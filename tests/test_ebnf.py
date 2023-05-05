@@ -42,7 +42,8 @@ from DHParser.error import has_errors, MANDATORY_CONTINUATION, PARSER_STOPPED_BE
 from DHParser.nodetree import WHITESPACE_PTYPE, flatten_sxpr
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
     EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS, parse_ebnf, \
-    transform_ebnf, HeuristicEBNFGrammar, ConfigurableEBNFGrammar
+    transform_ebnf, HeuristicEBNFGrammar, ConfigurableEBNFGrammar, \
+    WHITESPACE_TYPES
 from DHParser.dsl import CompilationError, compileDSL, create_parser, grammar_provider, raw_compileEBNF
 from DHParser.testing import grammar_unit, clean_report, unique_name
 from DHParser.trace import set_tracer, trace_history
@@ -166,6 +167,13 @@ class TestDirectives:
         '''
         _, errors, _ = compile_ebnf(lang)
         assert errors[0].message.find('or a string matching') >= 0
+
+    def test_disposable_bug(self):
+        lang = r'''@disposable = /_\w+/
+        doc=_text
+        _text = /.*/'''
+        parser=create_parser(lang)
+        assert parser.python_src__.find(r'(?:_\\w+)|(?:_\\w+)') < 0
 
 
 class TestReservedSymbols:
@@ -611,6 +619,27 @@ class TestWhitespace:
         assert not cst.error_flag
         cst = parser("DOCWörter Wörter Wörter")
         assert not cst.error_flag
+
+    def test_predefined_whitespace(self):
+        rx = re.compile(WHITESPACE_TYPES['linefeed'])
+        assert rx.match('').group(0) == ''
+        assert rx.match('\n').group(0) == '\n'
+        assert rx.match('\n\n').group(0) == ''
+        assert rx.match('A').group(0) == ''
+        assert rx.match('\n   ').group(0) == '\n   '
+        assert rx.match('   \n').group(0) == '   \n'
+        assert rx.match('\n   \n').group(0) == ''
+        assert rx.match('   \n   \n').group(0) == '   '
+
+        rx = re.compile(WHITESPACE_TYPES['linestart'])
+        assert rx.match('').group(0) == ''
+        assert rx.match('\n').group(0) == '\n'
+        assert rx.match('\n\n').group(0) == ''
+        assert rx.match('A').group(0) == ''
+        assert rx.match('\n   ').group(0) == '\n'
+        assert rx.match('   \n').group(0) == '   \n'
+        assert rx.match('\n   \n').group(0) == ''
+        assert rx.match('   \n   \n').group(0) == '   '
 
 
 class TestInterleave:

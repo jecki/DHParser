@@ -865,7 +865,7 @@ to at most a single linefeed::
     >>> testdata = '{"array": [1, 2.0, "a string"], \n\n\n "number": -1.3e+25, "bool": false}'
     >>> syntax_tree = json_parser(testdata)
     >>> print(syntax_tree.errors[0])
-    1:32: Error (1010): 'member' expected by parser 'object', but » \n\n\n "numb...« found instead!
+    1:33: Error (1010): 'member' expected by parser 'object', but »\n\n\n "numbe...« found instead!
     >>> json_gr = '@whitespace = /\\s*/ \n' + json_gr
     >>> json_parser = create_parser(json_gr, "JSON")
     >>> syntax_tree = json_parser(testdata)

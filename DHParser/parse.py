@@ -45,7 +45,7 @@ from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
     PARSER_LOOKAHEAD_MATCH_ONLY, PARSER_STOPPED_BEFORE_END, PARSER_NEVER_TOUCHES_DOCUMENT, \
     MALFORMED_ERROR_STRING, MANDATORY_CONTINUATION_AT_EOF, DUPLICATE_PARSERS_IN_ALTERNATIVE, \
     CAPTURE_WITHOUT_PARSERNAME, CAPTURE_DROPPED_CONTENT_WARNING, LOOKAHEAD_WITH_OPTIONAL_PARSER, \
-    BADLY_NESTED_OPTIONAL_PARSER, BAD_ORDER_OF_ALTERNATIVES, BAD_MANDATORY_SETUP, \
+    BAD_ORDER_OF_ALTERNATIVES, BAD_MANDATORY_SETUP, \
     OPTIONAL_REDUNDANTLY_NESTED_WARNING, CAPTURE_STACK_NOT_EMPTY, BAD_REPETITION_COUNT, \
     AUTOCAPTURED_SYMBOL_NOT_CLEARED, RECURSION_DEPTH_LIMIT_HIT, CAPTURE_STACK_NOT_EMPTY_WARNING, \
     MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, CAPTURE_STACK_NOT_EMPTY_NON_ROOT_ONLY, \
@@ -3034,13 +3034,13 @@ class ZeroOrMore(Option):
         return '{' + (self.parser.repr[1:-1] if isinstance(self.parser, Alternative)
                       and not self.parser.pname else self.parser.repr) + '}'
 
-    def static_analysis(self) -> List[AnalysisError]:
-        errors = super().static_analysis()
-        if self.parser.is_optional():
-            errors.append(self.static_error(
-                "Optional or empty parsers should not be nested inside repeating parsers: "
-                + self.location_info(), BADLY_NESTED_OPTIONAL_PARSER))
-        return errors
+    # def static_analysis(self) -> List[AnalysisError]:
+    #     errors = super().static_analysis()
+    #     if self.parser.is_optional():
+    #         errors.append(self.static_error(
+    #             "Optional or empty parsers should not be nested inside repeating parsers: "
+    #             + self.location_info(), BADLY_NESTED_OPTIONAL_PARSER))
+    #     return errors
 
 
 class OneOrMore(UnaryParser):

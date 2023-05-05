@@ -86,6 +86,7 @@ __all__ = ('DHPARSER_IMPORTS',
            'EBNFTransform',
            'EBNFCompilerError',
            'EBNFDirectives',
+           'WHITESPACE_TYPES',
            'EBNFCompiler',
            'grammar_changed',
            'compile_ebnf')
@@ -1107,8 +1108,8 @@ compiling: Junction = create_transition(
 '''
 
 
-WHITESPACE_TYPES = {'linefeed': r'[ \t]*(?:\n[ \t]*)?(?!\n)',  # default
-                    'linestart': r'[ \t]*\n?(?![ \t]*\n)',
+WHITESPACE_TYPES = {'linefeed': r'[ \t]*(?:\n[ \t]*(?![ \t]*\n))?',  # default
+                    'linestart': r'[ \t]*(?:\n(?![ \t]*\n))?',
                     'horizontal': r'[\t ]*',
                     'vertical': r'\s*'}
 
@@ -1124,7 +1125,7 @@ ReprType: TypeAlias = Union[str, unrepr]
 
 VALID_DIRECTIVES = {
     'comment': r'Regular expression for comments, e.g. /#.*(?:\n|$)/',
-    'whitespace': r'Regular expression for whitespace or one of: horizontal, linefeed, vertical',
+    'whitespace': r'Regular expression for whitespace or one of: horizontal, linefeed, linestart, vertical',
     'literalws': 'Controls implicit whitespace adjacent to literals: left, right, both, none',
     'ignorecase': 'Controls case-sensitivity: True, False',
     '[preprocessor_]tokens': 'List of the names of all preprocessor tokens',
@@ -2033,7 +2034,8 @@ class EBNFCompiler(Compiler):
             if nd.name == 'directive':
                 if nd[0].content == "disposable":
                     directivedefs.insert(0, nd)  # make sure that @disposable is always in front of @drop
-                directivedefs.append(nd)
+                else:
+                    directivedefs.append(nd)
             elif nd.name == 'macrodef':
                 if nd.get('placeholder', None):
                     macrodefs.append(nd)
@@ -2213,9 +2215,14 @@ class EBNFCompiler(Compiler):
                         f'Expcted: {VALID_DIRECTIVES[key]}')
             else:
                 value = self.extract_regex(node.children[1])
-                if key == 'whitespace' and not re.match(value, ''):
-                    self.tree.new_error(node, "Implicit whitespace should always "
-                                        "match the empty string, /%s/ does not." % value)
+                if key == 'whitespace':
+                    if not re.match(value, ''):
+                        self.tree.new_error(node, f"Implicit whitespace should "
+                            f"always match the empty string, /{value}/ does not.")
+                    elif not re.match(value, '\n\n'):
+                        self.tree.new_error(node, f"Implicit whitespace should always "
+                            f"match and at least return the empty string, but /{value}/ "
+                            f'does not match the empty beginning of "\\n\\n"!')
             self.directives[key] = value
 
         elif key == 'disposable':
