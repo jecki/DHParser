@@ -1108,6 +1108,7 @@ compiling: Junction = create_transition(
 
 
 WHITESPACE_TYPES = {'linefeed': r'[ \t]*(?:\n[ \t]*)?(?!\n)',  # default
+                    'linestart': r'[ \t]*\n?(?![ \t]*\n)',
                     'horizontal': r'[\t ]*',
                     'vertical': r'\s*'}
 
