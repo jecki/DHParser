@@ -132,8 +132,6 @@ parsing: PseudoJunction = create_parser_transition(
     JSONGrammar)
 get_grammar = parsing.factory # for backwards compatibility, only    
 
-def parse_JSON(document, start_parser = "root_parser__", *, complete_match=True):
-    return get_grammar()(document, start_parser, complete_match=complete_match)
 
 #######################################################################
 #
@@ -278,6 +276,10 @@ def compile_JSON(ast):
 # END OF DHPARSER-SECTIONS
 #
 #######################################################################
+
+def parse_JSON(document, start_parser = "root_parser__", *, complete_match=True):
+    return get_grammar()(document, start_parser, complete_match=complete_match)
+
 
 RESULT_FILE_EXTENSION = ".sxpr"  # Change this according to your needs!
 
