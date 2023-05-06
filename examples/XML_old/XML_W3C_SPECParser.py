@@ -99,13 +99,13 @@ class XML_W3C_SPECGrammar(Grammar):
     element = Forward()
     extSubsetDecl = Forward()
     ignoreSectContents = Forward()
-    source_hash__ = "2a314a4d44b5b162598c9047827acf65"
+    source_hash__ = "376773c3dc67c5f2bf441b7b80cdf9c3"
     disposable__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
     comment_rx__ = RX_NEVER_MATCH
-    WHITESPACE__ = r'[ \t]*(?:\n[ \t]*)?(?!\n)'
+    WHITESPACE__ = r'[ \t]*(?:\n[ \t]*(?![ \t]*\n))?'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     PubidChar = Alternative(RegExp('[\x20]'), RegExp('[\x0D]'), RegExp('[\x0A]'), RegExp('[a-zA-Z0-9]'), RegExp('[-\'()+,./:=?;!*#@$_%]'))

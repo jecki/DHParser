@@ -48,6 +48,8 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     has_errors, ERROR, FATAL, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 
+from DHParser.dsl import PseudoJunction, create_parser_transition
+
 
 #######################################################################
 #
@@ -93,7 +95,7 @@ class JSONGrammar(Grammar):
     r"""Parser for a JSON source file.
     """
     _element = Forward()
-    source_hash__ = "d932fa46e6d7c2b3b4a3f2d848472a1c"
+    source_hash__ = "7046077a0556ceea34e899524e540c77"
     disposable__ = re.compile('_\\w+')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -125,24 +127,10 @@ class JSONGrammar(Grammar):
     json = Series(dwsp__, _element, _EOF)
     root__ = json
     
-
-_raw_grammar = ThreadLocalSingletonFactory(JSONGrammar)
-
-def get_grammar() -> JSONGrammar:
-    grammar = _raw_grammar()
-    if get_config_value('resume_notices'):
-        resume_notices_on(grammar)
-    elif get_config_value('history_tracking'):
-        set_tracer(grammar, trace_history)
-    try:
-        if not grammar.__class__.python_src__:
-            grammar.__class__.python_src__ = get_grammar.python_src__
-    except AttributeError:
-        pass
-    return grammar
     
-def parse_JSON(document, start_parser = "root_parser__", *, complete_match=True):
-    return get_grammar()(document, start_parser, complete_match=complete_match)
+parsing: PseudoJunction = create_parser_transition(
+    JSONGrammar)
+get_grammar = parsing.factory # for backwards compatibility, only    
 
 
 #######################################################################

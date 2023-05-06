@@ -45,7 +45,7 @@ from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
     PARSER_LOOKAHEAD_MATCH_ONLY, PARSER_STOPPED_BEFORE_END, PARSER_NEVER_TOUCHES_DOCUMENT, \
     MALFORMED_ERROR_STRING, MANDATORY_CONTINUATION_AT_EOF, DUPLICATE_PARSERS_IN_ALTERNATIVE, \
     CAPTURE_WITHOUT_PARSERNAME, CAPTURE_DROPPED_CONTENT_WARNING, LOOKAHEAD_WITH_OPTIONAL_PARSER, \
-    BAD_ORDER_OF_ALTERNATIVES, BAD_MANDATORY_SETUP, \
+    BADLY_NESTED_OPTIONAL_PARSER, BAD_ORDER_OF_ALTERNATIVES, BAD_MANDATORY_SETUP, \
     OPTIONAL_REDUNDANTLY_NESTED_WARNING, CAPTURE_STACK_NOT_EMPTY, BAD_REPETITION_COUNT, \
     AUTOCAPTURED_SYMBOL_NOT_CLEARED, RECURSION_DEPTH_LIMIT_HIT, CAPTURE_STACK_NOT_EMPTY_WARNING, \
     MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, CAPTURE_STACK_NOT_EMPTY_NON_ROOT_ONLY, \
@@ -2464,9 +2464,29 @@ def DTKN(token, wsL='', wsR=r'\s*'):
 
 
 class Whitespace(RegExp):
-    """A variant of RegExp that signifies through its class name that it
-    is a RegExp-parser for whitespace."""
+    """A variant of RegExp that it meant to be used for insignificant whitespace.
+    In contrast to RegExp, Whitespace always returns a match. If the defining
+    regular expression did not match, an empty match is returned."""
     assert WHITESPACE_PTYPE == ":Whitespace"
+
+    def _parse(self, location: cint) -> ParsingResult:
+        """For the sake of performance, the _parse-method of class RegExp has
+        been repeated, here, rather than being called. Only the last line
+        has been changed to retrun an empty match instead of a non-match,
+        when the regular expression did not match."""
+        match = self.regexp.match(self._grammar.text__, location)
+        if match:
+            capture = match.group(0)
+            if capture or not self.disposable:
+                end = match.end()
+                if self.drop_content:
+                    return EMPTY_NODE, end
+                return Node(self.node_name, capture, True), end
+            return EMPTY_NODE, location
+        return EMPTY_NODE, location
+
+    def is_optional(self) -> Optional[bool]:
+        return True  # parser can never fail, like an optional parser
 
     def __repr__(self):
         return '~'
@@ -3841,10 +3861,12 @@ class Lookahead(FlowParser):
 
     def static_analysis(self) -> List[AnalysisError]:
         errors = super().static_analysis()
-        if self.parser.is_optional():
+        # Whitespaces are excluded in the following, because they are also used as
+        # placeholders for macros in which case the error message would be confusing
+        if self.parser.is_optional() and not isinstance(self.parser, Whitespace):
             errors.append(AnalysisError(self.pname, self, Error(
-                'Lookahead %s does not make sense with optional parser "%s"!'
-                % (self.pname, str(self.parser)),
+                "Lookahead %s does not make sense with optional parser %s!"
+                % (self.node_name, str(self.parser)),
                 0, LOOKAHEAD_WITH_OPTIONAL_PARSER)))
         return errors
 

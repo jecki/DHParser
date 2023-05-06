@@ -48,6 +48,8 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     has_errors, ERROR, FATAL, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 
+from DHParser.dsl import PseudoJunction, create_parser_transition
+
 
 #######################################################################
 #
@@ -93,7 +95,7 @@ class miniXMLGrammar(Grammar):
     r"""Parser for a miniXML source file.
     """
     element = Forward()
-    source_hash__ = "ac5d424ca8c844df4e191f17be87aa78"
+    source_hash__ = "59383ee7bcd1e6a369dd706fea3dff2e"
     disposable__ = re.compile('EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -113,24 +115,10 @@ class miniXMLGrammar(Grammar):
     document = Series(dwsp__, element, dwsp__, EOF, mandatory=3)
     root__ = document
     
-
-_raw_grammar = ThreadLocalSingletonFactory(miniXMLGrammar, ident=1)
-
-def get_grammar() -> miniXMLGrammar:
-    grammar = _raw_grammar()
-    if get_config_value('resume_notices'):
-        resume_notices_on(grammar)
-    elif get_config_value('history_tracking'):
-        set_tracer(grammar, trace_history)
-    try:
-        if not grammar.__class__.python_src__:
-            grammar.__class__.python_src__ = get_grammar.python_src__
-    except AttributeError:
-        pass
-    return grammar
     
-def parse_miniXML(document, start_parser = "root_parser__", *, complete_match=True):
-    return get_grammar()(document, start_parser, complete_match)
+parsing: PseudoJunction = create_parser_transition(
+    miniXMLGrammar)
+get_grammar = parsing.factory # for backwards compatibility, only    
 
 
 #######################################################################

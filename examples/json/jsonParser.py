@@ -103,8 +103,8 @@ class jsonGrammar(Grammar):
     r"""Parser for a json source file.
     """
     _element = Forward()
-    source_hash__ = "82e693ffabd87a47d56feb32c2f56deb"
-    disposable__ = re.compile('(?:_[A-Za-z]+)|(?:_[A-Za-z]+)')
+    source_hash__ = "70688403de20600e8c312ecad50a8237"
+    disposable__ = re.compile('_[A-Za-z]+')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'(?:\/\/|#).*'

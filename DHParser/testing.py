@@ -397,7 +397,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
 
     if isinstance(test_unit, str):
         _, unit_name = os.path.split(os.path.splitext(test_unit)[0])
-        test_unit = unit_from_file(test_unit, UNIT_STAGES | {j.dst for j in junctions})
+        test_unit = unit_from_file(test_unit, UNIT_STAGES | {j[2] for j in junctions})
     else:
         unit_name = 'unit_test_' + str(id(test_unit))
     if verbose:

@@ -1309,9 +1309,11 @@ class EBNFCompiler(Compiler):
     :ivar definitions:  A dictionary of definitions. Other than ``rules``
             this maps the symbols to their compiled definienda.
 
-    :ivar macros:  A dictionary that maps macro names to the AST of the
-            macro-definition. (The macro's AST is used to implement the
-            the substitution when the macro is applied.)
+    :ivar macros:  A dictionary that maps macro names to the
+            macro-definition, or, more precisely to a tuple of the
+            node of the macro-symbol, the string-list or macro arguments
+            and the node of the AST that is substituted for the
+            macro-symbol.
 
     :ivar macro_stack:  A stack (i.e. list) of macro names needed to
             ensure that macro calls are not recursively nested.
@@ -2101,9 +2103,13 @@ class EBNFCompiler(Compiler):
                 src_lines = probe_src.split('\n')
                 se.msg += f' "{src_lines[se.lineno - 1]}" '
                 raise se
-            for sym, _, err in errors:
-                symdef_node = self.rules[sym][0]
-                err.pos = self.rules[sym][0].pos
+            for sym, parser, err in errors:
+                psym = parser.symbol
+                for dic, key in [(self.rules, sym), (self.rules, psym), (self.macros, psym)]:
+                    symdef_node = dic.get(key, [None])[0]
+                    if symdef_node:  break
+                else:  symdef_node = node
+                err.pos = symdef_node.pos
                 self.tree.add_error(symdef_node, err)
         self.python_src = python_src
         return python_src

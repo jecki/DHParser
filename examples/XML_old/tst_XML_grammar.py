@@ -29,7 +29,7 @@ def recompile_grammar(grammar_src, force):
     if not dsl.recompile_grammar(grammar_src, force=force):
         print('\nErrors while recompiling "%s":' % grammar_src +
               '\n--------------------------------------\n\n')
-        error_path = os.path.join(grammar_src[:-5] + '_ebnf_ERRORS.txt')
+        error_path = os.path.join(grammar_src[:-5] + '_ebnf_MESSAGES.txt')
         with open(error_path) as f:
             print(f.read())
         sys.exit(1)

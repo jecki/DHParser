@@ -347,7 +347,7 @@ class TestCompilerErrors:
     def test_no_error(self):
         """But reserved symbols should not be reported as undefined.
         """
-        ebnf = """nothing =  WSP_RE__ | COMMENT__\n"""
+        ebnf = """nothing =  COMMENT__ | WSP_RE__\n"""
         result, messages, st = compile_source(
             ebnf, None, get_ebnf_grammar(), get_ebnf_transformer(),
             get_ebnf_compiler('UndefinedSymbols'))

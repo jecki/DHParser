@@ -1,6 +1,13 @@
 DHParser Version 1.5.0
 ......................
 
+- parse.py: The (insignificant) "Whitespace"-parser is now optional
+  per default. This simplifies writing regular expressions for
+  insignificant whitespace, but can lead to BREAKING badly formulated
+  grammars, because optional-testing during static analysis is now
+  more comprehensive.
+- ebnf.py: bugfix for linefeed whitespace-parser and added linestart
+  whitespace-parser.
 - parse.py: removed methods for combining parsers, i.e. turn cascades
   of nested Series, Interleave or Alternative parsers into one
   flat parser with a longer list of arguments, because these are
