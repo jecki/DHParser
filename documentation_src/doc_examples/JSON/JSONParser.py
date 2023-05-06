@@ -132,6 +132,8 @@ parsing: PseudoJunction = create_parser_transition(
     JSONGrammar)
 get_grammar = parsing.factory # for backwards compatibility, only    
 
+def parse_JSON(document, start_parser = "root_parser__", *, complete_match=True):
+    return get_grammar()(document, start_parser, complete_match=complete_match)
 
 #######################################################################
 #

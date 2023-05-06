@@ -95,7 +95,7 @@ class miniXMLGrammar(Grammar):
     r"""Parser for a miniXML source file.
     """
     element = Forward()
-    source_hash__ = "59383ee7bcd1e6a369dd706fea3dff2e"
+    source_hash__ = "b7e1eabdd75eb1bfe12f2fd4e9b53004"
     disposable__ = re.compile('EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
