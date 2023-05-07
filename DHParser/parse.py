@@ -62,12 +62,8 @@ from DHParser.toolkit import sane_parser_name, escape_ctrl_chars, re, \
 
 try:
     import cython
-    cint: TypeAlias = cython.int
-except NameError:
-    cint: TypeAlias = int
-except ImportError:
+except (ImportError, NameError):
     import DHParser.externallibs.shadow_cython as cython
-    cint: TypeAlias = int
 
 
 __all__ = ('parser_names',
@@ -420,7 +416,7 @@ def reentry_point(rest: StringView,
 ########################################################################
 
 
-ParsingResult: TypeAlias = Tuple[Optional[Node], cint]
+ParsingResult: TypeAlias = Tuple[Optional[Node], int]
 MemoizationDict: TypeAlias = Dict[int, ParsingResult]
 
 ApplyFunc: TypeAlias = Callable[['Parser'], Optional[bool]]
@@ -428,7 +424,7 @@ ParserTrail: TypeAlias = Tuple['Parser']
 ApplyToTrailFunc: TypeAlias = Callable[[ParserTrail], Optional[bool]]
 # The return value of ``True`` stops any further application
 FlagFunc: TypeAlias = Callable[[ApplyFunc, Set[ApplyFunc]], bool]
-ParseFunc: TypeAlias = Callable[['Parser', cint], ParsingResult]
+ParseFunc: TypeAlias = Callable[['Parser', int], ParsingResult]
 
 
 class Parser:
@@ -610,7 +606,7 @@ class Parser:
         self.visited: MemoizationDict = self._grammar.get_memoization_dict__(self)
 
     @cython.locals(next_location=cython.int, gap=cython.int, i=cython.int, save_suspend_memoization=cython.bint)
-    def __call__(self: Parser, location: cint) -> ParsingResult:
+    def __call__(self: Parser, location: cython.int) -> ParsingResult:
         """Applies the parser to the given text. This is a wrapper method that adds
         the business intelligence that is common to all parsers. The actual parsing is
         done in the overridden method ``_parse()``. This wrapper-method can be thought of
@@ -736,7 +732,7 @@ class Parser:
             return cast(Interleave, other).__rmul__(self)
         return Interleave(self, other)
 
-    def _parse(self, location: cint) -> ParsingResult:
+    def _parse(self, location: cython.int) -> ParsingResult:
         """Applies the parser to the given ``text`` and returns a node with
         the results or None as well as the text at the position right behind
         the matching string."""
@@ -2155,7 +2151,7 @@ class Unparameterized(Parser):
 
 class Always(Unparameterized):
     """A parser that always matches, but does not capture anything."""
-    def _parse(self, location: cint) -> ParsingResult:
+    def _parse(self, location: cython.int) -> ParsingResult:
         if self.node_name[0:1] == ':':
             return EMPTY_NODE, location
         else:
@@ -2167,7 +2163,7 @@ class Always(Unparameterized):
 
 class Never(Unparameterized):
     """A parser that never matches."""
-    def _parse(self, location: cint) -> ParsingResult:
+    def _parse(self, location: cython.int) -> ParsingResult:
         return None, location
 
 
@@ -2175,7 +2171,7 @@ class AnyChar(Unparameterized):
     """A parser that returns the next unicode character of the document
     whatever that is. The parser fails only at the very end of the text."""
     @cython.locals(location_=cython.int, L=cython.int)
-    def _parse(self, location: cint) -> ParsingResult:
+    def _parse(self, location: cython.int) -> ParsingResult:
         text = self._grammar.document__._text
         L = len(text)
         if location < L:
@@ -2210,7 +2206,7 @@ class PreprocessorToken(Parser):
         return duplicate
 
     @cython.locals(end=cython.int)
-    def _parse(self, location: cint) -> ParsingResult:
+    def _parse(self, location: cython.int) -> ParsingResult:
         text = self._grammar.document__[location:]
         if text[0:1] == BEGIN_TOKEN:
             end = text.find(END_TOKEN, 1)
@@ -2288,7 +2284,7 @@ class ERR(Parser):
         copy_parser_base_attrs(self, duplicate)
         return duplicate
 
-    def _parse(self, location: cint) -> ParsingResult:
+    def _parse(self, location: cython.int) -> ParsingResult:
         node = Node(ZOMBIE_TAG, '').with_pos(location)
         before = '...' + self._grammar.document__[location - 10:location].replace('\n', '\\n')
         after = self._grammar.document__[location:location + 10].replace('\n', '\\n') + '...'
@@ -2330,7 +2326,7 @@ class Text(Parser):
 
     @cython.locals(location_=cython.int)
     @cython.returns((object, cython.int))
-    def _parse(self, location: cint) -> ParsingResult:
+    def _parse(self, location: cython.int) -> ParsingResult:
         location_ = location + self.len
         self_text = self.text
         if self._grammar.text__[location:location_] == self_text:
@@ -2386,7 +2382,7 @@ class RegExp(Parser):
         copy_parser_base_attrs(self, duplicate)
         return duplicate
 
-    def _parse(self, location: cint) -> ParsingResult:
+    def _parse(self, location: cython.int) -> ParsingResult:
         match = self.regexp.match(self._grammar.text__, location)
         if match:
             capture = match.group(0)
@@ -2469,7 +2465,7 @@ class Whitespace(RegExp):
     regular expression did not match, an empty match is returned."""
     assert WHITESPACE_PTYPE == ":Whitespace"
 
-    def _parse(self, location: cint) -> ParsingResult:
+    def _parse(self, location: cython.int) -> ParsingResult:
         """For the sake of performance, the _parse-method of class RegExp has
         been repeated, here, rather than being called. Only the last line
         has been changed to retrun an empty match instead of a non-match,
@@ -2845,7 +2841,7 @@ class CustomParser(CombinedParser):
         copy_combined_parser_attrs(self, duplicate)
         return duplicate
 
-    def _parse(self, location: cint) -> ParsingResult:
+    def _parse(self, location: cython.int) -> ParsingResult:
         try:
             node = self.parse_func(self._grammar.document__[location:])
         except Exception as e:
@@ -2977,7 +2973,7 @@ class Option(UnaryParser):
     def __init__(self, parser: Parser) -> None:
         super(Option, self).__init__(parser)
 
-    def _parse(self, location: cint) -> ParsingResult:
+    def _parse(self, location: cython.int) -> ParsingResult:
         node, location = self.parser(location)
         return self._return_value(node), location
 
@@ -3034,7 +3030,7 @@ class ZeroOrMore(Option):
     """
 
     @cython.locals(n=cython.int)
-    def _parse(self, location: cint) -> ParsingResult:
+    def _parse(self, location: cython.int) -> ParsingResult:
         results: Tuple[Node, ...] = ()
         n: int = location - 1
         while True:  # location > n:
@@ -3088,7 +3084,7 @@ class OneOrMore(UnaryParser):
     EBNF-Example:  ``sentence = { /\w+,?/ }+``
     """
     @cython.locals(n=cython.int)
-    def _parse(self, location: cint) -> ParsingResult:
+    def _parse(self, location: cython.int) -> ParsingResult:
         results: Tuple[Node, ...] = ()
         # text_ = text  # type: StringView
         match_flag: bool = False
@@ -3175,7 +3171,7 @@ class Counted(UnaryParser):
         return duplicate
 
     @cython.locals(location_=cython.int)
-    def _parse(self, location: cint):
+    def _parse(self, location: cython.int):
         results: Tuple[Node, ...] = ()
         location_ = location
         for _ in range(self.repetitions[0]):
@@ -3292,7 +3288,7 @@ class MandatoryNary(NaryParser):
         copy_combined_parser_attrs(self, duplicate)
         return duplicate
 
-    def get_reentry_point(self, location: cint) -> Tuple[int, Node]:
+    def get_reentry_point(self, location: cython.int) -> Tuple[int, Node]:
         """Returns a tuple of integer index of the closest reentry point and a Node
         capturing all text from ``rest`` up to this point or ``(-1, None)`` if no
         reentry-point was found. If no reentry-point was found or the
@@ -3307,7 +3303,7 @@ class MandatoryNary(NaryParser):
         return -1, Node(ZOMBIE_TAG, '')
 
     def mandatory_violation(self,
-                            location: cint,
+                            location: cython.int,
                             failed_on_lookahead: bool,
                             expected: str,
                             reloc: int,
@@ -3421,7 +3417,7 @@ class Series(MandatoryNary):
     # RX_ARGUMENT = re.compile(r'\s(\S)')
 
     @cython.locals(location_=cython.int, pos=cython.int, reloc=cython.int, mandatory=cython.int)
-    def _parse(self, location: cint) -> ParsingResult:
+    def _parse(self, location: cython.int) -> ParsingResult:
         results = []  # type: List[Node]
         location_ = location
         error = None  # type: Optional[Error]
@@ -3538,7 +3534,7 @@ class Alternative(NaryParser):
     EBNF-Example:  ``number = /\d+\.\d+/ | /\d+/``
     """
     @cython.locals(location_=cython.int)
-    def _parse(self, location: cint) -> ParsingResult:
+    def _parse(self, location: cython.int) -> ParsingResult:
         for parser in self.parsers:
             node, location_ = parser(location)
             if node is not None:
@@ -3737,7 +3733,7 @@ class Interleave(MandatoryNary):
         return duplicate
 
     @cython.locals(location_=cython.int, location__=cython.int, i=cython.int, reloc=cython.int)
-    def _parse(self, location: cint):
+    def _parse(self, location: cython.int):
         results = ()  # type: Tuple[Node, ...]
         location_ = location  # type: int
         counter = [0] * len(self.parsers)
@@ -3849,7 +3845,7 @@ class Lookahead(FlowParser):
     Matches, if the contained parser would match for the following text,
     but does not consume any text.
     """
-    def _parse(self, location: cint) -> ParsingResult:
+    def _parse(self, location: cython.int) -> ParsingResult:
         node, _ = self.parser(location)
         if self.match(node is not None):
             return (EMPTY_NODE if self.disposable else Node(self.node_name, '', True)), location
@@ -3915,7 +3911,7 @@ class Lookbehind(FlowParser):
         super(Lookbehind, self).__init__(parser)
 
     @cython.locals(start=cython.int)
-    def _parse(self, location: cint) -> ParsingResult:
+    def _parse(self, location: cython.int) -> ParsingResult:
         start = self._grammar.document_length__ - location
         backwards_text = self._grammar.reversed__[start:]
         if self.regexp is None:  # assert self.text is not None
@@ -3989,7 +3985,7 @@ class ContextSensitive(UnaryParser):
     def gen_memoization_dict(self) -> dict:
         return BlackHoleDict()
 
-    def _rollback_location(self, location: cint, location_: cint) -> cint:
+    def _rollback_location(self, location: cython.int, location_: cython.int) -> cython.int:
         """
         Determines the rollback location for context-sensitive parsers, i.e.
         parsers that either manipulate (store or change) or use variables.
@@ -4053,7 +4049,7 @@ class Capture(ContextSensitive):
         return self._grammar.variables__[self.pname].pop()
 
     @cython.locals(location_=cython.int)
-    def _parse(self, location: cint) -> ParsingResult:
+    def _parse(self, location: cython.int) -> ParsingResult:
         node, location_ = self.parser(location)
         if node is not None:
             assert self.pname, """Tried to apply an unnamed capture-parser!"""
@@ -4188,7 +4184,7 @@ class Retrieve(ContextSensitive):
         return self.node_name
 
     @cython.locals(location_=cython.int)
-    def _parse(self, location: cint) -> ParsingResult:
+    def _parse(self, location: cython.int) -> ParsingResult:
         # auto-capture on first use if symbol was not captured before
         if len(self._grammar.variables__[self.symbol_pname]) == 0:
             node, location_ = self.parser(location)   # auto-capture value
@@ -4206,7 +4202,7 @@ class Retrieve(ContextSensitive):
     def __repr__(self):
         return ':' + self.parser.repr
 
-    def retrieve_and_match(self, location: cint) -> ParsingResult:
+    def retrieve_and_match(self, location: cython.int) -> ParsingResult:
         """
         Retrieves variable from stack through the match function passed to
         the class' constructor and tries to match the variable's value with
@@ -4264,7 +4260,7 @@ class Pop(Retrieve):
         self._grammar.variables__[self.symbol_pname].append(self.values.pop())
 
     @cython.locals(location_=cython.int)
-    def _parse(self, location: cint) -> ParsingResult:
+    def _parse(self, location: cython.int) -> ParsingResult:
         node, location_ = self.retrieve_and_match(location)
         if node is not None and not id(node) in self._grammar.tree__.error_nodes:
             self.values.append(self._grammar.variables__[self.symbol_pname].pop())
@@ -4305,7 +4301,7 @@ class Synonym(UnaryParser):
     def __init__(self, parser: Parser) -> None:
         super(Synonym, self).__init__(parser)
 
-    def _parse(self, location: cint) -> ParsingResult:
+    def _parse(self, location: cython.int) -> ParsingResult:
         node, location = self.parser(location)
         if node is not None:
             if self.drop_content:
@@ -4385,7 +4381,7 @@ class Forward(UnaryParser):
         return duplicate
 
     @cython.locals(ldepth=cython.int, rb_stack_size=cython.int)
-    def __call__(self, location: cint) -> ParsingResult:
+    def __call__(self, location: cython.int) -> ParsingResult:
         """
         Overrides :py:meth:`Parser.__call__`, because Forward is not an independent parser
         but merely redirects the call to another parser. Other than parser

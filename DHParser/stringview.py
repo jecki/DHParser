@@ -42,21 +42,16 @@ except ImportError:
 
 try:
     import cython
-    cython_optimized = cython.compiled  # type: bool
-    cint: TypeAlias = cython.int
-except NameError:
-    cint: TypeAlias = int
-except ImportError:
-    # import DHParser.Shadow as cython
-    cython_optimized = False
+    cython_optimized: bool = cython.compiled
+except (NameError, ImportError):
     import DHParser.externallibs.shadow_cython as cython
-    cint: TypeAlias = int
+    cython_optimized = False
 
 
 __all__ = ('StringView', 'real_indices', 'EMPTY_STRING_VIEW', 'TextBuffer')
 
 
-def first_char(text: str,  begin: cint, end: cint, chars: str) -> cint:
+def first_char(text: str,  begin: cython.int, end: cython.int, chars: str) -> int:
     """Returns the index of the first non-whitespace character in string
      `text` within the bounds [begin, end].
     """
@@ -65,7 +60,7 @@ def first_char(text: str,  begin: cint, end: cint, chars: str) -> cint:
     return begin
 
 
-def last_char(text: str, begin: cint, end: cint, chars: str) -> cint:
+def last_char(text: str, begin: cython.int, end: cython.int, chars: str) -> cython.int:
     """Returns the index of the last non-whitespace character in string
     `text` within the bounds [begin, end].
     """
@@ -74,7 +69,7 @@ def last_char(text: str, begin: cint, end: cint, chars: str) -> cint:
     return end
 
 
-def pack_index(index: cint, length: cint) -> cint:
+def pack_index(index: cython.int, length: cython.int) -> cython.int:
     """Transforms `index` into a positive index counting from the beginning
     of the string, capping it at the boundaries [0, len].
     Examples:
@@ -91,18 +86,18 @@ def pack_index(index: cint, length: cint) -> cint:
 
 def fast_real_indices(begin: Optional[int],
                       end: Optional[int],
-                      length: cint) -> Tuple[cint, cint]:
+                      length: cython.int) -> Tuple[cython.int, cython.int]:
     """Returns the tuple of real (i.e. positive) indices from the slice
     indices `begin`,  `end`, assuming a string of size `length`.
     """
-    cbegin: cint = 0 if begin is None else begin
-    cend: cint = length if end is None else end
+    cbegin: cython.int = 0 if begin is None else begin
+    cend: cython.int = length if end is None else end
     return pack_index(cbegin, length), pack_index(cend, length)
 
 
 def real_indices(begin: Optional[int],
                  end: Optional[int],
-                 length: cint) -> Tuple[cint, cint]:
+                 length: cython.int) -> Tuple[cython.int, cython.int]:
     """Python callable real-indices function for testing."""
     return fast_real_indices(begin, end, length)
 
@@ -268,7 +263,7 @@ class StringView:  # collections.abc.Sized
 
     def startswith(self,
                    prefix: str,
-                   start: cint = 0,
+                   start: cython.int = 0,
                    end: Optional[int] = None) -> bool:
         """Return True if S starts with the specified prefix, False otherwise.
         With optional `start`, test S beginning at that position.
@@ -280,7 +275,7 @@ class StringView:  # collections.abc.Sized
 
     def endswith(self,
                  suffix: str,
-                 start: cint = 0,
+                 start: cython.int = 0,
                  end: Optional[int] = None) -> bool:
         """Return True if S ends with the specified suffix, False otherwise.
         With optional `start`, test S beginning at that position.
@@ -290,7 +285,7 @@ class StringView:  # collections.abc.Sized
         end = self._end if end is None else self._begin + end
         return self._text.endswith(suffix, start, end)
 
-    def match(self, regex, flags: cint = 0):
+    def match(self, regex, flags: cython.int = 0):
         """Executes `regex.match` on the StringView object and returns the
         result, which is either a match-object or None. Keep in mind that
         match.end(), match.span() etc. are mapped to the underlying text,
@@ -298,7 +293,7 @@ class StringView:  # collections.abc.Sized
         """
         return regex.match(self._text, pos=self._begin, endpos=self._end)
 
-    def index(self, absolute_index: cint) -> int:
+    def index(self, absolute_index: cython.int) -> int:
         """Converts an index for a string watched by a StringView object
         to an index relative to the string view object, e.g.::
 
@@ -402,7 +397,7 @@ class TextBuffer:
     indexing or slicing.
     """
 
-    def __init__(self, text: Union[str, StringView], version: cint = 0):
+    def __init__(self, text: Union[str, StringView], version: cython.int = 0):
         self._text = text       # type: Union[str, StringView]
         self._buffer = []       # type: List[Union[str, StringView]]
         self.version = version if version >= 0 else 0
@@ -438,7 +433,8 @@ class TextBuffer:
             self._lazy_init()
         return len(self._buffer)
 
-    def update(self, l1: cint, c1: cint, l2: cint, c2: cint, replacement: Union[str, StringView]):
+    def update(self, l1: cython.int, c1: cython.int, l2: cython.int, c2: cython.int,
+               replacement: Union[str, StringView]):
         """Replaces the text-range from line and column (l1, c1) to
         line and column (l2, c2) with the replacement-string.
         """
@@ -453,7 +449,7 @@ class TextBuffer:
         self._text = ''  # invalidate single-string copy
         self.version += 1
 
-    def text_edits(self, edits: Union[list, dict], version: cint = -1):
+    def text_edits(self, edits: Union[list, dict], version: cython.int = -1):
         """Incorporates the one or more text-edits or change-events into the text.
         A Text-Edit is a dictionary of this form::
 

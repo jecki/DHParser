@@ -3,4 +3,6 @@
 #cython: c_string_type=unicode
 #cython: c_string_encoding=utf-8
 
+import cython
+
 cpdef trace_history(self, int location)

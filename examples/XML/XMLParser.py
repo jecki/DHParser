@@ -104,7 +104,7 @@ class XMLGrammar(Grammar):
     r"""Parser for a XML source file.
     """
     element = Forward()
-    source_hash__ = "14f0c934a44ef05dd73a9f2603d6a005"
+    source_hash__ = "a35f0d669a6691ca072a8dd76d2632e4"
     disposable__ = re.compile('BOM$|Misc$|NameStartChar$|NameChars$|CommentChars$|PubidChars$|prolog$|PubidCharsSingleQuoted$|VersionNum$|EncName$|Reference$|CData$|EOF$|tagContent$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

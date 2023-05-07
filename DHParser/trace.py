@@ -41,12 +41,8 @@ from typing import Tuple, Optional, List, Iterable, Union
 
 try:
     import cython
-    cint = cython.int
-except NameError:
-    cint = int
 except ImportError:
     import DHParser.externallibs.shadow_cython as cython
-    cint = int
 
 from DHParser.error import Error, RESUME_NOTICE, RECURSION_DEPTH_LIMIT_HIT
 from DHParser.nodetree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE
@@ -109,7 +105,7 @@ def symbol_name(parser: Parser, grammar: Grammar) -> str:
 
 @cython.locals(location_=cython.int, delta=cython.int, cs_len=cython.int,
                i=cython.int, L=cython.int)
-def trace_history(self: Parser, location: cint) -> Tuple[Optional[Node], cint]:
+def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], cython.int]:
     grammar = self._grammar  # type: Grammar
     if not grammar.history_tracking__:
         try:

@@ -55,12 +55,8 @@ from DHParser.toolkit import re, linebreaks, line_col, JSONnull, \
 
 try:
     import cython
-    cint: TypeAlias = cython.int
-except NameError:
-    cint: TypeAlias = int
 except ImportError:
     import DHParser.externallibs.shadow_cython as cython
-    cint: TypeAlias = int
 
 
 __all__ = ('WHITESPACE_PTYPE',
@@ -734,7 +730,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             raise AssertionError("Position value not initialized! Use Node.with_pos()")
         return self._pos
 
-    def with_pos(self, pos: cint) -> Node:
+    def with_pos(self, pos: cython.int) -> Node:
         """
         Initializes the node's position value. Usually, the parser takes
         care of assigning the positions in the document to the nodes of
@@ -1241,7 +1237,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return None
 
     @cython.locals(end=cython.int)
-    def locate(self, location: cint) -> Optional[Node]:
+    def locate(self, location: cython.int) -> Optional[Node]:
         """
         Returns the leaf-Node that covers the given ``location``, where
         location is the actual position within ``self.content`` (not the
@@ -1357,7 +1353,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return []
 
     @cython.locals(end=cython.int)
-    def locate_path(self, location: cint) -> Path:
+    def locate_path(self, location: cython.int) -> Path:
         """
         Like :py:meth:`Node.locate()`, only that the entire path (i.e.
         chain of descendants) relative to `self` is returned.
@@ -2591,7 +2587,7 @@ def split(*args, **kwargs):
 
 
 @cython.locals(k=cython.int)
-def split_node(node: Node, parent: Node, i: cint, left_biased: bool = True,
+def split_node(node: Node, parent: Node, i: cython.int, left_biased: bool = True,
                chain_attr: Optional[dict] = None) -> int:
     """Splits a node at the given index (in case of a branch-node) or
     string-position (in case of a leaf-node). Returns the index of the
@@ -2701,7 +2697,7 @@ def split_node(node: Node, parent: Node, i: cint, left_biased: bool = True,
 
 
 @cython.locals(L=cython.int)
-def deep_split(path: Path, i: cint, left_biased: bool=True,
+def deep_split(path: Path, i: cython.int, left_biased: bool=True,
                greedy: bool=True,
                match_func: PathMatchFunction = ANY_PATH,
                skip_func: PathMatchFunction = NO_PATH,
@@ -2778,7 +2774,7 @@ def deep_split(path: Path, i: cint, left_biased: bool=True,
 
 
 @cython.locals(L=cython.int)   # k=cython.int does not work!!!
-def can_split(t: Path, i: cint, left_biased: bool = True, greedy: bool = True,
+def can_split(t: Path, i: cython.int, left_biased: bool = True, greedy: bool = True,
               match_func: PathMatchFunction = ANY_PATH,
               skip_func: PathMatchFunction = NO_PATH,
               divisable: AbstractSet[str] = LEAF_PTYPES) -> int:
@@ -2862,7 +2858,7 @@ def markup_leaf(node: Node, start: int, end: int, name: str, *attr_dict, **attri
 #######################################################################
 
 @cython.locals(k=cython.int)
-def markup_right(path: Path, i: cint, name: str, attr_dict: Dict[str, Any],
+def markup_right(path: Path, i: cython.int, name: str, attr_dict: Dict[str, Any],
                  greedy: bool = True,
                  match_func: PathMatchFunction = ANY_PATH,
                  skip_func: PathMatchFunction = NO_PATH,
@@ -2968,7 +2964,7 @@ def markup_right(path: Path, i: cint, name: str, attr_dict: Dict[str, Any],
 
 
 @cython.locals(k=cython.int)
-def markup_left(path: Path, i: cint, name: str, attr_dict: Dict[str, Any],
+def markup_left(path: Path, i: cython.int, name: str, attr_dict: Dict[str, Any],
                 greedy: bool = True,
                 match_func: PathMatchFunction = ANY_PATH,
                 skip_func: PathMatchFunction = NO_PATH,
@@ -3273,7 +3269,7 @@ class ContentMapping:
         return self._pos_list
 
     @cython.locals(path_index=cython.int, last=cython.int)
-    def get_path_index(self, pos: cint, left_biased: bool = False) -> int:
+    def get_path_index(self, pos: cython.int, left_biased: bool = False) -> int:
         """Yields the index for the path in given context-mapping that contains
         the position ``pos``.
 
@@ -3325,7 +3321,7 @@ class ContentMapping:
         return self._path_list[path_index], pos - self._pos_list[path_index]
 
     @cython.locals(a=cython.int, b=cython.int, index_a=cython.int, index_b=cython.int)
-    def iterate_paths(self, start_pos: cint, end_pos: cint, left_biased: bool = False) \
+    def iterate_paths(self, start_pos: cython.int, end_pos: cython.int, left_biased: bool = False) \
             -> Iterator[Path]:
         """Yields all paths from position ``start_pos`` up to and including
         position ``end_pos``. Example::
@@ -3341,7 +3337,7 @@ class ContentMapping:
             yield self._path_list[i]
 
     @cython.locals(i=cython.int, start_pos=cython.int, end_pos=cython.int, offset=cython.int)
-    def rebuild_mapping_slice(self, first_index: cint, last_index: cint):
+    def rebuild_mapping_slice(self, first_index: cython.int, last_index: cython.int):
         """Reconstructs a particular section of the context mapping after the
         underlying tree has been restructured. Ohter than
         :py:meth:`ContentMappin.rebuild_mapping`, the section that needs repairing
@@ -3486,7 +3482,7 @@ class ContentMapping:
 
 
     @cython.locals(i=cython.int, k=cython.int, q=cython.int, r=cython.int, t=cython.int, u=cython.int, L=cython.int)
-    def markup(self, start_pos: cint, end_pos: cint, name: str,
+    def markup(self, start_pos: cython.int, end_pos: cython.int, name: str,
                *attr_dict, **attributes) -> Node:
         """ Marks the span [start_pos, end_pos[ up by adding one or more Node's
         with ``name``, eventually cutting through ``divisable`` nodes. Returns the
@@ -3709,7 +3705,7 @@ class LocalContentMapping(ContentMapping):
         self.local_path_list: List[Path] = pathL
         self.local_pos_list: List[int] = posL
 
-    def _gen_local_path_and_pos_list(self, i: cint, k: cint):
+    def _gen_local_path_and_pos_list(self, i: cython.int, k: cython.int):
         return ([(self.stump + path) for path in self._path_list[i:k + 1]],
                 [pos - self.pos_offset for pos in self._pos_list[i:k + 1]])
 
@@ -3909,7 +3905,7 @@ class FrozenNode(Node):
     def pos(self):
         return -1
 
-    def with_pos(self, pos: cint) -> Node:
+    def with_pos(self, pos: cython.int) -> Node:
         raise NotImplementedError("Position values cannot be assigned to frozen nodes!")
 
     def to_json_obj(self, as_dict: bool=False, include_pos: bool=True) -> List:

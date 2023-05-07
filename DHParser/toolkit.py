@@ -73,10 +73,7 @@ try:
     cython_optimized = cython.compiled  # type: bool
     if cython_optimized:  # not ?
         import DHParser.externallibs.shadow_cython as cython
-    cint = cython.int
-except NameError:
-    cint = int
-except ImportError:
+except (NameError, ImportError):
     cython_optimized = False
     import DHParser.externallibs.shadow_cython as cython
 
@@ -973,7 +970,7 @@ def linebreaks(text: Union[StringView, str]) -> List[int]:
 
 
 @cython.locals(line=cython.int, column=cython.int)
-def line_col(lbreaks: List[int], pos: cint) -> Tuple[cint, cint]:
+def line_col(lbreaks: List[int], pos: cython.int) -> Tuple[cython.int, cython.int]:
     """
     Returns the position within a text as (line, column)-tuple based
     on a list of all line breaks, including -1 and EOF.

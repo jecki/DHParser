@@ -101,7 +101,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     param_block = Forward()
     tabular_config = Forward()
-    source_hash__ = "8a190f3271347781c56b016cd02b651b"
+    source_hash__ = "1c79be70061fb2afe0540012cafd938d"
     disposable__ = re.compile('_\\w+')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

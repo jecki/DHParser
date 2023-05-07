@@ -3,10 +3,13 @@
 #cython: c_string_type=unicode
 #cython: c_string_encoding=utf-8
 
+import cython
+
 # cpdef copy_parser_base_attrs(src, duplicate)
 
 cdef class Parser:
     cdef public str pname
+    cdef public str ptype
     cdef public bint disposable
     cdef public bint drop_content
     cdef public str node_name

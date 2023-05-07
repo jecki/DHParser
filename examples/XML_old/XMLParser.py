@@ -77,8 +77,8 @@ class XMLGrammar(Grammar):
     r"""Parser for a XML source file.
     """
     element = Forward()
-    source_hash__ = "43d2c4810365e5c4f4c15a36c54cfb3c"
-    disposable__ = re.compile('(?:Misc$|NameStartChar$|NameChars$|CommentChars$|PubidChars$|PubidCharsSingleQuoted$|VersionNum$|EncName$|Reference$|CData$|EOF$)|(?:Misc$|NameStartChar$|NameChars$|CommentChars$|PubidChars$|PubidCharsSingleQuoted$|VersionNum$|EncName$|Reference$|CData$|EOF$)')
+    source_hash__ = "a7dd6db56507a7d922a018141a9a666e"
+    disposable__ = re.compile('Misc$|NameStartChar$|NameChars$|CommentChars$|PubidChars$|PubidCharsSingleQuoted$|VersionNum$|EncName$|Reference$|CData$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -88,6 +88,7 @@ class XMLGrammar(Grammar):
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
     EOF = NegativeLookahead(RegExp('.'))
+    S = RegExp('\\s+')
     CharRef = Alternative(Series(Drop(Text('&#')), RegExp('[0-9]+'), Drop(Text(';'))), Series(Drop(Text('&#x')), RegExp('[0-9a-fA-F]+'), Drop(Text(';'))))
     CommentChars = RegExp('(?:(?!-)(?:\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-\\U0010FFFF]))+')
     PIChars = RegExp('(?:(?!\\?>)(?:\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-\\U0010FFFF]))+')
@@ -102,7 +103,7 @@ class XMLGrammar(Grammar):
     Name = Series(NameStartChar, Option(NameChars))
     PITarget = Series(NegativeLookahead(RegExp('X|xM|mL|l')), Name)
     PI = Series(Drop(Text('<?')), PITarget, RegExp('[~ PIChars]'), Drop(Text('?>')))
-    Misc = OneOrMore(Alternative(Comment, PI, dwsp__))
+    Misc = OneOrMore(Alternative(Comment, PI, S))
     EntityRef = Series(Drop(Text('&')), Name, Drop(Text(';')))
     Reference = Alternative(EntityRef, CharRef)
     PubidLiteral = Alternative(Series(Drop(Text('"')), Option(PubidChars), Drop(Text('"'))), Series(Drop(Text("\'")), Option(PubidCharsSingleQuoted), Drop(Text("\'"))))

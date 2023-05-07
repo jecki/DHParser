@@ -3,6 +3,7 @@
 #cython: c_string_type=unicode
 #cython: c_string_encoding=utf-8
 
+import cython
 
 cdef class Node:
     cdef public int _pos
@@ -18,7 +19,7 @@ cdef class Node:
     cpdef _set_result(self, result)
     cpdef _leaf_data(self)
     # cpdef pos(self)
-    cpdef object with_pos(self, pos)
+    cpdef object with_pos(self, int pos)
     # cpdef has_attr(self, attr)
     # cpdef attr(self)
     # cpdef get_attr(self, attribute, default)
@@ -46,7 +47,7 @@ cdef class Node:
 
 
 cdef class FrozenNode(Node):
-    cpdef object with_pos(self, pos)
+    cpdef object with_pos(self, int pos)
 
 # cannot cythonize RootNode, because self.__dict__ is being accessed
 # in the __deepcopy__-method

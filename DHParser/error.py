@@ -52,9 +52,8 @@ from __future__ import annotations
 from collections import namedtuple
 import functools
 import os
-from typing import Iterable, Iterator, Union, List, Sequence, Dict, Callable
+from typing import Iterable, Iterator, Union, List, Sequence, Callable
 
-from DHParser.stringview import StringView
 from DHParser.toolkit import linebreaks, line_col, is_filename, TypeAlias
 
 
