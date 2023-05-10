@@ -5,6 +5,9 @@
 
 import cython
 
+from typing import List
+from nodetree import Node, RootNode
+
 # any functions that causes trouble with cython has been commented out!
 
 # cpdef transformation_factory(t1=?, t2=?, t3=?, t4=?, t5=?)

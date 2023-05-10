@@ -25,8 +25,8 @@ same formal language can be described by different grammars and the way
 the grammar is written influences the shape of the syntax-tree that the
 parser yields. Therefore, it is quite common to rewrite a grammar or
 parts of it more than once during the course of developing a formal
-notatation. For example, in the first iteration one tries to find a
-grammar that matches the given or inteded notation. In the second
+notation. For example, in the first iteration one tries to find a
+grammar that matches the given or intended notation. In the second
 iteration, the grammar is refined to yield a well-shaped syntax-tree to
 make further processing easier. Unit-tests help to safeguard this
 process against breaking earlier changes by later changes.
@@ -98,7 +98,7 @@ glob-pattern ``*_test_*.ini``.
     from the menu to run a particular test. 
     
     This works pretty 
-    well with PyCharm, but should also be possible with other
+    well with PyCharm, but is alos possible with most other
     integrated development environments or code-editors.
 
 
