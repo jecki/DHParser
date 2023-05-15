@@ -115,7 +115,7 @@ proc withSourcePos*(node: Node, sourcePos: int): Node =
 const indentation = 2
 
 proc serialize(node: Node,
-               opening, closing: proc (nd: Node) : string,
+               opening, closing: proc(nd: Node) : string,
                leafdata: proc(nd: Node): seq[string],
                ind: int = 0): seq[string] =
   # result = newSeq[string]()
@@ -158,7 +158,7 @@ proc serialize(node: Node,
       result[^1] &= close
 
 
-func asSxpr*(node: NodeOrNil): string =
+proc asSxpr*(node: NodeOrNil): string =
   func renderAttrs(node: Node): string =
     # if node.attributes.len == 0:  return ""
     var attrStrs = newSeq[string](node.attributes.len)

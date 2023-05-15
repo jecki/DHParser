@@ -7,6 +7,8 @@
 
 import unittest
 
+import nimparser/nodetree
 import nimparser/parse
+
 test "Text parser, simple test":
   doAssert Text("A")("A").node.asSxpr == "(:Text \"A\")"
