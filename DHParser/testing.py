@@ -89,6 +89,7 @@ UNIT_STAGES = frozenset({'match*', 'match', 'fail', 'ast', 'cst'})
 RESULT_STAGES = frozenset({'__cst__', '__ast__', '__err__'})
 
 RX_SECTION = re.compile(r'\s*\[(?P<stage>\w+(:?\.\w+)*):(?P<symbol>\w+)\]')
+RX_METADATA_SECTION = re.compile(r'\s*\[(?P<metadata>\w+)\]')
 RE_VALUE = '(?:"""((?:.|\n)*?)""")|' + "(?:'''((?:.|\n)*?)''')|" + \
            r'(?:"(.*?)")|' + "(?:'(.*?)')|" + r'(.*(?:\n(?:\s*\n)*    .*)*)'
 # the following does not work with pypy3, because pypy's re-engine does not
@@ -152,7 +153,26 @@ def unit_from_config(config_str, filename, allowed_stages=UNIT_STAGES):
     OD = OrderedDict
     unit = OD()
 
+    # read meta-data
     pos = eat_comments(cfg, 0)
+    metadata_match = RX_METADATA_SECTION.match(cfg, pos)
+    while metadata_match:
+        mdsection = metadata_match.groupdict()['metadata']
+        if not mdsection[-2:] == '__':
+            mdsection += '_' if mdsection[-1:] == '_' else '__'
+        unit.setdefault(mdsection, OD())
+        pos = eat_comments(cfg, metadata_match.span()[1])
+        entry_match = RX_ENTRY.match(cfg, pos)
+        while entry_match:
+            key, value = [group for group in entry_match.groups() if group is not None]
+            value = normalize_code(value, full_normalization=True)
+            unit[mdsection] = value
+            pos = eat_comments(cfg, entry_match.span()[1])
+            entry_match = RX_ENTRY.match(cfg, pos)
+        metadata_match = RX_METADATA_SECTION.match(cfg, pos)
+
+
+    # read test-data
     section_match = RX_SECTION.match(cfg, pos)
     first_section_missing = True
     while section_match:
@@ -187,9 +207,11 @@ def unit_from_config(config_str, filename, allowed_stages=UNIT_STAGES):
 
     if pos != len(cfg) and not re.match(r'\s+$', cfg[pos:]):
         err_head = 'N' if first_section_missing else 'Test NAME:STRING or n'
-        err_str = err_head + 'ew section [TEST:PARSER] expected, ' \
+        err_str = err_head + 'ew section [TEST:PARSER] or [METADATA] expected, ' \
                   + 'where TEST is "match", "fail" or "ast"; in file ' \
-                  + '"%s", line %i' % (filename, cfg[:pos + 1].count('\n') + 1)
+                  + '"%s", line %i: "%s"' \
+                  % (filename, cfg[:pos + 1].count('\n') + 1,
+                     cfg[pos:cfg.find('\n', pos + 1)].strip('\n'))
         raise SyntaxError(err_str)
     return unit
 

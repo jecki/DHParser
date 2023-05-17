@@ -455,7 +455,6 @@ CONFIG_PRESET['flatten_sxpr_threshold'] = 120
 # the same line as the last line of the content.
 CONFIG_PRESET['compact_sxpr_threshold'] = 10
 
-
 # How to treat illegal attribute values when serializing as XML,
 # e.g. attr="<". Possible values are:
 # 'ignore' - faulty attribute values will be serialized nonetheless
@@ -467,11 +466,12 @@ CONFIG_PRESET['compact_sxpr_threshold'] = 10
 # 'fail'  - an error will be raised, when an illegal attribute value
 #           is encountered while serializing a tree as XML. Illegal
 #           attribute values can still be set, though, since they
-#           they concern only the XMl-serialization and not the
+#           concern only the XMl-serialization and not the
 #           S-expression or JSON serialization.
 # Default value = "fail"
 CONFIG_PRESET['xml_attribute_error_handling'] = 'fail'
 ALLOWED_PRESET_VALUES['xml_attribute_error_handling'] = frozenset({'ignore', 'fix', 'lxml', 'fail'})
+
 
 ########################################################################
 #
@@ -492,7 +492,7 @@ CONFIG_PRESET['log_syntax_trees'] = frozenset()
 #
 ########################################################################
 
-# Carries out static analysis on the the parser tree before parsing starts
+# Carries out static analysis on the parser tree before parsing starts
 # to ensure its correctness. EXPERIMENTAL! Possible values are:
 # 'early' - static analysis is carried out by DHParser.ebnf.EBNFCompiler,
 #           already. Any errors it revealed will be located in the EBNF

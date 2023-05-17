@@ -514,6 +514,33 @@ class TestFalsePositives:
         assert errata
 
 
+class TestConfigSwitch:
+    grammar = """document = word { L word }
+    word = /\w+/
+    L    = /\s+/
+    """
+    test_sxml = """
+    [config]
+    ast_serialization = "SXML"
+    
+    [match:document]
+    M1: "The little dog jumped over the hedge"
+    """
+
+    def setup(self):
+        self.save_dir = os.getcwd()
+        os.chdir(scriptpath)
+
+    def teardown(self):
+        clean_report('REPORT')
+        os.chdir(self.save_dir)
+
+    def test_config_switch(self):
+        parser_factory = grammar_provider(TestConfigSwitch.grammar)
+        test_sxml = unit_from_config(TestConfigSwitch.test_sxml, 'test_sxml.ini')
+        errata = grammar_unit(test_sxml, parser_factory, lambda: lambda _:_, 'REPORT')
+
+
 if __name__ == "__main__":
     from DHParser.testing import runner
     runner("", globals())
