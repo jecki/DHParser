@@ -12,6 +12,7 @@ DHParser Version 1.5.0
   of nested Series, Interleave or Alternative parsers into one
   flat parser with a longer list of arguments, because these are
   practically never needed and have undesired side-effects.
+- testing.py: allow to set config-values in test-files.
 - EXPERIMENTAL: started a nim-rewrite of the parser core to increase
   parser speed to the level of a compiled language, i.e. nim (nim-lang.org)
 

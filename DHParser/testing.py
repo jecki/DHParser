@@ -166,7 +166,7 @@ def unit_from_config(config_str, filename, allowed_stages=UNIT_STAGES):
         while entry_match:
             key, value = [group for group in entry_match.groups() if group is not None]
             value = normalize_code(value, full_normalization=True)
-            unit[mdsection] = value
+            unit[mdsection][key] = value
             pos = eat_comments(cfg, entry_match.span()[1])
             entry_match = RX_ENTRY.match(cfg, pos)
         metadata_match = RX_METADATA_SECTION.match(cfg, pos)
@@ -207,7 +207,7 @@ def unit_from_config(config_str, filename, allowed_stages=UNIT_STAGES):
 
     if pos != len(cfg) and not re.match(r'\s+$', cfg[pos:]):
         err_head = 'N' if first_section_missing else 'Test NAME:STRING or n'
-        err_str = err_head + 'ew section [TEST:PARSER] or [METADATA] expected, ' \
+        err_str = err_head + 'ew section [TEST:PARSER] expected, ' \
                   + 'where TEST is "match", "fail" or "ast"; in file ' \
                   + '"%s", line %i: "%s"' \
                   % (filename, cfg[:pos + 1].count('\n') + 1,
@@ -470,9 +470,16 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                     + '\n\t'.join(str(msg).replace('\n', '\n\t\t') for msg in test_errors))
                 # errata.append('\n\n')  # leads to wrong error count!!!
 
+    saved_config_values = dict()
     for parser_name, tests in test_unit.items():
         # if not get_config_value('test_parallelization'):
         #     print('  Testing parser: ' + parser_name)
+        if parser_name[-2:] == '__':
+            assert parser_name == 'config__', f'Unknown metadata-type: "{parser_name}"'
+            for key, value in tests.items():
+                saved_config_values[key] = get_config_value(key)
+                set_config_value(key, value)
+            continue
 
         track_history = get_config_value('history_tracking')
         try:
@@ -716,6 +723,10 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
             with open(os.path.join(report, unit_name + '.md'), 'w', encoding='utf8') as f:
                 f.write(test_report)
                 f.flush()
+
+    # restore changed config values
+    for key, value in saved_config_values.items():
+        set_config_value(key, value)
 
     print('\n'.join(output))
     return errata

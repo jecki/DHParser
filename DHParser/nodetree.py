@@ -1642,7 +1642,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 indentation: int = 2,
                 compact: bool = True,
                 flatten_threshold: int = 92,
-                sxml: bool = False) -> str:
+                sxml: int = 0) -> str:
         """
         Serializes the tree as S-expression, i.e. in lisp-like form. If this
         method is called on a RootNode-object, error strings will be displayed
@@ -1659,9 +1659,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         :param flatten_threshold:  Return the S-expression in flattened form if
             the flattened expression does not exceed the threshold length.
             A negative number means that it will always be flattened.
-        :param sxml:  If True, attributes are rendered according to the
+        :param sxml:  If >= 1, attributes are rendered according to the
             `SXML <https://okmij.org/ftp/Scheme/SXML.html>`_ -conventions,
             e.g. `` (@ (attr "value")`` instead of `` `(attr "value") ``
+            if 2, the attribute node (@) will always be presen, even is empty.
         :returns: A string containing the S-expression serialization of the tree.
         """
         left_bracket, right_bracket, density = ('(', ')', 1) if compact else ('(', ')', 0)
@@ -1682,7 +1683,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             render_pos = node._pos >= 0 and src is not None
             has_errors = root and id(node) in root.error_nodes
             show_attrs = has_attrs or render_pos or has_errors
-            if show_attrs:
+            if show_attrs or sxml >= 2:
                 if sxml:  txt.append(' (@')
                 if has_attrs:
                     txt.extend(attr(k, str(v)) for k, v in node.attr.items())
@@ -1711,14 +1712,17 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 else "'%s'" % strg if strg.find("'") < 0 \
                 else '"%s"' % strg.replace('"', r'\"')
 
+        assert 0 <= sxml <= 2
         sxpr = '\n'.join(self._tree_repr(' ' * indentation, opening, closing, pretty, density=density))
         return flatten_sxpr(sxpr, flatten_threshold)
 
     def as_sxml(self, src: Optional[str] = None,
                 indentation: int = 2,
                 compact: bool = True,
-                flatten_threshold: int = 92) -> str:
-        return self.as_sxpr(src, indentation, compact, flatten_threshold, sxml=True)
+                flatten_threshold: int = 92,
+                normal_form: int = 1) -> str:
+        assert 1 <= normal_form <= 2, "Presently, only sxml normal forms 1 and 2 are supported"
+        return self.as_sxpr(src, indentation, compact, flatten_threshold, sxml=normal_form)
 
     def as_xml(self, src: Optional[str] = None,
                indentation: int = 2,
@@ -2063,9 +2067,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if switch in ('S-expression', 'S-Expression', 's-expression', 'sxpr'):
             return self.as_sxpr(flatten_threshold=get_config_value('flatten_sxpr_threshold'),
                                 compact=exceeds_compact_threshold(self, compact_threshold))
-        elif switch == 'sxml':
+        elif switch[:4] == 'sxml':
+            normal_form = int(switch[-1]) if len(switch) > 4 else 1
             return self.as_sxml(flatten_threshold=get_config_value('flatten_sxpr_threshold'),
-                                compact=exceeds_compact_threshold(self, compact_threshold))
+                                compact=exceeds_compact_threshold(self, compact_threshold),
+                                normal_form=normal_form)
         elif switch == 'xml':
             return self.as_xml(strict_mode=False)
         elif switch == 'html':

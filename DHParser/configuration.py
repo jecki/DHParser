@@ -434,7 +434,8 @@ CONFIG_PRESET['infinite_loop_warning'] = True
 #                  of entries in dictionaries. (e.g. Python < 3.6)
 # Default values: "compact" for concrete syntax trees and "XML" for abstract
 #                 syntax trees and "S-expression" for any other kind of tree.
-_serializations = frozenset({'XML', 'HTML', 'json', 'indented', 'tree', 'S-expression', 'SXML'})
+_serializations = frozenset({'XML', 'HTML', 'json', 'indented', 'tree',
+                             'S-expression', 'SXML', 'SXML1', 'SXML2'})
 CONFIG_PRESET['cst_serialization'] = 'S-expression'
 CONFIG_PRESET['ast_serialization'] = 'S-expression'
 CONFIG_PRESET['default_serialization'] = 'S-expression'

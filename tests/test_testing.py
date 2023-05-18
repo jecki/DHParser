@@ -521,7 +521,7 @@ class TestConfigSwitch:
     """
     test_sxml = """
     [config]
-    ast_serialization = "SXML"
+    ast_serialization: "SXML2"
     
     [match:document]
     M1: "The little dog jumped over the hedge"
@@ -538,7 +538,14 @@ class TestConfigSwitch:
     def test_config_switch(self):
         parser_factory = grammar_provider(TestConfigSwitch.grammar)
         test_sxml = unit_from_config(TestConfigSwitch.test_sxml, 'test_sxml.ini')
+        assert 'config__' in test_sxml
+        assert test_sxml['config__'] == {'ast_serialization': 'SXML2'}
         errata = grammar_unit(test_sxml, parser_factory, lambda: lambda _:_, 'REPORT')
+        fname = os.listdir('REPORT')[0]
+        with open(os.path.join('REPORT', fname), 'r', encoding='utf-8') as f:
+            report = f.read()
+        assert report.find('(@)') >= 0
+
 
 
 if __name__ == "__main__":
