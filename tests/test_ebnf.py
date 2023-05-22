@@ -147,6 +147,21 @@ class TestDirectives:
         st = parser('* Hund*')
         assert str(st) == "*Hund"
 
+    # def test_dont_drop_alternatives(self):
+    #     lang = r"""
+    #         @ drop = strings, whitespace
+    #         @ literalws = right
+    #         doc  = a b c d
+    #         a    = "A"
+    #         b    = "1" | "2"
+    #         c    = a "+" b
+    #         d    = a ("*"|"/") b
+    #         word = /\w+/
+    #     """
+    #     parser = create_parser(lang)
+    #     st = parser('A2A+1A*2')
+    #     assert str(st) == "A2A1A2"
+
     def test_drop_error_messages(self):
         lang = r'''
         @disposable = A
@@ -1813,7 +1828,7 @@ class TestInclude:
     group      = "(" expression ")"
     
     add        = "+"
-    sub       = "-"
+    sub        = "-"
     mul        = "*"
     div        = "/"
     
@@ -1839,6 +1854,7 @@ class TestInclude:
         assert not errors, str(errors)
         parser = create_parser(arithmetic_ebnf)
         tree = parser('2 - (3 * -4.145E+5)')
+        print(tree)
         assert not tree.errors
 
 

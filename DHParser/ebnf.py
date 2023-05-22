@@ -2868,6 +2868,14 @@ class EBNFCompiler(Compiler):
 
     def drop_on(self, category):
         return category in self.directives.drop and self.path[-2].name != "definition"
+        # # exclude the cases like:
+        # # number = "1"
+        # # number = "1" | "2" | "3"
+        # return category in self.directives.drop and \
+        #     (self.path[-2].name != "definition"
+        #      and (self.path[-2].name != "expression" or self.path[-3].name != "definition"
+        #           or
+        #           (any(child.name != 'literal' for child in self.path[-2].children))))
 
 
     def TEXT_PARSER(self, text, drop):
