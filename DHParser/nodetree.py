@@ -110,11 +110,13 @@ __all__ = ('WHITESPACE_PTYPE',
            'LAST_CHILD',
            'select_path_if',
            'select_path',
+           'pick_path_if',
            'pick_path',
            'foregoing_str',
            'ensuing_str',
            'select_from_path_if',
            'select_from_path',
+           'pick_from_path_if',
            'pick_from_path',
            'find_common_ancestor',
            'pp_path',
@@ -2410,14 +2412,33 @@ def select_path(start_path: Path,
                           include_root, reverse, create_path_match_function(skip_subtree))
 
 
+def pick_path_if(start_path: Path,
+                 match_func: PathMatchFunction,
+                 include_root: bool = False,
+                 reverse: bool = False,
+                 skip_subtree: PathSelector = NO_PATH) -> Optional[Path]:
+    """
+    Returns the first path for which match_func becomes True. If no
+    path in the given direction (forward by default or reverse,
+    if paramter reverse is True), None is returned.
+    """
+    try:
+        return next(select_path_if(
+            start_path, match_func, include_root=include_root, reverse=reverse,
+            skip_subtree=skip_subtree))
+    except StopIteration:
+        return None
+
+
 def pick_path(start_path: Path,
               criteria: PathSelector,
               include_root: bool = False,
               reverse: bool = False,
               skip_subtree: PathSelector = NO_PATH) -> Optional[Path]:
     """
-    Like ``Node.pick()``, only that the entire path (i.e. chain of descendants)
-    relative to `self` is returned.
+    Returns the first path for which the criterion matches. If no
+    path in the given direction (forward by default or reverse,
+    if paramter reverse is True), None is returned.
     """
     try:
         return next(select_path(
@@ -2445,6 +2466,17 @@ def select_from_path(path: Path, criteria: NodeSelector, reverse: bool=False) \
         -> Iterator[Node]:
     """Yields all nodes from path which fulfill the criterion."""
     return select_from_path_if(path, create_match_function(criteria), reverse)
+
+
+def pick_from_path_if(path: Path,
+                      match_func: NodeMatchFunction,
+                      reverse: bool=False) -> Optional[Node]:
+    """Picks the first node from the path for which match_func is True. Returns
+    `None` if the path does not contain any node for which this is the case."""
+    try:
+        return next(select_from_path(path, match_func, reverse=reverse))
+    except StopIteration:
+        return None
 
 
 def pick_from_path(path: Path, criterion: NodeSelector, reverse: bool=False) \
