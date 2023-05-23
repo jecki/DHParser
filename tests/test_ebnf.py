@@ -156,11 +156,22 @@ class TestDirectives:
     #         b    = "1" | "2"
     #         c    = a "+" b
     #         d    = a ("*"|"/") b
-    #         word = /\w+/
     #     """
     #     parser = create_parser(lang)
     #     st = parser('A2A+1A*2')
     #     assert str(st) == "A2A1A2"
+
+    def test_dont_drop_sequence(self):
+        lang = r"""
+            @ drop = strings, backticked, whitespace
+            @ literalws = right
+            doc  = a b
+            a    = "A"
+            b    = `1` `2`
+        """
+        parser = create_parser(lang)
+        st = parser('A12')
+        assert str(st) == "A"
 
     def test_drop_error_messages(self):
         lang = r'''
