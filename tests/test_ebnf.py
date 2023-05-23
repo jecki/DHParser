@@ -173,6 +173,13 @@ class TestDirectives:
         st = parser('A12')
         assert str(st) == "A"
 
+    def test_no_drop_clause_for_non_dropping_defs(self):
+        lang = r"""@drop = regexps
+        CMDNAME    = /\\@?(?:(?![\d_])\w)+/~
+        """
+        parser = create_parser(lang)
+        assert parser.python_src__.find('CMDNAME = Series(RegExp(') >= 0
+
     def test_drop_error_messages(self):
         lang = r'''
         @disposable = A

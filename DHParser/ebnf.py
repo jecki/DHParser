@@ -2442,7 +2442,7 @@ class EBNFCompiler(Compiler):
         """
         arguments = [self.compile(r) for r in node.children] + custom_args
         assert all(isinstance(arg, str) for arg in arguments), str(arguments)
-        # remove drop clause for non dropping definitions of forms like "/\w+/~"
+        # remove drop clause for non-dropping definitions of forms like "/\w+/~"
         parser_class = self.P.get(parser_class, parser_class)
         drop_clause = f'{self.P["Drop"]}('
         drop_regexp = drop_clause + f'{self.P["RegExp"]}('
