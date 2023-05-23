@@ -2448,9 +2448,11 @@ class EBNFCompiler(Compiler):
         drop_regexp = drop_clause + f'{self.P["RegExp"]}('
         drop_text = drop_clause + f'{self.P["Text"]}('
         if (parser_class == self.P["Series"] and node.name not in self.directives.drop
+            and len(arguments) <= 2
             and DROP_REGEXP in self.directives.drop and self.path[-2].name == "definition"
             and all((arg.startswith(drop_regexp) or arg.startswith(drop_text)
-                     or arg in EBNFCompiler.COMMENT_OR_WHITESPACE) for arg in arguments)):
+                     or arg in EBNFCompiler.COMMENT_OR_WHITESPACE) for arg in arguments)
+                and any(arg in EBNFCompiler.COMMENT_OR_WHITESPACE for arg in arguments)):
             arguments = [arg.replace(drop_clause, '').replace('))', ')') for arg in arguments]
         if self.drop_flag:
             return drop_clause + parser_class + '(' + ', '.join(arguments) + '))'
