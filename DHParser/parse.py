@@ -605,6 +605,72 @@ class Parser:
         # grammar = self._grammar
         self.visited: MemoizationDict = self._grammar.get_memoization_dict__(self)
 
+    @cython.locals(next_location=cython.int, location=cython.int, gap=cython.int, i=cython.int)
+    def _handle_parsing_error(self, pe: ParserError, location: cython.int) -> ParsingResult:
+        grammar = self._grammar
+        gap = pe.location - location
+        rules = tuple(grammar.resume_rules__.get(self.symbol, []))
+        next_location = pe.location + pe.node_orig_len
+        rest = grammar.document__[next_location:]
+        i, skip_node = reentry_point(rest, rules, grammar.comment_rx__,
+                                     grammar.reentry_search_window__)
+        if i >= 0 or self == grammar.start_parser__:
+            # either a reentry point was found or the
+            # error has fallen through to the first level
+            assert pe.node._children or (not pe.node.result)
+            # apply reentry-rule or catch error at root-parser
+            if i < 0:  i = 0
+            try:
+                zombie = pe.node.pick_child(ZOMBIE_TAG)  # type: Optional[Node]
+            except (KeyError, ValueError):
+                zombie = None
+            if zombie and not zombie.result:
+                zombie.result = rest[:i]
+                tail = tuple()  # type: ChildrenType
+            else:
+                # nd.attr['err'] = pe.error.message
+                tail = (skip_node,)
+            next_location += i
+            if pe.first_throw:
+                node = pe.node
+                node.result = node._children + tail
+            else:
+                cut = grammar.document__[location:location + gap]
+                node = Node(
+                    self.node_name,
+                    (Node(ZOMBIE_TAG, cut).with_pos(location), pe.node) + tail) \
+                    .with_pos(location)
+        # if no re-entry point was found, do any of the following:
+        elif pe.first_throw:
+            # just fall through
+            # TODO: Is this case still needed with module "trace"?
+            raise pe.new_PE(first_throw=False)
+        elif grammar.tree__.errors[-1].code in \
+                (MANDATORY_CONTINUATION_AT_EOF, MANDATORY_CONTINUATION_AT_EOF_NON_ROOT):
+            # try to create tree as faithful as possible
+            node = Node(self.node_name, pe.node).with_pos(location)
+        else:
+            # fall through but skip the gap
+            cut = grammar.document__[location:location + gap]
+            result = (Node(ZOMBIE_TAG, cut).with_pos(location), pe.node) if gap \
+                else pe.node  # type: ResultType
+            raise pe.new_PE(node=Node(self.node_name, result).with_pos(location),
+                            node_orig_len=pe.node_orig_len + gap,
+                            location=location, first_throw=False)
+        return node, next_location
+
+    def _handle_recursion_error(self) -> ParsingResult:
+        grammar = self._grammar
+        text = grammar.document__[location:]
+        node = Node(ZOMBIE_TAG, str(text[:min(10, max(1, text.find("\n")))]) + " ...")
+        node._pos = location
+        error = Error("maximum recursion depth of parser reached; potentially due to too many "
+                      "errors or left recursion!", location, RECURSION_DEPTH_LIMIT_HIT)
+        grammar.tree__.add_error(node, error)
+        grammar.most_recent_error__ = ParserError(self, node, node.strlen(), location, error,
+                                                  first_throw=False)
+        next_location = len(grammar.document__)
+
     @cython.locals(next_location=cython.int, gap=cython.int, i=cython.int, save_suspend_memoization=cython.bint)
     def __call__(self: Parser, location: cython.int) -> ParsingResult:
         """Applies the parser to the given text. This is a wrapper method that adds
@@ -634,55 +700,7 @@ class Parser:
                 node, next_location = self._parse_proxy(location)
             except ParserError as pe:
                 # catching up with parsing after an error occurred
-                gap = pe.location - location
-                rules = tuple(grammar.resume_rules__.get(self.symbol, []))
-                next_location = pe.location + pe.node_orig_len
-                rest = grammar.document__[next_location:]
-                i, skip_node = reentry_point(rest, rules, grammar.comment_rx__,
-                                             grammar.reentry_search_window__)
-                if i >= 0 or self == grammar.start_parser__:
-                    # either a reentry point was found or the
-                    # error has fallen through to the first level
-                    assert pe.node._children or (not pe.node.result)
-                    # apply reentry-rule or catch error at root-parser
-                    if i < 0:  i = 0
-                    try:
-                        zombie = pe.node.pick_child(ZOMBIE_TAG)  # type: Optional[Node]
-                    except (KeyError, ValueError):
-                        zombie = None
-                    if zombie and not zombie.result:
-                        zombie.result = rest[:i]
-                        tail = tuple()  # type: ChildrenType
-                    else:
-                        # nd.attr['err'] = pe.error.message
-                        tail = (skip_node,)
-                    next_location += i
-                    if pe.first_throw:
-                        node = pe.node
-                        node.result = node._children + tail
-                    else:
-                        cut = grammar.document__[location:location + gap]
-                        node = Node(
-                            self.node_name,
-                            (Node(ZOMBIE_TAG, cut).with_pos(location), pe.node) + tail) \
-                            .with_pos(location)
-                # if no re-entry point was found, do any of the following:
-                elif pe.first_throw:
-                    # just fall through
-                    # TODO: Is this case still needed with module "trace"?
-                    raise pe.new_PE(first_throw=False)
-                elif grammar.tree__.errors[-1].code in \
-                        (MANDATORY_CONTINUATION_AT_EOF, MANDATORY_CONTINUATION_AT_EOF_NON_ROOT):
-                    # try to create tree as faithful as possible
-                    node = Node(self.node_name, pe.node).with_pos(location)
-                else:
-                    # fall through but skip the gap
-                    cut = grammar.document__[location:location + gap]
-                    result = (Node(ZOMBIE_TAG, cut).with_pos(location), pe.node) if gap \
-                        else pe.node  # type: ResultType
-                    raise pe.new_PE(node=Node(self.node_name, result).with_pos(location),
-                                    node_orig_len=pe.node_orig_len + gap,
-                                    location=location, first_throw=False)
+                node, next_location = self._handle_parsing_error(pe, location)
 
             if node is None:
                 if location > grammar.ff_pos__:
@@ -690,22 +708,12 @@ class Parser:
                     grammar.ff_parser__ = self
             elif node is not EMPTY_NODE:
                 node._pos = location
-            # grammar.suspend_memoization__ = is_context_sensitive(self.parser)
+
             if not grammar.suspend_memoization__:
                 visited[location] = (node, next_location)
                 grammar.suspend_memoization__ = save_suspend_memoization
-
         except RecursionError:
-            text = grammar.document__[location:]
-            node = Node(ZOMBIE_TAG, str(text[:min(10, max(1, text.find("\n")))]) + " ...")
-            node._pos = location
-            error = Error("maximum recursion depth of parser reached; potentially due to too many "
-                          "errors or left recursion!", location, RECURSION_DEPTH_LIMIT_HIT)
-            grammar.tree__.add_error(node, error)
-            grammar.most_recent_error__ = ParserError(self, node, node.strlen(), location, error,
-                                                      first_throw=False)
-            next_location = len(grammar.document__)
-
+            node, next_location = self._handle_recursion_error()
         return node, next_location
 
     def __add__(self, other: Parser) -> 'Series':
@@ -939,6 +947,95 @@ class Parser:
         """Analyses the parser for logical errors after the grammar has been
         instantiated."""
         return []
+
+
+class LeafParser(Parser):
+    """Base-Class for leaf-parsers. A leaf-parser is a parser that does
+    not call any other parsers."""
+
+    def __call__(self: Parser, location: cython.int) -> ParsingResult:
+        """Applies the parser to the given text. This is a wrapper method that adds
+        the business intelligence that is common to all parsers. The actual parsing is
+        done in the overridden method ``_parse()``. This wrapper-method can be thought of
+        as a "parser guard", because it guards the parsing process.
+        """
+        grammar = self._grammar
+
+        try:
+            # rollback variable changing operation if parser backtracks to a position
+            # before or at the location where the variable changing operation occurred
+            if location <= grammar.last_rb__loc__:
+                grammar.rollback_to__(location)
+
+            # if location has already been visited by the current parser, return saved result
+            visited = self.visited  # using local variable for better performance
+            if location in visited:
+                # no history recording in case of memoized results!
+                return visited[location]
+
+            # now, the actual parser call!
+            try:
+                node, next_location = self._parse_proxy(location)
+            except ParserError as pe:
+                # catching up with parsing after an error occurred
+                node, next_location = self._handle_parsing_error(pe, location)
+
+            if node is None:
+                if location > grammar.ff_pos__:
+                    grammar.ff_pos__ = location
+                    grammar.ff_parser__ = self
+            elif node is not EMPTY_NODE:
+                node._pos = location
+
+            visited[location] = (node, next_location)
+        except RecursionError:
+            node, next_location = self._handle_recursion_error()
+        return node, next_location
+
+
+class BlackHoleDict(dict):
+    """A dictionary that always stays empty. Usae case:
+    Disabling memoization."""
+    def __setitem__(self, key, value):
+        return
+
+
+class NoMemoizationParser(LeafParser):
+    """Base class for parsers that should not memoize"""
+
+    @cython.locals(next_location=cython.int, gap=cython.int, i=cython.int, save_suspend_memoization=cython.bint)
+    def __call__(self: Parser, location: cython.int) -> ParsingResult:
+        """Like Parser.__call__, but without memoization"""
+        grammar = self._grammar
+
+        try:
+            # rollback variable changing operation if parser backtracks to a position
+            # before or at the location where the variable changing operation occurred
+            if location <= grammar.last_rb__loc__:
+                grammar.rollback_to__(location)
+
+            # now, the actual parser call!
+            try:
+                node, next_location = self._parse_proxy(location)
+            except ParserError as pe:
+                # catching up with parsing after an error occurred
+                node, next_location = self._handle_parsing_error(pe, location)
+
+            if node is None:
+                if location > grammar.ff_pos__:
+                    grammar.ff_pos__ = location
+                    grammar.ff_parser__ = self
+            elif node is not EMPTY_NODE:
+                node._pos = location
+
+        except RecursionError:
+            node, next_location = self._handle_recursion_error()
+
+        return node, next_location
+
+
+    def gen_memoization_dict(self) -> dict:
+        return BlackHoleDict()
 
 
 def copy_parser_base_attrs(src: Parser, duplicate: Parser):
@@ -2140,7 +2237,10 @@ def is_grammar_placeholder(grammar: Optional[Grammar]) -> bool:
 #
 ########################################################################
 
-class Unparameterized(Parser):
+
+
+
+class Unparameterized(NoMemoizationParser):
     """Unparameterized parsers do not receive any parameters on instantiation.
     As a consequence, different instances of the same unparameterized
     parser are always functionally equivalent."""
@@ -2181,7 +2281,7 @@ class AnyChar(Unparameterized):
             return None, location
 
 
-class PreprocessorToken(Parser):
+class PreprocessorToken(LeafParser):
     """
     Parses tokens that have been inserted by a preprocessor.
 
@@ -2271,7 +2371,7 @@ def extract_error_code(err_msg: str, err_code: ErrorCode=ERROR) -> Tuple[str, Er
     return err_msg, err_code
 
 
-class ERR(Parser):
+class ERR(LeafParser):
     """ERR is a pseudo-parser does not consume any text, but adds an error
     message at the current location."""
 
@@ -2302,7 +2402,8 @@ class ERR(Parser):
 #
 ########################################################################
 
-class Text(Parser):
+
+class Text(NoMemoizationParser):
     """
     Parses plain text strings. (Could be done by RegExp as well, but is faster.)
 
@@ -2348,7 +2449,7 @@ class Text(Parser):
         return self.__class__.__name__, self.text
 
 
-class RegExp(Parser):
+class RegExp(LeafParser):
     r"""
     Regular expression parser.
 
@@ -3953,14 +4054,7 @@ def is_context_sensitive(parser: Parser) -> bool:
     return any(isinstance(p, ContextSensitive) for p in parser.descendants)
 
 
-class BlackHoleDict(dict):
-    """A dictionary that always stays empty. Usae case:
-    Disabling memoization."""
-    def __setitem__(self, key, value):
-        return
-
-
-class ContextSensitive(UnaryParser):
+class ContextSensitive(UnaryParser, NoMemoizationParser):
     """Base class for context-sensitive parsers.
 
     Context-Sensitive-Parsers are parsers that either manipulate
@@ -3981,9 +4075,6 @@ class ContextSensitive(UnaryParser):
     proportional to the size of the document, anymore. Therefore,
     it is recommended to use context-sensitive-parsers sparingly.
     """
-
-    def gen_memoization_dict(self) -> dict:
-        return BlackHoleDict()
 
     def _rollback_location(self, location: cython.int, location_: cython.int) -> cython.int:
         """
