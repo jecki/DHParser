@@ -558,7 +558,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                     # fail hard when trying a compiliation test with a non-existing
                     # parser (resp. node-type), because otherwise obscure subsequent
                     # errors can occur. (Eventually develop a better solution, that ist...)
-                    raise SyntaxError(
+                    raise ValueError(
                         f'Unknown parser "{parser_name}" in test(s) '
                         f'{", ".join([repr(t) for t in tests.keys()])} in unit "{unit_name}"!')
                 old_errors = set(ast.errors)
