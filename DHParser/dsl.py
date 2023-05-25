@@ -995,7 +995,7 @@ def process_file(source: str, out_dir: str,
     errors.sort(key=lambda e: e.pos)
     if errors:
         err_ext = '_ERRORS.txt' if has_errors(errors, ERROR) else '_WARNINGS.txt'
-        err_filename = dest_name + err_ext
+        err_filename = os.path.join(out_dir, dest_name + err_ext)
         with open(err_filename, 'w', encoding='utf-8') as f:
             f.write('\n'.join(canonical_error_strings(errors)))
         return err_filename

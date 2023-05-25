@@ -659,7 +659,7 @@ class Parser:
                             location=location, first_throw=False)
         return node, next_location
 
-    def _handle_recursion_error(self) -> ParsingResult:
+    def _handle_recursion_error(self, location: int) -> ParsingResult:
         grammar = self._grammar
         text = grammar.document__[location:]
         node = Node(ZOMBIE_TAG, str(text[:min(10, max(1, text.find("\n")))]) + " ...")
@@ -713,7 +713,7 @@ class Parser:
                 visited[location] = (node, next_location)
                 grammar.suspend_memoization__ = save_suspend_memoization
         except RecursionError:
-            node, next_location = self._handle_recursion_error()
+            node, next_location = self._handle_recursion_error(location)
         return node, next_location
 
     def __add__(self, other: Parser) -> 'Series':
@@ -989,7 +989,7 @@ class LeafParser(Parser):
 
             visited[location] = (node, next_location)
         except RecursionError:
-            node, next_location = self._handle_recursion_error()
+            node, next_location = self._handle_recursion_error(location)
         return node, next_location
 
 
@@ -1029,7 +1029,7 @@ class NoMemoizationParser(LeafParser):
                 node._pos = location
 
         except RecursionError:
-            node, next_location = self._handle_recursion_error()
+            node, next_location = self._handle_recursion_error(location)
 
         return node, next_location
 
@@ -4067,7 +4067,7 @@ def is_context_sensitive(parser: Parser) -> bool:
     return any(isinstance(p, ContextSensitive) for p in parser.descendants)
 
 
-class ContextSensitive(UnaryParser, NoMemoizationParser):
+class ContextSensitive(UnaryParser):
     """Base class for context-sensitive parsers.
 
     Context-Sensitive-Parsers are parsers that either manipulate
@@ -4088,6 +4088,8 @@ class ContextSensitive(UnaryParser, NoMemoizationParser):
     proportional to the size of the document, anymore. Therefore,
     it is recommended to use context-sensitive-parsers sparingly.
     """
+
+    __call__ = NoMemoizationParser.__call__
 
     def _rollback_location(self, location: cython.int, location_: cython.int) -> cython.int:
         """

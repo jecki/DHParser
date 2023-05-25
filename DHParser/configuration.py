@@ -433,12 +433,13 @@ CONFIG_PRESET['infinite_loop_warning'] = True
 #                  of data by JSON parsers that are not aware of the order
 #                  of entries in dictionaries. (e.g. Python < 3.6)
 # Default values: "compact" for concrete syntax trees and "XML" for abstract
-#                 syntax trees and "S-expression" for any other kind of tree.
+#                 syntax trees and "sxpr" (read "S-Expression") for any other
+#                 kind of tree.
 _serializations = frozenset({'XML', 'HTML', 'json', 'indented', 'tree',
-                             'S-expression', 'SXML', 'SXML1', 'SXML2'})
-CONFIG_PRESET['cst_serialization'] = 'S-expression'
-CONFIG_PRESET['ast_serialization'] = 'S-expression'
-CONFIG_PRESET['default_serialization'] = 'S-expression'
+                             'sxpr', 'SXML', 'SXML1', 'SXML2'})
+CONFIG_PRESET['cst_serialization'] = 'sxpr'
+CONFIG_PRESET['ast_serialization'] = 'sxpr'
+CONFIG_PRESET['default_serialization'] = 'sxpr'
 ALLOWED_PRESET_VALUES['cst_serialization'] = _serializations
 ALLOWED_PRESET_VALUES['ast_serialization'] = _serializations
 ALLOWED_PRESET_VALUES['default_serialization'] = _serializations

@@ -34,6 +34,12 @@ cdef class Parser:
     # cpdef _apply(self, func, ptrail, flip)
     cpdef apply(self, func)
 
+cdef class LeafParser(Parser):
+    pass
+
+cdef class NoMemoizationParser(LeafParser):
+    pass
+
 # cpdef mixin_comment(whitespace, str)
 
 # cpdef mixin_nonempty(whitespace)
@@ -68,14 +74,14 @@ cdef class Grammar:
     # cdef public object static_analysis_errors__
     # cdef public object parser_names
 
-cdef class PreprocessorToken(Parser):
+cdef class PreprocessorToken(LeafParser):
     pass
 
-cdef class Text(Parser):
+cdef class Text(NoMemoizationParser):
     cdef public str text
     cdef public int len
 
-cdef class RegExp(Parser):
+cdef class RegExp(LeafParser):
     cdef public object regexp
 
 cdef class Whitespace(RegExp):

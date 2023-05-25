@@ -553,15 +553,14 @@ def process_tree(tp: CompilerFunc, tree: RootNode) -> Any:
             try:
                 result = tp(tree)
             except Exception as e:
-                # node = tp.path[-1] if hasattr(tp, 'path') and tp.path else tree
                 node = (getattr(tp, 'path', [tree]) or [tree])[-1]
-                st = traceback.format_list(traceback.extract_tb(e.__traceback__))
-                trace = ''.join(st)  # filter_stacktrace(st)
+                # st = traceback.format_list(traceback.extract_tb(e.__traceback__))
+                # trace = ''.join(st)  # filter_stacktrace(st)
                 tree.new_error(
                     node, "Tree-processing failed, most likely, due to errors earlier in "
-                          "in the processing pipeline. Crash Message: %s: %s\n%s"
-                          % (e.__class__.__name__, str(e), trace),
-                    TREE_PROCESSING_CRASH)
+                          "in the processing pipeline.", TREE_PROCESSING_CRASH)
+                          # "Crash Message: %s: %s\n%s" % (e.__class__.__name__, str(e), trace),
+                          # TREE_PROCESSING_CRASH)
         else:
             # assume Python crashes are programming mistakes, so let
             # the exceptions through

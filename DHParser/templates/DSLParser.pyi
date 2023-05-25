@@ -143,8 +143,13 @@ def main(called_from_app=False) -> bool:
     if args.singlethread:
         set_config_value('batch_processing_parallelization', False)
 
-    if args.xml:
-        RESULT_FILE_EXTENSION = '.xml'
+    if args.xml:  outfmt = 'xml'
+    elif args.sxpr:  outfmt = 'sxpr'
+    elif args.sxml:  outfmt = 'sxml'
+    elif args.tree:  outfmt = 'tree'
+    elif args.json:  outfmt = 'json'
+    else:  outfmt = get_config_value('default_serialization')
+    serializations['*'] = [outfmt]
 
     def echo(message: str):
         if args.verbose:
@@ -181,12 +186,6 @@ def main(called_from_app=False) -> bool:
 
         if not errors or (not has_errors(errors, ERROR)) \
                 or (not has_errors(errors, FATAL) and args.force):
-            if args.xml:  outfmt = 'xml'
-            elif args.sxpr:  outfmt = 'sxpr'
-            elif args.sxml:  outfmt = 'sxml'
-            elif args.tree:  outfmt = 'tree'
-            elif args.json:  outfmt = 'json'
-            else:  outfmt = 'default'
             print(result.serialize(how=outfmt) if isinstance(result, Node) else result)
             if errors:  print('\n---')
 
