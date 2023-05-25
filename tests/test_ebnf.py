@@ -882,20 +882,13 @@ class TestErrorCustomizationErrors:
         l3 = [zeile for zeile in l2 if not zeile.lstrip().startswith('mitte')]
         lang3 = '\n'.join(l3).replace('mitte', '(`M` §"ITTE")')
         result, messages, ast = compile_ebnf(lang3)
-        # print(lang3)
-        # print(result)
         assert not messages, str(messages)
 
         parser = create_parser(lang3)
         cst = parser('ANFANGMITTEENDE')
         assert not cst.errors
-        # parser.root_parser__.apply(lambda p: p.reset())
-        # for p in parser.all_parsers__:
-        #     if len(p.visited) > 0:
-        #         print(p.name, p)
         cst = parser('ANFANGMISSEENDE')
         assert cst.errors
-        # print(cst.as_sxpr())
         assert 'alles' in cst and 'ZOMBIE__' in cst['alles'] and 'ende' in cst['alles']
 
     def test_multiple_resume_definitions(self):
@@ -1129,7 +1122,6 @@ class TestCustomizedResumeParsing_with_Parsers:
             # ALPHA_RESUME = { !`BETA` !`GAMMA` /./ }
             """
         gr = grammar_provider(lang)()
-        # print(gr.python_src__)
         content = 'ALPHA abc BETA bad GAMMA cab .'
         cst = gr(content)
         assert cst.error_flag
@@ -1872,7 +1864,6 @@ class TestInclude:
         assert not errors, str(errors)
         parser = create_parser(arithmetic_ebnf)
         tree = parser('2 - (3 * -4.145E+5)')
-        print(tree)
         assert not tree.errors
 
 

@@ -1871,6 +1871,16 @@ class Grammar:
                 result, location = pe.node, L
             if result is EMPTY_NODE:  # don't ever deal out the EMPTY_NODE singleton!
                 result = Node(EMPTY_PTYPE, '').with_pos(0)
+
+            ## begin of error-handling
+
+            # form here on, it is only error handling in case the parser failed,
+            # e.g. because of incomplete match.
+
+            # Not very elegant code, but there are many special cases to consider, e.g.
+            # in order to allow proper error-reporting when testing sub-parsers with
+            # lookaheads etc.
+
             if location < L and complete_match:
                 rest = self.document__[location:]
                 fwd = rest.find("\n") + 1 or len(rest)
@@ -1959,8 +1969,8 @@ class Grammar:
                                 .with_pos(tail_pos(stitches)))
             result = Node(ZOMBIE_TAG, tuple(stitches)).with_pos(0)
         if any(self.variables__.values()):
-                # capture stack not empty will only be reported for root-parsers
-                # to avoid false negatives when testing
+            # capture stack not empty will only be reported for root-parsers
+            # to avoid false negatives when testing
             error_msg = "Capture-stack not empty after end of parsing: " \
                 + ', '.join(f'{v} {len(l)} {"items" if len(l) > 1 else "item"}'
                             for v, l in self.variables__.items() if len(l) >= 1)
@@ -1985,6 +1995,9 @@ class Grammar:
                     result.result = result.children + (error_node,)
                 else:
                     self.tree__.new_error(result, error_msg, error_code)
+
+        ## end of error-handling
+
         self.tree__.swallow(result, self.text__, source_mapping)
         self.tree__.stage = 'cst'
         # if not self.tree__.source:  self.tree__.source = document
