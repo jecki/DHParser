@@ -143,6 +143,7 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar
     last_value, matching_bracket, optional_last_value
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \\
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
+from DHParser.stringview import StringView
 from DHParser.toolkit import is_filename, load_if_file, cpu_count, RX_NEVER_MATCH, \\
     ThreadLocalSingletonFactory, expand_table
 from DHParser.trace import set_tracer, resume_notices_on, trace_history
@@ -1079,6 +1080,26 @@ preprocessing: PseudoJunction = create_preprocess_transition(
 '''
 
 
+CUSTOM_PARSER_EXAMPLE = '''
+# Examples for custom parsers. Use these as role models for your own 
+# Python-implemented parsing-functions
+
+# 1. Plain parsing function (denoted as "@pCustom(parse_word)" is the grammar)
+
+def parse_word(s: StringView) -> Optional[Node]:
+    m = s.match(r'\\w+')
+    if m: 
+        return Node('word', s[:m.end()])
+    return None
+
+# 2. Simple parser generator: like plain parser function, but looks
+#    in the grammar, i.e. "@parse_word()"
+
+
+
+'''
+
+
 GRAMMAR_FACTORY = '''
     
 parsing: PseudoJunction = create_parser_transition(
@@ -1464,6 +1485,11 @@ class EBNFCompiler(Compiler):
         rs = repr(comment_re) if comment_re else 'NEVER_MATCH_PATTERN'
         return PREPROCESSOR_FACTORY.format(NAME=self.grammar_name, COMMENT__=rs)
 
+    def gen_custom_parser_example(self) -> str:
+        """
+        Returns Python-example-code for a custom parser.
+        """
+        return CUSTOM_PARSER_EXAMPLE
 
     def gen_transformer_skeleton(self) -> str:
         """

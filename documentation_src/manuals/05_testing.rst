@@ -97,8 +97,41 @@ glob-pattern ``*_test_*.ini``.
     the test in the IDE's file-manager and pick the tool
     from the menu to run a particular test. 
     
-    This works pretty 
-    well with PyCharm, but is alos possible with most other
-    integrated development environments or code-editors.
+    This works pretty well with PyCharm, but is alos possible 
+    with most other integrated development environments or 
+    code-editors.
 
+TO BE CONTINUED...
+
+
+Test and Development-Workflows
+------------------------------
+
+- Test Driven Grammar-Development
+- Particularly useful for the restructuring of human written 
+  semi-formal noations with formal grammars!
+
+
+Monitoring AST-creation 
+-----------------------
+
+- ASTs can and should be tested, too
+- No structural validation supported as of now. (Use XML-serialization
+  and Relax NG for this)
+
+
+Testing the processing-pipeline
+-------------------------------
+
+- Also, later stages of the processing pipeline can be tested with
+  the same apparaturs as long as their results are serializable
+
+
+Conventional Unit-Testing
+-------------------------
+
+- Sometimes it becomes necessary to fallback to conventional
+  unit-testing.
+
+- How this is done
 

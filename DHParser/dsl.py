@@ -23,6 +23,7 @@ of domain specific languages based on an EBNF-grammar.
 from __future__ import annotations
 
 from collections import namedtuple
+import concurrent.futures
 from functools import partial, lru_cache
 import inspect
 import os
@@ -40,15 +41,17 @@ from DHParser.ebnf import EBNFCompiler, grammar_changed, DHPARSER_IMPORTS, \
 from DHParser.error import Error, is_error, has_errors, only_errors, canonical_error_strings, \
     CANNOT_VERIFY_TRANSTABLE_WARNING, ErrorCode, ERROR
 from DHParser.log import suspend_logging, resume_logging, is_logging, log_dir, append_log
-from DHParser.nodetree import Node, RootNode
-from DHParser.parse import Grammar, ParserFactory, ParserFunc
+from DHParser.nodetree import Node
+from DHParser.parse import Grammar, ParserFactory
 from DHParser.preprocess import nil_preprocessor, Tokenizer, PreprocessorFunc, \
-    gen_find_include_func, make_preprocessor, chain_preprocessors, preprocess_includes, PreprocessorFactory
-from DHParser.stringview import StringView
+    gen_find_include_func, make_preprocessor, chain_preprocessors, preprocess_includes, \
+    PreprocessorFactory
 from DHParser.trace import set_tracer, trace_history, resume_notices_on
-from DHParser.transform import TransformerFunc, TransformationDict, transformer, TransformerFactory
+from DHParser.transform import TransformerFunc, TransformationDict, transformer, \
+    TransformerFactory
 from DHParser.toolkit import DHPARSER_DIR, load_if_file, is_python_code, is_filename, \
-    compile_python_object, re, as_identifier, ThreadLocalSingletonFactory, cpu_count, deprecated
+    compile_python_object, re, as_identifier, ThreadLocalSingletonFactory, cpu_count, \
+    deprecated, instantiate_executor
 from DHParser.versionnumber import __version__, __version_info__
 
 
@@ -101,6 +104,7 @@ RX_WHITESPACE = re.compile(r'\s*')
 
 SYMBOLS_SECTION = "SYMBOLS SECTION - Can be edited. Changes will be preserved."
 PREPROCESSOR_SECTION = "PREPROCESSOR SECTION - Can be edited. Changes will be preserved."
+CUSTOM_PARSER_SECTION = "CUSTOM PARSER Section - Can be edited. Changes will be preserved."
 PARSER_SECTION = "PARSER SECTION - Don't edit! CHANGES WILL BE OVERWRITTEN!"
 AST_SECTION = "AST SECTION - Can be edited. Changes will be preserved."
 COMPILER_SECTION = "COMPILER SECTION - Can be edited. Changes will be preserved."
@@ -277,6 +281,7 @@ def compileEBNF(ebnf_src: str, branding="DSL") -> str:
            SECTION_MARKER.format(marker=SYMBOLS_SECTION),
            DHPARSER_IMPORTS, VERSION_CHECK,
            SECTION_MARKER.format(marker=PREPROCESSOR_SECTION), compiler.gen_preprocessor_skeleton(),
+           SECTION_MARKER.format(marker=CUSTOM_PARSER_SECTION), compiler.gen_custom_parser_example(),
            SECTION_MARKER.format(marker=PARSER_SECTION), compiler.result,
            SECTION_MARKER.format(marker=AST_SECTION), compiler.gen_transformer_skeleton(),
            SECTION_MARKER.format(marker=COMPILER_SECTION), compiler.gen_compiler_skeleton(),
@@ -1015,9 +1020,6 @@ def batch_process(file_names: List[str], out_dir: str,
     error messages to the directory `our_dir`. Returns a list of error
     messages files.
     """
-    import concurrent.futures
-    from DHParser.toolkit import instantiate_executor
-
     def collect_results(res_iter, file_names, log_func, cancel_func) -> List[str]:
         error_list = []
         if cancel_func(): return error_list

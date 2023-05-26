@@ -1940,7 +1940,40 @@ without explicitly passing them as parameters::
 A limitation of DHParser's macro-system is that there is no way to
 define new symbols inside a macro-definition.
 
-For a more detailed example, see :any:`macros`.
+Here is a simple example for the use of macros to highlight particular
+words when parsing a text::
+
+    >>> hilight_grammar = '''@reduction = merge
+    ...     song = { $skip("rain") rain } [$skip("rain")] EOF
+    ...     $skip($phrase) = { !$phrase /.|\\n/ }
+    ...     rain  = "rain"
+    ...     EOF   = !/.|\\n/'''
+
+    >>> hilight_parser = create_parser(hilight_grammar)
+    >>> song = """
+    ...     I'm singin' in the rain
+    ...     Just singin' in the rain
+    ...     What a glorious feeling
+    ...     I'm happy again."""
+    
+    >>> syntax_tree = hilight_parser(song)
+    >>> print(syntax_tree.as_sxpr())  
+    (song
+      (skip
+        ""
+        "    I'm singin' in the ")
+      (rain "rain")
+      (skip
+        ""
+        "    Just singin' in the ")
+      (rain "rain")
+      (skip
+        ""
+        "    What a glorious feeling"
+        "    I'm happy again.")
+      (EOF))
+
+For another, more detailed example, see :any:`macros`.
 
 .. _context_sensitive_parsers:
 
@@ -2479,14 +2512,19 @@ advantageous. These include cases, where it is easier to write a parser in
 Python, where a Python-parser might be faster, or where a parser cannot be coded
 in EBNF, say, because it requires as Turing-complete programming languages.
 
-A kind of parser that is a bit tedious to code in EBNF is a search parser. In
-the simplest imaginable case (e.g. ignoring comments ignoring nested structures,
-where the search phrase might occur, but should not be found) you could write
-``{ !"search_phrase" /.|\\n/ }``. Be wary that this search parser could land you in
-the middle of a comment, e.g. when "searching" for "rain" in the line ``I'm
-singing in # the rain`` (assuming ``#`` as the comment sign). So it is better to
-write ``{ !"search_phrase" (~ | /.|\\n/) }``. To keep the example simple, we'll leave
-such worries aside in the following::
+Custom-parser example
+^^^^^^^^^^^^^^^^^^^^^
+
+As you might remember from one of the macros-examples, above (see
+:any:`macro_system`), a kind of parser that is a bit tedious to code in
+EBNF is a search parser. In the simplest imaginable case (e.g. ignoring
+comments ignoring nested structures, where the search phrase might
+occur, but should not be found) you could write ``{ !"search_phrase"
+/.|\\n/ }``. Be wary that this search parser could land you in the
+middle of a comment, e.g. when "searching" for "rain" in the line ``I'm
+singing in # the rain`` (assuming ``#`` as the comment sign). So it is
+better to write ``{ !"search_phrase" (~ | /.|\\n/) }``. To keep the
+example simple, we'll leave such worries aside in the following::
 
     >>> search_rain_grammar = '''@reduction = merge
     ...     song = { search_rain count_rain } [search_rain] EOF
@@ -2544,7 +2582,7 @@ therefore, write it directly into a string.
     >>> search_src = """
     ... from DHParser.parse import CustomParseFunc
     ... from DHParser.stringview import StringView
-    ... def search(what: string) -> CustomParseFunc:
+    ... def search(what: str) -> CustomParseFunc:
     ...     def parse_func(rest: StringView) -> Optional[Node]:
     ...         i = rest.find(what)
     ...         if i >= 0:  
@@ -2561,6 +2599,10 @@ because this information is not available within the function. If, however, the
 custom parser is defined as a class derived of :py:class:`~parse.CustomParser`,
 the right name must be given when creating the node. In most cases this will
 simply be ``self.node_name``.
+
+Also, keep in mind that the parameter passed to the parsing function is
+of type :py:class:`~stringview.StringView` and not simply a string. This
+view represents the remaining part of the document to be parsed.
 
 As said, referring to the custom parser factory function from the grammar is simple::
 
@@ -2599,10 +2641,147 @@ are changed frequently and better directly fetched from a database then encoded
 in the grammar which would have to be recompiled every time there is a change in
 the data.
 
-Finally, custom parsers can also be used or misused for semantic actions of any
+Implementing Custom Parsers
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+There exist three different ways to implement a caustom parser:
+
+**1. via factory-functions** The "standard" way has been shown above, 
+where you write a factory function that returns the parser. The
+factory function is required when you want to pass arguments
+to your parsing function, because these will be saved in the closure 
+of the factory function - as in the example above.
+
+.. caution:: It is only possible to pass a single argument to custom
+    parsers in the grammar which can either be a string (enclosed by 
+    quotation marks) or a symbol (without quotation marks).
+
+    If you want to pass more than one argument, you'll have to encode 
+    the list or arguments in a single string and decode this string in
+    your Python code.
+
+This also works for parsing functions without arguments, of course::
+
+    >>> word_parser_factory = """
+    ... def parse_word() -> CustomParseFunc:
+    ...     RX_WORD = re.compile(r'\w+')
+    ...     def inner_parse_word(rest: StringView) -> Optional[Node]:
+    ...         m = rest.match(RX_WORD)
+    ...         if m: 
+    ...             return Node('', rest[:m.end()])
+    ...         return None
+    ...     return inner_parse_word"""
+
+As noted earlier, the parsing function (i.e. "inner_parse_word")
+receives a :py:class:`~stringview.StringView` on the remaining part 
+of the document as a parameter and that it should return a Node
+with an empty nmae, so that the proper node-name can be filled in 
+by DHParser's :py:class:`~parse.CustomParser`-wrapper. 
+
+In a grammar this custom-parser needs to be invoked with brackets "()",
+but without argument:: 
+    
+    >>> word_grammar = """@reduction = merge
+    ...     document = @parse_word()"""
+
+    >>> word_parser = create_parser(word_grammar, additional_code=word_parser_factory)
+    >>> print(word_parser("Hello").as_sxpr())
+    (document "Hello")
+
+**2. as a simple parser function** If no arguments need to be passed
+to the custom parser it can also be implemented without a
+factory-wrapper, just as a simple parsing function::
+
+    >>> plain_word_parser = """
+    ... def parse_word(rest: StringView) -> Optional[Node]:
+    ...     m = rest.match(re.compile(r'\w+'))
+    ...     if m: 
+    ...         return Node('', rest[:m.end()])
+    ...     return None"""  
+
+If the custom-parsing function is implemented without a wrapper in the
+Python-code, it needs to be wrapped into a `@Custom(...)`-clause within
+the grammar, however. This tells DHParser that it should not expect
+parsing-function invoked in the grammar to be factory::
+
+    >>> word_grammar = """@reduction = merge
+    ...     document = @Custom(parse_word)"""
+
+    >>> word_parser = create_parser(word_grammar, additional_code=plain_word_parser)
+    >>> print(word_parser("Hello").as_sxpr())
+    (document "Hello")
+
+**3. as a fully implemented parsing class** Finally, custom parsers can
+also be implemented as descendants of :py:class:`~parse.Parse`. This is
+the most complicated case, because writing a derivative class of 
+:py:class:`~parse.Parse` or :py:class:`parse.UnaryParser` or
+:py:class:`~parse.NaryParser` requires to pay attention to all kinds of
+requirements, as for example, the need for a ``__deepcopy__``-method.
+Therefore, implementing one's own Parse-classes should be avoided if 
+possible. 
+
+Nevertheless, here is the previous example implemented with A
+custom parser class::
+
+   >>> word_parser_class = """from DHParser.parse import Parser, copy_parser_base_attrs
+   ... class ParseWord(Parser):
+   ...     def __init__(self):
+   ...         super().__init__()
+   ...         self.RX_WORD = re.compile(r'\\w+')
+   ...
+   ...     def __deepcopy__(self, memo):
+   ...         duplicate = self.__class__()
+   ...         copy_parser_base_attrs(self, duplicate)
+   ...         return duplicate
+   ...
+   ...     def _parse(self, location) -> Tuple[Optional[Node], int]:
+   ...         document_view = self.grammar.document__
+   ...         m = document_view.match(self.RX_WORD, location)
+   ...         if m:
+   ...             return Node(self.node_name, document_view[location: m.end()]), m.end()
+   ...         return None, location"""
+
+    >>> word_grammar = """@reduction = merge
+    ...     document = @ParseWord()"""
+
+    >>> word_parser = create_parser(word_grammar, additional_code=word_parser_class)
+    >>> print(word_parser("Hello").as_sxpr())
+    (document "Hello")
+
+In contrast to the former two methods, implementing one's own custom
+Parser-classes in addition to giving access to the
+:py:class:`~parse.Grammar`-object allows to manipulate the location
+pointer. A possible use case is when you'd like to store the
+unstructured source-data of some part of the source-document in the
+parsing tree, next to the data strauctured by the parser::
+
+    >>> save_source = """from DHParser.parse import Parser
+    ... RX_LINE = re.compile(r'[^ \\t\\n]+(?:[ \\t]*[^ \\t\\n]+)*')
+    ...
+    ... class SaveSource(Parser):
+    ...     def _parse(self, location) -> Tuple[Optional[Node], int]:
+    ...         match = RX_LINE.match(self.grammar.text__, location)
+    ...         source_code = match.group(0) if match else ''
+    ...         # return unstructured source but do not move location pointer forward!
+    ...         return Node('Quelle', source_code), location"""
+
+    >>> grammar = """@reduction = merge
+    ...     document = line { /\\\\n/ line }
+    ...     line = @SaveSource() word { ' ' word }
+    ...     word = /\\w+/"""
+
+    >>> parser = create_parser(grammar, additional_code=save_source)
+    >>> print(parser("Hello World").as_sxpr())
+    (document (line (Quelle "Hello World") (word "Hello") (:Text " ") (word "World")))
+
+
+Semantic Actions
+^^^^^^^^^^^^^^^^
+
+Finally, custom parsers can also be used (or be abused) for semantic actions of any
 kind. Tracing certain points of the parser by dumping debug-information would be
 one reasonable use case of this kind. When storing or manipulating data in your
-custom parser of producing other side effects, you should be aware that even if
+custom parser or producing other side effects, you should be aware that even if
 the parser matches, it's results may be thrown away later, because the
 rescursive descent parser pursues an other branch. There is no support by
 DHParser for filling and unwinding data-stacks or the like during parsing - with
@@ -2610,7 +2789,18 @@ the exception the :ref:`context sensitive parsers <context_sensitive_parsers>`
 described above. If you want to store data at all, it is best to save the data
 in the attributes of the nodes that your custom function returns, because then
 you can be sure that only data from valid nodes survives to the end of the
-parsing process.
+parsing process. 
+
+However, since parser functions or classes do not have access to the
+parsing tree during parsing, any variables stored in this way will be
+accessible during parsing only to custom parsers that directly or
+indirectly call other custom parsers (via the sub-trees returned from
+the called parsers). This does not mean that storing variables in
+attributes during parsing is entirely useless. Variables stored in the
+node's attributes will be accessible without any restrictions only in
+the processing stages following the parsing-stage (see
+:any:`processing_pipelines`).
+
 
 
 *Classes and Functions-Reference*
