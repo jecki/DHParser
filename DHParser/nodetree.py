@@ -2066,7 +2066,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         # flatten_threshold = get_config_value('flatten_sxpr_threshold')
         compact_threshold = get_config_value('compact_sxpr_threshold')
 
-        if switch in ('S-expression', 'S-Expression', 's-expression', 'sxpr'):
+        if switch in ('s-expression', 'sxpr'):
             return self.as_sxpr(flatten_threshold=get_config_value('flatten_sxpr_threshold'),
                                 compact=exceeds_compact_threshold(self, compact_threshold))
         elif switch[:4] == 'sxml':

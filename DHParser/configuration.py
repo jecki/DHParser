@@ -436,7 +436,7 @@ CONFIG_PRESET['infinite_loop_warning'] = True
 #                 syntax trees and "sxpr" (read "S-Expression") for any other
 #                 kind of tree.
 _serializations = frozenset({'XML', 'HTML', 'json', 'indented', 'tree',
-                             'sxpr', 'SXML', 'SXML1', 'SXML2'})
+                             'S-expression', 'sxpr', 'SXML', 'SXML1', 'SXML2'})
 CONFIG_PRESET['cst_serialization'] = 'sxpr'
 CONFIG_PRESET['ast_serialization'] = 'sxpr'
 CONFIG_PRESET['default_serialization'] = 'sxpr'
