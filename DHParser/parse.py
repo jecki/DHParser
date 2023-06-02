@@ -1202,7 +1202,6 @@ RESERVED_PARSER_NAMES = ('root__', 'dwsp__', 'wsp__', 'comment__', 'root_parser_
 def reset_parser(parser):
     return parser.reset()
 
-
 class Grammar:
     r"""
     Class Grammar directs the parsing process and stores global state
@@ -1810,8 +1809,24 @@ class Grammar:
             (See test/test_testing.TestLookahead !))
             """
             def is_lookahead(name: str) -> bool:
-                return (name in self and isinstance(self[name], Lookahead)
-                        or name[0] == ':' and issubclass(eval(name[1:]), Lookahead))
+                custom_parser_class = None
+
+                def find_parser_class(parser, name):
+                    nonlocal custom_parser_class
+                    if parser.__class__.__name__ == name:
+                        custom_parser_class = parser.__class__
+                        return True
+
+                try:
+                    return (name in self and isinstance(self[name], Lookahead)
+                            or name[0] == ':' and issubclass(eval(name[1:]), Lookahead))
+                except NameError:  
+                    #  eval(name[1:]) failed, because custom parsers are not visible from here
+                    nonlocal parser
+                    parser.apply(functools.partial(find_parser_class, name=name[1:]))
+                    if custom_parser_class:
+                        return issubclass(custom_parser_class, Lookahead)
+                    return False
 
             last_record = self.history__[-2] if len(self.history__) > 1 \
                 else None  # type: Optional[HistoryRecord]
