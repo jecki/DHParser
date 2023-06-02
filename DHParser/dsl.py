@@ -990,6 +990,10 @@ def process_file(source: str, out_dir: str,
                 slist = serializations.get(t, serializations.get(
                     '*', get_config_value('default_serialization')))
                 for s in slist:
+                    s = s.lower()  # normalize file-extensions:
+                    if s == 'default':  s = get_config_value('default_serialization').lower()
+                    elif s == 's-expression':  s = 'sxpr'
+                    elif s == 'indented':  s = 'tree'
                     data = result.serialize(s)
                     with open('.'.join([path, s]), 'w', encoding='utf-8') as f:
                         f.write(data)
