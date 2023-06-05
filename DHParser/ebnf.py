@@ -1884,9 +1884,15 @@ class EBNFCompiler(Compiler):
                 # check for indirectly reachable unconsumed mandatory markers
                 for s in self.referred_symbols(symbol):
                     if s not in self.directives.skip and s not in self.directives.resume:
-                        if self.definitions[s].find('mandatory=') >= 0:
-                            self.consumed_skip_rules.add(symbol)
-                            break
+                        try:
+                            if self.definitions[s].find('mandatory=') >= 0:
+                                self.consumed_skip_rules.add(symbol)
+                                break
+                        except KeyError as ke:
+                            if len(ke.args) >= 1 and s == ke.args[0] and \
+                                    (s in self.rules or ('$' + s) in self.macros):
+                                raise ke
+                            # otherwise s is an undefined symbol and will be reported later!
                 else:
                     try:
                         def_node = self.rules[symbol][0]

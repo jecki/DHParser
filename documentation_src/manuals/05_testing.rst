@@ -56,7 +56,7 @@ for the outline-parser example from the overview (:ref:`macros`)::
         ### SubSection 1.2
         ## Section 2"""
 
-Test-files are separated into sections by headings that are enclosed
+Test-files (".ini"-Files) are separated into sections by headings that are enclosed
 in square-brackets, i.e. ``[`` and ``]``. The heading's name consists
 of two parts, separeted by a colon ``:``. The first part indicates the
 kind of the tests that are specified under the heading. The second
@@ -97,7 +97,7 @@ glob-pattern ``*_test_*.ini``.
     the test in the IDE's file-manager and pick the tool
     from the menu to run a particular test. 
     
-    This works pretty well with PyCharm, but is alos possible 
+    This works pretty well with PyCharm, but is also possible
     with most other integrated development environments or 
     code-editors.
 
