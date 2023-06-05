@@ -95,7 +95,7 @@ class JSONGrammar(Grammar):
     r"""Parser for a JSON source file.
     """
     _element = Forward()
-    source_hash__ = "7046077a0556ceea34e899524e540c77"
+    source_hash__ = "55c1d4ce9df3a26e2825b49ec6a5eb55"
     disposable__ = re.compile('_\\w+')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

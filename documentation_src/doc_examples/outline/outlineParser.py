@@ -106,8 +106,8 @@ preprocessing: PseudoJunction = create_preprocess_transition(
 class outlineGrammar(Grammar):
     r"""Parser for an outline source file.
     """
-    source_hash__ = "317a37295be92215fca59594e18b7397"
-    disposable__ = re.compile('(?:WS$|EOF$|LINE$|S$)|(?:WS$|EOF$|LINE$|S$)')
+    source_hash__ = "66a2a67d6f256e61d217646158300173"
+    disposable__ = re.compile('WS$|EOF$|LINE$|S$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
