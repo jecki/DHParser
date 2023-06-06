@@ -28,7 +28,7 @@ time) when parsing longer documents. Unfortunately, Python's `memoryview`
 does not work for unicode strings. Hence, the StringView class.
 
 It is recommended to compile this module with the Cython-compiler for
-speedup. The modules comes with a ``stringview.pxd`` that contains some type
+speedup. The module comes with a ``stringview.pxd`` that contains some type
 declarations to more fully exploit the benefits of the Cython-compiler.
 """
 
@@ -83,6 +83,7 @@ def pack_index(index: cython.int, length: cython.int) -> cython.int:
     # assert length >= 0
     index = index if index >= 0 else index + length
     return 0 if index < 0 else length if index > length else index
+
 
 def fast_real_indices(begin: Optional[int],
                       end: Optional[int],
@@ -356,7 +357,7 @@ class StringView:  # collections.abc.Sized
         return self if end == self._len else self[:end]
 
     @cython.locals(length=cython.int, i=cython.int, k=cython.int)
-    def split(self, sep=None): ## -> List[Union[StringView, str]]:
+    def split(self, sep=None):  # -> List[Union[StringView, str]]:
         """Returns a list of the words in `self`, using `sep` as the
         delimiter string.  If `sep` is not specified or is None, any
         whitespace string is a separator and empty strings are

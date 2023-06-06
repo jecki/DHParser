@@ -279,6 +279,10 @@ class NoneNode(FrozenNode):
 NONE_TAG = ":None"
 NONE_NODE = NoneNode(NONE_TAG, '')
 
+FlowOperatorNames = {':Lookahead': '&',
+                     ':NegativeLookahead': '!',
+                     ':Lookbehind': '<-&',
+                     ':NegativeLookbehind': '<-!'}
 
 def callstack_as_str(callstack: Sequence[CallItem], depth=-1) -> str:
     """Returns a string representation of the callstack!"""
@@ -287,8 +291,10 @@ def callstack_as_str(callstack: Sequence[CallItem], depth=-1) -> str:
     anonymous_tail = True
     for node_name, _ in reversed(callstack):
         if node_name[:1] == ':':
-            if anonymous_tail and node_name != ":Forward":
+            if (anonymous_tail and node_name != ":Forward"):
                 short_stack.append(node_name)
+            elif node_name in FlowOperatorNames and len(short_stack) > 0:
+                short_stack[-1] = FlowOperatorNames[node_name] + short_stack[-1]
         else:
             short_stack.append(node_name)
             anonymous_tail = False
@@ -383,7 +389,7 @@ class HistoryRecord:
         Returns history record formatted as an html table row.
         """
         stack = html.escape(self.stack).replace(
-            '-&gt;', '<span>&shy;-&gt;</span>')
+            '-&gt;', '<span>&shy;-&gt;</span>').replace('<-', '&lt;-')
         status = html.escape(self.status)
         excerpt = html.escape(self.excerpt)
         if excerpt[:1] == ' ':
