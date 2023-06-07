@@ -2187,7 +2187,7 @@ def content_of(segment: Union[Node, Tuple[Node, ...], StringView, str],
     return ''.join(content_list)
 
 
-def _strlen_of(segment: Union[Node, Tuple[Node, ...]],
+def _strlen_of(segment: Union[Node, Sequence[Node, ...]],
               match_func: PathMatchFunction = LEAF_PATH,
               skip_func: PathMatchFunction = NO_PATH) -> int:
     if skip_func is NO_PATH and (match_func is LEAF_PATH or match_func is ANY_PATH):
@@ -2205,7 +2205,7 @@ def _strlen_of(segment: Union[Node, Tuple[Node, ...]],
     return length
 
 
-def strlen_of(segment: Union[Node, Tuple[Node, ...], StringView, str],
+def strlen_of(segment: Union[Node, Sequence[Node, ...], StringView, str],
               select: PathSelector = LEAF_PATH,
               ignore: PathSelector = NO_PATH) -> int:
     """Returns the string size from a single node or a tuple of Nodes."""
