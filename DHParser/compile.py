@@ -558,7 +558,7 @@ def process_tree(tp: CompilerFunc, tree: RootNode) -> Any:
                 # trace = ''.join(st)  # filter_stacktrace(st)
                 tree.new_error(
                     node, "Tree-processing failed, most likely, due to errors earlier in "
-                          "in the processing pipeline.", TREE_PROCESSING_CRASH)
+                          "the processing pipeline.", TREE_PROCESSING_CRASH)
                           # "Crash Message: %s: %s\n%s" % (e.__class__.__name__, str(e), trace),
                           # TREE_PROCESSING_CRASH)
         else:
