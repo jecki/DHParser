@@ -188,7 +188,42 @@ an excerpt from the report file might look like this::
     3:4: Error (1040): Parser "document" stopped before end, at: »# BADLY NE...« Terminating parser.
 
 
-TO BE CONDINUED
+In case a test fails, the error-messages will appear in the report-file.
+DHParser will still attempt to produce an abstract-syntax-tree (AST)
+and, potentially, the results of further processing stages. But these
+will not necessarily represent any reasonable structures. Typically, for
+example, the AST will contain nodes named "ZOMBIE__" which either
+capture passages of the source could which could not be parsed properly,
+due to the failure or, if empty, have been added as an anchor for
+error-messages. 
+
+More important is the fact that for each failed test an HTML-log will be
+produced in the "LOGS"-subdirectory which resides on the same level as the
+"REPORT"-subdirectory. (If this directory does not exist it will be
+created the nest time a test fails. Like the REPORT-directory it can
+safely be deleted, because it will always be recreated and populated
+anew during the next test-run.) The HTML-log contains a detailed log of
+the parsing process. This can be seen as a post-mortem debugger for
+parsing that helps to find the cause of the failure of the test. The 
+most frequent causes for test-failures are 1) EBNF-coding-errors, i.e. 
+some part of the EBNF-encoded grammar does not capture or reject a piece
+of the source text that it was expected to capture or reject, or 2) the
+grammar does not yet encode certain constructs of the formal
+target-language and needs to be extended. Here is an excerpt of a 
+
+
+= == ================================= ======= ===========================================
+L	C	 parser call sequence	             success text matched or failed
+= == ================================= ======= ===========================================
+1	1	 type_alias-> `export`             DROP    export type Exact<T extends { [key: stri...
+1	8	 type_alias-> `type`               DROP    type Exact<T extends { [key: string]: un...
+1	13 type_alias->identifier->! `true`	 FAIL    Exact<T extends { [key: string]: unk ...
+1	13 type_alias->identifier->! `false` FAIL    Exact<T extends { [key: string]: unk ...
+1	13 type_alias->identifier->_part     MATCH   Exact<T extends { [key: string]: unknown...
+1	18 type_alias->identifier-> `.`      FAIL    <T extends { [key: string]: unknown ...
+1	13 type_alias->identifier            MATCH   Exact<T extends { [key: string]: unknown...
+1	18 type_alias->type_parameters-> `<` DROP    <T extends { [key: string]: unknown }...
+= == ================================= ======= ===========================================
 
 
 Test and Development-Workflows
