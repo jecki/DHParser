@@ -115,30 +115,34 @@ The structure of a JSON file can easily be described in EBNF::
     ...     bool     = "true" ~ | "false" ~
     ...     null     = "null" ~                                   '''
 
-This is a rather common EBNF-grammar. A few peculiarities are noteworthy, though:
-First of all you might notice that some components of the grammar
-(or "production rules" as they are commonly called) have names with a leading
-underscore ``_``. It is a convention to mark those elements, in which we are on
-interested on their own account, with an underscore ``_``. When moving from the
-concrete syntax-tree to a more abstract syntax-tree, these elements could be
-substituted by their content, to simplify the tree.
+This is a rather common EBNF-grammar. A few peculiarities are
+noteworthy, though: First of all you might notice that some components
+of the grammar (or "production rules" as they are commonly called) have
+names with a leading underscore ``_``. It is a convention to mark those
+elements, in which we are on interested on their own account, with an
+underscore ``_``. When moving from the concrete syntax-tree to a more
+abstract syntax-tree, these elements could be substituted by their
+content, to simplify the tree.
 
-Secondly, some production rules carry a name written in capital letters. This is also
-a convention to mark those symbols which with other parser-generators would
-represent tokens delivered by a lexical scanner. DHParser is a "scanner-less"
-parser, which means that the breaking down of the string into meaningful tokens
-is done in place with regular expressions (like in the definition of ``_EOF``)
-or simple combinations of regular expressions (see the definition of ``_INT`` above).
-Their is no sharp distinction between tokens and other symbols in DHParser,
-but we keep it as a loose convention. Regular expressions are enclosed in forward
-slashes and follow the standard syntax of Perl-style regular expression that is
-also used by the "re"-module of the Python standard library. (Don't worry about
-the number of backslashes in the line defining ``_CHARS`` for now!)
+Secondly, some production rules carry a name written in capital letters.
+This is also a convention to mark those symbols which with other
+parser-generators would represent tokens delivered by a lexical scanner.
+DHParser is a "scanner-less" parser, which means that the breaking down
+of the string into meaningful tokens is done in place with regular
+expressions (like in the definition of ``_EOF``) or simple combinations
+of regular expressions (see the definition of ``_INT`` above). Their is
+no sharp distinction between tokens and other symbols in DHParser, but
+we keep it as a loose convention. Regular expressions are enclosed in
+forward slashes and follow the standard syntax of Perl-style regular
+expression that is also used by the "re"-module of the Python standard
+library. (Don't worry about the number of backslashes in the line
+defining ``_CHARS`` for now!)
 
-Finally, it is another helpful convention to indent the definitions of symbols
-that have only been introduced to simplify an otherwise unnecessarily
-complicated definition (e.g. the definition of ``number``, above) or to make
-it more understandable by giving names to its components (like ``_EOF``).
+Finally, it is another helpful convention to indent the definitions of
+symbols that have only been introduced to simplify an otherwise
+unnecessarily complicated definition (e.g. the definition of ``number``,
+above) or to make it more understandable by giving names to its
+components (like ``_EOF``).
 
 Let's try this grammar on our test-string.  In order to compile
 this grammar into executable Python-code, we use the high-level-function
@@ -624,29 +628,30 @@ of words::
     ...     PBR            = /[ \\t]*\\n[ \\t]*\\n[ \\t]*/
     ...     S              = /(?=[ \\n\\t])[ \\t]*(?:\\n[ \\t]*)?(?!\\n)/ '''
 
-Here, we have two types of significant whitespace ``PBR`` ("paragraph-break") and ``S``
-("space"). Both types allow for a certain amount of flexibility, so that two
-whitespaces of the same type do not need to have exactly the same content, but
-we could always normalize these whitespaces in a subsequent transformation step.
+Here, we have two types of significant whitespace ``PBR``
+("paragraph-break") and ``S`` ("space"). Both types allow for a certain
+amount of flexibility, so that two whitespaces of the same type do not
+need to have exactly the same content, but we could always normalize
+these whitespaces in a subsequent transformation step.
 
 Two typical design patterns for significant whitespace are noteworthy, here:
 
-1. Both whitespaces match only if there was at least one whitespace character.
-   We may allow whitespace to be optional (as at the beginning and end of the
-   document), but if the option has not been taken, we don't to see an empty
-   whitespace-tag in the document, later on.
-   (For insignificant whitespace, the opposite convention can be more convenient,
-   because, typically, insignificant whitespace is dropped anyway, whether it's
-   got content or not.)
+1. Both whitespaces match only if there was at least one whitespace
+   character. We may allow whitespace to be optional (as at the
+   beginning and end of the document), but if the option has not been
+   taken, we don't to see an empty whitespace-tag in the document, later
+   on. (For insignificant whitespace, the opposite convention can be
+   more convenient, because, typically, insignificant whitespace is
+   dropped anyway, whether it's got content or not.)
 
-2. The grammar is construed in such a way that the whitespace always appears
-   *between* different elements at the same level, but not after the last or
-   before the first element. The whitespace after the last word of a sentence
-   or before the first word of a sentence is really whitespace between
-   two sentences. If we pick out a sentence or a clause, we will have no
-   dangling whitespace at its beginning or end.
-   (Again, for soon to be dropped insignificant whitespace, another convention
-   can be more advisable.)
+2. The grammar is construed in such a way that the whitespace always
+   appears *between* different elements at the same level, but not after
+   the last or before the first element. The whitespace after the last
+   word of a sentence or before the first word of a sentence is really
+   whitespace between two sentences. If we pick out a sentence or a
+   clause, we will have no dangling whitespace at its beginning or end.
+   (Again, for soon to be dropped insignificant whitespace, another
+   convention can be more advisable.)
 
 Let's just try our grammar on an example::
 
@@ -689,10 +694,11 @@ printing the content of the data-tree::
     >>> print(sentence)
     First of all: what is work?
 
-Otherwise one would have to program a dedicated serialization routine. Especially,
-if you receive data from a different source, you'll appreciate not having to
-do this - and so will other people, receiving your data. Think about it! However,
-dropping the whitespace will yield more concise data.
+Otherwise one would have to program a dedicated serialization routine.
+Especially, if you receive data from a different source, you'll
+appreciate not having to do this - and so will other people, receiving
+your data. Think about it! However, dropping the whitespace will yield
+more concise data.
 
 Coding Comments
 ^^^^^^^^^^^^^^^
@@ -877,9 +883,10 @@ also matches the empty string! There is no need to worry that the syntax tree
 get's cluttered by empty whitespace-nodes, because tilde-whitespace always
 yields anonymous nodes and DHParser drops empty anonymous nodes right away.
 
-Comments can be defined using the ``@comment``-directive. DHParser automatically
-intermingles comments and whitespace so that where-ever tilde-whitespace is
-allowed, a comment defined by the ``@comment``-directive is also allowed:
+Comments can be defined using the ``@comment``-directive. DHParser
+automatically intermingles comments and whitespace so that where-ever
+tilde-whitespace is allowed, a comment defined by the
+``@comment``-directive is also allowed:
 
     >>> json_gr = '@comment = /#[^\\n]*(?:\\n|$)/ \n' + json_gr
     >>> json_parser = create_parser(json_gr, "JSON")
@@ -1070,12 +1077,14 @@ negative look-ahead operator "!":
     A dog    is a carnivorous quadrupel that barks
     A human  is a featherless biped
 
-The statement ``word !":="`` is a sequence of a ``word`` and a negative lookahead.
-This whole sequence only matches, if ``word`` matches and the negative looakahead
-matches, which is only the case of the following text cannot be matched by ":=".
+The statement ``word !":="`` is a sequence of a ``word`` and a negative
+lookahead. This whole sequence only matches, if ``word`` matches and the
+negative looakahead matches, which is only the case of the following
+text cannot be matched by ":=".
 
-We could have achieved the same effect with a positive lookahead by checking
-whether any of the possible follow-up-sequences of parser ``definiens`` ensues::
+We could have achieved the same effect with a positive lookahead by
+checking whether any of the possible follow-up-sequences of parser
+``definiens`` ensues::
 
     >>> def_DSL = def_DSL_first_try.replace('definiens   = word { word }',
     ...                                     'definiens   = word { word &(word|EOF) }')
@@ -1127,21 +1136,23 @@ in the sense of "without" more intuitive::
     >>> print(str(syntax_tree).strip())
     <<< Error on "sxxx := bad word" | Parser "word->!forbidden" did not match: »sxxx := bad word« >>>
 
-Next to the lookahead operators, there also exist lookback operators. Be warned,
-though, that look back operators are an **experimental** feature in DHParser
-and that their implementation is highly idiosyncratic, that is, it is most
-likely not compatible with any other parser-generator-toolkit based on EBNF-grammers.
-Also, lookback operators in DHParser are more restricted than lookahead-operators.
-They can only be used in combination with simple text or regular expression parsers
-and - here comes the idiosyncratic part - they work in the opposite direction.
-This means that if you want to check whether a parser is preceded, say, by the
-keyword "BEGIN", the text phrase that you have to check for with the lookback
-parser is actually "NIGEB". If that still does not put you off, here is how
-lookback-operators are used: Let's assume that our definition should not only
-allow for a definiens but, alternatively for enumerations and that the difference
-is indicated by using a simple equal sign "=" instead of the definition symbol
-":=". Then using lookback-operators to distinguish the case, we can rewrite our
-grammar as follows::
+Next to the lookahead operators, there also exist lookback operators. Be
+warned, though, that look back operators are an **experimental** feature
+in DHParser and that their implementation is highly idiosyncratic, that
+is, it is most likely not compatible with any other
+parser-generator-toolkit based on EBNF-grammers. Also, lookback
+operators in DHParser are more restricted than lookahead-operators. They
+can only be used in combination with simple text or regular expression
+parsers and - here comes the idiosyncratic part - they work in the
+opposite direction. This means that if you want to check whether a
+parser is preceded, say, by the keyword "BEGIN", the text phrase that
+you have to check for with the lookback parser is actually "NIGEB". If
+that still does not put you off, here is how lookback-operators are
+used: Let's assume that our definition should not only allow for a
+definiens but, alternatively for enumerations and that the difference is
+indicated by using a simple equal sign "=" instead of the definition
+symbol ":=". Then using lookback-operators to distinguish the case, we
+can rewrite our grammar as follows::
 
     >>> def_DSL_extended = '''
     ...     @literalws  = right
@@ -1161,10 +1172,10 @@ grammar as follows::
     >>> print(str(syntax_tree.pick('enumeration')).strip())
     water beer juice
 
-The lookback operators are ``<-&`` for the positive lookback and ``<-!`` for the
-negative lookback, each of which must be followed by a regular expression or a string.
-Of course, this example is rather wanton and the grammar can easily be rewritten
-without the lookback-operators.
+The lookback operators are ``<-&`` for the positive lookback and ``<-!``
+for the negative lookback, each of which must be followed by a regular
+expression or a string. Of course, this example is rather wanton and the
+grammar can easily be rewritten without the lookback-operators.
 
 
 Error-Catching
@@ -1261,21 +1272,22 @@ of failure::
     1:13: Error (1010): 'expression' expected by parser 'group', but »)...« found instead!
 
 The error messages give a much better indication of the cause of the
-error. What is reported as cause is either the name of the parser that was
-expected to match, as in the second case, or the rule of the parser in case
-of unnamed parsers, as in the first case. This usually, though unfortunately not
-always, yields a much better indication of the location and cause of an
-error than the farthest failure.
+error. What is reported as cause is either the name of the parser that
+was expected to match, as in the second case, or the rule of the parser
+in case of unnamed parsers, as in the first case. This usually, though
+unfortunately not always, yields a much better indication of the
+location and cause of an error than the farthest failure.
 
-However, a little care has to be taken, not
-to place the mandatory marker in front of a parser that might fail at a location
-that could still be reached and matched by another branch of the grammar.
-(In our example it is clear that round brackets enclose only groups. Thus,
-if the opening round bracket has matched, we can be sure that what follows
-must be an expression followed by a closing round bracket, or, if not it is
-a mistake.) Luckily, although this may sound complicated, in practice it
-never is. Unless you grammar is very badly structured, you will hardly
-ever make this mistake, an if you do, you will notice soon enough.
+However, a little care has to be taken, not to place the mandatory
+marker in front of a parser that might fail at a location that could
+still be reached and matched by another branch of the grammar. (In our
+example it is clear that round brackets enclose only groups. Thus, if
+the opening round bracket has matched, we can be sure that what follows
+must be an expression followed by a closing round bracket, or, if not it
+is a mistake.) Luckily, although this may sound complicated, in practice
+it never is. Unless you grammar is very badly structured, you will
+hardly ever make this mistake, an if you do, you will notice soon
+enough.
 
 Also, there is an important restriction: There is only one §-marker
 allowed per named parser. In case you have a long EBNF-expression on the
@@ -1386,8 +1398,9 @@ the help of customized error messages - be described as such
 and properly be located.
 
 Generally, though, emitting the right error messages based on a
-regular-expression-condition is not easy. In the worst case, badly customized error
-messages can even be more confusing than not customizing error messages at all.
+regular-expression-condition is not easy. In the worst case, badly
+customized error messages can even be more confusing than not
+customizing error messages at all.
 
 One possible development-strategy is to wait for the feedback of testers and
 users or to monitor the errors that users typically make and then to customize
@@ -1399,42 +1412,47 @@ the computer refuses to parse a certain construct.
 Enhancing grammars with error-paths
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A frequently used approach to error catching is the encoding of alternative code
-paths for erroneous code right into the grammar. This is usually done by adding
-a further alternative with the alternative-operator ``|`` that is specifically
-meant to "throw" an error if all regular alternatives have been exhausted.
-DHParser offers a special syntax to add an error message if a certain part of
-the grammar is activated during the parsing of an erroneous source-text:
-``@Error("[CODE:]MESSAGE")`` where MESSAGE has to be substituted by a particular
-error message and the optional "CODE:" with a natural number at the beginning of
-the error-message from which the error-code must be separated with a colon. This
-number can freely be chosen, but must adhere to the following convention:
+A frequently used approach to error catching is the encoding of
+alternative code paths for erroneous code right into the grammar. This
+is usually done by adding a further alternative with the
+alternative-operator ``|`` that is specifically meant to "throw" an
+error if all regular alternatives have been exhausted. DHParser offers a
+special syntax to add an error message if a certain part of the grammar
+is activated during the parsing of an erroneous source-text:
+``@Error("[CODE:]MESSAGE")`` where MESSAGE has to be substituted by a
+particular error message and the optional "CODE:" with a natural number
+at the beginning of the error-message from which the error-code must be
+separated with a colon. This number can freely be chosen, but must
+adhere to the following convention:
 
-    * numbers from 1 to 99 must be used for mere notices 
+    * numbers from 1 to 99 must be used for mere notices
     * numbers from 100 to 999 for warnings
-    * numbers from 1000 to 9999 for errors 
+    * numbers from 1000 to 9999 for errors
     * numbers of 10000 and more as fatal errors
 
 Fatal errors result in the stop of the :ref:`processing pipeline
-<processing_pipelines>` right after the step where the error occurred. "Normal"
-errors result in invalid results but DHParser will attempt to continue with the
-processing pipeline. This has the advantage that other errors further downstream
-will also be reported in the same passe. A possible disadvantage is that
-consequential errors may arise in the processing of faulty results from earlier
-stages in the pipeline. If too many consequential errors occur in the aftermath
-of an error, it should be considered to lift this error to a fatal error by
-assigning a higher number to it.  
+<processing_pipelines>` right after the step where the error occurred.
+"Normal" errors result in invalid results but DHParser will attempt to
+continue with the processing pipeline. This has the advantage that other
+errors further downstream will also be reported in the same passe. A
+possible disadvantage is that consequential errors may arise in the
+processing of faulty results from earlier stages in the pipeline. If too
+many consequential errors occur in the aftermath of an error, it should
+be considered to lift this error to a fatal error by assigning a higher
+number to it.
 
-Warnings and notices should never should be used when the results will still be
-valid, though maybe not what they were intended to be. (Thus, the warning) Error
-codes starting with the digit "1" are reserved by DHParser. So, for
-custom-errors codes starting with "2", "3" etc. must be used.
+Warnings and notices should never should be used when the results will
+still be valid, though maybe not what they were intended to be. (Thus,
+the warning) Error codes starting with the digit "1" are reserved by
+DHParser. So, for custom-errors codes starting with "2", "3" etc. must
+be used.
 
-Here is an example how error-messages can be added within the grammar. The
-syntax uses the same ``@``-marker as directives but other than directives the
-error-markers do not resemble symbol-definitions but occur within the right hand
-side of a symbol definition. The following is a grammar that parses a sequence
-of natural numbers separated by a blank of line-feed, e.g. "1 2 3"::
+Here is an example how error-messages can be added within the grammar.
+The syntax uses the same ``@``-marker as directives but other than
+directives the error-markers do not resemble symbol-definitions but
+occur within the right hand side of a symbol definition. The following
+is a grammar that parses a sequence of natural numbers separated by a
+blank of line-feed, e.g. "1 2 3"::
 
     >>> sequence_of_natural_numbers = """@drop = whitespace
     ...     document = { ~ number | error } ~ EOF
@@ -1455,26 +1473,28 @@ an error-branch would read::
 
     document = { ~ number } ~ EOF
 
-Here, we add an alternative branch to the ``number``-parser in case the number
-parser does not match. Now, the number parser will not match on one of two
-conditions: a) the following text is not a number, or b) the end of the file has
-been reached. Now, since the latter is perfectly in order, we have to exclude
-this case at the beginning of the error-branch with a negative-lookahead::
+Here, we add an alternative branch to the ``number``-parser in case the
+number parser does not match. Now, the number parser will not match on
+one of two conditions: a) the following text is not a number, or b) the
+end of the file has been reached. Now, since the latter is perfectly in
+order, we have to exclude this case at the beginning of the error-branch
+with a negative-lookahead::
 
     error  = !EOF           
              @Error("1010:Not a valid Number!") 
              § EOF
 
-While the first line of the definition of the error-branch excludes the kinds of
-non-match(es) that are not errors, the second line adds an error message with
-the current location of the parser. We add an error code, "1010", to make it
-easier to identify this error in automated tests or the like. The last line is
-just a means to make the parser to stop parsing right on the spot (that is,
-unless this error is caught by a resume-directive, see :ref:`below
-<fail_tolerant_parsing>`). It will produce the consequential error "EOF
-expected", though. In order not to confuse the use, the error has been
-reconfigured as a simple notice that explains the situation with the directive
-``@error_error = "20:Parser stopped because of an error"`` in the line before.
+While the first line of the definition of the error-branch excludes the
+kinds of non-match(es) that are not errors, the second line adds an
+error message with the current location of the parser. We add an error
+code, "1010", to make it easier to identify this error in automated
+tests or the like. The last line is just a means to make the parser to
+stop parsing right on the spot (that is, unless this error is caught by
+a resume-directive, see :ref:`below <fail_tolerant_parsing>`). It will
+produce the consequential error "EOF expected", though. In order not to
+confuse the use, the error has been reconfigured as a simple notice that
+explains the situation with the directive ``@error_error = "20:Parser
+stopped because of an error"`` in the line before.
 
 Instead of stopping the parser by jumping right to the end of the document, one
 might also try to skip only so much text as is needed to continue the
@@ -1491,9 +1511,9 @@ next blank or up to the end of the file. Let's try::
     1:5: Error (2010): Not a valid Number!
     1:11: Error (2010): Not a valid Number!
 
-The location of the second error indicates that the parser has continued to read
-the document after the first error. We can double-check this by looking at the
-abstract syntax tree::
+The location of the second error indicates that the parser has continued
+to read the document after the first error. We can double-check this by
+looking at the abstract syntax tree::
 
     >>> print(syntax_tree.as_sxpr())
     (document
@@ -1516,12 +1536,13 @@ abstract syntax tree::
 Fail-tolerant Parsing
 ---------------------
 
-A serious limitation of all previously described error-handling mechanisms (with
-the exception the very last example) is that the parsing process still stops on
-the very first error. This is particularly annoying for beginners learning to
-code data or program code with a new DSL, because the compiler must be run again
-and again before all errors have been found and corrected. It would be much
-better to receive a list of all errors on the first run.
+A serious limitation of all previously described error-handling
+mechanisms (with the exception the very last example) is that the
+parsing process still stops on the very first error. This is
+particularly annoying for beginners learning to code data or program
+code with a new DSL, because the compiler must be run again and again
+before all errors have been found and corrected. It would be much better
+to receive a list of all errors on the first run.
 
 .. _generic_fail_tolerant_parsing:
 
@@ -1542,10 +1563,11 @@ Fail tolerant parsing means that:
    document, but merely artifacts of badly chosen locations
    for the resumption of the parsing process.
 
-There are a number of techniques for fail-tolerant parsing. One technique that
-has already been shown :ref:`earlier <grammar_code_for_errors>` and which is not
-specific to DHParser but can be used with any parser-generator is to add
-grammar-paths for possibly erroneous code to the grammar::
+There are a number of techniques for fail-tolerant parsing. One
+technique that has already been shown :ref:`earlier
+<grammar_code_for_errors>` and which is not specific to DHParser but can
+be used with any parser-generator is to add grammar-paths for possibly
+erroneous code to the grammar::
 
     >>> grammar = '''
     ... string          = `"` ([characters] `"` | string_error [`"`]) ~
@@ -1609,12 +1631,12 @@ new parts of the document and the like.
 Skip and Resume
 ^^^^^^^^^^^^^^^
 
-DHParser also offers two other constructs for fail-tolerant parsing which are
-quite similar to the just described technique. However, they do not require
-adding code-paths to the grammar and reuse the error-locating ability of the
-§-marker. A disadvantage is that the DHParser-specific support for fail-tolerant
-parsing presently relies entirely on regular expressions for finding the right
-re-entry points.
+DHParser also offers two other constructs for fail-tolerant parsing
+which are quite similar to the just described technique. However, they
+do not require adding code-paths to the grammar and reuse the
+error-locating ability of the §-marker. A disadvantage is that the
+DHParser-specific support for fail-tolerant parsing presently relies
+entirely on regular expressions for finding the right re-entry points.
 
 DHParser allows to resume parsing after an error at a later point
 in the text. When trying to resume parsing two questions must be
@@ -1701,17 +1723,18 @@ expression::
         (plain "al"))
       (ZOMBIE__ `(err "1:4: Error (1010): Illegal escape sequence »\pha\"...«") '\pha"'))
 
-Note, that this time, the zombie-node also contains the closing quotation marks.
-Also, it should be observed, that the regular expression of the resume-directives
-stops after the closing quotation marks as well as any ensuing whitespace. This is
-because parsing will continue with the calling parser of the string parser, so the
-resumption point must be at a reasonable place where the string parser might have
+Note, that this time, the zombie-node also contains the closing
+quotation marks. Also, it should be observed, that the regular
+expression of the resume-directives stops after the closing quotation
+marks as well as any ensuing whitespace. This is because parsing will
+continue with the calling parser of the string parser, so the resumption
+point must be at a reasonable place where the string parser might have
 returned, if no error had occurred.
 
-A simple rule for specifying the reentry point of an error is to find a location
-where the next structural entity after the erroneous entity starts. Let's try
-this for a (simplified) `config-file <https://docs.python.org/3/library/configparser.html>`_
-parser::
+A simple rule for specifying the reentry point of an error is to find a
+location where the next structural entity after the erroneous entity
+starts. Let's try this for a (simplified) `config-file
+<https://docs.python.org/3/library/configparser.html>`_ parser::
 
     >>> config_grammar = '''@literalws = right
     ... config     = ~ { section } EOF
@@ -1756,19 +1779,20 @@ a single pass::
     8:6: Error (1010): '`:` ~' expected by parser 'entry', but »1: "cold"\n...« found instead!
 
 It can become difficult to find a reentry point with regular expressions
-that is on the same level of the parser call chain (or one level higher up in
-the case of the resume-directive) when an error occurs in a syntactic structure
-that can be recursively nested. Because of this it is also possible to specify
-the re-entry point with a parser. In this case, the search term has a different
-semantics however. If a parser is specified, it must match all characters
-from the point where the error occurred up to the reentry point. In the case
-of a simple string or a regular expression, DHParser searches for the first
-match of the expression and then picks the location after that match. In order
-to distinguish the two cases clearly, PEG-rules must always be enclosed in round
-brackets. Thus, a single regular expression or a singular string enclosed in
-round brackets will not be used as a search term but as a matching expression
-that determines the reentry-location by matching the complete text from the
-error location to the reentry-point.
+that is on the same level of the parser call chain (or one level higher
+up in the case of the resume-directive) when an error occurs in a
+syntactic structure that can be recursively nested. Because of this it
+is also possible to specify the re-entry point with a parser. In this
+case, the search term has a different semantics however. If a parser is
+specified, it must match all characters from the point where the error
+occurred up to the reentry point. In the case of a simple string or a
+regular expression, DHParser searches for the first match of the
+expression and then picks the location after that match. In order to
+distinguish the two cases clearly, PEG-rules must always be enclosed in
+round brackets. Thus, a single regular expression or a singular string
+enclosed in round brackets will not be used as a search term but as a
+matching expression that determines the reentry-location by matching the
+complete text from the error location to the reentry-point.
 
 As an example, let's try this with a parser for arbitrarily nested lists
 of positive integers. First, we write our grammar without any re-entry rules::
@@ -1838,9 +1862,10 @@ are involved::
     1:16: Error (1010): '`]` ~' expected by parser 'list', but »; [7, 8], ...« found instead!
     1:28: Error (1010): '_EOF' expected by parser '_document', but », 10, ]...« found instead!
 
-Here, the parser stopped before the end of the document, which shows that our resumption
-rules have been either incomplete or inadequate. Let's turn on some debugging information
-to get a better insight into what went wrong::
+Here, the parser stopped before the end of the document, which shows
+that our resumption rules have been either incomplete or inadequate.
+Let's turn on some debugging information to get a better insight into
+what went wrong::
 
     >>> from DHParser.trace import resume_notices_on
     >>> resume_notices_on(list_parser)
@@ -1880,8 +1905,9 @@ rackets!)::
     1:16: Error (1010): '`]` ~' expected by parser 'list', but »; [7, 8], ...« found instead!
     1:34: Error (1010): '_item' expected by parser '_items', but »]...« found instead!
 
-This time, the parser does not terminate before the end. The resume-notices show
-that resumption does not get caught on the nested structure, any more::
+This time, the parser does not terminate before the end. The
+resume-notices show that resumption does not get caught on the nested
+structure, any more::
 
     >>> for e in result.errors:
     ...     if e.code == RESUME_NOTICE: print(e)
@@ -1907,7 +1933,7 @@ a result of poorly chosen resumption rules.
 
 .. _macro_system:
 
-Macros 
+Macros
 ------
 
 In order to reduce code-repetition within grammar-specifications
@@ -1921,7 +1947,7 @@ always start with a dollar sign ``$``::
     $list($delimiter) = { /[^,.;:]+/ | !$delimiter /[,.;:]/ }
            { $delimiter ~ { /[^,.;:]+/ | !$delimiter /[,.;:]/ } }
 
-The parameters of a macro are also marked with a dollar sign. 
+The parameters of a macro are also marked with a dollar sign.
 Using macros is straight forward::
 
     keywords = "Keywords:" $list(",")
@@ -1955,9 +1981,9 @@ words when parsing a text::
     ...     Just singin' in the rain
     ...     What a glorious feeling
     ...     I'm happy again."""
-    
+
     >>> syntax_tree = hilight_parser(song)
-    >>> print(syntax_tree.as_sxpr())  
+    >>> print(syntax_tree.as_sxpr())
     (song
       (skip
         ""
@@ -2110,10 +2136,11 @@ the "Retrieve"-operator which is denoted by a single colon `:`::
     ... EOF      = !/./
     ... '''
 
-Here the Pop-operator ``::`` is used in the definition of ``fenced`` in just the same way
-as in the earlier example. The Retrieve-operator ``:`` is used in the definition of
-``no_fence`` in combination with a negative lookahead ``!``. This allows the no_fence-parsers
-to capture all "fences" which are not closing-fence of the current fenced environment::
+Here the Pop-operator ``::`` is used in the definition of ``fenced`` in
+just the same way as in the earlier example. The Retrieve-operator ``:``
+is used in the definition of ``no_fence`` in combination with a negative
+lookahead ``!``. This allows the no_fence-parsers to capture all
+"fences" which are not closing-fence of the current fenced environment::
 
     >>> parseFenced = create_parser(fencedTextEBNF)
     >>> fenced_test_1 = '''~~~
@@ -2137,20 +2164,23 @@ to capture all "fences" which are not closing-fence of the current fenced enviro
         (no_fence "~~~")
         (fence "~~~~~")))
 
-But what if the opening and closing fence are not one and the same string, but complements of
-each other, like opening and closing brackets? Say, you'd like to enclose code-examples in
-curled braces "{" and "}" and since the code examples themselves may contain braces, you'd
-like to allow the markup-writer to use an arbitrary number of braces as opening and closing
-delimiters::
+But what if the opening and closing fence are not one and the same
+string, but complements of each other, like opening and closing
+brackets? Say, you'd like to enclose code-examples in curled braces "{"
+and "}" and since the code examples themselves may contain braces, you'd
+like to allow the markup-writer to use an arbitrary number of braces as
+opening and closing delimiters::
 
     >>> markup = "This ist a code example: {{ mapping = { 'a': 1, 'b': 2} }} with braces."
 
-Here, the recalled value would need to be transformed or otherwise interpreted before the
-following text is either considered a match or a non-match. Since such a transformation
-can hardly be encoded in EBNF even an augmented EBNF, any more, one of DHParser's loopholes
-for semantic actions must be used. It is possible to assign Python filter-functions to
-symbols, the value of which is retrieved with yet another directive, which is the
-``@ XXXX_filter``-directive, where "XXXX" stands for the name of the symbol::
+Here, the recalled value would need to be transformed or otherwise
+interpreted before the following text is either considered a match or a
+non-match. Since such a transformation can hardly be encoded in EBNF
+even an augmented EBNF, any more, one of DHParser's loopholes for
+semantic actions must be used. It is possible to assign Python
+filter-functions to symbols, the value of which is retrieved with yet
+another directive, which is the ``@ XXXX_filter``-directive, where
+"XXXX" stands for the name of the symbol::
 
     >>> bracesExampleEBNF = '''
     ... @braces_filter = matching_bracket()
@@ -2162,17 +2192,19 @@ symbols, the value of which is retrieved with yet another directive, which is th
     ... text           = /[^{}]+/
     ... '''
 
-The function name that is passed to the directive must be the name of a function that
-is within reach of the generated parser (by either defining it in the same module or
-importing it) and it must have the signature:
+The function name that is passed to the directive must be the name of a
+function that is within reach of the generated parser (by either
+defining it in the same module or importing it) and it must have the
+signature:
 
      Callable[str, List[str]], Optional[str]]
 
-This function takes the following text as well as the stack of previous value of
-the symbol that is being retrieved as an argument and it must return either
-a stretch of matched text of ``None`` to indicate a non-match. The function
-``matching_bracket()`` is already defined in :py:mod:`DHParser.parse`. Slightly
-simplified to cover only the case of curly braces, it looks like this::
+This function takes the following text as well as the stack of previous
+value of the symbol that is being retrieved as an argument and it must
+return either a stretch of matched text of ``None`` to indicate a
+non-match. The function ``matching_bracket()`` is already defined in
+:py:mod:`DHParser.parse`. Slightly simplified to cover only the case of
+curly braces, it looks like this::
 
     >>> from typing import List, Optional
     >>> def matching_bracket(text: str, stack: List[str]) -> Optional[str]:
@@ -2196,22 +2228,25 @@ simplified to cover only the case of curly braces, it looks like this::
         (braces "}}"))
       (text " with braces."))
 
-Here, the outer double braces "{{" and "}}" open up and close a new code block and could be
-discarded as delimiters during the AST-transformation, while the opening and closing braces
-within the code block are simply that: opening and closing braces.
+Here, the outer double braces "{{" and "}}" open up and close a new code
+block and could be discarded as delimiters during the
+AST-transformation, while the opening and closing braces within the code
+block are simply that: opening and closing braces.
 
 Advanced usages
 ^^^^^^^^^^^^^^^
 
-Apart from the Pop- and Retrieve-operator, DHParser offers a third retrieval operator that,
-like the Pop-operator, "pops" that last value from the stack and matches either this value
-or the empty strings. In other word, this operator always matches, as long as there is still
-a value on the stack, but it captures the beginning of the following text only
-if it matches the stored value. A non-match only happens, when the stack has already been
-exhausted. This "Pop anyways"-operator is denoted by a colon followed by a question mark ``:?``.
-Weird as this may sound, this operator has astonishingly manifold use cases. Think for
-example of a modification of our minimal pseudo-XML parser the allows coders to omit the
-tag name in closing tags to save them some typing:
+Apart from the Pop- and Retrieve-operator, DHParser offers a third
+retrieval operator that, like the Pop-operator, "pops" that last value
+from the stack and matches either this value or the empty strings. In
+other word, this operator always matches, as long as there is still a
+value on the stack, but it captures the beginning of the following text
+only if it matches the stored value. A non-match only happens, when the
+stack has already been exhausted. This "Pop anyways"-operator is denoted
+by a colon followed by a question mark ``:?``. Weird as this may sound,
+this operator has astonishingly manifold use cases. Think for example of
+a modification of our minimal pseudo-XML parser the allows coders to
+omit the tag name in closing tags to save them some typing:
 
     >>> miniXML = miniXML.replace('::TagName', ':?TagName')
     >>> parseXML = create_parser(miniXML)
@@ -2226,14 +2261,16 @@ tag name in closing tags to save them some typing:
         ETag
           TagName
 
-Another, rather tricky use case is to let the value of certain symbols be determined
-on first use by marking all appearances of theses symbols on the right hand side of
-the definitions wherein they appear with the single colon retrieval operator ``:`` and
-clearing the stack with ``[:?symbol]`` after the end of file has been reached.
-This technique has been employed for the "FlexibleEBNF"-parser in the examples folder.
-The FlexibleEBNF-parser "magically" adjusts itself to different syntactical flavors of
-EBNF. Here is an abbreviated excerpt of the grammar of this parser, to see how this
-technique can be used in a grammar::
+Another, rather tricky use case is to let the value of certain symbols
+be determined on first use by marking all appearances of theses symbols
+on the right hand side of the definitions wherein they appear with the
+single colon retrieval operator ``:`` and clearing the stack with
+``[:?symbol]`` after the end of file has been reached. This technique
+has been employed for the "FlexibleEBNF"-parser in the examples folder.
+The FlexibleEBNF-parser "magically" adjusts itself to different
+syntactical flavors of EBNF. Here is an abbreviated excerpt of the
+grammar of this parser, to see how this technique can be used in a
+grammar::
 
     syntax     = ~ { definition } EOF
     definition = symbol §:DEF~ expression :ENDL~
@@ -2493,24 +2530,25 @@ if we combine both errors, its limitations begin to show::
     3:26: Error (1010): 'ETag = `</` ::TagName "wrong" § `>`' expected by parser 'element', but »</litle>\n ...« found instead!
     5:1: Error (1010): 'ETag = `</` ::TagName "title" § `>`' expected by parser 'element', but »</doc>...« found instead!
 
-Here, it seems almost impossible to avoid an error-cascade in combination with
-context-sensitive parsers if met with a combination of different errors. In this
-particular case of an XML-parser, the best way out might be not to use
-context-sensitive parsers at all and check the matching XML-tags at a later
-processing stage.
+Here, it seems almost impossible to avoid an error-cascade in
+combination with context-sensitive parsers if met with a combination of
+different errors. In this particular case of an XML-parser, the best way
+out might be not to use context-sensitive parsers at all and check the
+matching XML-tags at a later processing stage.
 
 
 Custom Parsers
 --------------
 
-Specifying a grammar in EBNF and generating a parser from this specification has
-the advantage that one can get a much better overview over the grammar than when
-writing a completely parser directly in Python. This also makes changing the
-grammar and explaining it to others much easier. However, there are cases where
-writing a parsers at least for particular components in Python can be
-advantageous. These include cases, where it is easier to write a parser in
-Python, where a Python-parser might be faster, or where a parser cannot be coded
-in EBNF, say, because it requires as Turing-complete programming languages.
+Specifying a grammar in EBNF and generating a parser from this
+specification has the advantage that one can get a much better overview
+over the grammar than when writing a completely parser directly in
+Python. This also makes changing the grammar and explaining it to others
+much easier. However, there are cases where writing a parsers at least
+for particular components in Python can be advantageous. These include
+cases, where it is easier to write a parser in Python, where a
+Python-parser might be faster, or where a parser cannot be coded in
+EBNF, say, because it requires as Turing-complete programming languages.
 
 Custom-parser example
 ^^^^^^^^^^^^^^^^^^^^^
@@ -2557,26 +2595,29 @@ example simple, we'll leave such worries aside in the following::
     2
 
 Let's now define a custom parser for "search_rain". A custom parser is a
-factory-function that returns a "custom parse function" which in turn is a
-function that takes a :py:class:`~stringview.StringView`-object as input and
-returns a :py:class:`nodetree.Node`-object or ``None`` as result. This
-factory-function can be a derived class from class :py:class:`parse.Parser` but
-does not need to be. In the EBNF-grammar is specified as ``@name(param)``
-where ``name`` is the name for the factory function on the Python side and
-``param`` either an identifier or - if enclosed in quotation marks - a single string
-paramter on the Python side, which can be used to configure the factory function.
+factory-function that returns a "custom parse function" which in turn is
+a function that takes a :py:class:`~stringview.StringView`-object as
+input and returns a :py:class:`nodetree.Node`-object or ``None`` as
+result. This factory-function can be a derived class from class
+:py:class:`parse.Parser` but does not need to be. In the EBNF-grammar is
+specified as ``@name(param)`` where ``name`` is the name for the factory
+function on the Python side and ``param`` either an identifier or - if
+enclosed in quotation marks - a single string paramter on the Python
+side, which can be used to configure the factory function.
 
-It is also possible to specify a custom parser function directly instead of
-a factory function. However, it must then be specified as the parameter of the
-predefined factory function "Custom", e.g. ``@Custom(parse_func)``. 
+It is also possible to specify a custom parser function directly instead
+of a factory function. However, it must then be specified as the
+parameter of the predefined factory function "Custom", e.g.
+``@Custom(parse_func)``.
 
-The parser (factory) function itself must be defined in a global namespace
-that is reachable from the Grammar-class generated from the EBNF-code. A good
-place is the beginning of the generated "xxxParser.py"-script in case of
-DHParser-projects created with the "dhparser"-command. If, as in the following,
-the parser is created with :py:func:`~dsl.create_parser`, the custom code 
-should be passed as Python-source-string to the ``additional_code``-argument
-of the :py:func:`~dsl.create_parser`-function. In the following snipped, we,
+The parser (factory) function itself must be defined in a global
+namespace that is reachable from the Grammar-class generated from the
+EBNF-code. A good place is the beginning of the generated
+"xxxParser.py"-script in case of DHParser-projects created with the
+"dhparser"-command. If, as in the following, the parser is created with
+:py:func:`~dsl.create_parser`, the custom code should be passed as
+Python-source-string to the ``additional_code``-argument of the
+:py:func:`~dsl.create_parser`-function. In the following snipped, we,
 therefore, write it directly into a string.
 
     >>> search_src = """
@@ -2585,20 +2626,21 @@ therefore, write it directly into a string.
     ... def search(what: str) -> CustomParseFunc:
     ...     def parse_func(rest: StringView) -> Optional[Node]:
     ...         i = rest.find(what)
-    ...         if i >= 0:  
+    ...         if i >= 0:
     ...             return Node('', rest[:i])
     ...         else:
     ...             return Node('', rest)
     ...     return parse_func
     ... """
 
-Note, that the name of the returned node ist left empty. It will be filled in by
-the :py:class:`~parse.CustomParser`-object either with the anonymous-parser name
-":CustomParser" or the name of the symbol to which the parser is assigned,
-because this information is not available within the function. If, however, the
-custom parser is defined as a class derived of :py:class:`~parse.CustomParser`,
-the right name must be given when creating the node. In most cases this will
-simply be ``self.node_name``.
+Note, that the name of the returned node ist left empty. It will be
+filled in by the :py:class:`~parse.CustomParser`-object either with the
+anonymous-parser name ":CustomParser" or the name of the symbol to which
+the parser is assigned, because this information is not available within
+the function. If, however, the custom parser is defined as a class
+derived of :py:class:`~parse.CustomParser`, the right name must be given
+when creating the node. In most cases this will simply be
+``self.node_name``.
 
 Also, keep in mind that the parameter passed to the parsing function is
 of type :py:class:`~stringview.StringView` and not simply a string. This
@@ -2612,7 +2654,7 @@ As said, referring to the custom parser factory function from the grammar is sim
     ...     count_rain  = "rain"
     ...     EOF         = !/.|\\n/'''
 
-    >>> rain_counter = create_parser(search_rain_grammar, 
+    >>> rain_counter = create_parser(search_rain_grammar,
     ...                              additional_code=search_src)
 
 Let's try using it::
@@ -2634,29 +2676,29 @@ Let's try using it::
         "    I'm happy again.")
       (EOF))
 
-Another good use cases for custom parsers are long lists of fixed alternatives,
-say, a list of state-names, e.g. "Afghanistan, Albania, ... Zimbabwe" which
-would clutter the grammar and slow down parsing. In particular, if these lists
-are changed frequently and better directly fetched from a database then encoded
-in the grammar which would have to be recompiled every time there is a change in
-the data.
+Another good use cases for custom parsers are long lists of fixed
+alternatives, say, a list of state-names, e.g. "Afghanistan, Albania,
+... Zimbabwe" which would clutter the grammar and slow down parsing. In
+particular, if these lists are changed frequently and better directly
+fetched from a database then encoded in the grammar which would have to
+be recompiled every time there is a change in the data.
 
 Implementing Custom Parsers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 There exist three different ways to implement a caustom parser:
 
-**1. via factory-functions** The "standard" way has been shown above, 
-where you write a factory function that returns the parser. The
-factory function is required when you want to pass arguments
-to your parsing function, because these will be saved in the closure 
-of the factory function - as in the example above.
+**1. via factory-functions** The "standard" way has been shown above,
+where you write a factory function that returns the parser. The factory
+function is required when you want to pass arguments to your parsing
+function, because these will be saved in the closure of the factory
+function - as in the example above.
 
 .. caution:: It is only possible to pass a single argument to custom
-    parsers in the grammar which can either be a string (enclosed by 
+    parsers in the grammar which can either be a string (enclosed by
     quotation marks) or a symbol (without quotation marks).
 
-    If you want to pass more than one argument, you'll have to encode 
+    If you want to pass more than one argument, you'll have to encode
     the list or arguments in a single string and decode this string in
     your Python code.
 
@@ -2667,20 +2709,20 @@ This also works for parsing functions without arguments, of course::
     ...     RX_WORD = re.compile(r'\w+')
     ...     def inner_parse_word(rest: StringView) -> Optional[Node]:
     ...         m = rest.match(RX_WORD)
-    ...         if m: 
+    ...         if m:
     ...             return Node('', rest[:m.end()])
     ...         return None
     ...     return inner_parse_word"""
 
 As noted earlier, the parsing function (i.e. "inner_parse_word")
-receives a :py:class:`~stringview.StringView` on the remaining part 
-of the document as a parameter and that it should return a Node
-with an empty nmae, so that the proper node-name can be filled in 
-by DHParser's :py:class:`~parse.CustomParser`-wrapper. 
+receives a :py:class:`~stringview.StringView` on the remaining part of
+the document as a parameter and that it should return a Node with an
+empty nmae, so that the proper node-name can be filled in by DHParser's
+:py:class:`~parse.CustomParser`-wrapper.
 
 In a grammar this custom-parser needs to be invoked with brackets "()",
-but without argument:: 
-    
+but without argument::
+
     >>> word_grammar = """@reduction = merge
     ...     document = @parse_word()"""
 
@@ -2695,9 +2737,9 @@ factory-wrapper, just as a simple parsing function::
     >>> plain_word_parser = """
     ... def parse_word(rest: StringView) -> Optional[Node]:
     ...     m = rest.match(re.compile(r'\w+'))
-    ...     if m: 
+    ...     if m:
     ...         return Node('', rest[:m.end()])
-    ...     return None"""  
+    ...     return None"""
 
 If the custom-parsing function is implemented without a wrapper in the
 Python-code, it needs to be wrapped into a `@Custom(...)`-clause within
@@ -2713,12 +2755,12 @@ parsing-function invoked in the grammar to be factory::
 
 **3. as a fully implemented parsing class** Finally, custom parsers can
 also be implemented as descendants of :py:class:`~parse.Parse`. This is
-the most complicated case, because writing a derivative class of 
+the most complicated case, because writing a derivative class of
 :py:class:`~parse.Parse` or :py:class:`parse.UnaryParser` or
 :py:class:`~parse.NaryParser` requires to pay attention to all kinds of
 requirements, as for example, the need for a ``__deepcopy__``-method.
-Therefore, implementing one's own Parse-classes should be avoided if 
-possible. 
+Therefore, implementing one's own Parse-classes should be avoided if
+possible.
 
 Nevertheless, here is the previous example implemented with A
 custom parser class::
@@ -2778,18 +2820,19 @@ parsing tree, next to the data strauctured by the parser::
 Semantic Actions
 ^^^^^^^^^^^^^^^^
 
-Finally, custom parsers can also be used (or be abused) for semantic actions of any
-kind. Tracing certain points of the parser by dumping debug-information would be
-one reasonable use case of this kind. When storing or manipulating data in your
-custom parser or producing other side effects, you should be aware that even if
-the parser matches, it's results may be thrown away later, because the
-rescursive descent parser pursues an other branch. There is no support by
-DHParser for filling and unwinding data-stacks or the like during parsing - with
-the exception the :ref:`context sensitive parsers <context_sensitive_parsers>`
-described above. If you want to store data at all, it is best to save the data
-in the attributes of the nodes that your custom function returns, because then
-you can be sure that only data from valid nodes survives to the end of the
-parsing process. 
+Finally, custom parsers can also be used (or be abused) for semantic
+actions of any kind. Tracing certain points of the parser by dumping
+debug-information would be one reasonable use case of this kind. When
+storing or manipulating data in your custom parser or producing other
+side effects, you should be aware that even if the parser matches, it's
+results may be thrown away later, because the rescursive descent parser
+pursues an other branch. There is no support by DHParser for filling and
+unwinding data-stacks or the like during parsing - with the exception
+the :ref:`context sensitive parsers <context_sensitive_parsers>`
+described above. If you want to store data at all, it is best to save
+the data in the attributes of the nodes that your custom function
+returns, because then you can be sure that only data from valid nodes
+survives to the end of the parsing process.
 
 However, since parser functions or classes do not have access to the
 parsing tree during parsing, any variables stored in this way will be

@@ -1,42 +1,45 @@
 Overview of DHParser
 ====================
 
-DHParser is a parser-generator and domain-specific-language (DSL) construction
-kit that is designed to make the process of designing, implementing and revising
-a DSL as simple as possible. It can be used in an adhoc-fashion for small
-projects and the grammar can either be specified in Python (similar to the
-approach of `pyparsing <https://pypi.org/project/pyparsing/>`_) or,
-alternatively, in a slightly amended version of the `Extended-Backus-Naur-Form
-(EBNF) <https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form>`_
-directly within the Python-code. But DHParser can just as well be used for large
-projects where you set up a directory tree with the grammar, parser, test-runner
-each residing in a separate file und the test and example code in dedicated
-sub-directories.
+DHParser is a parser-generator and domain-specific-language (DSL)
+construction kit that is designed to make the process of designing,
+implementing and revising a DSL as simple as possible. It can be used in
+an adhoc-fashion for small projects and the grammar can either be
+specified in Python (similar to the approach of `pyparsing
+<https://pypi.org/project/pyparsing/>`_) or, alternatively, in a
+slightly amended version of the `Extended-Backus-Naur-Form (EBNF)
+<https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form>`_
+directly within the Python-code. But DHParser can just as well be used
+for large projects where you set up a directory tree with the grammar,
+parser, test-runner each residing in a separate file und the test and
+example code in dedicated sub-directories.
 
 DHParser uses `packrat parsing <https://bford.info/packrat/>`_ with full
-left-recursion support which allows to build parsers for about any context-free
-grammar. Thus, when writing a grammar you do not need to worry about potential
-restrictions of the parser. DHParser provides a post-mortem debugger to analyse
-the parsing process and it offers facilities for unit-testing grammars as well
-as some (experimental) support for fail-tolerant parsing so that the parser does
-not stop at the first syntax error it encounters. Finally, it provides the 
-necessary boilerplate code for language servers that adhere to the
+left-recursion support which allows to build parsers for about any
+context-free grammar. Thus, when writing a grammar you do not need to
+worry about potential restrictions of the parser. DHParser provides a
+post-mortem debugger to analyse the parsing process and it offers
+facilities for unit-testing grammars as well as some (experimental)
+support for fail-tolerant parsing so that the parser does not stop at
+the first syntax error it encounters. Finally, it provides the necessary
+boilerplate code for language servers that adhere to the
 editor-independent the `language server-protocol
-<https://microsoft.github.io/language-server-protocol/>`_. This makes adding
-editor support for you own DSL easy - no matter which editor is your (or your
-user's) favorite one.
+<https://microsoft.github.io/language-server-protocol/>`_. This makes
+adding editor support for you own DSL easy - no matter which editor is
+your (or your user's) favorite one.
 
 
 Generating a parser from a Grammar
 ----------------------------------
 
-Generating a parser does not requires more than writing your grammar in EBNF
-and compiling it with the "dhparser"-command into a readily usable Python-script!
+Generating a parser does not requires more than writing your grammar in
+EBNF and compiling it with the "dhparser"-command into a readily usable
+Python-script!
 
-Let's try this with a parser for the Javascript-Object-Notation (JSON). To
-generate a json-Parser, just store the following EBNF-code which closely resembles
-the grammar on the `JSON-Website <https://www.json.org/>`_ in a file named
-"json.ebnf"::
+Let's try this with a parser for the Javascript-Object-Notation (JSON).
+To generate a json-Parser, just store the following EBNF-code which
+closely resembles the grammar on the `JSON-Website
+<https://www.json.org/>`_ in a file named "json.ebnf"::
 
         @literalws  = right
         @drop       = whitespace, strings
@@ -67,8 +70,9 @@ the grammar on the `JSON-Website <https://www.json.org/>`_ in a file named
         _EOF        =  !/./
 
 (The three lines starting with an ``@``-sign at the beginning of the
-grammar-string are not standard EBNF-code,  but DHParser-directives (see :py:mod:`ebnf`)
-which help to streamline the syntax-tree that the parser produces.)
+grammar-string are not standard EBNF-code,  but DHParser-directives (see
+:py:mod:`ebnf`) which help to streamline the syntax-tree that the parser
+produces.)
 
 Then, run the "dhparser"-script to generate a parser::
 
@@ -107,17 +111,19 @@ text-file or string to produce a syntax-tree::
 
 Mind that the generated script does not yield the json data in form of a
 nested tree of python dictionaries and arrays but only the syntax tree
-of the JSON-document. To derive the actual JSON-data from the syntax-tree
-of a JSON-document a few more processing steps are necessary (see further below). 
+of the JSON-document. To derive the actual JSON-data from the
+syntax-tree of a JSON-document a few more processing steps are necessary
+(see further below).
 
 
 Creating parsers within a Python-script
 ---------------------------------------
 
-In case you just need a parser for some very simple DSL, you can directly add a string
-with the EBNF-grammar of that DSL to you python code and compile if into an executable
-parser much like you'd compile a regular expresseion. Let's do this for a
-`JSON <https://www.json.org/>`_-parser::
+In case you just need a parser for some very simple DSL, you can
+directly add a string with the EBNF-grammar of that DSL to you python
+code and compile if into an executable parser much like you'd compile a
+regular expresseion. Let's do this for a `JSON
+<https://www.json.org/>`_-parser::
 
     import sys
     from DHParser.dsl import create_parser
@@ -167,10 +173,11 @@ parser much like you'd compile a regular expresseion. Let's do this for a
 
 Instead of specifying the grammar with EBNF and then generating a parser
 form the grammar, parsers can also be directly written with Python-code.
-This is best be done inside a derivative class of :py:class:`~parse.Grammar`.
-Doing so avoids namespace pollution and invokes a bit of Grammar-class magic
-that assigns the field names to the Parser-objects. (Otherwise
-the :py:meth:`~parse.Parser.name`-method would have to be called, explicitly.)::
+This is best be done inside a derivative class of
+:py:class:`~parse.Grammar`. Doing so avoids namespace pollution and
+invokes a bit of Grammar-class magic that assigns the field names to the
+Parser-objects. (Otherwise the :py:meth:`~parse.Parser.name`-method
+would have to be called, explicitly.)::
 
     import sys, re
 
@@ -218,14 +225,18 @@ the :py:meth:`~parse.Parser.name`-method would have to be called, explicitly.)::
         print(syntax_tree.serialize(how='indented'))
 
 
-Note, that a ``root__``-field must be added to the class definition that points to the root-parser
-of the Grammar! (The ``disposable__``-field is optional and defines a pattern for names of parsers
-which are considered mere "helper"-parsers that do not capture any essential unit of data by
-themselves and therefore do not need to appear as node-names in the syntax-tree.)
+Note, that a ``root__``-field must be added to the class definition that
+points to the root-parser of the Grammar! (The ``disposable__``-field is
+optional and defines a pattern for names of parsers which are considered
+mere "helper"-parsers that do not capture any essential unit of data by
+themselves and therefore do not need to appear as node-names in the
+syntax-tree.)
 
-Usually, the best alternative is to specify the grammar in EBNF, compile it and then copy and paste the
-compiled grammar into your script. This is easier and neater than specifying the parser with Python-code.
-And it saves the added startup time that results from compiling the grammar within the Python-script.
+Usually, the best alternative is to specify the grammar in EBNF, compile
+it and then copy and paste the compiled grammar into your script. This
+is easier and neater than specifying the parser with Python-code. And it
+saves the added startup time that results from compiling the grammar
+within the Python-script.
 
 
 .. _full_scale_DSLs:
@@ -242,8 +253,9 @@ and filled with templates for the project-files::
    $ dir
    example.dsl  JSON.ebnf    JSONServer.py  README.md  tests_grammar  tst_JSON_grammar.py
 
-The first step is to replace the ".ebnf"-file that contains a simple demo-grammar with your
-own grammar. For the sake of the example we'll write our json-Grammar into this file::
+The first step is to replace the ".ebnf"-file that contains a simple
+demo-grammar with your own grammar. For the sake of the example we'll
+write our json-Grammar into this file::
 
     #  EBNF-Directives
 
@@ -286,9 +298,10 @@ own grammar. For the sake of the example we'll write our json-Grammar into this 
 
     _EOF        =  !/./
 
-The division of the grammar into several sections is purely conventional. If a
-comment-line starts with ``#:`` this is a hint to the test script to generate a
-separate unit-test-template with the section-name that follows in the same line.
+The division of the grammar into several sections is purely
+conventional. If a comment-line starts with ``#:`` this is a hint to the
+test script to generate a separate unit-test-template with the
+section-name that follows in the same line.
 
 The "tst_XXX_grammar.py"-script is the most important tool in any DSL-project.
 The script generates or updates the "XXXParser.py"-program if the grammar has
@@ -298,10 +311,10 @@ by running the test script::
 
     $ python tst_JSON_grammar.py
 
-If there were no errors, a new "jsonParser.py"-file appears in the directory (as
-well as a "jsonServer.py" and a "jsonApp.py"-script which will be explained
-later). Before we can try it, we need some test-data. Then we can run the script
-just like before::
+If there were no errors, a new "jsonParser.py"-file appears in the
+directory (as well as a "jsonServer.py" and a "jsonApp.py"-script which
+will be explained later). Before we can try it, we need some test-data.
+Then we can run the script just like before::
 
     $ rm example.dsl
     $ echo '{ "one": 1, "two": 2 }' >example.json
@@ -316,58 +329,63 @@ Clutter-free grammars
 DHParser tries to minimize unnecessary clutter in grammar definitions.
 To reach this goal DHParser follows a few, mostly intuitive, conventions:
 
-1. The symbols on the left hand side of any definition (or "rule" or "production")
-   are considered significant by default.
+1. The symbols on the left hand side of any definition (or "rule" or
+   "production") are considered significant by default.
 
-   Nodes generated by a parser associated to a symbol will carry the symbol's
-   name and are considered structurally relevant, i.e. they will be eliminated
-   silently. All other nodes are considered as structurally irrelevant and may
-   silently be removed from the syntax-tree to simplify its structure while
-   preserving its content.
+   Nodes generated by a parser associated to a symbol will carry the
+   symbol's name and are considered structurally relevant, i.e. they
+   will be eliminated silently. All other nodes are considered as
+   structurally irrelevant and may silently be removed from the
+   syntax-tree to simplify its structure while preserving its content.
 
 2. Symbols can, however, be marked as "disposable", too.
 
-   Thus, you'll never see an "_element"-node in a JSON-syntax-tree produced
-   by the above grammar, but only object-, array-, string-, number-, true-,
-   false- or null-nodes. (See :any:`simplifying_syntax_trees`.)
+   Thus, you'll never see an "_element"-node in a JSON-syntax-tree
+   produced by the above grammar, but only object-, array-, string-,
+   number-, true-, false- or null-nodes. (See
+   :any:`simplifying_syntax_trees`.)
 
 3. Insignificant whitespace is denoted with a the single character: ``~``.
 
-4. Comments defined by the ``@comment``-directive at the top of the grammar are
-   allowed in any place where insignificant ``~``-whitespace is allowed.
+4. Comments defined by the ``@comment``-directive at the top of the
+   grammar are allowed in any place where insignificant ``~``-whitespace
+   is allowed.
 
-   Thus, you never need to worry about where to provide for comments in you
-   grammar. Allowing comments whereever insignificant whitespace is allowed is
-   as easy as it is intuitive. (See :py:func:`~ebnf.comments_and_whitespace`.)
+   Thus, you never need to worry about where to provide for comments in
+   you grammar. Allowing comments whereever insignificant whitespace is
+   allowed is as easy as it is intuitive. (See
+   :py:func:`~ebnf.comments_and_whitespace`.)
 
-5. To keep the grammar clean, delimiters like "," or "[", "]" can catch adjacent
-   whitespace (and comments), automatically.
+5. To keep the grammar clean, delimiters like "," or "[", "]" can catch
+   adjacent whitespace (and comments), automatically.
 
-   Since delimiters are typically surrounded by insignificant whitespace,
-   DHParser can be advised via the ``@literalws``-directive to catch
-   insignificant whitespace to the right or left hand side of string literals,
-   keeping the grammar clear of too many whitespace markers.
+   Since delimiters are typically surrounded by insignificant
+   whitespace, DHParser can be advised via the ``@literalws``-directive
+   to catch insignificant whitespace to the right or left hand side of
+   string literals, keeping the grammar clear of too many whitespace
+   markers.
 
    In case you would like to grab a string without "eating" its adjacent
-   whitespace, you can still use the "backt-icked" notation for string literals
-   ```back-ticked string```.
+   whitespace, you can still use the "backt-icked" notation for string
+   literals ```back-ticked string```.
 
-6. DHParser can be advised (via the ``@drop``-directive) to drop string-tokens
-   completely from the syntax-tree and, likewise, insignificant whitespace or
-   disposable symbols. This greatly reduces the verbosity of the concrete syntax
-   tree.
+6. DHParser can be advised (via the ``@drop``-directive) to drop
+   string-tokens completely from the syntax-tree and, likewise,
+   insignificant whitespace or disposable symbols. This greatly reduces
+   the verbosity of the concrete syntax tree.
 
-   In case you would still to keep a particular string-token in the tree, you
-   can still do so by assigning it to a non-disposable symbol, e.g.
-   ``opening_bracket = "("`` and using this symbol instead of the string literal
-   in other expressions.
+   In case you would still to keep a particular string-token in the
+   tree, you can still do so by assigning it to a non-disposable symbol,
+   e.g. ``opening_bracket = "("`` and using this symbol instead of the
+   string literal in other expressions.
 
 7. Macros (marked with ``$``) can be used to avoid code-repetition
    within a grammar; the ``@include``-directive allows to share code
    between code between different grammars
-   
-8. Ah, and yes, of course, you do not need to end every single definition in the
-   grammar with a semicolon ";" as demanded by that ISO-norm for EBNF :-)
+
+8. Ah, and yes, of course, you do not need to end every single
+   definition in the grammar with a semicolon ";" as demanded by that
+   ISO-norm for EBNF :-)
 
 
 .. _ast_building:
@@ -375,10 +393,10 @@ To reach this goal DHParser follows a few, mostly intuitive, conventions:
 Declarative AST-building
 ------------------------
 
-DHParser does does not hide any stages of the tree generation process. Thus, you
-get full access to the (somewhat simplified if you choose) concrete syntax tree
-(CST) as well as to the (even more simplyfied and streamlined) abstract syntax
-tree (AST).
+DHParser does does not hide any stages of the tree generation process.
+Thus, you get full access to the (somewhat simplified if you choose)
+concrete syntax tree (CST) as well as to the (even more simplyfied and
+streamlined) abstract syntax tree (AST).
 
 An internal mini-DSL for AST-transformation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -414,9 +432,10 @@ Alternatively, you could also have used the rule ``"string":
 containing the quotation mark-delimiters of a string do according to our
 specification of the JSON-grammar.
 
-To give an impression of how AST-transformation-tables may look like, here is an
-excerpt from (a former version of) DHParser's own transformation table to derive
-a lean AST from the concrete syntax-tree of an EBNF grammar::
+To give an impression of how AST-transformation-tables may look like,
+here is an excerpt from (a former version of) DHParser's own
+transformation table to derive a lean AST from the concrete syntax-tree
+of an EBNF grammar::
 
     EBNF_AST_transformation_table = {
         # AST Transformations for EBNF-grammar
@@ -437,15 +456,16 @@ the help of DHParser's ``@disposable``-, ``@reduction``- and
 ``@drop``-directives, only few transformations should remain necessary to
 produce the desired abstract syntax-tree.
 
-In specific application cases it is often desirable to model the abstract
-syntax-tree as a tree of objects of different classes. However, since DHParser
-is a generic Parser-generator, DHParser's syntax-trees are composed of a single
-:py:class:`~nodetree.Node`-type. Nodes contain either text-data ("leaf-nodes")
-or have one or more other nodes as children ("branch nodes"), but - other than,
-say, XML - not both at the same time. The "kind" or "type" of a node is
-indicated by its "name". It should be easy, though, to transform this tree of
-nodes into an application-specific tree of objects of different classes. 
-(See :ref:`json_compiler` below for a simple example of how to do this.)
+In specific application cases it is often desirable to model the
+abstract syntax-tree as a tree of objects of different classes. However,
+since DHParser is a generic Parser-generator, DHParser's syntax-trees
+are composed of a single :py:class:`~nodetree.Node`-type. Nodes contain
+either text-data ("leaf-nodes") or have one or more other nodes as
+children ("branch nodes"), but - other than, say, XML - not both at the
+same time. The "kind" or "type" of a node is indicated by its "name". It
+should be easy, though, to transform this tree of nodes into an
+application-specific tree of objects of different classes. (See
+:ref:`json_compiler` below for a simple example of how to do this.)
 
 Serialization as you like it: XML, JSON, S-expressions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -518,11 +538,11 @@ syntax-trees in either a nicely formatted or compact form.
           number
             INT "2"
 
-All but the last serialization-formats can be de-serialized into a tree of nodes
-with the functions: :py:func:`~nodetree.parse_sxpr`,
+All but the last serialization-formats can be de-serialized into a tree
+of nodes with the functions: :py:func:`~nodetree.parse_sxpr`,
 :py:func:`~nodetree.parse_xml`, :py:func:`~nodetree.parse_json`. The
-:py:func:`~nodetree.parse_xml` is not restricted to de-serialization but can
-parse any XML into a tree of nodes.
+:py:func:`~nodetree.parse_xml` is not restricted to de-serialization but
+can parse any XML into a tree of nodes.
 
 XML-support
 ^^^^^^^^^^^
@@ -534,19 +554,22 @@ allow direct transfer to and from the xml-ElementTrees of either the Python
 standard-library or the lxml-package. This can become useful if you need full
 support for XPath, XQuery and XSLT, which DHParser does not provide on its own.
 
-On the other hand DHParser's node-trees (the equivalent of XML-DOM-trees),
-provide their own set of navigation-functions which, depending on the use
-case, can be way more comfortable to use than the common X-technologies.
-Most of these functions are provided as methods of :py:class:`~nodetree.Node`
-such as :py:meth:`~nodetree.Node.select` and :py:meth:`~nodetree.Node.select_path`.
-For a comprehensive description see the section on :ref:`tree-traversal <paths>`
-in the referance manual of :py:mod:`~nodetree`.
+On the other hand DHParser's node-trees (the equivalent of
+XML-DOM-trees), provide their own set of navigation-functions which,
+depending on the use case, can be way more comfortable to use than the
+common X-technologies. Most of these functions are provided as methods
+of :py:class:`~nodetree.Node` such as :py:meth:`~nodetree.Node.select`
+and :py:meth:`~nodetree.Node.select_path`. For a comprehensive
+description see the section on :ref:`tree-traversal <paths>` in the
+referance manual of :py:mod:`~nodetree`.
 
-An particularly useful tool when processing text in tree-structures are content mappings
-as provided by :py:class:`~nodetree.ContentMapping`. Content mappings allow to map positions
-in the flat-string-representation of the document encoded in a DOM-tree to
-paths and locations within the tree. Thus, it becomes possible to search for strings
-in the document with regular expressions or simple string-search::
+An particularly useful tool when processing text in tree-structures are
+content mappings as provided by :py:class:`~nodetree.ContentMapping`.
+Content mappings allow to map positions in the
+flat-string-representation of the document encoded in a DOM-tree to
+paths and locations within the tree. Thus, it becomes possible to search
+for strings in the document with regular expressions or simple
+string-search::
 
     >>> from DHParser.nodetree import parse_xml, ContentMapping, pp_path
     >>> tree = parse_xml('<doc>This is <em>New</em> York, not "old" York</doc>')
@@ -558,9 +581,10 @@ in the document with regular expressions or simple string-search::
     >>> print(offset)
     0
 
-This is supplemented by a powerful markup-funciotn (:py:meth:`~nodetree.ContentMapping.markup`)
-to which the string position of the text to be marked up can be passed. No worries
-about tags lying in between::
+This is supplemented by a powerful markup-funciotn
+(:py:meth:`~nodetree.ContentMapping.markup`) to which the string
+position of the text to be marked up can be passed. No worries about
+tags lying in between::
 
     >>> parent = cm.markup(ny_pos, ny_pos + len('New York'), 'location')
     >>> print(parent.as_xml(inline_tags='doc'))
@@ -582,9 +606,10 @@ debugger often, any more, by the time you are more experienced with writing
 grammars, the unit-testing facilities become almost indispensable when
 refactoring the grammar of evolving DSLs.
 
-The unit-testing-framework has been designed to be easy to handle: Tests for any symbol
-of the grammar are written into ``.ini``-Files in the ``tests_grammar``
-sub-directory of the DSL-project. Test-cases look like this::
+The unit-testing-framework has been designed to be easy to handle: Tests
+for any symbol of the grammar are written into ``.ini``-Files in the
+``tests_grammar`` sub-directory of the DSL-project. Test-cases look like
+this::
 
     [match:number]
     M1: "-3.2E-32"
@@ -612,12 +637,13 @@ the test-subdirectory yields the results of the tests in this file, only::
 
     SUCCESS! All tests passed :-)
 
-In addition to this summary-report, the test-script stores detailed reports of
-all tests for each test-file in form of Markdown-documents in the
-"test_grammar/REPORTS" directory. These reports contain the generated ASTs from
-all match-tests and the error messages for all fail-tests. If we look at the AST
-of the first match-test "M1" we might find to our surprise that it is not what
-we expect, but much more verbose::
+In addition to this summary-report, the test-script stores detailed
+reports of all tests for each test-file in form of Markdown-documents in
+the "test_grammar/REPORTS" directory. These reports contain the
+generated ASTs from all match-tests and the error messages for all
+fail-tests. If we look at the AST of the first match-test "M1" we might
+find to our surprise that it is not what we expect, but much more
+verbose::
 
    (number (INT (NEG "-") (:RegExp "3"))
            (FRAC (DOT ".") (:RegExp "2"))
@@ -631,18 +657,19 @@ name as the match-test that yields the AST we'd like to test::
     [ast:number]
     M1: (number "-3.2E-32")
 
-Running the test-suite will, of course, yield a failure for the AST-Test until
-we fix the issue, which in this case could be done by adding ``"number":
-[collapse]`` to our AST-transformations. Since it is sometimes helpful to
-inspect the CST as well, a match test's name can be marked with an asterisk, e.g.
-``M1*:  "-3.2E-32"`` to include the CST for this test in the report, too.
+Running the test-suite will, of course, yield a failure for the AST-Test
+until we fix the issue, which in this case could be done by adding
+``"number": [collapse]`` to our AST-transformations. Since it is
+sometimes helpful to inspect the CST as well, a match test's name can be
+marked with an asterisk, e.g. ``M1*:  "-3.2E-32"`` to include the CST
+for this test in the report, too.
 
-If a parser fails to match, it is sometimes hard to tell which mistake in the
-grammar definition has been responsible for that failure. This is where
-DHParser's post-mortem-debugger comes in. It delivers a detailed account of the
-parsing process up to the failure. These accounts will be written in HTML-format
-into the ``test_grammar/LOGS``-subdirectory whenever a test fails and can be
-viewed with a browser.
+If a parser fails to match, it is sometimes hard to tell which mistake
+in the grammar definition has been responsible for that failure. This is
+where DHParser's post-mortem-debugger comes in. It delivers a detailed
+account of the parsing process up to the failure. These accounts will be
+written in HTML-format into the ``test_grammar/LOGS``-subdirectory
+whenever a test fails and can be viewed with a browser.
 
 To see what this looks like, let's introduce a little mistake into our grammar,
 let's assume that we had forgotten that the exponent of a decimal number can
@@ -658,39 +685,44 @@ faulty source text but due to an error within the grammar-specification.
 Fail-tolerant parsing
 ---------------------
 
-Fail-tolerance is the ability of a parser to resume parsing after an error has
-been encountered. A parser that is fail-tolerant does not stop parsing at the
-first error but can report several if not all errors in a source-code file in
-one single run. Thus, the user is not forced to fix an earlier error before she
-or he is even being informed about the next error. Fail-tolerance is a
-particularly desirable property when using a modern editor or integrated
-development environment (IDE) that annotate errors while typing the source code.
+Fail-tolerance is the ability of a parser to resume parsing after an
+error has been encountered. A parser that is fail-tolerant does not stop
+parsing at the first error but can report several if not all errors in a
+source-code file in one single run. Thus, the user is not forced to fix
+an earlier error before she or he is even being informed about the next
+error. Fail-tolerance is a particularly desirable property when using a
+modern editor or integrated development environment (IDE) that annotate
+errors while typing the source code.
 
-DHParser offers support for fail-tolerant parsing that goes beyond what can be
-achieved within EBNF alone. A prerequisite for fail-tolerant-parsing is to
-annotate the grammar with ``§``-markers ("mandatory-marker") at places where
-one can be sure that the parser annotated with the marker must match if it is
-called at all. This is usually the case for parsers in a series after the point
-where it is uniquely determined.
+DHParser offers support for fail-tolerant parsing that goes beyond what
+can be achieved within EBNF alone. A prerequisite for
+fail-tolerant-parsing is to annotate the grammar with ``§``-markers
+("mandatory-marker") at places where one can be sure that the parser
+annotated with the marker must match if it is called at all. This is
+usually the case for parsers in a series after the point where it is
+uniquely determined.
 
-For example, once the opening bracket of a bracketed expression has been matched
-by a parser it is clear that eventually the closing bracket must be matched,
-too, or it is an error. Thus, in our JSON-grammar we could write::
+For example, once the opening bracket of a bracketed expression has been
+matched by a parser it is clear that eventually the closing bracket must
+be matched, too, or it is an error. Thus, in our JSON-grammar we could
+write::
 
     array       = "[" [ _element { "," _element } ] §"]"
 
 The ``§`` advises the following parser(s) in the series to raise an error
 on the spot instead of merely returning a non-match if they fail.
 
-The §-marker can be supplemented with a ``@ ..._resume``-directive that tells
-the calling parsers where to continue after the array parser has failed. So, the
-parser resuming the parsing process is not the array-parser that has failed, but
-the first of the parsers in the call-stack of the array-parser that catches up
-at the location indicated by the ``@ ..._resume``-directive. The location itself
-is determined by either a regular expression or another parser. If a parser is
-given, it must match all characters between the error location and the
-intended point of re-entry. In the case of a regular expression, the point for
-reentry is the location *after* the next match of the regular expression::
+The §-marker can be supplemented with a ``@ ..._resume``-directive that
+tells the calling parsers where to continue after the array parser has
+failed. So, the parser resuming the parsing process is not the
+array-parser that has failed, but the first of the parsers in the
+call-stack of the array-parser that catches up at the location indicated
+by the ``@ ..._resume``-directive. The location itself is determined by
+either a regular expression or another parser. If a parser is given, it
+must match all characters between the error location and the intended
+point of re-entry. In the case of a regular expression, the point for
+reentry is the location *after* the next match of the regular
+expression::
 
     @array_resume = /\]/
     array       = "[" [ _element { "," _element } ] §"]"
@@ -706,9 +738,10 @@ over a simple test case::
              "array": [1,2 3,4],
              "string": "two" }'''
 
-First, without re-entrance and without ``§``-marker the error message is not very informative and
-no structure has been detected correctly. At least the location of the error has been determined
-with good precision by the "farthest failure"-principle.::
+First, without re-entrance and without ``§``-marker the error message is
+not very informative and no structure has been detected correctly. At
+least the location of the error has been determined with good precision
+by the "farthest failure"-principle.::
 
     ### Error:
 
@@ -721,9 +754,11 @@ with good precision by the "farthest failure"-principle.::
 
         (ZOMBIE__ (ZOMBIE__ `() '{ "number": 1,' "") (ZOMBIE__ '"array": [1,2 3,4],' '"string": "two" }'))
 
-Secondly, still without re-entrance but with the ``§``-marker. The error-message is more precise, though the
-followup-error "Parser stopped before end" may be confusing. The AST-tree (not shown here) contains more
-structure, but is still littered with ``ZOMBIE__``-nodes of unidentified parts of the input::
+Secondly, still without re-entrance but with the ``§``-marker. The
+error-message is more precise, though the followup-error "Parser stopped
+before end" may be confusing. The AST-tree (not shown here) contains
+more structure, but is still littered with ``ZOMBIE__``-nodes of
+unidentified parts of the input::
 
     ### Error:
 
@@ -732,9 +767,9 @@ structure, but is still littered with ``ZOMBIE__``-nodes of unidentified parts o
     2:15: Error (1010): `]` ~ expected by parser 'array', »3,4],\n "str...« found!
 
 
-Finally, with both ``§``-marker and resume-directive as denoted in the EBNF snippet
-above, we receive a sound error message and, even more surprising, an almost complete
-AST::
+Finally, with both ``§``-marker and resume-directive as denoted in the
+EBNF snippet above, we receive a sound error message and, even more
+surprising, an almost complete AST::
 
     ### Error:
 
@@ -762,11 +797,12 @@ AST::
                 (PLAIN "two")))))
 
 It should be noted that it can be quite an art to find the proper
-resume-clauses, because different kinds of errors require different resume-clause.
-Assume for example, the coder of the JSON-file had forgotten the closing square bracket.
-It is virtually impossible to anticipate and take care of all possible mistakes 
-with a resume clause. But one can build these clauses "empirically" based on the 
-most common or most typical mistakes.
+resume-clauses, because different kinds of errors require different
+resume-clause. Assume for example, the coder of the JSON-file had
+forgotten the closing square bracket. It is virtually impossible to
+anticipate and take care of all possible mistakes with a resume clause.
+But one can build these clauses "empirically" based on the most common
+or most typical mistakes.
 
 .. _macros:
 
@@ -800,18 +836,18 @@ again, this can be rewritten with macros as in the following complete
 grammar::
 
     >>> outlined_text_grammar = """@ whitespace  = /[ \\t]*/
-    ... @ reduction   = merge        
+    ... @ reduction   = merge
     ... @ disposable  = WS, EOF, LINE, S, $outline
     ... @ drop        = WS, EOF, backticked, whitespace
-    ... 
-    ... $outline($level_sign, $sub_level) = 
+    ...
+    ... $outline($level_sign, $sub_level) =
     ...     [WS] $level_sign !`#` ~ heading [blocks] { [WS] $sub_level }
-    ... 
+    ...
     ... main = $outline(`#`, section) [WS] EOF
     ... section = $outline(`##`, subsection)
     ... subsection = $outline(`###`, subsubsection)
     ... subsubsection = $outline(`####`, NEVER_MATCH)
-    ... 
+    ...
     ... heading = LINE
     ... blocks = [WS] block { PARSEP block }
     ... block  = !is_heading line { lf !is_heading line }
@@ -822,14 +858,14 @@ grammar::
     ... LINE      = /[ \\t]*[^\\n]+/   # a line of text
     ... WS        = /(?:[ \\t]*\\n)+/  # empty lines
     ... S         = !PARSEP /\\s+/     # whitespace and single(!) linefeeds
-    ... PARSEP    = /[ \\t]*\\n[ \\t]*\\n\\s*/  # one or more empty lines    
+    ... PARSEP    = /[ \\t]*\\n[ \\t]*\\n\\s*/  # one or more empty lines
     ... EOF       =  !/./              # end of file
     ... NEVER_MATCH = /..(?<=^)/       # a regular expression that never matches"""
 
 Note that DHParser's macro-system does not allow to define symbols
 inside macros. Therefore, each outline level must still be defined
-explicitly. However, it suffices to write the grammar for parsing 
-an outline-heading only once. 
+explicitly. However, it suffices to write the grammar for parsing an
+outline-heading only once.
 
 Furthermore, though not related to macros in particular, this grammar
 demonstrates how to encode such intuitive structures of common
@@ -863,38 +899,42 @@ Compiling DSLs
 The auto-generated parser-script
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-As explained earlier (see :ref:`full_scale_DSLs`), full scale DSL-projects
-contain a test-script the name of which starts with ``tst_...`` that generates
-and, if the grammar has been changed, updates a parser-script the name of which
-ends with ``...Parser.py``. This parser-script can be used to "compile"
-documents written in the DSL described by the ebnf-Grammar in the project
-directory. A freshley generated parser-script merely yields a
-concrete-syntax-tree when run on a source file. In almost all cases, you'll want
-to adjust the ``...Parser.py`` script, so that it really yields the data
-contained in the compiled document. This, however, requires further processing
-steps than just parsing. The ``...Parser.py``-script contains four different
+As explained earlier (see :ref:`full_scale_DSLs`), full scale
+DSL-projects contain a test-script the name of which starts with
+``tst_...`` that generates and, if the grammar has been changed, updates
+a parser-script the name of which ends with ``...Parser.py``. This
+parser-script can be used to "compile" documents written in the DSL
+described by the ebnf-Grammar in the project directory. A freshley
+generated parser-script merely yields a concrete-syntax-tree when run on
+a source file. In almost all cases, you'll want to adjust the
+``...Parser.py`` script, so that it really yields the data contained in
+the compiled document. This, however, requires further processing steps
+than just parsing. The ``...Parser.py``-script contains four different
 sections, namley, the **Preprocesser**-, **Parser**-, **AST**- and
 **Compiler**-sections. Once this script has been generated, only the
 Parser-section will be updated automatically when running the
-``tst_...``-scripts. The Parser-section should therefore be left untouched,
-because any change might be overwritten without warning. For the same reason the
-comments demarking the different sections should be left intact. All other
-sections can and - with the exceptions of the Preprocessor-section - usually
-must be edited by hand in order to allow the ``..Parser.py``-script to return
-the parsed data in the desired form.
+``tst_...``-scripts. The Parser-section should therefore be left
+untouched, because any change might be overwritten without warning. For
+the same reason the comments demarking the different sections should be
+left intact. All other sections can and - with the exceptions of the
+Preprocessor-section - usually must be edited by hand in order to allow
+the ``..Parser.py``-script to return the parsed data in the desired
+form.
 
 Because for most typical DSL-projects, preprocessors are not needed, the
-Preprocessor-section will be not be discussed, here. The other two sections, AST
-(for Abstract Syntax Tree) and Compiler, contain skeletons for (different kinds
-of) tree-transformations that can be edited at will or even completely be
-substituted by custom code. All sections (including "Preprocessor") comprise a
-callable class or an "instantiation function" returning a transformation
-function that should be edited as well as a ``get_...``-function that returns a
-thread-specific instance of this class or function and a function that passes a
-call through to this thread-specific instance. Only the transformation-function
-proper needs to be touched. The other two functions are merely scaffolding to
-ensure thread-safety so that you do not have to worry about it, when filling in
-the transformation-function proper.
+Preprocessor-section will be not be discussed, here. The other two
+sections, AST (for Abstract Syntax Tree) and Compiler, contain skeletons
+for (different kinds of) tree-transformations that can be edited at will
+or even completely be substituted by custom code. All sections
+(including "Preprocessor") comprise a callable class or an
+"instantiation function" returning a transformation function that should
+be edited as well as a ``get_...``-function that returns a
+thread-specific instance of this class or function and a function that
+passes a call through to this thread-specific instance. Only the
+transformation-function proper needs to be touched. The other two
+functions are merely scaffolding to ensure thread-safety so that you do
+not have to worry about it, when filling in the transformation-function
+proper.
 
 In the case of our json-parser, the skeleton for the "compiler" that is called
 after rhw AST-transformation has finished. looks like this:
@@ -933,13 +973,14 @@ after rhw AST-transformation has finished. looks like this:
         return get_compiler()(ast)
 
 
-Here, the ``get_compiler()``- and ``compile_json()``-functions do not need to be
-touched, while the ``jsonCompiler``-class should be edited at will or be
-replaced by a function that returns a transformation functions, i.e. a function
-that takes a syntax tree as input and returns an arbitrary kind of output. In
-this example, it is reasonable to expect a nested Python-data-structure as
-output that contains the data of the json-file. We'll see in section
-:ref:`json_compiler`, below, how this could be done.
+Here, the ``get_compiler()``- and ``compile_json()``-functions do not
+need to be touched, while the ``jsonCompiler``-class should be edited at
+will or be replaced by a function that returns a transformation
+functions, i.e. a function that takes a syntax tree as input and returns
+an arbitrary kind of output. In this example, it is reasonable to expect
+a nested Python-data-structure as output that contains the data of the
+json-file. We'll see in section :ref:`json_compiler`, below, how this
+could be done.
 
 Streamlining the abstract-syntax-tree (AST)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1013,15 +1054,18 @@ child-nodes by its concatenated string-content.
     FRAC- or EXP-nodes in the syntax-tree of the number element in the subsequent compilation
     stage.
 
-A great way to check if an AST-transformation works as expected is by adding an asterisk "*" to the name
-of match-test. Usually, the test runner only outputs the abstract-syntax-tree of match-tests in the
-test-report. However, if marked with an asterisk, the concrete syntax tree will be printed, too. So,
-adding this marker to a test within an ".ini"-file in the "tests_grammar"-subdirectory, say::
+A great way to check if an AST-transformation works as expected is by
+adding an asterisk "*" to the name of match-test. Usually, the test
+runner only outputs the abstract-syntax-tree of match-tests in the
+test-report. However, if marked with an asterisk, the concrete syntax
+tree will be printed, too. So, adding this marker to a test within an
+".ini"-file in the "tests_grammar"-subdirectory, say::
 
     [match:number]
     M1*: "-2.0E-10"
 
-yields the following in results in the respective markdown-file in "tests_grammar/REPORT"-subdirectory::
+yields the following in results in the respective markdown-file in
+"tests_grammar/REPORT"-subdirectory::
 
     Test of parser: "number"
     ========================
@@ -1042,8 +1086,9 @@ yields the following in results in the respective markdown-file in "tests_gramma
 
         (number "-2.0E-10")
 
-The transformation rules specified above already greatly simplify the AST. For
-example, compiling our simple test data set ``{ "one": 1, "two": 2 }`` now yields::
+The transformation rules specified above already greatly simplify the
+AST. For example, compiling our simple test data set ``{ "one": 1,
+"two": 2 }`` now yields::
 
     (json (object (member (string "one") (number "1")) (member (string "two") (number "2"))))
 
@@ -1053,11 +1098,13 @@ example, compiling our simple test data set ``{ "one": 1, "two": 2 }`` now yield
 Compiling the AST to data
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-However, this is still not quite what we would expect from a JSON-parser. What we'd like to have would
-be a JSON-parser (or "compiler" for that matter) that returns a nested Python-data-structure
-that contains the data stored in a JSON-file - and not merely the concrete or abstract syntax-tree
-of that file. For this purpose, we need to fill in the Compiler-class-skeleton in the compiler-sections
-of the generated Parser script:
+However, this is still not quite what we would expect from a
+JSON-parser. What we'd like to have would be a JSON-parser (or
+"compiler" for that matter) that returns a nested Python-data-structure
+that contains the data stored in a JSON-file - and not merely the
+concrete or abstract syntax-tree of that file. For this purpose, we need
+to fill in the Compiler-class-skeleton in the compiler-sections of the
+generated Parser script:
 
 .. code-block:: python
 
@@ -1142,17 +1189,18 @@ The code should be self-explanatory: For each node-type (or tag name) that can
 occur in the abstract-syntax-tree the associated visitor-method converts the
 sub-tree to a Python data-structure which is returned to the calling method.
 
-After having added this compiler code to the Parser-skript, calling it with our
-trivial test-data set yields the expected Python-dictionary: ``{'one': 1, 'two':
-2}`` instead of the syntax-tree.
+After having added this compiler code to the Parser-skript, calling it
+with our trivial test-data set yields the expected Python-dictionary:
+``{'one': 1, 'two': 2}`` instead of the syntax-tree.
 
-Now, since our JSON-Parser is able to produce Python-objects from JSON-files, we
-will probably prefer to call it from Python in order to receive the data rather
-than running it on the command line. Instead of calling it, the generated
-parser-script can simply be imported as a module. The generated script contains
-a ``compile_src()``-function which allows to compile a DSL-string from within a
-python programm by running all four stages (preprocessing, parsing,
-AST-transformation and compiling) in sequence on the source string.
+Now, since our JSON-Parser is able to produce Python-objects from
+JSON-files, we will probably prefer to call it from Python in order to
+receive the data rather than running it on the command line. Instead of
+calling it, the generated parser-script can simply be imported as a
+module. The generated script contains a ``compile_src()``-function which
+allows to compile a DSL-string from within a python programm by running
+all four stages (preprocessing, parsing, AST-transformation and
+compiling) in sequence on the source string.
 
 .. code-block:: python
 
@@ -1185,47 +1233,51 @@ following line at the beginning of the "jsonCompiler.py" script::
 
     from jsonParser import get_preprocessor, get_grammar, get_transformer
 
-and everything works just the same, only that from now on the compiler-script
-takes the role of the parser script from the perspective of any client using the
-JSON-parser. This means that from now on, in order to use the parser/compiler
-either from the command line or from Python code, the second part, i.e. the
-compiler-script must be called or imported. Thus, if we split our JSON-parser in
-this fashion, we'd call ``python jsonCompiler.py test.json`` from the command
-line, and we would add ``import jsonCompiler`` or ``from jsonCompiler import
-compile_src`` at the beginning of a client script.
+and everything works just the same, only that from now on the
+compiler-script takes the role of the parser script from the perspective
+of any client using the JSON-parser. This means that from now on, in
+order to use the parser/compiler either from the command line or from
+Python code, the second part, i.e. the compiler-script must be called or
+imported. Thus, if we split our JSON-parser in this fashion, we'd call
+``python jsonCompiler.py test.json`` from the command line, and we would
+add ``import jsonCompiler`` or ``from jsonCompiler import compile_src``
+at the beginning of a client script.
 
-In case you make use of the auto-generated Server-script (see below), you should
-also adjust any import-statements that refer to the parser-script, so that they
-refer to the compile-script instead.
+In case you make use of the auto-generated Server-script (see below),
+you should also adjust any import-statements that refer to the
+parser-script, so that they refer to the compile-script instead.
 
 Language Servers
 ----------------
 
-DHParser supports running parsers as local servers and includes boilerplate code
-for building editor support for your domain specific language via the `language
-server protocol`_. After creating a new project and running the test-runner
-script in the project directory, you will also find a "...Server.py"-script next
-to the "...Parser.py" in the project directory. The server-script can be used in
-a similar way as the parser-script. However, the server script will pass on any
-parsing requests to a server running in the background. The server will
+DHParser supports running parsers as local servers and includes
+boilerplate code for building editor support for your domain specific
+language via the `language server protocol`_. After creating a new
+project and running the test-runner script in the project directory, you
+will also find a "...Server.py"-script next to the "...Parser.py" in the
+project directory. The server-script can be used in a similar way as the
+parser-script. However, the server script will pass on any parsing
+requests to a server running in the background. The server will
 automatically be started when calling the script for the first time::
 
     $ python jsonServer.py test.json
     Starting server on 127.0.0.1:8890
     [{"one":1,"two":2},[]]
 
-Other than the plain parser-script, the result the server returns is always a list of
-the result propper and any errors or warnings that haven been generated on the way.
+Other than the plain parser-script, the result the server returns is
+always a list of the result propper and any errors or warnings that
+haven been generated on the way.
 
 Running the parser in server-mode as several advantages:
 
-1. Once the server is running, there are no startup times any more. Not the least
-   because of the compilation of the (potentially very many) regular expressions
-   within a parser, the startup times can otherwise be considerable for complex
-   grammars.
+1. Once the server is running, there are no startup times any more. Not
+   the least because of the compilation of the (potentially very many)
+   regular expressions within a parser, the startup times can otherwise
+   be considerable for complex grammars.
 
-2. In particular, just-in-time compilers like `pypy`_ that typically trade startup
-   time for run-time speed, can profit in particular from the server mode.
+2. In particular, just-in-time compilers like `pypy`_ that typically
+   trade startup time for run-time speed, can profit in particular from
+   the server mode.
 
 3. Serveral parsing/compilation can be run in parrallel and will automatically
    use different processor cores. However, when calling the parser-script in
@@ -1234,11 +1286,12 @@ Running the parser in server-mode as several advantages:
    it with the name of a cirectory containing source files, it will also try
    to exploit multiple processor cores.
 
-4. Last not least, the server script can be extended to provide a language server
-   for an integrated development environment or programm-editor. In this
-   case the script would usually be startet from within the editor and with
-   the "--stream"-option which will allow connect to the server via streams
-   rather than a tcp port and address.
+4. Last not least, the server script can be extended to provide a
+   language server for an integrated development environment or
+   programm-editor. In this case the script would usually be startet
+   from within the editor and with the "--stream"-option which will
+   allow connect to the server via streams rather than a tcp port and
+   address.
 
 In order to stop a running server, the server-script should be called with
 the "--stoperver"-option::
@@ -1251,8 +1304,9 @@ respects from the popular `pygls`_-module:
 
 * DHParser uses the more lightwight `TypedDict`_ -dictionaries instead
   of `pydantic`_-modules. The TypedDict-definitions in the
-  DHParser.lsp-module are auto-generated from the `language server protocol specification`_
-  with `ts2python`_, a package that has itself been build with DHParser.
+  DHParser.lsp-module are auto-generated from the `language server
+  protocol specification`_ with `ts2python`_, a package that has itself
+  been build with DHParser.
 
 * The DHParser.server-module also provides some boilerplate code to support
   parallel execution via multiprocessing.
@@ -1265,45 +1319,47 @@ Parser-GUI
 ----------
 
 Along with the "...Server.py"-script the test runner also creates and
-"...App.py" script (DHParser versions >= 1.4.0, only!). The latter is a simple
-GUI-frontend for the "...Parser.py"-script. In case you do not need the Server-
-or App-script, you can safely either of them. Both of theses scripts can always
-be created anew by calling the test-runner script "tst\_...\_grammar.py" with the
-"--scripts"-option.
+"...App.py" script (DHParser versions >= 1.4.0, only!). The latter is a
+simple GUI-frontend for the "...Parser.py"-script. In case you do not
+need the Server- or App-script, you can safely either of them. Both of
+theses scripts can always be created anew by calling the test-runner
+script "tst\_...\_grammar.py" with the "--scripts"-option.
 
-.. caution:: When bundling the App-script with `pyinstaller`_ or a similar technology, 
-    multiprocessing can fail to work unter some conditions. In this case it is
-    advisable to turn of the configuration switch for multiprocessing in the
-    main-section of the App-script by uncommenting the respective lines 
-    before bundling the App.
+.. caution:: When bundling the App-script with `pyinstaller`_ or a
+    similar technology, multiprocessing can fail to work unter some
+    conditions. In this case it is advisable to turn of the
+    configuration switch for multiprocessing in the main-section of
+    the App-script by uncommenting the respective lines before
+    bundling the App.
 
 
 Performance optimization
 ------------------------
 
-The most important design goals of DHParser have been reliability, flexibility
-and testability. There are some performance optimizations, most notably the
-early tree reduction during the parsing stage that is controlled with the
-``@drop``  and  ``@disposable``-directives (see
+The most important design goals of DHParser have been reliability,
+flexibility and testability. There are some performance optimizations,
+most notably the early tree reduction during the parsing stage that is
+controlled with the ``@drop``  and  ``@disposable``-directives (see
 :any:`simplifying_syntax_trees`) and type-hint modules (.pxd) for
-compiling DHParser with `Cython`_. However, given that the whole project has
-been realized with Python, rather than a compiled language like `nim`_,
-top-performance has not been the most import design goal.
+compiling DHParser with `Cython`_. However, given that the whole project
+has been realized with Python, rather than a compiled language like
+`nim`_, top-performance has not been the most import design goal.
 
-This said, you can expect
-DHParser to have roundabout the same performance as other python parsers that
-are equally powerful, i.e. DHParser is slower but more powerful than
-LALR-parsers and about as fast as the about equally powerful Earley-parsers.
+This said, you can expect DHParser to have roundabout the same
+performance as other python parsers that are equally powerful, i.e.
+DHParser is slower but more powerful than LALR-parsers and about as fast
+as the about equally powerful Earley-parsers.
 
-If you feel that DHParser's performance is too slow, you can increase the
-roughly a factor of 2 by compiling with `Cython`_. In order to do so you
-need to have a c-ompiler installed on your system (gcc, clang on Linux
-or MacOs and msvc on Windows will all do.  Since
-Version 1.3 DHParser requires at least Cython Version 3 alpha 11,
-which cannot be installed from the `Python Package Index <https://pypi.org/>`_
-but must be built from the `sources on github <https://github.com/cython/cython>`_.
-On some Linux-distributions you might find it in the community-repositories.
-(Under Arch-Linux it can be installed with ``yay -S cython3``.)
+If you feel that DHParser's performance is too slow, you can increase
+the roughly a factor of 2 by compiling with `Cython`_. In order to do so
+you need to have a c-ompiler installed on your system (gcc, clang on
+Linux or MacOs and msvc on Windows will all do.  Since Version 1.3
+DHParser requires at least Cython Version 3 alpha 11, which cannot be
+installed from the `Python Package Index <https://pypi.org/>`_ but must
+be built from the `sources on github
+<https://github.com/cython/cython>`_. On some Linux-distributions you
+might find it in the community-repositories. (Under Arch-Linux it can be
+installed with ``yay -S cython3``.)
 
 Compiling DHParser is simple. You just need to call the
 ``dhparser_cythonize.py``-script in the ``scripts``-subdirectory of
@@ -1311,22 +1367,25 @@ DHParsers-installation-driectory::
 
     $ python DHParser/scripts/dhparser_cythonize.py
 
-DHParser can also be run with any recent version of `pypy3`_. However, my own
-experience so far has been that while running DHParser with pypy with one and the
-same dataset over and over again produces a most impressive speedup, in real-world
-applications of DHParser (I ran a whole fascicle of different medieval latin
-dictionary articles through DHParser in batch-mode), pypy is a even quite a bit slower
-than the python-interpreter. (Compiling one fascicle of the medival latin dctionary
-in batch mode with multiprocessing takes about three times longe with pypy3 than with
-CPython!) So, presently, I'd recommend staying with `Cython`_ when
-trying to speed-up DHParser.
+DHParser can also be run with any recent version of `pypy3`_. However,
+my own experience so far has been that while running DHParser with pypy
+with one and the same dataset over and over again produces a most
+impressive speedup, in real-world applications of DHParser (I ran a
+whole fascicle of different medieval latin dictionary articles through
+DHParser in batch-mode), pypy is a even quite a bit slower than the
+python-interpreter. (Compiling one fascicle of the medival latin
+dctionary in batch mode with multiprocessing takes about three times
+longe with pypy3 than with CPython!) So, presently, I'd recommend
+staying with `Cython`_ when trying to speed-up DHParser.
 
-DHParser uses a variant of a recursive descent parser, a so called "pack-rat-parser",
-which means that it employs memoizing to cache results. It has been proven that this
-kind of parser runs in linear time, although I am not sure if the proof also accounts for
-the "seed and grow"-algorithm that has been implemented to support left-recursive grammars.
-Other than that, you can rest assured that there will be no nasty runtime surprises
-as they can happen with regular-expression engines or uncached recursive-descent-parsers.
+DHParser uses a variant of a recursive descent parser, a so called
+"pack-rat-parser", which means that it employs memoizing to cache
+results. It has been proven that this kind of parser runs in linear
+time, although I am not sure if the proof also accounts for the "seed
+and grow"-algorithm that has been implemented to support left-recursive
+grammars. Other than that, you can rest assured that there will be no
+nasty runtime surprises as they can happen with regular-expression
+engines or uncached recursive-descent-parsers.
 
 
 

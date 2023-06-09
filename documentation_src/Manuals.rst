@@ -1,52 +1,57 @@
 Manuals
 =======
 
-At the core of DHParser lies a parser generator for parsing expression grammars.
-As a parser generator it offers similar functionality as pyparsing_ or lark_.
-But it goes far beyond a mere parser generator by offering rich support of
-the testing an debugging of grammars, tree-processing (always needed in the
-XML-prone Digital Humanities ;-) ), fail-tolerant grammars and some
-(as of now, experimental) support for editing via the
-`language server protocol`_.
+At the core of DHParser lies a parser generator for parsing expression
+grammars. As a parser generator it offers similar functionality as
+pyparsing_ or lark_. But it goes far beyond a mere parser generator by
+offering rich support of the testing an debugging of grammars,
+tree-processing (always needed in the XML-prone Digital Humanities ;-)
+), fail-tolerant grammars and some (as of now, experimental) support for
+editing via the `language server protocol`_.
 
-DHParser is both suitable for small projects or "on the fly" use of parsing
-expression grammar as a more powerful substitute for regular expressions and
-for big projects. (The workflow for the latter is described in the
-:doc:`StepByStepGuide`.) The usage and API of DHParser is (or will be) described
-with many examples in the doctrings of its various modules. The following
-reading-order is recommended to understand DHParser:
+DHParser is both suitable for small projects or "on the fly" use of
+parsing expression grammar as a more powerful substitute for regular
+expressions and for big projects. (The workflow for the latter is
+described in the :doc:`StepByStepGuide`.) The usage and API of DHParser
+is (or will be) described with many examples in the doctrings of its
+various modules. The following reading-order is recommended to
+understand DHParser:
 
-:doc:`ebnf <manuals/01_ebnf>` - Although DHParser also offers a Python-interface for specifying
-   grammers (similar to pyparsing_), the recommended way of using DHParser
-   is by specifying the grammar in EBNF_. Here it is described how grammars
-   are specified in EBNF_ and how parsers can be auto-generated from these
-   grammars and how they are used to parse text.
+:doc:`ebnf <manuals/01_ebnf>` - Although DHParser also offers a
+   Python-interface for specifying grammers (similar to pyparsing_), the
+   recommended way of using DHParser is by specifying the grammar in
+   EBNF_. Here it is described how grammars are specified in EBNF_ and
+   how parsers can be auto-generated from these grammars and how they
+   are used to parse text.
 
-:doc:`nodetree <manuals/02_nodetree>` - Syntax-trees are the central data-structure of any
-   parsing system. The description to this modules explains how syntax-trees
-   are represented within DHParser, how they can be manipulated, queried
-   and serialized or deserialized as XML, S-expressions or json.
+:doc:`nodetree <manuals/02_nodetree>` - Syntax-trees are the central
+   data-structure of any parsing system. The description to this modules
+   explains how syntax-trees are represented within DHParser, how they
+   can be manipulated, queried and serialized or deserialized as XML,
+   S-expressions or json.
 
-:doc:`transform <manuals/03_transform>` - It is not untypical for digital humanities applications
-   that document tress are transformed again and again to produce different
-   representations of research data or various output forms. DHParser
-   supplies the scaffolding for two different types of tree transformations,
-   both of which a variations of the `visitor pattern`_. The scaffolding supplied
-   by the transform-module allows to specify tree-transformations in a
+:doc:`transform <manuals/03_transform>` - It is not untypical for
+   digital humanities applications that document tress are transformed
+   again and again to produce different representations of research data
+   or various output forms. DHParser supplies the scaffolding for two
+   different types of tree transformations, both of which a variations
+   of the `visitor pattern`_. The scaffolding supplied by the
+   transform-module allows to specify tree-transformations in a
    declarative style by filling in a dictionary of tag-names with lists
-   of transformation functions that are called in sequence on a node.
-   A number of transformations are pre-defined that cover the most needed
-   cases that occur in particular when transforming concrete syntax trees
-   to more abstract syntax trees. (An example for this kind of declaratively
-   specified transformation is the ``EBNF_AST_transformation_table`` within
-   DHParser's ebnf-module.)
+   of transformation functions that are called in sequence on a node. A
+   number of transformations are pre-defined that cover the most needed
+   cases that occur in particular when transforming concrete syntax
+   trees to more abstract syntax trees. (An example for this kind of
+   declaratively specified transformation is the
+   ``EBNF_AST_transformation_table`` within DHParser's ebnf-module.)
 
-:doc:`compile <manuals/04_compile>` - The compile-module offers an object-oriented scaffolding
-   for the `visitor pattern`_ that is more suitable for complex
-   transformations that make heavy use of algorithms as well as
-   transformations from trees to non-tree objects like program code.
-   (An example for the latter kind of transformation is the
-   :py:class`~ebnf.EBNFCompiler`-class of DHParser's ebnf-module.)
+:doc:`compile <manuals/04_compile>` - The compile-module offers an
+   object-oriented scaffolding for the `visitor pattern`_ that is more
+   suitable for complex transformations that make heavy use of
+   algorithms as well as transformations from trees to non-tree objects
+   like program code. (An example for the latter kind of transformation
+   is the :py:class`~ebnf.EBNFCompiler`-class of DHParser's
+   ebnf-module.)
 
 With the documentation of these four modules you should have enough
 knowledge to realize projects that follow the workflow described
@@ -100,25 +105,26 @@ interact with the other modules directly.
 
 :py:mod:`server` - In order to avoid startup times or to provide a language
     sever for a domain-specific-language (DSL), DSL-parsers generated by
-    DHParser can be run as a server. Module :py:mod:`server` provides the scaffolding
-    for an asynchronous language server. The -Server.py"-script generated
-    by DHParser provides a minimal language server (sufficient) for
-    compiling a DSL. Especially if used with the just-in-time compiler
-    `pypy`_ using the -Server.py script allows for a significant speed-up.
+    DHParser can be run as a server. Module :py:mod:`server` provides
+    the scaffolding for an asynchronous language server. The
+    -Server.py"-script generated by DHParser provides a minimal language
+    server (sufficient) for compiling a DSL. Especially if used with the
+    just-in-time compiler `pypy`_ using the -Server.py script allows for
+    a significant speed-up.
 
 :py:mod:`lsp` - (as of now, this is just a stub!) provides data classes that
-    resemble the typescript-interfaces of the `language server protocol specification`_.
+    resemble the typescript-interfaces of the `language server protocol
+    specification`_.
 
 :py:mod:`stringview` - defines a low level class that provides views on slices
-    of strings. It is used by the :py:mod:`parse`-module to avoid excessive copying
-    of data when slicing strings. (Python always creates a copy of the
-    data when slicing strings as a design decision.) If any, this module
-    can significantly be sped up by compiling it with cython_. (Use the
-    ``cythonize_stringview``-skript in  DHParser's main directory or,
-    even better, compile (almost) all modules with the
-    ``build_cython-modules``-skript. This yields a 2-3x speed increase.
-    The fastest way to run DHParser, however, is pypy_, which yields
-    a 4-5x speed increase, albeit only in the long run.)
+    of strings. It is used by the :py:mod:`parse`-module to avoid
+    excessive copying of data when slicing strings. (Python always
+    creates a copy of the data when slicing strings as a design
+    decision.) If any, this module can significantly be sped up by
+    compiling it with cython_. (Use the ``cythonize_stringview``-skript
+    in  DHParser's main directory or, even better, compile (almost) all
+    modules with the ``build_cython-modules``-skript. This yields a 2-3x
+    speed increase.)
 
 :py:mod:`toolkit` - various little helper functions for DHParser. Usually,
     there is no need to call any of these directly.
