@@ -317,14 +317,17 @@ class HistoryRecord:
     parser call, which ist either MATCH, FAIL (i.e. no match)
     or ERROR.
     """
-    __slots__ = ('call_stack', 'node', 'text', 'pos', 'line_col', 'errors')
+    __slots__ = ('call_stack', 'node', 'text', 'pos', 'line_col', 'errors', '_stack', '_status')
 
     MATCH = "MATCH"
+    NMATCH = "!MATCH"
     DROP = "DROP"
+    NDROP = "!DROP"
     ERROR = "ERROR"
+    NFAIL = "!FAIL"
     FAIL = "FAIL"
     Snapshot_Fields = ('line', 'column', 'stack', 'status', 'text')
-    Snapshot = collections.namedtuple('Snapshot', ('line', 'column', 'stack', 'status', 'text'))
+    Snapshot = collections.namedtuple('Snapshot', Snapshot_Fields)
 
     COLGROUP = '<colgroup>\n<col style="width:2%"/><col style="width:2%"/><col ' \
                'style="width:65%"/><col style="width:6%"/><col style="width:25%"/>\n</colgroup>'
@@ -332,19 +335,26 @@ class HistoryRecord:
                 '<th>success</th><th>text matched or failed</th></tr>')
     HTML_LEAD_IN = (
         '<!DOCTYPE html>\n'
-        '<html>\n<head>\n<meta charset="utf-8"/>\n<style>\n'
+        '<html lang="en">\n<head>\n<meta charset="utf-8"/>\n<style>\n'
         'table {border-spacing: 0px; border: thin solid grey; width:100%}\n'
         'td,th {font-family:monospace; '
         'border-right: thin solid grey; border-bottom: thin solid grey}\n'
         'td.line, td.column {color:grey}\n'
-        '.text{color:blue}\n'
+        '.text {color:blue}\n'
+        '.lookahead {color:darkgreen}\n'
+        '.nofail {color:grey}\n'
+        '.nomatch {color:grey}\n'
+        '.dropped {color:dodgerblue}\n'
         '.failtext {font-weight:normal; color:grey}\n'
         '.errortext {font-weight:normal; color:darkred}\n'
         '.unmatched {font-weight:normal; color:lightgrey}\n'
         '.fail {font-weight:bold; color:darkgrey}\n'
+        '.nfail {font-weight:bold; color:darkgreen}\n'
         '.error {font-weight:bold; color:red}\n'
         '.match {font-weight:bold; color:green}\n'
-        '.drop {font-weight:bold; color:darkslategrey}\n'
+        '.nmatch {font-weight:bold; color:darkgrey}\n'
+        '.drop {font-weight:bold; color:green}\n'        
+        '.ndrop {font-weight:semibold; color:darkslategrey}\n'
         '.matchstack {font-weight:bold;color:darkred}\n'
         'span {color:darkgrey}\n'
         '</style>\n</head>\n<body>\n')
@@ -355,12 +365,14 @@ class HistoryRecord:
                  text: StringView,
                  line_col: Tuple[int, int],
                  errors: List[Error] = []) -> None:
-        self.call_stack = tuple(call_stack)              # type: Tuple[CallItem, ...]
-        self.node = NONE_NODE if node is None else node  # type: Node
-        self.text = text                                 # type: StringView
-        self.line_col = line_col                         # type: Tuple[int, int]
+        self.call_stack: Tuple[CallItem, ...] = tuple(call_stack)
+        self.node: Node = NONE_NODE if node is None else node
+        self.text: StringView = text
+        self.line_col: Tuple[int, int] = line_col
         assert all(isinstance(err, Error) for err in errors)
-        self.errors = errors                             # type: List[Error]
+        self.errors: List[Error] = errors
+        self._stack: str = ''
+        self._status: str = ''
 
     def __str__(self):
         return '%4i, %2i:  %s;  %s;  "%s"' % self.as_tuple()
@@ -392,13 +404,20 @@ class HistoryRecord:
             '-&gt;', '<span>&shy;-&gt;</span>').replace('<-', '&lt;-')
         status = html.escape(self.status)
         excerpt = html.escape(self.excerpt)
-        if excerpt[:1] == ' ':
+        if excerpt[0:1] == ' ':
             stripped = excerpt.lstrip()
             excerpt = "&nbsp;" * (len(excerpt) - len(stripped)) + stripped
         classes = list(HistoryRecord.Snapshot_Fields)
         idx = {field_name: i for i, field_name in enumerate(classes)}
-        classes[idx['status']] = 'error' if status[:5] == 'ERROR' else status.lower()
-        if status in (self.MATCH, self.DROP):
+        classes[idx['status']] = 'error' if status[:5] == 'ERROR' \
+                                  else status.lower().replace('!', 'n')
+        if status in (self.MATCH, self.DROP, self.NMATCH, self.NDROP):
+            if status == self.DROP:
+                classes[idx['text']] = 'dropped'
+            elif status[:1] == '!':
+                classes[idx['text']] = 'nofail'
+            elif self.stack.find('&') > 0:
+                classes[idx['text']] = 'lookahead'
             n = max(40 - len(excerpt), 0)
             dots = '...' if len(self.text) > n else ''
             excerpt = ''.join([excerpt, '<span class="unmatched">',
@@ -420,7 +439,10 @@ class HistoryRecord:
                 stack = '<span class="matchstack">{}</span>'.format(stack)
         elif status == self.FAIL:
             classes[idx['text']] = 'failtext'
-        else:  # ERROR
+        elif status == self.NFAIL:
+            classes[idx['text']] = 'nofail'
+        else:
+            assert status[0:5] == self.ERROR, status
             stack += '<br/>\n"%s"' % self.err_msg().replace('<', '&lt;').replace('>', '&gt;')
             classes[idx['text']] = 'errortext'
         tpl = self.Snapshot(str(self.line_col[0]), str(self.line_col[1]),
@@ -433,20 +455,24 @@ class HistoryRecord:
 
     @property
     def stack(self) -> str:
-        return callstack_as_str(self.call_stack)
+        if not self._stack:
+            self._stack = callstack_as_str(self.call_stack)
+        return self._stack
 
     @property
     def status(self) -> str:
-        if self.errors:
-            return self.ERROR + ": " + ', '.join(str(e.code) for e in self.errors)
-        elif self.node.name in (NONE_TAG, ZOMBIE_TAG):
-            return self.FAIL
-        elif self.node.name == EMPTY_PTYPE:
-            return self.DROP
-        else:
-            return self.MATCH
-        # return self.FAIL if self.node is None or self.node.name == ZOMBIE_TAG else \
-        #     ('"%s"' % self.err_msg()) if self.errors else self.MATCH
+        if not self._status:
+            if self.errors:
+                self._status = self.ERROR + ": " + ', '.join(str(e.code) for e in self.errors)
+            else:
+                neg = self._stack.count('!') % 2
+                if self.node.name in (NONE_TAG, ZOMBIE_TAG):
+                    self._status = self.NFAIL if neg else self.FAIL
+                elif self.node.name == EMPTY_PTYPE:
+                    self._status = self.NDROP if neg else self.DROP
+                else:
+                    self._status = self.NMATCH if neg else self.MATCH
+        return self._status
 
     @property
     def excerpt(self):
