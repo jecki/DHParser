@@ -83,7 +83,8 @@ intentation will automatically be removed before running the test.)
 Running grammar-tests
 ---------------------
 
-### Calling the test-script
+Calling the test-script
+^^^^^^^^^^^^^^^^^^^^^^^
 
 Grammar tests can be run either by calling the (auto-generated)
 test-grammar script with the filename of the test-file as argument.
@@ -129,7 +130,8 @@ and will, therefore, be overlooked, if the script is called without any
 arguments. This can be quite useful, if you want to experiment with
 tests that you might not (yet) want to add to your regular test-suite.
 
-### Reading the test-report
+Reading the test-report
+^^^^^^^^^^^^^^^^^^^^^^^
 
 After the test has been run, the results can be found in the
 "REPORT"-subdirectory of the tests-directory. For each test-file that
@@ -211,12 +213,13 @@ In case a test fails, the error-messages will appear in the report-file.
 DHParser will still attempt to produce an abstract-syntax-tree (AST)
 and, potentially, the results of further processing stages. But these
 will not necessarily represent any reasonable structures. Typically, for
-example, the AST will contain nodes named "ZOMBIE__" which either
+example, the AST will contain nodes named "ZOMBIE\_\_" which either
 capture passages of the source could which could not be parsed properly,
 due to the failure or, if empty, have been added as an anchor for
 error-messages.
 
-### Debugging failed tests
+Debugging failed tests
+^^^^^^^^^^^^^^^^^^^^^^
 
 More important is the fact that for each failed test an HTML-log will be
 produced in the "LOGS"-subdirectory which resides on the same level as the
@@ -235,25 +238,23 @@ test-log of a failed test from a converter for
 Typescript-type-definitions which does not yet know the
 "extends"-keyword and therefore fails a particular unit-test:
 
-= == ================================== ======= ===========================================
-L	C	 parser call sequence	              success text matched or failed
-= == ================================== ======= ===========================================
-1	1	 type_alias-> `export`              DROP    export type Exact<T extends { [key: stri...
-1	8	 type_alias-> `type`                DROP    type Exact<T extends { [key: string]: un...
-1	13 type_alias->identifier->! `true`	  !FAIL   Exact<T extends { [key: string]: unk ...
-1	13 type_alias->identifier->! `false`  !FAIL   Exact<T extends { [key: string]: unk ...
-1	13 type_alias->identifier->_part      MATCH   Exact<T extends { [key: string]: unknown...
-1	18 type_alias->identifier-> `.`       FAIL    <T extends { [key: string]: unknown ...
-1	13 type_alias->identifier             MATCH   Exact<T extends { [key: string]: unknown...
-1	18 type_alias->type_parameters-> `<`  DROP    <T extends { [key: string]: unknown }...
-
-     ...
-
-1	19 ... ->parameter_types	            MATCH	  T extends { [key: string]: unknown }> = ...
-1	21	type_alias->type_parameters-> `,`	FAIL	  extends { [key: string]: unknown }> ...
-1	21	type_alias->type_parameters-> `>`	FAIL	  extends { [key: string]: unknown }> ...
-1	21	type_alias->type_parameters       ERROR   1010, 50	extends { [key: string]: ...
-= == ================================= ======== ===========================================
+= == =================================== ======= ===========================================
+L C  parser call sequence                success text matched or failed
+= == =================================== ======= ===========================================
+1 1  type_alias->\`export\`              DROP    export type Exact<T extends { [key: stri...
+1 8  type_alias->\`type\`                DROP    type Exact<T extends { [key: string]: un...
+1 13 type_alias->identifier->!\`true\`   !FAIL   Exact<T extends { [key: string]: unk ...
+1 13 type_alias->identifier->!\`false\`  !FAIL   Exact<T extends { [key: string]: unk ...
+1 13 type_alias->identifier->_part       MATCH   Exact<T extends { [key: string]: unknown...
+1 18 type_alias->identifier->\`.\`       FAIL    <T extends { [key: string]: unknown ...
+1 13 type_alias->identifier              MATCH   Exact<T extends { [key: string]: unknown...
+1 18 type_alias->type_parameters->\`<\`  DROP    <T extends { [key: string]: unknown }...
+. .  ...                                 ...     ...
+1 19 ... ->parameter_types               MATCH   T extends { [key: string]: unknown }> = ...
+1 21 type_alias->type_parameters->\`,\`  FAIL    extends { [key: string]: unknown }> ...
+1 21 type_alias->type_parameters->\`>\`  FAIL    extends { [key: string]: unknown }> ...
+1 21 type_alias->type_parameters         ERROR   ERROR 1010, 50 extends { [key: string]: ...
+= == =================================== ======= ===========================================
 
 Typically, the parsing-log is a quite long and the error becomes
 apparaent only at the very end. So it is advisable to scroll right to
@@ -261,23 +262,23 @@ the bottom of the page to see what has caused the test to fail by
 looking at the error message (which for the sake of brevity has been
 ommited from the above excerpt, though the error number 1010 for
 mandatory continuation errors still indicates that another item than the
-following "extends" was expected). 
+following "extends" was expected).
 
 The parsing log log's the match or non-match of every leaf-parser (i.e.
 parsers that do not call other parsers but try to match the next part of
 the text directly) that is applied during the parsing process. The steps
 leading up to the call a leaf-parser are not recorded individually but
 can be seen from the call-stack which follows the line and column-number
-of the place in the document where the parser tried to match. 
+of the place in the document where the parser tried to match.
 
 The match or non-match of the leaf-parser is indicated by the
-success-state. There are six different success-states::
+success-state. There are six different success-states:
 
 ======= ==================================================================
 success meaning
 ======= ==================================================================
 MATCH   the parser matched a part of the following text
-DROP    the parser matched but the matched text was dropped from the CST 
+DROP    the parser matched but the matched text was dropped from the CST
 FAIL    the parser failed to match the following text
 !MATCH  the parser matched but as part of a negative lookahead it's a fail
 !FAIL   the parser failed but as part of a negativ lookahead it's a match
@@ -288,7 +289,7 @@ Finally, the last part of each entry (i.e. line) in the log is an
 exceprt from the document at the location where the parser stood. In the
 HTML-log, colors indicate the which part of the excerpt was matched. (In
 the pure text-output as shown above this can only be inferred from the
-next line.) 
+next line.)
 
 With these informations in mind you should be able to "read" the above
 log-excerpt. It takes a while to get used to reading oarsing-logs,
@@ -301,7 +302,7 @@ this is usually dure to memoizing an the same parser having been called
 at the same location earlier in the parsing process. (You might find the
 first insantance by looking for the same line and column in the earlier
 part of the log.) Still, looking at the parsing-log helps to find and 
-understand the causes for an unexpected parser-behavior. 
+understand the causes for an unexpected parser-behavior.
 
 
 
