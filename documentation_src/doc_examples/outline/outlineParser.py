@@ -106,7 +106,7 @@ preprocessing: PseudoJunction = create_preprocess_transition(
 class outlineGrammar(Grammar):
     r"""Parser for an outline source file.
     """
-    source_hash__ = "66a2a67d6f256e61d217646158300173"
+    source_hash__ = "2bdf5500a11a80d93f23ac8bc843b343"
     disposable__ = re.compile('WS$|EOF$|LINE$|S$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -126,12 +126,12 @@ class outlineGrammar(Grammar):
     block = Series(NegativeLookahead(is_heading), line, ZeroOrMore(Series(lf, NegativeLookahead(is_heading), line)))
     blocks = Series(Option(WS), block, ZeroOrMore(Series(PARSEP, block)))
     heading = Synonym(LINE)
-    s6section = Series(Drop(Text("######")), NegativeLookahead(Drop(Text("#"))), heading, Option(blocks))
-    s5section = Series(Drop(Text("#####")), NegativeLookahead(Drop(Text("#"))), heading, Option(blocks), ZeroOrMore(Series(Option(WS), s6section)))
-    subsubsection = Series(Drop(Text("####")), NegativeLookahead(Drop(Text("#"))), heading, Option(blocks), ZeroOrMore(Series(Option(WS), s5section)))
-    subsection = Series(Drop(Text("###")), NegativeLookahead(Drop(Text("#"))), heading, Option(blocks), ZeroOrMore(Series(Option(WS), subsubsection)))
-    section = Series(Drop(Text("##")), NegativeLookahead(Drop(Text("#"))), heading, Option(blocks), ZeroOrMore(Series(Option(WS), subsection)))
-    main = Series(Option(WS), Drop(Text("#")), NegativeLookahead(Drop(Text("#"))), heading, Option(blocks), ZeroOrMore(Series(Option(WS), section)))
+    s6section = Series(Drop(Text("######")), NegativeLookahead(Drop(Text("#"))), wsp__, heading, Option(blocks))
+    s5section = Series(Drop(Text("#####")), NegativeLookahead(Drop(Text("#"))), wsp__, heading, Option(blocks), ZeroOrMore(Series(Option(WS), s6section)))
+    subsubsection = Series(Drop(Text("####")), NegativeLookahead(Drop(Text("#"))), wsp__, heading, Option(blocks), ZeroOrMore(Series(Option(WS), s5section)))
+    subsection = Series(Drop(Text("###")), NegativeLookahead(Drop(Text("#"))), wsp__, heading, Option(blocks), ZeroOrMore(Series(Option(WS), subsubsection)))
+    section = Series(Drop(Text("##")), NegativeLookahead(Drop(Text("#"))), wsp__, heading, Option(blocks), ZeroOrMore(Series(Option(WS), subsection)))
+    main = Series(Option(WS), Drop(Text("#")), NegativeLookahead(Drop(Text("#"))), wsp__, heading, Option(blocks), ZeroOrMore(Series(Option(WS), section)))
     document = Series(main, Option(WS), EOF, mandatory=2)
     root__ = TreeReduction(document, CombinedParser.MERGE_LEAVES)
     

@@ -83,6 +83,8 @@ intentation will automatically be removed before running the test.)
 Running grammar-tests
 ---------------------
 
+### Calling the test-script
+
 Grammar tests can be run either by calling the (auto-generated)
 test-grammar script with the filename of the test-file as argument.
 Alternatively, the script can be run without any arguments, in which
@@ -127,6 +129,8 @@ and will, therefore, be overlooked, if the script is called without any
 arguments. This can be quite useful, if you want to experiment with
 tests that you might not (yet) want to add to your regular test-suite.
 
+### Reading the test-report
+
 After the test has been run, the results can be found in the
 "REPORT"-subdirectory of the tests-directory. For each test-file that
 has been executed the REPORT-subdirectory contains a Markdown-file with
@@ -139,7 +143,7 @@ If one or more failures occured, the number of failed tests will be
 reported.
 
 The test-code for each test will be repeated in the report-file,
-followed by the abstract-syntax-tree that the code generated in the case
+followed by the abstract-syntax-tree (AST) that the code generated in the case
 of (successful) match-tests or the error-messages in case of successful
 fail-tests. This information is not only helpful for testing purposes,
 but also for the implementation of further processing stages which rely
@@ -163,15 +167,15 @@ an excerpt from the report file might look like this::
 
       (document
         (main
-          (heading " Main Heading")
+          (heading "Main Heading")
           (section
-            (heading " Section 1")
+            (heading "Section 1")
             (subsection
-              (heading " SubSection 1.1"))
+              (heading "SubSection 1.1"))
             (subsection
-              (heading " SubSection 1.2")))
+              (heading "SubSection 1.2")))
           (section
-            (heading " Section 2"))))
+            (heading "Section 2"))))
 
     ...
 
@@ -190,6 +194,19 @@ an excerpt from the report file might look like this::
     3:1: Error (1010): 'EOF' expected by parser 'document', but »#### BADLY...« found instead!
     3:4: Error (1040): Parser "document" stopped before end, at: »# BADLY NE...« Terminating parser.
 
+You might expect that a test-report of the parser would show the 
+concrete-syntax-tree (CST) rather than the AST. However, the CST can be
+quite verbose dependning on how far it is curbed or not curbed in the
+grammar definition, already (see :ref:`simplifying_syntax_trees`) and
+is usually less informative than the AST. Typically, you'll want to
+see it only in very particular cases and only when debugging the 
+AST-generation. For this purpose, DHParser's testing-framework allows 
+to quickly turn the additional output of the CST in the test-report
+on and off by simply placing an asterix ``*`` after the test name
+of any match test or removing it after the debugging has been done.
+If for example, your test's name is "M1" you'd simply write ``M!*:
+...``` in the test-ini-file.
+
 In case a test fails, the error-messages will appear in the report-file.
 DHParser will still attempt to produce an abstract-syntax-tree (AST)
 and, potentially, the results of further processing stages. But these
@@ -198,6 +215,8 @@ example, the AST will contain nodes named "ZOMBIE__" which either
 capture passages of the source could which could not be parsed properly,
 due to the failure or, if empty, have been added as an anchor for
 error-messages.
+
+### Debugging failed tests
 
 More important is the fact that for each failed test an HTML-log will be
 produced in the "LOGS"-subdirectory which resides on the same level as the
@@ -211,21 +230,30 @@ most frequent causes for test-failures are 1) EBNF-coding-errors, i.e.
 some part of the EBNF-encoded grammar does not capture or reject a piece
 of the source text that it was expected to capture or reject, or 2) the
 grammar does not yet encode certain constructs of the formal
-target-language and needs to be extended. Here is an excerpt of a
+target-language and needs to be extended. Here is an excerpt of the
+test-log of a failed test from a converter for
+Typescript-type-definitions which does not yet know the
+"extends"-keyword and therefore fails a particular unit-test:
 
+= == ================================== ======= ===========================================
+L	C	 parser call sequence	              success text matched or failed
+= == ================================== ======= ===========================================
+1	1	 type_alias-> `export`              DROP    export type Exact<T extends { [key: stri...
+1	8	 type_alias-> `type`                DROP    type Exact<T extends { [key: string]: un...
+1	13 type_alias->identifier->! `true`	  !FAIL   Exact<T extends { [key: string]: unk ...
+1	13 type_alias->identifier->! `false`  !FAIL   Exact<T extends { [key: string]: unk ...
+1	13 type_alias->identifier->_part      MATCH   Exact<T extends { [key: string]: unknown...
+1	18 type_alias->identifier-> `.`       FAIL    <T extends { [key: string]: unknown ...
+1	13 type_alias->identifier             MATCH   Exact<T extends { [key: string]: unknown...
+1	18 type_alias->type_parameters-> `<`  DROP    <T extends { [key: string]: unknown }...
+     
+     ...
 
-= == ================================= ======= ===========================================
-L	C	 parser call sequence	             success text matched or failed
-= == ================================= ======= ===========================================
-1	1	 type_alias-> `export`             DROP    export type Exact<T extends { [key: stri...
-1	8	 type_alias-> `type`               DROP    type Exact<T extends { [key: string]: un...
-1	13 type_alias->identifier->! `true`	 FAIL    Exact<T extends { [key: string]: unk ...
-1	13 type_alias->identifier->! `false` FAIL    Exact<T extends { [key: string]: unk ...
-1	13 type_alias->identifier->_part     MATCH   Exact<T extends { [key: string]: unknown...
-1	18 type_alias->identifier-> `.`      FAIL    <T extends { [key: string]: unknown ...
-1	13 type_alias->identifier            MATCH   Exact<T extends { [key: string]: unknown...
-1	18 type_alias->type_parameters-> `<` DROP    <T extends { [key: string]: unknown }...
-= == ================================= ======= ===========================================
+1	19 ... ->parameter_types	            MATCH	  T extends { [key: string]: unknown }> = ...
+1	21	type_alias->type_parameters-> `,`	FAIL	  extends { [key: string]: unknown }> ...
+1	21	type_alias->type_parameters-> `>`	FAIL	  extends { [key: string]: unknown }> ...
+1	21	type_alias->type_parameters       ERROR   1010, 50	extends { [key: string]: ...
+= == ================================= ======== ===========================================
 
 
 Test and Development-Workflows

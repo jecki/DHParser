@@ -20,12 +20,12 @@
 
 document = main [WS] §EOF
 
-main  = [WS] `#` !`#` heading [blocks] { [WS] section }
-section  = `##` !`#` heading [blocks] { [WS] subsection }
-subsection  = `###` !`#` heading [blocks] { [WS] subsubsection }
-subsubsection  = `####` !`#` heading [blocks] { [WS] s5section }
-s5section  = `#####` !`#` heading [blocks] { [WS] s6section }
-s6section  = `######` !`#` heading [blocks]
+main  = [WS] `#` !`#` ~ heading [blocks] { [WS] section }
+section  = `##` !`#` ~ heading [blocks] { [WS] subsection }
+subsection  = `###` !`#` ~ heading [blocks] { [WS] subsubsection }
+subsubsection  = `####` !`#` ~ heading [blocks] { [WS] s5section }
+s5section  = `#####` !`#` ~ heading [blocks] { [WS] s6section }
+s6section  = `######` !`#` ~ heading [blocks]
 
 #######################################################################
 #
