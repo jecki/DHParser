@@ -255,6 +255,54 @@ L	C	 parser call sequence	              success text matched or failed
 1	21	type_alias->type_parameters       ERROR   1010, 50	extends { [key: string]: ...
 = == ================================= ======== ===========================================
 
+Typically, the parsing-log is a quite long and the error becomes
+apparaent only at the very end. So it is advisable to scroll right to
+the bottom of the page to see what has caused the test to fail by
+looking at the error message (which for the sake of brevity has been
+ommited from the above excerpt, though the error number 1010 for
+mandatory continuation errors still indicates that another item than the
+following "extends" was expected). 
+
+The parsing log log's the match or non-match of every leaf-parser (i.e.
+parsers that do not call other parsers but try to match the next part of
+the text directly) that is applied during the parsing process. The steps
+leading up to the call a leaf-parser are not recorded individually but
+can be seen from the call-stack which follows the line and column-number
+of the place in the document where the parser tried to match. 
+
+The match or non-match of the leaf-parser is indicated by the
+success-state. There are six different success-states::
+
+======= ==================================================================
+success meaning
+======= ==================================================================
+MATCH   the parser matched a part of the following text
+DROP    the parser matched but the matched text was dropped from the CST 
+FAIL    the parser failed to match the following text
+!MATCH  the parser matched but as part of a negative lookahead it's a fail
+!FAIL   the parser failed but as part of a negativ lookahead it's a match
+ERROR   a syntax error was detected during parsing
+======= ==================================================================
+
+Finally, the last part of each entry (i.e. line) in the log is an
+exceprt from the document at the location where the parser stood. In the
+HTML-log, colors indicate the which part of the excerpt was matched. (In
+the pure text-output as shown above this can only be inferred from the
+next line.) 
+
+With these informations in mind you should be able to "read" the above
+log-excerpt. It takes a while to get used to reading oarsing-logs,
+though. Reading logs can become confusing when lookahead or, in
+particular, when look-behind parsers are involved. Also, keep in mind
+that DHParser uses memoizing to avoid parsing the same part of a
+document over and over again with the same parser. Thus, if you
+encounter a line in the log where the call stack appears to be clipped,
+this is usually dure to memoizing an the same parser having been called
+at the same location earlier in the parsing process. (You might find the
+first insantance by looking for the same line and column in the earlier
+part of the log.) Still, looking at the parsing-log helps to find and 
+understand the causes for an unexpected parser-behavior. 
+
 
 
 
