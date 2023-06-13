@@ -598,6 +598,9 @@ Check it out!
 Test-driven grammar development
 -------------------------------
 
+Unit-testing framework
+^^^^^^^^^^^^^^^^^^^^^^
+
 Just like regular expressions, it is quite difficult to get EBNF-grammars right
 on the first try, especially, if you are new to the technology. DHParser offers
 a unit-testing environment and a debugger for EBNF-grammars. This greatly helps
@@ -664,6 +667,9 @@ sometimes helpful to inspect the CST as well, a match test's name can be
 marked with an asterisk, e.g. ``M1*:  "-3.2E-32"`` to include the CST
 for this test in the report, too.
 
+Debugger included
+^^^^^^^^^^^^^^^^^
+
 If a parser fails to match, it is sometimes hard to tell which mistake
 in the grammar definition has been responsible for that failure. This is
 where DHParser's post-mortem-debugger comes in. It delivers a detailed
@@ -681,35 +687,6 @@ also be introduced by a capital letter "E": ``EXP = `e` [`+`|`-`] /[0-9]+/``.
 While error messages help to locate errors in the source text, the
 grammar-debugger helps to find the cause of an error that is not due to a
 faulty source text but due to an error within the grammar-specification.
-
-
-A parser-debugger
------------------
-
-Writing grammars is hard and, in particular, people who do not have much
-experience with writing grammars often find it difficult to figure out 
-why a parser did not match a certain syntactic construct in a document.
-While testing smaller units (as described above) helps to pinpoint which
-part of a grammar behaves unexpectedly, it does not tell anything about
-the causes why a test failed. 
-
-Luckily, DHParser produces a detailed log of the parsing process for
-every failed unit-test. Thus, if a test fails unexpectedly, the best
-advise is to look at (the end of) the parsing log. The following 
-screenshot shows a parsing-log from a parser that was supposed to
-parse a text-document, but stops short unexpectedly. A look at the
-parsing log reveals just why:
-
-
-.. image:: parsing_history.png
-
-
-Obviously, the parser "WORD" does not accept apostrophes and neither 
-does the calling parser "sentence". It seems that apostrophes have been
-forgotten when writing the grammar for text-documents. The parsing-log
-works like a post-mortem debugger for grammars and helps to find and 
-understand the causes of bugs in the grammar-definition, quickly.
-
 
 
 Fail-tolerant parsing
