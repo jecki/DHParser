@@ -305,8 +305,6 @@ part of the log.) Still, looking at the parsing-log helps to find and
 understand the causes of unexpected parser-behavior, quickly. 
 
 
-
-
 Test and Development-Workflows
 ------------------------------
 
