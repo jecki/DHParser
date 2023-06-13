@@ -302,7 +302,7 @@ this is usually dure to memoizing an the same parser having been called
 at the same location earlier in the parsing process. (You might find the
 first insantance by looking for the same line and column in the earlier
 part of the log.) Still, looking at the parsing-log helps to find and 
-understand the causes for an unexpected parser-behavior.
+understand the causes of unexpected parser-behavior, quickly. 
 
 
 

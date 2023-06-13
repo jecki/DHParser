@@ -84,10 +84,10 @@ repetition range               ... (i, k)
 ------------------------------ ----------
 **lookbehind operators**
 ------------------------------ ----------
-postivie lookbehind            <-&
-negtive lookahead              <-!
+positive lookbehind            <-&
+negative lookahead             <-!
 ------------------------------ ----------
-**constext sensitive parsers**
+**context sensitive parsers**
 ------------------------------ ----------
 pop and match                  :: ...
 retrieve and match             : ...

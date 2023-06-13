@@ -352,7 +352,7 @@ To reach this goal DHParser follows a few, mostly intuitive, conventions:
    is allowed.
 
    Thus, you never need to worry about where to provide for comments in
-   you grammar. Allowing comments whereever insignificant whitespace is
+   you grammar. Allowing comments wherever insignificant whitespace is
    allowed is as easy as it is intuitive. (See
    :py:func:`~ebnf.comments_and_whitespace`.)
 
@@ -366,7 +366,7 @@ To reach this goal DHParser follows a few, mostly intuitive, conventions:
    markers.
 
    In case you would like to grab a string without "eating" its adjacent
-   whitespace, you can still use the "backt-icked" notation for string
+   whitespace, you can still use the "back-ticked" notation for string
    literals ```back-ticked string```.
 
 6. DHParser can be advised (via the ``@drop``-directive) to drop
@@ -561,7 +561,7 @@ common X-technologies. Most of these functions are provided as methods
 of :py:class:`~nodetree.Node` such as :py:meth:`~nodetree.Node.select`
 and :py:meth:`~nodetree.Node.select_path`. For a comprehensive
 description see the section on :ref:`tree-traversal <paths>` in the
-referance manual of :py:mod:`~nodetree`.
+reference manual of :py:mod:`~nodetree`.
 
 An particularly useful tool when processing text in tree-structures are
 content mappings as provided by :py:class:`~nodetree.ContentMapping`.
@@ -581,7 +581,7 @@ string-search::
     >>> print(offset)
     0
 
-This is supplemented by a powerful markup-funciotn
+This is supplemented by a powerful markup-function
 (:py:meth:`~nodetree.ContentMapping.markup`) to which the string
 position of the text to be marked up can be passed. No worries about
 tags lying in between::
@@ -681,6 +681,36 @@ also be introduced by a capital letter "E": ``EXP = `e` [`+`|`-`] /[0-9]+/``.
 While error messages help to locate errors in the source text, the
 grammar-debugger helps to find the cause of an error that is not due to a
 faulty source text but due to an error within the grammar-specification.
+
+
+A parser-debugger
+-----------------
+
+Writing grammars is hard and, in particular, people who do not have much
+experience with writing grammars often find it difficult to figure out 
+why a parser did not match a certain syntactic construct in a document.
+While testing smaller units (as described above) helps to pinpoint which
+part of a grammar behaves unexpectedly, it does not tell anything about
+the causes why a test failed. 
+
+Luckily, DHParser produces a detailed log of the parsing process for
+every failed unit-test. Thus, if a test fails unexpectedly, the best
+advise is to look at (the end of) the parsing log. The following 
+screenshot shows a parsing-log from a parser that was supposed to
+parse a text-document, but stops short unexpectedly. A look at the
+parsing log reveals just why:
+
+
+.. image:: parsing_history.png
+
+
+Obviously, the parser "WORD" does not accept apostrophes and neither 
+does the calling parser "sentence". It seems that apostrophes have been
+forgotten when writing the grammar for text-documents. The parsing-log
+works like a post-mortem debugger for grammars and helps to find and 
+understand the causes of bugs in the grammar-definition, quickly.
+
+
 
 Fail-tolerant parsing
 ---------------------
@@ -904,18 +934,18 @@ DSL-projects contain a test-script the name of which starts with
 ``tst_...`` that generates and, if the grammar has been changed, updates
 a parser-script the name of which ends with ``...Parser.py``. This
 parser-script can be used to "compile" documents written in the DSL
-described by the ebnf-Grammar in the project directory. A freshley
+described by the EBNF-Grammar in the project directory. A freshly
 generated parser-script merely yields a concrete-syntax-tree when run on
 a source file. In almost all cases, you'll want to adjust the
 ``...Parser.py`` script, so that it really yields the data contained in
 the compiled document. This, however, requires further processing steps
 than just parsing. The ``...Parser.py``-script contains four different
-sections, namley, the **Preprocesser**-, **Parser**-, **AST**- and
+sections, namely, the **Preprocesser**-, **Parser**-, **AST**- and
 **Compiler**-sections. Once this script has been generated, only the
 Parser-section will be updated automatically when running the
 ``tst_...``-scripts. The Parser-section should therefore be left
 untouched, because any change might be overwritten without warning. For
-the same reason the comments demarking the different sections should be
+the same reason the comments delimiting the different sections should be
 left intact. All other sections can and - with the exceptions of the
 Preprocessor-section - usually must be edited by hand in order to allow
 the ``..Parser.py``-script to return the parsed data in the desired
@@ -937,7 +967,7 @@ not have to worry about it, when filling in the transformation-function
 proper.
 
 In the case of our json-parser, the skeleton for the "compiler" that is called
-after rhw AST-transformation has finished. looks like this:
+after the AST-transformation has finished. looks like this:
 
 .. code-block:: python
 
@@ -1016,7 +1046,7 @@ This may look slightly more complicated, because - as explained earlier
 in :py:ref:`ast_building` - per default the AST-transformations are
 defined declaratively by a transformation-table. Of course, you are free
 to replace the table-definition and the
-``jsonTransformer``-instantiation function alltogether by a class like
+``jsonTransformer``-instantiation function all together by a class like
 in the compilation section. (See the `XML-example
 <https://gitlab.lrz.de/badw-it/DHParser/-/tree/master/examples/XML>`_ in
 the examples-subdirectory of the DHParser-repository, where this has
@@ -1189,7 +1219,7 @@ The code should be self-explanatory: For each node-type (or tag name) that can
 occur in the abstract-syntax-tree the associated visitor-method converts the
 sub-tree to a Python data-structure which is returned to the calling method.
 
-After having added this compiler code to the Parser-skript, calling it
+After having added this compiler code to the Parser-script, calling it
 with our trivial test-data set yields the expected Python-dictionary:
 ``{'one': 1, 'two': 2}`` instead of the syntax-tree.
 
@@ -1198,7 +1228,7 @@ JSON-files, we will probably prefer to call it from Python in order to
 receive the data rather than running it on the command line. Instead of
 calling it, the generated parser-script can simply be imported as a
 module. The generated script contains a ``compile_src()``-function which
-allows to compile a DSL-string from within a python programm by running
+allows to compile a DSL-string from within a python program by running
 all four stages (preprocessing, parsing, AST-transformation and
 compiling) in sequence on the source string.
 
@@ -1265,7 +1295,7 @@ automatically be started when calling the script for the first time::
     [{"one":1,"two":2},[]]
 
 Other than the plain parser-script, the result the server returns is
-always a list of the result propper and any errors or warnings that
+always a list of the result proper and any errors or warnings that
 haven been generated on the way.
 
 Running the parser in server-mode as several advantages:
@@ -1279,22 +1309,22 @@ Running the parser in server-mode as several advantages:
    trade startup time for run-time speed, can profit in particular from
    the server mode.
 
-3. Serveral parsing/compilation can be run in parrallel and will automatically
+3. Several parsing/compilation can be run in parallel and will automatically
    use different processor cores. However, when calling the parser-script in
 
    batch-mode by adding more than one filename to the command line or calling
-   it with the name of a cirectory containing source files, it will also try
+   it with the name of a directory containing source files, it will also try
    to exploit multiple processor cores.
 
 4. Last not least, the server script can be extended to provide a
    language server for an integrated development environment or
-   programm-editor. In this case the script would usually be startet
+   program-editor. In this case the script would usually be started
    from within the editor and with the "--stream"-option which will
    allow connect to the server via streams rather than a tcp port and
    address.
 
 In order to stop a running server, the server-script should be called with
-the "--stoperver"-option::
+the "--stopserver"-option::
 
     $ python jsonServer.py --stopserver
     Server on 127.0.0.1:8890 stopped
@@ -1302,7 +1332,7 @@ the "--stoperver"-option::
 The language server protocol support that DHParser offers differs in several
 respects from the popular `pygls`_-module:
 
-* DHParser uses the more lightwight `TypedDict`_ -dictionaries instead
+* DHParser uses the more lightweight `TypedDict`_ -dictionaries instead
   of `pydantic`_-modules. The TypedDict-definitions in the
   DHParser.lsp-module are auto-generated from the `language server
   protocol specification`_ with `ts2python`_, a package that has itself
@@ -1326,7 +1356,7 @@ theses scripts can always be created anew by calling the test-runner
 script "tst\_...\_grammar.py" with the "--scripts"-option.
 
 .. caution:: When bundling the App-script with `pyinstaller`_ or a
-    similar technology, multiprocessing can fail to work unter some
+    similar technology, multiprocessing can fail to work under some
     conditions. In this case it is advisable to turn of the
     configuration switch for multiprocessing in the main-section of
     the App-script by uncommenting the respective lines before
@@ -1352,7 +1382,7 @@ as the about equally powerful Earley-parsers.
 
 If you feel that DHParser's performance is too slow, you can increase
 the roughly a factor of 2 by compiling with `Cython`_. In order to do so
-you need to have a c-ompiler installed on your system (gcc, clang on
+you need to have a c-compiler installed on your system (gcc, clang on
 Linux or MacOs and msvc on Windows will all do.  Since Version 1.3
 DHParser requires at least Cython Version 3 alpha 11, which cannot be
 installed from the `Python Package Index <https://pypi.org/>`_ but must
@@ -1363,7 +1393,7 @@ installed with ``yay -S cython3``.)
 
 Compiling DHParser is simple. You just need to call the
 ``dhparser_cythonize.py``-script in the ``scripts``-subdirectory of
-DHParsers-installation-driectory::
+DHParsers-installation-directory::
 
     $ python DHParser/scripts/dhparser_cythonize.py
 
@@ -1373,8 +1403,8 @@ with one and the same dataset over and over again produces a most
 impressive speedup, in real-world applications of DHParser (I ran a
 whole fascicle of different medieval latin dictionary articles through
 DHParser in batch-mode), pypy is a even quite a bit slower than the
-python-interpreter. (Compiling one fascicle of the medival latin
-dctionary in batch mode with multiprocessing takes about three times
+python-interpreter. (Compiling one fascicle of the medieval latin
+dictionary in batch mode with multiprocessing takes about three times
 longe with pypy3 than with CPython!) So, presently, I'd recommend
 staying with `Cython`_ when trying to speed-up DHParser.
 

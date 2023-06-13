@@ -22,5 +22,14 @@
     "restructuredtext.preview.name": "docutils",
     "cSpell.enableFiletypes": [
         "restructuredtext"
+    ],
+    "spellright.language": [
+        "en"
+    ],
+    "spellright.documentTypes": [
+        "markdown",
+        "latex",
+        "plaintext",
+        "restructuredtext"
     ]
 }
