@@ -612,7 +612,7 @@ our json-compiler (although we did not bother to call it thus) yields
 the json-data in form of Python-objects. Now let's assume, we'd like to
 add two further processing stages, one which yields the json-data as a
 human-readable pretty-printed json-string, the other which yields it as
-a compact bytearry, ready for transmission over some kind of connection.
+a compact byte-array, ready for transmission over some kind of connection.
 This is how our extension of the standard-pipeline looks like::
 
             |
@@ -650,7 +650,7 @@ passing the non-tree data further on through the data. This trick has the
 benefit that the methods for error reporting that the
 :py:class:`DHParser.nodetree.RootNode`-class provides can also be used for the
 non-tree-stages of the pipeline. In our example already the first stage of the
-extended data is not a nodetree, any more. So we need to attach it to the
+extended data is not a node-tree, any more. So we need to attach it to the
 root-node of the last tree-stage, which in this case is the AST::
 
    >>> ast.data = json_objs
@@ -681,7 +681,7 @@ respective junction::
    ...         return f'"{str(e)}"'
    >>> pretty_print_junction = ('json', lambda : pretty_print, 'pretty-json')
 
-Any errors can simply be attached to the RootNode-obeject that is passed to the
+Any errors can simply be attached to the RootNode-object that is passed to the
 compilation-function!
 
 Since "pretty_print" yields a final state, it does not need to return a
@@ -765,15 +765,15 @@ class Compile
         arguments, that will be called at the end of the compilation of the
         entire tree.
 
-  * :py:meth:`~compile.Compiler.prepare`: An overrideable method that will be
+  * :py:meth:`~compile.Compiler.prepare`: An overridable method that will be
         called with the root-note just before the compilation of the tree
         starts.
 
-  * :py:meth:`~compile.Compiler.finalize`: A overrideable method that will be
+  * :py:meth:`~compile.Compiler.finalize`: A overridable method that will be
         called with the result and that may return a possibly modified result
         after the compilation has finished.
 
-  * :py:meth:`~compile.Compiler.wildcard`: An overriable commpilaiton-method
+  * :py:meth:`~compile.Compiler.wildcard`: An overridable compilation-method
         that will be called when no specific compilation method, i.e.
         ``on_NAME(node)`` has been defined. It defaults to redirecting to
         :py:meth:`~compile.Commpiler.fallback_compiler`.
@@ -781,7 +781,7 @@ class Compile
    * :py:meth:`~compile.Compiler.fallback_compiler`: A method that will be
         be called on nodes for the type or name, for that matter, of which
         no ``on_NME(onde)``-method has been defined. This method should ony
-        be called for purely tree-transforming Comilper objects.
+        be called for purely tree-transforming Compiler-objects.
 
 Types and Functions
 ^^^^^^^^^^^^^^^^^^^

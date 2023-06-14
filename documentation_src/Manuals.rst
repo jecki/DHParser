@@ -13,12 +13,12 @@ DHParser is both suitable for small projects or "on the fly" use of
 parsing expression grammar as a more powerful substitute for regular
 expressions and for big projects. (The workflow for the latter is
 described in the :doc:`StepByStepGuide`.) The usage and API of DHParser
-is (or will be) described with many examples in the doctrings of its
+is (or will be) described with many examples in the docstrings of its
 various modules. The following reading-order is recommended to
 understand DHParser:
 
 :doc:`ebnf <manuals/01_ebnf>` - Although DHParser also offers a
-   Python-interface for specifying grammers (similar to pyparsing_), the
+   Python-interface for specifying grammars (similar to pyparsing_), the
    recommended way of using DHParser is by specifying the grammar in
    EBNF_. Here it is described how grammars are specified in EBNF_ and
    how parsers can be auto-generated from these grammars and how they
@@ -121,9 +121,9 @@ interact with the other modules directly.
     excessive copying of data when slicing strings. (Python always
     creates a copy of the data when slicing strings as a design
     decision.) If any, this module can significantly be sped up by
-    compiling it with cython_. (Use the ``cythonize_stringview``-skript
+    compiling it with cython_. (Use the ``cythonize_stringview``-script
     in  DHParser's main directory or, even better, compile (almost) all
-    modules with the ``build_cython-modules``-skript. This yields a 2-3x
+    modules with the ``build_cython-modules``-script. This yields a 2-3x
     speed increase.)
 
 :py:mod:`toolkit` - various little helper functions for DHParser. Usually,

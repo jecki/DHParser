@@ -67,7 +67,7 @@ and type::
     $ cd DHParser
 
 The second command changes to the DHParser directory. Within this directory
-you should recognise the following subdirectories and files. There are more
+you should recognize the following subdirectories and files. There are more
 files and directories for sure, but those will not concern us for now::
 
     DHParser/            - the DHParser python packages
@@ -351,7 +351,7 @@ the parser simply would not match, which in itself is not considered an error.
    whether whitespace is to be considered insignificant. For example, a
    typesetter might not quite agree that whitespace at the beginning of a text
    is insignificant. And in our example, whitespace between words is considered
-   as semantically insiginificant, because -- even though it is needed during
+   as semantically insignificant, because -- even though it is needed during
    the parsing process -- we know by definition that words must be separated by
    whitespace, so that we can safely leave it out of our data model (see below).
    In fact, all whitespace in our example is thus considered as insignificant.
@@ -360,14 +360,14 @@ the parser simply would not match, which in itself is not considered an error.
    insignificant type of whitespace -- which is often reasonable, then the
    insignificant whitespace should be denoted by DHParser's default sign for
    whitespace, that is a tilde "~", while significant whitespace should be
-   explicitely defined in the grammar, for example by introducing a
+   explicitly defined in the grammar, for example by introducing a
    definition like ``S = /\s+/`` into the grammar.
 
    Here is a little exercise: Can you rewrite the grammar of this example
    so as to distinguish between significant whitespace between words and
    insignificant whitespace at the beginning of the text? Why could it be
    useful to keep whitespace in the data model, even if the presence of
-   whitespace follows strict conventions (e.g. between any two consecuitive
+   whitespace follows strict conventions (e.g. between any two consecutive
    words there must be whitespace and at the beginning of the second and
    all following paragraphs there is to be whitespace and the like)? Discuss.
 
@@ -539,7 +539,7 @@ DHParser offers a special syntax for this case::
     part = { WORD }+
 
 (The plus sign "+" must always follow directly after the curly brace "}"
-without any whitespace in between, otherwise DHParser won't understannd it.)
+without any whitespace in between, otherwise DHParser won't understand it.)
 At this point the worry may arise that the same problem could reoccur at
 another level, if the rule for WORD would match empty strings as well. Let's
 quickly add a test case for this to the file
@@ -601,7 +601,7 @@ tedious in the beginning, especially the column that contains the parser
 call sequence. But it is all very straight forward: For every application of a
 match rule, there is a row in the table. Typically, match rules are applied at
 the end of a long sequence of parser calls that is displayed in the third
-column. You will recognise the parsers that represent rules by their names,
+column. You will recognize the parsers that represent rules by their names,
 e.g. "document", "sentence" etc. Those parsers that merely represent
 constructs of the EBNF grammar within a rule do not have a name and are
 represented by this type, which always begins with a colon, like
@@ -810,7 +810,7 @@ Running the "poetryParser.py"-script on "macbeth.dsl" again, yields::
 
 It starts to become more readable and concise. The same trick can of course
 be done with the Whitespace inside the ``part``- and ``sentence``-nodes,
-only here it does not make sence to reduce a single child::
+only here it does not make sense to reduce a single child::
 
     "part": [remove_whitespace],
     "sentence": [remove_whitespace],

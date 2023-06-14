@@ -27,9 +27,9 @@
         "en"
     ],
     "spellright.documentTypes": [
-        "markdown",
         "latex",
         "plaintext",
-        "restructuredtext"
+        "restructuredtext",
+        "markdown"
     ]
 }

@@ -182,7 +182,7 @@ The main purpose of keeping source-code locations in the node-objects is
 to equip the messages of errors that are detected in later processing
 stages with source code locations. In later processing stages the tree
 may already have been reshaped and its string-content may have been
-changed, say, by normalising whitespace or dropping delimiters.
+changed, say, by normalizing whitespace or dropping delimiters.
 
 Before the `pos`-field can be read, it must have been initialized with the
 `with_pos`-method, which recursively initializes the `pos`-field of the child
@@ -215,11 +215,12 @@ Syntax trees can be serialized as S-expressions, XML, JSON and indented text.
 Module 'nodetree' also contains a few simple parsers
 (:py:func:`~nodetree.parse_sxpr()`, :py:func:`~nodetree.parse_xml()`) or
 :py:func:`~nodetree.parse_json()` to convert XML-snippets, S-expressions or
-json objects into trees composed of Node-objects. Only
-:py:func:`~nodetree.parse_xml()` can deserialize any XML-file. The other two
-functions can parse only the restricted subset of S-expressions or JSON into
-Node-trees that is used when serializing into these formats. There is no
-function to deserialize indented text.
+json objects into trees composed of Node-objects. 
+
+.. note: Only :py:func:`~nodetree.parse_xml()` can deserialize any XML-file. The other two
+    functions can parse only the restricted subset of S-expressions or JSON into
+    Node-trees that is used when serializing into these formats. There is no
+    function to deserialize indented text.
 
 In order to make parameterizing serialization easier, the Node-class also
 defines a generic :py:meth:`~nodetree.Node.serialize()`-method next to the more
@@ -268,8 +269,8 @@ However, mixed-content can be simulated with `string_tags`-parameter of the
 
 The `inline_tags`-parameter ensures that all listed tags and contained
 tags will be printed on a single line. This is helpful when opening the
-XML-serialization in an internet-browser in order to avoid spurios
-blanks when a linebreak occurs in the HTML/XML-source.
+XML-serialization in an internet-browser in order to avoid spurious
+blanks when a line-break occurs in the HTML/XML-source.
 
 Finally, empty tags that do not have a closing tag (e.g. <br />) can be
 declared as such with the `empty_tags`-parameter.
@@ -336,11 +337,11 @@ scaffolding classes for the traversal and transformation of
 syntax-trees.
 
 Module `nodetree` does not provide any functions for transforming trees,
-but it provides low-evel functions for navigating trees. These functions
+but it provides low-level functions for navigating trees. These functions
 cover three different purposes:
 
-1. Downtree-navigation within the subtree spanned by a prticular node.
-2. Uptree- and horizontal navigation to the neigborhood ("siblinings") ancestry
+1. Downtree-navigation within the subtree spanned by a particular node.
+2. Uptree- and horizontal navigation to the neighborhood ("siblings") ancestry
    of a given node.
 3. Navigation by looking at the string-representation of the tree.
 
@@ -369,9 +370,12 @@ Or, reversing the direction::
     >>> last_match
     Node('word', 'Palace')
 
-While nodes contain references to their children, a node does not contain a
-references to its parent. As a last resort (because it is slow) the node's
-parent can be found by the `find_parent`-function which must be executed ony
+While nodes contain references to their children, a node does not
+contain a references to its parent. The method
+:py:meth:`~nodetree.Node.pick_pach` (described below) can be used to pick
+the complete list of ancestors leading up to and including a particular
+node. As a last resort (because it is slow) the node's parent can be
+found by the `find_parent`-function which must be executed on any
 ancestor of the node::
 
     >>> printw(sentence.find_parent(last_match))
@@ -440,7 +444,7 @@ phrase and assume at the same time that words may occur in nested structures::
 
 Now, in order to select all words on the level of the sentence, but excluding
 any sub-phrases, it would not be helpful to use methods based on the selection
-of children (i.e. immediate descendents), because the word nested in an
+of children (i.e. immediate descendants), because the word nested in an
 'italic'-Node would be missed. For this purpose the various selection()-methods
 of class node have a `skip_subtree`-parameter which can be used to block
 subtrees from the iterator based on a criteria (which can be a function, a tag
@@ -502,7 +506,7 @@ Thus::
     >>> pp_path(next_path(pointer), with_content=-1)
     'sentence "This is Buckingham Palace" <- phrase "Buckingham Palace"'
 
-The reason for this beavior is that ``prev_path()`` and ``next_path()``
+The reason for this behavior is that ``prev_path()`` and ``next_path()``
 try to move to the path which contains the string content preceding or
 succeeding that of the given path. Therefore, these functions move to
 the next sibling on the same branch, rather traversing the complete tree
@@ -551,7 +555,7 @@ arbitrary path, instead of the one end or the other end of the tree rooted in
 
 Another important difference, besides the starting point, is that the
 `select()`-generators of the `nodetree`-module traverse the tree post-order
-(or "depth first"), while the respective methods ot the Node-class traverse the
+(or "depth first"), while the respective methods of the Node-class traverse the
 tree pre-order. See the difference::
 
     >>> l = [pp_path(ctx, with_content=1)
@@ -735,7 +739,7 @@ select-argument. ContentMapping raises a ValueError if the
 select-criterion allows paths that are not leaf-path. The
 leaf_paths-filter is a simple, though slightly costly in terms of speed,
 means of turning any criteria into a "criteria is true for path AND path
-is a leaf-path"-coindition.
+is a leaf-path"-condition.
 
 Now, let's look for the string "München" in the footnotes only::
 
@@ -754,7 +758,7 @@ of the leaf node of the path to the term at the given offset::
     ...                   path[-1].result[offset:]
 
 In this particular case, because the offset is zero, we could also have
-written ``"Stadt " + path[-1].result``, but the formular above also
+written ``"Stadt " + path[-1].result``, but the formula above also
 works for the general case where cannot be sure that the offset will
 always be 0.
 
@@ -799,9 +803,9 @@ string content may miss phrases separated by a page break::
     >>> re.search('New\s+York', tree.content)
 
 Currently, the only remedy is to either allow redundant encoding
-of textual meanings withing the string-content or adding specific
-nodes that ccarry the redundant textual meanings within their
-string-contnet and removing them again, after searches etc. have
+of textual meanings within the string-content or adding specific
+nodes that carry the redundant textual meanings within their
+string-content and removing them again, after searches etc. have
 been finished.
 
 
@@ -817,7 +821,7 @@ as cross-cutting tag-boundaries or overlapping hierarchies.
 This solves a common challenge when processing tree structured text-data
 which consists in adding new nodes that cover certain ranges of the
 string content that may already have been covered by other elements. The
-problem ia the same as adding further markup to an existing XML or
+problem is the same as adding further markup to an existing XML or
 HTML-document. In trivial cases like::
 
     >>> trivial_xml = parse_xml("<trivial>Please mark up Stadt München "
@@ -848,7 +852,7 @@ assume that it appears in exactly the same form in the text. For
 example, it could be broken up by a line break, e.g. "Stadt\\nMünchen".
 
 Now, let's try the more complicated case. Because we will try
-different configurations, we use copyied of the tree "hard_xml"::
+different configurations, we use copied of the tree "hard_xml"::
 
     >>> hard_xml_copy = copy.deepcopy(hard_xml)
     >>> mapping = ContentMapping(hard_xml_copy)
@@ -911,14 +915,14 @@ by that markup::
 
 See the difference? This time the <foreign>-element remains intact,
 while the <location>-element has been split. This behavior can be
-configures by the divisability-map that is passed to the parameter
+configures by the divisibility-map that is passed to the parameter
 ``divisability`` of the ContentMapping-constructor. It maps elements
 (or, rather, their names) to sets of elements that can be cut by them.
 The asterix ``*`` is a wildcard and contains those elements that can be
 cut by any other element. An element that does not appear in the
 value-set anywhere in the mapping cannot be cut by any other element. It
 is also possible to pass a simple set of element-names instead of a
-dictionary to the divisability-parameter. In this case any element with
+dictionary to the divisibility-parameter. In this case any element with
 a name in this set can be cut by any other element. Any element the name
 of which is not a member of the set cannot be cut when markup is added.
 
@@ -1194,14 +1198,14 @@ class Node
   * :py:meth:`~nodetree.Node.pick`: Picks a particular node from the tree of
         descendants.
   * :py:meth:`~nodetree.Node.locate`: Finds the leaf-node covering a
-        paraticular location of string content of the tree originating
+        particular location of string content of the tree originating
         in this node.
   * :py:meth:`~nodetree.Node.select_path`: Selects :ref:`paths <paths>`
         from the tree of descendants.
   * :py:meth:`~nodetree.Node.pick_path`: Picks a particular path from
         the tree of descendants.
   * :py:meth:`~nodetree.Node.locate_path`: Finds the path of the
-        leaf-node covering a paraticular location of string content of
+        leaf-node covering a particular location of string content of
         the tree originating in this node.
 
     **Serialization**
@@ -1245,7 +1249,7 @@ Traversing trees via paths
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * :py:func:`~nodetree.prev_path`: Returns the :ref:`path <paths>`
-      preceeding a given path.
+      preceding a given path.
 * :py:func:`~nodetree.next_path`: Returns the :ref:`path <paths>`
       following a given path.
 * :py:func:`~nodetree.generate_content_mapping`: Generates a

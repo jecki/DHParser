@@ -198,12 +198,12 @@ serializing the data in a human readable form. The philosophy
 behind this design decision can be called "rule-based data enrichment".
 
 The output of "LyrikParser_example.py" follows a different philosophy,
-namely that of "comprehensive data modelling". In this case everything
+namely that of "comprehensive data modeling". In this case everything
 that is needed for rendering the data in a human readable form is 
 included in the data itself in addition to every aspect that is 
 modeled for processing the data with a machine. This does not mean that
 every aspect of the source data will be preserved. Rather, the philosophy
-of "comprehensive data modelling" allows, but does not require to replace
+of "comprehensive data modeling" allows, but does not require to replace
 these items by a normalized form. For example, if the input data contains 
 several blank lines where one single blank line would have sufficed to 
 convey the meaning, only one blank like will be included in the data.
@@ -262,8 +262,8 @@ reads as follows: The text of the poem consists of a stanza that
 be followed by further stanzas each of which is separated by one or more blank
 lines (German: "Leerzeilen") from the previous stanza. 
 The structural definition of a stanza (`strophe`) as `vers { ZW vers }+` in turn
-says that a stanza consists of a vers that is followed by at least one more verse
-that are sparated with a single linefeed (and not a blank line which contains two 
+says that a stanza consists of a verse that is followed by at least one more verse
+that are separated with a single linefeed (and not a blank line which contains two 
 line feeds in sequence) only. Here, the `+` following the closing curly brace means
 that what is enclosed in the curly braces must follow one or more times rather than
 just zero or more times as in the case of the simple curly braces. 
@@ -271,12 +271,12 @@ just zero or more times as in the case of the simple curly braces.
 Apart from the curly braces, there are two more signs in this snipped, the
 tilde '~' and the the `§`-sign. The tilde stands for insignificant whitespace 
 (which in this case is restricted to horizontal whitespace, i.e. blanks and
-tabulators). Insigificant whitespeace will be dropped in the instant the parser 
+tabulators). Insignificant whitespace will be dropped in the instant the parser 
 reads it and never appear in the data. Here the tile-sign is used to allow leading
 and following whitespace in lines of text, although we do not need this whitespace
 in our data. 
 
-The paragrah-sign `§` means that what follows is obligatory. In this case, the line
+The paragraph-sign `§` means that what follows is obligatory. In this case, the line
 `gedicht = titel LEERZEILEN §text` means a poem (`gedicht`) is something that has a title.
 If there is no title, it is not a poem, but could still be something else (say a footer, 
 although we do not have this here.) But if there is something that has a title followed 
@@ -427,8 +427,8 @@ trees, because it depends on the particular domain of application
 which details are important and which not. For poems these might be
 different from, say, for a catalogue entry. And even for poems it depends
 on the particular use you'd like to make of the data, if you need a
-line of verse to be separeted into text-chunks and blanks (as in the
-verobse output) or if a single text-line enclosed in "verse"-tags is
+line of verse to be separated into text-chunks and blanks (as in the
+verbose output) or if a single text-line enclosed in "verse"-tags is
 sufficient. Because of this, the AST-transformation has to be specified 
 for each grammar separately, just as the grammar has to be specified 
 for each application domain.
@@ -486,7 +486,7 @@ this would internally be represented as:
     <text><plain>It's a </plain><emph>beautiful</emph><plain> day today!</plain></text>
     
 DHParser supports the transformation of its internal restricted tree-representation to
-anbd from standard-XML as an import and export-feature, however. So it can be used to
+and from standard-XML as an import and export-feature, however. So it can be used to
 work seamlessly with other XML-tools, just as it can be connected seamlessly to tools
 that process s-expressions like lisp- or scheme-interpreters.
    

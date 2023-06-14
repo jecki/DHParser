@@ -338,7 +338,7 @@ the transformation-table of the LaTeX-Parser example::
 The first entry of the dictionary turns nodes with the either of the
 names "hide_from_toc" or "no_numbering" into empty nodes, which is
 reasonable, because these markers which in the LaTeX-source consist of a
-simple asterix that is appended to a section-command or a command for an
+simple asterix (*) that is appended to a section-command or a command for an
 equation array shall not be printed as part of the text. At the same
 time, it is reasonable to keep the empty nodes as flags to indicate to
 latter processing stages that a certain section or chapter shall not
@@ -619,7 +619,7 @@ technical reasons.
 .. hint:: Transformation functions usually either assume that the
    path on which they are called ends with e leaf-node or with
    a branch-node but do not make much sense in the other case.
-   It is therefore good practie to check this as a pre-condition
+   It is therefore good practice to check this as a pre-condition
    with an if-clause (see function ``remove_children_if`` above)
    or an assert-statement::
 
@@ -634,7 +634,7 @@ technical reasons.
 Debugging the transformation-table
 ----------------------------------
 
-Complex tranformations can become hard to follow and to debug. The
+Complex transformations can become hard to follow and to debug. The
 transformation-module provides a simple "printf-style" debugging
 facility in form of the peek-function to help spotting mistakes.
 Additionally, the :py:mod:`DHParser.testing`-module provides
@@ -717,7 +717,6 @@ of the "node" a transformation function operates on in the following,
 we always mean the last node in the path that is passed to the
 transformation function as argument.
 
-
 * :py:func:`~transform.replace_by_single_child`: Replaces a node with its
   single child, in case it has exactly one chile. Thus, ``(a (b "x"))``
   becomes ``(b "x")``, if the function is called on node "a", e.g. the
@@ -733,8 +732,8 @@ transformation function as argument.
 * :py:func:`~transform.change_name`: Changes the name of the node.
 
 * :py:func:`~transform.flatten`: "Flattens" a node by replacing all
-  of its children that are not leave nodes and which fulfil a given
-  critrion by that child's children. The default criterion is
+  of its children that are not leave nodes and which fulfill a given
+  criterion by that child's children. The default criterion is
   :py:func:`~transform.is_anonymous`. Example: ``(expr (term "5")
   (:OneOrMore (PLUS "+") (term "4") (MINUS "-") (term "3")))`` ->
   ``(expr (term "5") (PLUS "+") (term "4") (MINUS "-") (term "3"))``
@@ -748,7 +747,7 @@ transformation function as argument.
   processing stages any more.
 
 * :py:func:`~transform.collapse_children_if`. Merges adjacent children
-  that fulfil a given condition, e.g. ``(place (abbreviation "p.") (page
+  that fulfill a given condition, e.g. ``(place (abbreviation "p.") (page
   "26") (superscript "b") (mark ",") (page "18"))`` -> ``(place (text
   "p.26") (superscript "b") (text ",18"))`` (In this example the
   condition was "not_one_of({'superscript', 'subscript'})" and the
@@ -762,7 +761,7 @@ transformation function as argument.
   function for more details.
 
 * :py:func:`~transform.move_fringes`. Moves children from the left and right
-  fringes to the parent node as long as the children on the fringes fulfil
+  fringes to the parent node as long as the children on the fringes fulfill
   a given condition. This functions can help to patch up badly formulated
   grammars.
 
@@ -772,7 +771,7 @@ Content-Changing Transformations
 
 * :py:func:`~transform.lstrip`, :py:func:`~transform.rstrip`,
   :py:func:`~transform.strip`. Recursively removes all leading, trailing or
-      both child-nodes that fulfil a given condition like
+      both child-nodes that fulfill a given condition like
       'is_whitespace'.
 
 * :py:func:`~transform.remove_children_if`. Removes all children that

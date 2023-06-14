@@ -18,7 +18,7 @@ DHParser uses `packrat parsing <https://bford.info/packrat/>`_ with full
 left-recursion support which allows to build parsers for about any
 context-free grammar. Thus, when writing a grammar you do not need to
 worry about potential restrictions of the parser. DHParser provides a
-post-mortem debugger to analyse the parsing process and it offers
+post-mortem debugger to analyze the parsing process and it offers
 facilities for unit-testing grammars as well as some (experimental)
 support for fail-tolerant parsing so that the parser does not stop at
 the first syntax error it encounters. Finally, it provides the necessary
@@ -122,7 +122,7 @@ Creating parsers within a Python-script
 In case you just need a parser for some very simple DSL, you can
 directly add a string with the EBNF-grammar of that DSL to you python
 code and compile if into an executable parser much like you'd compile a
-regular expresseion. Let's do this for a `JSON
+regular expression. Let's do this for a `JSON
 <https://www.json.org/>`_-parser::
 
     import sys
@@ -395,7 +395,7 @@ Declarative AST-building
 
 DHParser does does not hide any stages of the tree generation process.
 Thus, you get full access to the (somewhat simplified if you choose)
-concrete syntax tree (CST) as well as to the (even more simplyfied and
+concrete syntax tree (CST) as well as to the (even more simplified and
 streamlined) abstract syntax tree (AST).
 
 An internal mini-DSL for AST-transformation
@@ -917,7 +917,7 @@ a source file. In almost all cases, you'll want to adjust the
 ``...Parser.py`` script, so that it really yields the data contained in
 the compiled document. This, however, requires further processing steps
 than just parsing. The ``...Parser.py``-script contains four different
-sections, namely, the **Preprocesser**-, **Parser**-, **AST**- and
+sections, namely, the **Preprocessor**-, **Parser**-, **AST**- and
 **Compiler**-sections. Once this script has been generated, only the
 Parser-section will be updated automatically when running the
 ``tst_...``-scripts. The Parser-section should therefore be left

@@ -8,15 +8,15 @@
 Welcome to DHParser's documentation!
 ====================================
 
-DHParser is a parser-generator and and domain-specific-languages
+DHParser is a parser-generator and and domain-specific-language
 construction kit, designed for but not restricted to
 Digital-Humanities-applications.
 
 DHParser offers:
 
 * EBNF-based grammar-specification language with support for
-  different flavors of EBNF
-* Macros to reduce code-repetion within grammars and includes to
+  different flavors of EBNF 
+* Macros to reduce code-repetition within grammars and includes to
   avoid code-repetition between grammars.
 * Parsing-Expression-Grammar (PEG)-parser with memoization
   and full left-recursion support
@@ -37,7 +37,7 @@ License
 
 DHParser is open source software under the `Apache 2.0 License`_.
 
-Copyright 2016-2022  `Eckhart Arnold <arnold@badw.de>`_, Bavarian Academy of Sciences and Humanities
+Copyright 2016-2023  `Eckhart Arnold <arnold@badw.de>`_, Bavarian Academy of Sciences and Humanities
 
 The source code can downloaded from: `gitlab.lrz.de/badw-it/DHParser <https://gitlab.lrz.de/badw-it/DHParser>`_
 
