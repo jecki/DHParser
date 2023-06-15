@@ -515,7 +515,7 @@ class TestFalsePositives:
 
 
 class TestConfigSwitch:
-    grammar = """document = word { L word }
+    grammar = r"""document = word { L word }
     word = /\w+/
     L    = /\s+/
     """

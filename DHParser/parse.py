@@ -836,22 +836,6 @@ class Parser:
         except NameError:  # Cython: No access to _GRAMMAR_PLACEHOLDER, yet :-(
             self._grammar = grammar
 
-    def anonyous_closure(self, grammar = _GRAMMAR_PLACEHOLDER) -> AbstractSet[Parser]:
-        """Returns a set of self any all anonymous descendant parsers."""
-        if self._anon_desc_cache is None:
-            if is_grammar_placeholder(grammar):   grammar = self.grammar
-
-            def collect(parser: Parser):
-                if not parser.pname:
-                    parser.grammar = grammar
-                    self._anon_desc_cache.add(parser)
-                    for p in parser.sub_parsers:
-                        collect(p)
-
-            self._anon_desc_cache.add(self)
-            for p in self.sub_parsers:  collect(p)
-        return self._anon_desc_cache
-
     def descendants(self, grammar = _GRAMMAR_PLACEHOLDER) -> AbstractSet[Parser]:
         """Returns a set of self and all descendant parsers,
         avoiding circles."""
@@ -3067,6 +3051,8 @@ class LateBindingUnary(UnaryParser):
     """Superclass for late-binding unary parsers. LateBindingUnary only stores
     the name of a parser upon object creation. This name is resolved the first time
     the parser is used.
+
+    EXPERIMENTAL !!
 
     A possible use case is a custom parser derived from LateBindingUnary that
     calls another parser without having to worry about whether the called
