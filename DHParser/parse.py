@@ -417,6 +417,21 @@ def reentry_point(rest: StringView,
 ########################################################################
 
 
+_GRAMMAR_PLACEHOLDER = None  # type: Optional[Grammar]
+
+
+def get_grammar_placeholder() -> 'Grammar':
+    global _GRAMMAR_PLACEHOLDER
+    if _GRAMMAR_PLACEHOLDER is None:
+        _GRAMMAR_PLACEHOLDER = Grammar.__new__(Grammar)
+    return cast(Grammar, _GRAMMAR_PLACEHOLDER)
+
+
+def is_grammar_placeholder(grammar: Optional['Grammar']) -> bool:
+    return grammar is None or cast(Grammar, grammar) is _GRAMMAR_PLACEHOLDER
+
+
+
 ParsingResult: TypeAlias = Tuple[Optional[Node], int]
 MemoizationDict: TypeAlias = Dict[int, ParsingResult]
 
@@ -802,7 +817,7 @@ class Parser:
             #     return self._grammar
             # else:
             #     raise ValueError('Grammar has not yet been set!')
-            assert self._grammar is not _GRAMMAR_PLACEHOLDER
+            assert not is_grammar_placeholder(self._grammar)
             return self._grammar
         except (AttributeError, NameError):
             raise AttributeError('Parser placeholder does not have a grammar!')
@@ -821,34 +836,10 @@ class Parser:
         except NameError:  # Cython: No access to _GRAMMAR_PLACEHOLDER, yet :-(
             self._grammar = grammar
 
-    # def descendants(self) -> Iterator[Parser]:
-    #     """Returns a set of self and all descendant parsers,
-    #     avoiding circles."""
-    #     if self._descendants_cache is None:
-    #         if self._descendant_trails_cache:
-    #             self._descendants_cache = tuple(pt[-1] for pt in self._descendant_trails_cache)
-    #         else:
-    #             visited = set()
-    #
-    #             def descendants_iter() -> Iterable[Parser]:
-    #
-    #                 def collect(parser: Parser):
-    #                     nonlocal visited
-    #                     if parser not in visited:
-    #                         visited.add(parser)
-    #                         yield parser
-    #                         for p in parser.sub_parsers:
-    #                             collect(p)
-    #                 yield from collect(self)
-    #                 self._descendants_cache = frozenset(visited)  # tuple(p for p in collect(self))
-    #             return descendants_iter()
-    #     return self._descendants_cache
-
     def anonyous_closure(self, grammar = _GRAMMAR_PLACEHOLDER) -> AbstractSet[Parser]:
         """Returns a set of self any all anonymous descendant parsers."""
         if self._anon_desc_cache is None:
-            if grammar is _GRAMMAR_PLACEHOLDER:
-                grammar = self.grammar
+            if is_grammar_placeholder(grammar):   grammar = self.grammar
 
             def collect(parser: Parser):
                 if not parser.pname:
@@ -858,23 +849,23 @@ class Parser:
                         collect(p)
 
             self._anon_desc_cache.add(self)
-            for p in self.sub_parsers:
-                collect(p)
+            for p in self.sub_parsers:  collect(p)
         return self._anon_desc_cache
 
-    def descendants(self) -> AbstractSet[Parser]:
+    def descendants(self, grammar = _GRAMMAR_PLACEHOLDER) -> AbstractSet[Parser]:
         """Returns a set of self and all descendant parsers,
         avoiding circles."""
         if self._descendants_cache is None:
             if self._desc_trails_cache:
                 self._descendants_cache = tuple(pt[-1] for pt in self._desc_trails_cache)
             else:
+                if  is_grammar_placeholder(grammar):   grammar = self._grammar
                 visited = set()
 
                 def collect(parser: Parser):
                     nonlocal visited
                     if parser not in visited:
-                        parser.grammar = self._grammar
+                        parser.grammar = grammar
                         visited.add(parser)
                         for p in parser.sub_parsers:
                             collect(p)
@@ -894,9 +885,7 @@ class Parser:
             def collect_trails(parser: Parser, ptrl: List[Parser]):
                 nonlocal visited, trails
                 if parser not in visited:
-                    parser.grammar = self.grammar
                     visited.add(parser)
-                    # ptrl = ptrl + [parser]  # creates a new ptrl-list...
                     ptrl.append(parser)
                     trails.add(tuple(ptrl))
                     for p in parser.sub_parsers:
@@ -907,7 +896,7 @@ class Parser:
             self._desc_trails_cache = frozenset(trails)
         return self._desc_trails_cache
 
-    def apply(self, func: ApplyFunc) -> Optional[bool]:
+    def apply(self, func: ApplyFunc, grammar = _GRAMMAR_PLACEHOLDER) -> Optional[bool]:
         """
         Applies function ``func(parser)`` recursively to this parser and all
         descendant parsers as long as ``func()`` returns ``None`` or ``False``.
@@ -917,6 +906,9 @@ class Parser:
         If ``func`` has been applied to all descendant parsers without issuing
         a stop signal by returning ``True``, ``False`` is returned.
 
+        if apply is called for the first time on the parser, the parser will be
+        conntected to ``grammar``
+
         This use of the return value allows to use the ``apply``-method both
         to issue tests on all descendant parsers (including self) which may be
         decided already after some parsers have been visited without any need
@@ -925,7 +917,7 @@ class Parser:
         worrying about forgetting the return value of procedure, because a
         return value of ``None`` means "carry on".
         """
-        for parser in self.descendants():
+        for parser in self.descendants(grammar):
             if func(parser):
                 return True
         return False
@@ -1609,11 +1601,6 @@ class Grammar:
         if parser not in self.all_parsers__:
             if parser.pname:
                 # prevent overwriting instance variables or parsers of a different class
-                # assert (parser.pname not in self.__dict__
-                #         or isinstance(self.__dict__[parser.pname], parser.__class__)), \
-                #     ('Cannot add parser "%s" because a field with the same name '
-                #      'already exists in grammar object: %s!'
-                #      % (parser.pname, str(self.__dict__[parser.pname])))
                 if parser.pname in self.__dict__:
                     assert (isinstance(self.__dict__[parser.pname], Forward)
                             or isinstance(self.__dict__[parser.pname], parser.__class__)), \
@@ -1624,12 +1611,6 @@ class Grammar:
                     setattr(self, parser.pname, parser)
             elif isinstance(parser, Forward):
                 setattr(self, cast(Forward, parser).parser.pname, parser)
-            # # see Parser.name()
-            # if parser.disposable:
-            #     parser.name = (':' + parser.pname) if parser.pname else parser.ptype
-            # else:
-            #     parser.name = parser.pname
-            # parser.name(parser.pname, parser.disposable)
             self.all_parsers__.add(parser)
             # parser.grammar = self  # moved to parser.descendants
 
@@ -1691,14 +1672,12 @@ class Grammar:
             self.static_analysis_errors__ = self.__class__.static_analysis_errors__
         self.static_analysis_caches__ = dict()  # type: Dict[str, Dict]
 
-        self.root_parser__.grammar = self
-        self.root_parser__.apply(self._add_parser__)
+        self.root_parser__.apply(self._add_parser__, self)
         root_connected = frozenset(self.all_parsers__)
 
         assert 'root_parser__' in self.__dict__
         assert self.root_parser__ == self.__dict__['root_parser__']
         self.ff_parser__ = self.root_parser__
-        # self.root_parser__.apply(reset_parser)
         self.unconnected_parsers__: Set[Parser] = set()
         self.resume_parsers__: Set[Parser] = set()
         resume_lists = []
@@ -1714,18 +1693,12 @@ class Grammar:
                     if p not in root_connected:
                         self.unconnected_parsers__.add(p)
                         self.resume_parsers__.add(p)
-                        p.grammar = self
-                        p.apply(self._add_parser__)
         for name in self.__class__.parser_names__:
             parser = self[name]
-            if parser not in root_connected:
-                self.unconnected_parsers__.add(parser)
-                parser.grammar = self
-                parser.apply(self._add_parser__)
+            if parser not in root_connected:  self.unconnected_parsers__.add(parser)
 
         determine_eq_classes(self.all_parsers__)
-        if not root:
-            TreeReduction(self.all_parsers__, self.early_tree_reduction__)
+        if not root:  TreeReduction(self.all_parsers__, self.early_tree_reduction__)
 
         if (self.static_analysis_pending__
             and (static_analysis
@@ -1762,8 +1735,7 @@ class Grammar:
             if parser_template:
                 # add parser to grammar object on the fly...
                 parser = copy.deepcopy(parser_template)
-                parser.grammar = self
-                parser.apply(self._add_parser__)
+                parser.apply(self._add_parser__, self)
                 assert self[key] == parser
                 return self[key]
             raise AttributeError(f'Unknown parser "{key}" in grammar {self.__class__.__name__}!')
@@ -2294,20 +2266,6 @@ def dsl_error_msg(parser: Parser, error_str: str) -> str:
 
 def dsl_error(parser, node, error_str, error_code):
     parser.grammar.tree__.new_error(node, dsl_error_msg(parser, error_str), error_code)
-
-
-_GRAMMAR_PLACEHOLDER = None  # type: Optional[Grammar]
-
-
-def get_grammar_placeholder() -> Grammar:
-    global _GRAMMAR_PLACEHOLDER
-    if _GRAMMAR_PLACEHOLDER is None:
-        _GRAMMAR_PLACEHOLDER = Grammar.__new__(Grammar)
-    return cast(Grammar, _GRAMMAR_PLACEHOLDER)
-
-
-def is_grammar_placeholder(grammar: Optional[Grammar]) -> bool:
-    return grammar is None or cast(Grammar, grammar) is _GRAMMAR_PLACEHOLDER
 
 
 ########################################################################
