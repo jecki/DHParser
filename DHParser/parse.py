@@ -1612,7 +1612,7 @@ class Grammar:
             #     parser.name = parser.pname
             # parser.name(parser.pname, parser.disposable)
             self.all_parsers__.add(parser)
-            parser.grammar = self  # moved to parser.descendants
+            # parser.grammar = self  # moved to parser.descendants
 
 
     def __init__(self, root: Optional[Parser] = None, static_analysis: Optional[bool] = None) -> None:
