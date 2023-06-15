@@ -14,6 +14,7 @@ DHParser Version 1.5.0
   practically never needed and have undesired side-effects.
 - parse.py: Speed-Optimization by implementing simplified __call__-methods
   for leaf-parsers and for parsers that do not memoize.
+- parse.py: class LateBindingUnary added
 - testing.py: allow to set config-values in test-files.
 - EXPERIMENTAL: started a nim-rewrite of the parser core to increase
   parser speed to the level of a compiled language, i.e. nim (nim-lang.org)
