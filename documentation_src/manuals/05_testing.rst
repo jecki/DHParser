@@ -83,8 +83,8 @@ indentation will automatically be removed before running the test.)
 Running grammar-tests
 ---------------------
 
-Calling the test-script
-^^^^^^^^^^^^^^^^^^^^^^^
+The test-runner-script
+^^^^^^^^^^^^^^^^^^^^^^
 
 Grammar tests can be run either by calling the (auto-generated)
 test-grammar script with the filename of the test-file as argument.
@@ -93,15 +93,6 @@ case it will look for a "test_grammar" folder inside the
 current-directory and then run all test-files in this directory, where
 any file is considered a test-file the name of which matches the
 glob-pattern ``*_test_*.ini``.
-
-.. tip:: It is a good idea to add the DHParser-projects's
-    ``tst_..._grammar.py``-script to the executable tools
-    of your Python-IDE. Then it suffices to simply point to
-    the test in the IDE's file-manager and pick the tool
-    from the menu to run a particular test.
-
-    This works pretty well with PyCharm, but is also possible with most
-    other integrated development environments or code-editors.
 
 From the command-line grammar-tests can be run with a call like this one::
 
@@ -125,13 +116,22 @@ For example::
     $ tst_outline_grammar.py tests_grammar/Playground.ini
 
 works just as well as long as the file "tests_grammar/Playground.ini"
-exsits, even though its name does not match the test-file-name-pattern
+exists, even though its name does not match the test-file-name-pattern
 and will, therefore, be overlooked, if the script is called without any
 arguments. This can be quite useful, if you want to experiment with
 tests that you might not (yet) want to add to your regular test-suite.
 
-Reading the test-report
-^^^^^^^^^^^^^^^^^^^^^^^
+.. tip:: It is a good idea to add the DHParser-projects's
+    ``tst_..._grammar.py``-script to the executable tools
+    of your Python-IDE. Then it suffices to simply point to
+    the test in the IDE's file-manager and pick the tool
+    from the menu to run a particular test.
+
+    This works pretty well with PyCharm, but is also possible with most
+    other integrated development environments or code-editors.
+
+Test-reports
+^^^^^^^^^^^^
 
 After the test has been run, the results can be found in the
 "REPORT"-subdirectory of the tests-directory. For each test-file that
@@ -196,13 +196,13 @@ an excerpt from the report file might look like this::
     3:1: Error (1010): 'EOF' expected by parser 'document', but »#### BADLY...« found instead!
     3:4: Error (1040): Parser "document" stopped before end, at: »# BADLY NE...« Terminating parser.
 
-You might expect that a test-report of the parser would show the 
+You might expect that a test-report of the parser would show the
 concrete-syntax-tree (CST) rather than the AST. However, the CST can be
 quite verbose dependning on how far it is curbed or not curbed in the
 grammar definition, already (see :ref:`simplifying_syntax_trees`) and
 is usually less informative than the AST. Typically, you'll want to
-see it only in very particular cases and only when debugging the 
-AST-generation. For this purpose, DHParser's testing-framework allows 
+see it only in very particular cases and only when debugging the
+AST-generation. For this purpose, DHParser's testing-framework allows
 to quickly turn the additional output of the CST in the test-report
 on and off by simply placing an asterix ``*`` after the test name
 of any match test or removing it after the debugging has been done.
@@ -286,13 +286,13 @@ ERROR   a syntax error was detected during parsing
 ======= ==================================================================
 
 Finally, the last part of each entry (i.e. line) in the log is an
-exceprt from the document at the location where the parser stood. In the
+excerpt from the document at the location where the parser stood. In the
 HTML-log, colors indicate the which part of the excerpt was matched. (In
 the pure text-output as shown above this can only be inferred from the
 next line.)
 
-With these informations in mind you should be able to "read" the above
-log-excerpt. It takes a while to get used to reading oarsing-logs,
+With these information in mind you should be able to "read" the above
+log-excerpt. It takes a while to get used to reading parsing-logs,
 though. Reading logs can become confusing when lookahead or, in
 particular, when look-behind parsers are involved. Also, keep in mind
 that DHParser uses memoizing to avoid parsing the same part of a
@@ -300,9 +300,9 @@ document over and over again with the same parser. Thus, if you
 encounter a line in the log where the call stack appears to be clipped,
 this is usually dure to memoizing an the same parser having been called
 at the same location earlier in the parsing process. (You might find the
-first insantance by looking for the same line and column in the earlier
-part of the log.) Still, looking at the parsing-log helps to find and 
-understand the causes of unexpected parser-behavior, quickly. 
+first instance by looking for the same line and column in the earlier
+part of the log.) Still, looking at the parsing-log helps to find and
+understand the causes of unexpected parser-behavior, quickly.
 
 
 Development-Workflows
