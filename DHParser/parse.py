@@ -3049,8 +3049,8 @@ class UnaryParser(CombinedParser):
 
 class LateBindingUnary(UnaryParser):
     """Superclass for late-binding unary parsers. LateBindingUnary only stores
-    the name of a parser upon object creation. This name is resolved the first time
-    the parser is used.
+    the name of a parser upon object creation. This name is resolved at the time
+    when the late-binding-parser-object is connected to the grammar.
 
     EXPERIMENTAL !!
 
@@ -3072,7 +3072,7 @@ class LateBindingUnary(UnaryParser):
         copy_combined_parser_attrs(self, duplicate)
         return duplicate
 
-    def resolve(self) -> Parser:
+    def resolve_parser_name(self) -> Parser:
         if self.parser is PARSER_PLACEHOLDER:
             self.parser = getattr(self.grammar, self.parser_name)
             self.sub_parsers = frozenset({self.parser})
@@ -3083,8 +3083,7 @@ class LateBindingUnary(UnaryParser):
 
     @property
     def sub_parsers(self) -> FrozenSet[Parser]:
-        self.resolve()
-        return frozenset({self.parser})
+        return frozenset({self.resolve_parser_name()})
 
     @sub_parsers.setter
     def sub_parsers(self, f: FrozenSet):
