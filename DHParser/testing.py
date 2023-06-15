@@ -484,7 +484,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         track_history = get_config_value('history_tracking')
         try:
             if has_lookahead(parser_name):
-                set_tracer(parser[parser_name].descendants, trace_history)
+                set_tracer(parser[parser_name].descendants(), trace_history)
                 track_history = True
         except AttributeError:
             pass
@@ -710,7 +710,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 write(infostr + ("OK" if len(errata) == errflag else "FAIL"))
 
     # remove tracers, in case there are any:
-    set_tracer(parser.root_parser__.descendants, None)
+    set_tracer(parser.root_parser__.descendants(), None)
 
     # write test-report
     if report:

@@ -94,6 +94,7 @@ class TestParserClass:
         l = []
         def visitor(p: Parser):
             l.append(p.pname + p.ptype)
+        gr.root__.grammar = gr
         gr.root__.apply(visitor)
         s1 = ", ".join(l)
         l = []

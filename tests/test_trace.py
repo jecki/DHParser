@@ -78,7 +78,7 @@ class TestTrace:
             factor = /[0-9]+/~ | "(" expr ")"
             """
         gr = grammar_provider(lang)()
-        all_desc = gr.root_parser__.descendants
+        all_desc = gr.root_parser__.descendants()
         set_tracer(all_desc, trace_history)
         st = gr('2*(3+4)')
         assert(str(st)) == '2*(3+4)'
@@ -101,7 +101,7 @@ class TestTrace:
             factor = /[0-9]+/~ | "(" expr ")"
             """
         gr = grammar_provider(lang)()
-        all_desc = gr.root_parser__.descendants
+        all_desc = gr.root_parser__.descendants()
         set_tracer(all_desc, trace_history)
         _ = gr('2*(3+4)xxx')
         log_parsing_history(gr, 'trace_stopped_early')
@@ -123,7 +123,7 @@ class TestTrace:
             """
         set_config_value('compiled_EBNF_log', 'test_trace_parser.py')
         gr = grammar_provider(lang)()
-        all_desc = gr.root_parser__.descendants
+        all_desc = gr.root_parser__.descendants()
         set_tracer(all_desc, trace_history)
         # st = gr('2*(3+4)')
         st = gr('2*(3 + 4*(5 + 6*(7 + 8 + 9*2 - 1/5*1000) + 2) + 5000 + 4000)')
@@ -275,7 +275,7 @@ class TestErrorReporting:
         series = "A" "B" §"C" "D"
         """
         gr = grammar_provider(lang)()
-        set_tracer(gr.root_parser__.descendants, trace_history)
+        set_tracer(gr.root_parser__.descendants(), trace_history)
         _ = gr('AB_D')
         assert any(record.status.startswith(record.ERROR) for record in gr.history__), \
             "Missing Error!"

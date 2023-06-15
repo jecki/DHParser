@@ -105,6 +105,7 @@ class XMLGrammar(Grammar):
     """
     element = Forward()
     source_hash__ = "a35f0d669a6691ca072a8dd76d2632e4"
+    early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
     disposable__ = re.compile('BOM$|Misc$|NameStartChar$|NameChars$|CommentChars$|PubidChars$|prolog$|PubidCharsSingleQuoted$|VersionNum$|EncName$|Reference$|CData$|EOF$|tagContent$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -160,7 +161,7 @@ class XMLGrammar(Grammar):
     resume_rules__ = {'tagContent': [re.compile(r'(?=>|\/>)')],
                       'ETag': [re.compile(r'(?=>)')],
                       'Attribute': [re.compile(r'(?=>|\/>)')]}
-    root__ = TreeReduction(document, CombinedParser.MERGE_TREETOPS)
+    root__ = document
     
     
 parsing: PseudoJunction = create_parser_transition(

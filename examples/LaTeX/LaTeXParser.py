@@ -102,6 +102,7 @@ class LaTeXGrammar(Grammar):
     param_block = Forward()
     tabular_config = Forward()
     source_hash__ = "1c79be70061fb2afe0540012cafd938d"
+    early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
     disposable__ = re.compile('_\\w+')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -270,7 +271,7 @@ class LaTeXGrammar(Grammar):
     tabular_config.set(Series(Series(Drop(Text("{")), dwsp__), OneOrMore(Alternative(Series(cfg_celltype, Option(cfg_unit)), cfg_separator, Drop(RegExp(' +')))), Series(Drop(Text("}")), dwsp__), mandatory=2))
     _block_environment.set(Alternative(Series(Lookahead(_has_block_start), _known_environment), generic_block))
     latexdoc = Series(preamble, document, mandatory=1)
-    root__ = TreeReduction(latexdoc, CombinedParser.MERGE_TREETOPS)
+    root__ = latexdoc
     
     
 parsing: PseudoJunction = create_parser_transition(

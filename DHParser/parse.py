@@ -36,7 +36,7 @@ from bisect import bisect_left
 from collections import defaultdict, namedtuple
 import copy
 from functools import lru_cache
-from typing import Callable, cast, List, Tuple, Set, Dict, \
+from typing import Callable, cast, List, Tuple, Set, FrozenSet, Dict, Collection, \
     DefaultDict, Sequence, Union, Optional, Iterator, Hashable, AbstractSet
 
 from DHParser.configuration import get_config_value
@@ -103,6 +103,7 @@ __all__ = ('parser_names',
            'Custom',
            'CustomParser',
            'UnaryParser',
+           'LateBindingUnary',
            'NaryParser',
            'Drop',
            'Synonym',
@@ -800,6 +801,7 @@ class Parser:
             #     return self._grammar
             # else:
             #     raise ValueError('Grammar has not yet been set!')
+            assert self._grammar is not _GRAMMAR_PLACEHOLDER
             return self._grammar
         except (AttributeError, NameError):
             raise AttributeError('Parser placeholder does not have a grammar!')
@@ -818,7 +820,29 @@ class Parser:
         except NameError:  # Cython: No access to _GRAMMAR_PLACEHOLDER, yet :-(
             self._grammar = grammar
 
-    @property
+    # def descendants(self) -> Iterator[Parser]:
+    #     """Returns a set of self and all descendant parsers,
+    #     avoiding circles."""
+    #     if self._descendants_cache is None:
+    #         if self._descendant_trails_cache:
+    #             self._descendants_cache = tuple(pt[-1] for pt in self._descendant_trails_cache)
+    #         else:
+    #             visited = set()
+    #
+    #             def descendants_iter() -> Iterable[Parser]:
+    #
+    #                 def collect(parser: Parser):
+    #                     nonlocal visited
+    #                     if parser not in visited:
+    #                         visited.add(parser)
+    #                         yield parser
+    #                         for p in parser.sub_parsers:
+    #                             collect(p)
+    #                 yield from collect(self)
+    #                 self._descendants_cache = frozenset(visited)  # tuple(p for p in collect(self))
+    #             return descendants_iter()
+    #     return self._descendants_cache
+
     def descendants(self) -> AbstractSet[Parser]:
         """Returns a set of self and all descendant parsers,
         avoiding circles."""
@@ -831,16 +855,15 @@ class Parser:
                 def collect(parser: Parser):
                     nonlocal visited
                     if parser not in visited:
+                        parser.grammar = self._grammar
                         visited.add(parser)
                         for p in parser.sub_parsers:
                             collect(p)
-
                 collect(self)
                 self._descendants_cache = frozenset(visited)  # tuple(p for p in collect(self))
         return self._descendants_cache
 
-    @property
-    def descendant_trails(self) -> AbstractSet[ParserTrail]:
+    def descendant_trails(self) -> Iterator[ParserTrail]:
         """Returns a set of the trails of self and all descendant
         parsers, avoiding circles. NOTE: The algorithm is rather sloppy and
         the returned set is not really comprehensive, but sufficient to trace
@@ -852,6 +875,7 @@ class Parser:
             def collect_trails(parser: Parser, ptrl: List[Parser]):
                 nonlocal visited, trails
                 if parser not in visited:
+                    parser.grammar = self.grammar
                     visited.add(parser)
                     # ptrl = ptrl + [parser]  # creates a new ptrl-list...
                     ptrl.append(parser)
@@ -882,7 +906,7 @@ class Parser:
         worrying about forgetting the return value of procedure, because a
         return value of ``None`` means "carry on".
         """
-        for parser in self.descendants:
+        for parser in self.descendants():
             if func(parser):
                 return True
         return False
@@ -893,7 +917,7 @@ class Parser:
         receives the complete "trail", i.e. list of parsers that lead
         from self to the visited parser as argument.
         """
-        for pctx in self.descendant_trails:
+        for pctx in self.descendant_trails():
             if func(pctx):
                 return True
         return False
@@ -1047,7 +1071,7 @@ def copy_parser_base_attrs(src: Parser, duplicate: Parser):
     duplicate.eq_class = src.eq_class
 
 
-def determine_eq_classes(root: Parser):
+def determine_eq_classes(parsers: Collection[Parser]):
     """Sorts the parsers originating in root (imperfectly) into equivalence
     classes and assigns respective the class identifier to the ``eq_class``-field
     of each parser."""
@@ -1059,8 +1083,8 @@ def determine_eq_classes(root: Parser):
         p.eq_class = eq_classes.setdefault(signature, id(p))
         return False
 
-    root.apply(assign_eq_class)
-
+    for p in parsers:
+        assign_eq_class(p)
 
 def Drop(parser: Parser) -> Parser:
     """Returns the parser with the ``parser.drop_content``-property set to ``True``."""
@@ -1085,6 +1109,7 @@ def get_parser_placeholder() -> Parser:
         PARSER_PLACEHOLDER.drop_content = False
         PARSER_PLACEHOLDER.node_name = ':PLACEHOLDER__'
         PARSER_PLACEHOLDER.eq_class = id(PARSER_PLACEHOLDER)
+        PARSER_PLACEHOLDER.sub_parsers = frozenset()
     return cast(Parser, PARSER_PLACEHOLDER)
 
 
@@ -1347,11 +1372,11 @@ class Grammar:
                 was started (see method ``__call__``) or ``None`` if no parsing process
                 is running.
 
-    :ivar unconnected_parsers\__: A list of parsers that are not connected to the
-                root parser. This list of parsers is collected during instantiation.
+    :ivar unconnected_parsers\__: A set of parsers that are not connected to the
+                root parser. The set of parsers is collected during instantiation.
 
-    :ivar resume_parsers\__: A list of parsers that appear either in a resume-rule
-                or a skip-rule. This is a subset of ``unconnected_parsers__``
+    :ivar resume_parsers\__: A set of parsers that appear either in a resume-rule
+                or a skip-rule. This set is a subset of ``unconnected_parsers__``
 
     :ivar _dirty_flag\__:  A flag indicating that the Grammar has been called at
                 least once so that the parsing-variables need to be reset
@@ -1499,6 +1524,7 @@ class Grammar:
     static_analysis_pending__ = [True]  # type: List[bool]
     static_analysis_errors__ = []  # type: List[AnalysisError]
     parser_names__ = []            # type: List[str]
+    early_tree_reduction__ = 1     # type: int  # 1 == CombinedParser.FLATTEN
 
     @classmethod
     def _assign_parser_names__(cls):
@@ -1542,8 +1568,6 @@ class Grammar:
                         # parser.pname = entry
                         # parser.disposable = anonymous
                     cls.parser_names__.append(entry)
-            if not is_parser_placeholder(cls.root__):
-                determine_eq_classes(cls.root__)
             # if cls != Grammar:
             cls.parser_initialization__ = ["done"]  # (over-)write subclass-variable
 
@@ -1562,6 +1586,7 @@ class Grammar:
         Adds the particular copy of the parser object to this
         particular instance of Grammar.
         """
+        assert parser is not PARSER_PLACEHOLDER
         if parser not in self.all_parsers__:
             if parser.pname:
                 # prevent overwriting instance variables or parsers of a different class
@@ -1587,7 +1612,7 @@ class Grammar:
             #     parser.name = parser.pname
             # parser.name(parser.pname, parser.disposable)
             self.all_parsers__.add(parser)
-            parser.grammar = self
+            parser.grammar = self  # moved to parser.descendants
 
 
     def __init__(self, root: Optional[Parser] = None, static_analysis: Optional[bool] = None) -> None:
@@ -1631,7 +1656,6 @@ class Grammar:
         # (Usually, all parsers should be connected to the root object. But
         # during testing and development this does not need to be the case.)
         if root:
-            determine_eq_classes(root)
             self.root_parser__ = copy.deepcopy(root)
             if not self.root_parser__.pname:
                 self.root_parser__.name("root")
@@ -1648,6 +1672,7 @@ class Grammar:
             self.static_analysis_errors__ = self.__class__.static_analysis_errors__
         self.static_analysis_caches__ = dict()  # type: Dict[str, Dict]
 
+        self.root_parser__.grammar = self
         self.root_parser__.apply(self._add_parser__)
         root_connected = frozenset(self.all_parsers__)
 
@@ -1655,8 +1680,8 @@ class Grammar:
         assert self.root_parser__ == self.__dict__['root_parser__']
         self.ff_parser__ = self.root_parser__
         # self.root_parser__.apply(reset_parser)
-        self.unconnected_parsers__: List[Parser] = []
-        self.resume_parsers__: List[Parser] = []
+        self.unconnected_parsers__: Set[Parser] = set()
+        self.resume_parsers__: Set[Parser] = set()
         resume_lists = []
         if hasattr(self, 'resume_rules__'):
             resume_lists.extend(self.resume_rules__.values())
@@ -1668,14 +1693,20 @@ class Grammar:
                     p = self[l[i].pname]
                     l[i] = p
                     if p not in root_connected:
-                        self.unconnected_parsers__.append(p)
-                        self.resume_parsers__.append(p)
+                        self.unconnected_parsers__.add(p)
+                        self.resume_parsers__.add(p)
+                        p.grammar = self
                         p.apply(self._add_parser__)
         for name in self.__class__.parser_names__:
             parser = self[name]
             if parser not in root_connected:
-                self.unconnected_parsers__.append(parser)
+                self.unconnected_parsers__.add(parser)
+                parser.grammar = self
                 parser.apply(self._add_parser__)
+
+        determine_eq_classes(self.all_parsers__)
+        if not root:
+            TreeReduction(self.all_parsers__, self.early_tree_reduction__)
 
         if (self.static_analysis_pending__
             and (static_analysis
@@ -1712,6 +1743,7 @@ class Grammar:
             if parser_template:
                 # add parser to grammar object on the fly...
                 parser = copy.deepcopy(parser_template)
+                parser.grammar = self
                 parser.apply(self._add_parser__)
                 assert self[key] == parser
                 return self[key]
@@ -2867,9 +2899,16 @@ def copy_combined_parser_attrs(src: CombinedParser, duplicate: CombinedParser):
     duplicate._return_values = duplicate.__getattribute__(src._return_values.__name__)
 
 
-def TreeReduction(root_parser: Parser, level: int = CombinedParser.FLATTEN) -> Parser:
+def TreeReduction(root_or_parserlist: Union[Parser, Collection[Parser]],
+                  level: int = CombinedParser.FLATTEN) -> Parser:
     """
-    Applies tree-reduction level to CombinedParsers::
+    Applies tree-reduction level to CombinedParsers either in the collection
+    or parsers passed in the first arg or in the graph of interconnected
+    parsers originating in the single "roo" parser passed as first argument.
+    Returns the root-parser or, if a collection has been passed, the
+    PARSER_PLACEHOLDER
+
+    Examples, how tree-reduction wors::
 
         >>> root = Text('A') + Text('B') | Text('C') + Text('D')
         >>> grammar = Grammar(TreeReduction(root, CombinedParser.NO_TREE_REDUCTION))
@@ -2932,13 +2971,20 @@ def TreeReduction(root_parser: Parser, level: int = CombinedParser.FLATTEN) -> P
                 cast(CombinedParser, parser)._return_value = parser._return_value_flatten
                 cast(CombinedParser, parser)._return_values = parser._return_values_merge_leaves
 
-    assert isinstance(root_parser, Parser)
-    assert level in (CombinedParser.NO_TREE_REDUCTION,
-                     CombinedParser.FLATTEN,
-                     CombinedParser.MERGE_TREETOPS,
-                     CombinedParser.MERGE_LEAVES)
-    root_parser.apply(apply_func)
-    return root_parser
+    if isinstance(root_or_parserlist, Parser):
+        root_parser = root_or_parserlist
+        assert isinstance(root_parser, Parser)
+        assert level in (CombinedParser.NO_TREE_REDUCTION,
+                         CombinedParser.FLATTEN,
+                         CombinedParser.MERGE_TREETOPS,
+                         CombinedParser.MERGE_LEAVES)
+        root_parser.apply(apply_func)
+        return root_parser
+    else:
+        if level != CombinedParser.FLATTEN:
+            for p in root_or_parserlist:
+                apply_func(p)
+        return get_parser_placeholder()
 
 
 CustomParseFunc: TypeAlias = Callable[[StringView], Optional[Node]]
@@ -3039,6 +3085,47 @@ class UnaryParser(CombinedParser):
     def _signature(self) -> Hashable:
         return self.__class__.__name__, self.parser.signature()
 
+
+class LateBindingUnary(UnaryParser):
+    """Superclass for late-binding unary parsers. LateBindingUnary only stores
+    the name of a parser upon object creation. This name is resolved the first time
+    the parser is used.
+
+    A possible use case is a custom parser derived from LateBindingUnary that
+    calls another parser without having to worry about whether the called
+    parser has already been defined earlier in the Grammar-class.
+
+    LateBindingUnary is not to be confused with :py:class:`Forward` and should
+    not be abused for recursive parser calls either!"""
+
+    def __init__(self, parser_name: str) -> None:
+        super(LateBindingUnary, self).__init__(get_parser_placeholder())
+        self.parser_name: str = parser_name
+
+    def  __deepcopy__(self, memo):
+        duplicate = self.__class__(self.parser_name)
+        # duplicate.parser = copy.deepcopy(self.resolve(), memo)
+        # duplicate.sub_parsers = frozenset({duplicate.parser})
+        copy_combined_parser_attrs(self, duplicate)
+        return duplicate
+
+    def resolve(self) -> Parser:
+        if self.parser is PARSER_PLACEHOLDER:
+            self.parser = getattr(self.grammar, self.parser_name)
+            self.sub_parsers = frozenset({self.parser})
+        return self.parser
+
+    def _signature(self) -> Hashable:
+        return self.__class__.__name__, self.parser_name
+
+    @property
+    def sub_parsers(self) -> FrozenSet[Parser]:
+        self.resolve()
+        return frozenset({self.parser})
+
+    @sub_parsers.setter
+    def sub_parsers(self, f: FrozenSet):
+        pass
 
 class NaryParser(CombinedParser):
     """
@@ -4079,7 +4166,7 @@ class NegativeLookbehind(Lookbehind):
 def is_context_sensitive(parser: Parser) -> bool:
     """Returns True, is ``parser`` is a context-sensitive parser
     or calls a context-sensitive parser."""
-    return any(isinstance(p, ContextSensitive) for p in parser.descendants)
+    return any(isinstance(p, ContextSensitive) for p in parser.descendants())
 
 
 class ContextSensitive(UnaryParser):

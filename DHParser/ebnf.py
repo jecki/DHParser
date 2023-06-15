@@ -1437,7 +1437,7 @@ class EBNFCompiler(Compiler):
         self.current_symbols = []              # type: List[Node]
         self.cache_literal_symbols = None      # type: Optional[Dict[str, str]]
         self.symbols = {}                      # type: Dict[str, List[Node]]
-        self.py_symbols = []                   # type: List[str]
+        self.py_symbols = set()                # type: Set[str]
         self.variables = {}                    # type: Dict[str, List[Node]]
         self.forward = set()                   # type: Set[str]
         self.definitions = {}                  # type: Dict[str, str]
@@ -1635,7 +1635,7 @@ class EBNFCompiler(Compiler):
             return unrepr("re.compile(r'(?=%s)')" % escape_re(s))
         elif nd.name == 'procedure':
             proc_name = nd.content
-            self.py_symbols.append(proc_name)
+            self.py_symbols.add(proc_name)
             return unrepr(proc_name)
         elif nd.name == 'symbol':
             referred_symbol = nd.content.strip()
@@ -1933,6 +1933,10 @@ class EBNFCompiler(Compiler):
         definitions.append(('static_analysis_pending__', '[True]'))
         definitions.append(('disposable__',
                             're.compile(' + repr(self.directives.disposable) + ')'))
+        if self.directives.reduction != CombinedParser.DEFAULT_OPTIMIZATION:
+            opt = 'CombinedParser.' + ('NO_TREE_REDUCTION', 'FLATTEN', 'MERGE_TREETOPS',
+                                       'MERGE_LEAVES')[self.directives.reduction]
+            definitions.append(('early_tree_reduction__', opt))
         if self.grammar_source:
             definitions.append(('source_hash__',
                                 '"%s"' % md5(self.grammar_source, __version__)))
@@ -2020,12 +2024,7 @@ class EBNFCompiler(Compiler):
         # assemble python grammar definition
 
         if self.root_symbol:
-            if self.directives.reduction != CombinedParser.DEFAULT_OPTIMIZATION:
-                opt = ', CombinedParser.' + ('NO_TREE_REDUCTION', 'FLATTEN', 'MERGE_TREETOPS',
-                                             'MERGE_LEAVES')[self.directives.reduction] + ')'
-                declarations.append('root__ = TreeReduction(' + self.root_symbol + opt)
-            else:
-                declarations.append('root__ = ' + self.root_symbol)
+            declarations.append('root__ = ' + self.root_symbol)
         else:
             declarations.append(f'root__ = RegExp(r"{NEVER_MATCH_PATTERN}")')
         declarations.append('')
@@ -2551,7 +2550,7 @@ class EBNFCompiler(Compiler):
 
     def on_expression(self, node) -> str:
         # The following algorithm reorders literal alternatives, so that earlier alternatives
-        # doe not pre-empt later alternatives, e.g. 'ID' | 'IDREF' will be reordered as
+        # does not pre-empt later alternatives, e.g. 'ID' | 'IDREF' will be reordered as
         # 'IDREF' | 'ID'
 
         def move_items(l: List, a: int, b: int):
@@ -3018,12 +3017,12 @@ class EBNFCompiler(Compiler):
         assert 1 <= len(node.children) <= 2, node.as_sxpr()
         name = self.compile(node['name'])
         if name not in ('Custom', 'CustomParser', 'Error', 'ERR'):
-            self.py_symbols.append(name)
+            self.py_symbols.add(name)
         if name == 'Error':  name = 'ERR'
         if 'argument' in node:
             argument = self.compile(node['argument'])
             if argument[0:1] not in ('"', "'"):
-                self.py_symbols.append(argument)
+                self.py_symbols.add(argument)
             return f'{self.P["Custom"]}({name}({argument}))'
         else:
             return f'{self.P["Custom"]}({name}())'
