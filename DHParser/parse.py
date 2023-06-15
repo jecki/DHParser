@@ -527,7 +527,7 @@ class Parser:
     :ivar _descendants_cache: A cache of all descendant parsers that can be
                 reached from this parser.
 
-    :ivar _descendant_trails_cache:  A cache of the trails (i.e. list of parsers)
+    :ivar _desc_trails_cache:  A cache of the trails (i.e. list of parsers)
                 from this parser to all other parsers that can be reached from
                 this parser.
     """
@@ -549,7 +549,8 @@ class Parser:
             pass                      # ensures Cython-compatibility
         self._symbol = ''             # type: str
         self._descendants_cache = None  # type: Optional[AbstractSet[Parser]]
-        self._descendant_trails_cache = None  # type: Optional[AbstractSet[ParserTrail]]
+        self._anon_desc_cache = None    # type: Optional[AbstractSet[Parser]]
+        self._desc_trails_cache = None  # type: Optional[AbstractSet[ParserTrail]]
         self.reset()
 
     def __deepcopy__(self, memo):
@@ -843,12 +844,30 @@ class Parser:
     #             return descendants_iter()
     #     return self._descendants_cache
 
+    def anonyous_closure(self, grammar = _GRAMMAR_PLACEHOLDER) -> AbstractSet[Parser]:
+        """Returns a set of self any all anonymous descendant parsers."""
+        if self._anon_desc_cache is None:
+            if grammar is _GRAMMAR_PLACEHOLDER:
+                grammar = self.grammar
+
+            def collect(parser: Parser):
+                if not parser.pname:
+                    parser.grammar = grammar
+                    self._anon_desc_cache.add(parser)
+                    for p in parser.sub_parsers:
+                        collect(p)
+
+            self._anon_desc_cache.add(self)
+            for p in self.sub_parsers:
+                collect(p)
+        return self._anon_desc_cache
+
     def descendants(self) -> AbstractSet[Parser]:
         """Returns a set of self and all descendant parsers,
         avoiding circles."""
         if self._descendants_cache is None:
-            if self._descendant_trails_cache:
-                self._descendants_cache = tuple(pt[-1] for pt in self._descendant_trails_cache)
+            if self._desc_trails_cache:
+                self._descendants_cache = tuple(pt[-1] for pt in self._desc_trails_cache)
             else:
                 visited = set()
 
@@ -868,7 +887,7 @@ class Parser:
         parsers, avoiding circles. NOTE: The algorithm is rather sloppy and
         the returned set is not really comprehensive, but sufficient to trace
         anonymous parsers to their nearest named ancestor."""
-        if self._descendant_trails_cache is None:
+        if self._desc_trails_cache is None:
             visited = set()
             trails = set()
 
@@ -885,8 +904,8 @@ class Parser:
                     ptrl.pop()
 
             collect_trails(self, [])
-            self._descendant_trails_cache = frozenset(trails)
-        return self._descendant_trails_cache
+            self._desc_trails_cache = frozenset(trails)
+        return self._desc_trails_cache
 
     def apply(self, func: ApplyFunc) -> Optional[bool]:
         """
