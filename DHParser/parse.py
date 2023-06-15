@@ -1672,13 +1672,13 @@ class Grammar:
         for l in resume_lists:
             for i in range(len(l)):
                 if isinstance(l[i], Parser):
-                    p = self[l[i].pname]
+                    p = self[l[i].pname]  # deep-copy and initialize with grammar-object
                     l[i] = p
                     if p not in root_connected:
                         self.unconnected_parsers__.add(p)
                         self.resume_parsers__.add(p)
         for name in self.__class__.parser_names__:
-            parser = self[name]
+            parser = self[name]  # deep-copy and initialize with grammar-object (see __getitem__)
             if parser not in root_connected:  self.unconnected_parsers__.add(parser)
 
         determine_eq_classes(self.all_parsers__)
