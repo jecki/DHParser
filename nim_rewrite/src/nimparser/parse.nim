@@ -185,7 +185,14 @@ method is_optional(self: Parser): Option[bool] {.base.} =
 ##
 ## Leaf parsers are "object"-parsers that capture text directly without
 ## calling other parsers
+##
 
+
+## Text-Parser
+## ^^^^^^^^^^^
+##
+## A plain-text-parser
+##
 
 type
   TextRef = ref TextObj not nil
@@ -214,6 +221,40 @@ method parse*(self: TextRef, location: int): ParsingResult =
   return (nil, location)
 
 
+## Regex-Parser
+## ^^^^^^^^^^^^
+##
+## A parser for regular-expressions
+##
+
+type
+  RegexRef = ref TextObj not nil
+  RegexObj = object of ParserObj
+    regex: string
+
+proc init*(regexParser: RegexRef, regex: string): RegexRef =
+  discard Parser(RegexParser).init(":Regex")
+  regexParser.regex = regex
+  return regexParser
+
+proc Regex*(regex: string): RegexRef =
+  return new(RegexRef).init(regex)
+
+method parse*(self: RegexRef, location: int): ParsingResult =
+  runnableExamples:
+    import nodetree
+    doAssert Regex("\w+")("ABC").node.asSxpr() == "(:Regex \"ABC\")"
+
+  # TODO: Rewrite this for regular repressions
+  if self.grammar.document.continuesWith(self.text, location):
+    if self.dropContent:
+      return (EMPTY_NODE, location + self.text.len)
+    elif self.text != "" or not self.disposable:
+      return (newNode(self.nodeName, self.text), location + self.text.len)
+    return (EMPTY_NODE, location)
+  return (nil, location)
+
+
 ## Combined Parsers
 ## ----------------
 ##
@@ -222,6 +263,7 @@ method parse*(self: TextRef, location: int): ParsingResult =
 proc infiniteLoopWarning(parser: Parser, node: NodeOrNil, location: int) =
   return
 
+# use Repeat as generalized parser instead!
 # type
 #   OptionRef = ref OptionObj not nil
 #   OptionObj = object of ParserObj
