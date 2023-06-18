@@ -308,6 +308,152 @@ understand the causes of unexpected parser-behavior, quickly.
 Development-Workflows
 ---------------------
 
+The development workflows for writing parsers for domain specific 
+languages (DSLs) or parsing (semi-)structured text-data are very similar.
+Only that in the latter case there already exists plenty of sample
+material while in the former case one would usually start to draw
+up some examples. 
+
+In both cases, however, it requires going through many iterations 
+of adjustments and refinements before the grammar stands. In the 
+case of a DSL, the even DSL itself might be adjusted in the course of the
+development, requiring further changes of the grammar all alike.
+
+This is where test-driven-grammar development comes into play. Before
+even writing a grammar and running it on complete documents, you
+start with a small subset that you gradually extend. There are basically
+to stratgies for grammar-development:
+
+   1. Top-Down-Grammar development, where one starts with the macro-
+      structure and uses summary parsers to gloss over the
+      microstructure, which will be replaced later.
+      
+   2. Bottom-Up-Grammar development, where yoou start with parsers 
+      for the parts of the documents and later connect them with
+      higher level parsers. 
+
+Of course, it is also possible to work from both ends and to follow
+both strategies at the same time, until the top-down and
+bottom-up-development meets in the middle.
+
+We will look at both strategies with the example of our outline-parser
+in the following. In case you want to reenact the following steps, you
+should start by creating a new project with the dhparser-command::
+
+    $ dhparser Markdown
+    $ cd Markdown
+
+Top-Down-Grammar-Development
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Suppose, you'd like to write a Markdown-parser, then with a 
+top-down-strategy you'd start with the outer-elements which in this case
+is the outline of the document, i.e. the structure of headings and
+sub-headings. In the true spirit of test-driven-development we start
+by writing some tests, before even coding the first draft of our
+grammar. So we add a document ``tests\01_test_outline.ini`` to a
+freshly created project with the following content::
+
+    [match:document]
+    M1: """# Main Heading
+        ## Section 1
+        ### SubSection 1.1
+        ### SubSection 1.2
+        ## Section 2"""
+
+    [fail:document]
+    F1: """# Main Heading
+        ## Section 1
+        #### BADLY NESTED SubSubSection 1.1.1
+        ### SubSection 1.2
+        ## Section 2"""
+
+The meaning of these two test-cases should be obvious: The first is a
+document that only contains an outline, but not yet any content -
+because will start writing our grammar top-down with the definition
+of the outline-elements leaving out the content-elements for now. The
+match-test test will check that our grammar matches a properly formed
+document-outline.
+
+The second is a fail test, which checks that the parser for our grammar
+does not accidently match a badly structured document. Now, we will 
+start writing a grammar that is suitable to cpature the snippet from
+our match-test. As you'll see in the following, this already requires
+quite a few definitions. Here is our first attempt (which still
+contains a mistake!)::
+
+    # First attempt of any outline-grammar. Can you spot the error?
+    
+    #  EBNF-Directives
+    @ whitespace  = /[ \t]*/  # only horizontal whitespace, no linefeeds
+    @ reduction   = merge     # simplify tree as much as possible
+    @ disposable  = WS, EOF, LINE
+    @ drop        = WS, EOF, backticked
+
+    #:  Outline
+    document = main [WS] §EOF
+
+    main  = [WS] `#` ~ heading { [WS] section }
+    section  = `##` ~ heading { [WS] subsection }
+    subsection  = `###` ~ heading { [WS] subsubsection }
+    subsubsection  = `####` ~ heading { [WS] s5section }
+    s5section  = `#####` ~ heading { [WS] s6section }
+    s6section  = `######` ~ heading
+
+    heading = LINE
+
+    #:  Regular Expressions
+    LINE      = /[^\n]+/         # everything up to the next linefeed
+    WS        = /(?:[ \t]*\n)+/  # a single linefeed and any ws at line-end 
+    EOF       =  !/./  # no more characters ahead, end of file reached
+
+When runing the grammar-tests, we notice that while the match-test
+passes as expected, the fail-test fails, that is, it captures the badly
+structured outline, although it shouldn't. The output of the
+tst-grammar-script on the console looks like this::
+
+    GRAMMAR TEST UNIT: 01_test_outline
+      Match-Tests for parser "document"
+        match-test "M1" ... OK
+      Fail-Tests for parser "document"
+        fail-test  "F1" ... FAIL
+
+Can you guess why the fail-test did not pass? If
+not it helps to cast a look at the parsing log of the failed test
+that has been stored in file
+"tests/LOGS/fail_document_F2_parser.log.html".
+There you find the suspicious lines:
+
+= == ================================================= ===== ===========================================
+3	1	document->main->section->subsection-> `###`	       DROP	 #### BADLY NESTED SubSubSection 1.1.1 ##...
+3	4	document->main->section->subsection->heading->LINE MATCH # BADLY NESTED SubSubSection 1.1.1 ### S...
+= == ================================================= ===== ===========================================
+
+Obviously, the parser "subsection" found its marker consiting of three ``#``-signs, but then it
+did not stop short at the next ``#``-sign, but left this to be captured by its "heading"-parser which
+simply reads the rest of the line, no matter what it looks like. 
+
+The remedy is simple: We add a negative lookahead to check that after each heading-marker that no further 
+``#``-sign follows. Otherwise, the respective section, subsection, etc. -parser simply won't match. So,
+in the "Outline"-section of our grammar, we change the following definitions, accordingly::
+
+    main  = [WS] `#` !`#` ~ heading { [WS] section }
+    section  = `##` !`#` ~ heading { [WS] subsection }
+    subsection  = `###` !`#` ~ heading { [WS] subsubsection }
+    subsubsection  = `####` !`#` ~ heading { [WS] s5section }
+    s5section  = `#####` !`#` ~ heading { [WS] s6section }
+    s6section  = `######` !`#` ~ heading
+
+This time the grammar-tests yield the desired result::
+
+    GRAMMAR TEST UNIT: 01_test_outline
+      Match-Tests for parser "document"
+        match-test "M1" ... OK
+      Fail-Tests for parser "document"
+        fail-test  "F1" ... OK 
+
+
+
 - Test Driven Grammar-Development
 - Particularly useful for the restructuring of human written
   semi-formal noations with formal grammars!

@@ -20,11 +20,6 @@ s6section  = `######` !`#` ~ heading
 
 heading = LINE
 
-#: blocks
-
-blocks  = !is_heading LINE { WS !is_heading LINE }
-is_heading = /##?#?#?#?#?(?!#)/
-
 #:  Regular Expressions
 
 LINE      = /[^\n]+/         # everything up to the next linefeed
