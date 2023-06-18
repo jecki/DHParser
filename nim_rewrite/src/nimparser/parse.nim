@@ -6,6 +6,8 @@ import std/options
 import std/strformat
 import std/strutils
 
+import regex
+
 import nodetree
 
 
@@ -228,25 +230,26 @@ method parse*(self: TextRef, location: int): ParsingResult =
 ##
 
 type
-  RegexRef = ref TextObj not nil
+  RegexRef = ref RegexObj not nil
   RegexObj = object of ParserObj
-    regex: string
+    regex: Regex
 
-proc init*(regexParser: RegexRef, regex: string): RegexRef =
-  discard Parser(RegexParser).init(":Regex")
+proc init*(regexParser: RegexRef, regex: Regex): RegexRef =
+  discard Parser(regexParser).init(":Regex")
   regexParser.regex = regex
   return regexParser
 
-proc Regex*(regex: string): RegexRef =
+proc Regex*(regex: Regex): RegexRef =
   return new(RegexRef).init(regex)
 
 method parse*(self: RegexRef, location: int): ParsingResult =
   runnableExamples:
     import nodetree
-    doAssert Regex("\w+")("ABC").node.asSxpr() == "(:Regex \"ABC\")"
+    doAssert Regex(re"\w+")("ABC").node.asSxpr() == "(:Regex \"ABC\")"
 
-  # TODO: Rewrite this for regular repressions
-  if self.grammar.document.continuesWith(self.text, location):
+  var match: RegexMatch
+  if self.grammar.document.find(self.regex, match, location):
+    var length = 
     if self.dropContent:
       return (EMPTY_NODE, location + self.text.len)
     elif self.text != "" or not self.disposable:
