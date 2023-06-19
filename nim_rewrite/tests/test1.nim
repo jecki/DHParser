@@ -6,9 +6,13 @@
 # To run these tests, simply execute `nimble test`.
 
 import unittest
+import regex
 
 import nimparser/nodetree
 import nimparser/parse
 
 test "Text parser, simple test":
   doAssert Text("A")("A").node.asSxpr == "(:Text \"A\")"
+
+test "Regex parser, simple text":
+  doAssert Regex(re"\w+")("ABC").node.asSxpr() == "(:Regex \"ABC\")"

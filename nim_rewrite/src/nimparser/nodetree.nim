@@ -1,4 +1,5 @@
 {.experimental: "strictNotNil".}
+{.experimental: "strictFuncs".}
 
 import std/enumerate
 import std/sequtils

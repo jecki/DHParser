@@ -1,5 +1,6 @@
 {.experimental: "strictNotNil".} 
 {.experimental: "callOperator".}
+{.experimental: "strictFuncs".}
 
 import std/math
 import std/options
@@ -244,16 +245,16 @@ proc Regex*(regex: Regex): RegexRef =
 
 method parse*(self: RegexRef, location: int): ParsingResult =
   runnableExamples:
-    import nodetree
+    import nodetree, regex
     doAssert Regex(re"\w+")("ABC").node.asSxpr() == "(:Regex \"ABC\")"
 
   var match: RegexMatch
   if self.grammar.document.find(self.regex, match, location):
-    var length = 
+    let text = self.grammar.document[match.boundaries]
     if self.dropContent:
-      return (EMPTY_NODE, location + self.text.len)
-    elif self.text != "" or not self.disposable:
-      return (newNode(self.nodeName, self.text), location + self.text.len)
+      return (EMPTY_NODE, location + text.len)
+    elif text != "" or not self.disposable:
+      return (newNode(self.nodeName, text), location + text.len)
     return (EMPTY_NODE, location)
   return (nil, location)
 
