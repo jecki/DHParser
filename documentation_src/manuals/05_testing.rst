@@ -94,6 +94,15 @@ current-directory and then run all test-files in this directory, where
 any file is considered a test-file the name of which matches the
 glob-pattern ``*_test_*.ini``.
 
+.. tip:: It is a good idea to add the DHParser-projects's
+    ``tst_..._grammar.py``-script to the executable tools
+    of your Python-IDE. Then it suffices to simply point to
+    the test in the IDE's file-manager and pick the tool
+    from the menu to run a particular test.
+
+    This works pretty well with PyCharm, but is also possible with most
+    other integrated development environments or code-editors.
+
 From the command-line grammar-tests can be run with a call like this one::
 
     $ tst_outline_grammar.py
@@ -298,7 +307,7 @@ particular, when look-behind parsers are involved. Also, keep in mind
 that DHParser uses memoizing to avoid parsing the same part of a
 document over and over again with the same parser. Thus, if you
 encounter a line in the log where the call stack appears to be clipped,
-this is usually dure to memoizing an the same parser having been called
+this is usually due to memoizing an the same parser having been called
 at the same location earlier in the parsing process. (You might find the
 first instance by looking for the same line and column in the earlier
 part of the log.) Still, looking at the parsing-log helps to find and
@@ -308,14 +317,14 @@ understand the causes of unexpected parser-behavior, quickly.
 Development-Workflows
 ---------------------
 
-The development workflows for writing parsers for domain specific 
+The development workflows for writing parsers for domain specific
 languages (DSLs) or parsing (semi-)structured text-data are very similar.
 Only that in the latter case there already exists plenty of sample
 material while in the former case one would usually start to draw
-up some examples. 
+up some examples.
 
-In both cases, however, it requires going through many iterations 
-of adjustments and refinements before the grammar stands. In the 
+In both cases, however, it requires going through many iterations
+of adjustments and refinements before the grammar stands. In the
 case of a DSL, the even DSL itself might be adjusted in the course of the
 development, requiring further changes of the grammar all alike.
 
@@ -327,10 +336,10 @@ to stratgies for grammar-development:
    1. Top-Down-Grammar development, where one starts with the macro-
       structure and uses summary parsers to gloss over the
       microstructure, which will be replaced later.
-      
-   2. Bottom-Up-Grammar development, where yoou start with parsers 
+
+   2. Bottom-Up-Grammar development, where yoou start with parsers
       for the parts of the documents and later connect them with
-      higher level parsers. 
+      higher level parsers.
 
 Of course, it is also possible to work from both ends and to follow
 both strategies at the same time, until the top-down and
@@ -346,7 +355,7 @@ should start by creating a new project with the dhparser-command::
 Top-Down-Grammar-Development
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Suppose, you'd like to write a Markdown-parser, then with a 
+Suppose, you'd like to write a Markdown-parser, then with a
 top-down-strategy you'd start with the outer-elements which in this case
 is the outline of the document, i.e. the structure of headings and
 sub-headings. In the true spirit of test-driven-development we start
@@ -376,14 +385,14 @@ match-test test will check that our grammar matches a properly formed
 document-outline.
 
 The second is a fail test, which checks that the parser for our grammar
-does not accidently match a badly structured document. Now, we will 
+does not accidently match a badly structured document. Now, we will
 start writing a grammar that is suitable to cpature the snippet from
 our match-test. As you'll see in the following, this already requires
 quite a few definitions. Here is our first attempt (which still
 contains a mistake!)::
 
     # First attempt of any outline-grammar. Can you spot the error?
-    
+
     #  EBNF-Directives
     @ whitespace  = /[ \t]*/  # only horizontal whitespace, no linefeeds
     @ reduction   = merge     # simplify tree as much as possible
@@ -404,7 +413,7 @@ contains a mistake!)::
 
     #:  Regular Expressions
     LINE      = /[^\n]+/         # everything up to the next linefeed
-    WS        = /(?:[ \t]*\n)+/  # a single linefeed and any ws at line-end 
+    WS        = /(?:[ \t]*\n)+/  # a single linefeed and any ws at line-end
     EOF       =  !/./  # no more characters ahead, end of file reached
 
 When runing the grammar-tests, we notice that while the match-test
@@ -431,9 +440,9 @@ There you find the suspicious lines:
 
 Obviously, the parser "subsection" found its marker consiting of three ``#``-signs, but then it
 did not stop short at the next ``#``-sign, but left this to be captured by its "heading"-parser which
-simply reads the rest of the line, no matter what it looks like. 
+simply reads the rest of the line, no matter what it looks like.
 
-The remedy is simple: We add a negative lookahead to check that after each heading-marker that no further 
+The remedy is simple: We add a negative lookahead to check that after each heading-marker that no further
 ``#``-sign follows. Otherwise, the respective section, subsection, etc. -parser simply won't match. So,
 in the "Outline"-section of our grammar, we change the following definitions, accordingly::
 
@@ -450,7 +459,7 @@ This time the grammar-tests yield the desired result::
       Match-Tests for parser "document"
         match-test "M1" ... OK
       Fail-Tests for parser "document"
-        fail-test  "F1" ... OK 
+        fail-test  "F1" ... OK
 
 
 
@@ -471,7 +480,7 @@ Testing the processing-pipeline
 -------------------------------
 
 - Also, later stages of the processing pipeline can be tested with
-  the same apparaturs as long as their results are serializable
+  the same apparatus as long as their results are serializable
 
 
 Conventional Unit-Testing
