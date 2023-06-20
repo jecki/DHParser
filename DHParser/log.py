@@ -488,7 +488,14 @@ class HistoryRecord:
                     neg = (self._stack.count('!') - self._stack[re_start:].count('!')) % 2
                 else:  # just count the '!'-signs
                     neg = self._stack.count('!') % 2
-                if self.node.name in (NONE_TAG, ZOMBIE_TAG):
+
+                if len(self.call_stack) > 2 and \
+                        self.call_stack[-2][0] in (":Lookbehind", ":NegativeLookbehind"):
+                    if self.node.name in (NONE_TAG, ZOMBIE_TAG):
+                        self._status = self.NDROP if neg else self.DROP
+                    else:
+                        self._status = self.NFAIL if neg else self.FAIL
+                elif self.node.name in (NONE_TAG, ZOMBIE_TAG):
                     self._status = self.NFAIL if neg else self.FAIL
                 elif self.node.name == EMPTY_PTYPE:
                     self._status = self.NDROP if neg else self.DROP
