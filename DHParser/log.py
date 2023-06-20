@@ -284,25 +284,38 @@ FlowOperatorNames = {':Lookahead': '&',
                      ':Lookbehind': '<-&',
                      ':NegativeLookbehind': '<-!'}
 
+# def callstack_as_str(callstack: Sequence[CallItem], depth=-1) -> str:
+#     """Returns a string representation of the callstack!"""
+#     # return "->".join(name for name, _ in self.call_stack)
+#     short_stack = []
+#     anonymous_tail = True
+#     for node_name, _ in reversed(callstack):
+#         if node_name[:1] == ':':
+#             if (anonymous_tail and node_name != ":Forward"):
+#                 short_stack.append(node_name)
+#             elif node_name in FlowOperatorNames and len(short_stack) > 0:
+#                 short_stack[-1] = FlowOperatorNames[node_name] + short_stack[-1]
+#         else:
+#             short_stack.append(node_name)
+#             anonymous_tail = False
+#     if depth <= 0:  depth = len(short_stack)
+#     s = "->".join(reversed(short_stack[:depth]))
+#     omitted = len(short_stack) - depth
+#     return f'[{omitted}]->' + s if omitted > 0 else s
+
 def callstack_as_str(callstack: Sequence[CallItem], depth=-1) -> str:
     """Returns a string representation of the callstack!"""
     # return "->".join(name for name, _ in self.call_stack)
     short_stack = []
-    anonymous_tail = True
     for node_name, _ in reversed(callstack):
-        if node_name[:1] == ':':
-            if (anonymous_tail and node_name != ":Forward"):
-                short_stack.append(node_name)
-            elif node_name in FlowOperatorNames and len(short_stack) > 0:
-                short_stack[-1] = FlowOperatorNames[node_name] + short_stack[-1]
-        else:
+        if node_name in FlowOperatorNames and len(short_stack) > 0:
+            short_stack[-1] = FlowOperatorNames[node_name] + short_stack[-1]
+        elif node_name[0:1] != ':':
             short_stack.append(node_name)
-            anonymous_tail = False
     if depth <= 0:  depth = len(short_stack)
     s = "->".join(reversed(short_stack[:depth]))
     omitted = len(short_stack) - depth
     return f'[{omitted}]->' + s if omitted > 0 else s
-
 
 class HistoryRecord:
     """
@@ -317,7 +330,7 @@ class HistoryRecord:
     parser call, which ist either MATCH, FAIL (i.e. no match)
     or ERROR.
     """
-    __slots__ = ('call_stack', 'node', 'text', 'pos', 'line_col', 'errors', '_stack', '_status')
+    __slots__ = ('call_stack', 'node', 'text', 'pos', 'line_col', 'errors', '_stack', '_status', '_excerpt')
 
     MATCH = "MATCH"
     NMATCH = "!MATCH"
@@ -373,6 +386,7 @@ class HistoryRecord:
         self.errors: List[Error] = errors
         self._stack: str = ''
         self._status: str = ''
+        self._excerpt: str =''
 
     def __str__(self):
         return '%4i, %2i:  %s;  %s;  "%s"' % self.as_tuple()
@@ -465,7 +479,15 @@ class HistoryRecord:
             if self.errors:
                 self._status = self.ERROR + ": " + ', '.join(str(e.code) for e in self.errors)
             else:
-                neg = self._stack.count('!') % 2
+                last_ch = self._stack[-1:]
+                if last_ch == '/':  # a regular-expression that could contain !-signs
+                    re_start = self._stack.rfind('/', 0, len(self._stack) - 1)
+                    neg = (self._stack.count('!') - self._stack[re_start:].count('!')) % 2
+                elif last_ch == ' ': # a recall from memo str that could contain !-signs
+                    re_start = self._stack.rfind('recall ', 0, len(self._stack) - 1)
+                    neg = (self._stack.count('!') - self._stack[re_start:].count('!')) % 2
+                else:  # just count the '!'-signs
+                    neg = self._stack.count('!') % 2
                 if self.node.name in (NONE_TAG, ZOMBIE_TAG):
                     self._status = self.NFAIL if neg else self.FAIL
                 elif self.node.name == EMPTY_PTYPE:
@@ -476,13 +498,14 @@ class HistoryRecord:
 
     @property
     def excerpt(self):
-        if self.node.name not in (NONE_TAG, ZOMBIE_TAG) and not self.errors:
-            excerpt = abbreviate_middle(str(self.node), 40)
-        else:
-            s = self.text
-            excerpt = s[:36] + ' ...' if len(s) > 36 else s
-        excerpt = escape_ctrl_chars(str(excerpt))
-        return excerpt
+        if not self._excerpt:
+            if self.node.name not in (NONE_TAG, ZOMBIE_TAG) and not self.errors:
+                excerpt = abbreviate_middle(str(self.node), 40)
+            else:
+                s = self.text
+                excerpt = s[:36] + ' ...' if len(s) > 36 else s
+            self._excerpt = escape_ctrl_chars(str(excerpt))
+        return self._excerpt
 
     # @property
     # def extent(self) -> slice:

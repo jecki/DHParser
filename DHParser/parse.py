@@ -989,7 +989,7 @@ class LeafParser(Parser):
             # if location has already been visited by the current parser, return saved result
             visited = self.visited  # using local variable for better performance
             if location in visited:
-                # no history recording in case of memoized results!
+                # Sorry, no history recording in case of memoized results!
                 return visited[location]
 
             # now, the actual parser call!
@@ -4579,7 +4579,7 @@ class Forward(UnaryParser):
         # if location has already been visited by the current parser, return saved result
         visited = self.visited  # using local variable for better performance
         if location in visited:
-            # no history recording in case of memoized results!
+            # Sorry, no history recording in case of memoized results!
             return visited[location]
 
         if location in self.recursion_counter:

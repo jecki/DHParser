@@ -74,7 +74,7 @@ double quotation-marks ``"``. *Multi-line-strings must always be
 indented by four spaces for all lines except the first line!* (The
 indentation will automatically be removed before running the test.)
 
-.. attention:: The names for fail-test must differ from the names of
+.. ATTENTION:: The names for fail-test must differ from the names of
     match tests! One way to do so is the mark the test with a special
     letter like "M" for match-test and "F" for fail-tests, respectively.
     E.G.: "M1", "M2", "M3", ... and "F1", "F2", "F3", ...
@@ -130,7 +130,7 @@ and will, therefore, be overlooked, if the script is called without any
 arguments. This can be quite useful, if you want to experiment with
 tests that you might not (yet) want to add to your regular test-suite.
 
-.. tip:: It is a good idea to add the DHParser-projects's
+.. TIP:: It is a good idea to add the DHParser-projects's
     ``tst_..._grammar.py``-script to the executable tools
     of your Python-IDE. Then it suffices to simply point to
     the test in the IDE's file-manager and pick the tool
@@ -269,7 +269,7 @@ Typically, the parsing-log is a quite long and the error becomes
 apparaent only at the very end. So it is advisable to scroll right to
 the bottom of the page to see what has caused the test to fail by
 looking at the error message (which for the sake of brevity has been
-ommited from the above excerpt, though the error number 1010 for
+omitted from the above excerpt, though the error number 1010 for
 mandatory continuation errors still indicates that another item than the
 following "extends" was expected).
 
@@ -312,6 +312,16 @@ at the same location earlier in the parsing process. (You might find the
 first instance by looking for the same line and column in the earlier
 part of the log.) Still, looking at the parsing-log helps to find and
 understand the causes of unexpected parser-behavior, quickly.
+
+.. TIP:: Parsing-logs are by default only generated for failed test. 
+    In case you'd like to see the parsing-log for a successful test,
+    a simple trick is to flip the type of the test from "match" to
+    "fail" in the .ini-file or vice versa. 
+    
+    The test with the flipped type will then be reported as a failure,
+    but the parsing-log is just the same as if it was a success. Once,
+    you have seen the log, you can flip the type back again to get
+    a correct test-report.
 
 
 Development-Workflows

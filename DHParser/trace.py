@@ -160,6 +160,10 @@ def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], c
     grammar.call_stack__.append(
         (((' ' + self.repr) if self.node_name in (REGEXP_PTYPE, TOKEN_PTYPE, ":Retrieve", ":Pop")
           else (self.pname or self.node_name)), location))  # ' ' added to avoid ':' as first char!
+    stack_counter = 1
+    if self.node_name in (":Lookbehind", ":NegativeLookbehind"):
+        grammar.call_stack__.append((' ' + self.parser.repr, location))
+        stack_counter += 1
     grammar.moving_forward__ = True
 
     doc = self._grammar.document__
@@ -177,7 +181,9 @@ def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], c
             grammar.history__.append(
                 HistoryRecord(grammar.call_stack__, nd, doc[fe.location + nd.strlen():],
                               lc, [fe.error]))
-        grammar.call_stack__.pop()
+        while stack_counter > 0:
+            grammar.call_stack__.pop()
+            stack_counter -= 1
         raise pe
 
     # Mind that memoized parser calls will not appear in the history record!
@@ -191,16 +197,28 @@ def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], c
         # TODO: Make dropping insignificant whitespace from history configurable
         hnd = Node(node.name, doc[location:location_]).with_pos(location) if node else None
         lc = line_col(grammar.document_lbreaks__, location)
+        if self.sub_parsers and self.node_name[0:1] == ':' \
+                and any(location in p.visited for p in self.sub_parsers):
+            # arg = ','.join(str(p) for p in self.sub_parsers)
+            if self.pname:
+                grammar.call_stack__.append((f"recall from memo", location))
+            else:
+                grammar.call_stack__.append((f"recall {self} ", location))
         record = HistoryRecord(grammar.call_stack__, hnd, doc[location_:], lc, [])
         cs_len = len(record.call_stack)
         if (not grammar.history__ or not node
                 or lc != grammar.history__[-1].line_col
                 or record.call_stack != grammar.history__[-1].call_stack[:cs_len]
                 or self == grammar.start_parser__):
+            if len(record.call_stack) >= 2 and \
+                    record.call_stack[-2][0] in (":Lookbehind", ":NegativeLookbehind"):
+                record.text = grammar.reversed__[len(grammar.document__) - location_:]
             grammar.history__.append(record)
 
     grammar.moving_forward__ = False
-    grammar.call_stack__.pop()
+    while stack_counter > 0:
+        grammar.call_stack__.pop()
+        stack_counter -= 1
     return node, location_
 
 
