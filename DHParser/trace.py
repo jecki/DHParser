@@ -198,7 +198,8 @@ def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], c
         hnd = Node(node.name, doc[location:location_]).with_pos(location) if node else None
         lc = line_col(grammar.document_lbreaks__, location)
         if self.sub_parsers and self.node_name[0:1] == ':' \
-                and any(location in p.visited for p in self.sub_parsers):
+                and any([location in p.visited for p in self.sub_parsers
+                         if hasattr(p, 'visited')]):  # TODO: needed for Cython!?
             # arg = ','.join(str(p) for p in self.sub_parsers)
             if self.pname:
                 grammar.call_stack__.append((f"recall from memo", location))

@@ -253,8 +253,11 @@ expressions. `regex` is faster and more powerful than `re`.
 In order to speed up DHParser even more, it can be compiled with
 the Python to C compiler [Cython](https://cython.org). Since
 Version 1.3 DHParser requires at least Cython Version 3 alpha 11,
-which cannot be installed from the [Python Package Index](https://pypi.org/),
-but must be built from the [sources on github](https://github.com/cython/cython).
+which can be installed with pip by adding the alpha or 
+beta-versionnumber:
+
+    pip install Cython==3.0.0b3
+
 On some Linux-distributions you might find it in the community-repositories.
 (Under Arch-Linux it can be installed with `yay -S cython3`.)
  

@@ -20,7 +20,8 @@ cdef class Parser:
     cdef object visited
     cdef str _symbol
     cdef public object _descendants_cache
-    cdef public object _descendant_trails_cache
+    cdef public object _anon_desc_cache
+    cdef public object _desc_trails_cache
 
     cpdef reset(self)
     # cpdef __call__(self, location)
@@ -32,7 +33,7 @@ cdef class Parser:
     # cpdef descendants(self)
     # cpdef descendant_trails(self)
     # cpdef _apply(self, func, ptrail, flip)
-    cpdef apply(self, func)
+    # cpdef apply(self, func, grammar)
 
 cdef class LeafParser(Parser):
     pass
