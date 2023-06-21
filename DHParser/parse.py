@@ -2654,13 +2654,36 @@ class CombinedParser(Parser):
     optimization of return values of such parser
     (i.e. descendants of classes UnaryParser and NaryParser).
 
-    The optimization consists in flattening the tree by eliminating
+    One optimization consists in flattening the tree by eliminating
     anonymous nodes. This is the same as what the function
     DHParser.transform.flatten() does, only at an earlier stage.
     The reasoning is that the earlier the tree is reduced, the less work
     remains to do at all later processing stages. As these typically run
-    through all nodes of the syntax tree, this results in a considerable
-    speedup.
+    through all nodes of the syntax tree, this saves memory and presumably
+    also time.
+
+    Regarding the latter, however, performing flattening or
+    merging during parsing stage alse means that it will be perfomred
+    on all those tree-structures that are discarded later in the parsing
+    process, as well.
+
+    Doing flatteining or merging during AST-transformation will ensure
+    that it is only performed only on those nodes that made it into the
+    concrete-syntax-tree. Mergeing, in particular, might become costly
+    because of potentially many string-concatenations.
+
+    But then again, the usual depth-first-traversal
+    during AST-transformation will take longer, because of the much more
+    verbose tree...
+
+    TODO: Test whether a post-parsing before-AST-transofrmation stage
+        of flattening and merging is faster than flattening and merging
+        during parsing. Presumably flattening early and merging later
+        is the best strategy...
+
+    Another optimization consists in returning the singleton EMPTY_NODE
+    for dropped contents, rather than creating an new empty node every
+    time empty content is returned. This optimization should always work.
     """
 
     def __init__(self):
@@ -2754,7 +2777,7 @@ class CombinedParser(Parser):
         N = len(results)
         if N > 1:
             nr = []  # type: List[Node]
-            # flatten and parse tree
+            # flatten the parse tree
             merge = True
             for child in results:
                 if child.name[0] == ':':  # child.anonymous:
@@ -2805,7 +2828,7 @@ class CombinedParser(Parser):
         N = len(results)
         if N > 1:
             nr = []  # type: List[Node]
-            # flatten and parse tree
+            # flatten the parse tree
             for child in results:
                 if child.name[0] == ':':  # child.anonymous:
                     grandchildren = child._children
@@ -2818,12 +2841,23 @@ class CombinedParser(Parser):
             if nr:
                 merged = []
                 tail_is_anonymous_leaf = False
+                # need_copy = False
                 for nd in nr:
                     head_is_anonymous_leaf = not nd._children and nd.name[0] == ':'  # nd.anonymous
                     if tail_is_anonymous_leaf and head_is_anonymous_leaf:
-                        merged[-1].result += nd._result
+                        if need_copy:
+                            # because merged[-1] could be memoized somewhere,
+                            # it must be copied, before it is changed
+                            old = merged[-1]
+                            new = Node(old.name, old._result + nd._result)
+                            new._pos = old._pos
+                            merged[-1] = new
+                            need_copy = False
+                        else:
+                            merged[-1].result += nd._result
                     else:
                         merged.append(nd)
+                        need_copy = True
                     tail_is_anonymous_leaf = head_is_anonymous_leaf
                 if len(merged) > 1:
                     return Node(self.node_name, tuple(merged))

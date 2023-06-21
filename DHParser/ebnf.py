@@ -1196,7 +1196,7 @@ class EBNFDirectives:
             the failing parser (:py:class:`parser.Series`
             or :py:class:`parser.Interleave`) has returned.
     :ivar disposable: A regular expression to identify "disposable" symbols,
-            i.e. symbols that will not appear as tag-names. Instead
+            i.e. symbols that will not appear as tag-names. Instead,
             the nodes produced by the parsers associated with these
             symbols will yield anonymous nodes just like "inner"
             parsers that are not directly assigned to a symbol.
@@ -1995,7 +1995,7 @@ class EBNFCompiler(Compiler):
         for symbol in self.referred_otherwise:
             if symbol in defined_symbols:
                 remove_connections(symbol)
-        for leftover in defined_symbols:
+        for leftover in defined_symbols - self.py_symbols:
             self.tree.new_error(self.rules[leftover][0],
                                 'Rule "%s" is not connected to parser root "%s" !' %
                                 (leftover, self.root_symbol), UNCONNECTED_SYMBOL_WARNING)
@@ -2105,7 +2105,8 @@ class EBNFCompiler(Compiler):
             # circumvent name-errors for external symbols
             tmpl = "def {name}(*args, **kwargs):\n    return ERR('')\n"
             probe_src = '\n'.join([DHPARSER_IMPORTS, '\n'] +
-                                  [tmpl.format(name=name) for name in self.py_symbols] +
+                                  [tmpl.format(name=name) for name in self.py_symbols
+                                   if name not in self.rules] +
                                   [python_src])
             try:
                 grammar_class = compile_python_object(
@@ -2179,6 +2180,12 @@ class EBNFCompiler(Compiler):
             if isinstance(defn, str):
                 if defn.find("(") < 0:
                     # assume it's a synonym, like 'page = REGEX_PAGE_NR'
+                    if not self.drop_flag and defn in self.directives['drop'] \
+                            and re.match(self.directives['disposable'], rule):
+                        self.tree.new_error(node, f'Content of "{rule}" will be dropped, because '
+                            f'it is a Synonym for the dropped symbol "{defn}". If this behaviour '
+                            f'is undesired, swap the definitions of both symbols. Otherwise, add '
+                            f'"{rule}" to the @drop-directive to avoid this warning.', ERROR)
                     defn = f'{self.P["Synonym"]}({defn})'
                 if self.drop_flag and not defn.startswith(self.P["Drop"] + "("):
                     defn = f'{self.P["Drop"]}({defn})'
@@ -2372,9 +2379,6 @@ class EBNFCompiler(Compiler):
             check_argnum(2)
             symbol = key[:-6]
             error_msgs = self.directives.error.get(symbol, [])
-            # if symbol in self.rules:
-            #     self.tree.new_error(node, 'Custom error message for symbol "%s"' % symbol
-            #                         + ' must be defined before the symbol!')
             if node.children[1 if len(node.children) == 2 else 2].name != 'literal':
                 self.tree.new_error(
                     node, 'Directive "%s" requires message string or a pair ' % key
@@ -2538,10 +2542,6 @@ class EBNFCompiler(Compiler):
         code = self.compile(Node('macroname', node).with_attr({'name': macro_name}))
         _ = self.macro_stack.pop()
         assert macro_name == _
-        # if macro_name in self.directives.drop and not code.startswith(self.P["Drop"]):
-        #     return f'{self.P["Drop"]}({code})'
-        # elif not re.match(self.directives.disposable, macro_name):
-        #     return f'{self.P["Synonym"]}({code}).name("{macro_name}")'
         return code
 
 
@@ -3018,10 +3018,17 @@ class EBNFCompiler(Compiler):
         name = self.compile(node['name'])
         if name not in ('Custom', 'CustomParser', 'Error', 'ERR'):
             self.py_symbols.add(name)
-        if name == 'Error':  name = 'ERR'
-        if 'argument' in node:
+        if name == 'Error':
+            name = 'ERR'
             argument = self.compile(node['argument'])
-            if argument[0:1] not in ('"', "'"):
+            return f'{self.P["Custom"]}({name}({argument}))'
+        elif 'argument' in node:
+            argument = self.compile(node['argument'])
+            if argument[0:1] in ('"', "'"):
+                arglist = re.sub(r',\s*', ',', argument.strip('"').strip("'"))
+                for arg in arglist.split(','):  # identify potential identifiers in string args
+                    if re.fullmatch(r'(?!\d)\w+', arg):  self.py_symbols.add(arg)
+            else:
                 self.py_symbols.add(argument)
             return f'{self.P["Custom"]}({name}({argument}))'
         else:

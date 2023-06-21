@@ -1571,6 +1571,27 @@ class TestMemoization:
 
         cst = grammar('"camma", "beta", "alpha"')
 
+    def test_memoization_early_tree_reduction(self):
+        lang = """@reduction = merge
+        @disposable = /_\w+/
+        doc = VollerName EOF | Angabe EOF
+        Angabe = [VollerName ","] Buchtitel [_L] Jahr
+        VollerName = Name { _L Name }
+        Name = [_WORT_KLEIN / +/] _WORT_GROß { _L _WORT_GROß }
+        Jahr = /\d\d\d\d/
+        Buchtitel = (_WORT_KLEIN | _WORT_GROß) { _L (_WORT_KLEIN | _WORT_GROß) }
+        _WORT_KLEIN = /[a-zäöüß]+/ 
+        _WORT_GROß  = /[A-ZÄÖÜ][a-zäöüß]+/ 
+        _L    = / +/
+        EOF   = !/./
+        """
+        parser = create_parser(lang)
+        tree = parser("Hans im Glück 1928")
+        Buchtitel = tree.pick('Buchtitel')
+        # rewriting of nodes in parse.CombinedParser.return_values() could cause memoized
+        # nodes to be changed, resulting in "Hans im  Glück" instead of "Hans im Glück"!
+        # fixed in DHParser Version 1.50
+        assert Buchtitel.content == "Hans im Glück"
 
 class TestStringAlternative:
     def test_longest_match(self):
