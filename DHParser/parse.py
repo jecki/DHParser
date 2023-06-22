@@ -2130,9 +2130,9 @@ class Grammar:
         if result is not None and self.early_tree_reduction__ >= CombinedParser.FLATTEN:
             flatten(result)
             if self.early_tree_reduction__ == CombinedParser.MERGE_TREETOPS:
-                merge_treetops(result)
+                if result._children:  merge_treetops(result)
             elif self.early_tree_reduction__ == CombinedParser.MERGE_LEAVES:
-                merge_leaves(result)
+                if result._children:  merge_leaves(result)
 
         self.tree__.swallow(result, self.text__, source_mapping)
         self.tree__.stage = 'cst'
@@ -2817,6 +2817,7 @@ class CombinedParser(Parser):
         # assert node is None or isinstance(node, Node)
         if self.drop_content or (self.disposable and node is None):
             return EMPTY_NODE
+        if node is EMPTY_NODE:  node = None
         return Node(self.node_name, node or ())  # unoptimized code
 
     def _return_value_flatten(self, node: Optional[Node]) -> Node:
@@ -2846,7 +2847,7 @@ class CombinedParser(Parser):
         # assert isinstance(results, (list, tuple))
         if self.drop_content or (self.disposable and not results):
             return EMPTY_NODE
-        return Node(self.node_name, tuple(results))  # unoptimized
+        return Node(self.node_name, tuple(nd for nd in results if nd is not EMPTY_NODE))  # unoptimized
 
     @cython.locals(N=cython.int, c_anonymous=cython.bint)
     def _return_values_flatten(self, results: Sequence[Node]) -> Node:

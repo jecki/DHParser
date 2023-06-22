@@ -269,7 +269,7 @@ and otherwise be left in place. Without this optimization, each
 construct of the EBNF-grammar would leave a node in the syntax-tree::
 
     >>> from DHParser.parse import CombinedParser, TreeReduction
-    >>> _ = TreeReduction(parser.json, CombinedParser.NO_TREE_REDUCTION)
+    >>> parser.early_tree_reduction__ = CombinedParser.NO_TREE_REDUCTION
     >>> syntax_tree = parser(testdata)
     >>> print(syntax_tree.pick('array').as_sxpr())
     (array
