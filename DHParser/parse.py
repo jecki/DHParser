@@ -2873,6 +2873,14 @@ class CombinedParser(Parser):
         return '%s%s in definition of "%s" as %s' \
             % (self.pname or '_', self.ptype, self.symbol, str(self))
 
+    # these fields are deprecated and just kept for backward compatibility
+    # they are now defined on top-level
+    NO_TREE_REDUCTION = 0
+    FLATTEN = 1  # "flatten" vertically    (A (:Text "data"))  -> (A "data")
+    MERGE_TREETOPS = 2  # "merge" horizontally  (A (:Text "hey ") (:RegExp "you")) -> (A "hey you")
+    MERGE_LEAVES = 3  #  (A (:Text "hey ") (:RegExp "you") (C "!")) -> (A (:Text "hey you") (C "!"))
+    DEFAULT_TREE_REDUCTION = FLATTEN
+
 
 CustomParseFunc: TypeAlias = Callable[[StringView], Optional[Node]]
 
@@ -3138,7 +3146,8 @@ class ZeroOrMore(Option):
             node, location = self.parser(location)
             if node is None:
                 break
-            if node._result or node.name[0] != ':': # drop anonymous empty nodes
+            # if node._result or node.name[0] != ':': # drop anonymous empty nodes
+            if node is not EMPTY_NODE:
                 results += (node,)
             if location <= n:
                 infinite_loop_warning(self, node, location)
@@ -3195,7 +3204,8 @@ class OneOrMore(UnaryParser):
             if node is None:
                 break
             match_flag = True
-            if node._result or node.name[0] != ':':  # node.anonymous:  # drop anonymous empty nodes
+            # if node._result or node.name[0] != ':':  # node.anonymous:  # drop anonymous empty nodes
+            if node is not EMPTY_NODE:
                 results += (node,)
             if location <= n:
                 infinite_loop_warning(self, node, location)
@@ -3278,8 +3288,8 @@ class Counted(UnaryParser):
             node, location = self.parser(location)
             if node is None:
                 return None, location_
-            if node._result or node.name[0] != ':':
-                results += (node,)
+            # if node._result or node.name[0] != ':':
+            if node is not EMPTY_NODE:  results += (node,)
             if location_ >= location:
                 infinite_loop_warning(self, node, location)
                 break  # avoid infinite loop
@@ -3288,8 +3298,8 @@ class Counted(UnaryParser):
             node, location = self.parser(location)
             if node is None:
                 break
-            if node._result or node.name[0] != ':':
-                results += (node,)
+            # if node._result or node.name[0] != ':':
+            if node is not EMPTY_NODE:  results += (node,)
             if location_ >= location:
                 infinite_loop_warning(self, node, location)
                 break  # avoid infinite loop
@@ -3543,7 +3553,8 @@ class Series(MandatoryNary):
                     else:
                         results.append(node)
                         break
-            if node._result or node.name[0] != ':':  # node.anonymous:  # drop anonymous empty nodes
+            # if node._result or node.name[0] != ':':  # node.anonymous:  # drop anonymous empty nodes
+            if node is not EMPTY_NODE:
                 results.append(node)
         # assert len(results) <= len(self.parsers) \
         #        or len(self.parsers) >= len([p for p in results if p.name != ZOMBIE_TAG])
@@ -3844,7 +3855,8 @@ class Interleave(MandatoryNary):
                 if parser not in consumed:
                     node, location__ = parser(location_)
                     if node is not None:
-                        if node._result or node.name[0] != ':':  # node.anonymous:  # drop anonymous empty nodes
+                        # if node._result or node.name[0] != ':':  # node.anonymous:  # drop anonymous empty nodes
+                        if node is not EMPTY_NODE:
                             results += (node,)
                             # location_ = location__
                         counter[i] += 1
