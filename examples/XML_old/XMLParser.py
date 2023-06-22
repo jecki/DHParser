@@ -47,8 +47,8 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \
     positions_of, replace_child_names, add_attributes, delimit_children, merge_connected, \
-    has_attr, has_parent, ThreadLocalSingletonFactory, TreeReduction, CombinedParser, \
-    apply_unless, ERROR
+    has_attr, has_parent, ThreadLocalSingletonFactory, CombinedParser, \
+    apply_unless, ERROR, MERGE_TREETOPS
 
 from DHParser.dsl import PseudoJunction, create_parser_transition
 
@@ -78,7 +78,7 @@ class XMLGrammar(Grammar):
     """
     element = Forward()
     source_hash__ = "a7dd6db56507a7d922a018141a9a666e"
-    early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
+    early_tree_reduction__ = MERGE_TREETOPS
     disposable__ = re.compile('Misc$|NameStartChar$|NameChars$|CommentChars$|PubidChars$|PubidCharsSingleQuoted$|VersionNum$|EncName$|Reference$|CData$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

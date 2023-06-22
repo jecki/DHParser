@@ -268,8 +268,8 @@ replaced by their content, if they are a single child of some parent,
 and otherwise be left in place. Without this optimization, each
 construct of the EBNF-grammar would leave a node in the syntax-tree::
 
-    >>> from DHParser.parse import CombinedParser, TreeReduction
-    >>> parser.early_tree_reduction__ = CombinedParser.NO_TREE_REDUCTION
+    >>> from DHParser.parse import NO_TREE_REDUCTION
+    >>> parser.early_tree_reduction__ = NO_TREE_REDUCTION
     >>> syntax_tree = parser(testdata)
     >>> print(syntax_tree.pick('array').as_sxpr())
     (array

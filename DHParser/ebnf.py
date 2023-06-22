@@ -57,7 +57,8 @@ from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_
 from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, \
     Drop, Lookahead, NegativeLookahead, Alternative, Series, Option, ZeroOrMore, OneOrMore, \
     Text, Capture, Retrieve, Pop, optional_last_value, GrammarError, Whitespace, Always, Never, \
-    Synonym, INFINITE, matching_bracket, ParseFunc, update_scanner, CombinedParser, parser_names
+    Synonym, INFINITE, matching_bracket, ParseFunc, update_scanner, parser_names, \
+    DEFAULT_TREE_REDUCTION, NO_TREE_REDUCTION, FLATTEN, MERGE_TREETOPS, MERGE_LEAVES
 from DHParser.preprocess import PreprocessorFunc, PreprocessorResult, gen_find_include_func, \
     preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.nodetree import Node, RootNode, WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_TAG, \
@@ -138,9 +139,10 @@ from DHParser.log import start_logging, suspend_logging, resume_logging
 from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode, Path
 from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar, Parser, \\
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, ERR, \\
-    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \\
-    ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, mixin_comment, \\
-    last_value, matching_bracket, optional_last_value
+    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \\
+    ZeroOrMore, Forward, NegativeLookahead, Required, Custom, mixin_comment, \\
+    last_value, matching_bracket, optional_last_value, NO_TREE_REDUCTION, FLATTEN, \\
+    MERGE_TREETOPS, MERGE_LEAVES
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \\
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.stringview import StringView
@@ -1933,9 +1935,9 @@ class EBNFCompiler(Compiler):
         definitions.append(('static_analysis_pending__', '[True]'))
         definitions.append(('disposable__',
                             're.compile(' + repr(self.directives.disposable) + ')'))
-        if self.directives.reduction != CombinedParser.DEFAULT_OPTIMIZATION:
-            opt = 'CombinedParser.' + ('NO_TREE_REDUCTION', 'FLATTEN', 'MERGE_TREETOPS',
-                                       'MERGE_LEAVES')[self.directives.reduction]
+        if self.directives.reduction != DEFAULT_TREE_REDUCTION:
+            opt = ('NO_TREE_REDUCTION', 'FLATTEN', 'MERGE_TREETOPS',
+                   'MERGE_LEAVES')[self.directives.reduction]
             definitions.append(('early_tree_reduction__', opt))
         if self.grammar_source:
             definitions.append(('source_hash__',

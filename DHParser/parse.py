@@ -57,7 +57,7 @@ from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.nodetree import ChildrenType, Node, RootNode, WHITESPACE_PTYPE, TOKEN_PTYPE, \
      MIXED_MODE_TEXT_PTYPE, ZOMBIE_TAG, EMPTY_NODE, EMPTY_PTYPE, ResultType, LEAF_NODE
-from DHParser.toolkit import sane_parser_name, escape_ctrl_chars, re, \
+from DHParser.toolkit import sane_parser_name, escape_ctrl_chars, re, deprecation_warning, \
     abbreviate_middle, RX_NEVER_MATCH, RxPatternType, linebreaks, line_col, TypeAlias
 
 try:
@@ -77,6 +77,12 @@ __all__ = ('parser_names',
            'Parser',
            'AnalysisError',
            'GrammarError',
+           'DEFAULT_TREE_REDUCTION',
+           'NO_TREE_REDUCTION',
+           'FLATTEN',
+           'MERGE_LEAVES',
+           'MERGE_TREETOPS',
+           'TreeReduction',
            'Grammar',
            'is_grammar_placeholder',
            'is_parser_placeholder',
@@ -98,7 +104,6 @@ __all__ = ('parser_names',
            'mixin_comment',
            'mixin_nonempty',
            'CombinedParser',
-           'TreeReduction',
            'CustomParseFunc',
            'Custom',
            'CustomParser',
@@ -1137,6 +1142,128 @@ def has_non_autocaptured_symbols(ptrail: ParserTrail) -> Optional[bool]:
 
 ########################################################################
 #
+# tree-reduction-methods
+#
+########################################################################
+
+NO_TREE_REDUCTION = 0
+FLATTEN = 1  # "flatten" vertically    (A (:Text "data"))  -> (A "data")
+MERGE_TREETOPS = 2  # "merge" horizontally  (A (:Text "hey ") (:RegExp "you")) -> (A "hey you")
+MERGE_LEAVES = 3  #  (A (:Text "hey ") (:RegExp "you") (C "!")) -> (A (:Text "hey you") (C "!"))
+DEFAULT_TREE_REDUCTION = FLATTEN
+
+
+def TreeReduction(p, l):
+    deprecation_warning("DHParser.parse.TreeReduction is deprecated. "
+        "Use parse.Grammar.set_tree_reduction(grammar, level)!")
+
+
+def flatten_anonymous_nodes(node):
+    if node._children:
+        nr = []
+        for child in node._children:
+            if child._children:  flatten_anonymous_nodes(child)
+            if child._children:
+                if child.name[0] == ':':
+                    nr.extend(child._children)
+                else:
+                    nr.append(child)
+            elif child._result or child.name[0] != ":":
+                nr.append(child)
+        if len(nr) == 1:
+            child = nr[0]
+            if node.name[0] == ':':  # usually the inner node type is more relevant
+                node._children = child._result if isinstance(child._result, tuple) else tuple()
+                node._result = child._result
+                node.name = child.name
+            elif child.name[0] == ':':
+                node._children = child._result if isinstance(child._result, tuple) else tuple()
+                node._result = child._result
+            else:
+                node._children = tuple(nr)
+                node._result = node._children
+        else:
+            node._children = tuple(nr)
+            node._result = node._children or ''
+
+
+@cython.locals(crunch=cython.bint, c_canonymous=cython.bint)
+def merge_anonymous_treetops(node: Node):
+    """Recursively traverses the tree and "merges" nodes that contain
+    only anonymous child nodes that are leaves. "mergeing" here means the
+    node's result will be replaced by the merged content of the children.
+    """
+    if node._children:
+        crunch = True
+        for child in node._children:
+            if child._children:
+                merge_anonymous_treetops(child)
+                crunch = False
+            elif crunch and child.name[0] != ':':  # not child.anonymous:
+                crunch = False
+        if crunch:
+            node._result = ''.join(child._result for child in node.children)
+            node._children = tuple()
+
+
+@cython.locals(N=cython.int, head_is_anonymous_leaf=cython.bint, tail_is_anonymous_leaf=cython.bint)
+def merge_anonymous_leaves(node: Node):
+    N = len(node._children)
+    if N > 1:
+        merged = []
+        tail_is_anonymous_leaf = False
+        bunch = []
+        for nd in node._children:
+            if nd._children:
+                merge_anonymous_leaves(nd)
+                head_is_anonymous_leaf = False
+            else:
+                head_is_anonymous_leaf = nd.name[0] == ':'  # nd.anonymous
+            if tail_is_anonymous_leaf:
+                if head_is_anonymous_leaf:
+                    bunch.append(tail._result)
+                    tail = nd
+                else:
+                    if bunch:
+                        bunch.append(tail._result)
+                        new = Node(MIXED_MODE_TEXT_PTYPE, ''.join(bunch), True)
+                        new._pos = pos
+                        merged.append(new)
+                        bunch = []
+                    else:
+                        merged.append(tail)
+                    merged.append(nd)
+            elif head_is_anonymous_leaf:
+                tail = nd
+                pos = tail._pos
+            else:
+                merged.append(nd)
+            tail_is_anonymous_leaf = head_is_anonymous_leaf
+        if tail_is_anonymous_leaf:
+            if bunch:
+                bunch.append(tail._result)
+                new = Node(MIXED_MODE_TEXT_PTYPE, ''.join(bunch), True)
+                new._pos = pos
+                merged.append(new)
+            else:
+                merged.append(tail)
+        if len(merged) > 1:
+            node._result = tuple(merged)
+            node._children = node._result
+        elif tail_is_anonymous_leaf:
+            node._result = merged[0]._result
+            node._children = node._result if isinstance(node._result, tuple) else tuple()
+    else:
+        child = node._children[0]
+        if child._children:
+            merge_anonymous_leaves(child)
+            if child.name[0] == ':':
+                node._result = child._result
+                node._children = node._result if isinstance(node._result, tuple) else tuple()
+
+
+########################################################################
+#
 # Grammar class, central administration of all parser of a grammar
 #
 ########################################################################
@@ -1219,111 +1346,6 @@ class GrammarError(Exception):
 
 
 RESERVED_PARSER_NAMES = ('root__', 'dwsp__', 'wsp__', 'comment__', 'root_parser__', 'ff_parser__')
-
-
-def flatten(node):
-    if node._children:
-        nr = []
-        for child in node._children:
-            if child._children:  flatten(child)
-            if child._children:
-                if child.name[0] == ':':
-                    nr.extend(child._children)
-                else:
-                    nr.append(child)
-            elif child._result or child.name[0] != ":":
-                nr.append(child)
-        if len(nr) == 1:
-            child = nr[0]
-            if node.name[0] == ':':  # usually the inner node type is more relevant
-                node._children = child._result if isinstance(child._result, tuple) else tuple()
-                node._result = child._result
-                node.name = child.name
-            elif child.name[0] == ':':
-                node._children = child._result if isinstance(child._result, tuple) else tuple()
-                node._result = child._result
-            else:
-                node._children = tuple(nr)
-                node._result = node._children
-        else:
-            node._children = tuple(nr)
-            node._result = node._children or ''
-
-
-@cython.locals(crunch=cython.bint, c_canonymous=cython.bint)
-def merge_treetops(node: Node):
-    """Recursively traverses the tree and "merges" nodes that contain
-    only anonymous child nodes that are leaves. "mergeing" here means the
-    node's result will be replaced by the merged content of the children.
-    """
-    if node._children:
-        crunch = True
-        for child in node._children:
-            if child._children:
-                merge_treetops(child)
-                crunch = False
-            elif crunch and child.name[0] != ':':  # not child.anonymous:
-                crunch = False
-        if crunch:
-            node._result = ''.join(child._result for child in node.children)
-            node._children = tuple()
-
-
-@cython.locals(N=cython.int, head_is_anonymous_leaf=cython.bint, tail_is_anonymous_leaf=cython.bint)
-def merge_leaves(node: Node):
-    N = len(node._children)
-    if N > 1:
-        merged = []
-        tail_is_anonymous_leaf = False
-        bunch = []
-        for nd in node._children:
-            if nd._children:
-                merge_leaves(nd)
-                head_is_anonymous_leaf = False
-            else:
-                head_is_anonymous_leaf = nd.name[0] == ':'  # nd.anonymous
-            if tail_is_anonymous_leaf:
-                if head_is_anonymous_leaf:
-                    bunch.append(tail._result)
-                    tail = nd
-                else:
-                    if bunch:
-                        bunch.append(tail._result)
-                        new = Node(MERGED_PTYPE, ''.join(bunch), True)
-                        new._pos = pos
-                        merged.append(new)
-                        bunch = []
-                    else:
-                        merged.append(tail)
-                    merged.append(nd)
-            elif head_is_anonymous_leaf:
-                tail = nd
-                pos = tail._pos
-            else:
-                merged.append(nd)
-            tail_is_anonymous_leaf = head_is_anonymous_leaf
-        if tail_is_anonymous_leaf:
-            if bunch:
-                bunch.append(tail._result)
-                new = Node(MERGED_PTYPE, ''.join(bunch), True)
-                new._pos = pos
-                merged.append(new)
-            else:
-                merged.append(tail)
-        if len(merged) > 1:
-            node._result = tuple(merged)
-            node._children = node._result
-        elif tail_is_anonymous_leaf:
-            node._result = merged[0]._result
-            node._children = node._result if isinstance(node._result, tuple) else tuple()
-    else:
-        child = node._children[0]
-        if child._children:
-            merge_leaves(child)
-            if child.name[0] == ':':
-                node._result = child._result
-                node._children = node._result if isinstance(node._result, tuple) else tuple()
-
 
 
 def reset_parser(parser):
@@ -1626,7 +1648,7 @@ class Grammar:
     static_analysis_pending__ = [True]  # type: List[bool]
     static_analysis_errors__ = []  # type: List[AnalysisError]
     parser_names__ = []            # type: List[str]
-    early_tree_reduction__ = 1     # type: int  # 1 == CombinedParser.FLATTEN
+    early_tree_reduction__ = FLATTEN  # type: int
 
     @classmethod
     def _assign_parser_names__(cls):
@@ -1706,7 +1728,8 @@ class Grammar:
             # parser.grammar = self  # moved to parser.descendants
 
 
-    def __init__(self, root: Optional[Parser] = None, static_analysis: Optional[bool] = None) -> None:
+    def __init__(self, root: Optional[Parser] = None,
+                 static_analysis: Optional[bool] = None) -> None:
         """Constructor of class Grammar.
 
         :param root: If not None, this is going to be the root parser of the grammar.
@@ -1789,7 +1812,6 @@ class Grammar:
             if parser not in root_connected:  self.unconnected_parsers__.add(parser)
 
         determine_eq_classes(self.all_parsers__)
-        # if not root:  TreeReduction(self.all_parsers__, self.early_tree_reduction__)
 
         if (self.static_analysis_pending__
             and (static_analysis
@@ -2127,12 +2149,12 @@ class Grammar:
 
         ## end of error-handling
 
-        if result is not None and self.early_tree_reduction__ >= CombinedParser.FLATTEN:
-            flatten(result)
-            if self.early_tree_reduction__ == CombinedParser.MERGE_TREETOPS:
-                if result._children:  merge_treetops(result)
-            elif self.early_tree_reduction__ == CombinedParser.MERGE_LEAVES:
-                if result._children:  merge_leaves(result)
+        if result is not None and self.early_tree_reduction__ >= FLATTEN:
+            flatten_anonymous_nodes(result)
+            if self.early_tree_reduction__ == MERGE_TREETOPS:
+                if result._children:  merge_anonymous_treetops(result)
+            elif self.early_tree_reduction__ == MERGE_LEAVES:
+                if result._children:  merge_anonymous_leaves(result)
 
         self.tree__.swallow(result, self.text__, source_mapping)
         self.tree__.stage = 'cst'
@@ -2220,6 +2242,69 @@ class Grammar:
                 ebnf.append(str(parser))
         ebnf.append('')
         return '\n'.join(ebnf)
+
+    def set_tree_reduction(self: 'Grammar', level: int = FLATTEN) -> Grammar:
+        """
+        Sets the tree-reduction level of a grammar-object. The following calls
+        to that very grammar-object will yield reduced trees accorting to the
+        reduction_level, which can be one of NO_REDUCTION (0), FLATTEN (1),
+        MERGE_TREETOPS (2) or MERGE_LEAVES (3)
+
+        Currently, this simply sets the field grammar.early_tree_reduction__ to
+        value of the parameter "level".
+
+        Returns the grammar-object itself after changeing the tree-reduction-level.
+
+        Examples, how tree-reduction wors::
+
+            >>> root = Text('A') + Text('B') | Text('C') + Text('D')
+            >>> grammar = Grammar(root).set_tree_reduction(NO_TREE_REDUCTION)
+            >>> tree = grammar('AB')
+            >>> print(tree.as_sxpr())
+            (root (:Series (:Text "A") (:Text "B")))
+            >>> grammar = Grammar(root).set_tree_reduction(FLATTEN)  # default
+            >>> tree = grammar('AB')
+            >>> print(tree.as_sxpr())
+            (root (:Text "A") (:Text "B"))
+            >>> grammar = Grammar(root).set_tree_reduction(MERGE_TREETOPS)
+            >>> tree = grammar('AB')
+            >>> print(tree.as_sxpr())
+            (root "AB")
+            >>> grammar = Grammar(root).set_tree_reduction(MERGE_LEAVES)
+            >>> tree = grammar('AB')
+            >>> print(tree.as_sxpr())
+            (root "AB")
+
+            >>> root = Series(Text('A'), Text('B'), Text('C').name('important') | Text('D'))
+            >>> grammar = Grammar(root).set_tree_reduction(NO_TREE_REDUCTION)
+            >>> tree = grammar('ABC')
+            >>> print(tree.as_sxpr())
+            (root (:Text "A") (:Text "B") (:Alternative (important "C")))
+            >>> grammar = Grammar(root).set_tree_reduction(FLATTEN)  # default
+            >>> tree = grammar('ABC')
+            >>> print(tree.as_sxpr())
+            (root (:Text "A") (:Text "B") (important "C"))
+            >>> tree = grammar('ABD')
+            >>> print(tree.as_sxpr())
+            (root (:Text "A") (:Text "B") (:Text "D"))
+            >>> grammar = Grammar(root).set_tree_reduction(MERGE_TREETOPS)
+            >>> tree = grammar('ABC')
+            >>> print(tree.as_sxpr())
+            (root (:Text "A") (:Text "B") (important "C"))
+            >>> tree = grammar('ABD')
+            >>> print(tree.as_sxpr())
+            (root "ABD")
+            >>> grammar = Grammar(root).set_tree_reduction(MERGE_LEAVES)
+            >>> tree = grammar('ABC')
+            >>> print(tree.as_sxpr())
+            (root (:Text "AB") (important "C"))
+            >>> tree = grammar('ABD')
+            >>> print(tree.as_sxpr())
+            (root "ABD")
+        """
+        assert level in (NO_TREE_REDUCTION, FLATTEN, MERGE_TREETOPS, MERGE_LEAVES)
+        self.early_tree_reduction__ = level
+        return self
 
 
     def associated_symbol__(self, parser: Parser) -> Parser:
@@ -2762,417 +2847,31 @@ def update_scanner(grammar: Grammar, leaf_parsers: Dict[str, str]):
 ########################################################################
 
 
-MERGED_PTYPE = MIXED_MODE_TEXT_PTYPE
-
-
 class CombinedParser(Parser):
     """Class CombinedParser is the base class for all parsers that
-    call ("combine") other parsers. It contains functions for the
-    optimization of return values of such parser
-    (i.e. descendants of classes UnaryParser and NaryParser).
-
-    One optimization consists in flattening the tree by eliminating
-    anonymous nodes. This is the same as what the function
-    DHParser.transform.flatten() does, only at an earlier stage.
-    The reasoning is that the earlier the tree is reduced, the less work
-    remains to do at all later processing stages. As these typically run
-    through all nodes of the syntax tree, this saves memory and presumably
-    also time.
-
-    Regarding the latter, however, performing flattening or
-    merging during parsing stage alse means that it will be perfomred
-    on all those tree-structures that are discarded later in the parsing
-    process, as well.
-
-    Doing flatteining or merging during AST-transformation will ensure
-    that it is only performed only on those nodes that made it into the
-    concrete-syntax-tree. Mergeing, in particular, might become costly
-    because of potentially many string-concatenations.
-
-    But then again, the usual depth-first-traversal
-    during AST-transformation will take longer, because of the much more
-    verbose tree...
-
-    TODO: Test whether a post-parsing before-AST-transofrmation stage
-        of flattening and merging is faster than flattening and merging
-        during parsing. Presumably flattening early and merging later
-        is the best strategy...
-
-    Another optimization consists in returning the singleton EMPTY_NODE
-    for dropped contents, rather than creating an new empty node every
-    time empty content is returned. This optimization should always work.
+    call ("combine") other parsers.
     """
 
-    def __init__(self):
-        super(CombinedParser, self).__init__()
-        self._return_value = self._return_value_no_optimization  # self._return_value_flatten
-        self._return_values = self._return_values_no_tree_reduction  # self._return_values_flatten
-
-    def __deepcopy__(self, memo):
-        duplicate = self.__class__()
-        copy_combined_parser_attrs(self, duplicate)
-        return duplicate
-
-    def _return_value_no_optimization(self, node: Optional[Node]) -> Node:
+    def _return_value(self, node: Optional[Node]) -> Node:
         # assert node is None or isinstance(node, Node)
-        if self.drop_content or (self.disposable and node is None):
+        if self.drop_content:
             return EMPTY_NODE
-        if node is EMPTY_NODE:  node = None
-        return Node(self.node_name, node or ())  # unoptimized code
-
-    def _return_value_flatten(self, node: Optional[Node]) -> Node:
-        """
-        Generates a return node if a single node has been returned from
-        any descendant parsers. Anonymous empty nodes will be dropped.
-        If ``self`` is an unnamed parser, a non-empty descendant node
-        will be passed through. If the descendant node is anonymous,
-        it will be dropped and only its result will be kept.
-        In all other cases a new node will be
-        generated and the descendant node will be its single child.
-        """
-        # assert node is None or isinstance(node, Node)
-        if node is not None:
+        if node is None or (node.name[0] == ":" and not node._result):
             if self.disposable:
-                if self.drop_content:
-                    return EMPTY_NODE
-                return node
-            if node.name[0:1] == ':':  # node.anonymous:
-                return Node(self.node_name, node._result)
-            return Node(self.node_name, node)
-        elif self.disposable:
-            return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
-        return Node(self.node_name, '', True)
+                return EMPTY_NODE
+            return Node(self.node_name, ())
+        return Node(self.node_name, node)  # unoptimized code
 
-    def _return_values_no_tree_reduction(self, results: Sequence[Node]) -> Node:
-        # assert isinstance(results, (list, tuple))
+    def _return_values(self, results: Tuple[Node]) -> Node:
         if self.drop_content or (self.disposable and not results):
             return EMPTY_NODE
-        return Node(self.node_name, tuple(nd for nd in results if nd is not EMPTY_NODE))  # unoptimized
-
-    @cython.locals(N=cython.int, c_anonymous=cython.bint)
-    def _return_values_flatten(self, results: Sequence[Node]) -> Node:
-        """
-        Generates a return node from a tuple of returned nodes from
-        descendant parsers. Anonymous empty nodes will be removed from
-        the tuple. Anonymous child nodes will be flattened.
-        """
-        # assert isinstance(results, (list, tuple))
-        if self.drop_content:
-            return EMPTY_NODE
-        N = len(results)
-        if N > 1:
-            nr = []  # type: List[Node]
-            # flatten parse tree
-            for child in results:
-                c_anonymous = (child.name[0] == ':')  # child.anonymous
-                if child._children and c_anonymous:
-                    nr.extend(child._children)
-                elif child._result or not c_anonymous:
-                    nr.append(child)
-            if nr or not self.disposable:
-                return Node(self.node_name, tuple(nr))
-            else:
-                return EMPTY_NODE
-        elif N == 1:
-            return self._return_value(results[0])
-        if self.disposable:
-            return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
-        return Node(self.node_name, '', True)
-
-    @cython.locals(N=cython.int, merge=cython.bint)
-    def _return_values_merge_treetops(self, results: Sequence[Node]) -> Node:
-        """
-        Generates a return node from a tuple of returned nodes from
-        descendant parsers. Anonymous empty nodes will be removed from
-        the tuple. Anonymous child nodes will be flattened. Plus, nodes
-        that contain only anonymous leaf-nodes as children will be
-        merged, i.e. the content of these nodes will be joined and
-        assigned to the parent.
-        """
-        # assert isinstance(results, (list, tuple))
-        if self.drop_content:
-            return EMPTY_NODE
-        N = len(results)
-        if N > 1:
-            nr = []  # type: List[Node]
-            # flatten the parse tree
-            merge = True
-            for child in results:
-                if child.name[0] == ':':  # child.anonymous:
-                    grandchildren = child._children
-                    if grandchildren:
-                        nr.extend(grandchildren)
-                        # merge &= all(not grandchild._children and grandchild.anonymous
-                        #               for grandchild in grandchildren)
-                        # cython compatibility:
-                        for grandchild in grandchildren:
-                            if grandchild._children or not grandchild.name[0] == ':':  # grandchild.anonymous:
-                                merge = False
-                                break
-                    elif child._result:
-                        nr.append(child)
-                else:
-                    nr.append(child)
-                    merge = False
-            if nr:
-                if merge:
-                    # result = ''.join(nd._result for nd in nr)
-                    # cython compatibility:
-                    result = ''.join([nd._result for nd in nr])
-                    if result or not self.disposable:
-                        return Node(self.node_name, result)
-                    return EMPTY_NODE
-                return Node(self.node_name, tuple(nr))
-            return EMPTY_NODE if self.disposable else Node(self.node_name, '', True)
-        elif N == 1:
-            return self._return_value(results[0])
-        if self.disposable:
-            return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
-        return Node(self.node_name, '', True)
-
-    # @cython.locals(N=cython.int)
-    # def _return_values_merge_leaves(self, results: Sequence[Node]) -> Node:
-    #     """
-    #     Generates a return node from a tuple of returned nodes from
-    #     descendant parsers. Anonymous empty nodes will be removed from
-    #     the tuple. Anonymous child nodes will be flattened. Plus, any
-    #     anonymous leaf-nodes adjacent to each other will be merged and,
-    #     in cases where only one anonymous node is left, be reduced to
-    #     its parent.
-    #     """
-    #     # assert isinstance(results, (list, tuple))
-    #     if self.drop_content:
-    #         return EMPTY_NODE
-    #     N = len(results)
-    #     if N > 1:
-    #         nr = []  # type: List[Node]
-    #         # flatten the parse tree
-    #         for child in results:
-    #             if child.name[0] == ':':  # child.anonymous:
-    #                 grandchildren = child._children
-    #                 if grandchildren:
-    #                     nr.extend(grandchildren)
-    #                 elif child._result:
-    #                     nr.append(child)
-    #             else:
-    #                 nr.append(child)
-    #         if nr:
-    #             merged = []
-    #             tail_is_anonymous_leaf = False
-    #             # need_copy = False
-    #             for nd in nr:
-    #                 head_is_anonymous_leaf = not nd._children and nd.name[0] == ':'  # nd.anonymous
-    #                 if tail_is_anonymous_leaf and head_is_anonymous_leaf:
-    #                     if need_copy:
-    #                         # because merged[-1] could be memoized somewhere,
-    #                         # it must be copied, before it is changed
-    #                         old = merged[-1]
-    #                         new = Node(old.name, old._result + nd._result)
-    #                         new._pos = old._pos
-    #                         merged[-1] = new
-    #                         need_copy = False
-    #                     else:
-    #                         merged[-1].result += nd._result
-    #                 else:
-    #                     merged.append(nd)
-    #                     need_copy = True
-    #                 tail_is_anonymous_leaf = head_is_anonymous_leaf
-    #             if len(merged) > 1:
-    #                 return Node(self.node_name, tuple(merged))
-    #             if tail_is_anonymous_leaf:
-    #                 result = merged[0].result
-    #                 if result or not self.disposable:
-    #                     return Node(self.node_name, merged[0].result)
-    #                 return EMPTY_NODE
-    #             return Node(self.node_name, merged[0])
-    #         return EMPTY_NODE if self.disposable else Node(self.node_name, '', True)
-    #     elif N == 1:
-    #         return self._return_value(results[0])
-    #     if self.disposable:
-    #         return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
-    #     return Node(self.node_name, '', True)
-
-    @cython.locals(N=cython.int, head_is_anonymous_leaf=cython.bint, tail_is_anonymous_leaf=cython.bint)
-    def _return_values_merge_leaves(self, results: Sequence[Node]) -> Node:
-        """
-        Generates a return node from a tuple of returned nodes from
-        descendant parsers. Anonymous empty nodes will be removed from
-        the tuple. Anonymous child nodes will be flattened. Plus, any
-        anonymous leaf-nodes adjacent to each other will be merged and,
-        in cases where only one anonymous node is left, be reduced to
-        its parent.
-        """
-        # assert isinstance(results, (list, tuple))
-        if self.drop_content:
-            return EMPTY_NODE
-        N = len(results)
-        if N > 1:
-            nr = []  # type: List[Node]
-            # flatten the parse tree
-            for child in results:
-                if child.name[0] == ':':  # child.anonymous:
-                    grandchildren = child._children
-                    if grandchildren:
-                        nr.extend(grandchildren)
-                    elif child._result:
-                        nr.append(child)
-                else:
-                    nr.append(child)
-            if nr:
-                merged = []
-                tail_is_anonymous_leaf = False
-                bunch = []
-                for nd in nr:
-                    head_is_anonymous_leaf = not nd._children and nd.name[0] == ':'  # nd.anonymous
-                    if tail_is_anonymous_leaf:
-                        if head_is_anonymous_leaf:
-                            bunch.append(tail._result)
-                            tail = nd
-                        else:
-                            if bunch:
-                                bunch.append(tail._result)
-                                new = Node(MERGED_PTYPE, ''.join(bunch), True)
-                                new._pos = pos
-                                merged.append(new)
-                                bunch = []
-                            else:
-                                merged.append(tail)
-                            merged.append(nd)
-                    elif head_is_anonymous_leaf:
-                        tail = nd
-                        pos = tail._pos
-                    else:
-                        merged.append(nd)
-                    tail_is_anonymous_leaf = head_is_anonymous_leaf
-                if tail_is_anonymous_leaf:
-                    if bunch:
-                        bunch.append(tail._result)
-                        new = Node(MERGED_PTYPE, ''.join(bunch), True)
-                        new._pos = pos
-                        merged.append(new)
-                    else:
-                        merged.append(tail)
-                if len(merged) > 1:
-                    return Node(self.node_name, tuple(merged))
-                if tail_is_anonymous_leaf:
-                    result = merged[0].result
-                    if result or not self.disposable:
-                        return Node(self.node_name, result)
-                    return EMPTY_NODE
-                return Node(self.node_name, merged[0])
-            return EMPTY_NODE if self.disposable else Node(self.node_name, '', True)
-        elif N == 1:
-            return self._return_value(results[0])
-        if self.disposable:
-            return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
-        return Node(self.node_name, '', True)
+        return Node(self.node_name, results)  # unoptimized
 
     def location_info(self) -> str:
         """Returns a description of the location of the parser within the grammar
         for the purpose of transparent error reporting."""
         return '%s%s in definition of "%s" as %s' \
             % (self.pname or '_', self.ptype, self.symbol, str(self))
-
-    NO_TREE_REDUCTION = 0
-    FLATTEN = 1  # "flatten" vertically    (A (:Text "data"))  -> (A "data")
-    MERGE_TREETOPS = 2  # "merge" horizontally  (A (:Text "hey ") (:RegExp "you")) -> (A "hey you")
-    MERGE_LEAVES = 3  #  (A (:Text "hey ") (:RegExp "you") (C "!")) -> (A (:Text "hey you") (C "!"))
-    DEFAULT_OPTIMIZATION = FLATTEN
-
-
-def copy_combined_parser_attrs(src: CombinedParser, duplicate: CombinedParser):
-    assert isinstance(src, CombinedParser)
-    copy_parser_base_attrs(src, duplicate)
-    duplicate._return_value = duplicate.__getattribute__(src._return_value.__name__)
-    duplicate._return_values = duplicate.__getattribute__(src._return_values.__name__)
-
-
-def TreeReduction(root_or_parserlist: Union[Parser, Collection[Parser]],
-                  level: int = CombinedParser.FLATTEN) -> Parser:
-    """
-    Applies tree-reduction level to CombinedParsers either in the collection
-    or parsers passed in the first arg or in the graph of interconnected
-    parsers originating in the single "roo" parser passed as first argument.
-    Returns the root-parser or, if a collection has been passed, the
-    PARSER_PLACEHOLDER
-
-    Examples, how tree-reduction wors::
-
-        >>> root = Text('A') + Text('B') | Text('C') + Text('D')
-        >>> grammar = Grammar(TreeReduction(root, CombinedParser.NO_TREE_REDUCTION))
-        >>> tree = grammar('AB')
-        >>> print(tree.as_sxpr())
-        (root (:Series (:Text "A") (:Text "B")))
-        >>> grammar = Grammar(TreeReduction(root, CombinedParser.FLATTEN))  # default
-        >>> tree = grammar('AB')
-        >>> print(tree.as_sxpr())
-        (root (:Text "A") (:Text "B"))
-        >>> grammar = Grammar(TreeReduction(root, CombinedParser.MERGE_TREETOPS))
-        >>> tree = grammar('AB')
-        >>> print(tree.as_sxpr())
-        (root "AB")
-        >>> grammar = Grammar(TreeReduction(root, CombinedParser.MERGE_LEAVES))
-        >>> tree = grammar('AB')
-        >>> print(tree.as_sxpr())
-        (root "AB")
-
-        >>> root = Series(Text('A'), Text('B'), Text('C').name('important') | Text('D'))
-        >>> grammar = Grammar(TreeReduction(root, CombinedParser.NO_TREE_REDUCTION))
-        >>> tree = grammar('ABC')
-        >>> print(tree.as_sxpr())
-        (root (:Text "A") (:Text "B") (:Alternative (important "C")))
-        >>> grammar = Grammar(TreeReduction(root, CombinedParser.FLATTEN))  # default
-        >>> tree = grammar('ABC')
-        >>> print(tree.as_sxpr())
-        (root (:Text "A") (:Text "B") (important "C"))
-        >>> tree = grammar('ABD')
-        >>> print(tree.as_sxpr())
-        (root (:Text "A") (:Text "B") (:Text "D"))
-        >>> grammar = Grammar(TreeReduction(root, CombinedParser.MERGE_TREETOPS))
-        >>> tree = grammar('ABC')
-        >>> print(tree.as_sxpr())
-        (root (:Text "A") (:Text "B") (important "C"))
-        >>> tree = grammar('ABD')
-        >>> print(tree.as_sxpr())
-        (root "ABD")
-        >>> grammar = Grammar(TreeReduction(root, CombinedParser.MERGE_LEAVES))
-        >>> tree = grammar('ABC')
-        >>> print(tree.as_sxpr())
-        (root (:Text "AB") (important "C"))
-        >>> tree = grammar('ABD')
-        >>> print(tree.as_sxpr())
-        (root "ABD")
-    """
-    def apply_func(parser: Parser) -> None:
-        nonlocal level
-        if isinstance(parser, CombinedParser):
-            if level == CombinedParser.NO_TREE_REDUCTION:
-                cast(CombinedParser, parser)._return_value = parser._return_value_no_optimization
-                cast(CombinedParser, parser)._return_values = parser._return_values_no_tree_reduction
-            elif level == CombinedParser.FLATTEN:
-                cast(CombinedParser, parser)._return_value = parser._return_value_flatten
-                cast(CombinedParser, parser)._return_values = parser._return_values_flatten
-            elif level == CombinedParser.MERGE_TREETOPS:
-                cast(CombinedParser, parser)._return_value = parser._return_value_flatten
-                cast(CombinedParser, parser)._return_values = parser._return_values_merge_treetops
-            else:  # level == CombinedParser.SQUEEZE_TIGHT
-                cast(CombinedParser, parser)._return_value = parser._return_value_flatten
-                cast(CombinedParser, parser)._return_values = parser._return_values_merge_leaves
-
-    if isinstance(root_or_parserlist, Parser):
-        root_parser = root_or_parserlist
-        assert isinstance(root_parser, Parser)
-        assert level in (CombinedParser.NO_TREE_REDUCTION,
-                         CombinedParser.FLATTEN,
-                         CombinedParser.MERGE_TREETOPS,
-                         CombinedParser.MERGE_LEAVES)
-        root_parser.apply(apply_func)
-        return root_parser
-    else:
-        if level != CombinedParser.FLATTEN:
-            for p in root_or_parserlist:
-                apply_func(p)
-        return get_parser_placeholder()
 
 
 CustomParseFunc: TypeAlias = Callable[[StringView], Optional[Node]]
@@ -3201,7 +2900,7 @@ class CustomParser(CombinedParser):
     def __deepcopy__(self, memo):
         parse_func = copy.deepcopy(self.parse_func, memo)
         duplicate = self.__class__(parse_func)
-        copy_combined_parser_attrs(self, duplicate)
+        copy_parser_base_attrs(self, duplicate)
         return duplicate
 
     def _parse(self, location: cython.int) -> ParsingResult:
@@ -3214,16 +2913,12 @@ class CustomParser(CombinedParser):
         if node is None:
             return None, location
         if node is EMPTY_NODE:
+            return EMPTY_NODE, location
+        elif self.drop_content:
             return EMPTY_NODE, location + node.strlen()
         else:
-            if node.name and not node.name[0:1] == ':':
-                save_name = node.name
-            else:
-                save_name = self.node_name
-            node.name = ":"
-            node = self._return_value(node)
-            if node is not EMPTY_NODE and node is not None:
-                node.name = save_name
+            if not node.name or node.name[0:1] == ':':
+                node.name = self.node_name
             return node, location + node.strlen()
 
     def _signature(self) -> Hashable:
@@ -3267,7 +2962,7 @@ class UnaryParser(CombinedParser):
     def __deepcopy__(self, memo):
         parser = copy.deepcopy(self.parser, memo)
         duplicate = self.__class__(parser)
-        copy_combined_parser_attrs(self, duplicate)
+        copy_parser_base_attrs(self, duplicate)
         return duplicate
 
     def _signature(self) -> Hashable:
@@ -3296,7 +2991,7 @@ class LateBindingUnary(UnaryParser):
         duplicate = self.__class__(self.parser_name)
         # duplicate.parser = copy.deepcopy(self.resolve(), memo)
         # duplicate.sub_parsers = frozenset({duplicate.parser})
-        copy_combined_parser_attrs(self, duplicate)
+        copy_parser_base_attrs(self, duplicate)
         return duplicate
 
     def resolve_parser_name(self) -> Parser:
@@ -3340,7 +3035,7 @@ class NaryParser(CombinedParser):
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
         duplicate = self.__class__(*parsers)
-        copy_combined_parser_attrs(self, duplicate)
+        copy_parser_base_attrs(self, duplicate)
         return duplicate
 
     def _signature(self) -> Hashable:
@@ -3500,7 +3195,7 @@ class OneOrMore(UnaryParser):
             if node is None:
                 break
             match_flag = True
-            if node._result or not node.name[0] == ':':  # node.anonymous:  # drop anonymous empty nodes
+            if node._result or node.name[0] != ':':  # node.anonymous:  # drop anonymous empty nodes
                 results += (node,)
             if location <= n:
                 infinite_loop_warning(self, node, location)
@@ -3572,7 +3267,7 @@ class Counted(UnaryParser):
     def __deepcopy__(self, memo):
         parser = copy.deepcopy(self.parser, memo)
         duplicate = self.__class__(parser, self.repetitions)
-        copy_combined_parser_attrs(self, duplicate)
+        copy_parser_base_attrs(self, duplicate)
         return duplicate
 
     @cython.locals(location_=cython.int)
@@ -3583,7 +3278,8 @@ class Counted(UnaryParser):
             node, location = self.parser(location)
             if node is None:
                 return None, location_
-            results += (node,)
+            if node._result or node.name[0] != ':':
+                results += (node,)
             if location_ >= location:
                 infinite_loop_warning(self, node, location)
                 break  # avoid infinite loop
@@ -3592,7 +3288,8 @@ class Counted(UnaryParser):
             node, location = self.parser(location)
             if node is None:
                 break
-            results += (node,)
+            if node._result or node.name[0] != ':':
+                results += (node,)
             if location_ >= location:
                 infinite_loop_warning(self, node, location)
                 break  # avoid infinite loop
@@ -3654,7 +3351,7 @@ class MandatoryNary(NaryParser):
 
         >>> fraction = Series(Text('.'), RegExp(r'[0-9]+'), mandatory=1).name('fraction')
         >>> number = (RegExp(r'[0-9]+') + Option(fraction)).name('number')
-        >>> num_parser = Grammar(TreeReduction(number, CombinedParser.MERGE_TREETOPS))
+        >>> num_parser = Grammar(number).set_tree_reduction(MERGE_TREETOPS)
         >>> num_parser('25').as_sxpr()
         '(number "25")'
         >>> num_parser('3.1415').as_sxpr()
@@ -3690,7 +3387,7 @@ class MandatoryNary(NaryParser):
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
         duplicate = self.__class__(*parsers, mandatory=self.mandatory)
-        copy_combined_parser_attrs(self, duplicate)
+        copy_parser_base_attrs(self, duplicate)
         return duplicate
 
     def get_reentry_point(self, location: cython.int) -> Tuple[int, Node]:
@@ -3846,11 +3543,11 @@ class Series(MandatoryNary):
                     else:
                         results.append(node)
                         break
-            if node._result or not node.name[0] == ':':  # node.anonymous:  # drop anonymous empty nodes
+            if node._result or node.name[0] != ':':  # node.anonymous:  # drop anonymous empty nodes
                 results.append(node)
         # assert len(results) <= len(self.parsers) \
         #        or len(self.parsers) >= len([p for p in results if p.name != ZOMBIE_TAG])
-        ret_node = self._return_values(results)  # type: Node
+        ret_node = self._return_values(tuple(results))  # type: Node
         if error and reloc < 0:  # no worry: reloc is always defined when error is True
             # parser will be moved forward, even if no relocation point has been found
             raise ParserError(self, ret_node.with_pos(location_),
@@ -3944,9 +3641,6 @@ class Alternative(NaryParser):
             node, location_ = parser(location)
             if node is not None:
                 return self._return_value(node), location_
-                # return self._return_value(node if node._result or parser.pname else None), text_
-                # return Node(self.name,
-                #             node if node._result or parser.pname else ()), text_
         return None, location
 
     def __repr__(self):
@@ -4134,7 +3828,7 @@ class Interleave(MandatoryNary):
         parsers = copy.deepcopy(self.parsers, memo)
         duplicate = self.__class__(*parsers, mandatory=self.mandatory,
                                    repetitions=self.repetitions)
-        copy_combined_parser_attrs(self, duplicate)
+        copy_parser_base_attrs(self, duplicate)
         return duplicate
 
     @cython.locals(location_=cython.int, location__=cython.int, i=cython.int, reloc=cython.int)
@@ -4150,7 +3844,7 @@ class Interleave(MandatoryNary):
                 if parser not in consumed:
                     node, location__ = parser(location_)
                     if node is not None:
-                        if node._result or not node.name[0] == ':':  # node.anonymous:  # drop anonymous empty nodes
+                        if node._result or node.name[0] != ':':  # node.anonymous:  # drop anonymous empty nodes
                             results += (node,)
                             # location_ = location__
                         counter[i] += 1
@@ -4176,7 +3870,7 @@ class Interleave(MandatoryNary):
                 infinite_loop_warning(self, node, location)
                 break  # infinite loop protection
             location_ = location__
-        nd = self._return_values(results)  # type: Node
+        nd = self._return_values(tuple(results))  # type: Node
         if error and reloc < 0:  # no worry: reloc is always defined when error is True
             # parser will be moved forward, even if no relocation point has been found
             raise ParserError(self, nd.with_pos(location),
@@ -4432,7 +4126,7 @@ class Capture(ContextSensitive):
     def __deepcopy__(self, memo):
         symbol = copy.deepcopy(self.parser, memo)
         duplicate = self.__class__(symbol, self.zero_length_warning)
-        copy_combined_parser_attrs(self, duplicate)
+        copy_parser_base_attrs(self, duplicate)
         duplicate._can_capture_zero_length = self._can_capture_zero_length
         return duplicate
 
@@ -4559,7 +4253,7 @@ class Retrieve(ContextSensitive):
     def __deepcopy__(self, memo):
         symbol = copy.deepcopy(self.parser, memo)
         duplicate = self.__class__(symbol, self.match)
-        copy_combined_parser_attrs(self, duplicate)
+        copy_parser_base_attrs(self, duplicate)
         return duplicate
 
     @property
@@ -4649,7 +4343,7 @@ class Pop(Retrieve):
     # def __deepcopy__(self, memo):
     #     symbol = copy.deepcopy(self.parser, memo)
     #     duplicate = self.__class__(symbol, self.match)
-    #     copy_combined_parser_attrs(self, duplicate)
+    #     copy_parser_base_attrs(self, duplicate)
     #     duplicate.values = self.values[:]
     #     return duplicate
 

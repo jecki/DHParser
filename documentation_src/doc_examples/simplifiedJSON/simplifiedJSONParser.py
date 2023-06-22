@@ -27,7 +27,7 @@ except ImportError:
 from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, AnyChar, \
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, \
-    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \
+    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, mixin_comment, \
     compile_source, grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, \
     remove_if, Node, TransformationDict, TransformerFunc, transformation_factory, traverse, \
@@ -47,6 +47,8 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     has_attr, has_parent, ThreadLocalSingletonFactory, Error, canonical_error_strings, \
     has_errors, ERROR, FATAL, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
+
+from DHParser.dsl import PseudoJunction, create_parser_transition
 
 
 #######################################################################
@@ -93,7 +95,7 @@ class simplifiedJSONGrammar(Grammar):
     r"""Parser for a simplifiedJSON source file.
     """
     _element = Forward()
-    source_hash__ = "d3a0e5846946bdc6542ac50cb366d075"
+    source_hash__ = "e2b6d6e33d5968031818b9f6a3194051"
     disposable__ = re.compile('_\\w+')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -113,24 +115,10 @@ class simplifiedJSONGrammar(Grammar):
     json = Series(dwsp__, _element, _EOF)
     root__ = json
     
-
-_raw_grammar = ThreadLocalSingletonFactory(simplifiedJSONGrammar, ident=1)
-
-def get_grammar() -> simplifiedJSONGrammar:
-    grammar = _raw_grammar()
-    if get_config_value('resume_notices'):
-        resume_notices_on(grammar)
-    elif get_config_value('history_tracking'):
-        set_tracer(grammar, trace_history)
-    try:
-        if not grammar.__class__.python_src__:
-            grammar.__class__.python_src__ = get_grammar.python_src__
-    except AttributeError:
-        pass
-    return grammar
     
-def parse_simplifiedJSON(document, start_parser = "root_parser__", *, complete_match=True):
-    return get_grammar()(document, start_parser, complete_match)
+parsing: PseudoJunction = create_parser_transition(
+    simplifiedJSONGrammar)
+get_grammar = parsing.factory # for backwards compatibility, only    
 
 
 #######################################################################

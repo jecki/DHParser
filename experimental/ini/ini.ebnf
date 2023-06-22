@@ -21,7 +21,7 @@
 # Case-sensitivity: True, False
 @ ignorecase  = False
 
-# Tree-simplification while parsing:  none, flatten, merge_treetops, merge
+# Tree-simplification while parsing:  none, flatten, merge_anonymous_treetops, merge
 @ reduction   = flatten         # anonymous nodes are being reduced where possible
 
 # Tags that may be replaced with their content while parsing

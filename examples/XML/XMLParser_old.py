@@ -47,8 +47,8 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \
     positions_of, replace_child_names, add_attributes, delimit_children, merge_connected, \
-    has_attr, has_parent, ThreadLocalSingletonFactory, TreeReduction, CombinedParser, \
-    Path, apply_unless, ERROR
+    has_attr, has_parent, ThreadLocalSingletonFactory, Path, apply_unless, \
+    ERROR, MERGE_TREETOPS
 
 
 #######################################################################
@@ -74,6 +74,7 @@ def get_preprocessor() -> PreprocessorFunc:
 class XMLGrammar(Grammar):
     r"""Parser for a XML source file.
     """
+    early_tree_reduction__ = MERGE_TREETOPS
     element = Forward()
     source_hash__ = "0adc4a6df61ae6a925c93fcc6c382002"
     disposable__ = re.compile('Misc$|NameStartChar$|NameChars$|CommentChars$|PubidChars$|PubidCharsSingleQuoted$|VersionNum$|EncName$|Reference$|CData$|EOF$')
@@ -122,7 +123,7 @@ class XMLGrammar(Grammar):
     prolog = Series(Option(Series(dwsp__, XMLDecl)), Option(Misc), Option(Series(doctypedecl, Option(Misc))))
     element.set(Alternative(emptyElement, Series(STag, content, ETag, mandatory=1)))
     document = Series(prolog, element, Option(Misc), EOF)
-    root__ = TreeReduction(document, CombinedParser.MERGE_TREETOPS)
+    root__ = document
     
 
 _raw_grammar = ThreadLocalSingletonFactory(XMLGrammar, ident=1)

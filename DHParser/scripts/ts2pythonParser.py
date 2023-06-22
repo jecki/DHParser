@@ -50,8 +50,8 @@ except ImportError:
 from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, AnyChar, \
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, \
-    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \
-    ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, mixin_comment, \
+    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
+    ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, \
     compile_source, grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, \
     remove_if, Node, TransformerFunc, TransformationDict, transformation_factory, traverse, \
     remove_children_if, move_fringes, normalize_whitespace, is_anonymous, name_matches, \
@@ -70,7 +70,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     has_attr, has_parent, ThreadLocalSingletonFactory, Error, canonical_error_strings, \
     has_errors, ERROR, FATAL, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors, \
-    pick_from_path, json_dumps, RootNode, get_config_values
+    pick_from_path, json_dumps, RootNode, get_config_values, MERGE_TREETOPS
 
 
 #######################################################################
@@ -110,6 +110,7 @@ get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory)
 class ts2pythonGrammar(Grammar):
     r"""Parser for a ts2python source file.
     """
+    early_tree_reduction__ = MERGE_TREETOPS
     declaration = Forward()
     declarations_block = Forward()
     index_signature = Forward()
@@ -168,7 +169,7 @@ class ts2pythonGrammar(Grammar):
     declaration.set(Series(Option(qualifier), identifier, Option(optional), Option(Series(Series(Drop(Text(":")), dwsp__), types))))
     declarations_block.set(Series(Series(Drop(Text("{")), dwsp__), Option(Series(declaration, ZeroOrMore(Series(Option(Series(Drop(Text(";")), dwsp__)), declaration)), Option(Series(Series(Drop(Text(";")), dwsp__), map_signature)), Option(Series(Drop(Text(";")), dwsp__)))), Series(Drop(Text("}")), dwsp__)))
     document = Series(dwsp__, ZeroOrMore(Alternative(interface, type_alias, namespace, enum, const, Series(declaration, Series(Drop(Text(";")), dwsp__)), _top_level_assignment, _array_ellipsis, _top_level_literal)), EOF)
-    root__ = TreeReduction(document, CombinedParser.MERGE_TREETOPS)
+    root__ = document
     
 
 _raw_grammar = ThreadLocalSingletonFactory(ts2pythonGrammar)

@@ -39,9 +39,9 @@ from DHParser.log import start_logging, suspend_logging, resume_logging
 from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode
 from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar, Parser, \
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, ERR, \
-    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \
-    ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, mixin_comment, \
-    last_value, matching_bracket, optional_last_value
+    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
+    ZeroOrMore, Forward, NegativeLookahead, Required, Custom, mixin_comment, \
+    last_value, matching_bracket, optional_last_value, MERGE_TREETOPS
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.toolkit import is_filename, load_if_file, cpu_count, RX_NEVER_MATCH, \
@@ -102,7 +102,7 @@ class LaTeXGrammar(Grammar):
     param_block = Forward()
     tabular_config = Forward()
     source_hash__ = "1c79be70061fb2afe0540012cafd938d"
-    early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
+    early_tree_reduction__ = MERGE_TREETOPS
     disposable__ = re.compile('_\\w+')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

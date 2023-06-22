@@ -4,7 +4,7 @@
 @ literalws  = right
 @ whitespace = /[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?/    # insignificant whitespace, including at most one linefeed
 @ comment    = /%.*/                                # note: trailing linefeed is not part of the comment proper
-@ reduction  = merge_treetops
+@ reduction  = merge_anonymous_treetops
 @ disposable = _WSPC, _GAP, _LB, _PARSEP, _LETTERS, _NAME, INTEGER, FRAC,
                _QUALIFIED, TEXT_NOPAR, TEXT, _block_content, PATH, PATHSEP,
                HASH, COLON, TAG, _inline_math_text, _has_block_start,

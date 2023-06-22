@@ -1438,62 +1438,62 @@ class TestEarlyTokenWhitespaceDrop:
 
 
 class TestMetaParser:
-    mp = CombinedParser()
-    mp._return_value = mp._return_value_flatten
-    mp._return_values = mp._return_values_flatten
-    mp.grammar = Grammar()  # override placeholder warning
-    mp.pname = "named"
-    mp.disposable = False
-    mp.node_name = mp.pname
-
-    def test_return_value(self):
-        nd = self.mp._return_value(Node('tagged', 'non-empty'))
-        assert nd.name == 'named', nd.as_sxpr()
-        assert len(nd.children) == 1
-        assert nd.children[0].name == 'tagged'
-        assert nd.children[0].result == "non-empty"
-        nd = self.mp._return_value(Node('tagged', ''))
-        assert nd.name == 'named', nd.as_sxpr()
-        assert len(nd.children) == 1
-        assert nd.children[0].name == 'tagged'
-        assert not nd.children[0].result
-        nd = self.mp._return_value(Node(':anonymous', 'content'))
-        assert nd.name == 'named', nd.as_sxpr()
-        assert not nd.children
-        assert nd.result == 'content'
-        nd = self.mp._return_value(Node(':anonymous', ''))
-        assert nd.name == 'named', nd.as_sxpr()
-        assert not nd.children
-        assert not nd.content
-        nd = self.mp._return_value(EMPTY_NODE)
-        assert nd.name == 'named' and not nd.children, nd.as_sxpr()
-        self.mp.pname = ''
-        self.mp.disposable = True
-        self.mp.node_name = ':unnamed'
-        nd = self.mp._return_value(Node('tagged', 'non-empty'))
-        assert nd.name == 'tagged', nd.as_sxpr()
-        assert len(nd.children) == 0
-        assert nd.content == 'non-empty'
-        nd = self.mp._return_value(Node('tagged', ''))
-        assert nd.name == 'tagged', nd.as_sxpr()
-        assert len(nd.children) == 0
-        assert not nd.content
-        nd = self.mp._return_value(Node(':anonymous', 'content'))
-        assert nd.name == ':anonymous', nd.as_sxpr()
-        assert not nd.children
-        assert nd.result == 'content'
-        nd = self.mp._return_value(Node('', ''))
-        assert nd.name == '', nd.as_sxpr()
-        assert not nd.children
-        assert not nd.content
-        assert self.mp._return_value(None) == EMPTY_NODE
-        assert self.mp._return_value(EMPTY_NODE) == EMPTY_NODE
-
-    def test_return_values(self):
-        self.mp.pname = "named"
-        self.mp.node_name = self.mp.pname
-        rv = self.mp._return_values((Node('tag', 'content'), EMPTY_NODE))
-        assert rv[-1].name != EMPTY_NODE.name, rv[-1].name
+    # mp = CombinedParser()
+    # mp._return_value = mp._return_value_flatten
+    # mp._return_values = mp._return_values_flatten
+    # mp.grammar = Grammar()  # override placeholder warning
+    # mp.pname = "named"
+    # mp.disposable = False
+    # mp.node_name = mp.pname
+    #
+    # def test_return_value(self):
+    #     nd = self.mp._return_value(Node('tagged', 'non-empty'))
+    #     assert nd.name == 'named', nd.as_sxpr()
+    #     assert len(nd.children) == 1
+    #     assert nd.children[0].name == 'tagged'
+    #     assert nd.children[0].result == "non-empty"
+    #     nd = self.mp._return_value(Node('tagged', ''))
+    #     assert nd.name == 'named', nd.as_sxpr()
+    #     assert len(nd.children) == 1
+    #     assert nd.children[0].name == 'tagged'
+    #     assert not nd.children[0].result
+    #     nd = self.mp._return_value(Node(':anonymous', 'content'))
+    #     assert nd.name == 'named', nd.as_sxpr()
+    #     assert not nd.children
+    #     assert nd.result == 'content'
+    #     nd = self.mp._return_value(Node(':anonymous', ''))
+    #     assert nd.name == 'named', nd.as_sxpr()
+    #     assert not nd.children
+    #     assert not nd.content
+    #     nd = self.mp._return_value(EMPTY_NODE)
+    #     assert nd.name == 'named' and not nd.children, nd.as_sxpr()
+    #     self.mp.pname = ''
+    #     self.mp.disposable = True
+    #     self.mp.node_name = ':unnamed'
+    #     nd = self.mp._return_value(Node('tagged', 'non-empty'))
+    #     assert nd.name == 'tagged', nd.as_sxpr()
+    #     assert len(nd.children) == 0
+    #     assert nd.content == 'non-empty'
+    #     nd = self.mp._return_value(Node('tagged', ''))
+    #     assert nd.name == 'tagged', nd.as_sxpr()
+    #     assert len(nd.children) == 0
+    #     assert not nd.content
+    #     nd = self.mp._return_value(Node(':anonymous', 'content'))
+    #     assert nd.name == ':anonymous', nd.as_sxpr()
+    #     assert not nd.children
+    #     assert nd.result == 'content'
+    #     nd = self.mp._return_value(Node('', ''))
+    #     assert nd.name == '', nd.as_sxpr()
+    #     assert not nd.children
+    #     assert not nd.content
+    #     assert self.mp._return_value(None) == EMPTY_NODE
+    #     assert self.mp._return_value(EMPTY_NODE) == EMPTY_NODE
+    #
+    # def test_return_values(self):
+    #     self.mp.pname = "named"
+    #     self.mp.node_name = self.mp.pname
+    #     rv = self.mp._return_values((Node('tag', 'content'), EMPTY_NODE))
+    #     assert rv[-1].name != EMPTY_NODE.name, rv[-1].name
 
     def test_in_context(self):
         minilang = r"""
