@@ -806,7 +806,9 @@ class Parser:
             self.pname = pname[1:]
         else:
             self.disposable = False
-            if disposable is True:  self.disposable = True
+            if disposable is True:
+                self.disposable = True
+                self.node_name = ':' + pname
             self.pname = pname
         return self
 
@@ -2942,7 +2944,7 @@ class CombinedParser(Parser):
                 if tail_is_anonymous_leaf:
                     result = merged[0].result
                     if result or not self.disposable:
-                        return Node(self.node_name, merged[0].result)
+                        return Node(self.node_name, result)
                     return EMPTY_NODE
                 return Node(self.node_name, merged[0])
             return EMPTY_NODE if self.disposable else Node(self.node_name, '', True)
