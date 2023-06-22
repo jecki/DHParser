@@ -2701,7 +2701,7 @@ class CombinedParser(Parser):
 
     def _return_value_no_optimization(self, node: Optional[Node]) -> Node:
         # assert node is None or isinstance(node, Node)
-        if self.drop_content:
+        if self.drop_content or (self.disposable and node is None):
             return EMPTY_NODE
         return Node(self.node_name, node or ())  # unoptimized code
 
@@ -2730,7 +2730,7 @@ class CombinedParser(Parser):
 
     def _return_values_no_tree_reduction(self, results: Sequence[Node]) -> Node:
         # assert isinstance(results, (list, tuple))
-        if self.drop_content:
+        if self.drop_content or (self.disposable and not results):
             return EMPTY_NODE
         return Node(self.node_name, tuple(results))  # unoptimized
 
@@ -2916,7 +2916,7 @@ class CombinedParser(Parser):
                         else:
                             if bunch:
                                 bunch.append(tail._result)
-                                new = Node(MERGED_PTYPE, ''.join(bunch))
+                                new = Node(MERGED_PTYPE, ''.join(bunch), True)
                                 new._pos = pos
                                 merged.append(new)
                                 bunch = []
@@ -2932,7 +2932,7 @@ class CombinedParser(Parser):
                 if tail_is_anonymous_leaf:
                     if bunch:
                         bunch.append(tail._result)
-                        new = Node(MERGED_PTYPE, ''.join(bunch))
+                        new = Node(MERGED_PTYPE, ''.join(bunch), True)
                         new._pos = pos
                         merged.append(new)
                     else:
