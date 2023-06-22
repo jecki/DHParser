@@ -202,9 +202,9 @@ def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], c
                          if hasattr(p, 'visited')]):  # TODO: needed for Cython!?
             # arg = ','.join(str(p) for p in self.sub_parsers)
             if self.pname:
-                grammar.call_stack__.append((f"recall from memo", location))
+                grammar.call_stack__[-1] = (f"recall {self.pname}", location)
             else:
-                grammar.call_stack__.append((f"recall {self} ", location))
+                grammar.call_stack__[-1] = (f"recall {self} ", location)
         record = HistoryRecord(grammar.call_stack__, hnd, doc[location_:], lc, [])
         cs_len = len(record.call_stack)
         if (not grammar.history__ or not node
