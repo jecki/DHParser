@@ -1219,6 +1219,41 @@ class GrammarError(Exception):
 RESERVED_PARSER_NAMES = ('root__', 'dwsp__', 'wsp__', 'comment__', 'root_parser__', 'ff_parser__')
 
 
+def flatten(node):
+    if node._children:
+        nr = []
+        for child in node._children:
+            if child._children:
+                flatten(child)
+                if child.name[0:1] == ':':
+                    nr.extend(child._children)
+                else:
+                    nr.append(child)
+            elif child._result or not child.name[0:1] == ":":
+                nr.append(child)
+        node._result = tuple(nr)
+        node._children = node._result or ''
+
+
+@cython.locals(crunch=cython.bint, c_canonymous=cython.bint)
+def merge_treetops(node: Node):
+    """Recursively traverses the tree and "merges" nodes that contain
+    only anonymous child nodes that are leaves. "mergeing" here means the
+    node's result will be replaced by the merged content of the children.
+    """
+    if node._children:
+        crunch = True
+        for child in node._children:
+            if child._children:
+                merge_treetops(child)
+                crunch = False
+            elif crunch and child.name[0:1] != ':':  # not child.anonymous:
+                crunch = False
+        if crunch:
+            node._result = ''.join(child._result for child in node.children)
+            node._children = tuple()
+
+
 def reset_parser(parser):
     return parser.reset()
 
@@ -1682,7 +1717,7 @@ class Grammar:
             if parser not in root_connected:  self.unconnected_parsers__.add(parser)
 
         determine_eq_classes(self.all_parsers__)
-        if not root:  TreeReduction(self.all_parsers__, self.early_tree_reduction__)
+        # if not root:  TreeReduction(self.all_parsers__, self.early_tree_reduction__)
 
         if (self.static_analysis_pending__
             and (static_analysis
@@ -2019,6 +2054,10 @@ class Grammar:
                     self.tree__.new_error(result, error_msg, error_code)
 
         ## end of error-handling
+
+        if self.early_tree_reduction__ == CombinedParser.MERGE_TREETOPS:
+            flatten(result)
+            merge_treetops(result)
 
         self.tree__.swallow(result, self.text__, source_mapping)
         self.tree__.stage = 'cst'
@@ -2691,8 +2730,8 @@ class CombinedParser(Parser):
 
     def __init__(self):
         super(CombinedParser, self).__init__()
-        self._return_value = self._return_value_flatten
-        self._return_values = self._return_values_flatten
+        self._return_value = self._return_value_no_optimization  # self._return_value_flatten
+        self._return_values = self._return_values_no_tree_reduction  # self._return_values_flatten
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__()
@@ -2721,7 +2760,7 @@ class CombinedParser(Parser):
                 if self.drop_content:
                     return EMPTY_NODE
                 return node
-            if node.name[0] == ':':  # node.anonymous:
+            if node.name[0:1] == ':':  # node.anonymous:
                 return Node(self.node_name, node._result)
             return Node(self.node_name, node)
         elif self.disposable:
@@ -2734,7 +2773,7 @@ class CombinedParser(Parser):
             return EMPTY_NODE
         return Node(self.node_name, tuple(results))  # unoptimized
 
-    @cython.locals(N=cython.int)
+    @cython.locals(N=cython.int, c_anonymous=cython.bint)
     def _return_values_flatten(self, results: Sequence[Node]) -> Node:
         """
         Generates a return node from a tuple of returned nodes from

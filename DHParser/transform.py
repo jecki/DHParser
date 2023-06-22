@@ -511,7 +511,7 @@ def merge_treetops(node: Node):
             if child._children:
                 merge_treetops(child)
                 crunch = False
-            elif not child.anonymous:
+            elif crunch and child.name[0:1] != ':':  # not child.anonymous:
                 crunch = False
         if crunch:
             node.result = node.content

@@ -72,7 +72,7 @@ def tree_size(tree) -> int:
 
 
 def tst_func():
-    DHParser.log.start_logging(LOGGING)
+    # DHParser.log.start_logging(LOGGING)
     test_dir = os.path.join(fullpath, 'testdata')
     files = os.listdir(test_dir)
     files.sort()
