@@ -2703,9 +2703,13 @@ class CombinedParser(Parser):
 
     def _return_value_no_optimization(self, node: Optional[Node]) -> Node:
         # assert node is None or isinstance(node, Node)
-        if self.drop_content or (self.disposable and node is None):
+        if self.drop_content:
             return EMPTY_NODE
-        return Node(self.node_name, node or ())  # unoptimized code
+        if node is None or (node.name[0] == ":" and not node._result):
+            if self.disposable:
+                return EMPTY_NODE
+            return Node(self.node_name, ())
+        return Node(self.node_name, node)  # unoptimized code
 
     def _return_value_flatten(self, node: Optional[Node]) -> Node:
         """
@@ -2730,11 +2734,11 @@ class CombinedParser(Parser):
             return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
         return Node(self.node_name, '', True)
 
-    def _return_values_no_tree_reduction(self, results: Sequence[Node]) -> Node:
+    def _return_values_no_tree_reduction(self, results: Tuple[Node]) -> Node:
         # assert isinstance(results, (list, tuple))
         if self.drop_content or (self.disposable and not results):
             return EMPTY_NODE
-        return Node(self.node_name, tuple(results))  # unoptimized
+        return Node(self.node_name, results)  # unoptimized
 
     @cython.locals(N=cython.int)
     def _return_values_flatten(self, results: Sequence[Node]) -> Node:
@@ -3470,7 +3474,8 @@ class Counted(UnaryParser):
             node, location = self.parser(location)
             if node is None:
                 return None, location_
-            results += (node,)
+            if node._result or node.name[0] != ':':
+                results += (node,)
             if location_ >= location:
                 infinite_loop_warning(self, node, location)
                 break  # avoid infinite loop
@@ -3479,7 +3484,8 @@ class Counted(UnaryParser):
             node, location = self.parser(location)
             if node is None:
                 break
-            results += (node,)
+            if node._result or node.name[0] != ':':
+                results += (node,)
             if location_ >= location:
                 infinite_loop_warning(self, node, location)
                 break  # avoid infinite loop
@@ -3737,7 +3743,7 @@ class Series(MandatoryNary):
                 results.append(node)
         # assert len(results) <= len(self.parsers) \
         #        or len(self.parsers) >= len([p for p in results if p.name != ZOMBIE_TAG])
-        ret_node = self._return_values(results)  # type: Node
+        ret_node = self._return_values(tuple(results))  # type: Node
         if error and reloc < 0:  # no worry: reloc is always defined when error is True
             # parser will be moved forward, even if no relocation point has been found
             raise ParserError(self, ret_node.with_pos(location_),
@@ -3831,9 +3837,6 @@ class Alternative(NaryParser):
             node, location_ = parser(location)
             if node is not None:
                 return self._return_value(node), location_
-                # return self._return_value(node if node._result or parser.pname else None), text_
-                # return Node(self.name,
-                #             node if node._result or parser.pname else ()), text_
         return None, location
 
     def __repr__(self):
