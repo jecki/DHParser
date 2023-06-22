@@ -1254,6 +1254,57 @@ def merge_treetops(node: Node):
             node._children = tuple()
 
 
+def merge_leaves(node: Node):
+    N = len(node._children)
+    if N > 1:
+        merged = []
+        tail_is_anonymous_leaf = False
+        bunch = []
+        for nd in node._children:
+            if nd._children:
+                merge_leaves(nd)
+                head_is_anonymous_leaf = False
+            else:
+                head_is_anonymous_leaf = nd.name[0] == ':'  # nd.anonymous
+            if tail_is_anonymous_leaf:
+                if head_is_anonymous_leaf:
+                    bunch.append(tail._result)
+                    tail = nd
+                else:
+                    if bunch:
+                        bunch.append(tail._result)
+                        new = Node(MERGED_PTYPE, ''.join(bunch), True)
+                        new._pos = pos
+                        merged.append(new)
+                        bunch = []
+                    else:
+                        merged.append(tail)
+                    merged.append(nd)
+            elif head_is_anonymous_leaf:
+                tail = nd
+                pos = tail._pos
+            else:
+                merged.append(nd)
+            tail_is_anonymous_leaf = head_is_anonymous_leaf
+        if tail_is_anonymous_leaf:
+            if bunch:
+                bunch.append(tail._result)
+                new = Node(MERGED_PTYPE, ''.join(bunch), True)
+                new._pos = pos
+                merged.append(new)
+            else:
+                merged.append(tail)
+        if len(merged) > 1:
+            node._result = tuple(merged)
+            node._children = node._result
+        elif tail_is_anonymous_leaf:
+            node._result = merged[0]._result
+            node._children = tuple() if isinstance(node._result, str) else node._result
+    else:
+        pass
+
+
+
 def reset_parser(parser):
     return parser.reset()
 
@@ -2981,7 +3032,7 @@ class CombinedParser(Parser):
                 if tail_is_anonymous_leaf:
                     result = merged[0].result
                     if result or not self.disposable:
-                        return Node(self.node_name, merged[0].result)
+                        return Node(self.node_name, result)
                     return EMPTY_NODE
                 return Node(self.node_name, merged[0])
             return EMPTY_NODE if self.disposable else Node(self.node_name, '', True)
