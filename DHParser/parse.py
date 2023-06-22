@@ -2675,16 +2675,8 @@ class CombinedParser(Parser):
     Doing flatteining or merging during AST-transformation will ensure
     that it is only performed only on those nodes that made it into the
     concrete-syntax-tree. Mergeing, in particular, might become costly
-    because of potentially many string-concatenations.
-
-    But then again, the usual depth-first-traversal
-    during AST-transformation will take longer, because of the much more
-    verbose tree...
-
-    TODO: Test whether a post-parsing before-AST-transofrmation stage
-        of flattening and merging is faster than flattening and merging
-        during parsing. Presumably flattening early and merging later
-        is the best strategy...
+    because of potentially many string-concatenations. The effect seems
+    to be neglible, though.
 
     Another optimization consists in returning the singleton EMPTY_NODE
     for dropped contents, rather than creating an new empty node every
