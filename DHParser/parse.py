@@ -55,8 +55,8 @@ from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
 from DHParser.log import CallItem, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
-from DHParser.nodetree import ChildrenType, Node, RootNode, WHITESPACE_PTYPE, \
-    TOKEN_PTYPE, ZOMBIE_TAG, EMPTY_NODE, EMPTY_PTYPE, ResultType, LEAF_NODE
+from DHParser.nodetree import ChildrenType, Node, RootNode, WHITESPACE_PTYPE, TOKEN_PTYPE, \
+     MIXED_MODE_TEXT_PTYPE, ZOMBIE_TAG, EMPTY_NODE, EMPTY_PTYPE, ResultType, LEAF_NODE
 from DHParser.toolkit import sane_parser_name, escape_ctrl_chars, re, \
     abbreviate_middle, RX_NEVER_MATCH, RxPatternType, linebreaks, line_col, TypeAlias
 
@@ -2648,6 +2648,9 @@ def update_scanner(grammar: Grammar, leaf_parsers: Dict[str, str]):
 ########################################################################
 
 
+MERGED_PTYPE = MIXED_MODE_TEXT_PTYPE
+
+
 class CombinedParser(Parser):
     """Class CombinedParser is the base class for all parsers that
     call ("combine") other parsers. It contains functions for the
@@ -2874,7 +2877,7 @@ class CombinedParser(Parser):
     #         return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
     #     return Node(self.node_name, '', True)
 
-    @cython.locals(N=cython.int)
+    @cython.locals(N=cython.int, head_is_anonymous_leaf=cython.bint, tail_is_anonymous_leaf=cython.bint)
     def _return_values_merge_leaves(self, results: Sequence[Node]) -> Node:
         """
         Generates a return node from a tuple of returned nodes from
@@ -2913,7 +2916,7 @@ class CombinedParser(Parser):
                         else:
                             if bunch:
                                 bunch.append(tail._result)
-                                new = Node(name, ''.join(bunch))
+                                new = Node(MERGED_PTYPE, ''.join(bunch))
                                 new._pos = pos
                                 merged.append(new)
                                 bunch = []
@@ -2923,14 +2926,13 @@ class CombinedParser(Parser):
                     elif head_is_anonymous_leaf:
                         tail = nd
                         pos = tail._pos
-                        name = tail.name
                     else:
                         merged.append(nd)
                     tail_is_anonymous_leaf = head_is_anonymous_leaf
                 if tail_is_anonymous_leaf:
                     if bunch:
                         bunch.append(tail._result)
-                        new = Node(name, ''.join(bunch))
+                        new = Node(MERGED_PTYPE, ''.join(bunch))
                         new._pos = pos
                         merged.append(new)
                     else:

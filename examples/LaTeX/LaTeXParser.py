@@ -58,7 +58,7 @@ from DHParser.transform import is_empty, remove_if, TransformationDict, Transfor
     replace_content_with, forbid, assert_content, remove_infix_operator, add_error, error_on, \
     left_associative, lean_left, node_maker, has_descendant, neg, has_ancestor, insert, \
     positions_of, replace_child_names, add_attributes, delimit_children, merge_connected, \
-    has_attr, has_parent, traverse, apply_unless, apply_ifelse, has_children
+    has_attr, has_parent, traverse, apply_unless, apply_ifelse, has_children, merge_treetops
 from DHParser import parse as parse_namespace__
 
 
