@@ -1462,6 +1462,7 @@ class TestSyntaxExtensions:
         set_config_value('syntax_variant', 'strict')
         lang = "Char ::= #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]"
         parser = create_parser(lang)
+        print(parser.python_src__)
         st = parser('賌')
         assert st.as_sxpr() == '(Char "賌")'
 

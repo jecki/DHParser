@@ -806,7 +806,9 @@ class Parser:
             self.pname = pname[1:]
         else:
             self.disposable = False
-            if disposable is True:  self.disposable = True
+            if disposable is True:
+                self.disposable = True
+                self.node_name = ':' + pname
             self.pname = pname
         return self
 
@@ -1223,16 +1225,29 @@ def flatten(node):
     if node._children:
         nr = []
         for child in node._children:
+            if child._children:  flatten(child)
             if child._children:
-                flatten(child)
-                if child.name[0:1] == ':':
+                if child.name[0] == ':':
                     nr.extend(child._children)
                 else:
                     nr.append(child)
-            elif child._result or not child.name[0:1] == ":":
+            elif child._result or child.name[0] != ":":
                 nr.append(child)
-        node._result = tuple(nr)
-        node._children = node._result or ''
+        if len(nr) == 1:
+            child = nr[0]
+            if node.name[0] == ':':  # usually the inner node type is more relevant
+                node._children = child._result if isinstance(child._result, tuple) else tuple()
+                node._result = child._result
+                node.name = child.name
+            elif child.name[0] == ':':
+                node._children = child._result if isinstance(child._result, tuple) else tuple()
+                node._result = child._result
+            else:
+                node._children = tuple(nr)
+                node._result = node._children
+        else:
+            node._children = tuple(nr)
+            node._result = node._children or ''
 
 
 @cython.locals(crunch=cython.bint, c_canonymous=cython.bint)
@@ -1247,13 +1262,14 @@ def merge_treetops(node: Node):
             if child._children:
                 merge_treetops(child)
                 crunch = False
-            elif crunch and child.name[0:1] != ':':  # not child.anonymous:
+            elif crunch and child.name[0] != ':':  # not child.anonymous:
                 crunch = False
         if crunch:
             node._result = ''.join(child._result for child in node.children)
             node._children = tuple()
 
 
+@cython.locals(N=cython.int, head_is_anonymous_leaf=cython.bint, tail_is_anonymous_leaf=cython.bint)
 def merge_leaves(node: Node):
     N = len(node._children)
     if N > 1:
@@ -1299,9 +1315,14 @@ def merge_leaves(node: Node):
             node._children = node._result
         elif tail_is_anonymous_leaf:
             node._result = merged[0]._result
-            node._children = tuple() if isinstance(node._result, str) else node._result
+            node._children = node._result if isinstance(node._result, tuple) else tuple()
     else:
-        pass
+        child = node._children[0]
+        if child._children:
+            merge_leaves(child)
+            if child.name[0] == ':':
+                node._result = child._result
+                node._children = node._result if isinstance(node._result, tuple) else tuple()
 
 
 
@@ -2106,9 +2127,12 @@ class Grammar:
 
         ## end of error-handling
 
-        if self.early_tree_reduction__ == CombinedParser.MERGE_TREETOPS:
+        if result is not None and self.early_tree_reduction__ >= CombinedParser.FLATTEN:
             flatten(result)
-            merge_treetops(result)
+            if self.early_tree_reduction__ == CombinedParser.MERGE_TREETOPS:
+                merge_treetops(result)
+            elif self.early_tree_reduction__ == CombinedParser.MERGE_LEAVES:
+                merge_leaves(result)
 
         self.tree__.swallow(result, self.text__, source_mapping)
         self.tree__.stage = 'cst'

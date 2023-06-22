@@ -1439,6 +1439,8 @@ class TestEarlyTokenWhitespaceDrop:
 
 class TestMetaParser:
     mp = CombinedParser()
+    mp._return_value = mp._return_value_flatten
+    mp._return_values = mp._return_values_flatten
     mp.grammar = Grammar()  # override placeholder warning
     mp.pname = "named"
     mp.disposable = False
