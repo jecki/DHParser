@@ -958,6 +958,7 @@ class Parser:
         signature function, the protected method ``_signature``
         should be overridden instead.
         """
+        # hex-id is added to ensure uniqueness (for macro-names, in particular)
         return f'{self.pname}_{hex(id(self))}' if self.pname else self._signature()
 
 

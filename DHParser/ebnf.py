@@ -2524,7 +2524,7 @@ class EBNFCompiler(Compiler):
             self.tree.new_error(node, f'Recursive nesting of macro "{macro_name}"!',
                                 RECURSIVE_MACRO_CALL)
             return "wsp__"
-        values = [expr for expr in node.children[1:]]
+        values = node.children[1:]  #  [expr for expr in node.children[1:]]
         if len(values) != len(margs):
             self.tree.new_error(node, f'Wrong number of macro arguments: {len(margs)} expected, '
                                 f'{len(values)} given!', WRONG_NUMBER_OF_ARGUMENTS)
