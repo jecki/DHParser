@@ -1593,6 +1593,17 @@ class TestMemoization:
         # fixed in DHParser Version 1.50
         assert Buchtitel.content == "Hans im Glück"
 
+    def test_signature(self):
+        lang = """doc = A | B 
+        A = $space_before("x") "x"
+        B = $space_before("y") "y"
+        $space_before($arg) = / */ &$arg
+        """
+        parser = create_parser(lang)
+        tree = parser("  y")
+        assert not tree.errors
+
+
 class TestStringAlternative:
     def test_longest_match(self):
         l = ['a', 'ab', 'ca', 'cd']

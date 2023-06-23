@@ -2029,6 +2029,14 @@ class TestMacros:
         assert not tree.errors
         assert tree.as_sxpr() == '(doc ", ")'
 
+    def test_boundary_case(self):
+        lang = """doc = $macro("x")
+        $macro($arg) = $arg
+        """
+        parser = create_parser(lang)
+        tree = parser('x')
+        assert not tree.errors
+
     def test_macro_errors(self):
         lang = '''@reduction = merge
         doc = ~ $undefined(`,`) { `,`~ $phrase(`,`) } 

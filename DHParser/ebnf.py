@@ -2531,7 +2531,7 @@ class EBNFCompiler(Compiler):
             return "wsp__"  # use wsp__ as a placeholder
         args = dict(zip(margs, values))
         tmpl = copy.deepcopy(expansion)
-        for arg in tmpl.select_if(lambda nd: nd.name == 'placeholder'):
+        for arg in tmpl.select_if(lambda nd: nd.name == 'placeholder', include_root=True):
             arg_name = arg.content
             if arg_name in args:
                 value = args[arg_name]

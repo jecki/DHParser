@@ -958,7 +958,7 @@ class Parser:
         signature function, the protected method ``_signature``
         should be overridden instead.
         """
-        return self.pname if self.pname else self._signature()
+        return f'{self.pname}_{hex(id(self))}' if self.pname else self._signature()
 
 
     def static_error(self, msg: str, code: ErrorCode) -> 'AnalysisError':
@@ -1684,6 +1684,7 @@ class Grammar:
             if parser not in root_connected:  self.unconnected_parsers__.add(parser)
 
         determine_eq_classes(self.all_parsers__)
+        for p in self.all_parsers__:  reset_parser(p)
         if not root:  TreeReduction(self.all_parsers__, self.early_tree_reduction__)
 
         if (self.static_analysis_pending__
@@ -2675,8 +2676,16 @@ class CombinedParser(Parser):
     Doing flatteining or merging during AST-transformation will ensure
     that it is only performed only on those nodes that made it into the
     concrete-syntax-tree. Mergeing, in particular, might become costly
-    because of potentially many string-concatenations. The effect seems
-    to be neglible, though.
+    because of potentially many string-concatenations.
+
+    But then again, the usual depth-first-traversal
+    during AST-transformation will take longer, because of the much more
+    verbose tree...
+
+    TODO: Test whether a post-parsing before-AST-transofrmation stage
+        of flattening and merging is faster than flattening and merging
+        during parsing. Presumably flattening early and merging later
+        is the best strategy...
 
     Another optimization consists in returning the singleton EMPTY_NODE
     for dropped contents, rather than creating an new empty node every
