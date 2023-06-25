@@ -5,17 +5,17 @@
 @ whitespace  = /[ \t]*/  # only horizontal whitespace, no linefeeds
 @ reduction   = merge     # simplify tree as much as possible
 @ disposable  = WS, EOF, LINE
-@ drop        = WS, EOF, backticked
+@ drop        = WS, EOF, backticked, whitespace
 
 #:  Outline
 
-document = main [WS] §EOF
+document = [WS] main [WS] §EOF
 
-main  = [WS] `#` !`#` ~ heading { [WS] section }
-section  = `##` !`#` ~ heading { [WS] subsection }
-subsection  = `###` !`#` ~ heading { [WS] subsubsection }
-subsubsection  = `####` !`#` ~ heading { [WS] s5section }
-s5section  = `#####` !`#` ~ heading { [WS] s6section }
+main  = `#` !`#` ~ heading { WS section }
+section  = `##` !`#` ~ heading { WS subsection }
+subsection  = `###` !`#` ~ heading { WS subsubsection }
+subsubsection  = `####` !`#` ~ heading { WS s5section }
+s5section  = `#####` !`#` ~ heading { WS s6section }
 s6section  = `######` !`#` ~ heading
 
 heading = LINE
@@ -23,5 +23,5 @@ heading = LINE
 #:  Regular Expressions
 
 LINE      = /[^\n]+/         # everything up to the next linefeed
-WS        = /(?:[ \t]*\n)+/  # a single linefeed and any ws at the line-end
+WS        = /(?:[ \t]*\n)+/  # any ws at line-end and all following empty lines
 EOF       =  !/./  # no more characters ahead, end of file reached

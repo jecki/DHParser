@@ -28,5 +28,6 @@ is_heading = /##?#?#?#?#?(?!#)/
 #:  Regular Expressions
 
 LINE      = /[^\n]+/         # everything up to the next linefeed
-WS        = /(?:[ \t]*\n)+/  # a single linefeed and any ws at the line-end
+WS        = LFF
+LFF       = /(?:[ \t]*\n)+/  # any ws at line-end and all following empty lines
 EOF       =  !/./  # no more characters ahead, end of file reached

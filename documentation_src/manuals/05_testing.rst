@@ -313,11 +313,11 @@ first instance by looking for the same line and column in the earlier
 part of the log.) Still, looking at the parsing-log helps to find and
 understand the causes of unexpected parser-behavior, quickly.
 
-.. TIP:: Parsing-logs are by default only generated for failed test. 
+.. TIP:: Parsing-logs are by default only generated for failed test.
     In case you'd like to see the parsing-log for a successful test,
     a simple trick is to flip the type of the test from "match" to
-    "fail" in the .ini-file or vice versa. 
-    
+    "fail" in the .ini-file or vice versa.
+
     The test with the flipped type will then be reported as a failure,
     but the parsing-log is just the same as if it was a success. Once,
     you have seen the log, you can flip the type back again to get
@@ -407,24 +407,24 @@ contains a mistake!)::
     @ whitespace  = /[ \t]*/  # only horizontal whitespace, no linefeeds
     @ reduction   = merge     # simplify tree as much as possible
     @ disposable  = WS, EOF, LINE
-    @ drop        = WS, EOF, backticked
+    @ drop        = WS, EOF, backticked, whitespace
 
     #:  Outline
-    document = main [WS] §EOF
+    document = [WS] main [WS] §EOF
 
-    main  = [WS] `#` ~ heading { [WS] section }
-    section  = `##` ~ heading { [WS] subsection }
-    subsection  = `###` ~ heading { [WS] subsubsection }
-    subsubsection  = `####` ~ heading { [WS] s5section }
-    s5section  = `#####` ~ heading { [WS] s6section }
+    main  = `#` ~ heading { WS section }
+    section  = `##` ~ heading { WS subsection }
+    subsection  = `###` ~ heading { WS subsubsection }
+    subsubsection  = `####` ~ heading { WS s5section }
+    s5section  = `#####` ~ heading { WS s6section }
     s6section  = `######` ~ heading
 
     heading = LINE
 
     #:  Regular Expressions
-    LINE      = /[^\n]+/         # everything up to the next linefeed
-    WS        = /(?:[ \t]*\n)+/  # a single linefeed and any ws at line-end
-    EOF       =  !/./  # no more characters ahead, end of file reached
+    LINE = /[^\n]+/         # everything up to the next linefeed
+    WS   = /(?:[ \t]*\n)+/  # any ws at line-end and all following empty lines
+    EOF  =  !/./  # no more characters ahead, end of file reached
 
 When runing the grammar-tests, we notice that while the match-test
 passes as expected, the fail-test fails, that is, it captures the badly
@@ -448,19 +448,22 @@ There you find the suspicious lines:
 3	4	document->main->section->subsection->heading->LINE MATCH # BADLY NESTED SubSubSection 1.1.1 ### S...
 = == ================================================= ===== ===========================================
 
-Obviously, the parser "subsection" found its marker consiting of three ``#``-signs, but then it
-did not stop short at the next ``#``-sign, but left this to be captured by its "heading"-parser which
-simply reads the rest of the line, no matter what it looks like.
+Obviously, the parser "subsection" found its marker consiting
+of three ``#``-signs, but then it did not stop short at the next
+``#``-sign, but left this to be captured by its "heading"-parser
+which simply reads the rest of the line, no matter what it looks like.
 
-The remedy is simple: We add a negative lookahead to check that after each heading-marker that no further
-``#``-sign follows. Otherwise, the respective section, subsection, etc. -parser simply won't match. So,
-in the "Outline"-section of our grammar, we change the following definitions, accordingly::
+The remedy is simple: We add a negative lookahead to check that
+after each heading-marker that no further ``#``-sign follows.
+Otherwise, the respective section, subsection, etc. -parser
+simply won't match. So, in the "Outline"-section of our grammar,
+we change the following definitions, accordingly::
 
-    main  = [WS] `#` !`#` ~ heading { [WS] section }
-    section  = `##` !`#` ~ heading { [WS] subsection }
-    subsection  = `###` !`#` ~ heading { [WS] subsubsection }
-    subsubsection  = `####` !`#` ~ heading { [WS] s5section }
-    s5section  = `#####` !`#` ~ heading { [WS] s6section }
+    main  = [WS] `#` !`#` ~ heading { WS section }
+    section  = `##` !`#` ~ heading { WS subsection }
+    subsection  = `###` !`#` ~ heading { WS subsubsection }
+    subsubsection  = `####` !`#` ~ heading { WS s5section }
+    s5section  = `#####` !`#` ~ heading { WS s6section }
     s6section  = `######` !`#` ~ heading
 
 This time the grammar-tests yield the desired result::
@@ -470,6 +473,34 @@ This time the grammar-tests yield the desired result::
         match-test "M1" ... OK
       Fail-Tests for parser "document"
         fail-test  "F1" ... OK
+
+.. NOTE:: While not important for the topic of testing as such, a few
+    design-decisions of the EBNF-grammar of the outline-example might
+    be of interest for beginners:
+
+    1. Since the structure of the outline is preseverd by the structre
+       of the abstract syntax tree (i.e. the names and the nesting of
+       its nodes) all tokens (#, ##, ...) and delimiters (WS) are dropped
+       during parsing (see the ``@drop``-directive at the beginning
+       of the grammar). Dropping Tokens, Delimiters and insiginificant
+       whitespace is common practice - either when generating the AST
+       or - as done here - during parsing already.
+
+    2. No normalization is being done at the parsing stage. For example,
+       headings as definied here may still contain trailing whitespace.
+       Unless it organically results from the grammar definition,
+       normalization is better done in the CST-AST-transformation stage
+       to keep the grammar simple.
+
+    3. It is a good practice to give the symbols that are considered
+       disposable (i.e. they do not appear as node names in the syntax tree,
+       alghouth their content is preserved) or which will be dropped (i.e.
+       neither their name nor the captured content makes it into the syntax-tree)
+       special, well recognizable names, like for example, names starting with
+       a single underscore for disposable symbols and a double leading underscore
+       for symbols to be dropped. However, in this simple example we do not
+       follow this practice for the sake of readability.
+
 
 
 
