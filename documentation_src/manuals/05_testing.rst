@@ -207,7 +207,7 @@ an excerpt from the report file might look like this::
 
 You might expect that a test-report of the parser would show the
 concrete-syntax-tree (CST) rather than the AST. However, the CST can be
-quite verbose dependning on how far it is curbed or not curbed in the
+quite verbose depending on how far it is curbed or not curbed in the
 grammar definition, already (see :ref:`simplifying_syntax_trees`) and
 is usually less informative than the AST. Typically, you'll want to
 see it only in very particular cases and only when debugging the
@@ -501,7 +501,28 @@ This time the grammar-tests yield the desired result::
        for symbols to be dropped. However, in this simple example we do not
        follow this practice for the sake of readability.
 
+Before going further down with our top-down-design of the grammar, we draw 
+up a test-case that contains more structural details. For this purpose we
+add under the heading ``[match:document]`` another test-case with a little
+more structure::
 
+    M2: """# Main Heading
+
+        Some introductory Text
+
+        ## Section 1
+        One paragraph of text 
+
+        Another paragraph of text. This
+        time stretching over several lines.
+
+        ## Section 2
+        ### Section 2.1
+        ### Section 2.2
+
+        The previous section is (still) empty.
+        This one is not.
+        """
 
 
 - Test Driven Grammar-Development
