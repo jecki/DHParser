@@ -30,7 +30,7 @@ DEFAULT_PORT = 8890
 ALTERNATIVE_PORTS = [8888, 8889, 8898, 8980, 8988, 8989]
 
 DATA_RECEIVE_LIMIT = 262144
-SERVER_REPLY_TIMEOUT = 10
+SERVER_REPLY_TIMEOUT = 20
 
 KNOWN_HOST = ''  # if host and port are retrieved from a config file, their
 KNOWN_PORT = -2  # values are stored to these global variables
