@@ -1266,7 +1266,7 @@ of failure::
     >>> arithmetic = create_parser(arithmetic_grammar, "arithmetic")
     >>> terms = arithmetic('(2 - 3 * (4 + 5)')
     >>> print(terms.errors[0])
-    1:17: Error (1010): '`)` ~' expected by parser 'group', but »...« found instead!
+    1:17: Error (1010): '")"' expected by parser 'group', but »...« found instead!
     >>> terms = arithmetic('(2 - 3) * ( )')
     >>> print(terms.errors[0])
     1:13: Error (1010): 'expression' expected by parser 'group', but »)...« found instead!
@@ -1775,8 +1775,8 @@ a single pass::
     >>> result = config_parser(cfg_data_with_errors)
     >>> for error in result.errors_sorted:  print(error)
     4:8: Error (1010): 'value' expected by parser 'entry', but »rose"\nBuil...« found instead!
-    7:1: Error (1010): '`]` ~' expected by parser 'heading', but »red: "warm...« found instead!
-    8:6: Error (1010): '`:` ~' expected by parser 'entry', but »1: "cold"\n...« found instead!
+    7:1: Error (1010): '"]"' expected by parser 'heading', but »red: "warm...« found instead!
+    8:6: Error (1010): '":"' expected by parser 'entry', but »1: "cold"\n...« found instead!
 
 It can become difficult to find a reentry point with regular expressions
 that is on the same level of the parser call chain (or one level higher
@@ -1846,7 +1846,7 @@ particular example::
     >>> result = list_parser(example_with_errors)
     >>> for e in result.errors: print(e)
     1:8: Error (1010): '_item' expected by parser '_items', but »A, [5, 6; ...« found instead!
-    1:16: Error (1010): '`]` ~' expected by parser 'list', but »; 7], 8, ]...« found instead!
+    1:16: Error (1010): '"]"' expected by parser 'list', but »; 7], 8, ]...« found instead!
     1:25: Error (1010): '_item' expected by parser '_items', but »]...« found instead!
 
 All errors are located and reported properly in a single run and the
@@ -1859,7 +1859,7 @@ are involved::
     >>> result = list_parser(example_with_errors_2)
     >>> for e in result.errors: print(e)
     1:8: Error (1010): '_item' expected by parser '_items', but »A, [5, 6; ...« found instead!
-    1:16: Error (1010): '`]` ~' expected by parser 'list', but »; [7, 8], ...« found instead!
+    1:16: Error (1010): '"]"' expected by parser 'list', but »; [7, 8], ...« found instead!
     1:28: Error (1010): '_EOF' expected by parser '_document', but », 10, ]...« found instead!
 
 Here, the parser stopped before the end of the document, which shows
@@ -1873,7 +1873,7 @@ what went wrong::
     >>> for e in result.errors: print(e)
     1:8: Error (1010): '_item' expected by parser '_items', but »A, [5, 6; ...« found instead!
     1:9: Notice (50): Skipping from 1:8 'A, [5, ...' within _item->:_item to 1:9 ', [5, 6...'
-    1:16: Error (1010): '`]` ~' expected by parser 'list', but »; [7, 8], ...« found instead!
+    1:16: Error (1010): '"]"' expected by parser 'list', but »; [7, 8], ...« found instead!
     1:24: Notice (50): Resuming from list at 1:16 '; [7, 8...' with _items->:Series at 1:24 ', 9], 1...'
     1:28: Error (1010): '_EOF' expected by parser '_document', but », 10, ]...« found instead!
 
@@ -1902,7 +1902,7 @@ rackets!)::
     >>> for e in result.errors:
     ...     if e.code != RESUME_NOTICE: print(e)
     1:8: Error (1010): '_item' expected by parser '_items', but »A, [5, 6; ...« found instead!
-    1:16: Error (1010): '`]` ~' expected by parser 'list', but »; [7, 8], ...« found instead!
+    1:16: Error (1010): '"]"' expected by parser 'list', but »; [7, 8], ...« found instead!
     1:34: Error (1010): '_item' expected by parser '_items', but »]...« found instead!
 
 This time, the parser does not terminate before the end. The

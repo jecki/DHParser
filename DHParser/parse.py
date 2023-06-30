@@ -3762,6 +3762,12 @@ class Series(MandatoryNary):
         return ret_node, location_
 
     def __repr__(self):
+        if (len(self.parsers) >= 2
+            and (isinstance(self.parsers[-1], Whitespace)
+                 or isinstance(self.parsers[0], Whitespace))
+            and (isinstance(self.parsers[0], Text)
+                 or isinstance(self.parsers[1], Text))):
+            return f'"{cast(Text, self.parsers[0]).text}"'
         return " ".join([parser.repr for parser in self.parsers[:self.mandatory]]
                         + (['§'] if self.mandatory != NO_MANDATORY else [])
                         + [parser.repr for parser in self.parsers[self.mandatory:]])

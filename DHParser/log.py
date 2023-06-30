@@ -362,10 +362,12 @@ class HistoryRecord:
         '.errortext {font-weight:normal; color:darkred}\n'
         '.unmatched {font-weight:normal; color:lightgrey}\n'
         '.fail {font-weight:bold; color:darkgrey}\n'
-        '.nfail {font-weight:bold; color:darkgreen}\n'
+        '.nfail {font-weight:bold; color:darkgrey}\n'
         '.error {font-weight:bold; color:red}\n'
         '.match {font-weight:bold; color:green}\n'
-        '.nmatch {font-weight:bold; color:darkgrey}\n'
+        '.nmatch {font-weight:bold; color:green}\n'
+        '.emptymatch {font-weight:bold; color:darkseagreen}\n'
+        '.emptynmatch {font-weight:bold; color:darkseagreen}\n'  
         '.drop {font-weight:bold; color:green}\n'        
         '.ndrop {font-weight:semibold; color:darkslategrey}\n'
         '.matchstack {font-weight:bold;color:darkred}\n'
@@ -423,13 +425,16 @@ class HistoryRecord:
             excerpt = "&nbsp;" * (len(excerpt) - len(stripped)) + stripped
         classes = list(HistoryRecord.Snapshot_Fields)
         idx = {field_name: i for i, field_name in enumerate(classes)}
-        classes[idx['status']] = 'error' if status[:5] == 'ERROR' \
-                                  else status.lower().replace('!', 'n')
+        status_class = 'error' if status[:5] == 'ERROR' else status.lower().replace('!', 'n')
+        if status in (self.MATCH, self.NMATCH) and not self.node._result:
+            classes[idx['status']] = 'empty' + status_class
+        else:
+            classes[idx['status']] = status_class
         if status in (self.MATCH, self.DROP, self.NMATCH, self.NDROP):
             if status == self.DROP:
                 classes[idx['text']] = 'dropped'
-            elif status[:1] == '!':
-                classes[idx['text']] = 'nofail'
+            # elif status[:1] == '!':
+            #     classes[idx['text']] = 'nofail'
             elif self.stack.find('&') > 0:
                 classes[idx['text']] = 'lookahead'
             n = max(40 - len(excerpt), 0)
@@ -479,15 +484,8 @@ class HistoryRecord:
             if self.errors:
                 self._status = self.ERROR + ": " + ', '.join(str(e.code) for e in self.errors)
             else:
-                last_ch = self._stack[-1:]
-                if last_ch == '/':  # a regular-expression that could contain !-signs
-                    re_start = self._stack.rfind('/', 0, len(self._stack) - 1)
-                    neg = (self._stack.count('!') - self._stack[re_start:].count('!')) % 2
-                elif last_ch == ' ': # a recall from memo str that could contain !-signs
-                    re_start = self._stack.rfind('recall ', 0, len(self._stack) - 1)
-                    neg = (self._stack.count('!') - self._stack[re_start:].count('!')) % 2
-                else:  # just count the '!'-signs
-                    neg = self._stack.count('!') % 2
+                i = self.stack.rfind('->')
+                neg = self.stack.count('!', 0, i) % 2
 
                 if len(self.call_stack) > 2 and \
                         self.call_stack[-2][0] in (":Lookbehind", ":NegativeLookbehind"):
@@ -498,7 +496,10 @@ class HistoryRecord:
                 elif self.node.name in (NONE_TAG, ZOMBIE_TAG):
                     self._status = self.NFAIL if neg else self.FAIL
                 elif self.node.name == EMPTY_PTYPE:
-                    self._status = self.NDROP if neg else self.DROP
+                    if self.node._result:
+                        self._status = self.NDROP if neg else self.DROP
+                    else:
+                        self._status = self.NMATCH if neg else self.MATCH
                 else:
                     self._status = self.NMATCH if neg else self.MATCH
         return self._status

@@ -46,7 +46,7 @@ except ImportError:
 
 from DHParser.error import Error, RESUME_NOTICE, RECURSION_DEPTH_LIMIT_HIT
 from DHParser.nodetree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE
-from DHParser.log import HistoryRecord
+from DHParser.log import HistoryRecord, NONE_NODE
 from DHParser.parse import Grammar, Parser, ParserError, ParseFunc, ContextSensitive, \
     PARSER_PLACEHOLDER
 from DHParser.toolkit import line_col
@@ -186,25 +186,30 @@ def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], c
             stack_counter -= 1
         raise pe
 
+    def result_changed(node, history) -> bool:
+        current_result = node is None
+        if history:
+            last_result = history[-1].node is NONE_NODE
+        else:
+            return False
+        return last_result != current_result
+
     # Mind that memoized parser calls will not appear in the history record!
     # Don't track returning parsers except in case an error has occurred!
     if ((self.node_name != WHITESPACE_PTYPE)
         and (grammar.moving_forward__
              or (not self.disposable
-                 and (node
-                      or grammar.history__ and grammar.history__[-1].node)))):
+                 and (node and grammar.history__[-1].node))
+             or result_changed(node, grammar.history__))):
         # record history
         # TODO: Make dropping insignificant whitespace from history configurable
         hnd = Node(node.name, doc[location:location_]).with_pos(location) if node else None
         lc = line_col(grammar.document_lbreaks__, location)
-        if self.sub_parsers and self.node_name[0:1] == ':' \
-                and any([location in p.visited for p in self.sub_parsers
-                         if hasattr(p, 'visited')]):  # TODO: needed for Cython!?
-            # arg = ','.join(str(p) for p in self.sub_parsers)
+        if self.node_name[0:1] == ':':
             if self.pname:
-                grammar.call_stack__[-1] = (f"recall: {self.pname}", location)
+                grammar.call_stack__[-1] = (f"{self.pname}", location)
             else:
-                grammar.call_stack__[-1] = (f"recall: {self} ", location)
+                grammar.call_stack__[-1] = (f"{self} ", location)
         record = HistoryRecord(grammar.call_stack__, hnd, doc[location_:], lc, [])
         cs_len = len(record.call_stack)
         if (not grammar.history__ or not node
@@ -214,7 +219,12 @@ def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], c
             if len(record.call_stack) >= 2 and \
                     record.call_stack[-2][0] in (":Lookbehind", ":NegativeLookbehind"):
                 record.text = grammar.reversed__[len(grammar.document__) - location_:]
+            if not grammar.moving_forward__ \
+                    and not any(tag == ':Lookahead' \
+                                for tag, _ in grammar.history__[-1].call_stack):
+                grammar.history__.pop()
             grammar.history__.append(record)
+
 
     grammar.moving_forward__ = False
     while stack_counter > 0:
