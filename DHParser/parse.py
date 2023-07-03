@@ -1839,13 +1839,17 @@ class Grammar:
                         return issubclass(custom_parser_class, Lookahead)
                     return False
 
-            last_record = self.history__[-2] if len(self.history__) > 1 \
-                else None  # type: Optional[HistoryRecord]
-            return last_record and parser != self.root_parser__ \
-                and any(h.status == HistoryRecord.MATCH
-                        and any(is_lookahead(tn) and location >= len(self.document__)
-                                for tn, location in h.call_stack)
-                        for h in self.history__[:-1])
+            last_record = self.history__[-2] if len(self.history__) > 1 else None
+            if last_record and parser != self.root_parser__ \
+                and any(h.node.content == self.text__ for h in self.history__[:-1]
+                        if h.status == HistoryRecord.MATCH):
+                for h in self.history__[:-1]:
+                    if h.status == HistoryRecord.MATCH:
+                        if any(is_lookahead(tn) and location >= len(self.document__)
+                                    for tn, location in h.call_stack):
+                            return True
+            else:
+                return False
 
         # assert isinstance(document, str), type(document)
         parser = self[start_parser] if isinstance(start_parser, str) else start_parser
@@ -3762,12 +3766,12 @@ class Series(MandatoryNary):
         return ret_node, location_
 
     def __repr__(self):
-        if (len(self.parsers) >= 2
-            and (isinstance(self.parsers[-1], Whitespace)
-                 or isinstance(self.parsers[0], Whitespace))
-            and (isinstance(self.parsers[0], Text)
-                 or isinstance(self.parsers[1], Text))):
-            return f'"{cast(Text, self.parsers[0]).text}"'
+        L = len(self.parsers)
+        if L == 2 or L == 3 and isinstance(self.parsers[2], Whitespace):
+            if isinstance(self.parsers[1], Whitespace) and isinstance(self.parsers[0], Text):
+                return f'"{cast(Text, self.parsers[0]).text}"'
+            if isinstance(self.parsers[0], Whitespace) and isinstance(self.parsers[1], Text):
+                return f'"{cast(Text, self.parsers[1]).text}"'
         return " ".join([parser.repr for parser in self.parsers[:self.mandatory]]
                         + (['§'] if self.mandatory != NO_MANDATORY else [])
                         + [parser.repr for parser in self.parsers[self.mandatory:]])

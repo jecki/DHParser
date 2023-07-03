@@ -694,15 +694,16 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 traverse(cst, {'*': remove_children({TEST_ARTIFACT})})
                 transform(cst)
             if not (is_error(cst.error_flag) and not lookahead_artifact(cst)):
-                if cst.name != ZOMBIE_TAG:  # # not cst.pick(ZOMBIE_TAG, include_root=True):
-                    # add syntax tree, if it is useful
-                    try:
-                        stage = cst.stage
-                    except AttributeError:
-                        stage = 'cst'
-                    treestr = f'\n{indent(stage.upper() + ": " + cst.serialize(stage))}'
-                else:
-                    treestr = "\n    (AST not shown, because it is just a testing stub!)"
+                # if cst.name != ZOMBIE_TAG:  # # not cst.pick(ZOMBIE_TAG, include_root=True):
+                #     # add syntax tree, if it is useful
+                #     try:
+                #         stage = cst.stage
+                #     except AttributeError:
+                #         stage = 'cst'
+                #     treestr = f'\n{indent(stage.upper() + ": " + cst.serialize(stage))}'
+                # else:
+                #     treestr = "\n    (AST not shown, because it is just a testing stub!)"
+                treestr = ''
                 errata.append(f'Fail test "{test_name}" for parser "{parser_name}" '
                               f'yields match instead of expected failure!' + treestr)
                 tests.setdefault('__err__', {})[test_name] = errata[-1]

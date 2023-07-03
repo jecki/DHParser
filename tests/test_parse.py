@@ -38,7 +38,8 @@ from DHParser.error import Error, is_error, add_source_locations, MANDATORY_CONT
 from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, \
     Interleave, CombinedParser, Text, EMPTY_NODE, Capture, Drop, Whitespace, \
-    GrammarError, Counted, Always, INFINITE, longest_match, extract_error_code, Option, DTKN
+    GrammarError, Counted, Always, INFINITE, longest_match, extract_error_code, \
+    Option, DTKN, RegExp
 from DHParser import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
     parse_ebnf, DHPARSER_IMPORTS, compile_ebnf
@@ -1900,6 +1901,35 @@ class TestAlternativeParserDefinitions:
         json_parser = JSON_Grammar()
         st1 = json_parser(self.json_text)
         assert st1.equals(self.goal)
+
+
+class TestConvenientSerialization:
+    def test_convenient_serialization(self):
+        s = Series(Whitespace(' *'), Text('A'))
+        try:
+            assert str(s) == '"A"'
+        except AttributeError as e:
+            assert False, f"AttributeError while serializing parser: {e}"
+        s = Series(Whitespace(' *'), Text('A'), Whitespace(' *'))
+        try:
+            assert str(s) == '"A"'
+        except AttributeError as e:
+            assert False, f"AttributeError while serializing parser: {e}"
+        s = Series(Text('A'), Whitespace(' *'))
+        try:
+            assert str(s) == '"A"'
+        except AttributeError as e:
+            assert False, f"AttributeError while serializing parser: {e}"
+        s = Series(RegExp('A'), Whitespace(' *'))
+        try:
+            assert str(s) != '"A"'
+        except AttributeError as e:
+            assert False, f"AttributeError while serializing parser: {e}"
+        s = Series(Whitespace(' *'), Text('A'), Whitespace(' *'), Whitespace(' *'))
+        try:
+            assert str(s) != '"A"'
+        except AttributeError as e:
+            assert False, f"AttributeError while serializing parser: {e}"
 
 
 if __name__ == "__main__":
