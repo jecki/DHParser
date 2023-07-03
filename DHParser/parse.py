@@ -1840,13 +1840,19 @@ class Grammar:
                     return False
 
             last_record = self.history__[-2] if len(self.history__) > 1 else None
-            if last_record and parser != self.root_parser__ \
-                and any(h.node.content == self.text__ for h in self.history__[:-1]
-                        if h.status == HistoryRecord.MATCH):
-                for h in self.history__[:-1]:
+            if last_record and parser != self.root_parser__:
+                for i, h in enumerate(self.history__[:-1]):
+                    if h.status == HistoryRecord.MATCH \
+                            and h.node.strlen() == self.document_length__:
+                        # the last clause is faster than, but does the same as:
+                        # h.node.content == self.text__
+                        break
+                else:
+                    return False
+                for h in self.history__[i:-1]:
                     if h.status == HistoryRecord.MATCH:
                         if any(is_lookahead(tn) and location >= len(self.document__)
-                                    for tn, location in h.call_stack):
+                               for tn, location in h.call_stack):
                             return True
             else:
                 return False
