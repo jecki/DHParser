@@ -45,10 +45,10 @@ except ImportError:
     import DHParser.externallibs.shadow_cython as cython
 
 from DHParser.error import Error, RESUME_NOTICE, RECURSION_DEPTH_LIMIT_HIT
-from DHParser.nodetree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE
+from DHParser.nodetree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE, ZOMBIE_TAG
 from DHParser.log import HistoryRecord, NONE_NODE
 from DHParser.parse import Grammar, Parser, ParserError, ParseFunc, ContextSensitive, \
-    PARSER_PLACEHOLDER
+    ERR, PARSER_PLACEHOLDER
 from DHParser.toolkit import line_col
 
 __all__ = ('trace_history', 'set_tracer', 'resume_notices_on', 'resume_notices_off')
@@ -210,7 +210,8 @@ def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], c
                 grammar.call_stack__[-1] = (f"{self.pname}", location)
             else:
                 grammar.call_stack__[-1] = (f"{self} ", location)
-        record = HistoryRecord(grammar.call_stack__, hnd, doc[location_:], lc, [])
+        errors = grammar.tree__.error_nodes.get(id(node), [])
+        record = HistoryRecord(grammar.call_stack__, hnd, doc[location_:], lc, errors)
         cs_len = len(record.call_stack)
         if (not grammar.history__ or not node
                 or lc != grammar.history__[-1].line_col
@@ -224,6 +225,12 @@ def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], c
                                 for tag, _ in grammar.history__[-1].call_stack):
                 grammar.history__.pop()
             grammar.history__.append(record)
+    # elif node and node.name == ZOMBIE_TAG:
+    #     if id(node) in grammar.tree__.error_nodes:
+    #         lc = line_col(grammar.document_lbreaks__, location)
+    #         record = HistoryRecord(grammar.call_stack__, node, doc[location_:], lc,
+    #                                self.tree__.error_nodes[id(node)])
+    #         grammar.history__.append(record)
 
 
     grammar.moving_forward__ = False
