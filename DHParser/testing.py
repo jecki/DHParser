@@ -285,6 +285,11 @@ def unit_from_file(filename, additional_stages=UNIT_STAGES):
     return test_unit
 
 
+def indent(txt):
+    lines = txt.split('\n')
+    lines[0] = '    ' + lines[0]
+    return "\n    ".join(lines)
+
 def get_report(test_unit) -> str:
     """
     Returns a text-report of the results of a grammar unit test. The report
@@ -299,11 +304,6 @@ def get_report(test_unit) -> str:
     with the asterix marker when needed than to output the CST for all tests
     which would unnecessarily bloat the test reports.
     """
-    def indent(txt):
-        lines = txt.split('\n')
-        lines[0] = '    ' + lines[0]
-        return "\n    ".join(lines)
-
     report = []
     save = get_config_value('xml_attribute_error_handling')
     set_config_value('xml_attribute_error_handling', 'fix')
@@ -694,8 +694,17 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 traverse(cst, {'*': remove_children({TEST_ARTIFACT})})
                 transform(cst)
             if not (is_error(cst.error_flag) and not lookahead_artifact(cst)):
-                errata.append('Fail test "%s" for parser "%s" yields match instead of '
-                              'expected failure!\n' % (test_name, parser_name))
+                if cst.name != ZOMBIE_TAG:  # # not cst.pick(ZOMBIE_TAG, include_root=True):
+                    # add syntax tree, if it is useful
+                    try:
+                        stage = cst.stage
+                    except AttributeError:
+                        stage = 'cst'
+                    treestr = f'\n{indent(stage.upper() + ": " + cst.serialize(stage))}'
+                else:
+                    treestr = "\n    (AST not shown, because it is just a testing stub!)"
+                errata.append(f'Fail test "{test_name}" for parser "{parser_name}" '
+                              f'yields match instead of expected failure!' + treestr)
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
                 # write parsing-history log only in case of test-failure
                 if is_logging() and track_history:
