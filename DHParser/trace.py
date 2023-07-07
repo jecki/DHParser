@@ -37,7 +37,7 @@ This functionality can be used for several purposes:
 
 from __future__ import annotations
 
-from typing import Tuple, Optional, List, Iterable, Union
+from typing import Tuple, Optional, List, Iterable, Union, cast
 
 try:
     import cython
@@ -48,7 +48,7 @@ from DHParser.error import Error, RESUME_NOTICE, RECURSION_DEPTH_LIMIT_HIT
 from DHParser.nodetree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE, ZOMBIE_TAG
 from DHParser.log import HistoryRecord, NONE_NODE
 from DHParser.parse import Grammar, Parser, ParserError, ParseFunc, ContextSensitive, \
-    ERR, PARSER_PLACEHOLDER
+    UnaryParser, ERR, PARSER_PLACEHOLDER
 from DHParser.toolkit import line_col
 
 __all__ = ('trace_history', 'set_tracer', 'resume_notices_on', 'resume_notices_off')
@@ -80,7 +80,7 @@ def set_tracer(parsers: Union[Grammar, Parser, Iterable[Parser]], tracer: Option
     elif isinstance(parsers, Parser):
         parsers = [parsers]
     if parsers:
-        pivot = next(parsers.__iter__())
+        pivot = next(iter(parsers))
         assert all(pivot._grammar == parser._grammar for parser in parsers)
         if tracer is not None:
             pivot._grammar.history_tracking__ = True
@@ -104,16 +104,60 @@ def symbol_name(parser: Parser, grammar: Grammar) -> str:
     return name
 
 
+def result_changed(node, history) -> bool:
+    current_result = node is None
+    if history:
+        last_result = history[-1].node is NONE_NODE
+    else:
+        return False
+    return last_result != current_result
+
+
+def call_item(parser: Parser, location: int, prefix: str = '') -> Tuple[str, int]:
+    if parser.node_name in (REGEXP_PTYPE, TOKEN_PTYPE, ":Retrieve", ":Pop"):
+        return f"{' ' or prefix}{parser.repr}", location  # ' ' added to avoid ':' as first char!
+    else:
+        return f"{prefix}{parser.pname or parser.node_name}", location
+
+
+def history_record(parser: Parser, grammar: Grammar,
+                   node: Node,
+                   location: int,
+                   location_: int,
+                   prefix: str = '') -> HistoryRecord:
+    doc = grammar.document__
+    hnd = Node(node.name, doc[location:location_]).with_pos(location) if node else None
+    lc = line_col(grammar.document_lbreaks__, location)
+    errors = grammar.tree__.error_nodes.get(id(node), [])
+    if parser.node_name[0:1] == ':':
+        if parser.pname:
+            grammar.call_stack__[-1] = (f"{prefix}{parser.pname}", location)
+        else:
+            grammar.call_stack__[-1] = (f"{prefix}{parser} ", location)
+    return HistoryRecord(grammar.call_stack__, hnd, doc[location_:], lc, errors)
+
+
 @cython.locals(location_=cython.int, delta=cython.int, cs_len=cython.int,
                i=cython.int, L=cython.int)
 def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], cython.int]:
     grammar = self._grammar  # type: Grammar
     if not grammar.history_tracking__:
+        if location < 0:  return self.visited[-location]
         try:
             node, location = self._parse(location)  # <===== call to the actual parser!
         except ParserError as pe:
             raise pe
         return node, location
+
+    if location < 0:
+        location = -location
+        grammar.call_stack__.append(call_item(self, location, "RECALL: "))
+        node, location_ = self.visited[location]
+        record = history_record(self, grammar, node, location, location_, "RECALL: ")
+        grammar.history__.append(record)
+        grammar.call_stack__.pop()
+        return node, location_
+
 
     mre: Optional[ParserError] = grammar.most_recent_error__
     if mre is not None and location >= mre.error.pos:
@@ -157,18 +201,19 @@ def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], c
             getattr(mre, 'callstack_snapshot', grammar.call_stack__), mre.node, text_,
             line_col(grammar.document_lbreaks__, mre.error.pos), errors))
 
-    grammar.call_stack__.append(
-        (((' ' + self.repr) if self.node_name in (REGEXP_PTYPE, TOKEN_PTYPE, ":Retrieve", ":Pop")
-          else (self.pname or self.node_name)), location))  # ' ' added to avoid ':' as first char!
+    grammar.call_stack__.append(call_item(self, location))
     stack_counter = 1
     if self.node_name in (":Lookbehind", ":NegativeLookbehind"):
-        grammar.call_stack__.append((' ' + self.parser.repr, location))
+        grammar.call_stack__.append((' ' + cast(UnaryParser, self).parser.repr, location))
         stack_counter += 1
     grammar.moving_forward__ = True
 
-    doc = self._grammar.document__
     try:
+
+#####################################################################################
         node, location_ = self._parse(location)   # <===== call to the actual parser!
+#####################################################################################
+
     except ParserError as pe:
         if pe.first_throw:
             pe.callstack_snapshot = grammar.call_stack__.copy()
@@ -179,42 +224,25 @@ def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], c
             # TODO: get the call stack from when the error occurred, here
             nd = fe.node
             grammar.history__.append(
-                HistoryRecord(grammar.call_stack__, nd, doc[fe.location + nd.strlen():],
+                HistoryRecord(grammar.call_stack__, nd,
+                              grammar.document__[fe.location + nd.strlen():],
                               lc, [fe.error]))
         while stack_counter > 0:
             grammar.call_stack__.pop()
             stack_counter -= 1
         raise pe
 
-    def result_changed(node, history) -> bool:
-        current_result = node is None
-        if history:
-            last_result = history[-1].node is NONE_NODE
-        else:
-            return False
-        return last_result != current_result
-
-    # Mind that memoized parser calls will not appear in the history record!
     # Don't track returning parsers except in case an error has occurred!
     if ((self.node_name != WHITESPACE_PTYPE)
         and (grammar.moving_forward__
              or (not self.disposable
                  and (node and grammar.history__[-1].node))
              or result_changed(node, grammar.history__))):
-        # record history
         # TODO: Make dropping insignificant whitespace from history configurable
-        hnd = Node(node.name, doc[location:location_]).with_pos(location) if node else None
-        lc = line_col(grammar.document_lbreaks__, location)
-        if self.node_name[0:1] == ':':
-            if self.pname:
-                grammar.call_stack__[-1] = (f"{self.pname}", location)
-            else:
-                grammar.call_stack__[-1] = (f"{self} ", location)
-        errors = grammar.tree__.error_nodes.get(id(node), [])
-        record = HistoryRecord(grammar.call_stack__, hnd, doc[location_:], lc, errors)
+        record = history_record(self, grammar, node, location, location_)
         cs_len = len(record.call_stack)
         if (not grammar.history__ or not node
-                or lc != grammar.history__[-1].line_col
+                or record.line_col != grammar.history__[-1].line_col
                 or record.call_stack != grammar.history__[-1].call_stack[:cs_len]
                 or self == grammar.start_parser__):
             if len(record.call_stack) >= 2 and \
