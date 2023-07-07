@@ -706,7 +706,7 @@ class Parser:
             # if location has already been visited by the current parser, return saved result
             visited = self.visited  # using local variable for better performance
             if location in visited:
-                # no history recording in case of memoized results!
+                # no history recording in case of memoized results :-(
                 return visited[location]
 
             save_suspend_memoization = grammar.suspend_memoization__
@@ -1022,8 +1022,20 @@ class BlackHoleDict(dict):
         return
 
 
+BLACKHOLE_SINGLETON = BlackHoleDict()
+
+
 class NoMemoizationParser(LeafParser):
     """Base class for parsers that should not memoize"""
+
+    def __init__(self) -> None:
+        super().__init__()
+        global BLACKHOLE_SINGLETON
+        self.visited: MemoizationDict = BLACKHOLE_SINGLETON
+
+    def reset(self):
+        # no need to initialize self.visited, it's always the BLACKHOLE_SINLGETON
+        pass
 
     @cython.locals(next_location=cython.int, gap=cython.int, i=cython.int, save_suspend_memoization=cython.bint)
     def __call__(self: Parser, location: cython.int) -> ParsingResult:
@@ -1055,9 +1067,8 @@ class NoMemoizationParser(LeafParser):
 
         return node, next_location
 
-
     def gen_memoization_dict(self) -> dict:
-        return BlackHoleDict()
+        return self.visited  # BlackHoleDict()
 
 
 def copy_parser_base_attrs(src: Parser, duplicate: Parser):
