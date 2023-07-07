@@ -706,8 +706,10 @@ class Parser:
             # if location has already been visited by the current parser, return saved result
             visited = self.visited  # using local variable for better performance
             if location in visited:
-                # no history recording in case of memoized results :-(
-                return visited[location]
+                if grammar.history_tracking__ and self._parse_proxy != self._parse:
+                    return self._parse_proxy(-location)
+                else:
+                    return visited[location]
 
             save_suspend_memoization = grammar.suspend_memoization__
             grammar.suspend_memoization__ = False
