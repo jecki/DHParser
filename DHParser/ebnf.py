@@ -1564,7 +1564,8 @@ class EBNFCompiler(Compiler):
         """
         assert self._dirty_flag
         table_entries = set(expand_table(transtable).keys()) - {'*', '<', '>', '~'}
-        symbols = set(self.rules.keys())
+        symbols = set(self.rules.keys()) | set(self.macros.keys())
+        symbols.add('ZOMBIE__')
         messages = []
         for entry in table_entries:
             if entry not in symbols and not entry[:1] == ":":

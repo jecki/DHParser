@@ -492,7 +492,7 @@ def compile_source(source: str,
         else:
             syntax_tree = transformer(syntax_tree)
         assert isinstance(syntax_tree, RootNode)
-        syntax_tree.stage = 'ast'
+        # syntax_tree.stage = 'ast'
 
         if 'ast' in log_syntax_trees:
             log_ST(syntax_tree, log_file_name + '.ast')
