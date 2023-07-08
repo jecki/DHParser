@@ -238,6 +238,7 @@ def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], c
              or (not self.disposable
                  and (node and grammar.history__[-1].node))
              or result_changed(node, grammar.history__))):
+        # record history
         # TODO: Make dropping insignificant whitespace from history configurable
         record = history_record(self, grammar, node, location, location_)
         cs_len = len(record.call_stack)
