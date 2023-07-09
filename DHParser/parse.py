@@ -707,7 +707,7 @@ class Parser:
             visited = self.visited  # using local variable for better performance
             if location in visited:
                 if grammar.history_tracking__ and self._parse_proxy != self._parse:
-                    return self._parse_proxy(-location)
+                    return self._parse_proxy(-location)  # a negative location signals a memo-hit
                 else:
                     return visited[location]
 
@@ -4180,7 +4180,7 @@ class Lookahead(FlowParser):
     but does not consume any text.
     """
     def _parse(self, location: cython.int) -> ParsingResult:
-        node, _ = self.parser(location)
+        node, _ = self.parser(location)  # TODO: errors that occur during lookahead should be ignored
         if self.match(node is not None):
             return (EMPTY_NODE if self.disposable else Node(self.node_name, '', True)), location
         else:

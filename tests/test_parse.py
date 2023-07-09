@@ -385,6 +385,48 @@ class TestFlowControl:
         assert cst.error_flag, cst.as_sxpr()
 
 
+class TestStructurePreservationOnLookahead:
+    def test_structure_preservation_on_lookahead(self):
+        bib_grammar = r'''@literalws = right
+        @whitespace = horizontal
+        biliography = author ":" work { /\s*/ author ":" work } EOF 
+        author = name § { ~ name}+ &`:`
+        work = word § { ~ word} &(/\n/ | EOF)
+        name = word
+        word = /\w+/
+        EOF = !/./
+        '''
+        document = "Bertrand Russel: Principia Mathematica"
+        gr = create_parser(bib_grammar)
+        bib = gr(document)
+        assert bib['author'].content == "Bertrand Russel"
+        assert bib['work'].content == "Principia Mathematica"
+        author = gr('Bertrand Russell', 'author')
+        assert author.name == "author" and author.content == "Bertrand Russell"
+        assert author.errors[0].code == MANDATORY_CONTINUATION_AT_EOF_NON_ROOT
+
+
+class TestIgnoreErrorsDuringLookahead:
+    def test_lookahead_error(self):
+        ebnf = '''@reduction = merge
+        doc = !ab `A` `C`  
+        ab = `A` `B` 
+        '''
+        parser = create_parser(ebnf)
+        cst = parser('AC')
+        assert not cst.errors
+        assert cst.as_sxpr() == '(doc "AC")'
+
+        ebnf = '''@reduction = merge
+        doc = !ab `A` `C`  
+        ab = `A` § `B` 
+        '''
+        parser = create_parser(ebnf)
+        cst = parser('AC')
+        # assert not cst.errors
+        # assert cst.as_sxpr() == '(doc "AC")'
+
+
 class TestRegex:
     def test_multilineRegex(self):
         mlregex = r"""
@@ -1730,27 +1772,6 @@ class TestErrorLocations:
         json_string = create_parser(grammar, 'json_string')
         tree = json_string('"al\\pha"')
         assert len(tree.errors) == 1
-
-
-class TestStructurePreservationOnLookahead:
-    def test_structure_preservation_on_lookahead(self):
-        bib_grammar = r'''@literalws = right
-        @whitespace = horizontal
-        biliography = author ":" work { /\s*/ author ":" work } EOF 
-        author = name § { ~ name}+ &`:`
-        work = word § { ~ word} &(/\n/ | EOF)
-        name = word
-        word = /\w+/
-        EOF = !/./
-        '''
-        document = "Bertrand Russel: Principia Mathematica"
-        gr = create_parser(bib_grammar)
-        bib = gr(document)
-        assert bib['author'].content == "Bertrand Russel"
-        assert bib['work'].content == "Principia Mathematica"
-        author = gr('Bertrand Russell', 'author')
-        assert author.name == "author" and author.content == "Bertrand Russell"
-        assert author.errors[0].code == MANDATORY_CONTINUATION_AT_EOF_NON_ROOT
 
 
 class TestAlternativeParserDefinitions:

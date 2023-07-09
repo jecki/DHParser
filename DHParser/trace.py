@@ -149,7 +149,7 @@ def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], c
             raise pe
         return node, location
 
-    if location < 0:
+    if location < 0:  # a negative location signals a memo-hit
         location = -location
         grammar.call_stack__.append(call_item(self, location, "RECALL: "))
         node, location_ = self.visited[location]
