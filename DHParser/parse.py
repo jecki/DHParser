@@ -2846,68 +2846,6 @@ class CombinedParser(Parser):
             return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
         return Node(self.node_name, '', True)
 
-    # @cython.locals(N=cython.int)
-    # def _return_values_merge_leaves(self, results: Sequence[Node]) -> Node:
-    #     """
-    #     Generates a return node from a tuple of returned nodes from
-    #     descendant parsers. Anonymous empty nodes will be removed from
-    #     the tuple. Anonymous child nodes will be flattened. Plus, any
-    #     anonymous leaf-nodes adjacent to each other will be merged and,
-    #     in cases where only one anonymous node is left, be reduced to
-    #     its parent.
-    #     """
-    #     # assert isinstance(results, (list, tuple))
-    #     if self.drop_content:
-    #         return EMPTY_NODE
-    #     N = len(results)
-    #     if N > 1:
-    #         nr = []  # type: List[Node]
-    #         # flatten the parse tree
-    #         for child in results:
-    #             if child.name[0] == ':':  # child.anonymous:
-    #                 grandchildren = child._children
-    #                 if grandchildren:
-    #                     nr.extend(grandchildren)
-    #                 elif child._result:
-    #                     nr.append(child)
-    #             else:
-    #                 nr.append(child)
-    #         if nr:
-    #             merged = []
-    #             tail_is_anonymous_leaf = False
-    #             # need_copy = False
-    #             for nd in nr:
-    #                 head_is_anonymous_leaf = not nd._children and nd.name[0] == ':'  # nd.anonymous
-    #                 if tail_is_anonymous_leaf and head_is_anonymous_leaf:
-    #                     if need_copy:
-    #                         # because merged[-1] could be memoized somewhere,
-    #                         # it must be copied, before it is changed
-    #                         old = merged[-1]
-    #                         new = Node(old.name, old._result + nd._result)
-    #                         new._pos = old._pos
-    #                         merged[-1] = new
-    #                         need_copy = False
-    #                     else:
-    #                         merged[-1].result += nd._result
-    #                 else:
-    #                     merged.append(nd)
-    #                     need_copy = True
-    #                 tail_is_anonymous_leaf = head_is_anonymous_leaf
-    #             if len(merged) > 1:
-    #                 return Node(self.node_name, tuple(merged))
-    #             if tail_is_anonymous_leaf:
-    #                 result = merged[0].result
-    #                 if result or not self.disposable:
-    #                     return Node(self.node_name, merged[0].result)
-    #                 return EMPTY_NODE
-    #             return Node(self.node_name, merged[0])
-    #         return EMPTY_NODE if self.disposable else Node(self.node_name, '', True)
-    #     elif N == 1:
-    #         return self._return_value(results[0])
-    #     if self.disposable:
-    #         return EMPTY_NODE  # avoid creation of a node object for anonymous empty nodes
-    #     return Node(self.node_name, '', True)
-
     @cython.locals(N=cython.int, head_is_anonymous_leaf=cython.bint, tail_is_anonymous_leaf=cython.bint)
     def _return_values_merge_leaves(self, results: Sequence[Node]) -> Node:
         """
@@ -2968,13 +2906,15 @@ class CombinedParser(Parser):
                         merged.append(new)
                     else:
                         merged.append(tail)
+                    if len(merged) > 1:
+                        return Node(self.node_name, tuple(merged))
+                    else:
+                        result = merged[0].result
+                        if result or not self.disposable:
+                            return Node(self.node_name, result)
+                        return EMPTY_NODE
                 if len(merged) > 1:
                     return Node(self.node_name, tuple(merged))
-                if tail_is_anonymous_leaf:
-                    result = merged[0].result
-                    if result or not self.disposable:
-                        return Node(self.node_name, result)
-                    return EMPTY_NODE
                 return Node(self.node_name, merged[0])
             return EMPTY_NODE if self.disposable else Node(self.node_name, '', True)
         elif N == 1:
