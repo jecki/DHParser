@@ -154,8 +154,6 @@ class TestDHParserCommandLineTool:
         system(self.python + '../DHParser/scripts/dhparser.py '
                + os.path.join(name, 'Arithmetic.ebnf') + self.nulldevice)
         assert os.path.exists(os.path.join(name, 'ArithmeticParser.py'))
-        system(self.python + os.path.join(name, 'ArithmeticParser.py')
-               + ' "2 + 3 * 4" ' + self.nulldevice)
         save = os.getcwd()
         os.chdir(name.lstrip())
         os.mkdir('in')
@@ -195,6 +193,22 @@ class TestDHParserCommandLineTool:
         else:
             raise AssertionError('No "..._MESSAGES.txt - file found!')
         time.sleep(0.1)  # MS Windows needs a little break here...
+
+    def test_rerun_after_recompiling(self):
+        name = self.dirname
+        with open(os.path.join(name, 'Arithmetic.ebnf'), 'w', encoding='utf-8') as f:
+            f.write(TEST_GRAMMAR)
+        output = subprocess.check_output(self.python + '../DHParser/scripts/dhparser.py '
+               + os.path.join(name, 'Arithmetic.ebnf'))
+        assert output.find(b' successfully compiled ') >= 0
+        assert os.path.exists(os.path.join(name, 'ArithmeticParser.py'))
+        with open(os.path.join(name, 'Arithmetic.ebnf'), 'w', encoding='utf-8') as f:
+           f.write(TEST_GRAMMAR.replace('# Arithmetic-grammar', '# Arithmetic-Grammar'))
+        output = subprocess.check_output(
+            self.python + ' ' + os.path.join(name, 'ArithmeticParser.py') + ' ' + ' "3 + 4 * 3" ')
+        assert output.find(b'recompiling ') >= 0
+        assert output.find(b'(expression (term (factor (NUMBER "3"))) (PLUS "+") '
+                           b'(term (factor (NUMBER "4")) (MUL "*") (factor (NUMBER "3"))))') >= 0
 
 
 if __name__ == "__main__":

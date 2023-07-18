@@ -89,9 +89,16 @@ def main(called_from_app=False) -> bool:
                 print(f.read())
             sys.exit(1)
         elif parser_update:
-            print(os.path.basename(__file__) + ' has changed. '
-                  'Please run again in order to apply updated compiler')
-            sys.exit(0)
+            if '--dontrerun' in sys.argv:
+                print(os.path.basename(__file__) + ' has changed. '
+                      'Please run again in order to apply updated compiler')
+                sys.exit(0)
+            else:
+                import platform, subprocess
+                call = ['python', __file__, '--dontrerun'] + sys.argv[1:]
+                result = subprocess.run(call, capture_output=True)
+                print(result.stdout.decode('utf-8'))
+                sys.exit(result.returncode)
     else:
         print('Could not check whether grammar requires recompiling, '
               'because grammar was not found at: ' + grammar_path)
@@ -109,6 +116,8 @@ def main(called_from_app=False) -> bool:
                         help='Write output file even if errors have occurred')
     parser.add_argument('--singlethread', action='store_const', const='singlethread',
                         help='Run batch jobs in a single thread (recommended only for debugging)')
+    parser.add_argument('--dontrerun', action='store_const', const='dontrerun',
+                        help='Do not automatically run again if the grammar has been recompiled.')
     outformat = parser.add_mutually_exclusive_group()
     outformat.add_argument('-x', '--xml', action='store_const', const='xml', 
                            help='Format result as XML')

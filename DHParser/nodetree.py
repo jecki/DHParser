@@ -4257,35 +4257,34 @@ class RootNode(Node):
         self.add_error(node, error)
         return self
 
-    def pop_last_error(self) -> Error:
-        """
-        Removes and returns the last error that has been added from the tree.
-        :return: the last error that had been added and which has now been removed
-        """
-        assert self.errors
-        error = self.errors.pop()
-        self._error_set.remove(error)
-        for nid, el in self.error_nodes.items():
-            if el and el[-1] == error:
-                el.pop()
-                break
-        if not el:
-            del self.error_nodes[nid]
-            for epos, ids in self.error_positions:
-                if nid in ids:
-                    ids.remove(nid)
-                    break
-            if not ids:
-                del self.self.error_positions[epos]
-        if error.code == self.error_flag:
-            emax = 0
-            for e in self.errors:
-                if e.code == error.code:  break
-                if e.code > emax:  emax = e.code
-            else:
-                self.error_flag = emax
-        return error
-
+    # def pop_last_error(self) -> Error:
+    #     """
+    #     Removes and returns the last error that has been added from the tree.
+    #     :return: the last error that had been added and which has now been removed
+    #     """
+    #     assert self.errors
+    #     error = self.errors.pop()
+    #     self._error_set.remove(error)
+    #     for nid, el in self.error_nodes.items():
+    #         if el and el[-1] == error:
+    #             el.pop()
+    #             break
+    #     if not el:
+    #         del self.error_nodes[nid]
+    #         for epos, ids in self.error_positions:
+    #             if nid in ids:
+    #                 ids.remove(nid)
+    #                 break
+    #         if not ids:
+    #             del self.self.error_positions[epos]
+    #     if error.code == self.error_flag:
+    #         emax = 0
+    #         for e in self.errors:
+    #             if e.code == error.code:  break
+    #             if e.code > emax:  emax = e.code
+    #         else:
+    #             self.error_flag = emax
+    #     return error
 
     def node_errors(self, node: Node) -> List[Error]:
         """
