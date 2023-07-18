@@ -199,13 +199,14 @@ class TestDHParserCommandLineTool:
         with open(os.path.join(name, 'Arithmetic.ebnf'), 'w', encoding='utf-8') as f:
             f.write(TEST_GRAMMAR)
         output = subprocess.check_output(self.python + '../DHParser/scripts/dhparser.py '
-               + os.path.join(name, 'Arithmetic.ebnf'))
+               + os.path.join(name, 'Arithmetic.ebnf'), shell=True)
         assert output.find(b' successfully compiled ') >= 0
         assert os.path.exists(os.path.join(name, 'ArithmeticParser.py'))
         with open(os.path.join(name, 'Arithmetic.ebnf'), 'w', encoding='utf-8') as f:
            f.write(TEST_GRAMMAR.replace('# Arithmetic-grammar', '# Arithmetic-Grammar'))
         output = subprocess.check_output(
-            self.python + ' ' + os.path.join(name, 'ArithmeticParser.py') + ' ' + ' "3 + 4 * 3" ')
+            self.python + ' ' + os.path.join(name, 'ArithmeticParser.py') + ' ' + ' "3 + 4 * 3" ',
+            shell=True)
         assert output.find(b'recompiling ') >= 0
         assert output.find(b'(expression (term (factor (NUMBER "3"))) (PLUS "+") '
                            b'(term (factor (NUMBER "4")) (MUL "*") (factor (NUMBER "3"))))') >= 0
