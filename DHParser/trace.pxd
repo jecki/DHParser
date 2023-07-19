@@ -5,4 +5,4 @@
 
 import cython
 
-cpdef trace_history(self, int location)
+# cpdef trace_history(self, int location)

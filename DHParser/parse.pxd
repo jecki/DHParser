@@ -17,8 +17,8 @@ cdef class Parser:
     cdef public object sub_parsers
     cdef public object _parse_proxy
     cdef public object _grammar
-    cdef object visited
-    cdef str _symbol
+    cdef public object visited
+    cdef public str _symbol
     cdef public object _descendants_cache
     cdef public object _anon_desc_cache
     cdef public object _desc_trails_cache
