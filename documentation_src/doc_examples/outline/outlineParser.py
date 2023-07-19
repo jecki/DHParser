@@ -106,7 +106,8 @@ preprocessing: PseudoJunction = create_preprocess_transition(
 class outlineGrammar(Grammar):
     r"""Parser for an outline source file.
     """
-    source_hash__ = "fa294336faa566eaa3900d073d6c3517"
+    markup = Forward()
+    source_hash__ = "736a8c83be629b64ff1132de5ffafc61"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
     disposable__ = re.compile('WS$|EOF$|LINE$|LFF$')
     static_analysis_pending__ = []  # type: List[bool]
@@ -120,16 +121,24 @@ class outlineGrammar(Grammar):
     EOF = Drop(NegativeLookahead(RegExp('.')))
     LFF = RegExp('(?:[ \\t]*\\n)+')
     WS = Drop(Synonym(LFF))
+    PARSEP = Series(dwsp__, RegExp('\\n'), dwsp__, RegExp('\\n'))
+    LF = Series(dwsp__, RegExp('\\n(?![ \\t]*\\n)'))
+    L = RegExp('[ \\t]+')
+    TEXT = Series(RegExp('[^\\s*_]+'), ZeroOrMore(Series(Alternative(LF, L), RegExp('[^\\s*_]+'))))
     LINE = RegExp('[^\\n]+')
+    inner_txt = Series(Option(L), markup, Option(L))
+    bold = Alternative(Series(Drop(Text("**")), inner_txt, Drop(Text("**"))), Series(Drop(Text("__")), inner_txt, Drop(Text("__"))))
+    emphasis = Alternative(Series(Drop(Text("*")), NegativeLookahead(Drop(Text("*"))), inner_txt, Drop(Text("*")), NegativeLookahead(Drop(Text("*")))), Series(Drop(Text("_")), NegativeLookahead(Drop(Text("_"))), inner_txt, Drop(Text("_")), NegativeLookahead(Drop(Text("_")))))
+    heading = Synonym(LINE)
     is_heading = RegExp('##?#?#?#?#?(?!#)')
     blocks = Series(NegativeLookahead(is_heading), LINE, ZeroOrMore(Series(LFF, NegativeLookahead(is_heading), LINE)))
-    heading = Synonym(LINE)
     s6section = Series(Drop(Text("######")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)))
     s5section = Series(Drop(Text("#####")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, s6section)))
     subsubsection = Series(Drop(Text("####")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, s5section)))
     subsection = Series(Drop(Text("###")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, subsubsection)))
     section = Series(Drop(Text("##")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, subsection)))
     main = Series(Option(WS), Drop(Text("#")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, section)))
+    markup.set(Alternative(TEXT, bold, Series(emphasis, ZeroOrMore(Series(L, Alternative(TEXT, bold, emphasis))))))
     document = Series(main, Option(WS), EOF, mandatory=2)
     root__ = document
     
@@ -172,10 +181,13 @@ outline_AST_transformation_table = {
 }
 
 
+def outlineTransformer() -> TransformerFunc:
+    return partial(transformer, transformation_table=outline_AST_transformation_table.copy(),
+                   src_stage='cst', dst_stage='ast')
 
-ASTTransformation: Junction = create_transition(
-    outline_AST_transformation_table.copy(), "cst", "ast", "transtable")
 
+ASTTransformation: Junction = Junction(
+    'cst', ThreadLocalSingletonFactory(outlineTransformer), 'ast')
 
 
 #######################################################################

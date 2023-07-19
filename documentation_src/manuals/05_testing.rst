@@ -406,7 +406,7 @@ contains a mistake!)::
     #  EBNF-Directives
     @ whitespace  = /[ \t]*/  # only horizontal whitespace, no linefeeds
     @ reduction   = merge     # simplify tree as much as possible
-    @ disposable  = WS, EOF, LINE
+    @ disposable  = WS, EOF, LINE, LFF
     @ drop        = WS, EOF, backticked, whitespace
 
     #:  Outline
@@ -423,10 +423,11 @@ contains a mistake!)::
 
     #:  Regular Expressions
     LINE = /[^\n]+/         # everything up to the next linefeed
-    WS   = /(?:[ \t]*\n)+/  # any ws at line-end and all following empty lines
+    LFF  = /(?:[ \t]*\n)+/  # any ws at line-end and all following empty lines
+    WS   = LFF              # same as LFF, but will be dropped
     EOF  =  !/./  # no more characters ahead, end of file reached
 
-When runing the grammar-tests, we notice that while the match-test
+When running the grammar-tests, we notice that while the match-test
 passes as expected, the fail-test fails, that is, it captures the badly
 structured outline, although it shouldn't. The output of the
 tst-grammar-script on the console looks like this::
@@ -524,9 +525,115 @@ more structure::
         This one is not.
         """
 
+If we run the test now, it will expectedly fail with an error message like
+"3:1: Error (1010): 'EOF' expected by parser 'document',
+but »Some intro...« found instead!". Before the test succeeds, we need to
+extend out grammar so as to capture the content inside of sections
+as well. In true top-down fashion, first, we provide for the new content
+elements which we will call "blacks" in the definiens of the section-elements::
+
+    main  = [WS] `#` !`#` ~ heading [WS blocks] { WS section }
+    section  = `##` !`#` ~ heading [WS blocks] { WS subsection }
+    subsection  = `###` !`#` ~ heading [WS blocks] { WS subsubsection }
+    subsubsection  = `####` !`#` ~ heading [WS blocks] { WS s5section }
+    s5section  = `#####` !`#` ~ heading [WS blocks] { WS s6section }
+    s6section  = `######` !`#` ~ heading [WS blocks]
+
+Then, we define the the "blocks"-element::
+
+    blocks  = !is_heading LINE { LFF !is_heading LINE }
+    is_heading = /##?#?#?#?#?(?!#)/
+
+.. NOTE:: Note that in the definition of "blocks" we use "LFF" instead of "WS" although
+    they are synonyms for the same whitespace-parser, because other than in
+    the definition of the section-structure the whitespace (including empty lines)
+    does not serve as a delimiter but is part of the content, for example in a
+    block consisting of multiple paragraphs.
+
+This time, the grammar passes the recently added test. However, the new
+element "blocks" is sill a *placeholder* that does not capture the individual
+paragraphs, let alone other elements like lists or enumerations, as can easily
+be seen by looking at the generated abstract-syntax-tree (AST) in the
+test-report::
+
+    (document
+      (main
+        (heading "Main Heading")
+        (blocks "Some introductory Text")
+        (section
+          (heading "Section 1")
+          (blocks
+            "One paragraph of text "
+            ""
+            "Another paragraph of text. This"
+            "time stretching over several lines."))
+        (section
+          (heading "Section 2")
+          (subsection
+            (heading "Section 2.1"))
+          (subsection
+            (heading "Section 2.2")
+            (blocks
+              "The previous section is (still) empty."
+              "This one is not.")))))
+
+This use of "placeholder"-parsers which sweepingly capture larger
+chunks of text without dissecting their detailed structur is typical
+for the top-down approach. We could continue by replacing (or amending)
+the "blocks"-parser stepwise with more detailed parsers that
+capture individual paragraphs, highlighted passages etc., possibly
+making use of AST-tests (see below) in the process.
+
+However, we will now turn the tables and start with the detail-
+or "fine"-structure of our outlined text in order to see how the
+bottom-up-approach works.
+
+Bottom-Up-Grammar-Development
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For the bottom-up-approach one must first consider what are the
+smallest elements that need to be semantically captured. Surely,
+it would be exagerated to capture individual letters. One might
+think of words and lines, but then individual words do not really
+matter in Markdown-texts and lines have the disadvantage that
+highlighted elements might stretch over several lines.
+
+A possible choice are pieces of text
+consisting of letters, punctuation and whitespace the may but
+do not need to stretch over more than one single line, that is,
+they may also contain line-feeds, but they should not encompass
+empty lines. So, basically text is no-whitespace elements
+interspersed by whitespace and single-linefeeds. Let's
+first write a few tests and then cast this into a formal definition,
+which in my humble opion is even clearer than the verbal expression.
+Here are the tests::
+
+    [match:TEXT]
+    M1: "A bit of text."
+    M2: """A bit of text
+        over two lines!"""
+
+    [fail:TEXT]
+    F1: "  No leading whitespace"
+    F2: """Empty lines
+
+         separate paragraphs!"""
+
+
+And here is the definition of a piece of text (which, as is typical
+for the most atomic parsers, consist mostly of regular expressions
+enclosed by slashes)::
+
+    TEXT      = /[^\s]+/ { (LF | L) /[^\s]+/ }
+    L         = /[ \t]+/           # significant whitespace
+    LF        = ~/\n(?![ \t]*\n)/  # a single linefeed
+
+TO BE CONTINUED...
+
+
 
 - Test Driven Grammar-Development
-- Particularly useful for the restructuring of human written
+- Particularly useful for the re-structuring of human written
   semi-formal noations with formal grammars!
 
 

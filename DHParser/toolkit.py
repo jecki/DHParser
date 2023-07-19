@@ -373,7 +373,7 @@ def deprecated(message: str) -> Callable:
     def decorator(f: Callable) -> Callable:
         @functools.wraps(f)
         def wrapper(*args, **kwargs):
-            deprecation_warning(message)
+            deprecation_warning(message or str(f))
             return f(*args, **kwargs)
         return wrapper
     return decorator

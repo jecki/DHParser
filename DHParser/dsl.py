@@ -844,23 +844,21 @@ def _make_transformer(src_stage, dst_stage, table) -> TransformerFunc:
     return partial(transformer, transformation_table=table.copy(),
                    src_stage=src_stage, dst_stage=dst_stage)
 
-@deprecated("")
+@deprecated("DHParser.dsl.create_transtable_transition() is deprecated, "
+            "because it does not work with lambdas as transformer functions!")
 def create_transtable_transition(table: TransformationDict,
                                  src_stage: str,
                                  dst_stage: str) -> Junction:
     """Creates a thread-safe transformation function and function-factory from
     a transformation-table :py:func:`transform.traverse`.
 
-    TODO: This does not work if table contains functions that cannot be
-    pickled like lambda-functions!
+    TODO: This does not work if table contains functions that cannot be pickled (i.e. lambda-functions)!
     """
     assert isinstance(table, dict)
     assert src_stage and src_stage.islower()
     assert dst_stage and dst_stage.islower()
     make_transformer = partial(_make_transformer, src_stage, dst_stage, table)
     factory = ThreadLocalSingletonFactory(make_transformer, uniqueID=id(table))
-    # process = partial(process_template, src_stage=src_stage, dst_stage=dst_stage,
-    #                   factory_function=factory)
     return Junction(src_stage, factory, dst_stage)
 
 
@@ -899,9 +897,9 @@ def create_evaluation_transition(actions: Dict[str, Callable],
 def create_transition(tool: Union[dict, type],
                       src_stage: str,
                       dst_stage: str,
-                      hint: str='?') -> Junction:
+                      hint: str = '?') -> Junction:
     """Generic stage-creation function for tree-transforming stages where a tree-transforming
-    stage is a stage which either rehapes a node-tree or transforms a nodetree into
+    stage is a stage which either reshapes a node-tree or transforms a nodetree into
     something else, but not a stage where something else (e.g. a text) is turned into
     a node-tree."""
     if isinstance(tool, type):
