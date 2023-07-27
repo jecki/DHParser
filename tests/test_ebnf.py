@@ -1494,10 +1494,20 @@ class TestSyntaxExtensions:
         assert parser.python_src__.find('ident-cond') < 0
 
     def test_yet_another_variant(self):
+        set_config_value('syntax_variant', 'heuristic')
         lang = """STRING
         : [a-z]+
         ;"""
+        parser = create_parser(lang)
+
+    def test_placeholder(self):
         set_config_value('syntax_variant', 'heuristic')
+        lang = """ @reduction = merge
+        @disposable = $phrase
+        @drop = $phrase
+        doc = ~ $phrase(`,`) { `,`~ $phrase(`,`) }
+        $phrase($separator) = /[^.,;]*/ { !$separator /[.,;]/ /[^,.;]/ }
+        """
         parser = create_parser(lang)
 
 

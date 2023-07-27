@@ -239,8 +239,8 @@ class HeuristicEBNFGrammar(Grammar):
             # or python-style: # ... \n, excluding, however, character markers: #x20
         @ whitespace = /\s*/                            # whitespace includes linefeed
         @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
-        @ disposable = component, pure_elem, countable, FOLLOW_UP, SYM_REGEX, ANY_SUFFIX, EOF
-        @ drop       = whitespace, EOF                  # do not include these even in the concrete syntax tree
+        @ disposable = is_mdef, component, pure_elem, countable, no_range, FOLLOW_UP, ANY_SUFFIX, EOF
+        @ drop       = whitespace, EOF, no_range        # do not include these even in the concrete syntax tree
         @ RNG_BRACE_filter = matching_bracket()         # filter or transform content of RNG_BRACE on retrieve
 
         # re-entry-rules for resuming after parsing-error
@@ -259,11 +259,12 @@ class HeuristicEBNFGrammar(Grammar):
         #: top-level
 
         syntax     = ~ { definition | directive | macrodef } EOF
-        definition = symbol §:DEF~ [ :OR~ ] expression :ENDL~ & FOLLOW_UP  # [:OR~] to support v. Rossum's syntax
+        definition = symbol §:DEF~ [ :OR~ ] expression [hide] :ENDL~ & FOLLOW_UP  # [:OR~] to support v. Rossum's syntax
 
         directive  = "@" §symbol "=" component { "," component } & FOLLOW_UP
           # component  = (regexp | literals | procedure | symbol !DEF)
           component  = regexp | literals | procedure | symbol !_DEF
+                     | &`$` !is_mdef § placeholder !DEF
                      | "(" expression ")"  | RAISE_EXPR_WO_BRACKETS expression
           literals   = { literal }+                       # string chaining, only allowed in directives!
           procedure  = SYM_REGEX "()"                     # procedure name, only allowed in directives!
@@ -283,8 +284,14 @@ class HeuristicEBNFGrammar(Grammar):
                      { !`@` !(symbol :DEF) :AND~ ["§"] ( interleave | lookaround ) }
         interleave = difference { "°" ["§"] difference }
         lookaround = flowmarker § (oneormore | pure_elem)
-        difference = term ["-" § (oneormore | pure_elem)]
-        term       = oneormore | counted | repetition | option | pure_elem
+        difference = term [!`->` "-" § (oneormore | pure_elem)]
+        term       = (oneormore | counted | repetition | option | pure_elem) [skip]
+
+
+        #: tree-reduction-markers
+
+        skip       = "->" ("SKIP" | "Skip" | "skip" | "DROP" | "Drop" | "drop")
+        hide       = "->" ("HIDE" | "Hide" | "hide" | "DISPOSE" | "Dispose" | "dispose")
 
 
         #: elements
@@ -338,6 +345,7 @@ class HeuristicEBNFGrammar(Grammar):
                    | /'(?:(?<!\\)\\'|[^'])*?'/~         # whitespace following literals will be ignored tacitly.
         plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat whitespace
                    | /´(?:(?<!\\)\\´|[^´])*?´/~
+                   | /’(?:(?<!\\)\\’|[^’])*?’/~
         regexp     = :RE_LEADIN RE_CORE :RE_LEADOUT ~   # e.g. /\w+/, ~/#.*(?:\n|$)/~
         # regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
         char_range = `[` &char_range_heuristics
@@ -381,7 +389,8 @@ class HeuristicEBNFGrammar(Grammar):
 
         char_range_heuristics  = ! ( /[\n]/ | more_than_one_blank
                                    | ~ literal_heuristics
-                                   | ~ [`::`|`:?`|`:`] SYM_REGEX /\s*\]/ )
+                                   | ~ [`::`|`:?`|`:`] STRICT_SYM_REGEX /\s*\]/ )
+          STRICT_SYM_REGEX     = /(?!\d)\w+/
         more_than_one_blank    = /[^ \]]*[ ][^ \]]*[ ]/
         literal_heuristics     = /~?\s*"(?:[\\]\]|[^\]]|[^\\]\[[^"]*)*"/
                                | /~?\s*'(?:[\\]\]|[^\]]|[^\\]\[[^']*)*'/
@@ -400,7 +409,7 @@ class HeuristicEBNFGrammar(Grammar):
         #: basic-regexes
 
         RE_CORE    = /(?:(?<!\\)\\(?:\/)|[^\/])*/       # core of a regular expression, i.e. the dots in /.../
-        SYM_REGEX  = /(?!\d)\w+/                        # regular expression for symbols
+        SYM_REGEX  = /(?!\d)\w(?:-?\w)*/                # regular expression for symbols
         HEXCODE    = /[A-Fa-f0-9]{1,8}/
 
 
@@ -411,9 +420,8 @@ class HeuristicEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "a6bd5026c686bfeabba924473393fa58"
-    disposable__ = re.compile(
-        'component$|pure_elem$|countable$|FOLLOW_UP$|ANY_SUFFIX$|EOF$')
+    source_hash__ = "28b46a093773dfe1bb680f650e013d64"
+    disposable__ = re.compile('is_mdef$|component$|pure_elem$|countable$|no_range$|FOLLOW_UP$|ANY_SUFFIX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','),
@@ -426,7 +434,7 @@ class HeuristicEBNFGrammar(Grammar):
     dwsp__ = Drop(Whitespace(WSP_RE__))
     RAISE_EXPR_WO_BRACKETS = Text("")
     HEXCODE = RegExp('[A-Fa-f0-9]{1,8}')
-    SYM_REGEX = RegExp(r'(?!\d)\w(?:-?\w)*')
+    SYM_REGEX = RegExp('(?!\\d)\\w(?:-?\\w)*')
     RE_CORE = RegExp('(?:(?<!\\\\)\\\\(?:/)|[^/])*')
     regex_heuristics = Series(NegativeLookahead(
         Alternative(RegExp(' +`[^`]*` +/'), RegExp(' +´[^´]*´ +/'), RegExp(" +'[^']*' +/"), RegExp(' +"[^"]*" +/'),
@@ -456,7 +464,7 @@ class HeuristicEBNFGrammar(Grammar):
     OR = Capture(Alternative(Text("|"), Series(Text("/"), NegativeLookahead(regex_heuristics))),
                  zero_length_warning=True)
     _DEF = Alternative(Text("="), Text(":="), Text("::="), Text("<-"), RegExp(':\\n'), Text(": "))
-    DEF = Capture(Synonym(_DEF), zero_length_warning=False)
+    DEF = Capture(Synonym(_DEF), zero_length_warning=True)
     EOF = Drop(
         Series(Drop(NegativeLookahead(RegExp('.'))), Drop(Option(Drop(Pop(ENDL, match_func=optional_last_value)))),
                Drop(Option(Drop(Pop(DEF, match_func=optional_last_value)))),
@@ -489,7 +497,8 @@ class HeuristicEBNFGrammar(Grammar):
     argument = Alternative(literal, Series(name, dwsp__))
     parser = Series(Series(Text("@"), dwsp__), name, Series(Text("("), dwsp__), Option(argument),
                     Series(Text(")"), dwsp__))
-    no_range = Alternative(NegativeLookahead(multiplier), Series(Lookahead(multiplier), Retrieve(TIMES)))
+    no_range = Drop(Alternative(Drop(NegativeLookahead(multiplier)),
+                                Drop(Series(Drop(Lookahead(multiplier)), Drop(Retrieve(TIMES))))))
     macro = Series(Series(Text("$"), dwsp__), name, Series(Text("("), dwsp__), no_range, expression,
                    ZeroOrMore(Series(Series(Text(","), dwsp__), no_range, expression)), Series(Text(")"), dwsp__))
     range = Series(RNG_BRACE, dwsp__, multiplier, Option(Series(Retrieve(RNG_DELIM), dwsp__, multiplier)),
@@ -512,8 +521,17 @@ class HeuristicEBNFGrammar(Grammar):
     literals = OneOrMore(literal)
     pure_elem = Series(element, NegativeLookahead(ANY_SUFFIX), mandatory=1)
     procedure = Series(SYM_REGEX, Series(Text("()"), dwsp__))
-    term = Alternative(oneormore, counted, repetition, option, pure_elem)
-    difference = Series(term, Option(Series(Series(Text("-"), dwsp__), Alternative(oneormore, pure_elem), mandatory=1)))
+    hide = Series(Series(Text("->"), dwsp__),
+                  Alternative(Series(Text("HIDE"), dwsp__), Series(Text("Hide"), dwsp__), Series(Text("hide"), dwsp__),
+                              Series(Text("DISPOSE"), dwsp__), Series(Text("Dispose"), dwsp__),
+                              Series(Text("dispose"), dwsp__)))
+    skip = Series(Series(Text("->"), dwsp__),
+                  Alternative(Series(Text("SKIP"), dwsp__), Series(Text("Skip"), dwsp__), Series(Text("skip"), dwsp__),
+                              Series(Text("DROP"), dwsp__), Series(Text("Drop"), dwsp__), Series(Text("drop"), dwsp__)))
+    term = Series(Alternative(oneormore, counted, repetition, option, pure_elem), Option(skip))
+    difference = Series(term, Option(
+        Series(NegativeLookahead(Text("->")), Series(Text("-"), dwsp__), Alternative(oneormore, pure_elem),
+               mandatory=2)))
     lookaround = Series(flowmarker, Alternative(oneormore, pure_elem), mandatory=1)
     interleave = Series(difference,
                         ZeroOrMore(Series(Series(Text("°"), dwsp__), Option(Series(Text("§"), dwsp__)), difference)))
@@ -521,8 +539,8 @@ class HeuristicEBNFGrammar(Grammar):
         Series(NegativeLookahead(Text("@")), NegativeLookahead(Series(symbol, Retrieve(DEF))), Retrieve(AND), dwsp__,
                Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround))))
     FOLLOW_UP = Alternative(Text("@"), Text("$"), symbol, EOF)
-    definition = Series(symbol, Retrieve(DEF), dwsp__, Option(Series(Retrieve(OR), dwsp__)), expression, Retrieve(ENDL),
-                        dwsp__, Lookahead(FOLLOW_UP), mandatory=1)
+    definition = Series(symbol, Retrieve(DEF), dwsp__, Option(Series(Retrieve(OR), dwsp__)), expression, Option(hide),
+                        Retrieve(ENDL), dwsp__, Lookahead(FOLLOW_UP), mandatory=1)
     is_mdef = Series(Lookahead(Series(Text("$"), dwsp__)), name, Option(
         Series(Series(Text("("), dwsp__), placeholder, ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)),
                Series(Text(")"), dwsp__))), dwsp__, Retrieve(DEF))
@@ -532,6 +550,8 @@ class HeuristicEBNFGrammar(Grammar):
                Series(Text(")"), dwsp__), mandatory=1)), Retrieve(DEF), dwsp__, Option(Series(OR, dwsp__)), macrobody,
                       Retrieve(ENDL), dwsp__, Lookahead(FOLLOW_UP))
     component = Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(_DEF)),
+                            Series(Lookahead(Text("$")), NegativeLookahead(is_mdef), placeholder,
+                                   NegativeLookahead(DEF), mandatory=2),
                             Series(Series(Text("("), dwsp__), expression, Series(Text(")"), dwsp__)),
                             Series(RAISE_EXPR_WO_BRACKETS, expression))
     directive = Series(Series(Text("@"), dwsp__), symbol, Series(Text("="), dwsp__), component,
@@ -633,7 +653,7 @@ class ConfigurableEBNFGrammar(Grammar):
             # or python-style: # ... \n, excluding, however, character markers: #x20
         @ whitespace = /\s*/                            # whitespace includes linefeed
         @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
-        @ disposable = is_mdef, component, pure_elem, countable, no_range, FOLLOW_UP, SYM_REGEX, ANY_SUFFIX, EOF
+        @ disposable = is_mdef, component, pure_elem, countable, no_range, FOLLOW_UP, ANY_SUFFIX, EOF
         @ drop       = whitespace, EOF, no_range        # do not include these even in the concrete syntax tree
 
 
@@ -652,7 +672,7 @@ class ConfigurableEBNFGrammar(Grammar):
         #: top-level
 
         syntax     = ~ { definition | directive | macrodef } EOF
-        definition = symbol §DEF~ [ OR~ ] expression ENDL~ &FOLLOW_UP  # [OR~] to support v. Rossum's syntax
+        definition = symbol §DEF~ [ OR~ ] expression [hide] ENDL~ &FOLLOW_UP  # [OR~] to support v. Rossum's syntax
 
         directive  = "@" §symbol "=" component { "," component } &FOLLOW_UP
           component  = regexp | literals | procedure | symbol !DEF
@@ -676,8 +696,14 @@ class ConfigurableEBNFGrammar(Grammar):
                      { AND~ ["§"] ( interleave | lookaround ) }
         interleave = difference { "°" ["§"] difference }
         lookaround = flowmarker § (oneormore | pure_elem)
-        difference = term ["-" § (oneormore | pure_elem)]
-        term       = oneormore | counted | repetition | option | pure_elem
+        difference = term [!`->` "-" § (oneormore | pure_elem)]
+        term       = (oneormore | counted | repetition | option | pure_elem) [skip]
+
+
+        #: tree-reduction-markers
+
+        skip       = "->" ("SKIP" | "Skip" | "skip" | "DROP" | "Drop" | "drop")
+        hide       = "->" ("HIDE" | "Hide" | "hide" | "DISPOSE" | "Dispose" | "dispose")
 
 
         #: elements
@@ -694,9 +720,7 @@ class ConfigurableEBNFGrammar(Grammar):
                    | group
                    | macro !DEF
                    | placeholder !DEF
-                   | parser                             # a user defined parser
-
-
+                   | parser                            # a user defined parser
         ANY_SUFFIX = /[?*+]/
 
 
@@ -730,6 +754,7 @@ class ConfigurableEBNFGrammar(Grammar):
                    | /'(?:(?<!\\)\\'|[^'])*?'/~         # whitespace following literals will be ignored tacitly.
         plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat whitespace
                    | /´(?:(?<!\\)\\´|[^´])*?´/~
+                   | /’(?:(?<!\\)\\’|[^’])*?’/~
         regexp     = RE_LEADIN RE_CORE RE_LEADOUT ~   # e.g. /\w+/, ~/#.*(?:\n|$)/~
         character  = CH_LEADIN HEXCODE
         any_char   = "."
@@ -777,9 +802,8 @@ class ConfigurableEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "1e692df774672c88c722bd8b4e0bc838"
-    disposable__ = re.compile(
-        'is_mdef$|component$|pure_elem$|countable$|no_range$|FOLLOW_UP$|ANY_SUFFIX$|EOF$')
+    source_hash__ = "288900516812c52b06011eaf2fcff89d"
+    disposable__ = re.compile('is_mdef$|component$|pure_elem$|countable$|no_range$|FOLLOW_UP$|ANY_SUFFIX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','),
@@ -843,16 +867,25 @@ class ConfigurableEBNFGrammar(Grammar):
     literals = OneOrMore(literal)
     pure_elem = Series(element, NegativeLookahead(ANY_SUFFIX), mandatory=1)
     procedure = Series(SYM_REGEX, Series(Text("()"), dwsp__))
-    term = Alternative(oneormore, counted, repetition, option, pure_elem)
-    difference = Series(term, Option(Series(Series(Text("-"), dwsp__), Alternative(oneormore, pure_elem), mandatory=1)))
+    hide = Series(Series(Text("->"), dwsp__),
+                  Alternative(Series(Text("HIDE"), dwsp__), Series(Text("Hide"), dwsp__), Series(Text("hide"), dwsp__),
+                              Series(Text("DISPOSE"), dwsp__), Series(Text("Dispose"), dwsp__),
+                              Series(Text("dispose"), dwsp__)))
+    skip = Series(Series(Text("->"), dwsp__),
+                  Alternative(Series(Text("SKIP"), dwsp__), Series(Text("Skip"), dwsp__), Series(Text("skip"), dwsp__),
+                              Series(Text("DROP"), dwsp__), Series(Text("Drop"), dwsp__), Series(Text("drop"), dwsp__)))
+    term = Series(Alternative(oneormore, counted, repetition, option, pure_elem), Option(skip))
+    difference = Series(term, Option(
+        Series(NegativeLookahead(Text("->")), Series(Text("-"), dwsp__), Alternative(oneormore, pure_elem),
+               mandatory=2)))
     lookaround = Series(flowmarker, Alternative(oneormore, pure_elem), mandatory=1)
     interleave = Series(difference,
                         ZeroOrMore(Series(Series(Text("°"), dwsp__), Option(Series(Text("§"), dwsp__)), difference)))
     sequence = Series(Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(
         Series(AND, dwsp__, Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround))))
     FOLLOW_UP = Alternative(Text("@"), Text("$"), symbol, EOF)
-    definition = Series(symbol, DEF, dwsp__, Option(Series(OR, dwsp__)), expression, ENDL, dwsp__, Lookahead(FOLLOW_UP),
-                        mandatory=1)
+    definition = Series(symbol, DEF, dwsp__, Option(Series(OR, dwsp__)), expression, Option(hide), ENDL, dwsp__,
+                        Lookahead(FOLLOW_UP), mandatory=1)
     is_mdef = Series(Lookahead(Series(Text("$"), dwsp__)), name, Option(
         Series(Series(Text("("), dwsp__), placeholder, ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)),
                Series(Text(")"), dwsp__))), dwsp__, DEF)
@@ -962,12 +995,9 @@ def parse_ebnf(ebnf: str) -> Node:
 
 
 def pythonize_identifier(path: Path):
+    """A mekshift solution to allow identifiers with dashes: replace - by _"""
     assert not path[-1].children
     path[-1]._result = re.sub('(?<=\w)-(?=\w)', '_', path[-1]._result)
-
-
-def show(path):
-    print(path[-1].as_sxpr())
 
 
 EBNF_AST_transformation_table = {
@@ -2125,6 +2155,7 @@ class EBNFCompiler(Compiler):
             try:
                 grammar_class = compile_python_object(
                     probe_src, (self.grammar_name or "DSL") + "Grammar")
+                # print(probe_src)
                 errors = grammar_class().static_analysis_errors__
                 python_src = python_src.replace(
                     'static_analysis_pending__ = [True]',
@@ -2190,6 +2221,8 @@ class EBNFCompiler(Compiler):
             self.current_symbols = [node]
             self.rules[rule] = self.current_symbols
             self.drop_flag = rule in self.directives['drop'] and rule not in DROP_VALUES
+            if node.children[-1].name == 'hide':
+                self.add_to_disposable_regexp(rule + '$')
             defn = self.compile(node.children[1])
             if isinstance(defn, str):
                 if defn.find("(") < 0:
@@ -2640,6 +2673,18 @@ class EBNFCompiler(Compiler):
             node.result = tuple(children)
 
         return self.non_terminal(node, 'Alternative')
+
+
+    def on_term(self, node):
+        assert len(node.children) == 2
+        assert node[1].name == 'skip'
+        save = self.drop_flag
+        self.drop_flag = True
+        term_code = self.compile(node[0])
+        self.drop_flag = save
+        if self.current_symbols:
+            self.add_to_disposable_regexp(self.current_symbols[-1][0].content + '$')
+        return f'{self.P["Drop"]}({term_code})'
 
 
     def _error_customization(self, node) -> Tuple[Tuple[Node, ...], List[str]]:

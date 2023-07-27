@@ -33,7 +33,7 @@
 #: top-level
 
 syntax     = ~ { definition | directive | macrodef } EOF
-definition = symbol §DEF~ [ OR~ ] expression ENDL~ &FOLLOW_UP  # [OR~] to support v. Rossum's syntax
+definition = symbol §DEF~ [ OR~ ] expression [hide] ENDL~ &FOLLOW_UP  # [OR~] to support v. Rossum's syntax
 
 directive  = "@" §symbol "=" component { "," component } &FOLLOW_UP
   component  = regexp | literals | procedure | symbol !DEF
@@ -57,8 +57,14 @@ sequence   = ["§"] ( interleave | lookaround )  # "§" means all following term
              { AND~ ["§"] ( interleave | lookaround ) }
 interleave = difference { "°" ["§"] difference }
 lookaround = flowmarker § (oneormore | pure_elem)
-difference = term ["-" § (oneormore | pure_elem)]
-term       = oneormore | counted | repetition | option | pure_elem
+difference = term [!`->` "-" § (oneormore | pure_elem)]
+term       = (oneormore | counted | repetition | option | pure_elem) [skip]
+
+
+#: tree-reduction-markers
+
+skip       = "->" ("SKIP" | "Skip" | "skip" | "DROP" | "Drop" | "drop")
+hide       = "->" ("HIDE" | "Hide" | "hide" | "DISPOSE" | "Dispose" | "dispose")
 
 
 #: elements
@@ -75,9 +81,7 @@ element    = [retrieveop] symbol !DEF           # negative lookahead to be sure 
            | group
            | macro !DEF
            | placeholder !DEF
-           | parser                             # a user defined parser
-
-
+           | parser                            # a user defined parser
 ANY_SUFFIX = /[?*+]/
 
 

@@ -32,8 +32,9 @@ from DHParser.configuration import set_config_value, get_config_value, access_th
 from DHParser import dsl
 from DHParser.dsl import recompile_grammar, create_parser_transition, create_preprocess_transition, \
     create_transition, PseudoJunction, never_cancel
-from DHParser.ebnf import grammar_changed
-from DHParser.error import ErrorCode, Error, canonical_error_strings, has_errors, ERROR, FATAL
+from DHParser.ebnf import grammar_changed, EBNF_AST_transformation_table
+from DHParser.error import ErrorCode, Error, canonical_error_strings, has_errors, ERROR, FATAL, \
+    PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS
 from DHParser.log import start_logging, suspend_logging, resume_logging
 from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode
 from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar, Parser, \
@@ -57,7 +58,7 @@ from DHParser.transform import is_empty, remove_if, TransformationDict, Transfor
     replace_content_with, forbid, assert_content, remove_infix_operator, add_error, error_on, \
     left_associative, lean_left, node_maker, has_descendant, neg, has_ancestor, insert, \
     positions_of, replace_child_names, add_attributes, delimit_children, merge_connected, \
-    has_attr, has_parent, traverse
+    has_attr, has_parent, traverse, BLOCK_LEAVES
 from DHParser import parse as parse_namespace__
 
 
@@ -105,8 +106,8 @@ class FlexibleEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "94a7bac545dfd4640d267e0d53fad057"
-    disposable__ = re.compile('component$|pure_elem$|countable$|FOLLOW_UP$|ANY_SUFFIX$|EOF$')
+    source_hash__ = "28b46a093773dfe1bb680f650e013d64"
+    disposable__ = re.compile('is_mdef$|component$|pure_elem$|countable$|no_range$|FOLLOW_UP$|ANY_SUFFIX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
@@ -136,7 +137,7 @@ class FlexibleEBNFGrammar(Grammar):
     AND = Capture(Alternative(Text(","), Text("")), zero_length_warning=False)
     OR = Capture(Alternative(Text("|"), Series(Text("/"), NegativeLookahead(regex_heuristics))), zero_length_warning=True)
     _DEF = Alternative(Text("="), Text(":="), Text("::="), Text("<-"), RegExp(':\\n'), Text(": "))
-    DEF = Capture(Synonym(_DEF), zero_length_warning=False)
+    DEF = Capture(Synonym(_DEF), zero_length_warning=True)
     EOF = Drop(Series(Drop(NegativeLookahead(RegExp('.'))), Drop(Option(Drop(Pop(ENDL, match_func=optional_last_value)))), Drop(Option(Drop(Pop(DEF, match_func=optional_last_value)))), Drop(Option(Drop(Pop(OR, match_func=optional_last_value)))), Drop(Option(Drop(Pop(AND, match_func=optional_last_value)))), Drop(Option(Drop(Pop(RNG_DELIM, match_func=optional_last_value)))), Drop(Option(Drop(Pop(BRACE_SIGN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(CH_LEADIN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(TIMES, match_func=optional_last_value)))), Drop(Option(Drop(Pop(RE_LEADIN, match_func=optional_last_value)))), Drop(Option(Drop(Pop(RE_LEADOUT, match_func=optional_last_value))))))
     name = Synonym(SYM_REGEX)
     placeholder = Series(Series(Text("$"), dwsp__), name, NegativeLookahead(Text("(")), dwsp__)
@@ -152,7 +153,7 @@ class FlexibleEBNFGrammar(Grammar):
     symbol = Series(SYM_REGEX, dwsp__)
     argument = Alternative(literal, Series(name, dwsp__))
     parser = Series(Series(Text("@"), dwsp__), name, Series(Text("("), dwsp__), Option(argument), Series(Text(")"), dwsp__))
-    no_range = Alternative(NegativeLookahead(multiplier), Series(Lookahead(multiplier), Retrieve(TIMES)))
+    no_range = Drop(Alternative(Drop(NegativeLookahead(multiplier)), Drop(Series(Drop(Lookahead(multiplier)), Drop(Retrieve(TIMES))))))
     macro = Series(Series(Text("$"), dwsp__), name, Series(Text("("), dwsp__), no_range, expression, ZeroOrMore(Series(Series(Text(","), dwsp__), no_range, expression)), Series(Text(")"), dwsp__))
     range = Series(RNG_BRACE, dwsp__, multiplier, Option(Series(Retrieve(RNG_DELIM), dwsp__, multiplier)), Pop(RNG_BRACE, match_func=matching_bracket), dwsp__)
     counted = Alternative(Series(countable, range), Series(countable, Retrieve(TIMES), dwsp__, multiplier), Series(multiplier, Retrieve(TIMES), dwsp__, countable, mandatory=3))
@@ -166,17 +167,19 @@ class FlexibleEBNFGrammar(Grammar):
     literals = OneOrMore(literal)
     pure_elem = Series(element, NegativeLookahead(ANY_SUFFIX), mandatory=1)
     procedure = Series(SYM_REGEX, Series(Text("()"), dwsp__))
-    term = Alternative(oneormore, counted, repetition, option, pure_elem)
-    difference = Series(term, Option(Series(Series(Text("-"), dwsp__), Alternative(oneormore, pure_elem), mandatory=1)))
+    hide = Series(Series(Text("->"), dwsp__), Alternative(Series(Text("HIDE"), dwsp__), Series(Text("Hide"), dwsp__), Series(Text("hide"), dwsp__), Series(Text("DISPOSE"), dwsp__), Series(Text("Dispose"), dwsp__), Series(Text("dispose"), dwsp__)))
+    skip = Series(Series(Text("->"), dwsp__), Alternative(Series(Text("SKIP"), dwsp__), Series(Text("Skip"), dwsp__), Series(Text("skip"), dwsp__), Series(Text("DROP"), dwsp__), Series(Text("Drop"), dwsp__), Series(Text("drop"), dwsp__)))
+    term = Series(Alternative(oneormore, counted, repetition, option, pure_elem), Option(skip))
+    difference = Series(term, Option(Series(NegativeLookahead(Text("->")), Series(Text("-"), dwsp__), Alternative(oneormore, pure_elem), mandatory=2)))
     lookaround = Series(flowmarker, Alternative(oneormore, pure_elem), mandatory=1)
     interleave = Series(difference, ZeroOrMore(Series(Series(Text("°"), dwsp__), Option(Series(Text("§"), dwsp__)), difference)))
     sequence = Series(Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(Series(NegativeLookahead(Text("@")), NegativeLookahead(Series(symbol, Retrieve(DEF))), Retrieve(AND), dwsp__, Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround))))
     FOLLOW_UP = Alternative(Text("@"), Text("$"), symbol, EOF)
-    definition = Series(symbol, Retrieve(DEF), dwsp__, Option(Series(Retrieve(OR), dwsp__)), expression, Retrieve(ENDL), dwsp__, Lookahead(FOLLOW_UP), mandatory=1)
+    definition = Series(symbol, Retrieve(DEF), dwsp__, Option(Series(Retrieve(OR), dwsp__)), expression, Option(hide), Retrieve(ENDL), dwsp__, Lookahead(FOLLOW_UP), mandatory=1)
     is_mdef = Series(Lookahead(Series(Text("$"), dwsp__)), name, Option(Series(Series(Text("("), dwsp__), placeholder, ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)), Series(Text(")"), dwsp__))), dwsp__, Retrieve(DEF))
     macrobody = Synonym(expression)
     macrodef = Series(Series(Text("$"), dwsp__), name, dwsp__, Option(Series(Series(Text("("), dwsp__), placeholder, ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)), Series(Text(")"), dwsp__), mandatory=1)), Retrieve(DEF), dwsp__, Option(Series(OR, dwsp__)), macrobody, Retrieve(ENDL), dwsp__, Lookahead(FOLLOW_UP))
-    component = Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(_DEF)), Series(Series(Text("("), dwsp__), expression, Series(Text(")"), dwsp__)), Series(RAISE_EXPR_WO_BRACKETS, expression))
+    component = Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(_DEF)), Series(Lookahead(Text("$")), NegativeLookahead(is_mdef), placeholder, NegativeLookahead(DEF), mandatory=2), Series(Series(Text("("), dwsp__), expression, Series(Text(")"), dwsp__)), Series(RAISE_EXPR_WO_BRACKETS, expression))
     directive = Series(Series(Text("@"), dwsp__), symbol, Series(Text("="), dwsp__), component, ZeroOrMore(Series(Series(Text(","), dwsp__), component)), Lookahead(FOLLOW_UP), mandatory=1)
     element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(Retrieve(DEF))), literal, plaintext, regexp, char_range, Series(character, dwsp__), any_char, whitespace, group, Series(macro, NegativeLookahead(Retrieve(DEF))), Series(placeholder, NegativeLookahead(Retrieve(DEF))), parser))
     countable.set(Alternative(option, oneormore, element))
@@ -198,68 +201,14 @@ get_grammar = parsing.factory # for backwards compatibility, only
 #
 #######################################################################
 
-EBNF_AST_transformation_table = {
-    # AST Transformations for the EBNF-grammar
-    "<":
-        [remove_children_if(all_of(not_one_of('regexp'), is_empty))],
-    "syntax":
-        [],
-    "directive":
-        [flatten, remove_tokens('@', '=', ',')],
-    "procedure":
-        [remove_tokens('()'), reduce_single_child],
-    "literals":
-        [replace_by_single_child],
-    "definition":
-        [flatten, remove_children('DEF', 'ENDL'),
-         remove_tokens('=')],  # remove_tokens('=') is only for backwards-compatibility
-    "expression":
-        [replace_by_single_child, flatten, remove_children('OR'),
-         remove_tokens('|')],  # remove_tokens('|') is only for backwards-compatibility
-    "sequence":
-        [replace_by_single_child, flatten, remove_children('AND')],
-    "interleave":
-        [replace_by_single_child, flatten, remove_tokens('°')],
-    "lookaround":
-        [],
-    "difference":
-        [remove_tokens('-'), replace_by_single_child],
-    "term, pure_elem, element":
-        [replace_by_single_child],
-    "flowmarker, retrieveop":
-        [reduce_single_child],
-    "group":
-        [remove_brackets],
-    "oneormore, repetition, option":
-        [reduce_single_child, remove_brackets,  # remove_tokens('?', '*', '+'),
-         forbid('repetition', 'option', 'oneormore'), assert_content(r'(?!§)(?:.|\n)*')],
-    "counted":
-        [remove_children('TIMES')],
-    "range":
-        [remove_children('BRACE_SIGN', 'RNG_BRACE', 'RNG_DELIM')],
-    "symbol, literal, any_char":
-        [reduce_single_child],
-    "plaintext":
-        [],
-    "regexp":
-        [remove_children('RE_LEADIN', 'RE_LEADOUT'), reduce_single_child],
-    "character":
-        [remove_children('CH_LEADIN'), reduce_single_child],
-    (TOKEN_PTYPE, WHITESPACE_PTYPE, "whitespace"):
-        [reduce_single_child],
-    "EOF, DEF, OR, AND, ENDL, RNG_DELIM, TIMES, "
-    "RE_LEADIN, RE_CORE, RE_LEADOUT, CH_LEADIN":
-        [],
-    "*":
-        [replace_by_single_child]
-}
-
-
+# EBNF_AST_transformation_table imported form DHParser.ebnf
 
 def CreateEBNFTransformer() -> TransformerFunc:
     """Creates a transformation function that does not share state with other
     threads or processes."""
-    return partial(traverse, transformation_table=EBNF_AST_transformation_table.copy())
+    return partial(transformer,
+                   transformation_table=EBNF_AST_transformation_table.copy(),
+                   src_stage='cst', dst_stage='ast')
 
 
 def get_transformer() -> TransformerFunc:
