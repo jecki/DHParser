@@ -2683,7 +2683,7 @@ class EBNFCompiler(Compiler):
         term_code = self.compile(node[0])
         self.drop_flag = save
         if self.current_symbols:
-            self.add_to_disposable_regexp(self.current_symbols[-1][0].content + '$')
+            self.add_to_disposable_regexp(self.current_symbols[0][0].content + '$')
         return f'{self.P["Drop"]}({term_code})'
 
 
