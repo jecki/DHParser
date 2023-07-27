@@ -1,7 +1,9 @@
 # Flexible EBNF
 
 A flexible EBNF grammar for DHParsers that allows to use 
-as different flavors of EBNF as possible.
+as many different flavors of EBNF as possible. Which
+delimiter characters are used (e.g. "::=" or "=" for 
+definitions)
 
 Author: Eckhart Arnold <eckhart.arnold@posteo.de>, 
         Bavarian Academy of Sciences and Humanities

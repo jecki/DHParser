@@ -37,7 +37,7 @@ def recompile_grammar(grammar_src, force):
             notify=lambda: print('recompiling ' + grammar_src)):
         print('\nErrors while recompiling "%s":' % grammar_src +
               '\n--------------------------------------\n\n')
-        with open('FixedEBNF_ebnf_ERRORS.txt', encoding='utf-8') as f:
+        with open('FixedEBNF_ebnf_MESSAGES.txt', encoding='utf-8') as f:
             print(f.read())
         sys.exit(1)
     dsl.restore_server_script(grammar_src)

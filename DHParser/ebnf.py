@@ -413,7 +413,7 @@ class HeuristicEBNFGrammar(Grammar):
     expression = Forward()
     source_hash__ = "a6bd5026c686bfeabba924473393fa58"
     disposable__ = re.compile(
-        '(?:component$|pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$)|(?:component$|pure_elem$|countable$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$)')
+        'component$|pure_elem$|countable$|FOLLOW_UP$|ANY_SUFFIX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','),
@@ -426,7 +426,7 @@ class HeuristicEBNFGrammar(Grammar):
     dwsp__ = Drop(Whitespace(WSP_RE__))
     RAISE_EXPR_WO_BRACKETS = Text("")
     HEXCODE = RegExp('[A-Fa-f0-9]{1,8}')
-    SYM_REGEX = RegExp('(?!\\d)\\w+')
+    SYM_REGEX = RegExp(r'(?!\d)\w(?:-?\w)*')
     RE_CORE = RegExp('(?:(?<!\\\\)\\\\(?:/)|[^/])*')
     regex_heuristics = Series(NegativeLookahead(
         Alternative(RegExp(' +`[^`]*` +/'), RegExp(' +´[^´]*´ +/'), RegExp(" +'[^']*' +/"), RegExp(' +"[^"]*" +/'),
@@ -438,9 +438,10 @@ class HeuristicEBNFGrammar(Grammar):
                                      RegExp('~?\\s*´(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^´]*)*´'),
                                      RegExp('~?\\s*/(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^/]*)*/'))
     more_than_one_blank = RegExp('[^ \\]]*[ ][^ \\]]*[ ]')
+    STRICT_SYM_REGEX = RegExp('(?!\\d)\\w+')
     char_range_heuristics = NegativeLookahead(
         Alternative(RegExp('[\\n]'), more_than_one_blank, Series(dwsp__, literal_heuristics),
-                    Series(dwsp__, Option(Alternative(Text("::"), Text(":?"), Text(":"))), SYM_REGEX,
+                    Series(dwsp__, Option(Alternative(Text("::"), Text(":?"), Text(":"))), STRICT_SYM_REGEX,
                            RegExp('\\s*\\]'))))
     CH_LEADIN = Capture(Alternative(Text("0x"), Text("#x")), zero_length_warning=False)
     RE_LEADOUT = Capture(Text("/"), zero_length_warning=False)
@@ -480,7 +481,8 @@ class HeuristicEBNFGrammar(Grammar):
                         Series(Text("]"), dwsp__))
     regexp = Series(Retrieve(RE_LEADIN), RE_CORE, Retrieve(RE_LEADOUT), dwsp__)
     plaintext = Alternative(Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), dwsp__),
-                            Series(RegExp('´(?:(?<!\\\\)\\\\´|[^´])*?´'), dwsp__))
+                            Series(RegExp('´(?:(?<!\\\\)\\\\´|[^´])*?´'), dwsp__),
+                            Series(RegExp('’(?:(?<!\\\\)\\\\’|[^’])*?’'), dwsp__))
     literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), dwsp__),
                           Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__))
     symbol = Series(SYM_REGEX, dwsp__)
@@ -777,7 +779,7 @@ class ConfigurableEBNFGrammar(Grammar):
     expression = Forward()
     source_hash__ = "1e692df774672c88c722bd8b4e0bc838"
     disposable__ = re.compile(
-        '(?:is_mdef$|component$|pure_elem$|countable$|no_range$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$)|(?:is_mdef$|component$|pure_elem$|countable$|no_range$|FOLLOW_UP$|SYM_REGEX$|ANY_SUFFIX$|EOF$)')
+        'is_mdef$|component$|pure_elem$|countable$|no_range$|FOLLOW_UP$|ANY_SUFFIX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','),
@@ -812,7 +814,8 @@ class ConfigurableEBNFGrammar(Grammar):
     character = Series(CH_LEADIN, HEXCODE)
     regexp = Series(RE_LEADIN, RE_CORE, RE_LEADOUT, dwsp__)
     plaintext = Alternative(Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), dwsp__),
-                            Series(RegExp('´(?:(?<!\\\\)\\\\´|[^´])*?´'), dwsp__))
+                            Series(RegExp('´(?:(?<!\\\\)\\\\´|[^´])*?´'), dwsp__),
+                            Series(RegExp('’(?:(?<!\\\\)\\\\’|[^’])*?’'), dwsp__))
     literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), dwsp__),
                           Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__))
     symbol = Series(SYM_REGEX, dwsp__)
@@ -958,6 +961,15 @@ def parse_ebnf(ebnf: str) -> Node:
 ########################################################################
 
 
+def pythonize_identifier(path: Path):
+    assert not path[-1].children
+    path[-1]._result = re.sub('(?<=\w)-(?=\w)', '_', path[-1]._result)
+
+
+def show(path):
+    print(path[-1].as_sxpr())
+
+
 EBNF_AST_transformation_table = {
     # AST Transformations for EBNF-grammar
     "<":
@@ -1020,6 +1032,7 @@ EBNF_AST_transformation_table = {
         [remove_tokens('@', '(', ')')],
     "name, argument":
         [reduce_single_child],
+    "SYM_REGEX": [pythonize_identifier],
     "RAISE_EXPR_WO_BRACKETS":
         [add_error("PEG Expressions in directives must be enclosed in barckets (...)",
                    PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS)],

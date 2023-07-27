@@ -1482,6 +1482,25 @@ class TestSyntaxExtensions:
         assert st.errors
         set_config_value('syntax_variant', 'strict')
 
+    def test_minus_identifiers(self):
+        set_config_value('syntax_variant', 'heuristic')
+        lang = """
+            identifier  <- ident-start ident-cont* spacing
+            ident-cont  <- ident-start / [0-9] 
+            ident-start <- [a-zA-Z_]
+            spacing     <- (’?’ / ´\t´ / ´\n´)*           
+        """
+        parser = create_parser(lang)
+        assert parser.python_src__.find('ident-cond') < 0
+
+    def test_yet_another_variant(self):
+        lang = """STRING
+        : [a-z]+
+        ;"""
+        set_config_value('syntax_variant', 'heuristic')
+        parser = create_parser(lang)
+
+
 
 class TestModeSetting:
     def setup(self):

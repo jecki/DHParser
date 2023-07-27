@@ -25,7 +25,7 @@
     # or python-style: # ... \n, excluding, however, character markers: #x20
 @ whitespace = /\s*/                            # whitespace includes linefeed
 @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
-@ disposable = component, pure_elem, countable, FOLLOW_UP, SYM_REGEX, ANY_SUFFIX, EOF
+@ disposable = component, pure_elem, countable, FOLLOW_UP, ANY_SUFFIX, EOF
 @ drop       = whitespace, EOF                  # do not include these even in the concrete syntax tree
 @ RNG_BRACE_filter = matching_bracket()         # filter or transform content of RNG_BRACE on retrieve
 
@@ -124,6 +124,7 @@ literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
            | /'(?:(?<!\\)\\'|[^'])*?'/~         # whitespace following literals will be ignored tacitly.
 plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat whitespace
            | /´(?:(?<!\\)\\´|[^´])*?´/~
+           | /’(?:(?<!\\)\\’|[^’])*?’/~
 regexp     = :RE_LEADIN RE_CORE :RE_LEADOUT ~   # e.g. /\w+/, ~/#.*(?:\n|$)/~
 # regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
 char_range = `[` &char_range_heuristics
@@ -167,7 +168,8 @@ CH_LEADIN  = `0x` | `#x`
 
 char_range_heuristics  = ! ( /[\n]/ | more_than_one_blank
                            | ~ literal_heuristics
-                           | ~ [`::`|`:?`|`:`] SYM_REGEX /\s*\]/ )
+                           | ~ [`::`|`:?`|`:`] STRICT_SYM_REGEX /\s*\]/ )
+  STRICT_SYM_REGEX     = /(?!\d)\w+/
 more_than_one_blank    = /[^ \]]*[ ][^ \]]*[ ]/
 literal_heuristics     = /~?\s*"(?:[\\]\]|[^\]]|[^\\]\[[^"]*)*"/
                        | /~?\s*'(?:[\\]\]|[^\]]|[^\\]\[[^']*)*'/
@@ -186,7 +188,7 @@ regex_heuristics       = ! ( / +`[^`]*` +\//
 #: basic-regexes
 
 RE_CORE    = /(?:(?<!\\)\\(?:\/)|[^\/])*/       # core of a regular expression, i.e. the dots in /.../
-SYM_REGEX  = /(?!\d)\w+/                        # regular expression for symbols
+SYM_REGEX  = /(?!\d)\w(?:-?\w)*/                # regular expression for symbols
 HEXCODE    = /[A-Fa-f0-9]{1,8}/
 
 

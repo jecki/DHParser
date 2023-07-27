@@ -1,8 +1,13 @@
 # FixedEBNF
 
-PLACE A SHORT DESCRIPTION HERE
+FixedEBNF (aka ConfigurableEBNF) ist a grammar for a configurable superset of EBNF 
+that reads classical  EBNF-syntax (e.g. "{ }" for repetitions) jut as well as 
+regex-like EBNF-syntax (e.g. "...*" for repetitions). It is configurable in the sense 
+that the hard-coded character-sequences for definitions, line-end etc. can be 
+exchanged in the Grammar object (e.g. "::=" for definitions instead of "="), before 
+the parser is run.
 
-Author: AUTHOR'S NAME <EMAIL>, AFFILIATION
+Author: Eckhart Arnold <eckhart.arnold@posteo.de>
 
 
 ## License

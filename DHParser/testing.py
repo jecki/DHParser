@@ -846,7 +846,7 @@ def grammar_suite(directory, parser_factory, transformer_factory,
 ########################################################################
 
 
-RX_DEFINITION_OR_SECTION = re.compile(r'(?:^|\n)[ \t]*(\w+(?=[ \t]*=)|#:.*(?=\n|$|#))')
+RX_DEFINITION_OR_SECTION = re.compile(r'(?:^|\n)[ \t]*(\w(?:-?\w)*(?=[ \t]*:?:?=)|#:.*(?=\n|$|#))')
 SymbolsDictType: TypeAlias = Dict[str, List[str]]
 
 ALL_SYMBOLS = 'ALL_SYMBOLS'
@@ -892,11 +892,12 @@ def extract_symbols(ebnf_text_or_file: str) -> SymbolsDictType:
 
     ebnf = load_if_file(ebnf_text_or_file)
     deflist = RX_DEFINITION_OR_SECTION.findall(ebnf)
+    deflist = [re.sub('(?<=\w)-(?=\w)', '_', dfn) for dfn in deflist]
     if not deflist:
         if ebnf_text_or_file.find('\n') < 0 and ebnf_text_or_file.endswith('.ebnf'):
-            deflist = '#: ' + os.path.splitext(ebnf_text_or_file)[0]
+            deflist = ['#: ' + os.path.splitext(ebnf_text_or_file)[0]]
         else:
-            deflist = '#: ALL'
+            deflist = ['#: ALL']
     symbols = OrderedDict()  # type: SymbolsDictType
     if deflist[0][:2] != '#:':
         curr_section = ALL_SYMBOLS
