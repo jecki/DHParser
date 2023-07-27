@@ -35,7 +35,7 @@ from typing import Any, cast, List, Tuple, Union, Iterator, Iterable, Optional, 
 
 import DHParser.ebnf
 from DHParser.compile import Compiler, compile_source, full_compile, Junction, CompilerFactory
-from DHParser.configuration import get_config_value
+from DHParser.configuration import get_config_value, set_config_value
 from DHParser.ebnf import EBNFCompiler, grammar_changed, DHPARSER_IMPORTS, \
     get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.error import Error, is_error, has_errors, only_errors, canonical_error_strings, \
@@ -650,6 +650,18 @@ def recompile_grammar(ebnf_filename: str,
             or grammar_changed(parser_name, ebnf_filename)):
         notify()
         messages = compile_on_disk(ebnf_filename, parser_name)
+
+        # try again with heuristic EBNF-parser, if parser failed due to a
+        # different EBNF-dialect
+        if len(messages) == 2 and str(messages[1]).find("'DEF' expected by parser 'definition'") >= 0:
+            syntax_variant = get_config_value('syntax_variant')
+            if syntax_variant != 'heuristic':
+                set_config_value('syntax_variant', 'heuristic')
+                messages2 = compile_on_disk(ebnf_filename, parser_name)
+                set_config_value('syntax_variant', syntax_variant)
+                if not has_errors(messages2):
+                    messages = messages2
+
         if messages:
             # print("Errors while compiling: " + ebnf_filename + '!')
             with open(error_file_name, 'w', encoding="utf-8") as f:

@@ -3135,9 +3135,10 @@ def compile_ebnf(ebnf_source: str, branding: str = 'DSL', *, preserve_AST: bool 
     ``preserve_AST=True``) of the EBNF-source. This function is merely
     syntactic sugar.
     """
-    return compile_source(ebnf_source,
-                          get_ebnf_preprocessor(),
-                          get_ebnf_grammar(),
-                          get_ebnf_transformer(),
-                          get_ebnf_compiler(branding, ebnf_source),
-                          preserve_AST=preserve_AST)
+    result = compile_source(ebnf_source,
+                            get_ebnf_preprocessor(),
+                            get_ebnf_grammar(),
+                            get_ebnf_transformer(),
+                            get_ebnf_compiler(branding, ebnf_source),
+                            preserve_AST=preserve_AST)
+    return result
