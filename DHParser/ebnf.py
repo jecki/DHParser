@@ -62,7 +62,7 @@ from DHParser.preprocess import PreprocessorFunc, PreprocessorResult, gen_find_i
     preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.nodetree import Node, RootNode, WHITESPACE_PTYPE, TOKEN_PTYPE, ZOMBIE_TAG, \
     flatten_sxpr
-from DHParser.toolkit import load_if_file, escape_re, escape_ctrl_chars, md5, \
+from DHParser.toolkit import load_if_file, escape_ctrl_chars, md5, \
     sane_parser_name, re, expand_table, unrepr, compile_python_object, \
     ThreadLocalSingletonFactory, TypeAlias
 from DHParser.transform import TransformerFunc, transformer, remove_brackets, \
@@ -1650,7 +1650,7 @@ class EBNFCompiler(Compiler):
         if node.name in ('literal', 'plaintext'):
             assert value
             assert value[0] + value[-1] in ('""', "''", "``")
-            value = escape_re(value[1:-1])
+            value = re.escape(value[1:-1])
         else:
             assert node.name == "regexp"""
         value = self.check_rx(node, value)
@@ -1676,7 +1676,7 @@ class EBNFCompiler(Compiler):
             return unrepr("re.compile(r'%s')" % search_regex)
         elif nd.name == 'literal':
             s = nd.content[1:-1]  # remove quotation marks
-            return unrepr("re.compile(r'(?=%s)')" % escape_re(s))
+            return unrepr(f"re.compile(r'(?={re.escape(s)})')")
         elif nd.name == 'procedure':
             proc_name = nd.content
             self.py_symbols.add(proc_name)
@@ -2236,7 +2236,8 @@ class EBNFCompiler(Compiler):
                     defn = f'{self.P["Synonym"]}({defn})'
                 if self.drop_flag and not defn.startswith(self.P["Drop"] + "("):
                     defn = f'{self.P["Drop"]}({defn})'
-                # TODO: Recursively drop all contained parsers for optimization?
+                # TODO: Recursively drop all contained parsers
+                #      (that are not assigned to a symbol!) for optimization.
             else:
                 assert isinstance(defn, Node)
                 self.tree.new_error(node, 'Structural Error in AST, unexpected node-type: '
@@ -2471,7 +2472,6 @@ class EBNFCompiler(Compiler):
 
 
     def on_macrodef(self, node) -> str:
-        # TODO: Better reference-cycle-prevention than countdown
         macro_name = node['name'].content
         placeholders = [pl.content for pl in node.children if pl.name == 'placeholder']
         body = node.pick_if(lambda nd: nd.name == 'macrobody')

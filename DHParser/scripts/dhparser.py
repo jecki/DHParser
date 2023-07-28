@@ -188,7 +188,7 @@ def main():
     parameter) or runs a quick self-test.
     """
     access_presets()
-    set_preset_value('syntax_variant', 'heuristic')  # TODO: Bugs in Transformation-Table
+    set_preset_value('syntax_variant', 'heuristic')
     finalize_presets()
     if len(sys.argv) > 1:
         if sys.argv[1].lower() in ("--version", "-v"):

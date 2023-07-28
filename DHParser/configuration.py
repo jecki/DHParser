@@ -221,7 +221,6 @@ def read_local_config(ini_filename: str) -> str:
         ini_filename = basename
     if not os.path.exists(ini_filename):
         # try cfg-file in the applications' config-directory
-        # TODO: use a more portable method
         dirname = os.path.splitext(basename)[0]
         cfg_filename = os.path.join(os.path.expanduser('~'), '.config', dirname, 'config.ini')
         if os.path.exists(cfg_filename):

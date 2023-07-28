@@ -1521,7 +1521,7 @@ class Grammar:
                 has been encountered. Default is 10.000 characters.
     """
     python_src__ = ''  # type: str
-    root__ = get_parser_placeholder()   # type: Parser  # TODO: too early initialization of Parser?
+    root__ = get_parser_placeholder()   # type: Parser
     # root__ must be overwritten with the root-parser by grammar subclass
     parser_initialization__ = ["pending"]  # type: List[str]
     resume_rules__ = dict()        # type: Dict[str, ResumeList]
@@ -1659,9 +1659,7 @@ class Grammar:
             self.root_parser__ = copy.deepcopy(root)
             if not self.root_parser__.pname:
                 self.root_parser__.name("root")
-                # TODO: Reset name and name after parsing has been finished
-                # self.root_parser__.pname = "root"
-                # self.root_parser__.disposable = False
+            self.root_parser__.disposable = False
             self.static_analysis_pending__ = [True]  # type: List[bool]
             self.static_analysis_errors__ = []       # type: List[AnalysisError]
         else:
@@ -2700,16 +2698,11 @@ class CombinedParser(Parser):
     Doing flatteining or merging during AST-transformation will ensure
     that it is only performed only on those nodes that made it into the
     concrete-syntax-tree. Mergeing, in particular, might become costly
-    because of potentially many string-concatenations.
-
-    But then again, the usual depth-first-traversal
-    during AST-transformation will take longer, because of the much more
-    verbose tree...
-
-    TODO: Test whether a post-parsing before-AST-transofrmation stage
-        of flattening and merging is faster than flattening and merging
-        during parsing. Presumably flattening early and merging later
-        is the best strategy...
+    because of potentially many string-concatenations. But then again,
+    the usual depth-first-traversal during AST-transformation will take
+    longer, because of the much more verbose tree. (Experiments suggest
+    that not much ist to be gained by post-poning flattening and
+    merging to the AST-transformation stage.)
 
     Another optimization consists in returning the singleton EMPTY_NODE
     for dropped contents, rather than creating an new empty node every
@@ -4120,7 +4113,7 @@ class Lookahead(FlowParser):
     but does not consume any text.
     """
     def _parse(self, location: cython.int) -> ParsingResult:
-        node, _ = self.parser(location)  # TODO: errors that occur during lookahead should be ignored
+        node, _ = self.parser(location)
         if self.match(node is not None):
             return (EMPTY_NODE if self.disposable else Node(self.node_name, '', True)), location
         else:

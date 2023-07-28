@@ -799,7 +799,6 @@ def grammar_suite(directory, parser_factory, transformer_factory,
 
     assert tests, f"No pattern from {fn_patterns} matched any test in directory {os.getcwd()}"
 
-    # TODO: fix "handle is closed" error in pypy3 when exiting the interpreter!
     with instantiate_executor(get_config_value('test_parallelization') and len(tests) > 1,
                               concurrent.futures.ProcessPoolExecutor) as pool:
         results = []

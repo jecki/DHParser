@@ -1802,7 +1802,7 @@ class Server:
 
         if self.kill_switch:
             # TODO: terminate processes and threads! Is this needed?
-            # TODO: terminate all connections
+            #       terminate all connections
             self.stage.value = SERVER_TERMINATING
             if sys.version_info >= (3, 7):
                 await writer.wait_closed()
