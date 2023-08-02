@@ -106,7 +106,7 @@ class FlexibleEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "28b46a093773dfe1bb680f650e013d64"
+    source_hash__ = "8b710794a0bd9521c8ebcab85b8af299"
     disposable__ = re.compile('is_mdef$|component$|pure_elem$|countable$|no_range$|FOLLOW_UP$|ANY_SUFFIX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -148,8 +148,8 @@ class FlexibleEBNFGrammar(Grammar):
     character = Series(Retrieve(CH_LEADIN), HEXCODE)
     char_range = Series(Text("["), Lookahead(char_range_heuristics), Option(Text("^")), Alternative(character, free_char), ZeroOrMore(Alternative(Series(Option(Text("-")), character), free_char)), Series(Text("]"), dwsp__))
     regexp = Series(Retrieve(RE_LEADIN), RE_CORE, Retrieve(RE_LEADOUT), dwsp__)
-    plaintext = Alternative(Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), dwsp__), Series(RegExp('´(?:(?<!\\\\)\\\\´|[^´])*?´'), dwsp__), Series(RegExp('’(?:(?<!\\\\)\\\\’|[^’])*?’'), dwsp__))
-    literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), dwsp__), Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__))
+    plaintext = Alternative(Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), dwsp__), Series(RegExp('´(?:(?<!\\\\)\\\\´|[^´])*?´'), dwsp__))
+    literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), dwsp__), Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__), Series(RegExp('’(?:(?<!\\\\)\\\\’|[^’])*?’'), dwsp__))
     symbol = Series(SYM_REGEX, dwsp__)
     argument = Alternative(literal, Series(name, dwsp__))
     parser = Series(Series(Text("@"), dwsp__), name, Series(Text("("), dwsp__), Option(argument), Series(Text(")"), dwsp__))

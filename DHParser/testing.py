@@ -522,12 +522,19 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
             #     print('    Test: ' + str(test_name))
 
             errflag = len(errata)
+            clean_test_name = str(test_name).replace('*', '')
             try:
                 cst = parser(test_code, parser_name)
             except AttributeError as upe:
                 cst = RootNode()
                 cst = cst.new_error(Node(ZOMBIE_TAG, "").with_pos(0), str(upe))
-            clean_test_name = str(test_name).replace('*', '')
+            except KeyboardInterrupt as ctrlC:
+                if is_logging() and track_history:
+                    with local_log_dir('./LOGS'):
+                        log_parsing_history(parser, "interrupted_match_%s_%s.log" %
+                                            (parser_name, clean_test_name))
+                raise ctrlC
+
             tests.setdefault('__cst__', {})[test_name] = cst
             # errors = []  # type: List[Error]
             if is_error(cst.error_flag) and not lookahead_artifact(cst):

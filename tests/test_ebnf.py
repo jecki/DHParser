@@ -1488,7 +1488,7 @@ class TestSyntaxExtensions:
             identifier  <- ident-start ident-cont* spacing
             ident-cont  <- ident-start / [0-9] 
             ident-start <- [a-zA-Z_]
-            spacing     <- (’?’ / ´\t´ / ´\n´)*           
+            spacing     <- (` ` / ´\t´ / ´\n´)*           
         """
         parser = create_parser(lang)
         assert parser.python_src__.find('ident-cond') < 0

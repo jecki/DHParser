@@ -284,24 +284,6 @@ FlowOperatorNames = {':Lookahead': '&',
                      ':Lookbehind': '<-&',
                      ':NegativeLookbehind': '<-!'}
 
-# def callstack_as_str(callstack: Sequence[CallItem], depth=-1) -> str:
-#     """Returns a string representation of the callstack!"""
-#     # return "->".join(name for name, _ in self.call_stack)
-#     short_stack = []
-#     anonymous_tail = True
-#     for node_name, _ in reversed(callstack):
-#         if node_name[:1] == ':':
-#             if (anonymous_tail and node_name != ":Forward"):
-#                 short_stack.append(node_name)
-#             elif node_name in FlowOperatorNames and len(short_stack) > 0:
-#                 short_stack[-1] = FlowOperatorNames[node_name] + short_stack[-1]
-#         else:
-#             short_stack.append(node_name)
-#             anonymous_tail = False
-#     if depth <= 0:  depth = len(short_stack)
-#     s = "->".join(reversed(short_stack[:depth]))
-#     omitted = len(short_stack) - depth
-#     return f'[{omitted}]->' + s if omitted > 0 else s
 
 def callstack_as_str(callstack: Sequence[CallItem], depth=-1) -> str:
     """Returns a string representation of the callstack!"""
@@ -316,6 +298,7 @@ def callstack_as_str(callstack: Sequence[CallItem], depth=-1) -> str:
     s = "->".join(reversed(short_stack[:depth]))
     omitted = len(short_stack) - depth
     return f'[{omitted}]->' + s if omitted > 0 else s
+
 
 class HistoryRecord:
     """

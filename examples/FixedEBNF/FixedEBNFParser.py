@@ -84,7 +84,7 @@ class FixedEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "288900516812c52b06011eaf2fcff89d"
+    source_hash__ = "e4c755109a5d232ee8c2ade9b8d423d0"
     disposable__ = re.compile('is_mdef$|component$|pure_elem$|countable$|no_range$|FOLLOW_UP$|ANY_SUFFIX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -118,8 +118,8 @@ class FixedEBNFGrammar(Grammar):
     any_char = Series(Text("."), dwsp__)
     character = Series(CH_LEADIN, HEXCODE)
     regexp = Series(RE_LEADIN, RE_CORE, RE_LEADOUT, dwsp__)
-    plaintext = Alternative(Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), dwsp__), Series(RegExp('´(?:(?<!\\\\)\\\\´|[^´])*?´'), dwsp__), Series(RegExp('’(?:(?<!\\\\)\\\\’|[^’])*?’'), dwsp__))
-    literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), dwsp__), Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__))
+    plaintext = Alternative(Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), dwsp__), Series(RegExp('´(?:(?<!\\\\)\\\\´|[^´])*?´'), dwsp__))
+    literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), dwsp__), Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__), Series(RegExp('’(?:(?<!\\\\)\\\\’|[^’])*?’'), dwsp__))
     symbol = Series(SYM_REGEX, dwsp__)
     argument = Alternative(literal, Series(name, dwsp__))
     parser = Series(Series(Text("@"), dwsp__), name, Series(Text("("), dwsp__), Option(argument), Series(Text(")"), dwsp__), mandatory=3)

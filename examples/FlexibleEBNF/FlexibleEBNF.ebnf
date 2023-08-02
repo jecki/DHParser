@@ -129,9 +129,9 @@ parser     = "@" name "(" [argument] ")"        # a user defined parser
 symbol     = SYM_REGEX ~                        # e.g. expression, term, parameter_list
 literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
            | /'(?:(?<!\\)\\'|[^'])*?'/~         # whitespace following literals will be ignored tacitly.
+           | /’(?:(?<!\\)\\’|[^’])*?’/~
 plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat whitespace
            | /´(?:(?<!\\)\\´|[^´])*?´/~
-           | /’(?:(?<!\\)\\’|[^’])*?’/~
 regexp     = :RE_LEADIN RE_CORE :RE_LEADOUT ~   # e.g. /\w+/, ~/#.*(?:\n|$)/~
 # regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
 char_range = `[` &char_range_heuristics

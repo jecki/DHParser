@@ -343,9 +343,9 @@ class HeuristicEBNFGrammar(Grammar):
         symbol     = SYM_REGEX ~                        # e.g. expression, term, parameter_list
         literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
                    | /'(?:(?<!\\)\\'|[^'])*?'/~         # whitespace following literals will be ignored tacitly.
+                   | /’(?:(?<!\\)\\’|[^’])*?’/~
         plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat whitespace
                    | /´(?:(?<!\\)\\´|[^´])*?´/~
-                   | /’(?:(?<!\\)\\’|[^’])*?’/~
         regexp     = :RE_LEADIN RE_CORE :RE_LEADOUT ~   # e.g. /\w+/, ~/#.*(?:\n|$)/~
         # regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
         char_range = `[` &char_range_heuristics
@@ -489,10 +489,10 @@ class HeuristicEBNFGrammar(Grammar):
                         Series(Text("]"), dwsp__))
     regexp = Series(Retrieve(RE_LEADIN), RE_CORE, Retrieve(RE_LEADOUT), dwsp__)
     plaintext = Alternative(Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), dwsp__),
-                            Series(RegExp('´(?:(?<!\\\\)\\\\´|[^´])*?´'), dwsp__),
-                            Series(RegExp('’(?:(?<!\\\\)\\\\’|[^’])*?’'), dwsp__))
+                            Series(RegExp('´(?:(?<!\\\\)\\\\´|[^´])*?´'), dwsp__))
     literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), dwsp__),
-                          Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__))
+                          Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__),
+                          Series(RegExp('’(?:(?<!\\\\)\\\\’|[^’])*?’'), dwsp__))
     symbol = Series(SYM_REGEX, dwsp__)
     argument = Alternative(literal, Series(name, dwsp__))
     parser = Series(Series(Text("@"), dwsp__), name, Series(Text("("), dwsp__), Option(argument),
@@ -752,9 +752,9 @@ class ConfigurableEBNFGrammar(Grammar):
         symbol     = SYM_REGEX ~                        # e.g. expression, term, parameter_list
         literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
                    | /'(?:(?<!\\)\\'|[^'])*?'/~         # whitespace following literals will be ignored tacitly.
+                   | /’(?:(?<!\\)\\’|[^’])*?’/~
         plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat whitespace
                    | /´(?:(?<!\\)\\´|[^´])*?´/~
-                   | /’(?:(?<!\\)\\’|[^’])*?’/~
         regexp     = RE_LEADIN RE_CORE RE_LEADOUT ~   # e.g. /\w+/, ~/#.*(?:\n|$)/~
         character  = CH_LEADIN HEXCODE
         any_char   = "."
@@ -838,10 +838,10 @@ class ConfigurableEBNFGrammar(Grammar):
     character = Series(CH_LEADIN, HEXCODE)
     regexp = Series(RE_LEADIN, RE_CORE, RE_LEADOUT, dwsp__)
     plaintext = Alternative(Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), dwsp__),
-                            Series(RegExp('´(?:(?<!\\\\)\\\\´|[^´])*?´'), dwsp__),
-                            Series(RegExp('’(?:(?<!\\\\)\\\\’|[^’])*?’'), dwsp__))
+                            Series(RegExp('´(?:(?<!\\\\)\\\\´|[^´])*?´'), dwsp__))
     literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), dwsp__),
-                          Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__))
+                          Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__),
+                          Series(RegExp('’(?:(?<!\\\\)\\\\’|[^’])*?’'), dwsp__))
     symbol = Series(SYM_REGEX, dwsp__)
     argument = Alternative(literal, Series(name, dwsp__))
     parser = Series(Series(Text("@"), dwsp__), name, Series(Text("("), dwsp__), Option(argument),
@@ -2996,7 +2996,10 @@ class EBNFCompiler(Compiler):
 
 
     def on_literal(self, node: Node) -> str:
-        center = self.TEXT_PARSER(escape_ctrl_chars(node.content), self.drop_on(DROP_STRINGS))
+        content = escape_ctrl_chars(node.content)
+        if (content[:1] + content[-1:]) == '’’':
+            content = "'" + re.sub(r"(?<!\\)'", r"\'", content[1:-1]) + "'"
+        center = self.TEXT_PARSER(content, self.drop_on(DROP_STRINGS))
         force = DROP_STRINGS in self.directives.drop
         left = self.WSPC_PARSER(force) if 'left' in self.directives.literalws else ''
         right = self.WSPC_PARSER(force) if 'right' in self.directives.literalws else ''

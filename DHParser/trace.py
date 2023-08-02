@@ -232,6 +232,15 @@ def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], c
             stack_counter -= 1
         raise pe
 
+    except KeyboardInterrupt as ctrlC:
+        lc = line_col(grammar.document_lbreaks__, location)
+        grammar.history__.append(
+            HistoryRecord(grammar.call_stack__, None,
+                          grammar.document__[location:],
+                          lc, [Error('KeyboardInterrupt (Ctrl-C)', location)]))
+        raise ctrlC
+
+
     # Don't track returning parsers except in case an error has occurred!
     if ((self.node_name != WHITESPACE_PTYPE)
         and (grammar.moving_forward__

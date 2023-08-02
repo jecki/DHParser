@@ -2530,7 +2530,11 @@ class RegExp(LeafParser):
         return duplicate
 
     def _parse(self, location: cython.int) -> ParsingResult:
-        match = self.regexp.match(self._grammar.text__, location)
+        try:
+            match = self.regexp.match(self._grammar.text__, location)
+        except KeyboardInterrupt:
+            raise KeyboardInterrupt(f'Stopped while processing regular expression:  {self.regexp}'
+                f'  at pos {location}:  {self._grammar.text__[location:location + 40]}  ...')
         if match:
             capture = match.group(0)
             if capture or not self.disposable:
@@ -2617,7 +2621,11 @@ class Whitespace(RegExp):
         been repeated, here, rather than being called. Only the last line
         has been changed to retrun an empty match instead of a non-match,
         when the regular expression did not match."""
-        match = self.regexp.match(self._grammar.text__, location)
+        try:
+            match = self.regexp.match(self._grammar.text__, location)
+        except KeyboardInterrupt:
+            raise KeyboardInterrupt(f'Stopped while processing Whitespace-RE:  {self.regexp}'
+                f'  at pos {location}:  {self._grammar.text__[location:location + 40]}  ...')
         if match:
             capture = match.group(0)
             if capture or not self.disposable:
