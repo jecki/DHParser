@@ -251,23 +251,19 @@ will use `regex` instead of the built-in `re`-module for regular
 expressions. `regex` is faster and more powerful than `re`.
 
 In order to speed up DHParser even more, it can be compiled with
-the Python to C compiler [Cython](https://cython.org). Since
-Version 1.3 DHParser requires at least Cython Version 3 alpha 11,
-which can be installed with pip by adding the alpha or 
-beta-versionnumber:
+the Python to C compiler [Cython](https://cython.org). Cython
+version 3.0 or higher is required to compile DHParser. Type:
 
-    pip install Cython==3.0.0b3
-
-On some Linux-distributions you might find it in the community-repositories.
-(Under Arch-Linux it can be installed with `yay -S cython3`.)
+    pip install cython
  
-Once cython has been built and installed, you can run the 
-"dhparser_cythonize"-script from the command line:
+on the command-line to install cython. Once cython has been 
+built and installed, you can run the "dhparser_cythonize"-script 
+from the command line:
 
     dhparser_cythonize
        
 The Cython-compiled version is about 2-3 times faster than the 
-CPython interpreted version. Compiling can take quite a while. 
+CPython-interpreted version. Compiling can take quite a while. 
 If you are in a hurry, you can just can also just call
 `dhparser_cythonize_stringview` which just compiles the 
 stringview-module, which profits the most from being "cythonized".
@@ -291,6 +287,18 @@ Get them with:
 There exists a mirror of this repository on github:
 https://github.com/jecki/DHParser Be aware, though, that the github-mirror
 may occasionally lag behind a few commits.
+
+
+Packaging
+---------
+
+DHParser uses [Poetry](https://python-poetry.org/) for packaging and
+dependency-management. In order to build a package from the sources,
+type:
+
+    poetry build
+
+on the command line. The packages will then appear in the "dist" subdirectory.
 
 
 Author

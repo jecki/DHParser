@@ -11,7 +11,7 @@ DHParser Version 1.5.0
 - parse.py: removed methods for combining parsers, i.e. turn cascades
   of nested Series, Interleave or Alternative parsers into one
   flat parser with a longer list of arguments, because these are
-  practically never needed and have undesired side-effects.
+  practically never needed and have undesired side effects.
 - parse.py: Speed-Optimization by implementing simplified __call__-methods
   for leaf-parsers and for parsers that do not memoize.
 - parse.py: class LateBindingUnary added (experimental!)

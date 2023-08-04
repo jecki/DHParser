@@ -527,7 +527,7 @@ directive should at best only be applied in conjunction with the ``@drop`` and
 
 .. _table_reduction_directive:
 
-There are for possible values for the ``@direction``-directive:
+There are for possible values for the ``@reduction``-directive:
 
 +--------------------+----------------------------------------+
 | value              | effect                                 |
@@ -550,6 +550,60 @@ will be named and which nodes will be dropped. This, however, pays off in
 terms of speed and a considerably simplified abstract-syntax-tree generation
 stage, because most of the unnecessary structure of concrete-syntax-trees
 has already been eliminated at the parsing stage.
+
+.. _alternative_simplification_syntax:
+
+**Alternative Syntax with ->SKIP and ->HIDE**
+
+Since DHParser version 1.5.1 there also exists an alternative syntax to
+specify symbols that are to be considered disposable and elements that are
+to be dropped by local ``->SKIP`` (drop) and ``->HIDE`` (dispose) markers
+within the grammer, rather than with directives. These markers must be appended
+to the parser (skip/drop) or to the symbol definition (hide/dispose), e.g.::
+
+    WHITESPACE = /\s+/ ->SKIP
+
+There is a subtle difference between the two markers, in so far as the
+"->SKIP"-marker may appear at one or more places inside a (complex) definition
+or at its very end, while the "->HIDE" marker may only appear at the very
+end of the definition. (The reason is that while it makes sense to drop nodes
+returned by anonymous parsers, it does not make sense to dispose (i.e. hide)
+anonymous nodes, because these will be elimniated ("flattened"), anyway.)
+
+The names of the makers have been chosen to reflect existing EBNF-practices.
+If you find this confusing, you can also write "->DROP" instead of "->SKIP" for
+elements to be dropped and "->DISPOSE" instead of "->HIDE" for disposable symbols.
+Here is the last example, rewritten with "->SKIP" and "->HIDE"-markers. Note, that
+we still use the @drop-directive for whitespace, strings and backticked (strings),
+because otherwise we would have to add a "->SKIP"-marker after each string-literal
+and tilde (whitespace) -marker. Also, we already added the
+"@reduction=merge"-directive::
+
+    >>> json_gr = '''
+    ...     @drop      = whitespace, strings, backticked
+    ...     @reduction = merge
+    ...     json       = ~ _element _EOF
+    ...       _EOF     = /$/ -> SKIP
+    ...     _element   = (object | array | string | number | bool | null) -> HIDE
+    ...     object     = "{" ~ member ( "," ~ §member )* "}" ~
+    ...     member     = string ":" ~ _element
+    ...     array      = "[" ~ ( _element ( "," ~ _element )* )? "]" ~
+    ...     string     = `"` _CHARS `"` ~
+    ...       _CHARS   = /[^"\\\\]+/ | /\\[\/bnrt\\]/  -> HIDE
+    ...     number     = _INT _FRAC? _EXP? ~
+    ...       _INT     = /[-]/? ( /[1-9][0-9]+/ | /[0-9]/ ) -> HIDE
+    ...       _FRAC    = /[.]/ /[0-9]+/  -> HIDE
+    ...       _EXP     = /[Ee]/ [/[-+]/] /[0-9]+/ -> HIDE
+    ...     bool       = /true/ ~ | /false/ ~
+    ...     null       = /null/ ~                                  '''
+    >>> json_parser = create_parser(json_gr, 'JSON')
+    >>> syntax_tree = json_parser(testdata)
+    >>> print(syntax_tree.pick('array').as_sxpr(flatten_threshold=0))
+    (array
+      (number "1")
+      (number "2.0")
+      (string "a string"))
+
 
 .. _comments_and_whitespace:
 
