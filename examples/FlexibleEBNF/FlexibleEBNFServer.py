@@ -331,7 +331,7 @@ class EBNFLanguageServerProtocol:
                                                           publishDiagnostics)
         return None
 
-    async def lsp_textDocument_didOpen(self, textDocument):
+    async def lsp_textDocument_didOpen(self, ID: int, textDocument):
         from DHParser.stringview import TextBuffer
         uri = textDocument['uri']
         text = textDocument['text']
@@ -347,7 +347,7 @@ class EBNFLanguageServerProtocol:
     def lsp_textDocument_didClose(self, **kwargs):
         return None
 
-    async def lsp_textDocument_didChange(self, textDocument: dict, contentChanges: list):
+    async def lsp_textDocument_didChange(self, ID: int, textDocument: dict, contentChanges: list):
         uri = textDocument['uri']
         version = int(textDocument.get('version', -1))
         if uri not in self.current_text:
@@ -365,7 +365,7 @@ class EBNFLanguageServerProtocol:
                 await self.compile_text(uri)
         return None
 
-    def lsp_textDocument_completion(self, textDocument: dict, position: dict, context: dict):
+    def lsp_textDocument_completion(self, ID: int, textDocument: dict, position: dict, context: dict):
         from DHParser.lsp import CompletionTriggerKind, shortlist
         from DHParser.toolkit import JSONnull
         line = position['line']
