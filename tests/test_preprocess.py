@@ -36,7 +36,8 @@ from DHParser.dsl import grammar_provider
 from DHParser import compile_source
 from DHParser.preprocess import make_token, tokenized_to_original_mapping, source_map, \
     BEGIN_TOKEN, END_TOKEN, TOKEN_DELIMITER, PreprocessorResult, chain_preprocessors, \
-    strip_tokens, gen_find_include_func, preprocess_includes, IncludeInfo, make_preprocessor
+    strip_tokens, gen_find_include_func, preprocess_includes, IncludeInfo, make_preprocessor, \
+    ReadIncludeClass, ReadIncludeOnce
 from DHParser.error import SourceMap, Error
 from DHParser.toolkit import normalize_docstring, typing, re
 from DHParser.testing import unique_name
@@ -329,6 +330,40 @@ class TestIncludes:
             assert False, "ValueError expected"
         except ValueError:
             pass
+
+
+class MockReadInclude(ReadIncludeClass):
+    def read_include(self, include_name:str) -> str:
+        return include_name
+
+
+class MockReadIncludeOnce(ReadIncludeOnce):
+    def read_include(self, include_name: str) -> str:
+        return include_name
+
+
+class TestIncludeReadFileParameterization:
+    def test_read_include(self):
+        src = '#include(alpha)#include(beta)#include(alpha)'
+        RE_INCLUDE = r'#include\((?P<name>\w+)\)'
+        find_next_include = gen_find_include_func(RE_INCLUDE)
+        include_prep = partial(preprocess_includes,
+                               find_next_include=find_next_include,
+                               include_reader=MockReadInclude)
+        result = include_prep(src, 'test')
+        dst = result.preprocessed_text
+        assert dst == 'alphabetaalpha'
+
+        include_prep = partial(preprocess_includes,
+                               find_next_include=find_next_include,
+                               include_reader=MockReadIncludeOnce)
+        result = include_prep(src, 'test')
+        dst = result.preprocessed_text
+        assert dst == 'alphabeta'
+
+        result = include_prep(src, 'test')
+        dst = result.preprocessed_text
+        assert dst == 'alphabeta'
 
 
 if __name__ == "__main__":

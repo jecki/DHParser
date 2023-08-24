@@ -32,8 +32,9 @@ from __future__ import annotations
 import bisect
 from collections import namedtuple
 import functools
+import inspect
 import os
-from typing import Union, Optional, Callable, Tuple, List, Any
+from typing import Union, Optional, Callable, Tuple, List, Any, NamedTuple
 
 from DHParser.error import Error, SourceMap, SourceLocation, SourceMapFunc, \
     add_source_locations
@@ -59,6 +60,8 @@ __all__ = ('RX_TOKEN_NAME',
            'tokenized_to_original_mapping',
            'make_preprocessor',
            'gen_find_include_func',
+           'ReadIncludeClass',
+           'ReadIncludeOnce',
            'preprocess_includes')
 
 
@@ -83,7 +86,7 @@ RX_TOKEN = re.compile(r'\x1b(?P<name>\w+)\x1c(?P<argument>[^\x1b\x1c\x1d]*)\x1d'
 #     length: int
 #     file_name: str
 
-# collections.namedtuple needed for Cython compatbility
+# collections.namedtuple needed for Cython 2 compatbility
 IncludeInfo = namedtuple('IncludeInfo',
     ['begin',       ## type: int
      'length',      ## type: int
@@ -101,7 +104,7 @@ def has_includes(sm: SourceMap) -> bool:
 #     back_mapping: SourceMapFunc
 #     errors: List[Error]
 
-# collections.namedtuple needed for Cython compatbility
+# collections.namedtuple needed for Cython 2 compatbility
 PreprocessorResult = namedtuple('PreprocessorResult',
     ['original_text',      ## type: Union[str, StringView]
      'preprocessed_text',  ## type: Union[str, StringView]
@@ -199,7 +202,7 @@ def chain_preprocessors(*preprocessors) -> PreprocessorFunc:
 #
 # In DHParser the source text is usually not tokenized, but,
 # optionally, it can be enriched by tokens (or parts of it replaced
-# by tokens) to, say indicate beginnings and endings of indented
+# by tokens) to, say, indicate beginnings and endings of indented
 # or quoted blocks that are difficult to capture with an EBNF-parser.
 #
 ######################################################################
@@ -382,9 +385,31 @@ def gen_find_include_func(rx: Union[str, Any],
     return find_include if comment_rx is None else meta_find_include
 
 
+class ReadIncludeClass:
+    def __call__(self, include_name: str) -> str:
+        return self.read_include(include_name)
+    def read_include(self, include_name: str) -> str:
+        with open(include_name, 'r', encoding='utf-8') as f:
+            return f.read()
+
+
+class ReadIncludeOnce(ReadIncludeClass):
+    def __init__(self):
+        self.already_included = set()
+
+    def __call__(self, include_name: str) -> str:
+        if include_name in self.already_included:
+            return ""     # don't include the same file twice
+        else:
+            self.already_included.add(include_name)
+            return self.read_include(include_name)
+
+
 def generate_include_map(original_name: str,
                          original_text: str,
-                         find_next_include: FindIncludeFunc) -> Tuple[SourceMap, str]:
+                         find_next_include: FindIncludeFunc,
+                         include_reader: ReadIncludeClass=ReadIncludeClass) \
+                         -> Tuple[SourceMap, str]:
     file_names: set = set()
 
     def generate_map(source_name, source_text, find_next) -> Tuple[SourceMap, str]:
@@ -403,13 +428,13 @@ def generate_include_map(original_name: str,
         last_begin = -1
         begin, length, include_name = find_next(source_text, 0)
         include_name = os.path.join(dirname, include_name)
+        read_include = include_reader()
         while begin >= 0:
             assert begin > last_begin
             source_delta = begin - original_pointer
             original_pointer += source_delta
             result_pointer += source_delta
-            with open(include_name, 'r', encoding='utf-8') as f:
-                included_text = f.read()
+            included_text = read_include(include_name)
             inner_map, inner_text = generate_map(include_name, included_text, find_next)
             assert len(inner_map.positions) == len(inner_map.offsets) == len(inner_map.file_names)
             for i in range(len(inner_map.positions)):
@@ -461,10 +486,13 @@ def srcmap_includes(position: int, inclmap: SourceMap) -> SourceLocation:
 
 def preprocess_includes(original_text: Optional[str],
                         original_name: str,
-                        find_next_include: FindIncludeFunc) -> PreprocessorResult:
+                        find_next_include: FindIncludeFunc,
+                        include_reader: ReadIncludeClass=ReadIncludeClass) \
+                        -> PreprocessorResult:
     if not original_text:
         with open(original_name, 'r', encoding='utf-8') as f:
             original_text = f.read()
-    include_map, result = generate_include_map(original_name, original_text, find_next_include)
+    include_map, result = generate_include_map(
+        original_name, original_text, find_next_include, include_reader)
     mapping_func = functools.partial(srcmap_includes, inclmap=include_map)
     return PreprocessorResult(original_text, result, mapping_func, [])

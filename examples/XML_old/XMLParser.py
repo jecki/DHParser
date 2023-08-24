@@ -50,7 +50,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     has_attr, has_parent, ThreadLocalSingletonFactory, TreeReduction, CombinedParser, \
     apply_unless, ERROR
 
-from DHParser.dsl import PseudoJunction, create_parser_transition
+from DHParser.dsl import PseudoJunction, create_parser_junction
 
 
 #######################################################################
@@ -129,7 +129,7 @@ class XMLGrammar(Grammar):
     root__ = document
     
     
-parsing: PseudoJunction = create_parser_transition(
+parsing: PseudoJunction = create_parser_junction(
     XMLGrammar)
 get_grammar = parsing.factory # for backwards compatibility, only    
 

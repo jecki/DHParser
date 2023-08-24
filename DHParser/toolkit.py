@@ -186,7 +186,7 @@ class ThreadLocalSingletonFactory:
 
     Note: Parameter uniqueID should be provided if class_or_factory is not
     unique but generic. See source code of
-    :py:func:`DHParser.dsl.create_transtable_transition`
+    :py:func:`DHParser.dsl.create_transtable_junction`
     """
 
     def __init__(self, class_or_factory, name: str = "", *,

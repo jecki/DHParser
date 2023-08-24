@@ -28,8 +28,8 @@ from DHParser.compile import Compiler, compile_source, Junction, full_compile
 from DHParser.configuration import set_config_value, get_config_value, access_thread_locals, \
     access_presets, finalize_presets, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN
 from DHParser import dsl
-from DHParser.dsl import recompile_grammar, create_parser_transition, \
-    create_preprocess_transition, create_transition, PseudoJunction, never_cancel
+from DHParser.dsl import recompile_grammar, create_parser_junction, \
+    create_preprocess_junction, create_junction, PseudoJunction, never_cancel
 from DHParser.ebnf import grammar_changed
 from DHParser.error import ErrorCode, Error, canonical_error_strings, has_errors, NOTICE, \
     WARNING, ERROR, FATAL
@@ -200,7 +200,7 @@ class XML_W3C_SPECGrammar(Grammar):
     root__ = document
     
     
-parsing: PseudoJunction = create_parser_transition(
+parsing: PseudoJunction = create_parser_junction(
     XML_W3C_SPECGrammar)
 get_grammar = parsing.factory # for backwards compatibility, only    
 

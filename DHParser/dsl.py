@@ -45,7 +45,7 @@ from DHParser.nodetree import Node
 from DHParser.parse import Grammar, ParserFactory
 from DHParser.preprocess import nil_preprocessor, Tokenizer, PreprocessorFunc, \
     gen_find_include_func, make_preprocessor, chain_preprocessors, preprocess_includes, \
-    PreprocessorFactory
+    PreprocessorFactory, ReadIncludeClass
 from DHParser.trace import set_tracer, trace_history, resume_notices_on
 from DHParser.transform import TransformerFunc, TransformationDict, transformer, \
     TransformerFactory
@@ -69,16 +69,24 @@ __all__ = ('DefinitionError',
            'create_scripts',
            'restore_server_script',
            'PseudoJunction',
+           'create_preprocess_junction',
+           'create_parser_junction',
+           # 'process_template',
+           'create_compiler_junction',
+           'create_transtable_junction',
+           'create_evaluation_junction',
+           'create_junction',
+           'process_file',
+           'never_cancel',
+           'batch_process',
+           # deprecated
            'create_preprocess_transition',
            'create_parser_transition',
-           # 'process_template',
            'create_compiler_transition',
            'create_transtable_transition',
            'create_evaluation_transition',
            'create_transition',
-           'process_file',
-           'never_cancel',
-           'batch_process')
+           )
 
 
 @lru_cache()
@@ -549,7 +557,7 @@ def compile_on_disk(source_file: str,
         if RX_WHITESPACE.fullmatch(imports):
             imports = DHParser.ebnf.DHPARSER_IMPORTS + VERSION_CHECK
         elif imports.find("from DHParser.") < 0:
-            imports += "\nfrom DHParser.dsl import PseudoJunction, create_parser_transition\n"
+            imports += "\nfrom DHParser.dsl import PseudoJunction, create_parser_junction\n"
         if RX_WHITESPACE.fullmatch(preprocessor):
             preprocessor = ebnf_compiler.gen_preprocessor_skeleton()
         if RX_WHITESPACE.fullmatch(ast):
@@ -765,9 +773,12 @@ PseudoJunction = namedtuple('PseudoJunction',
 
 # Preprocessing-Stage #################################################
 
-def _preprocessor_factory(tokenizer, include_regex, comment_regex) -> PreprocessorFunc:
+def _preprocessor_factory(tokenizer: Tokenizer,
+                          include_regex,
+                          comment_regex,
+                          include_reader) -> PreprocessorFunc:
     # below, the second parameter must always be the same as Grammar.COMMENT__!
-    find_next_include = gen_find_include_func(include_regex, comment_regex)
+    find_next_include = gen_find_include_func(include_regex, comment_regex, include_reader)
     include_prep = partial(preprocess_includes, find_next_include=find_next_include)
     tokenizing_prep = make_preprocessor(tokenizer)
     return chain_preprocessors(include_prep, tokenizing_prep)
@@ -777,15 +788,25 @@ def _preprocessor_factory(tokenizer, include_regex, comment_regex) -> Preprocess
 #     return factory()(source)
 
 
-def create_preprocess_transition(tokenizer: Tokenizer,
-                                 include_regex, comment_regex) -> PseudoJunction:
+def create_preprocess_junction(tokenizer: Tokenizer,
+                               include_regex,
+                               comment_regex,
+                               include_reader: ReadIncludeClass=ReadIncludeClass) \
+                                -> PseudoJunction:
     """Creates a factory for thread-safe preprocessing functions as well as a
     thread-safe preprocessing function."""
-    preprocessor_factory = partial(_preprocessor_factory,
-        tokenizer=tokenizer, include_regex=include_regex, comment_regex=comment_regex)
+    preprocessor_factory = partial(
+        _preprocessor_factory, tokenizer=tokenizer,
+        include_regex=include_regex, comment_regex=comment_regex,
+        include_reader=include_reader)
     thread_safe_factory = ThreadLocalSingletonFactory(preprocessor_factory)
     # preprocess = partial(_preprocess, factory=thread_safe_factory)
     return PseudoJunction(thread_safe_factory)  # , preprocess)
+
+
+@deprecated('The name "create_preprocess_transition()" is deprecated. Use "create_preprocess_junction()" instead.')
+def create_preprocess_transition(*args, **kwargs):
+    return   create_preprocess_junction(*args, **kwargs)
 
 
 # Parsing-stage #######################################################
@@ -809,7 +830,7 @@ def _parser_factory(raw_grammar) -> Grammar:
 #     return parser_factory()(document, start_parser, complete_match=complete_match)
 
 
-def create_parser_transition(grammar_class: type) -> PseudoJunction:
+def create_parser_junction(grammar_class: type) -> PseudoJunction:
     """Creates a factory for thread-safe parser functions as well as a
     thread-safe parser function."""
     assert issubclass(grammar_class, Grammar)
@@ -817,6 +838,11 @@ def create_parser_transition(grammar_class: type) -> PseudoJunction:
     factory = partial(_parser_factory, raw_grammar=raw_grammar)
     # process = partial(_parse_func, parser_factory=factory)
     return PseudoJunction(factory)  # , process)
+
+
+@deprecated('The name "create_parser_transition()" is deprecated. Use "create_parser_junction()" instead.')
+def create_parser_transition(*args, **kwargs):
+    return   create_parser_junction(*args, **kwargs)
 
 
 # Tree-Processing-Stages ##############################################
@@ -835,9 +861,9 @@ def create_parser_transition(grammar_class: type) -> PseudoJunction:
 #     return result
 
 
-def create_compiler_transition(compile_class: type,
-                               src_stage: str,
-                               dst_stage: str) -> Junction:
+def create_compiler_junction(compile_class: type,
+                             src_stage: str,
+                             dst_stage: str) -> Junction:
     """Creates a thread-safe transformation function and function-factory from
     a :py:class:`compile.Compiler` or another callable class.
     """
@@ -850,6 +876,11 @@ def create_compiler_transition(compile_class: type,
     return Junction(src_stage, factory, dst_stage)
 
 
+@deprecated('The name "create__compiler_transition()" is deprecated. Use "create_compiler_junction()" instead.')
+def create_compiler_transition(*args, **kwargs):
+    return   create_compiler_junction(*args, **kwargs)
+
+
 # 2. tree-processing with transformation-table
 
 def _make_transformer(src_stage, dst_stage, table) -> TransformerFunc:
@@ -858,9 +889,9 @@ def _make_transformer(src_stage, dst_stage, table) -> TransformerFunc:
 
 @deprecated("DHParser.dsl.create_transtable_transition() is deprecated, "
             "because it does not work with lambdas as transformer functions!")
-def create_transtable_transition(table: TransformationDict,
-                                 src_stage: str,
-                                 dst_stage: str) -> Junction:
+def create_transtable_junction(table: TransformationDict,
+                               src_stage: str,
+                               dst_stage: str) -> Junction:
     """Creates a thread-safe transformation function and function-factory from
     a transformation-table :py:func:`transform.traverse`.
 
@@ -872,6 +903,11 @@ def create_transtable_transition(table: TransformationDict,
     make_transformer = partial(_make_transformer, src_stage, dst_stage, table)
     factory = ThreadLocalSingletonFactory(make_transformer, uniqueID=id(table))
     return Junction(src_stage, factory, dst_stage)
+
+
+@deprecated('The name "create_transtable_transition()" is deprecated. Use "create_transtable_junction()" instead.')
+def create_transtable_transition(*args, **kwargs):
+    return   create_transtable_junction(*args, **kwargs)
 
 
 # 3. tree-processing with evaluation-table
@@ -886,10 +922,10 @@ def _make_evaluation(actions, supply_path_arg) -> Callable[[Node], Any]:
     return evaluate_with_path if supply_path_arg else evaluate_without_path
 
 
-def create_evaluation_transition(actions: Dict[str, Callable],
-                                 src_stage: str,
-                                 dst_stage: str,
-                                 supply_path_arg: bool=True) -> Junction:
+def create_evaluation_junction(actions: Dict[str, Callable],
+                               src_stage: str,
+                               dst_stage: str,
+                               supply_path_arg: bool=True) -> Junction:
     """Creates a thread-safe transformation function and function-factory from
     an evaluation-table :py:meth:`nodetree.Node.evaluate`.
     """
@@ -904,31 +940,41 @@ def create_evaluation_transition(actions: Dict[str, Callable],
     return Junction(src_stage, factory, dst_stage)
 
 
+@deprecated('The name "create_evaluation_transition()" is deprecated. Use "create_evaluation_junction()" instead.')
+def create_evaluation_transition(*args, **kwargs):
+    return   create_evaluation_junction(*args, **kwargs)
+
+
 # generic tree-processing function
 
-def create_transition(tool: Union[dict, type],
-                      src_stage: str,
-                      dst_stage: str,
-                      hint: str = '?') -> Junction:
+def create_junction(tool: Union[dict, type],
+                    src_stage: str,
+                    dst_stage: str,
+                    hint: str = '?') -> Junction:
     """Generic stage-creation function for tree-transforming stages where a tree-transforming
     stage is a stage which either reshapes a node-tree or transforms a nodetree into
     something else, but not a stage where something else (e.g. a text) is turned into
     a node-tree."""
     if isinstance(tool, type):
-        return create_compiler_transition(tool, src_stage, dst_stage)
+        return create_compiler_junction(tool, src_stage, dst_stage)
     else:
         assert isinstance(tool, dict)
         if any(isinstance(value, Sequence) for value in tool.values()) \
                 or hint == "transtable":
-            return create_transtable_transition(tool, src_stage, dst_stage)
+            return create_transtable_junction(tool, src_stage, dst_stage)
         elif hint == "evaluate_with_path":
-            return create_evaluation_transition(tool, src_stage, dst_stage, True)
+            return create_evaluation_junction(tool, src_stage, dst_stage, True)
         elif hint == "evaluate_without_path":
-            return create_evaluation_transition(tool, src_stage, dst_stage, False)
+            return create_evaluation_junction(tool, src_stage, dst_stage, False)
         else:
             raise AssertionError('Cannot determine transformation-type automatically! '
                 'Please, add optional parameter "hint" to the function call with one of the '
                 'following values: "transtable", "evaluate_with_path", "evaluate_without_path"!')
+
+
+@deprecated('The name "create_transition()" is deprecated. Use "create_junction()" instead.')
+def create_transition(*args, **kwargs):
+    return   create_junction(*args, **kwargs)
 
 
 #######################################################################

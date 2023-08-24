@@ -48,7 +48,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     has_errors, ERROR, FATAL, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 
-from DHParser.dsl import PseudoJunction, create_parser_transition
+from DHParser.dsl import PseudoJunction, create_parser_junction
 
 
 #######################################################################
@@ -190,7 +190,7 @@ class XML_W3C_SPECGrammar(Grammar):
     root__ = document
     
     
-parsing: PseudoJunction = create_parser_transition(
+parsing: PseudoJunction = create_parser_junction(
     XML_W3C_SPECGrammar)
 get_grammar = parsing.factory # for backwards compatibility, only    
 
