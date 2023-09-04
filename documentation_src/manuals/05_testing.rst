@@ -341,13 +341,13 @@ development, requiring further changes of the grammar all alike.
 This is where test-driven-grammar development comes into play. Before
 even writing a grammar and running it on complete documents, you
 start with a small subset that you gradually extend. There are basically
-to stratgies for grammar-development:
+to strategies for grammar-development:
 
    1. Top-Down-Grammar development, where one starts with the macro-
       structure and uses summary parsers to gloss over the
       microstructure, which will be replaced later.
 
-   2. Bottom-Up-Grammar development, where yoou start with parsers
+   2. Bottom-Up-Grammar development, where you start with parsers
       for the parts of the documents and later connect them with
       higher level parsers.
 
@@ -395,8 +395,8 @@ match-test test will check that our grammar matches a properly formed
 document-outline.
 
 The second is a fail test, which checks that the parser for our grammar
-does not accidently match a badly structured document. Now, we will
-start writing a grammar that is suitable to cpature the snippet from
+does not accidentally match a badly structured document. Now, we will
+start writing a grammar that is suitable to capture the snippet from
 our match-test. As you'll see in the following, this already requires
 quite a few definitions. Here is our first attempt (which still
 contains a mistake!)::
@@ -404,7 +404,7 @@ contains a mistake!)::
     # First attempt of any outline-grammar. Can you spot the error?
 
     #  EBNF-Directives
-    @ whitespace  = /[ \t]*/  # only horizontal whitespace, no linefeeds
+    @ whitespace  = /[ \t]*/  # only horizontal whitespace, no line-feeds
     @ reduction   = merge     # simplify tree as much as possible
     @ disposable  = WS, EOF, LINE, LFF
     @ drop        = WS, EOF, backticked, whitespace
@@ -449,7 +449,7 @@ There you find the suspicious lines:
 3	4	document->main->section->subsection->heading->LINE MATCH # BADLY NESTED SubSubSection 1.1.1 ### S...
 = == ================================================= ===== ===========================================
 
-Obviously, the parser "subsection" found its marker consiting
+Obviously, the parser "subsection" found its marker consisting
 of three ``#``-signs, but then it did not stop short at the next
 ``#``-sign, but left this to be captured by its "heading"-parser
 which simply reads the rest of the line, no matter what it looks like.
@@ -479,23 +479,23 @@ This time the grammar-tests yield the desired result::
     design-decisions of the EBNF-grammar of the outline-example might
     be of interest for beginners:
 
-    1. Since the structure of the outline is preseverd by the structre
+    1. Since the structure of the outline is preserved by the structure
        of the abstract syntax tree (i.e. the names and the nesting of
        its nodes) all tokens (#, ##, ...) and delimiters (WS) are dropped
        during parsing (see the ``@drop``-directive at the beginning
-       of the grammar). Dropping Tokens, Delimiters and insiginificant
+       of the grammar). Dropping Tokens, Delimiters and insignificant
        whitespace is common practice - either when generating the AST
        or - as done here - during parsing already.
 
     2. No normalization is being done at the parsing stage. For example,
-       headings as definied here may still contain trailing whitespace.
+       headings as defined here may still contain trailing whitespace.
        Unless it organically results from the grammar definition,
        normalization is better done in the CST-AST-transformation stage
        to keep the grammar simple.
 
     3. It is a good practice to give the symbols that are considered
        disposable (i.e. they do not appear as node names in the syntax tree,
-       alghouth their content is preserved) or which will be dropped (i.e.
+       although their content is preserved) or which will be dropped (i.e.
        neither their name nor the captured content makes it into the syntax-tree)
        special, well recognizable names, like for example, names starting with
        a single underscore for disposable symbols and a double leading underscore
@@ -578,7 +578,7 @@ test-report::
               "This one is not.")))))
 
 This use of "placeholder"-parsers which sweepingly capture larger
-chunks of text without dissecting their detailed structur is typical
+chunks of text without dissecting their detailed structure is typical
 for the top-down approach. We could continue by replacing (or amending)
 the "blocks"-parser stepwise with more detailed parsers that
 capture individual paragraphs, highlighted passages etc., possibly
@@ -593,7 +593,7 @@ Bottom-Up-Grammar-Development
 
 For the bottom-up-approach one must first consider what are the
 smallest elements that need to be semantically captured. Surely,
-it would be exagerated to capture individual letters. One might
+it would be exaggerated to capture individual letters. One might
 think of words and lines, but then individual words do not really
 matter in Markdown-texts and lines have the disadvantage that
 highlighted elements might stretch over several lines.
@@ -603,9 +603,9 @@ consisting of letters, punctuation and whitespace the may but
 do not need to stretch over more than one single line, that is,
 they may also contain line-feeds, but they should not encompass
 empty lines. So, basically text is no-whitespace elements
-interspersed by whitespace and single-linefeeds. Let's
+interspersed by whitespace and single-line-feeds. Let's
 first write a few tests and then cast this into a formal definition,
-which in my humble opion is even clearer than the verbal expression.
+which in my humble opinion is even clearer than the verbal expression.
 Here are the tests::
 
     [match:TEXT]
@@ -619,23 +619,183 @@ Here are the tests::
 
          separate paragraphs!"""
 
-
 And here is the definition of a piece of text (which, as is typical
 for the most atomic parsers, consist mostly of regular expressions
 enclosed by slashes)::
 
-    TEXT      = /[^\s]+/ { LLF /[^\s]+/ }
-    LLF       = L | LF             # whitespace or single linefeed
-    L         = /[ \t]+/           # significant whitespace
-    LF        = ~/\n(?![ \t]*\n)/  # a single linefeed
+    TEXT      = CHARS { LLF CHARS }
+    CHARS     = /[^\s]+/             # sequence of non whitespace and non line-feed characters
+    LLF       = L | LF               # whitespace or single linefeed
+    L         = /[ \t]+/             # significant whitespace
+    LF        = /[ \t]*\n[ \t]*(?!\n)/  # a single linefeed
 
-TO BE CONTINUED...
+I am not going to explain the idioms used for encoding text blocks
+(aka "paragraphs") separated by empty lines, here, as the code
+above should be clear enough with the given comments.
+
+The next step will be a little bit more complicated: We would like 
+to allow inline-markup inside paragraphs. Loosely following the
+Markdown conventions we would like to use a single underscore character 
+(``_``) to mark emphasized text, e.g. ``_emphasized_``, and double
+underscore markers to mark bold text, e.g.  ``__bold__``. Again, we 
+start with writing test-code. We assume "emphasis" as the name of the
+parser for emphasized text and "bold" for bold text::
+
+    [match:emphasis]
+    M1: "_emphasized text_"
+    M2: """_multi
+        line_"""
+
+    [match:bold]
+    M1: "__bold text__"
+    M2: """__multi
+        line bold__"""
+
+Now, using underscore characters to markup emphasized or bold text
+raises the question what to write, if we would like to use the
+underscore as a normal character in out text without the intention to
+mark an emphasized block. For this purpose, we add an ordinary 
+escape mechanism that allows any character to be used literally, 
+if it is preceded by a backslash. Let's write a quick test::
+
+    [match:emphasis]
+    M3: "_emphasis with an escaped \_ character_"    
+
+    [fail:emphasis]
+    F1: "_cannot complete parsing, because of a dangling _ underscore_"
+
+Of course, we also need tests for markup text _containing_ emphasized 
+or bold elements::
+
+    [match:markup]
+    M1: "This is **bold** and this is *emphasized*"
+    M2: """This is a text *with several
+        emphasized words* as well as some
+        **bold text that contains *emphasized words***."""
+
+Now, let's start coding! In the first step we will implement our 
+escape-mechanism. For this purpose we define a new text element, 
+named "text" with small letters (in contrast to the "TEXT"-parser
+defined above). Again, we write the test first::
+
+    [match:text]
+    M1: "Text with \_ three \\ escaped \x elements"
+
+In this case it makes sense to also specify the expected result.
+(See below for more information on abstract-syntax-tree (AST)-testing.)::
+
+    [ast:text]
+    M1: (text "Text with _ three \ escaped x elements")
+
+Now, the last test makes sense in this form only if we "flatten"
+the syntax-tree of the text-element by marking the structure
+of all interior parsers as "disposable". We'll keep that in mind for
+later, when we have filled out the definitions for the parsers
+for which we have just written our tests::
+
+    text      = (TEXT | ESCAPED) { [LLF] (TEXT | ESCAPED) }
+    ESCAPED   = ESCAPED   = `\` /./
+
+Note that since we drop any back-ticked literals (see the 
+``@drop-directive`` way above) the "ESCAPED"-parser should always
+yield the escaped character without the backslash in front of it.
+
+In order to get a flat AST-tree, we need to mark all symbols that
+"text" refers to as "disposable" as well as the symbols these
+refer to etc. by adding the to the "@disposable"-directive at the
+top of the DHParser-EBNF-file (see :ref:`simplifying_syntax_trees`), 
+which then reads like this::
+
+    @ disposable  = WS, EOF, LINE, LFF, LLF, L, LF, CHARS, TEXT, ESCAPED
+
+Alternatively, we could have flattened the text-Nodes during AST-Transformation
+(:ref:`asttransformation`) stage with the 
+py:func:`~transform.collapse`-transformation. In any case, however, we receive 
+an error-message when running the test::
+
+  	Abstract syntax tree test "M1" for parser "text" failed:
+		    Expr.:     Text with \_ three \\ escaped \x elements
+		    Expected:  (text "Text with _ three \ escaped x elements")
+		    Received:  (text "Text with \_ three \\ escaped \x elements")
+
+Something went wrong! In order to find out what we could either look into the
+test-log (or, alternatively, remove the contained parsers from 
+the disposable-list again for a moment). It then becomes obvious that the
+"ESCAPED"-parser is never invoked but that the escape-sign "\" is captured by
+the "CHARS"-parser. Thus, we have to exclude it from the "CHARS"-parser
+explicitly to avoid it being captured by CHARS ans thus, indirectly, also by
+TEXT (with capital letters). At the same time we can take care to also
+exclude the underscore delimiter from the regular expression defining 
+the CHARS-parser::
+
+      CHARS = /[^\s\\_]+/
+
+We also need to keep in mind that should we add more inline elements in the
+future that we have to exclude their delimiters from the CHARS-parser
+as well. Now, the test should succeed. (Or, if we have forgotten to add the
+contained parsers of "text" back to the @disposable-directive, we'll find that
+the test fails, but that at least, the AST is sound in the sense that all
+ESCAPED characters have been properly captured by the ESCAPE-parser.)
+
+We use the same idiom that we have employed in order to enrich simple TEXT
+with ESCAPED characters in the definition of "text" for defining 
+markup-text that also contains bold and emphasized elements::
+
+    markup    = (text | bold | emphasis) { [LLF] (text | bold | emphasis) }
+    bold      = `__` inner_txt `__`
+    emphasis  = `_` inner_txt `_`
+    inner_txt = [L] markup [L]
+
+Note that by placing the emphasis-parser after the bold-parser in the 
+definition of the markup-parser, we make sure that a bold-element 
+is not accidentally captured as an emphasized-element containing 
+another emphasized element. (Yes, they can all be recursively nested!)
+
+The introduction of "inner_txt" is motivated by the fact that neither
+"text" nor "markup" (nor "TEXT") capture leading or trailing empty
+whit-space, but that we want to allow whitespace after the opening
+and before the closing markers for bold an emphasized elements, because
+this allows to disambiguate nested bold and emphasized elements
+when necessary by adding whitespace. Otherwise::
+
+    * **bold** text inside emphasized text that can be parsed* 
+
+would have to be written as::
+
+    ***bold** text inside emphasized text that fails to parse*
+
+which leads to a parser-error. (See the `CommonMark`_-specification for
+a more complicated solution to the same problem. Think about the
+pros and cons of either solution for a while, if you like!)
+
+We could have skipped the introduction of the intermediary "text"-parser
+by adding ESCAPED-elements directly to the "markup"-parser, e.g.::
+
+    markup    =         (TEXT | ESCAPED | bold | emphasis) 
+                { [LLF] (TEXT | ESCAPED | bold | emphasis) }
+    
+The reason, this has not been done is that while we would like to
+flatten ESCAPED chars and other TEXT but not the markup-structures. If
+we add further inline-elements like internet-links for example we
+would not add more intermediaries but rather extend the 
+"markup"-parser-definition. (You may want to try to add internetlinks 
+enclosed by ``<`` and ``>`` as an exercise!)
+
+For now, we'll stop with the bottom-up development and see if and how
+we can link the two parts of our grammar that we have developed so far,
+one in top-down and one in bottom-up-style.
+
+Linking both approaches
+^^^^^^^^^^^^^^^^^^^^^^^
 
 
+Final remarks 
+^^^^^^^^^^^^^
 
-- Test Driven Grammar-Development
+- Test Driven Grammar-Development and Rapid Grammar Prototyping
+
 - Particularly useful for the re-structuring of human written
-  semi-formal noations with formal grammars!
+  semi-formal notations with formal grammars!
 
 
 Monitoring AST-creation
@@ -661,3 +821,5 @@ Conventional Unit-Testing
 
 - How this is done
 
+
+.. _CommonMark: https://spec.commonmark.org/0.30/#emphasis-and-strong-emphasis

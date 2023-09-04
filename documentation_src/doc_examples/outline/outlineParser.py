@@ -107,9 +107,9 @@ class outlineGrammar(Grammar):
     r"""Parser for an outline source file.
     """
     markup = Forward()
-    source_hash__ = "487977434022d9d94201c9fff43c98c0"
+    source_hash__ = "f36ada9cb6c43d05d764031e48f201cf"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('WS$|EOF$|LINE$|LFF$|CHARS$|LLF$')
+    disposable__ = re.compile('WS$|EOF$|LINE$|LFF$|LLF$|L$|LF$|CHARS$|TEXT$|ESCAPED$|inner_txt$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -122,11 +122,11 @@ class outlineGrammar(Grammar):
     LFF = RegExp('(?:[ \\t]*\\n)+')
     WS = Drop(Synonym(LFF))
     PARSEP = Series(dwsp__, RegExp('\\n'), dwsp__, RegExp('\\n'))
+    LF = RegExp('[ \\t]*\\n[ \\t]*(?!\\n)')
     L = RegExp('[ \\t]+')
-    LF = Series(dwsp__, RegExp('\\n(?![ \\t]*\\n)'))
     LLF = Alternative(L, LF)
     ESCAPED = Series(Drop(Text("\\")), RegExp('.'))
-    CHARS = RegExp('[^\\s\\\\*_]+')
+    CHARS = RegExp('[^\\s\\\\_*]+')
     TEXT = Series(CHARS, ZeroOrMore(Series(LLF, CHARS)))
     LINE = RegExp('[^\\n]+')
     inner_txt = Series(Option(L), markup, Option(L))

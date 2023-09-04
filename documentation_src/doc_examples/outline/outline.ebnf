@@ -4,7 +4,8 @@
 
 @ whitespace  = /[ \t]*/  # only horizontal whitespace, no linefeeds
 @ reduction   = merge     # simplify tree as much as possible
-@ disposable  = WS, EOF, LINE, LFF, CHARS, LLF
+@ disposable  = WS, EOF, LINE, LFF, LLF, L, LF, CHARS, TEXT, ESCAPED,
+                inner_txt
 @ drop        = WS, EOF, backticked, whitespace
 
 #:  Outline
@@ -38,13 +39,14 @@ inner_txt = [L] markup [L]
 
 #:  Regular Expressions
 
-LINE      = /[^\n]+/           # everything up to the next linefeed
+LINE      = /[^\n]+/                # everything up to the next line-feed
 TEXT      = CHARS { LLF CHARS }
-CHARS     = /[^\s\\*_]+/
+CHARS     = /[^\s\\_*]+/
 ESCAPED   = `\` /./
 LLF       = L | LF
-L         = /[ \t]+/           # significant whitespace
-LF        = ~/\n(?![ \t]*\n)/  # a single linefeed
+L         = /[ \t]+/                # significant whitespace
+LF        = /[ \t]*\n[ \t]*(?!\n)/  #  single line-feed
+# LFN       = ~/\n(?![ \t]*\n)/~      # normalized single line-feed
 PARSEP    = ~/\n/ ~/\n/
 WS        = LFF
 LFF       = /(?:[ \t]*\n)+/    # any ws at line-end and all following empty lines

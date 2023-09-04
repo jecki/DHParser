@@ -252,7 +252,7 @@ file(s).
 
 Using DHParser's include-mechanism for modularizing your EBNF-grammar(s) is
 a different thing than adding an include mechanism to your domain specific
-language. For the latter, see the manual of the ``DHParser.preprocess``-module.
+language. For the latter, see the manual of the :py:mod:`preprocess`-module.
 
 .. _simplifying_syntax_trees:
 
@@ -335,8 +335,8 @@ Another useful directive advises the parser to treat named nodes as
 anonymous nodes and to eliminate them accordingly during parsing. This
 is useful, if we have introduced certain names in our grammar
 only as placeholders to render the definition of the grammar a bit
-more readable, not because we are interested in the text that is
-captured by the production associated with them in their own right::
+more readable, not because we are interested in the structure that is
+captured by the production associated with them in its own right::
 
     >>> disposable_symbols = '@disposable = /_\\w+/ \n'
 
@@ -353,7 +353,7 @@ Now, let's examine the effect of these two directives::
     >>> syntax_tree.content
     '{"array":[1,2.0,"a string"],"number":-1.3e+25,"bool":false}'
 
-You might have noticed that all insignificant whitespaces adjacent to
+You might have noticed that all insignificant white-spaces adjacent to
 the delimiters have been removed this time (but, of course not the
 significant whitespace between "a" and "string" in "a string"). And
 the difference, the use of these two directives makes, is even more
