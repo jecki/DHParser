@@ -4,7 +4,7 @@
 
 @ whitespace  = /[ \t]*/  # only horizontal whitespace, no linefeeds
 @ reduction   = merge     # simplify tree as much as possible
-@ disposable  = WS, EOF, LINE, LFF
+@ disposable  = WS, EOF, LINE, LFF, CHARS, LLF
 @ drop        = WS, EOF, backticked, whitespace
 
 #:  Outline
@@ -25,12 +25,13 @@ heading = LINE
 blocks  = !is_heading LINE { LFF !is_heading LINE }
 is_heading = /##?#?#?#?#?(?!#)/
 
-markup    = TEXT | bold | emphasis { L (TEXT | bold | emphasis) }
+markup    = (text | bold | emphasis) { [LLF] (text | bold | emphasis) }
+text      = (TEXT | ESCAPED) { [LLF] (TEXT | ESCAPED) }
 
 #: inline-elements
 
-emphasis  = `*` !`*` inner_txt `*` !`*`
-          | `_` !`_` inner_txt `_` !`_`
+emphasis  = `*` !`*` inner_txt `*`
+          | `_` !`_` inner_txt `_`
 bold      = `**` inner_txt `**`
           | `__` inner_txt `__`
 inner_txt = [L] markup [L]
@@ -38,7 +39,10 @@ inner_txt = [L] markup [L]
 #:  Regular Expressions
 
 LINE      = /[^\n]+/           # everything up to the next linefeed
-TEXT      = /[^\s*_]+/ { (LF | L) /[^\s*_]+/ }
+TEXT      = CHARS { LLF CHARS }
+CHARS     = /[^\s\\*_]+/
+ESCAPED   = `\` /./
+LLF       = L | LF
 L         = /[ \t]+/           # significant whitespace
 LF        = ~/\n(?![ \t]*\n)/  # a single linefeed
 PARSEP    = ~/\n/ ~/\n/

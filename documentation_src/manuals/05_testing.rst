@@ -624,7 +624,8 @@ And here is the definition of a piece of text (which, as is typical
 for the most atomic parsers, consist mostly of regular expressions
 enclosed by slashes)::
 
-    TEXT      = /[^\s]+/ { (LF | L) /[^\s]+/ }
+    TEXT      = /[^\s]+/ { LLF /[^\s]+/ }
+    LLF       = L | LF             # whitespace or single linefeed
     L         = /[ \t]+/           # significant whitespace
     LF        = ~/\n(?![ \t]*\n)/  # a single linefeed
 

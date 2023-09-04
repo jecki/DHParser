@@ -107,9 +107,9 @@ class outlineGrammar(Grammar):
     r"""Parser for an outline source file.
     """
     markup = Forward()
-    source_hash__ = "736a8c83be629b64ff1132de5ffafc61"
+    source_hash__ = "487977434022d9d94201c9fff43c98c0"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('WS$|EOF$|LINE$|LFF$')
+    disposable__ = re.compile('WS$|EOF$|LINE$|LFF$|CHARS$|LLF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -122,13 +122,17 @@ class outlineGrammar(Grammar):
     LFF = RegExp('(?:[ \\t]*\\n)+')
     WS = Drop(Synonym(LFF))
     PARSEP = Series(dwsp__, RegExp('\\n'), dwsp__, RegExp('\\n'))
-    LF = Series(dwsp__, RegExp('\\n(?![ \\t]*\\n)'))
     L = RegExp('[ \\t]+')
-    TEXT = Series(RegExp('[^\\s*_]+'), ZeroOrMore(Series(Alternative(LF, L), RegExp('[^\\s*_]+'))))
+    LF = Series(dwsp__, RegExp('\\n(?![ \\t]*\\n)'))
+    LLF = Alternative(L, LF)
+    ESCAPED = Series(Drop(Text("\\")), RegExp('.'))
+    CHARS = RegExp('[^\\s\\\\*_]+')
+    TEXT = Series(CHARS, ZeroOrMore(Series(LLF, CHARS)))
     LINE = RegExp('[^\\n]+')
     inner_txt = Series(Option(L), markup, Option(L))
     bold = Alternative(Series(Drop(Text("**")), inner_txt, Drop(Text("**"))), Series(Drop(Text("__")), inner_txt, Drop(Text("__"))))
-    emphasis = Alternative(Series(Drop(Text("*")), NegativeLookahead(Drop(Text("*"))), inner_txt, Drop(Text("*")), NegativeLookahead(Drop(Text("*")))), Series(Drop(Text("_")), NegativeLookahead(Drop(Text("_"))), inner_txt, Drop(Text("_")), NegativeLookahead(Drop(Text("_")))))
+    emphasis = Alternative(Series(Drop(Text("*")), NegativeLookahead(Drop(Text("*"))), inner_txt, Drop(Text("*"))), Series(Drop(Text("_")), NegativeLookahead(Drop(Text("_"))), inner_txt, Drop(Text("_"))))
+    text = Series(Alternative(TEXT, ESCAPED), ZeroOrMore(Series(Option(LLF), Alternative(TEXT, ESCAPED))))
     heading = Synonym(LINE)
     is_heading = RegExp('##?#?#?#?#?(?!#)')
     blocks = Series(NegativeLookahead(is_heading), LINE, ZeroOrMore(Series(LFF, NegativeLookahead(is_heading), LINE)))
@@ -138,7 +142,7 @@ class outlineGrammar(Grammar):
     subsection = Series(Drop(Text("###")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, subsubsection)))
     section = Series(Drop(Text("##")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, subsection)))
     main = Series(Option(WS), Drop(Text("#")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, section)))
-    markup.set(Alternative(TEXT, bold, Series(emphasis, ZeroOrMore(Series(L, Alternative(TEXT, bold, emphasis))))))
+    markup.set(Series(Alternative(text, bold, emphasis), ZeroOrMore(Series(Option(LLF), Alternative(text, bold, emphasis)))))
     document = Series(main, Option(WS), EOF, mandatory=2)
     root__ = document
     
