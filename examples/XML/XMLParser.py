@@ -60,6 +60,10 @@ from DHParser.transform import is_empty, remove_if, TransformationDict, Transfor
 from DHParser import parse as parse_namespace__
 
 
+from DHParser.dsl import PseudoJunction, create_parser_junction
+
+from DHParser.dsl import PseudoJunction, create_parser_junction
+
 
 #######################################################################
 #
@@ -104,7 +108,7 @@ class XMLGrammar(Grammar):
     r"""Parser for a XML source file.
     """
     element = Forward()
-    source_hash__ = "a35f0d669a6691ca072a8dd76d2632e4"
+    source_hash__ = "2960187a6fc88fcf8c7f4189fa1004a7"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
     disposable__ = re.compile('BOM$|Misc$|NameStartChar$|NameChars$|CommentChars$|PubidChars$|prolog$|PubidCharsSingleQuoted$|VersionNum$|EncName$|Reference$|CData$|EOF$|tagContent$')
     static_analysis_pending__ = []  # type: List[bool]

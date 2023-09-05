@@ -40,7 +40,7 @@ def recompile_grammar(grammar_src, force):
         with open('FixedEBNF_ebnf_MESSAGES.txt', encoding='utf-8') as f:
             print(f.read())
         sys.exit(1)
-    dsl.restore_server_script(grammar_src)
+    dsl.create_scripts(grammar_src)
 
 
 def run_grammar_tests(glob_pattern, get_grammar, get_transformer, get_compiler):

@@ -60,6 +60,10 @@ from DHParser.transform import is_empty, remove_if, TransformationDict, Transfor
     has_attr, has_parent, traverse
 from DHParser import parse as parse_namespace__
 
+from DHParser.dsl import PseudoJunction, create_parser_junction
+
+from DHParser.dsl import PseudoJunction, create_parser_junction
+
 
 #######################################################################
 #
@@ -81,7 +85,7 @@ def get_preprocessor() -> PreprocessorFunc:
 class readme_exampleGrammar(Grammar):
     r"""Parser for a readme_example source file.
     """
-    source_hash__ = "4489626aea24935664d1655bf7034474"
+    source_hash__ = "e9900ccee206346482c2c0da6e8c72b8"
     disposable__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

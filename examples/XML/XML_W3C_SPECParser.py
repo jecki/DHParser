@@ -60,6 +60,10 @@ from DHParser.transform import is_empty, remove_if, TransformationDict, Transfor
 from DHParser import parse as parse_namespace__
 
 
+from DHParser.dsl import PseudoJunction, create_parser_junction
+
+from DHParser.dsl import PseudoJunction, create_parser_junction
+
 
 #######################################################################
 #
@@ -109,7 +113,7 @@ class XML_W3C_SPECGrammar(Grammar):
     element = Forward()
     extSubsetDecl = Forward()
     ignoreSectContents = Forward()
-    source_hash__ = "b13ab14b04490f81d75f9da152f13820"
+    source_hash__ = "f31334ca603b4aad5d84ad23d13847c2"
     disposable__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

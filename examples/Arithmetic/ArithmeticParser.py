@@ -60,6 +60,10 @@ from DHParser.transform import is_empty, remove_if, TransformationDict, Transfor
     has_attr, has_parent, traverse
 from DHParser import parse as parse_namespace__
 
+from DHParser.dsl import PseudoJunction, create_parser_junction
+
+from DHParser.dsl import PseudoJunction, create_parser_junction
+
 
 #######################################################################
 #
@@ -82,7 +86,7 @@ class ArithmeticGrammar(Grammar):
     r"""Parser for an Arithmetic source file.
     """
     expression = Forward()
-    source_hash__ = "c8002ed9a3757ff956e777219303dcf7"
+    source_hash__ = "d6aa77724d9d6913ef9f9c45e1607ed9"
     disposable__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

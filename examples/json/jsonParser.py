@@ -58,6 +58,10 @@ from DHParser.transform import is_empty, remove_if, TransformationDict, Transfor
     has_attr, has_parent, traverse
 from DHParser import parse as parse_namespace__
 
+from DHParser.dsl import PseudoJunction, create_parser_junction
+
+from DHParser.dsl import PseudoJunction, create_parser_junction
+
 
 #######################################################################
 #
@@ -103,7 +107,7 @@ class jsonGrammar(Grammar):
     r"""Parser for a json source file.
     """
     _element = Forward()
-    source_hash__ = "7caf03c63931e95d5bb657d5a4d4526f"
+    source_hash__ = "2c9a4dc7402cd911ad86fe8406d26dc5"
     disposable__ = re.compile('_[A-Za-z]+')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

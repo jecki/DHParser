@@ -90,6 +90,11 @@ RESULT_STAGES = frozenset({'__cst__', '__ast__', '__err__'})
 
 RX_SECTION = re.compile(r'\s*\[(?P<stage>\w+(:?\.\w+)*):(?P<symbol>\w+)\]')
 RX_METADATA_SECTION = re.compile(r'\s*\[(?P<metadata>\w+)\]')
+RE_MULTILINE_STR_DOUBLE_QUOTE = r'(?:"""((?:.|\n)*?)""")'
+RE_MULTILINE_STR_SINGLE_QUOTE = r"(?:'''((?:.|\n)*?)''')"
+RE_ONELINE_STR_DOUBLE_QUOTE = r'(?:"(.*?)")'
+RE_ONELINE_STR_SINGLE_QUOTE = r"(?:'(.*?)')"
+RE_MULTILINE = r'(.*(?:\n(?:\s*\n)*    .*)*)'
 RE_VALUE = '(?:"""((?:.|\n)*?)""")|' + "(?:'''((?:.|\n)*?)''')|" + \
            r'(?:"(.*?)")|' + "(?:'(.*?)')|" + r'(.*(?:\n(?:\s*\n)*    .*)*)'
 # the following does not work with pypy3, because pypy's re-engine does not

@@ -556,7 +556,9 @@ def compile_on_disk(source_file: str,
             outro = read_template('DSLParser.pyi').format(NAME=compiler_name)
         if RX_WHITESPACE.fullmatch(imports):
             imports = DHParser.ebnf.DHPARSER_IMPORTS + VERSION_CHECK
-        elif imports.find("from DHParser.") < 0:
+        elif imports.find("from DHParser.") < 0 \
+                or imports.find('PseudoJunction') < 0 \
+                or imports.find('create_jarser_junction') < 0:
             imports += "\nfrom DHParser.dsl import PseudoJunction, create_parser_junction\n"
         if RX_WHITESPACE.fullmatch(preprocessor):
             preprocessor = ebnf_compiler.gen_preprocessor_skeleton()
@@ -749,7 +751,7 @@ def create_scripts(ebnf_filename: str,
     if not os.path.exists(parser_name):  recompile_grammar(ebnf_filename, parser_name)
 
 
-@deprecated("restore_server_script() is deprecated! Please, use create_additional_scripts().")
+@deprecated("restore_server_script() is deprecated! Please, use create_scripts().")
 def restore_server_script(ebnf_filename: str,
                           parser_name: str = '',
                           server_name: str = '',
