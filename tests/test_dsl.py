@@ -130,7 +130,7 @@ class TestCompilerGeneration:
             compiler_suite_2nd_run = f.read()
         diff = ''.join([a for a, b in zip(compiler_suite_2nd_run, compiler_suite) if a != b])
         # differences should only be ID-Numbers
-        assert not diff or diff.isnumeric()
+        assert not diff or diff.isnumeric(), diff
         # test compiling with a generated compiler suite
         # assert is_filename(self.text_name)
         errors = compile_on_disk(self.text_name, compiler_suite=self.compiler_name)

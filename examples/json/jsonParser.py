@@ -62,6 +62,8 @@ from DHParser.dsl import PseudoJunction, create_parser_junction
 
 from DHParser.dsl import PseudoJunction, create_parser_junction
 
+from DHParser.dsl import PseudoJunction, create_parser_junction
+
 
 #######################################################################
 #

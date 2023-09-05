@@ -101,6 +101,20 @@ M4: "fa[s]citergiis"
 M1: "sad(d)a"
 '''
 
+CFG_FILE_5 = '''
+[match:PARSER]
+M1: (a
+     (b "X")
+     
+    )
+M2: """(a
+     (b "X")
+     
+    )"""
+M3: "X" 
+'''
+
+
 class TestTestfiles:
     def setup(self):
         self.save_dir = os.getcwd()
@@ -148,6 +162,10 @@ class TestTestfiles:
             assert False, "Same key used twice should raise a key error!!!"
         except KeyError as e:
             pass
+
+    def test_unit_from_config_2(self):
+        unit = unit_from_config(CFG_FILE_5, 'cfg_file')
+        print(unit)
 
 
 ARITHMETIC_EBNF = """

@@ -90,13 +90,20 @@ RESULT_STAGES = frozenset({'__cst__', '__ast__', '__err__'})
 
 RX_SECTION = re.compile(r'\s*\[(?P<stage>\w+(:?\.\w+)*):(?P<symbol>\w+)\]')
 RX_METADATA_SECTION = re.compile(r'\s*\[(?P<metadata>\w+)\]')
-RE_MULTILINE_STR_DOUBLE_QUOTE = r'(?:"""((?:.|\n)*?)""")'
-RE_MULTILINE_STR_SINGLE_QUOTE = r"(?:'''((?:.|\n)*?)''')"
-RE_ONELINE_STR_DOUBLE_QUOTE = r'(?:"(.*?)")'
-RE_ONELINE_STR_SINGLE_QUOTE = r"(?:'(.*?)')"
-RE_MULTILINE = r'(.*(?:\n(?:\s*\n)*    .*)*)'
-RE_VALUE = '(?:"""((?:.|\n)*?)""")|' + "(?:'''((?:.|\n)*?)''')|" + \
-           r'(?:"(.*?)")|' + "(?:'(.*?)')|" + r'(.*(?:\n(?:\s*\n)*    .*)*)'
+RE_MULTILINE_DOUBLE_QUOTE = r'(?:""("(?:.|\n)*?")"")'
+RE_MULTILINE_SINGLE_QUOTE = r"(?:''('(?:.|\n)*?')'')"
+RE_ONELINE_DOUBLE_QUOTE = r'(".*?")'
+RE_ONELINE_SINGLE_QUOTE = r"('.*?')"
+# Any data as long as it is indented after the first line.
+# In practice, S-expressions, XML and nodetree-JSON will be interpreted
+RE_MULTILINE_DATA = r'(.*(?:\n(?:\s*\n)*    .*)*)'
+RE_VALUE = '|'.join([RE_MULTILINE_DOUBLE_QUOTE,
+                     RE_MULTILINE_SINGLE_QUOTE,
+                     RE_ONELINE_DOUBLE_QUOTE,
+                     RE_ONELINE_SINGLE_QUOTE,
+                     RE_MULTILINE_DATA])
+# RE_VALUE = '(?:"""((?:.|\n)*?)""")|' + "(?:'''((?:.|\n)*?)''')|" + \
+#            r'(?:"(.*?)")|' + "(?:'(.*?)')|" + r'(.*(?:\n(?:\s*\n)*    .*)*)'
 # the following does not work with pypy3, because pypy's re-engine does not
 # support local flags, e.g. '(?s: )'
 # RE_VALUE = r'(?:"""((?s:.*?))""")|' + "(?:'''((?s:.*?))''')|" + \
@@ -111,6 +118,10 @@ def normalize_code(testcode: str, full_normalization: bool=False) -> str:
     will be returned unchanged.
     """
     lines = testcode.split('\n')
+    if lines[0][:1] in ('"', "'") and lines[-1][-1:] in ('"', "'"):
+        # remove string markers
+        lines[0] = lines[0][1:]
+        lines[-1] = lines[-1][:-1]
     if len(lines) > 1:
         indent = sys.maxsize
         for i in range(1, len(lines)):
@@ -130,8 +141,7 @@ def normalize_code(testcode: str, full_normalization: bool=False) -> str:
             for k in range(len(lines) - 1, -1, -1):
                 if lines[k]:  break
             lines = lines[i:k + 1]
-        testcode = '\n'.join(lines)
-    return testcode
+    return '\n'.join(lines)
 
 
 def unit_from_config(config_str, filename, allowed_stages=UNIT_STAGES):
@@ -196,9 +206,9 @@ def unit_from_config(config_str, filename, allowed_stages=UNIT_STAGES):
         #     SyntaxError('No entries in section [%s:%s]' % (stage, symbol))
         while entry_match:
             testkey, testcode = [group for group in entry_match.groups() if group is not None]
+            is_str = testcode[:1] in ('"', "'") and testcode[-1:] in ('"', "'")
             testcode = normalize_code(
-                testcode, full_normalization=
-                stage not in ('match', 'fail', 'ast', 'cst'))
+                testcode, full_normalization=stage not in ('match', 'fail', 'ast', 'cst'))
             # test = unit.setdefault(symbol, OD()).setdefault(stage, OD())
             test = unit[symbol][stage]
             if testkey.strip('*') in test or (testkey.strip('*') + '*') in test:
