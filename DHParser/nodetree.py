@@ -4791,7 +4791,7 @@ def deserialize(xml_sxpr_or_json: str) -> Optional[Node]:
         return parse_xml(xml_sxpr_or_json)
     elif RX_IS_SXPR.match(xml_sxpr_or_json):
         return parse_sxpr(xml_sxpr_or_json)
-    elif re.match(r'\s*', xml_sxpr_or_json):
+    elif re.fullmatch(r'\s*', xml_sxpr_or_json):
         return None
     else:
         try:

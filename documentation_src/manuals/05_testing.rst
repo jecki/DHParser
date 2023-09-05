@@ -681,16 +681,18 @@ defined above). Again, we write the test first::
     [match:text]
     M1: "Text with \_ three \\ escaped \x elements"
 
-In this case it makes sense to also specify the expected result.
-(See below for more information on abstract-syntax-tree (AST)-testing.)::
+In this case it makes sense to also specify the expected result. With the 
+following test, we test the flat-string-representation of the 
+abstract-syntax-tree (AST) that parser "text" yields for the match-test "M1".
+Note, that the names of AST-tests and, in fact of any other tests further
+down the processing pipelines must be the same as the names of the match
+test they refer to. (See below for more information on abstract-syntax-tree 
+(AST)-testing.)::
 
     [ast:text]
-    M1: (text "Text with _ three \ escaped x elements")
+    M1: "Text with _ three \ escaped x elements"
 
-Now, the last test makes sense in this form only if we "flatten"
-the syntax-tree of the text-element by marking the structure
-of all interior parsers as "disposable". We'll keep that in mind for
-later, when we have filled out the definitions for the parsers
+Now we are ready to fill in the definitions for the parsers
 for which we have just written our tests::
 
     text      = (TEXT | ESCAPED) { [LLF] (TEXT | ESCAPED) }
@@ -700,27 +702,34 @@ Note that since we drop any back-ticked literals (see the
 ``@drop-directive`` way above) the "ESCAPED"-parser should always
 yield the escaped character without the backslash in front of it.
 
-In order to get a flat AST-tree, we need to mark all symbols that
-"text" refers to as "disposable" as well as the symbols these
-refer to etc. by adding the to the "@disposable"-directive at the
-top of the DHParser-EBNF-file (see :ref:`simplifying_syntax_trees`), 
-which then reads like this::
+Unfortunately, the ast-test fails with an error message::
 
-    @ disposable  = WS, EOF, LINE, LFF, LLF, L, LF, CHARS, TEXT, ESCAPED
-
-Alternatively, we could have flattened the text-Nodes during AST-Transformation
-(:ref:`asttransformation`) stage with the 
-py:func:`~transform.collapse`-transformation. In any case, however, we receive 
-an error-message when running the test::
-
-  	Abstract syntax tree test "M1" for parser "text" failed:
+  	ast-test "M1" for parser "text" or deserialization of expected value failed:
 		    Expr.:     Text with \_ three \\ escaped \x elements
-		    Expected:  (text "Text with _ three \ escaped x elements")
-		    Received:  (text "Text with \_ three \\ escaped \x elements")
+		    Expected:  Text with _ three \ escaped x elements
+		    Received:  Text with \_ three \\ escaped \x elements
 
-Something went wrong! In order to find out what we could either look into the
-test-log (or, alternatively, remove the contained parsers from 
-the disposable-list again for a moment). It then becomes obvious that the
+(The provisio "or deserialization of expected value failed" means that in case
+we had specified the actual AST (e.g. (text "Text with _ three \ escaped x elements")) 
+rather than its flat-string-representation the cause of the error might also be 
+a syntax-error in the written down abstract syntax tree.)
+
+Something went wrong! In order to find out what exactly went wrong,
+we could either look into the test-log or into the test-report which
+shows the full abstract-syntax-tree, which looks like this::
+
+    (text
+      (TEXT
+        (CHARS "Text")
+        (LLF
+          (L " "))
+        (CHARS "with")
+        (LLF
+          (L " "))
+        (CHARS "\_")
+        ...
+
+From this it becomes obvious that the
 "ESCAPED"-parser is never invoked but that the escape-sign "\" is captured by
 the "CHARS"-parser. Thus, we have to exclude it from the "CHARS"-parser
 explicitly to avoid it being captured by CHARS ans thus, indirectly, also by

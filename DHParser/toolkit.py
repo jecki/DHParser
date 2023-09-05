@@ -171,11 +171,11 @@ def identity(x):
 global_id_counter: int = 0
 
 
-# def gen_id() -> str:
-#     """Generates a unique id. (Not thread-safe!)"""
-#     global global_id_counter
-#     global_id_counter += 1
-#     return str(global_id_counter)
+def gen_id() -> int:
+    """Generates a unique id. (Not thread-safe!)"""
+    global global_id_counter
+    global_id_counter += 1
+    return global_id_counter
 
 
 class ThreadLocalSingletonFactory:
@@ -198,6 +198,11 @@ class ThreadLocalSingletonFactory:
         self.class_or_factory = class_or_factory
         # partial functions do not have a __name__ attribute!
         name = name or getattr(class_or_factory, '__name__', '') or class_or_factory.func.__name__
+        if not uniqueID:
+            if not hasattr(self.__class__, 'lock'):
+                self.__class__.lock = threading.Lock()
+            with self.__class__.lock:
+                uniqueID = gen_id()
         self.singleton_name = f"{name}_{str(id(self))}_{str(uniqueID)}_singleton"
         THREAD_LOCALS = access_thread_locals()
         assert not hasattr(THREAD_LOCALS, self.singleton_name), self.singleton_name

@@ -41,7 +41,7 @@ import sys
 import threading
 import traceback
 import time
-from typing import Dict, List, Union, Deque, cast
+from typing import Dict, List, Union, Deque, Optional, cast
 
 if sys.version_info >= (3, 6, 0):
     OrderedDict = dict
@@ -86,6 +86,7 @@ __all__ = ('unit_from_config',
 
 
 UNIT_STAGES = frozenset({'match*', 'match', 'fail', 'ast', 'cst'})
+STARTING_STAGES = frozenset({'match*', 'match', 'fail'})
 RESULT_STAGES = frozenset({'__cst__', '__ast__', '__err__'})
 
 RX_SECTION = re.compile(r'\s*\[(?P<stage>\w+(:?\.\w+)*):(?P<symbol>\w+)\]')
@@ -112,16 +113,49 @@ RX_ENTRY = re.compile(r'\s*(\w+\*?)\s*:\s*(?:{value})\s*'.format(value=RE_VALUE)
 RX_COMMENT = re.compile(r'\s*[#;].*(?:\n|$)')
 
 
-def normalize_code(testcode: str, full_normalization: bool=False) -> str:
+def normalize_code(testcode: str,
+                   full_normalization: bool=False,
+                   never_deserialize: bool=False) \
+        -> Union[str, Node]:
     """Removes leading and trailing empty lines (if full_normalization is True)
-    and leading indentation (always) from multiline text. Single line text
-    will be returned unchanged.
+    and leading indentation (always) from multiline text. Furthermore, removes
+    quotation marks from strings.
+
+    In case the test-code was not enclosed in single or double quotation marks,
+    normalize_code also attemts to deserialize the content as S-expression or XML
+    and returns the resulting node-tree, if successful.
+
+    In all other cases the normalized code is returned as string.
+
+    :param testcode: The test-code
+    :param full_normalization:  If True, leading or trailing empty lines will be
+        ignored.
+    :param never_deserialize:  Never return the test-code as deserialized node-tree.
+        Thus, strings containing S-expressions or XML will be returned as such.
+
+    :return: The normalized test-code, which can either be:
+        a) a string, if the string passed to parameter ``testcode`` contains quotation
+            marks (either '  or ") of the same kind in its first and last character,
+            or if the string passed can neither be interpreted as an XML nor as an
+            S-expression-tree.
+        b) a node-tree, if the string passed to parameter ``testcode`` does not begin
+            and end with quotation marks AND if the test-code can be interpreted
+            as an S-expression or as XML-code.
+
+    Examples::
+
+        >>> code = '''first line
+        ...     indented second line'''
+        >>> print(normalize_code(code))
+        first line
+        indented second line
+        >>> normalize_code('(a (b X))')
+        Node('a', (Node('b', 'X')))
+        >>> normalize_code('"(a (b X))"')
+        '(a (b X))'
+
     """
     lines = testcode.split('\n')
-    if lines[0][:1] in ('"', "'") and lines[-1][-1:] in ('"', "'"):
-        # remove string markers
-        lines[0] = lines[0][1:]
-        lines[-1] = lines[-1][:-1]
     if len(lines) > 1:
         indent = sys.maxsize
         for i in range(1, len(lines)):
@@ -141,18 +175,31 @@ def normalize_code(testcode: str, full_normalization: bool=False) -> str:
             for k in range(len(lines) - 1, -1, -1):
                 if lines[k]:  break
             lines = lines[i:k + 1]
+    if lines[0][:1] in ('"', "'") and lines[-1][-1:] in ('"', "'"):
+        # remove string markers
+        lines[0] = lines[0][1:]
+        lines[-1] = lines[-1][:-1]
+    elif not never_deserialize:
+        code = '\n'.join(lines)
+        try:
+            tree = deserialize(code)
+            return tree
+        except ValueError:
+            return code
     return '\n'.join(lines)
 
 
-def unit_from_config(config_str, filename, allowed_stages=UNIT_STAGES):
+def unit_from_config(config_str: str, filename: str, allowed_stages=UNIT_STAGES):
     """ Reads grammar unit tests contained in a file in config file (.ini)
     syntax.
 
-    Args:
-        config_str (str): A string containing a config-file with Grammar unit-tests
+    :param config_str: A string containing a config-file with Grammar unit-tests
+    :param filename: The file-name of the config-file containing ``config_str``.
+    :param allows_stages: A set of stage names of stages in the processing pipeline
+        for which the test-file may contain tests.
 
     Returns:
-        A dictionary representing the unit tests.
+        A JSON-like object(i.e. dictionary) representing the unit tests.
     """
     # TODO: issue a warning if the same match:xxx or fail:xxx block appears more than once
 
@@ -206,9 +253,9 @@ def unit_from_config(config_str, filename, allowed_stages=UNIT_STAGES):
         #     SyntaxError('No entries in section [%s:%s]' % (stage, symbol))
         while entry_match:
             testkey, testcode = [group for group in entry_match.groups() if group is not None]
-            is_str = testcode[:1] in ('"', "'") and testcode[-1:] in ('"', "'")
-            testcode = normalize_code(
-                testcode, full_normalization=stage not in ('match', 'fail', 'ast', 'cst'))
+            testcode = normalize_code(testcode,
+                full_normalization=stage not in UNIT_STAGES,
+                never_deserialize=stage in STARTING_STAGES)
             # test = unit.setdefault(symbol, OD()).setdefault(stage, OD())
             test = unit[symbol][stage]
             if testkey.strip('*') in test or (testkey.strip('*') + '*') in test:
@@ -248,7 +295,7 @@ def unit_from_json(json_str, filename, allowed_stages=UNIT_STAGES):
 
 
 # A dictionary associating file endings with reader functions that
-# transfrom strings containing the file's content to a nested dictionary
+# transform strings containing the file's content to a nested dictionary
 # structure of test cases.
 TEST_READERS = {
     '.ini': unit_from_config,
@@ -399,6 +446,19 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                  junctions=set(), show=set()):
     """
     Unit tests for a grammar-parser and ast-transformations.
+
+    :param test_unit: The test-unit in a json-like dictionary format as it is returned by
+        :py:func:`~testing.unit_from_file`.
+    :param parser_factory: the parser-factory-object, typically an instance of
+        :py:class:`~parse.Grammar`.
+    :param transformer_factory: A factory-function for the AST-transformation-function.
+    :param report: the name of the subdirectory where the test-reports will be saved.
+        If the name is the empty string, no reports will be generated.
+    :param verbose: If True, more information will be printed to the console during testing.
+    :param junctions: A set of :py:class:`~compile.Junction`-objects that define further
+        processing stages after the AST-transformation.
+    :param show: A set of stage names that shall be shown in the report apart from the AST.
+        (The abstract-syntax-tree will always be shown!)
     """
     assert isinstance(report, str)
     assert isinstance(junctions, Set) and all(isinstance(e[0], str) and isinstance(e[2], str)
@@ -484,6 +544,26 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 errata.append(f'Errors in test "{test_name}" of [{stage}:{parser_name}]\n\t'
                     + '\n\t'.join(str(msg).replace('\n', '\n\t\t') for msg in test_errors))
                 # errata.append('\n\n')  # leads to wrong error count!!!
+
+    def flat_string_test(tests, stage, tree, test_name,
+                         parser_name, test_code, errata) -> Optional[Node]:
+        compare = get(tests, stage, test_name)
+        if isinstance(compare, str):
+            content = tree.content
+            if content == compare:
+                if verbose:  write(f'      {stage}-test "' + test_name + '" ... OK')
+                return None
+            else:
+                try:
+                    return deserialize(compare)
+                except ValueError as e:
+                    test_code_str = "\n\t".join(test_code.split("\n"))
+                    errata.append(f'{stage}-test {test_name} for parser {parser_name} '
+                                  f'or deserialization of expected value failed:\n'
+                                  f'\tExpr.:     {test_code_str}\n'
+                                  f'\tExpected:  {compare}\n'
+                                  f'\tReceived:  {content}')
+                    return None
 
     saved_config_values = dict()
     for parser_name, tests in test_unit.items():
@@ -618,11 +698,8 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 write(infostr + ("OK" if len(errata) == errflag else "FAIL"))
 
             if "cst" in tests and len(errata) == errflag:
-                try:
-                    compare = deserialize(get(tests, "cst", test_name))
-                except ValueError as e:
-                    raise SyntaxError('CST-TEST "%s" of parser "%s" failed with:\n%s'
-                                      % (test_name, parser_name, str(e)))
+                compare = flat_string_test(tests, "cst", cst, test_name,
+                                           parser_name, test_code, errata)
                 if compare:
                     if not compare.equals(cst):
                         errata.append('Concrete syntax tree test "%s" for parser "%s" failed:\n%s' %
@@ -632,11 +709,8 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                         write(infostr + ("OK" if len(errata) == errflag else "FAIL"))
 
             if "ast" in tests and len(errata) == errflag:
-                try:
-                    compare = deserialize(get(tests, "ast", test_name))
-                except ValueError as e:
-                    raise SyntaxError('AST-TEST "%s" of parser "%s" failed with:\n%s'
-                                      % (test_name, parser_name, str(e)))
+                compare = flat_string_test(tests, "ast", ast, test_name,
+                                           parser_name, test_code, errata)
                 if compare:
                     traverse(compare, {'*': remove_children({TEST_ARTIFACT})})
                     if not compare.equals(ast):  # no worry: ast is defined if "ast" in tests
@@ -655,7 +729,8 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                     try:
                         data = extract_data(targets[stage][0])
                         if isinstance(data, Node):
-                            compare = deserialize(get(tests, stage, test_name))
+                            compare = flat_string_test(tests, stage, data, test_name,
+                                                       parser_name, test_code, errata)
                             if compare and not compare.equals(data):
                                 test_str = flatten_sxpr(data.as_sxpr())
                                 compare_str = flatten_sxpr(compare.as_sxpr())
@@ -678,9 +753,9 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                                 if not compare == test_str:
                                     test_code_str = "\n\t".join(test_code.split("\n"))
                                     errata.append(f'{stage}-test {test_name} for parser {parser_name} failed:\n'
-                                                  f'\tExpr.:\n{test_code_str}\n'
-                                                  f'\tExpected:\n{compare}\n'
-                                                  f'\tReceived:\n{test_str}')
+                                                  f'\tExpr.:     {test_code_str}\n'
+                                                  f'\tExpected:  {compare}\n'
+                                                  f'\tReceived:  {test_str}')
                     except ValueError as e:
                         raise SyntaxError(f'{stage}-test {test_name} of parser {parser_name} '
                                           f'failed with:\n{str(e)}.')

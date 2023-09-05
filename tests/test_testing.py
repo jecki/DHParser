@@ -27,7 +27,7 @@ scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 scriptpath = os.path.abspath(scriptpath)
 
-from DHParser.nodetree import parse_sxpr, flatten_sxpr, TOKEN_PTYPE
+from DHParser.nodetree import Node, parse_sxpr, flatten_sxpr, TOKEN_PTYPE
 from DHParser.transform import traverse, remove_whitespace, remove_empty, \
     replace_by_single_child, reduce_single_child, flatten, add_error
 from DHParser.dsl import grammar_provider, create_parser
@@ -102,7 +102,7 @@ M1: "sad(d)a"
 '''
 
 CFG_FILE_5 = '''
-[match:PARSER]
+[ast:PARSER]
 M1: (a
      (b "X")
      
@@ -165,7 +165,30 @@ class TestTestfiles:
 
     def test_unit_from_config_2(self):
         unit = unit_from_config(CFG_FILE_5, 'cfg_file')
-        print(unit)
+        assert isinstance(unit['PARSER']['ast']['M1'], Node)
+        assert isinstance(unit['PARSER']['ast']['M2'], str)
+        assert isinstance(unit['PARSER']['ast']['M3'], str)
+
+    def test_grammar_unit(self):
+        class ParserFactory:
+            def __init__(self):
+                self.root_parser__ = self
+            def __call__(self, document, name):
+                return parse_sxpr('(a (b "X"))')
+            def __getitem__(self, item):
+                return self
+            def apply(self, *args, **kwargs):
+                return False
+            def descendants(self):
+                return []
+        def transformer_factory():
+            def transform(ast):
+                return ast
+            return transform
+        unit = unit_from_config(CFG_FILE_5.replace('ast', 'match') + CFG_FILE_5, 'cfg_file')
+        errata = grammar_unit(unit, ParserFactory, transformer_factory, report='')
+        assert not errata
+
 
 
 ARITHMETIC_EBNF = """
