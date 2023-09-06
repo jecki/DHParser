@@ -1077,7 +1077,7 @@ EBNF_AST_transformation_table = {
 def EBNFTransform() -> TransformerFunc:
     return partial(transformer,
                    transformation_table=EBNF_AST_transformation_table.copy(),
-                   src_stage='cst', dst_stage='ast')
+                   src_stage='CST', dst_stage='AST')
 
 
 def get_ebnf_transformer() -> TransformerFunc:
@@ -1154,21 +1154,21 @@ get_grammar = parsing.factory # for backwards compatibility, only
 TRANSFORMER_FACTORY = '''
 # DEPRECATED, because it requires pickling the transformation-table, which rules out lambdas!
 # ASTTransformation: Junction = create_junction(
-#     {NAME}_AST_transformation_table, "cst", "ast", "transtable")
+#     {NAME}_AST_transformation_table, "CST", "AST", "transtable")
 
 def {NAME}Transformer() -> TransformerFunc:
     return partial(transformer, transformation_table={NAME}_AST_transformation_table.copy(),
-                   src_stage='cst', dst_stage='ast')
+                   src_stage='CST', dst_stage='AST')
 
 ASTTransformation: Junction = Junction(
-    'cst', ThreadLocalSingletonFactory({NAME}Transformer), 'ast')
+    'CST', ThreadLocalSingletonFactory({NAME}Transformer), 'AST')
 '''
 
 
 COMPILER_FACTORY = '''
 
 compiling: Junction = create_junction(
-    {NAME}Compiler, "ast", "{NAME}".lower())
+    {NAME}Compiler, "AST", "{NAME}")
 '''
 
 
@@ -1578,7 +1578,7 @@ class EBNFCompiler(Compiler):
                     '        # initialize your variables here, not in the constructor!',
                     '',
                     '    def prepare(self, root: RootNode) -> None:',
-                    '        assert root.stage == "ast", f"Source stage `ast` expected, '
+                    '        assert root.stage == "AST", f"Source stage `AST` expected, '
                                                          '`but `{root.stage}` found."',
                     '',
                     '    def finalize(self, result: Any) -> Any:',

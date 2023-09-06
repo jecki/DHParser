@@ -43,7 +43,7 @@ Example::
 
     from DHParser import compile_source, start_logging, set_config_value
     start_logging("LOGS")
-    set_config_value('log_syntax_trees', {'cst', 'ast'})
+    set_config_value('log_syntax_trees', {'CST', 'AST'})
     set_config_value('history_tracking', True)
     set_config_value('resume_notices', True)
     result, errors, ast = compile_source(source, preprocessor, grammar,

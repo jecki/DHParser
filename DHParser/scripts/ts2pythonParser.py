@@ -910,7 +910,7 @@ if __name__ == "__main__":
             log_dir = 'LOGS'
             set_preset_value('history_tracking', True)
             set_preset_value('resume_notices', True)
-            set_preset_value('log_syntax_trees', frozenset(['cst', 'ast']))  # don't use a set literal, here
+            set_preset_value('log_syntax_trees', frozenset(['CST', 'AST']))  # don't use a set literal, here
         if args.compatibility:
             version_info = tuple(int(part) for part in args.compatibility[0].split('.'))
             if version_info >= (3, 10):

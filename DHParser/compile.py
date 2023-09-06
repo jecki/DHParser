@@ -465,7 +465,7 @@ def compile_source(source: str,
     for e in errors:  syntax_tree.add_error(None, e)
     syntax_tree.source = original_text
     syntax_tree.source_mapping = source_mapping
-    if 'cst' in log_syntax_trees:
+    if 'CST' in log_syntax_trees:
         log_ST(syntax_tree, log_file_name + '.cst')
     if parser.history_tracking__:
         log_parsing_history(parser, log_file_name)
@@ -492,9 +492,9 @@ def compile_source(source: str,
         else:
             syntax_tree = transformer(syntax_tree)
         assert isinstance(syntax_tree, RootNode)
-        # syntax_tree.stage = 'ast'
+        # syntax_tree.stage = 'AST'
 
-        if 'ast' in log_syntax_trees:
+        if 'AST' in log_syntax_trees:
             log_ST(syntax_tree, log_file_name + '.ast')
 
         if not is_fatal(syntax_tree.error_flag):
@@ -620,10 +620,25 @@ def run_pipeline(junctions: Set[Junction],
                 'Possible causes:  a) wrong stage name specified in junction  b) stage name not '
                 f'updated by compilation-function  c) internal error of DHParser. {further_info}')
 
-    t_to_j = {j[-1]: j for j in junctions}
+    def normalize_name(name: str) -> str:
+        NAME = name.upper()
+        return NAME if NAME in ('AST', 'CST') else name
+
+    def normalize_junction(j: Junction):
+        SRC = j[0].upper()
+        if SRC == 'CST':
+            return Junction('CST', j[1], normalize_name(j[2]))
+        elif SRC == 'AST' and SRC != j[0]:
+            return Junction('AST', j[1], j[2])
+        else:
+            return j
+
+    t_to_j = {normalize_name(j[-1]): normalize_junction(j) for j in junctions}
+    target_stages = {normalize_name(t) for t in target_stages}
+    source_stages = {normalize_name(s): source_stages[s] for s in source_stages}
     steps = []
     targets = target_stages.copy()
-    already_reached = targets.copy() | source_stages.keys()
+    already_reached = targets | source_stages.keys()
     while targets:
         try:
             j_sequence = [t_to_j[t] for t in targets if t not in source_stages]

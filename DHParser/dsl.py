@@ -870,8 +870,8 @@ def create_compiler_junction(compile_class: type,
     a :py:class:`compile.Compiler` or another callable class.
     """
     assert callable(compile_class)
-    assert src_stage and src_stage.islower()
-    assert dst_stage and dst_stage.islower()
+    # assert src_stage and src_stage.islower()
+    # assert dst_stage and dst_stage.islower()
     factory = ThreadLocalSingletonFactory(compile_class)
     # process = partial(process_template, src_stage=src_stage, dst_stage=dst_stage,
     #                   factory_function=factory)

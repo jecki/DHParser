@@ -29,7 +29,7 @@ serializations = expand_table(dict([('*', ['sxpr'])]))
 
 #######################################################################
 
-def compile_src(source: str, target: str = "{NAME}".lower()) -> Tuple[Any, List[Error]]:
+def compile_src(source: str, target: str = "{NAME}") -> Tuple[Any, List[Error]]:
     """Compiles the source to a single targte and returns the result of the compilation
     as well as a (possibly empty) list or errors or warnings that have occurred in the
     process.
@@ -145,7 +145,7 @@ def main(called_from_app=False) -> bool:
         access_presets()
         set_preset_value('history_tracking', True)
         set_preset_value('resume_notices', True)
-        set_preset_value('log_syntax_trees', frozenset(['cst', 'ast']))  # don't use a set literal, here!
+        set_preset_value('log_syntax_trees', frozenset(['CST', 'AST']))  # don't use a set literal, here!
         finalize_presets()
     start_logging(log_dir)
 

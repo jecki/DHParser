@@ -482,7 +482,7 @@ ALLOWED_PRESET_VALUES['xml_attribute_error_handling'] = frozenset({'ignore', 'fi
 
 # Defines which syntax tree should be logged during compilation:
 # The concrete syntax tree, the abstract syntax tree or both.
-# Possible values are {'ast'}, {'cst'} or {'ast', 'cst'}
+# Possible values are {'AST'}, {'CST'} or {'AST', 'CST'}
 # Default value: empty set
 CONFIG_PRESET['log_syntax_trees'] = frozenset()
 

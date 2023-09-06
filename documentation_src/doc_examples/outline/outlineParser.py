@@ -187,11 +187,11 @@ outline_AST_transformation_table = {
 
 def outlineTransformer() -> TransformerFunc:
     return partial(transformer, transformation_table=outline_AST_transformation_table.copy(),
-                   src_stage='cst', dst_stage='ast')
+                   src_stage='CST', dst_stage='AST')
 
 
 ASTTransformation: Junction = Junction(
-    'cst', ThreadLocalSingletonFactory(outlineTransformer), 'ast')
+    'CST', ThreadLocalSingletonFactory(outlineTransformer), 'AST')
 
 
 #######################################################################
@@ -214,7 +214,7 @@ class outlineCompiler(Compiler):
         # initialize your variables here, not in the constructor!
 
     def prepare(self, root: RootNode) -> None:
-        assert root.stage == "ast", f"Source stage `ast` expected, `but `{root.stage}` found."
+        assert root.stage == "AST", f"Source stage `CST` expected, `but `{root.stage}` found."
 
     def finalize(self, result: Any) -> Any:
         if isinstance(self.tree, RootNode):
@@ -281,7 +281,7 @@ class outlineCompiler(Compiler):
 
 
 compiling: Junction = create_junction(
-    outlineCompiler, "ast", "outline".lower())
+    outlineCompiler, "AST", "outline")
 
 
 #######################################################################
@@ -428,7 +428,7 @@ def main(called_from_app=False) -> bool:
         access_presets()
         set_preset_value('history_tracking', True)
         set_preset_value('resume_notices', True)
-        set_preset_value('log_syntax_trees', frozenset(['cst', 'ast']))  # don't use a set literal, here!
+        set_preset_value('log_syntax_trees', frozenset(['CST', 'AST']))  # don't use a set literal, here!
         finalize_presets()
     start_logging(log_dir)
 

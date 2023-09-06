@@ -2046,7 +2046,7 @@ class Grammar:
         ## end of error-handling
 
         self.tree__.swallow(result, self.text__, source_mapping)
-        self.tree__.stage = 'cst'
+        self.tree__.stage = 'CST'
         # if not self.tree__.source:  self.tree__.source = document
         self.start_parser__ = None
         return self.tree__

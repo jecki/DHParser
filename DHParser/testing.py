@@ -85,7 +85,7 @@ __all__ = ('unit_from_config',
            'MockStream')
 
 
-UNIT_STAGES = frozenset({'match*', 'match', 'fail', 'ast', 'cst'})
+UNIT_STAGES = frozenset({'match*', 'match', 'fail', 'AST', 'CST'})
 STARTING_STAGES = frozenset({'match*', 'match', 'fail'})
 RESULT_STAGES = frozenset({'__cst__', '__ast__', '__err__'})
 
@@ -241,6 +241,8 @@ def unit_from_config(config_str: str, filename: str, allowed_stages=UNIT_STAGES)
         first_section_missing = False
         d = section_match.groupdict()
         stage = d['stage']
+        if stage.upper() == 'AST':  stage = 'AST'
+        if stage.upper() == 'CST':  stage = 'CST'
         if stage not in allowed_stages:
             raise KeyError(f'Unknown stage "{stage}" in file "{filename}"! '
                            f"must be one of: {allowed_stages}")
@@ -270,7 +272,7 @@ def unit_from_config(config_str: str, filename: str, allowed_stages=UNIT_STAGES)
     if pos != len(cfg) and not re.match(r'\s+$', cfg[pos:]):
         err_head = 'N' if first_section_missing else 'Test NAME:STRING or n'
         err_str = err_head + 'ew section [TEST:PARSER] expected, ' \
-                  + 'where TEST is "match", "fail" or "ast"; in file ' \
+                  + 'where TEST is "match", "fail" or "AST"; in file ' \
                   + '"%s", line %i: "%s"' \
                   % (filename, cfg[:pos + 1].count('\n') + 1,
                      cfg[pos:cfg.find('\n', pos + 1)].strip('\n'))
@@ -325,12 +327,12 @@ def unit_from_file(filename, additional_stages=UNIT_STAGES):
     errors = []
     for parser_name, tests in test_unit.items():
         # normalize case for test category names
-        keys = list(tests.keys())
-        for key in keys:
-            new_key = key.lower()
-            if new_key != key:
-                tests[new_key] = tests[keys]
-                del tests[keys]
+        # keys = list(tests.keys())
+        # for key in keys:
+        #     new_key = key.lower()
+        #     if new_key != key:
+        #         tests[new_key] = tests[key]
+        #         del tests[key]
 
         m_names = set(tests.get('match', dict()).keys())
         f_names = set(tests.get('fail', dict()).keys())
@@ -385,10 +387,10 @@ def get_report(test_unit) -> str:
             cst = tests.get('__cst__', {}).get(test_name, None)
             if cst and (not ast or str(test_name).endswith('*')):
                 report.append('\n### CST\n')
-                report.append(indent(cst.serialize('cst')))
+                report.append(indent(cst.serialize('CST')))
             if ast:
                 report.append('\n### AST\n')
-                report.append(indent(ast.serialize('ast')))
+                report.append(indent(ast.serialize('AST')))
 
             compilation_stages = [key for key in tests
                                   if key[:2] + key[-2:] == '____' and key not in
@@ -596,6 +598,13 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         match_tests = set(tests['match'].keys()) if 'match' in tests else set()
         match_test_keys = {clean_key(k) for k in match_tests}
 
+        # normalize AST and CST-names to upper!
+        for key in tuple(tests.keys()):
+            KEY = key.upper()
+            if KEY in ('AST', 'CST') and KEY != key:
+                tests[KEY] = tests[key]
+                del tests[key]
+
         transformation_stages = {key for key in tests if key not in {'match', 'fail'}}
         for stage in transformation_stages:
             transformation_tests = set(tests[stage].keys())
@@ -604,7 +613,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                                      ' lack corresponding match-tests.')
         # cst and ast will be treated separately in the following and are thus not
         # needed any more in the list
-        for stage in ('cst', 'ast'):
+        for stage in ('CST', 'AST'):
             try:
                 transformation_stages.remove(stage)
             except (KeyError, ValueError):
@@ -638,8 +647,8 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                               '\n\tExpr.:  %s\n\t%s' %
                               (test_name, parser_name, md_codeblock(test_code),
                                '\n'.join(str(m) for m in errors)))
-            if "ast" in tests or report or transformation_stages or show:
-                ast = copy.deepcopy(cst) if 'cst' in tests or str(test_name).find('*') >= 0 \
+            if 'AST' in tests or report or transformation_stages or show:
+                ast = copy.deepcopy(cst) if 'CST' in tests or str(test_name).find('*') >= 0 \
                       else cst
                 old_errors = set(ast.errors)
                 traverse(ast, {'*': remove_children({TEST_ARTIFACT})})
@@ -651,7 +660,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                     raise e
                 tests.setdefault('__ast__', {})[test_name] = ast
                 ast_errors = [e for e in ast.errors if e not in old_errors]
-                add_errors_to_errata(ast_errors, 'ast', test_name, parser_name)
+                add_errors_to_errata(ast_errors, 'AST', test_name, parser_name)
 
             # compilation-tests
 
@@ -665,7 +674,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                         f'{", ".join([repr(t) for t in tests.keys()])} in unit "{unit_name}"!')
                 old_errors = set(ast.errors)
                 try:
-                    targets = run_pipeline(junctions, {'ast': copy.deepcopy(ast)},
+                    targets = run_pipeline(junctions, {'AST': copy.deepcopy(ast)},
                                            transformation_stages | show)
                 except Exception as e:  # at least: (ValueError, IndexError)
                     # raise SyntaxError(f'Compilation-Test {test_name} of parser {parser_name} '
@@ -697,23 +706,23 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 infostr = '    match-test "' + test_name + '" ... '
                 write(infostr + ("OK" if len(errata) == errflag else "FAIL"))
 
-            if "cst" in tests and len(errata) == errflag:
-                compare = flat_string_test(tests, "cst", cst, test_name,
+            if 'CST' in tests and len(errata) == errflag:
+                compare = flat_string_test(tests, 'CST', cst, test_name,
                                            parser_name, test_code, errata)
                 if compare:
                     if not compare.equals(cst):
                         errata.append('Concrete syntax tree test "%s" for parser "%s" failed:\n%s' %
-                                      (test_name, parser_name, cst.serialize('cst')))
+                                      (test_name, parser_name, cst.serialize('CST')))
                     if verbose:
                         infostr = '      cst-test "' + test_name + '" ... '
                         write(infostr + ("OK" if len(errata) == errflag else "FAIL"))
 
-            if "ast" in tests and len(errata) == errflag:
-                compare = flat_string_test(tests, "ast", ast, test_name,
+            if 'AST' in tests and len(errata) == errflag:
+                compare = flat_string_test(tests, 'AST', ast, test_name,
                                            parser_name, test_code, errata)
                 if compare:
                     traverse(compare, {'*': remove_children({TEST_ARTIFACT})})
-                    if not compare.equals(ast):  # no worry: ast is defined if "ast" in tests
+                    if not compare.equals(ast):  # no worry: ast is defined if 'AST' in tests
                         ast_str = flatten_sxpr(ast.as_sxpr())
                         compare_str = flatten_sxpr(compare.as_sxpr())
                         errata.append('Abstract syntax tree test "%s" for parser "%s" failed:'
@@ -743,13 +752,13 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                             compare = get(tests, stage, test_name).strip('\n')
                             if compare:
                                 test_str = str(data)
-                                if stage in ('match', 'fail', 'ast', 'cst'):
+                                if stage in ('match', 'fail', 'AST', 'CST'):
                                     test_str = normalize_code(test_str, full_normalization=False)
                                 else:
                                     test_str = test_str.strip('\n')
                                 # test_str = normalize_code(
                                 #     test_str, full_normalization=
-                                #     stage not in ('match', 'fail', 'ast', 'cst'))
+                                #     stage not in ('match', 'fail', 'AST', 'CST'))
                                 if not compare == test_str:
                                     test_code_str = "\n\t".join(test_code.split("\n"))
                                     errata.append(f'{stage}-test {test_name} for parser {parser_name} failed:\n'
@@ -787,7 +796,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 errata.append('Unknown parser "{}" in fail test "{}"!'.format(
                     parser_name, test_name))
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
-            if "ast" in tests or report:
+            if 'AST' in tests or report:
                 traverse(cst, {'*': remove_children({TEST_ARTIFACT})})
                 transform(cst)
             if not (is_error(cst.error_flag) and not lookahead_artifact(cst)):
@@ -796,7 +805,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 #     try:
                 #         stage = cst.stage
                 #     except AttributeError:
-                #         stage = 'cst'
+                #         stage = 'CST'
                 #     treestr = f'\n{indent(stage.upper() + ": " + cst.serialize(stage))}'
                 # else:
                 #     treestr = "\n    (AST not shown, because it is just a testing stub!)"

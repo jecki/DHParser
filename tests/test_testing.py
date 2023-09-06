@@ -165,9 +165,9 @@ class TestTestfiles:
 
     def test_unit_from_config_2(self):
         unit = unit_from_config(CFG_FILE_5, 'cfg_file')
-        assert isinstance(unit['PARSER']['ast']['M1'], Node)
-        assert isinstance(unit['PARSER']['ast']['M2'], str)
-        assert isinstance(unit['PARSER']['ast']['M3'], str)
+        assert isinstance(unit['PARSER']['AST']['M1'], Node)
+        assert isinstance(unit['PARSER']['AST']['M2'], str)
+        assert isinstance(unit['PARSER']['AST']['M3'], str)
 
     def test_grammar_unit(self):
         class ParserFactory:
