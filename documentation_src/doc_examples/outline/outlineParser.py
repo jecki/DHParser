@@ -107,7 +107,7 @@ class outlineGrammar(Grammar):
     r"""Parser for an outline source file.
     """
     markup = Forward()
-    source_hash__ = "f36ada9cb6c43d05d764031e48f201cf"
+    source_hash__ = "caa1953a737c2a8c510ddccfacf3d6fc"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
     disposable__ = re.compile('WS$|EOF$|LINE$|LFF$|LLF$|L$|LF$|CHARS$|TEXT$|ESCAPED$|inner_txt$')
     static_analysis_pending__ = []  # type: List[bool]
@@ -163,25 +163,7 @@ outline_AST_transformation_table = {
     # "<": [],  # called for each node before calling its specific rules
     # "*": [],  # fallback for nodes that do not appear in this table
     # ">": [],   # called for each node after calling its specific rules
-    "document": [],
-    "main": [],
-    "section": [],
-    "subsection": [],
-    "subsubsection": [],
-    "s5section": [],
-    "s6section": [],
-    "heading": [],
-    "blocks": [],
-    "block": [],
-    "line": [],
-    "lf": [],
-    "is_heading": [],
-    "LINE": [],
-    "WS": [],
-    "S": [],
-    "PARSEP": [],
-    "NEVER_MATCH": [],
-    "EOF": [],
+    "markup": [merge_adjacent(is_one_of('text', ':L', ':LF'), 'text')],
 }
 
 

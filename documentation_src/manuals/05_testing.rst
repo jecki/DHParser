@@ -502,7 +502,7 @@ This time the grammar-tests yield the desired result::
        for symbols to be dropped. However, in this simple example we do not
        follow this practice for the sake of readability.
 
-Before going further down with our top-down-design of the grammar, we draw 
+Before going further down with our top-down-design of the grammar, we draw
 up a test-case that contains more structural details. For this purpose we
 add under the heading ``[match:document]`` another test-case with a little
 more structure::
@@ -512,7 +512,7 @@ more structure::
         Some introductory Text
 
         ## Section 1
-        One paragraph of text 
+        One paragraph of text
 
         Another paragraph of text. This
         time stretching over several lines.
@@ -633,11 +633,11 @@ I am not going to explain the idioms used for encoding text blocks
 (aka "paragraphs") separated by empty lines, here, as the code
 above should be clear enough with the given comments.
 
-The next step will be a little bit more complicated: We would like 
+The next step will be a little bit more complicated: We would like
 to allow inline-markup inside paragraphs. Loosely following the
-Markdown conventions we would like to use a single underscore character 
-(``_``) to mark emphasized text, e.g. ``_emphasized_``, and double
-underscore markers to mark bold text, e.g.  ``__bold__``. Again, we 
+Markdown conventions we would like to use a single underscore character
+(``_``) to mark emphasized text, e.g. ``_emphasized_``, and doubl
+underscore markers to mark bold text, e.g.  ``__bold__``. Again, we
 start with writing test-code. We assume "emphasis" as the name of the
 parser for emphasized text and "bold" for bold text::
 
@@ -654,17 +654,17 @@ parser for emphasized text and "bold" for bold text::
 Now, using underscore characters to markup emphasized or bold text
 raises the question what to write, if we would like to use the
 underscore as a normal character in out text without the intention to
-mark an emphasized block. For this purpose, we add an ordinary 
-escape mechanism that allows any character to be used literally, 
+mark an emphasized block. For this purpose, we add an ordinary
+escape mechanism that allows any character to be used literally,
 if it is preceded by a backslash. Let's write a quick test::
 
     [match:emphasis]
-    M3: "_emphasis with an escaped \_ character_"    
+    M3: "_emphasis with an escaped \_ character_"
 
     [fail:emphasis]
     F1: "_cannot complete parsing, because of a dangling _ underscore_"
 
-Of course, we also need tests for markup text _containing_ emphasized 
+Of course, we also need tests for markup text _containing_ emphasized
 or bold elements::
 
     [match:markup]
@@ -673,20 +673,20 @@ or bold elements::
         emphasized words* as well as some
         **bold text that contains *emphasized words***."""
 
-Now, let's start coding! In the first step we will implement our 
-escape-mechanism. For this purpose we define a new text element, 
+Now, let's start coding! In the first step we will implement our
+escape-mechanism. For this purpose we define a new text element,
 named "text" with small letters (in contrast to the "TEXT"-parser
 defined above). Again, we write the test first::
 
     [match:text]
     M1: "Text with \_ three \\ escaped \x elements"
 
-In this case it makes sense to also specify the expected result. With the 
-following test, we test the flat-string-representation of the 
+In this case it makes sense to also specify the expected result. With the
+following test, we test the flat-string-representation of the
 abstract-syntax-tree (AST) that parser "text" yields for the match-test "M1".
 Note, that the names of AST-tests and, in fact of any other tests further
 down the processing pipelines must be the same as the names of the match
-test they refer to. (See below for more information on abstract-syntax-tree 
+test they refer to. (See below for more information on abstract-syntax-tree
 (AST)-testing.)::
 
     [ast:text]
@@ -698,20 +698,21 @@ for which we have just written our tests::
     text      = (TEXT | ESCAPED) { [LLF] (TEXT | ESCAPED) }
     ESCAPED   = ESCAPED   = `\` /./
 
-Note that since we drop any back-ticked literals (see the 
+Note that since we drop any back-ticked literals (see the
 ``@drop-directive`` way above) the "ESCAPED"-parser should always
 yield the escaped character without the backslash in front of it.
 
 Unfortunately, the ast-test fails with an error message::
 
-  	ast-test "M1" for parser "text" or deserialization of expected value failed:
-		    Expr.:     Text with \_ three \\ escaped \x elements
-		    Expected:  Text with _ three \ escaped x elements
-		    Received:  Text with \_ three \\ escaped \x elements
+    ast-test "M1" for parser "text" or deserialization of expected value failed:
+        Expr.:     Text with \_ three \\ escaped \x elements
+        Expected:  Text with _ three \ escaped x elements
+        Received:  Text with \_ three \\ escaped \x elements
 
 (The provisio "or deserialization of expected value failed" means that in case
-we had specified the actual AST (e.g. (text "Text with _ three \ escaped x elements")) 
-rather than its flat-string-representation the cause of the error might also be 
+we had specified the actual AST
+(e.g. (text "Text with _ three \ escaped x elements"))
+rather than its flat-string-representation the cause of the error might also be
 a syntax-error in the written down abstract syntax tree.)
 
 Something went wrong! In order to find out what exactly went wrong,
@@ -734,7 +735,7 @@ From this it becomes obvious that the
 the "CHARS"-parser. Thus, we have to exclude it from the "CHARS"-parser
 explicitly to avoid it being captured by CHARS ans thus, indirectly, also by
 TEXT (with capital letters). At the same time we can take care to also
-exclude the underscore delimiter from the regular expression defining 
+exclude the underscore delimiter from the regular expression defining
 the CHARS-parser::
 
       CHARS = /[^\s\\_]+/
@@ -747,7 +748,7 @@ the test fails, but that at least, the AST is sound in the sense that all
 ESCAPED characters have been properly captured by the ESCAPE-parser.)
 
 We use the same idiom that we have employed in order to enrich simple TEXT
-with ESCAPED characters in the definition of "text" for defining 
+with ESCAPED characters in the definition of "text" for defining
 markup-text that also contains bold and emphasized elements::
 
     markup    = (text | bold | emphasis) { [LLF] (text | bold | emphasis) }
@@ -755,9 +756,9 @@ markup-text that also contains bold and emphasized elements::
     emphasis  = `_` inner_txt `_`
     inner_txt = [L] markup [L]
 
-Note that by placing the emphasis-parser after the bold-parser in the 
-definition of the markup-parser, we make sure that a bold-element 
-is not accidentally captured as an emphasized-element containing 
+Note that by placing the emphasis-parser after the bold-parser in the
+definition of the markup-parser, we make sure that a bold-element
+is not accidentally captured as an emphasized-element containing
 another emphasized element. (Yes, they can all be recursively nested!)
 
 The introduction of "inner_txt" is motivated by the fact that neither
@@ -767,7 +768,7 @@ and before the closing markers for bold an emphasized elements, because
 this allows to disambiguate nested bold and emphasized elements
 when necessary by adding whitespace. Otherwise::
 
-    * **bold** text inside emphasized text that can be parsed* 
+    * **bold** text inside emphasized text that can be parsed*
 
 would have to be written as::
 
@@ -780,15 +781,56 @@ pros and cons of either solution for a while, if you like!)
 We could have skipped the introduction of the intermediary "text"-parser
 by adding ESCAPED-elements directly to the "markup"-parser, e.g.::
 
-    markup    =         (TEXT | ESCAPED | bold | emphasis) 
+    markup    =         (TEXT | ESCAPED | bold | emphasis)
                 { [LLF] (TEXT | ESCAPED | bold | emphasis) }
-    
+
 The reason, this has not been done is that while we would like to
 flatten ESCAPED chars and other TEXT but not the markup-structures. If
 we add further inline-elements like internet-links for example we
-would not add more intermediaries but rather extend the 
-"markup"-parser-definition. (You may want to try to add internetlinks 
+would not add more intermediaries but rather extend the
+"markup"-parser-definition. (You may want to try to add internetlinks
 enclosed by ``<`` and ``>`` as an exercise!)
+
+Before we stop the bottom-up-approach at this point, there is one last
+touch we might want to add: The abstract syntax tree (AST) still looks
+rather verbose, e.g.:
+
+    (markup
+      (text
+        (TEXT
+          (CHARS "This")
+          (LLF
+            (L " "))
+          (CHARS "is")))
+    ...
+
+Since, for further processing, we are only interested in distinguighing
+text from highlighted elements (i.e. emphasized and bold text), we
+add the more attomic elements, LLF, L, LF, CHARS, TEXT, ESCAPED  to
+the list of disposables at the beginning of the EBNF-grammar, which
+makes them disappear, merging their content in the higher-level elements.
+Thus we change the @disposable-directive at the top of the grammar to:
+
+    @ disposable  = WS, EOF, LINE, LFF, LLF, L, LF, 
+                    CHARS, TEXT, ESCAPED, inner_txt
+
+Now, the syntax-trees look much smoother::
+
+    (markup
+      (text "This is a text")
+      (:L " ")
+      (emphasis
+        (markup
+          (text
+            "with several"
+            "emphasized words")))  
+    ...
+
+For even further refinement, you need to work with the AST-transformation-table
+that is found in the outlineParser.py-file. For example, by adding the entry::
+
+    "markup": [merge_adjacent(is_one_of('text', ':L', ':LF'), 'text')]
+
 
 For now, we'll stop with the bottom-up development and see if and how
 we can link the two parts of our grammar that we have developed so far,
@@ -797,8 +839,21 @@ one in top-down and one in bottom-up-style.
 Linking both approaches
 ^^^^^^^^^^^^^^^^^^^^^^^
 
+In the top-down approach we have defined the largest or the most
+encompassing elements from the whole document, its sections down
+to the block elements that make up the sections of the document.
+For the block elements we have (for the time being) only defined
+a simple makeshift parser as a fill in to be replaced by parsers
+for the fine structure, later::
 
-Final remarks 
+    blocks  = !is_heading LINE { LFF !is_heading LINE }
+
+Now, we can replace the "LINE"-parser in the statement above by
+the parser for the markup-block that we have arrived at with the
+bottom-up-approach.
+
+
+Final remarks
 ^^^^^^^^^^^^^
 
 - Test Driven Grammar-Development and Rapid Grammar Prototyping

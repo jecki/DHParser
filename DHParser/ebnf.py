@@ -972,6 +972,7 @@ def get_ebnf_grammar() -> Union[HeuristicEBNFGrammar, ConfigurableEBNFGrammar]:
             THREAD_LOCALS.ebnf_grammar_singleton = grammar
         else:
             grammar = HeuristicEBNFGrammar(static_analysis=False)
+
             grammar.mode__ = mode
             THREAD_LOCALS.ebnf_grammar_singleton = grammar
     if mode == 'configurable' or (mode == 'fixed' and grammar.mode__ != 'fixed'):

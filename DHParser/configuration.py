@@ -543,8 +543,8 @@ CONFIG_PRESET['default_literalws'] = "none"
 # Default value for the brand of EBNF that DHParser accepts
 # 'fixed'       - Allows to use suffix syntax (?, +, *) as well as classic
 #       EBNF-syntax ([], {}). The delimiters are fixed before first use to
-#       the DHParser-standard and will not be read from configuration-value
-#       "delimiter_set".
+#       the DHParser-standard and will only be read once from
+#       configuration-value "delimiter_set" upon first usage.
 # 'classic'     - relatively closest to the ISO-standard, i.e. uses [] and {}
 #       for optional and zero or more elements, respectively. Does not allow
 #       the ?, +, * suffixes (NOT YET IMPLEMENTED!). Allows the specification
@@ -555,7 +555,9 @@ CONFIG_PRESET['default_literalws'] = "none"
 #       allows character ranges within square brackets with ordinal values,
 #       only. Uses | as delimiter for alternatives.
 # 'configurable' - like fixed, but the delimiter constants will be configured
-#       from the configuration-value 'delimiter_set' (see below).
+#       from the configuration-value 'delimiter_set' (see below) each
+#       time the grammar object is requested with DHParser.ebnf.get_ebnf_grammar()
+#       or DHParser.ebnf.parse_ebnf().
 # 'heuristic'   - the most liberal mode, allows about everything. However,
 #       because it employs heuristics to distinguish ambiguous cases, it
 #       may lead to unexpected errors and require the user to resolve the

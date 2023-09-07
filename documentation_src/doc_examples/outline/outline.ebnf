@@ -4,8 +4,8 @@
 
 @ whitespace  = /[ \t]*/  # only horizontal whitespace, no linefeeds
 @ reduction   = merge     # simplify tree as much as possible
-@ disposable  = WS, EOF, LINE, LFF, LLF, L, LF, CHARS, TEXT, ESCAPED,
-                inner_txt
+@ disposable  = WS, EOF, LINE, LFF, LLF, L, LF, 
+                CHARS, TEXT, ESCAPED, inner_txt
 @ drop        = WS, EOF, backticked, whitespace
 
 #:  Outline
