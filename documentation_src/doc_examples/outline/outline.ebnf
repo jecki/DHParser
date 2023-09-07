@@ -23,10 +23,11 @@ heading = LINE
 
 #: blocks
 
-blocks  = !is_heading LINE { LFF !is_heading LINE }
+blocks  = !is_heading markup { LFF !is_heading markup }
 is_heading = /##?#?#?#?#?(?!#)/
 
-markup    = (text | bold | emphasis) { [LLF] (text | bold | emphasis) }
+markup    = [indent] (text | bold | emphasis) { [LLF] (text | bold | emphasis) }
+indent    = /[ \t]+(?=[^\s])/
 text      = (TEXT | ESCAPED) { [LLF] (TEXT | ESCAPED) }
 
 #: inline-elements

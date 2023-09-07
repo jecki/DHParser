@@ -751,7 +751,9 @@ We use the same idiom that we have employed in order to enrich simple TEXT
 with ESCAPED characters in the definition of "text" for defining
 markup-text that also contains bold and emphasized elements::
 
-    markup    = (text | bold | emphasis) { [LLF] (text | bold | emphasis) }
+    markup    = [indent] (text | bold | emphasis) 
+                { [LLF] (text | bold | emphasis) }
+    indent    = /[ \t]+(?=[^\s])/
     bold      = `__` inner_txt `__`
     emphasis  = `_` inner_txt `_`
     inner_txt = [L] markup [L]
@@ -781,7 +783,7 @@ pros and cons of either solution for a while, if you like!)
 We could have skipped the introduction of the intermediary "text"-parser
 by adding ESCAPED-elements directly to the "markup"-parser, e.g.::
 
-    markup    =         (TEXT | ESCAPED | bold | emphasis)
+    markup    = [indent] (TEXT | ESCAPED | bold | emphasis)
                 { [LLF] (TEXT | ESCAPED | bold | emphasis) }
 
 The reason, this has not been done is that while we would like to
@@ -827,7 +829,8 @@ Now, the syntax-trees look much smoother::
     ...
 
 For even further refinement, you need to work with the AST-transformation-table
-that is found in the outlineParser.py-file. For example, by adding the entry::
+that is found in the outlineParser.py-file. For example, by adding an entry
+to merge the whitespace nodes with the text-nodes::
 
     "markup": [merge_adjacent(is_one_of('text', ':L', ':LF'), 'text')]
 
@@ -850,7 +853,11 @@ for the fine structure, later::
 
 Now, we can replace the "LINE"-parser in the statement above by
 the parser for the markup-block that we have arrived at with the
-bottom-up-approach.
+bottom-up-approach::
+
+    blocks  = !is_heading markup { LFF !is_heading markup }
+
+
 
 
 Final remarks

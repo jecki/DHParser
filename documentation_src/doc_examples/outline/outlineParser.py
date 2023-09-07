@@ -107,7 +107,7 @@ class outlineGrammar(Grammar):
     r"""Parser for an outline source file.
     """
     markup = Forward()
-    source_hash__ = "caa1953a737c2a8c510ddccfacf3d6fc"
+    source_hash__ = "d1a89aaa29237cf1e5bd39a92885cec8"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
     disposable__ = re.compile('WS$|EOF$|LINE$|LFF$|LLF$|L$|LF$|CHARS$|TEXT$|ESCAPED$|inner_txt$')
     static_analysis_pending__ = []  # type: List[bool]
@@ -133,16 +133,17 @@ class outlineGrammar(Grammar):
     bold = Alternative(Series(Drop(Text("**")), inner_txt, Drop(Text("**"))), Series(Drop(Text("__")), inner_txt, Drop(Text("__"))))
     emphasis = Alternative(Series(Drop(Text("*")), NegativeLookahead(Drop(Text("*"))), inner_txt, Drop(Text("*"))), Series(Drop(Text("_")), NegativeLookahead(Drop(Text("_"))), inner_txt, Drop(Text("_"))))
     text = Series(Alternative(TEXT, ESCAPED), ZeroOrMore(Series(Option(LLF), Alternative(TEXT, ESCAPED))))
+    indent = RegExp('[ \\t]+(?=[^\\s])')
     heading = Synonym(LINE)
     is_heading = RegExp('##?#?#?#?#?(?!#)')
-    blocks = Series(NegativeLookahead(is_heading), LINE, ZeroOrMore(Series(LFF, NegativeLookahead(is_heading), LINE)))
+    blocks = Series(NegativeLookahead(is_heading), markup, ZeroOrMore(Series(LFF, NegativeLookahead(is_heading), markup)))
     s6section = Series(Drop(Text("######")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)))
     s5section = Series(Drop(Text("#####")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, s6section)))
     subsubsection = Series(Drop(Text("####")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, s5section)))
     subsection = Series(Drop(Text("###")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, subsubsection)))
     section = Series(Drop(Text("##")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, subsection)))
     main = Series(Option(WS), Drop(Text("#")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, section)))
-    markup.set(Series(Alternative(text, bold, emphasis), ZeroOrMore(Series(Option(LLF), Alternative(text, bold, emphasis)))))
+    markup.set(Series(Option(indent), Alternative(text, bold, emphasis), ZeroOrMore(Series(Option(LLF), Alternative(text, bold, emphasis)))))
     document = Series(main, Option(WS), EOF, mandatory=2)
     root__ = document
     
