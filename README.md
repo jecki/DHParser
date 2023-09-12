@@ -6,8 +6,8 @@ DHParser
 ![](https://img.shields.io/pypi/pyversions/DHParser) 
 ![](https://img.shields.io/pypi/l/DHParser)
 
-DHParser - A parser generator and domain specific language (DSL)
-construction kit for the Digital Humanities
+DHParser - Rapid prototyping of formal grammars and 
+domain specific languages (DSL) in the Digital Humanities
 
 This software is open source software under the Apache 2.0-License (see section License, below).
 
@@ -77,9 +77,10 @@ Features
   https://dhparser.readthedocs.io/en/latest/manuals/03_transform.html#declarative-tree-transformation)
   for post-processing syntax-trees
 
-* Unit testing framework for test-driven grammar development(
+* Unit testing framework and post-mortem-debuger for [test-driven grammar
+  development](
   https://dhparser.readthedocs.io/en/latest/Overview.html#test-driven-grammar-development)
-  and post-mortem debugger for grammars
+  and rapid-prototyping of grammars
 
 * [Customizable error reporting](
   https://dhparser.readthedocs.io/en/latest/manuals/01_ebnf.html#error-catching),

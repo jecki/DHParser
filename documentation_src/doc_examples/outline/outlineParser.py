@@ -51,7 +51,7 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.toolkit import is_filename, load_if_file, cpu_count, RX_NEVER_MATCH, \
-    ThreadLocalSingletonFactory, expand_table
+    ThreadLocalSingletonFactory, expand_table, smart_list
 from DHParser.trace import set_tracer, resume_notices_on, trace_history
 from DHParser.transform import is_empty, remove_if, TransformationDict, TransformerFunc, \
     transformation_factory, remove_children_if, move_fringes, normalize_whitespace, \
@@ -106,10 +106,10 @@ preprocessing: PseudoJunction = create_preprocess_junction(
 class outlineGrammar(Grammar):
     r"""Parser for an outline source file.
     """
-    markup = Forward()
-    source_hash__ = "d1a89aaa29237cf1e5bd39a92885cec8"
+    emphasis = Forward()
+    source_hash__ = "8ca494ec4d838ef642495c9e60c11e2c"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('WS$|EOF$|LINE$|LFF$|LLF$|L$|LF$|CHARS$|TEXT$|ESCAPED$|inner_txt$')
+    disposable__ = re.compile('WS$|EOF$|LINE$|LFF$|LLF$|L$|LF$|CHARS$|TEXT$|ESCAPED$|inner_emph$|inner_bold$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -129,13 +129,14 @@ class outlineGrammar(Grammar):
     CHARS = RegExp('[^\\s\\\\_*]+')
     TEXT = Series(CHARS, ZeroOrMore(Series(LLF, CHARS)))
     LINE = RegExp('[^\\n]+')
-    inner_txt = Series(Option(L), markup, Option(L))
-    bold = Alternative(Series(Drop(Text("**")), inner_txt, Drop(Text("**"))), Series(Drop(Text("__")), inner_txt, Drop(Text("__"))))
-    emphasis = Alternative(Series(Drop(Text("*")), NegativeLookahead(Drop(Text("*"))), inner_txt, Drop(Text("*"))), Series(Drop(Text("_")), NegativeLookahead(Drop(Text("_"))), inner_txt, Drop(Text("_"))))
     text = Series(Alternative(TEXT, ESCAPED), ZeroOrMore(Series(Option(LLF), Alternative(TEXT, ESCAPED))))
-    indent = RegExp('[ \\t]+(?=[^\\s])')
-    heading = Synonym(LINE)
+    inner_bold = Series(Option(Series(dwsp__, Lookahead(RegExp('[*_]')))), Alternative(text, emphasis), ZeroOrMore(Series(Option(LLF), Alternative(text, emphasis))), Option(Series(Lookbehind(RegExp('[*_]')), dwsp__)))
+    bold = Alternative(Series(Drop(Text("**")), inner_bold, Drop(Text("**")), mandatory=1), Series(Drop(Text("__")), inner_bold, Drop(Text("__")), mandatory=1))
     is_heading = RegExp('##?#?#?#?#?(?!#)')
+    heading = Synonym(LINE)
+    inner_emph = Series(Option(Series(dwsp__, Lookahead(RegExp('[*_]')))), Alternative(text, bold), ZeroOrMore(Series(Option(LLF), Alternative(text, bold))), Option(Series(Lookbehind(RegExp('[*_]')), dwsp__)))
+    indent = RegExp('[ \\t]+(?=[^\\s])')
+    markup = Series(Option(indent), Alternative(text, bold, emphasis), ZeroOrMore(Series(Option(LLF), Alternative(text, bold, emphasis))))
     blocks = Series(NegativeLookahead(is_heading), markup, ZeroOrMore(Series(LFF, NegativeLookahead(is_heading), markup)))
     s6section = Series(Drop(Text("######")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)))
     s5section = Series(Drop(Text("#####")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, s6section)))
@@ -143,7 +144,7 @@ class outlineGrammar(Grammar):
     subsection = Series(Drop(Text("###")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, subsubsection)))
     section = Series(Drop(Text("##")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, subsection)))
     main = Series(Option(WS), Drop(Text("#")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, section)))
-    markup.set(Series(Option(indent), Alternative(text, bold, emphasis), ZeroOrMore(Series(Option(LLF), Alternative(text, bold, emphasis)))))
+    emphasis.set(Alternative(Series(Drop(Text("*")), NegativeLookahead(Drop(Text("*"))), inner_emph, Drop(Text("*")), mandatory=2), Series(Drop(Text("_")), NegativeLookahead(Drop(Text("_"))), inner_emph, Drop(Text("_")), mandatory=2)))
     document = Series(main, Option(WS), EOF, mandatory=2)
     root__ = document
     
@@ -164,9 +165,11 @@ outline_AST_transformation_table = {
     # "<": [],  # called for each node before calling its specific rules
     # "*": [],  # fallback for nodes that do not appear in this table
     # ">": [],   # called for each node after calling its specific rules
-    "markup": [merge_adjacent(is_one_of('text', ':L', ':LF'), 'text')],
+    "markup, bold, emphasis":
+        [merge_adjacent(is_one_of('text', ':L', ':LF'), 'text')],
+    ":LFF": [change_name('LFF')]
 }
-
+replace_child_names({':L': 'text', ':LF': 'text'})
 
 def outlineTransformer() -> TransformerFunc:
     return partial(transformer, transformation_table=outline_AST_transformation_table.copy(),

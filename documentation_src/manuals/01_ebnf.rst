@@ -1300,6 +1300,9 @@ do little to remedy this situation, however. In this example,
 it would just be as confusing to learn that expression->\`+\` failed
 at the end of the parsed string.
 
+
+.. _mandatory_items:
+
 Mandatory items "§"
 ^^^^^^^^^^^^^^^^^^^
 

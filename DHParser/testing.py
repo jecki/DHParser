@@ -87,7 +87,7 @@ __all__ = ('unit_from_config',
 
 UNIT_STAGES = frozenset({'match*', 'match', 'fail', 'AST', 'CST'})
 STARTING_STAGES = frozenset({'match*', 'match', 'fail'})
-RESULT_STAGES = frozenset({'__cst__', '__ast__', '__err__'})
+RESULT_STAGES = frozenset({'__CST__', '__AST__', '__err__'})
 
 RX_SECTION = re.compile(r'\s*\[(?P<stage>\w+(:?\.\w+)*):(?P<symbol>\w+)\]')
 RX_METADATA_SECTION = re.compile(r'\s*\[(?P<metadata>\w+)\]')
@@ -383,8 +383,8 @@ def get_report(test_unit) -> str:
             if error:
                 report.append('\n### Error:\n')
                 report.append(error)
-            ast = tests.get('__ast__', {}).get(test_name, None)
-            cst = tests.get('__cst__', {}).get(test_name, None)
+            ast = tests.get('__AST__', {}).get(test_name, None)
+            cst = tests.get('__CST__', {}).get(test_name, None)
             if cst and (not ast or str(test_name).endswith('*')):
                 report.append('\n### CST\n')
                 report.append(indent(cst.serialize('CST')))
@@ -394,7 +394,7 @@ def get_report(test_unit) -> str:
 
             compilation_stages = [key for key in tests
                                   if key[:2] + key[-2:] == '____' and key not in
-                                  {'__ast__', '__cst__', '__err__', 'match', 'fail'}]
+                                  {'__AST__', '__CST__', '__err__', 'match', 'fail'}]
             for stage in compilation_stages:
                 if test_name in tests[stage]:
                     result = tests[stage][test_name]
@@ -639,7 +639,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                                             (parser_name, clean_test_name))
                 raise ctrlC
 
-            tests.setdefault('__cst__', {})[test_name] = cst
+            tests.setdefault('__CST__', {})[test_name] = cst
             # errors = []  # type: List[Error]
             if is_error(cst.error_flag) and not lookahead_artifact(cst):
                 errors = [e for e in cst.errors if e.code not in POSSIBLE_ARTIFACTS]
@@ -658,7 +658,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                     e.args = ('Test %s of parser %s failed, because:\n%s'
                               % (test_name, parser_name, e.args[0]),)
                     raise e
-                tests.setdefault('__ast__', {})[test_name] = ast
+                tests.setdefault('__AST__', {})[test_name] = ast
                 ast_errors = [e for e in ast.errors if e not in old_errors]
                 add_errors_to_errata(ast_errors, 'AST', test_name, parser_name)
 

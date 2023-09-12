@@ -14,7 +14,7 @@ Digital-Humanities-applications.
 
 DHParser offers:
 
-* EBNF-based grammar-specification language with support for
+* Rapid-Prototyping of EBNF-based grammar-specifications with support for
   different flavors of EBNF 
 * Macros to reduce code-repetition within grammars and includes to
   avoid code-repetition between grammars.

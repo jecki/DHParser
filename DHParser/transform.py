@@ -540,7 +540,7 @@ def traverse_locally(path: Path,
 
 def transformation_guard(value) -> None:
     if value is not None:
-        raise AssertionError('Transformation a value instead of None!')
+        raise AssertionError('Transformation of a value instead of None!')
 
 
 def condition_guard(value) -> bool:
@@ -1021,8 +1021,8 @@ def replace_child_names(path: Path, replacements: Dict[str, str]):
 
     :param path: The current path (i.e. list of ancestors and current
         node)
-    :param replacements: A dictionary of name. Each tag name of a child
-        node that exists as a key in the dictionary will be replaces by
+    :param replacements: A dictionary of names. Each tag name of a child
+        node that exists as a key in the dictionary will be replaced by
         the value for that key.
     """
     # assert ZOMBIE_TAG not in replacements, 'Replacing ZOMBIE_TAGS is not allowed, " \

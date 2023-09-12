@@ -754,21 +754,39 @@ markup-text that also contains bold and emphasized elements::
     markup    = [indent] (text | bold | emphasis) 
                 { [LLF] (text | bold | emphasis) }
     indent    = /[ \t]+(?=[^\s])/
-    bold      = `__` inner_txt `__`
-    emphasis  = `_` inner_txt `_`
-    inner_txt = [L] markup [L]
+    bold      = `__` §inner_bold `__`
+    emphasis  = `_` §inner_emph `_`
+    inner_emph = [~ &`_`] 
+                 (text | bold) { [LLF] (text | bold) } 
+                 [<-&`_` ~]
+    inner_bold = [~ &`_`]/] 
+                 (text | emphasis) { [LLF] (text | emphasis) } 
+                 [<-&`_` ~]
 
 Note that by placing the emphasis-parser after the bold-parser in the
 definition of the markup-parser, we make sure that a bold-element
 is not accidentally captured as an emphasized-element containing
-another emphasized element. (Yes, they can all be recursively nested!)
+another emphasized element.
 
-The introduction of "inner_txt" is motivated by the fact that neither
-"text" nor "markup" (nor "TEXT") capture leading or trailing empty
-whit-space, but that we want to allow whitespace after the opening
-and before the closing markers for bold an emphasized elements, because
-this allows to disambiguate nested bold and emphasized elements
-when necessary by adding whitespace. Otherwise::
+The "mandatory marker" ``§`` ensures that errors when marking 
+up bold or emphasized text will be located precisely. (See :ref:`mandatory_items`.)
+For example, neither bold text nor emphasized text must start or end with whitespace,
+e.g. ``* emphasized *`` must be written as `` *emphasized* ``, instead.
+
+The introduction of "inner_emph" and "inner_bold" is due to the fact that
+the beginning- and the end-markers for emphasis and bold-text, respectively, is
+the same, which makes things a little more complicated form a parser-development
+point of view than using different beginning and end-markers. Also, it shall be
+ensured that - while emphasis and bold-text can be nested the one within the other -
+emphasis and bold are not redundantly nested within themselves. 
+
+Both "inner_emph" and "inner_bold" allow - other than "text" - leading 
+and trailing (insignificant) whitespace before and after its content in
+case it precedes or succedes a nested emphasis or bold marker. This allows 
+to disambiguate nested bold and emphasized elements
+when necessary by adding whitespace. (Because the whitespace between
+bold and emphasis markers is only needed to disambiguate, it is treated
+as insignificat whitespace.) Otherwise::
 
     * **bold** text inside emphasized text that can be parsed*
 
@@ -814,7 +832,7 @@ makes them disappear, merging their content in the higher-level elements.
 Thus we change the @disposable-directive at the top of the grammar to:
 
     @ disposable  = WS, EOF, LINE, LFF, LLF, L, LF, 
-                    CHARS, TEXT, ESCAPED, inner_txt
+                    CHARS, TEXT, ESCAPED, inner_emph, inner_bold
 
 Now, the syntax-trees look much smoother::
 
@@ -832,8 +850,7 @@ For even further refinement, you need to work with the AST-transformation-table
 that is found in the outlineParser.py-file. For example, by adding an entry
 to merge the whitespace nodes with the text-nodes::
 
-    "markup": [merge_adjacent(is_one_of('text', ':L', ':LF'), 'text')]
-
+    "markup, bold, emphasis": [merge_adjacent(is_one_of('text', ':L', ':LF'), 'text')]
 
 For now, we'll stop with the bottom-up development and see if and how
 we can link the two parts of our grammar that we have developed so far,
@@ -851,28 +868,174 @@ for the fine structure, later::
 
     blocks  = !is_heading LINE { LFF !is_heading LINE }
 
-Now, we can replace the "LINE"-parser in the statement above by
+Let's again, write a test first. Then it will be easy to spot 
+the differences::
+
+    # Simple Test
+    
+    ## A test of bold- am emphasis-markup
+    
+      This paragraph contains *emphasized
+    text* that spreads over two lines.
+    
+      But what ist this: ** *emphasized* and bold**
+    or * **bold** and emphasized*?
+
+The AST reveals the use of the summary-parser for blocks that
+does not capture any markup inside paragraphs. In fact, it does
+not even divide the text into separate paragraphs::
+
+    (document
+      (main
+        (heading
+          "Simple Test"
+        )
+        (section
+          (heading
+            "A test of bold- am emphasis-markup"
+          )
+          (blocks
+            "  This paragraph contains *emphasized"
+            "text* that spreads over two lines."
+            ""
+            "  But what ist this: ** *emphasized* and bold**"
+            "or * **bold** and emphasized*?"
+          )
+        )
+      )
+    )  
+
+Now, we can replace the "LINE"-parser in the definition of 
+"blocks", above, by
 the parser for the markup-block that we have arrived at with the
 bottom-up-approach::
 
     blocks  = !is_heading markup { LFF !is_heading markup }
 
+The abstract syntax-tree is, as expected, much more verbose,
+because now it reflects the detail-strukture of the markup::
 
+    (document
+      (main
+        (heading "Simple Test")
+        (section
+          (heading "A test of bold- am emphasis-markup")
+          (blocks
+            (markup
+              (indent "  ")
+              (text "This paragraph contains ")
+              (emphasis
+                (text
+                  "emphasized"
+                  "text"))
+              (text " that spreads over two lines."))
+            (LFF
+              ""
+              ""
+              "")
+            (markup
+              (indent "  ")
+              (text "But what ist this: ")
+              (bold
+                (emphasis
+                  (text "emphasized"))
+                (text " and bold"))
+              (text
+                ""
+                "or ")
+              (emphasis
+                (bold
+                  (text "bold"))
+                (text " and emphasized"))
+              (text "?"))))))
+
+As far as explainig the basics of test-driven-grammar-development goes,
+this should suffice as an example. Admittedly, as far as coding a grammar
+for Markdown, there are still a few things to do, which are here
+left as an exercise to the reader. Here are some suggestions for
+more exercises in test-driven grammar-development::
+
+1.  The AST still keeps the content of L, LF and LFF literally,
+    although L and LF are merged with adjacent text-nodes during
+    :ref:`AST-transformation <asttransformation>` or even earlier. 
+    Ideally, though they should be normalized (before merging).
+    In order to do so, remove these tags from the list of disposable
+    tags, and add normalizations to the AST-transformation-table
+    in the parser-script.
+
+2. There are more inline elements than bold and emphasis in markdown.
+   Add support for inline-quotes and URL. Think about which symbol-
+   definitions in the grammar need to be changed for which kind of
+   inline-element in order to to so. "markup" or "text" or "both"?  
+   Or should new, intermediary symbols be introduced?
+
+3. You may have noticed that headins starting with one or more 
+   `#`-characters must be separated with at least one empty line 
+   from any preeceding text-blocks (other headings do not count
+   as text block!). If you haven't noticed this, verify this
+   with suitable match- or fail-tests! 
+
+   How would the grammar have to be changed to allow headings to
+   be detected as such, even if they directly follow a text block?
+
+   Should the grammar be changed in that way? Or does it have 
+   advantages (for whom, the writer of the grammar or the writer of
+   markdown-text?) to require headings to be separated by an empty
+   line from preceeding text? 
+
+4. Add support for block-quotes, enumerations and unordered lists.
 
 
 Final remarks
 ^^^^^^^^^^^^^
 
-- Test Driven Grammar-Development and Rapid Grammar Prototyping
+Specifying formal grammars is often considered as a painstaking
+process. Using test-driven-development encourages to try things
+a just start writing grammar-code without worrying too much 
+whether you have thought of every detail before writing down
+the specification. You just start conding the grammar and worry
+about the details later as you add more and more test, many
+of which will undoubtedly fail on the first try, reminding you
+that some detail still is not correct.
 
-- Particularly useful for the re-structuring of human written
-  semi-formal notations with formal grammars!
+In connections with the bottom-up and top-down development-strategies
+test-driven grammar-development allows for "rapid prototyping" of
+grammars. DHParsers ability to detect changes in the grammar-code
+and automatically recompile it before the parser is run the next
+time allows for short turn-around-times and will encourage you
+to try different alternatives and refactor the grammar often.  
+And, yes, grammars can and should be refactored just like 
+program-code as they grow.
+
+Test-driven grammar-development and rapid-prototyping and 
+-refactoring of grammars is particularly useful when writing
+grammars for human-written documents in semi-formal notations
+such a bibliograhies or table-data which were originally 
+intended to be read by humans and thus contain more variations,
+exceptions and mistakes than strictly defined formal languages. 
 
 
 Monitoring AST-creation
 -----------------------
 
-- ASTs can and should be tested, too
+So far, we have only written tests that allow us the check
+whether our parser(s) match or fail certain kinds of input as
+expected. However, we might also be intestes in testing whether
+the abstract-syntax-tree (AST) that the parser yields has the expected
+shape. In particular, since this shape is not striclty determined
+by our grammar (as is that of the concrete-syntax-tree) but also
+by the set of AST-transformations that we apply in order to transform
+the concrete-syntax-tree (CST) to the abstract-syntax-tree (AST). 
+And these transformations may of course contain bugs.
+
+One important method for checkings tree-structures (as well as any
+other data-structure) is structural validation. This, however, requires
+specifying the structure of the valid AST in another formal language
+like Relax-NG which is similar to and not much less complicated 
+than specifying the grammar of a formal language with EBNF. 
+For rapid-prototyping of grammars and especially in the early stages of 
+grammar-development, this is hardly a viable option.  
+
 - No structural validation supported as of now. (Use XML-serialization
   and Relax NG for this)
 

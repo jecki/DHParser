@@ -5,7 +5,7 @@
 @ whitespace  = /[ \t]*/  # only horizontal whitespace, no linefeeds
 @ reduction   = merge     # simplify tree as much as possible
 @ disposable  = WS, EOF, LINE, LFF, LLF, L, LF, 
-                CHARS, TEXT, ESCAPED, inner_txt
+                CHARS, TEXT, ESCAPED, inner_emph, inner_bold
 @ drop        = WS, EOF, backticked, whitespace
 
 #:  Outline
@@ -32,11 +32,13 @@ text      = (TEXT | ESCAPED) { [LLF] (TEXT | ESCAPED) }
 
 #: inline-elements
 
-emphasis  = `*` !`*` inner_txt `*`
-          | `_` !`_` inner_txt `_`
-bold      = `**` inner_txt `**`
-          | `__` inner_txt `__`
-inner_txt = [L] markup [L]
+emphasis  = `*` !`*` §inner_emph `*`
+          | `_` !`_` §inner_emph §`_`
+bold      = `**` §inner_bold `**`
+          | `__` §inner_bold `__`
+
+inner_emph = [~ &/[*_]/] (text | bold) { [LLF] (text | bold) } [<-&/[*_]/ ~]
+inner_bold = [~ &/[*_]/] (text | emphasis) { [LLF] (text | emphasis) } [<-&/[*_]/ ~]
 
 #:  Regular Expressions
 
