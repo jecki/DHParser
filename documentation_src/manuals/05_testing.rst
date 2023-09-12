@@ -475,7 +475,7 @@ This time the grammar-tests yield the desired result::
       Fail-Tests for parser "document"
         fail-test  "F1" ... OK
 
-.. NOTE:: While not important for the topic of testing as such, a few
+.. NOTE: While not important for the topic of testing as such, a few
     design-decisions of the EBNF-grammar of the outline-example might
     be of interest for beginners:
 
@@ -544,7 +544,7 @@ Then, we define the the "blocks"-element::
     blocks  = !is_heading LINE { LFF !is_heading LINE }
     is_heading = /##?#?#?#?#?(?!#)/
 
-.. NOTE:: Note that in the definition of "blocks" we use "LFF" instead of "WS" although
+.. NOTE: Note that in the definition of "blocks" we use "LFF" instead of "WS" although
     they are synonyms for the same whitespace-parser, because other than in
     the definition of the section-structure the whitespace (including empty lines)
     does not serve as a delimiter but is part of the content, for example in a
@@ -1016,9 +1016,9 @@ parser-development requires very many iterations and
 test-driven-grammar-development becomes an almost invaluable tool. 
 (An alternative approach would be to use machine-learning to "read"
 this kind of data, e.g. `GROBID`_ for bibliographies. Your mileage
-may vary with either approach. It is also imaginable to employ machine
-learning to find formal grammars that match a large set of test-cases,
-but I am not aware of any particular examples.)
+may vary with either approach. It is also at least in principle possible 
+to employ machine learning to find formal grammars that match a 
+large set of test-cases ("Grammar Induction").)
 
 
 Monitoring AST-creation
@@ -1049,14 +1049,38 @@ also possible to check the data-trees or the strings-serialized results
 of any further `processing-stages <processing_pipelines>`_ 
 in the same way (see below.)
 
-.. NOTE:: As of version 1.5 DHParser does not have any built-in support
+.. NOTE: As of version 1.5 DHParser does not have any built-in support
    for structural validation of tree-data. However, it is easy to
    leverage existing solutions for XML, like Relax NG, XSD or DTD for
    this purpose. Simply serialize you tree withe 
    :py:meth:`~nodetree.Node.as_xml` and run your preferred XML-tool
    for structural validation over the XML-serialized-tree.
 
-For now, we will discuss how the resulting ASTs can be tested. 
+ASTs can be tested by adding an ``[AST:parser_name]`` to the test file.
+"parser_name" must of course be replaced by a valid parser (symbol) of
+the grammar. Moreover, it must be a name for which a ``[match:parser_name]``
+sections exists in the same test-file. Each AST-test is related to a match
+test for the same parser. The relation between the AST-test and its match-test
+is established by using the same test-name, e.g. "M1", "M2", ..., for both.
+
+There exist two different types of AST-tests:
+
+1. Tests of the structure and content of the AST. Here, the test code 
+   is a complete tree that must be specified either as S-expression or
+   as XML-code.
+
+2. Tests of the concatenated string-content (or "flat string-content") of
+   the tree. In this case, the test-code consists of a string that is 
+   enclosed in either single (') or double (") quotation marks for 
+   single line strings or tripple single (''') or tripple double quotation marks
+   (""") for multiline strings - just like strings in Python. 
+
+   The following lines after the first line of multiline strings MUST
+   be indented by 4 spaces. The indentation does not count as part of the
+   test-string and will be automatically removed before the test-result
+   is compared.
+
+
 
 TODO: Example for testing ASTs.
 
