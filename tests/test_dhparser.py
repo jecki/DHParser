@@ -162,7 +162,7 @@ class TestDHParserCommandLineTool:
                 f.write(f'2 / (4 * -5 + {i})\n')
         system(self.python + ' ArithmeticParser.py' + ' in')
         assert os.listdir('out') == ['Arithmetic']
-        result_list = os.listdir(os.path.join('out', 'arithmetic'))
+        result_list = os.listdir(os.path.join('out', 'Arithmetic'))
         result_list.sort()
         assert result_list == ['data_0.Arithmetic.sxpr', 'data_1.Arithmetic.sxpr',
                                'data_2.Arithmetic.sxpr', 'data_3.Arithmetic.sxpr',
