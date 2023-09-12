@@ -107,7 +107,7 @@ class outlineGrammar(Grammar):
     r"""Parser for an outline source file.
     """
     emphasis = Forward()
-    source_hash__ = "8ca494ec4d838ef642495c9e60c11e2c"
+    source_hash__ = "54b89dc9b19f89629c84370ceaf975f3"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
     disposable__ = re.compile('WS$|EOF$|LINE$|LFF$|LLF$|L$|LF$|CHARS$|TEXT$|ESCAPED$|inner_emph$|inner_bold$')
     static_analysis_pending__ = []  # type: List[bool]

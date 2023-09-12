@@ -33,7 +33,7 @@ text      = (TEXT | ESCAPED) { [LLF] (TEXT | ESCAPED) }
 #: inline-elements
 
 emphasis  = `*` !`*` §inner_emph `*`
-          | `_` !`_` §inner_emph §`_`
+          | `_` !`_` §inner_emph `_`
 bold      = `**` §inner_bold `**`
           | `__` §inner_bold `__`
 
