@@ -1,0 +1,55 @@
+# outline-grammar
+
+#  EBNF-Directives
+
+@ whitespace  = /[ \t]*/  # only horizontal whitespace, no linefeeds
+@ reduction   = merge     # simplify tree as much as possible
+@ disposable  = WS, EOF, LINE, LFF, LLF, L, LF, 
+                CHARS, TEXT, ESCAPED, inner_emph, inner_bold
+@ drop        = WS, EOF, backticked, whitespace
+
+#:  Outline
+
+document = main [WS] §EOF
+
+main  = [WS] `#` !`#` ~ heading [WS blocks] { WS section }
+section  = `##` !`#` ~ heading [WS blocks] { WS subsection }
+subsection  = `###` !`#` ~ heading [WS blocks] { WS subsubsection }
+subsubsection  = `####` !`#` ~ heading [WS blocks] { WS s5section }
+s5section  = `#####` !`#` ~ heading [WS blocks] { WS s6section }
+s6section  = `######` !`#` ~ heading [WS blocks]
+
+heading = LINE
+
+#: blocks
+
+blocks  = !is_heading LINE { LFF !is_heading LINE }
+is_heading = /##?#?#?#?#?(?!#)/
+
+markup    = (text | bold | emphasis) { [LLF] (text | bold | emphasis) }
+text      = (TEXT | ESCAPED) { [LLF] (TEXT | ESCAPED) }
+
+#: inline-elements
+
+emphasis  = `*` !`*` §inner_emph `*`
+          | `_` !`_` §inner_emph `_`
+bold      = `**` §inner_bold `**`
+          | `__` §inner_bold `__`
+
+inner_emph = [~ &/[*_]/] (text | bold) { [LLF] (text | bold) } [<-&/[*_]/ ~]
+inner_bold = [~ &/[*_]/] (text | emphasis) { [LLF] (text | emphasis) } [<-&/[*_]/ ~]
+
+#:  Regular Expressions
+
+LINE      = /[^\n]+/                # everything up to the next line-feed
+TEXT      = CHARS { LLF CHARS }
+CHARS     = /[^\s\\_*]+/
+ESCAPED   = `\` /./
+LLF       = L | LF
+L         = /[ \t]+/                # significant whitespace
+LF        = /[ \t]*\n[ \t]*(?!\n)/  #  single line-feed
+# LFN       = ~/\n(?![ \t]*\n)/~      # normalized single line-feed
+PARSEP    = ~/\n/ ~/\n/
+WS        = LFF
+LFF       = /(?:[ \t]*\n)+/    # any ws at line-end and all following empty lines
+EOF       =  !/./  # no more characters ahead, end of file reached

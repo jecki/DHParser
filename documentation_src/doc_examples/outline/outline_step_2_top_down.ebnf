@@ -1,0 +1,33 @@
+# outline-grammar
+
+#  EBNF-Directives
+
+@ whitespace  = /[ \t]*/  # only horizontal whitespace, no linefeeds
+@ reduction   = merge     # simplify tree as much as possible
+@ disposable  = WS, EOF, LINE, LFF
+@ drop        = WS, EOF, backticked, whitespace
+
+#:  Outline
+
+document = main [WS] §EOF
+
+main  = [WS] `#` !`#` ~ heading [WS blocks] { WS section }
+section  = `##` !`#` ~ heading [WS blocks] { WS subsection }
+subsection  = `###` !`#` ~ heading [WS blocks] { WS subsubsection }
+subsubsection  = `####` !`#` ~ heading [WS blocks] { WS s5section }
+s5section  = `#####` !`#` ~ heading [WS blocks] { WS s6section }
+s6section  = `######` !`#` ~ heading [WS blocks]
+
+heading = LINE
+
+#: blocks
+
+blocks  = !is_heading LINE { LFF !is_heading LINE }
+is_heading = /##?#?#?#?#?(?!#)/
+
+#:  Regular Expressions
+
+LINE      = /[^\n]+/         # everything up to the next linefeed
+WS        = LFF
+LFF       = /(?:[ \t]*\n)+/  # any ws at line-end and all following empty lines
+EOF       =  !/./  # no more characters ahead, end of file reached
