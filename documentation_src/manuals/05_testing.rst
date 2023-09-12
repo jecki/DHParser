@@ -981,7 +981,7 @@ more exercises in test-driven grammar-development::
    Should the grammar be changed in that way? Or does it have 
    advantages (for whom, the writer of the grammar or the writer of
    markdown-text?) to require headings to be separated by an empty
-   line from preceeding text? 
+   line from preceding text? 
 
 4. Add support for block-quotes, enumerations and unordered lists.
 
@@ -993,26 +993,32 @@ Specifying formal grammars is often considered as a painstaking
 process. Using test-driven-development encourages to try things
 a just start writing grammar-code without worrying too much 
 whether you have thought of every detail before writing down
-the specification. You just start conding the grammar and worry
-about the details later as you add more and more test, many
-of which will undoubtedly fail on the first try, reminding you
-that some detail still is not correct.
+the specification. You just start coding the grammar and worry
+about the details later as you add more and more tests. 
 
-In connections with the bottom-up and top-down development-strategies
+In connection with the bottom-up and top-down development-strategies
 test-driven grammar-development allows for "rapid prototyping" of
-grammars. DHParsers ability to detect changes in the grammar-code
-and automatically recompile it before the parser is run the next
-time allows for short turn-around-times and will encourage you
-to try different alternatives and refactor the grammar often.  
-And, yes, grammars can and should be refactored just like 
-program-code as they grow.
+grammars. DHParser's ability to detect changes in the grammar-code
+and automatically recompile it before the parser is run allows for
+short turn-around-times and makes it easy to refactor the grammar
+frequently. 
 
-Test-driven grammar-development and rapid-prototyping and 
--refactoring of grammars is particularly useful when writing
-grammars for human-written documents in semi-formal notations
-such a bibliograhies or table-data which were originally 
-intended to be read by humans and thus contain more variations,
-exceptions and mistakes than strictly defined formal languages. 
+In Digital-Humanities-Test-scenarios, formal grammars are not only 
+used for parsing strictly defined formal notations (e.g. LaTeX) 
+but also for retro-digitalization or, rather, re-structuring of 
+"semi-structured" human-written documents with a notation the rules 
+of which are only
+verbally described, often somewhat vague and incomplete and in practice
+not always followed diligently. Examples are dictionaries (see 
+`Zacherl 2022`_),
+(specialized) bibliographies and the like. In these application-cases,
+parser-development requires very many iterations and 
+test-driven-grammar-development becomes an almost invaluable tool. 
+(An alternative approach would be to use machine-learning to "read"
+this kind of data, e.g. `GROBID`_ for bibliographies. Your mileage
+may vary with either approach. It is also imaginable to employ machine
+learning to find formal grammars that match a large set of test-cases,
+but I am not aware of any particular examples.)
 
 
 Monitoring AST-creation
@@ -1020,24 +1026,39 @@ Monitoring AST-creation
 
 So far, we have only written tests that allow us the check
 whether our parser(s) match or fail certain kinds of input as
-expected. However, we might also be intestes in testing whether
+expected. However, we might also be interested in testing whether
 the abstract-syntax-tree (AST) that the parser yields has the expected
-shape. In particular, since this shape is not striclty determined
+shape. In particular, since this shape is not strictly determined
 by our grammar (as is that of the concrete-syntax-tree) but also
 by the set of AST-transformations that we apply in order to transform
 the concrete-syntax-tree (CST) to the abstract-syntax-tree (AST). 
 And these transformations may of course contain bugs.
 
-One important method for checkings tree-structures (as well as any
+One important method for checking tree-structures (as well as any
 other data-structure) is structural validation. This, however, requires
 specifying the structure of the valid AST in another formal language
 like Relax-NG which is similar to and not much less complicated 
 than specifying the grammar of a formal language with EBNF. 
 For rapid-prototyping of grammars and especially in the early stages of 
-grammar-development, this is hardly a viable option.  
+grammar-development, this is hardly a viable option.
 
-- No structural validation supported as of now. (Use XML-serialization
-  and Relax NG for this)
+DHParser does not yet support structural validation of tree-data. However,
+DHParser allows to compare the resulting syntax-tree (CST or AST) or 
+their string-content against a given result for any match-test. It is 
+also possible to check the data-trees or the strings-serialized results
+of any further `processing-stages <processing_pipelines>`_ 
+in the same way (see below.)
+
+.. NOTE:: As of version 1.5 DHParser does not have any built-in support
+   for structural validation of tree-data. However, it is easy to
+   leverage existing solutions for XML, like Relax NG, XSD or DTD for
+   this purpose. Simply serialize you tree withe 
+   :py:meth:`~nodetree.Node.as_xml` and run your preferred XML-tool
+   for structural validation over the XML-serialized-tree.
+
+For now, we will discuss how the resulting ASTs can be tested. 
+
+TODO: Example for testing ASTs.
 
 
 Testing the processing-pipeline
@@ -1057,3 +1078,5 @@ Conventional Unit-Testing
 
 
 .. _CommonMark: https://spec.commonmark.org/0.30/#emphasis-and-strong-emphasis
+.. _GROBID: https://github.com/kermitt2/grobid
+.. _Zacherl 2022: http://www.kit.gwi.uni-muenchen.de/?band=82908&v=2#subchapter:5-2-abbildung-von-semi-strukturierten-texten 
