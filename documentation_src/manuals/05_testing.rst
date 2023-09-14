@@ -1125,7 +1125,7 @@ Here is the full test case for dropping GAP-nodes::
 
         and another paragraph"""
 
-    [ast:document]
+    [AST:document]
     A1: (document
           (main
             (heading "No gaps. please")
@@ -1161,6 +1161,61 @@ drop the GAP-nodes, running the test-script, yields a failure of the AST-Test "A
 The required adjustments in order to run the test successfully are quite trivial:
 Simply add the "GAP"-symbol to both the ``@disposable`` and the ``@drop``-directive
 of the grammar and the reported AST-test-failure will disappear.
+
+For the conversion of line-feeds to single-whitespace-characters, we will use
+a simple string comparison instead of a full tree comparison as test (see above)::
+
+[match:text]
+A1*: """Text in
+    two lines"""
+
+[AST:text]
+A1: "Text in two lines"
+
+This time, because it is a string comparison, the test code must stand within
+quotation marks. We mark the match test with an asterix "*" in order to receive
+output for the CST in the report, too. This will be helpful for engineering
+the AST-transformations that we need for the normalization. The AST-test shows
+what kind of result, we expect in the end. Again, as we have not yet changed
+our grammar or parser-script, we will receive an error message when running the
+test-script::
+
+	AST-test A2* for parser text or deserialization of expected value failed:
+        ...
+		Expected:  Text in two lines
+		Received:  Text in
+	two lines
+
+As we did not specify the expected result as an (S-expression) tree but as a string,
+the expected and received results are also printed as a strings in the error-message.
+Also, the error-meassge is slightly more vague, because there is the possibility that
+the comparison of expected and received result failed due to the expected result
+having unintentionally been misspecified, which is not the case, here, howeever.
+
+If we look up the AST and CST-trees in the report file, we find that both read as::
+
+  (text "Text in" "two lines")
+
+Note, that multiline-text in tree-nodes is rendered by DHParser as a seuqence of
+strings rather than a multiline string with line-feeds. So, the "text"-node
+really consists of one string with a line-break in between. The line-break is
+not explicit in form of an "LF"-node, because it has just like the significant
+whitespace and character-sequences that make up the text-element been added
+to the ``@disposable``-directive in the grammar. This LF and L nodes will be
+merged with CHARS-nodes wherever possible during the parsing stage, already.
+
+There are two possible strategies for replacing the line-feeds with whitespace:
+Either a) by replacing the line-feed-cahracters in the string-content of the
+text-nodes during AST-transformation by writing a dedicated
+transformation-procedure or b) removing LF from the list of disposable symbols
+in the grammar, then exchanging its content of each LF-node with a single
+whitespace characters and, maybe also chaning its name to "L" in the course
+of doing so, both during the AST-transformation-stage and, finally,
+merging any CHARS- and L-nodes within all nodes where they could possibly
+appear (i.e. text, bold and emphasis) into a single flat node, again.
+
+Although, b) is more complicated, we will follow b), because this nicely
+illustrates, how to work with tree-transformations.
 
 
 
