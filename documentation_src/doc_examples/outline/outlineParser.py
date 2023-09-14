@@ -107,9 +107,9 @@ class outlineGrammar(Grammar):
     r"""Parser for an outline source file.
     """
     emphasis = Forward()
-    source_hash__ = "54b89dc9b19f89629c84370ceaf975f3"
+    source_hash__ = "c8142774e14db8f9f0ccc38aeb282a4e"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('WS$|EOF$|LINE$|LFF$|LLF$|L$|LF$|CHARS$|TEXT$|ESCAPED$|inner_emph$|inner_bold$')
+    disposable__ = re.compile('WS$|EOF$|LINE$|GAP$|LLF$|L$|LF$|CHARS$|TEXT$|ESCAPED$|inner_emph$|inner_bold$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -119,8 +119,8 @@ class outlineGrammar(Grammar):
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
     EOF = Drop(NegativeLookahead(RegExp('.')))
-    LFF = RegExp('(?:[ \\t]*\\n)+')
-    WS = Drop(Synonym(LFF))
+    GAP = Drop(RegExp('(?:[ \\t]*\\n)+'))
+    WS = Drop(Synonym(GAP))
     PARSEP = Series(dwsp__, RegExp('\\n'), dwsp__, RegExp('\\n'))
     LF = RegExp('[ \\t]*\\n[ \\t]*(?!\\n)')
     L = RegExp('[ \\t]+')
@@ -137,7 +137,7 @@ class outlineGrammar(Grammar):
     inner_emph = Series(Option(Series(dwsp__, Lookahead(RegExp('[*_]')))), Alternative(text, bold), ZeroOrMore(Series(Option(LLF), Alternative(text, bold))), Option(Series(Lookbehind(RegExp('[*_]')), dwsp__)))
     indent = RegExp('[ \\t]+(?=[^\\s])')
     markup = Series(Option(indent), Alternative(text, bold, emphasis), ZeroOrMore(Series(Option(LLF), Alternative(text, bold, emphasis))))
-    blocks = Series(NegativeLookahead(is_heading), markup, ZeroOrMore(Series(LFF, NegativeLookahead(is_heading), markup)))
+    blocks = Series(NegativeLookahead(is_heading), markup, ZeroOrMore(Series(GAP, NegativeLookahead(is_heading), markup)))
     s6section = Series(Drop(Text("######")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)))
     s5section = Series(Drop(Text("#####")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, s6section)))
     subsubsection = Series(Drop(Text("####")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, s5section)))
@@ -167,7 +167,7 @@ outline_AST_transformation_table = {
     # ">": [],   # called for each node after calling its specific rules
     "markup, bold, emphasis":
         [merge_adjacent(is_one_of('text', ':L', ':LF'), 'text')],
-    ":LFF": [change_name('LFF')]
+    ":GAP": [change_name('GAP')]
 }
 replace_child_names({':L': 'text', ':LF': 'text'})
 

@@ -4,9 +4,9 @@
 
 @ whitespace  = /[ \t]*/  # only horizontal whitespace, no linefeeds
 @ reduction   = merge     # simplify tree as much as possible
-@ disposable  = WS, EOF, LINE, LFF, LLF, L, LF, 
+@ disposable  = WS, EOF, LINE, GAP, LLF, L, LF,
                 CHARS, TEXT, ESCAPED, inner_emph, inner_bold
-@ drop        = WS, EOF, backticked, whitespace
+@ drop        = WS, EOF, GAP, backticked, whitespace
 
 #:  Outline
 
@@ -23,7 +23,7 @@ heading = LINE
 
 #: blocks
 
-blocks  = !is_heading markup { LFF !is_heading markup }
+blocks  = !is_heading markup { GAP !is_heading markup }
 is_heading = /##?#?#?#?#?(?!#)/
 
 markup    = [indent] (text | bold | emphasis) { [LLF] (text | bold | emphasis) }
@@ -49,8 +49,8 @@ ESCAPED   = `\` /./
 LLF       = L | LF
 L         = /[ \t]+/                # significant whitespace
 LF        = /[ \t]*\n[ \t]*(?!\n)/  #  single line-feed
-# LFN       = ~/\n(?![ \t]*\n)/~      # normalized single line-feed
+# LFN       = ~/\n(?![ \t]*\n)/~    # normalized single line-feed
 PARSEP    = ~/\n/ ~/\n/
-WS        = LFF
-LFF       = /(?:[ \t]*\n)+/    # any ws at line-end and all following empty lines
+WS        = GAP                     # same as GAP, but will be dropped
+GAP       = /(?:[ \t]*\n)+/    # any ws at line-end and all following empty lines
 EOF       =  !/./  # no more characters ahead, end of file reached

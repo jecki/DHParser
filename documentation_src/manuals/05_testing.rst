@@ -406,7 +406,7 @@ contains a mistake!)::
     #  EBNF-Directives
     @ whitespace  = /[ \t]*/  # only horizontal whitespace, no line-feeds
     @ reduction   = merge     # simplify tree as much as possible
-    @ disposable  = WS, EOF, LINE, LFF
+    @ disposable  = WS, EOF, LINE, GAP
     @ drop        = WS, EOF, backticked, whitespace
 
     #:  Outline
@@ -423,8 +423,8 @@ contains a mistake!)::
 
     #:  Regular Expressions
     LINE = /[^\n]+/         # everything up to the next linefeed
-    LFF  = /(?:[ \t]*\n)+/  # any ws at line-end and all following empty lines
-    WS   = LFF              # same as LFF, but will be dropped
+    GAP  = /(?:[ \t]*\n)+/  # any ws at line-end and all following empty lines
+    WS   = GAP              # same as GAP, but will be dropped
     EOF  =  !/./  # no more characters ahead, end of file reached
 
 When running the grammar-tests, we notice that while the match-test
@@ -541,10 +541,10 @@ elements which we will call "blacks" in the definiens of the section-elements::
 
 Then, we define the the "blocks"-element::
 
-    blocks  = !is_heading LINE { LFF !is_heading LINE }
+    blocks  = !is_heading LINE { GAP !is_heading LINE }
     is_heading = /##?#?#?#?#?(?!#)/
 
-.. NOTE: Note that in the definition of "blocks" we use "LFF" instead of "WS" although
+.. NOTE: Note that in the definition of "blocks" we use "GAP" instead of "WS" although
     they are synonyms for the same whitespace-parser, because other than in
     the definition of the section-structure the whitespace (including empty lines)
     does not serve as a delimiter but is part of the content, for example in a
@@ -689,7 +689,7 @@ down the processing pipelines must be the same as the names of the match
 test they refer to. (See below for more information on abstract-syntax-tree
 (AST)-testing.)::
 
-    [ast:text]
+    [AST:text]
     M1: "Text with _ three \ escaped x elements"
 
 Now we are ready to fill in the definitions for the parsers
@@ -831,7 +831,7 @@ the list of disposables at the beginning of the EBNF-grammar, which
 makes them disappear, merging their content in the higher-level elements.
 Thus we change the @disposable-directive at the top of the grammar to:
 
-    @ disposable  = WS, EOF, LINE, LFF, LLF, L, LF, 
+    @ disposable  = WS, EOF, LINE, GAP, LLF, L, LF,
                     CHARS, TEXT, ESCAPED, inner_emph, inner_bold
 
 Now, the syntax-trees look much smoother::
@@ -866,7 +866,7 @@ For the block elements we have (for the time being) only defined
 a simple makeshift parser as a fill in to be replaced by parsers
 for the fine structure, later::
 
-    blocks  = !is_heading LINE { LFF !is_heading LINE }
+    blocks  = !is_heading LINE { GAP !is_heading LINE }
 
 Let's again, write a test first. Then it will be easy to spot 
 the differences::
@@ -910,7 +910,7 @@ Now, we can replace the "LINE"-parser in the definition of
 the parser for the markup-block that we have arrived at with the
 bottom-up-approach::
 
-    blocks  = !is_heading markup { LFF !is_heading markup }
+    blocks  = !is_heading markup { GAP !is_heading markup }
 
 The abstract syntax-tree is, as expected, much more verbose,
 because now it reflects the detail-strukture of the markup::
@@ -929,7 +929,7 @@ because now it reflects the detail-strukture of the markup::
                   "emphasized"
                   "text"))
               (text " that spreads over two lines."))
-            (LFF
+            (GAP
               ""
               ""
               "")
@@ -955,7 +955,7 @@ for Markdown, there are still a few things to do, which are here
 left as an exercise to the reader. Here are some suggestions for
 more exercises in test-driven grammar-development::
 
-1.  The AST still keeps the content of L, LF and LFF literally,
+1.  The AST still keeps the content of L, LF and GAP literally,
     although L and LF are merged with adjacent text-nodes during
     :ref:`AST-transformation <asttransformation>` or even earlier. 
     Ideally, though they should be normalized (before merging).
@@ -995,6 +995,14 @@ a just start writing grammar-code without worrying too much
 whether you have thought of every detail before writing down
 the specification. You just start coding the grammar and worry
 about the details later as you add more and more tests. 
+
+Top-Down and bottom-up-development are to different but supplementary
+strategies for incremental development. There is no rule when to use
+which of these approaches. Rather, one will switch between these
+approaches in the course of the grammar development as appropriate.
+The bottom-up approach is a bit simpler in so far as it does not
+require summary- or scaffolding-parsers to skip parts of a
+document for which the grammar has not yet been spelled out.
 
 In connection with the bottom-up and top-down development-strategies
 test-driven grammar-development allows for "rapid prototyping" of
@@ -1080,9 +1088,81 @@ There exist two different types of AST-tests:
    test-string and will be automatically removed before the test-result
    is compared.
 
+The following examples are motivated by a common requirement of electronic
+document processing which is the normalization of the document. Let's
+assume that we want to perform the following three types of normalization
+to our text-data:
+
+1. The "GAP"-nodes between "markup"-nodes shall be dropped from the syntax
+   tree. After all gaps of one or more empty lines merely serve as
+   delimiters for paragraphs. Generally, delimiters are not needed in a
+   syntax-tree any more, because the document structure is expressed by
+   the tree-structure.
+
+2. Line-feeds within paragraphs should be replaced by single blank characters
+   to achieve a stronger regularity of the text-content. After all the exact
+   place where a linefeed occurs is not relevant, anyway, and may change
+   depending on the output-form or device.
+
+3. Sequences of blank characters should be normalized to a single blank
+   character to indicate.
+
+As mentioned test-cases for ASTs consist of two parts, a match-test-case
+and a related AST-test-case. A simple trick for writing the AST-test-case
+quickly is to write the match-test first, then let the test-script run
+and copy and paste the AST from the report-file to the test-file
+(".ini"-file) as AST-test case. Finally, edit this AST to its desired
+shape. Take this as starting point for programming the AST-transformation
+or earlier tree-simplifications via the ``@disposable``- and ``@drop``-
+directives.
+
+Here is the full test case for dropping GAP-nodes::
+
+    [match:document]
+    A1: """# No gaps. please
+
+        one paragraph
+
+        and another paragraph"""
+
+    [ast:document]
+    A1: (document
+          (main
+            (heading "No gaps. please")
+            (blocks
+              (markup
+                (text "one paragraph"))
+              (markup
+                (text "and another paragraph")))))
+
+Note, that the AST-test-case has the same name, in this case "A1", and that the
+code of the AST-test is, of course, not enclosed in quotation marks. The
+code describing the tree can either - like in the example, above - be denoted
+as S-expression or as XML. The results will be reported as S-expression,
+never the less. (If you prefer XML-output, you need to change the respective
+configuration value for tree-serializations.)
+
+Since we have not yet adjusted the grammar and AST-transformation-code in order to
+drop the GAP-nodes, running the test-script, yields a failure of the AST-Test "A1"::
+
+	Abstract syntax tree test "A1" for parser "document" failed:
+        ...
+		Expected:  (document
+		             (main (heading 'No gaps. please"')
+		             (blocks
+		               (markup (text "one paragraph"))
+		               (markup (text "and another paragraph")))))
+		Received:  (document
+		             (main (heading "No gaps. please")
+		             (blocks (markup (text "one paragraph"))
+		             (GAP "" "" "")
+		             (markup (text "and another paragraph")))))
+
+The required adjustments in order to run the test successfully are quite trivial:
+Simply add the "GAP"-symbol to both the ``@disposable`` and the ``@drop``-directive
+of the grammar and the reported AST-test-failure will disappear.
 
 
-TODO: Example for testing ASTs.
 
 
 Testing the processing-pipeline

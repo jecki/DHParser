@@ -566,6 +566,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                                   f'\tExpected:  {compare}\n'
                                   f'\tReceived:  {content}')
                     return None
+        return compare
 
     saved_config_values = dict()
     for parser_name, tests in test_unit.items():

@@ -102,7 +102,7 @@ M1: "sad(d)a"
 '''
 
 CFG_FILE_5 = '''
-[ast:PARSER]
+[AST:PARSER]
 M1: (a
      (b "X")
      
@@ -112,6 +112,9 @@ M2: """(a
      
     )"""
 M3: "X" 
+M4: <a>
+      <b>X</b>
+    </a>
 '''
 
 
@@ -185,9 +188,13 @@ class TestTestfiles:
             def transform(ast):
                 return ast
             return transform
-        unit = unit_from_config(CFG_FILE_5.replace('ast', 'match') + CFG_FILE_5, 'cfg_file')
+        unit = unit_from_config(CFG_FILE_5.replace('AST', 'match') + CFG_FILE_5, 'cfg_file')
         errata = grammar_unit(unit, ParserFactory, transformer_factory, report='')
         assert not errata
+        unit = unit_from_config(CFG_FILE_5.replace('AST', 'match') + CFG_FILE_5.replace(' (a', ' (o'), 'cfg_file')
+        errata = grammar_unit(unit, ParserFactory, transformer_factory, report='')
+        assert errata
+        # for e in errata: print(e)
 
 
 
