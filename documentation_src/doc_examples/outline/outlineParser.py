@@ -107,9 +107,9 @@ class outlineGrammar(Grammar):
     r"""Parser for an outline source file.
     """
     emphasis = Forward()
-    source_hash__ = "c8142774e14db8f9f0ccc38aeb282a4e"
+    source_hash__ = "84441cbc5206578ce8e96e16ce34b7e5"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('WS$|EOF$|LINE$|GAP$|LLF$|L$|LF$|CHARS$|TEXT$|ESCAPED$|inner_emph$|inner_bold$')
+    disposable__ = re.compile('WS$|EOF$|LINE$|GAP$|LLF$|L$|CHARS$|TEXT$|ESCAPED$|inner_emph$|inner_bold$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -165,11 +165,12 @@ outline_AST_transformation_table = {
     # "<": [],  # called for each node before calling its specific rules
     # "*": [],  # fallback for nodes that do not appear in this table
     # ">": [],   # called for each node after calling its specific rules
-    "markup, bold, emphasis":
-        [merge_adjacent(is_one_of('text', ':L', ':LF'), 'text')],
+    "markup, bold, emphasis, text":
+          [merge_adjacent(is_one_of('text', ':Text', ':L', ':LF'), 'text'),
+           apply_if(reduce_single_child, is_one_of('text'))],
+    "LF": [replace_content_with(' '), change_name(':L')],
     ":GAP": [change_name('GAP')]
 }
-replace_child_names({':L': 'text', ':LF': 'text'})
 
 def outlineTransformer() -> TransformerFunc:
     return partial(transformer, transformation_table=outline_AST_transformation_table.copy(),

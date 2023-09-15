@@ -61,7 +61,7 @@ except ImportError:
 
 __all__ = ('WHITESPACE_PTYPE',
            'TOKEN_PTYPE',
-           'MIXED_MODE_TEXT_PTYPE',
+           'MIXED_CONTENT_TEXT_PTYPE',
            'REGEXP_PTYPE',
            'EMPTY_PTYPE',
            'LEAF_PTYPES',
@@ -153,10 +153,10 @@ __all__ = ('WHITESPACE_PTYPE',
 WHITESPACE_PTYPE = ':Whitespace'
 TOKEN_PTYPE = ':Text'
 # Node name for plain text in XML-elements that contain both children and plain text
-MIXED_MODE_TEXT_PTYPE = ':Text'
+MIXED_CONTENT_TEXT_PTYPE = ':Text'
 REGEXP_PTYPE = ':RegExp'
 EMPTY_PTYPE = ':EMPTY'
-LEAF_PTYPES = frozenset({WHITESPACE_PTYPE, TOKEN_PTYPE, MIXED_MODE_TEXT_PTYPE,
+LEAF_PTYPES = frozenset({WHITESPACE_PTYPE, TOKEN_PTYPE, MIXED_CONTENT_TEXT_PTYPE,
                          REGEXP_PTYPE, EMPTY_PTYPE})
 
 ZOMBIE_TAG = "ZOMBIE__"
@@ -1729,7 +1729,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def as_xml(self, src: Optional[str] = None,
                indentation: int = 2,
                inline_tags: AbstractSet[str] = frozenset(),
-               string_tags: AbstractSet[str] = frozenset({MIXED_MODE_TEXT_PTYPE}),
+               string_tags: AbstractSet[str] = frozenset({MIXED_CONTENT_TEXT_PTYPE}),
                empty_tags: AbstractSet[str] = frozenset(),
                strict_mode: bool = True) -> str:
         """Serializes the tree of nodes as XML.
@@ -2092,7 +2092,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # Export and import as Element-Tree ###
 
-    def as_etree(self, ET=None, string_tags: AbstractSet[str] = frozenset({MIXED_MODE_TEXT_PTYPE}),
+    def as_etree(self, ET=None, string_tags: AbstractSet[str] = frozenset({MIXED_CONTENT_TEXT_PTYPE}),
                  empty_tags: AbstractSet[str] = frozenset()):
         """Returns the tree as standard-library- or lxml-ElementTree.
 
@@ -2142,7 +2142,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return element
 
     @staticmethod
-    def from_etree(et, string_tag: str = MIXED_MODE_TEXT_PTYPE) -> Node:
+    def from_etree(et, string_tag: str = MIXED_CONTENT_TEXT_PTYPE) -> Node:
         """Converts a standard-library- or lxml-ElementTree to a tree of nodes.
 
         :param et:  the root element-object of the ElementTree
@@ -4071,7 +4071,7 @@ class RootNode(Node):
 
         # customization for XML-Representation
         self.inline_tags: Set[str] = set()
-        self.string_tags: Set[str] = {MIXED_MODE_TEXT_PTYPE}
+        self.string_tags: Set[str] = {MIXED_CONTENT_TEXT_PTYPE}
         self.empty_tags: Set[str] = set()
 
         # meta-data

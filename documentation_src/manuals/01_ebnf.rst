@@ -185,6 +185,8 @@ captures the first json-array within the syntax-tree::
           (:Text '"')))
       (:Text "]"))
 
+.. _definition_anonymous_nodes:
+
 The nodes of the syntax-tree carry the names of the production rules
 by which they have been generated. Nodes, that have been created by
 components of a production receive the name of of the parser-type
@@ -527,7 +529,10 @@ directive should at best only be applied in conjunction with the ``@drop`` and
 
 .. _table_reduction_directive:
 
-There are for possible values for the ``@reduction``-directive:
+There are for possible values for the ``@reduction``-directive to
+control "early" flattening and merging
+(i.e. flattening and merging in the parsing-stage, already)
+of anonymous-nodes:
 
 +--------------------+----------------------------------------+
 | value              | effect                                 |

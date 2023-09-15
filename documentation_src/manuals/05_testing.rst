@@ -1180,7 +1180,7 @@ what kind of result, we expect in the end. Again, as we have not yet changed
 our grammar or parser-script, we will receive an error message when running the
 test-script::
 
-	AST-test A2* for parser text or deserialization of expected value failed:
+	AST-test A1* for parser text or deserialization of expected value failed:
         ...
 		Expected:  Text in two lines
 		Received:  Text in
@@ -1205,18 +1205,95 @@ to the ``@disposable``-directive in the grammar. This LF and L nodes will be
 merged with CHARS-nodes wherever possible during the parsing stage, already.
 
 There are two possible strategies for replacing the line-feeds with whitespace:
-Either a) by replacing the line-feed-cahracters in the string-content of the
+Either a) by replacing the line-feed-characters in the string-content of the
 text-nodes during AST-transformation by writing a dedicated
 transformation-procedure or b) removing LF from the list of disposable symbols
 in the grammar, then exchanging its content of each LF-node with a single
-whitespace characters and, maybe also chaning its name to "L" in the course
+whitespace characters and, maybe also changeing its name to "L" in the course
 of doing so, both during the AST-transformation-stage and, finally,
 merging any CHARS- and L-nodes within all nodes where they could possibly
 appear (i.e. text, bold and emphasis) into a single flat node, again.
 
-Although, b) is more complicated, we will follow b), because this nicely
-illustrates, how to work with tree-transformations.
+Although, b) is more complicated, we will follow b), because this is the
+more general approach. So, we start by adjusting our list of disposable nodes, i.e.
+node that like anonymous-nodes can be flattened during parsing, already. It then
+reads::
 
+    @ disposable  = WS, EOF, LINE, GAP, LLF, L, CHARS, TEXT, ESCAPED, inner_emph, inner_bold
+
+If we run the test script, the result of the test in the report file now reads::
+
+    Match-test "A1*"
+    -----------------
+
+    ### Test-code:
+
+        Text in
+        two lines
+
+    ### Error:
+
+    AST-test A1* for parser text or deserialization of expected value failed:
+        Expr.:     Text in
+        two lines
+        Expected:  Text in two lines
+        Received:  Text in
+    two lines
+
+    ### CST
+
+        (text (:Text "Text in") (LF "" "") (:Text "two lines"))
+
+    ### AST
+
+        (text (:Text "Text in") (LF "" "") (:Text "two lines"))
+
+As expected, the AST-error is duly reported, and the CST and the AST are identical, since
+we have not yet programmed the AST-transformation to change the line-feed nodes ("LF")
+into whitespace-nodes.
+
+What might appear surprising is the occurrence of ":Text"-nodes
+inside the "text"-nodes. ":Text" is DHParsers stock name for anonymous leaf-nodes.
+(":Text"-nodes can be thought of as the equivalent to the plain-text parts inside
+`mixed-content XML-tags <https://www.w3.org/TR/xml/#sec-mixed-content>`_.) ":Text"-tags
+are created when the parser merges anonymous leaf-nodes of different types.
+(See the :ref:`definition of anonymous nodes <definition_anonymos_nodes>`
+and ref:`simplifying_syntax_trees` to understand the role of anonymous nodes
+and "early merging" of leaf-nodes.)
+
+Now, let's adjust the tree-transformation so that all line-feeds will be replaced
+by whitespaces::
+
+    outline_AST_transformation_table = {
+        "LF": [replace_content_with(' '), change_name(':L')],
+        "markup, bold, emphasis, text":
+              [merge_adjacent(is_one_of('text', ':Text', ':L'), 'text'),
+               apply_if(reduce_single_child, is_one_of('text'))],
+    }
+
+Compared to the earlier version of the transformation-table one entry
+("markup, bold, ...") has been changed in several ways and another entry ("LF")
+has been added. Let's look at the differences one by one::
+
+1. First of all, the entry "LF" has been added. The transformations that
+   are performed on "LF"-nodes replaces their content with a single
+   whitespace and then renames these nodes to ":L"
+   (anonymous significant whitespace).
+
+   The latter is not strictly necessary, but helpful (for debugging)
+   to avoid surprises, since with the change of the content,
+   the semantics of the name "LF" are not appropriate any more.
+
+2. Then, "text" has been added to the list of elements within which
+   adjacent child-elements with purely textual content are merged. Therefore
+   the key of this table entry now reads "markup, bold, emphasis, text".
+
+3. Then, the list of elements, passed to the boolean check "is_one_of" in the
+   condition-clause of the :py:func:`~transform.merge_adjacent` has been adjusted
+   by adding ":Text" and removing the ":LF", which cannot occur anymore, anyway,
+   because the transformations are applied depth-first by DHParser and before
+   the LF-child-node is merged with other nodes by its parent-element, it
+   has been renamed.
 
 
 

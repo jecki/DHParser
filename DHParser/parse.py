@@ -56,7 +56,7 @@ from DHParser.log import CallItem, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.nodetree import ChildrenType, Node, RootNode, WHITESPACE_PTYPE, TOKEN_PTYPE, \
-     MIXED_MODE_TEXT_PTYPE, ZOMBIE_TAG, EMPTY_NODE, EMPTY_PTYPE, ResultType, LEAF_NODE
+     MIXED_CONTENT_TEXT_PTYPE, ZOMBIE_TAG, EMPTY_NODE, EMPTY_PTYPE, ResultType, LEAF_NODE
 from DHParser.toolkit import sane_parser_name, escape_ctrl_chars, re, \
     abbreviate_middle, RX_NEVER_MATCH, RxPatternType, linebreaks, line_col, TypeAlias
 
@@ -2681,7 +2681,7 @@ def update_scanner(grammar: Grammar, leaf_parsers: Dict[str, str]):
 ########################################################################
 
 
-MERGED_PTYPE = MIXED_MODE_TEXT_PTYPE
+MERGED_PTYPE = MIXED_CONTENT_TEXT_PTYPE
 
 
 class CombinedParser(Parser):

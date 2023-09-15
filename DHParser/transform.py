@@ -1181,15 +1181,15 @@ def collapse_children_if(path: Path,
 def merge_adjacent(path: Path, condition: Callable, preferred_name: str = ''):
     """
     Merges adjacent nodes that fulfill the given `condition`. It is
-    assumed that `condition` is never true for leaf-nodes and non-leaf-nodes
+    assumed that ``condition`` is never true for leaf-nodes and non-leaf-nodes
     alike. Otherwise, a type-error might ensue!
 
-    The merged node's name is determined according to the following rule:
-
-    - If any of the nodes to be merged has the name that is passed as argument
-      'preferred_name', this name is chosen.
-    - If none of the to be merged nodes has the 'preferred_name' the
-      name of the first node is chosen.
+    The merged node's name will be set to the value ``preferred_name``
+    unless that value is the empty string. In this case the name of the
+    first node of the merge will be chosen. (Note that the assignment
+    of the preferred name only happens if a merge actually took place,
+    i.e. if there are at least two nodes that have been merged.
+    `´merge_adjaced()`` will not rename single nodes.)
 
     'merge_adjacent' differs from :py:func:`collapse_children_if` in
     two respects:
@@ -1204,7 +1204,7 @@ def merge_adjacent(path: Path, condition: Callable, preferred_name: str = ''):
 
         >>> sxpr = '(place (abbreviation "p.") (page "26") (superscript "b") (mark ",") (page "18"))'
         >>> tree = parse_sxpr(sxpr)
-        >>> merge_adjacent([tree], not_one_of({'superscript', 'subscript'}), 'text')
+        >>> merge_adjacent([tree], not_one_of({'superscript', 'subscript'}), '')
         >>> print(flatten_sxpr(tree.as_sxpr()))
         (place (abbreviation "p.26") (superscript "b") (mark ",18"))
     """
@@ -1227,7 +1227,7 @@ def merge_adjacent(path: Path, condition: Callable, preferred_name: str = ''):
                     names = {nd.name for nd in adjacent}
                     head.result = reduce(operator.add, (nd.result for nd in adjacent), initial)
                     update_attr(head, adjacent[1:], cast(RootNode, path[0]))
-                    if preferred_name in names:
+                    if preferred_name and len(adjacent) > 1:  #  in names:
                         head.name = preferred_name
                     new_result.append(head)
             else:
