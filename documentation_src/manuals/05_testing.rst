@@ -1011,110 +1011,113 @@ and automatically recompile it before the parser is run allows for
 short turn-around-times and makes it easy to refactor the grammar
 frequently. 
 
-In Digital-Humanities-Test-scenarios, formal grammars are not only 
-used for parsing strictly defined formal notations (e.g. LaTeX) 
-but also for retro-digitalization or, rather, re-structuring of 
-"semi-structured" human-written documents with a notation the rules 
-of which are only
+In Digital-Humanities-Test-scenarios, formal grammars are not only used
+for parsing strictly defined formal notations (e.g. LaTeX) but also for
+retro-digitalization or, rather, re-structuring of "semi-structured"
+human-written documents with a notation the rules of which are only
 verbally described, often somewhat vague and incomplete and in practice
-not always followed diligently. Examples are dictionaries (see 
-`Zacherl 2022`_),
-(specialized) bibliographies and the like. In these application-cases,
-parser-development requires very many iterations and 
-test-driven-grammar-development becomes an almost invaluable tool. 
-(An alternative approach would be to use machine-learning to "read"
-this kind of data, e.g. `GROBID`_ for bibliographies. Your mileage
-may vary with either approach. It is also at least in principle possible 
-to employ machine learning to find formal grammars that match a 
-large set of test-cases ("Grammar Induction").)
+not always followed diligently. Examples are dictionaries (see `Zacherl
+2022`_), (specialized) bibliographies and the like. In these
+application-cases, parser-development requires very many iterations and
+test-driven-grammar-development becomes an almost invaluable tool. (An
+alternative approach would be to use machine-learning to "read" this
+kind of data, e.g. `GROBID`_ for bibliographies. Your mileage may vary
+with either approach. It is also at least in principle possible to
+employ machine learning to find formal grammars that match a large set
+of test-cases ("Grammar Induction").)
 
 
 Monitoring AST-creation
 -----------------------
 
-So far, we have only written tests that allow us the check
-whether our parser(s) match or fail certain kinds of input as
-expected. However, we might also be interested in testing whether
-the abstract-syntax-tree (AST) that the parser yields has the expected
-shape. In particular, since this shape is not strictly determined
-by our grammar (as is that of the concrete-syntax-tree) but also
-by the set of AST-transformations that we apply in order to transform
-the concrete-syntax-tree (CST) to the abstract-syntax-tree (AST). 
-And these transformations may of course contain bugs.
+So far, we have only written tests that allow us the check whether our
+parser(s) match or fail certain kinds of input as expected. However, we
+might also be interested in testing whether the abstract-syntax-tree
+(AST) that the parser yields has the expected shape. In particular,
+since this shape is not strictly determined by our grammar (as is that
+of the concrete-syntax-tree) but also by the set of AST-transformations
+that we apply in order to transform the concrete-syntax-tree (CST) to
+the abstract-syntax-tree (AST). And these transformations may of course
+contain bugs.
 
-One important method for checking tree-structures (as well as any
-other data-structure) is structural validation. This, however, requires
+One important method for checking tree-structures (as well as any other
+data-structure) is structural validation. This, however, requires
 specifying the structure of the valid AST in another formal language
-like Relax-NG which is similar to and not much less complicated 
-than specifying the grammar of a formal language with EBNF. 
-For rapid-prototyping of grammars and especially in the early stages of 
+like Relax-NG which is similar to and not much less complicated than
+specifying the grammar of a formal language with EBNF. For
+rapid-prototyping of grammars and especially in the early stages of
 grammar-development, this is hardly a viable option.
 
-DHParser does not yet support structural validation of tree-data. However,
-DHParser allows to compare the resulting syntax-tree (CST or AST) or 
-their string-content against a given result for any match-test. It is 
-also possible to check the data-trees or the strings-serialized results
-of any further `processing-stages <processing_pipelines>`_ 
-in the same way (see below.)
+DHParser does not yet support structural validation of tree-data.
+However, DHParser allows to compare the resulting syntax-tree (CST or
+AST) or their string-content against a given result for any match-test.
+It is also possible to check the data-trees or the strings-serialized
+results of any further `processing-stages <processing_pipelines>`_ in
+the same way (see below.)
 
 .. NOTE: As of version 1.5 DHParser does not have any built-in support
    for structural validation of tree-data. However, it is easy to
    leverage existing solutions for XML, like Relax NG, XSD or DTD for
-   this purpose. Simply serialize you tree withe 
-   :py:meth:`~nodetree.Node.as_xml` and run your preferred XML-tool
-   for structural validation over the XML-serialized-tree.
+   this purpose. Simply serialize you tree withe
+   :py:meth:`~nodetree.Node.as_xml` and run your preferred XML-tool for
+   structural validation over the XML-serialized-tree.
 
 ASTs can be tested by adding an ``[AST:parser_name]`` to the test file.
 "parser_name" must of course be replaced by a valid parser (symbol) of
-the grammar. Moreover, it must be a name for which a ``[match:parser_name]``
-sections exists in the same test-file. Each AST-test is related to a match
-test for the same parser. The relation between the AST-test and its match-test
-is established by using the same test-name, e.g. "M1", "M2", ..., for both.
+the grammar. Moreover, it must be a name for which a
+``[match:parser_name]`` sections exists in the same test-file. Each
+AST-test is related to a match test for the same parser. The relation
+between the AST-test and its match-test is established by using the same
+test-name, e.g. "M1", "M2", ..., for both.
 
 There exist two different types of AST-tests:
 
-1. Tests of the structure and content of the AST. Here, the test code 
-   is a complete tree that must be specified either as S-expression or
-   as XML-code.
+1. Tests of the structure and content of the AST. Here, the test code is
+   a complete tree that must be specified either as S-expression or as
+   XML-code.
 
-2. Tests of the concatenated string-content (or "flat string-content") of
-   the tree. In this case, the test-code consists of a string that is 
-   enclosed in either single (') or double (") quotation marks for 
-   single line strings or tripple single (''') or tripple double quotation marks
-   (""") for multiline strings - just like strings in Python. 
+2. Tests of the concatenated string-content (or "flat string-content")
+   of the tree. In this case, the test-code consists of a string that is
+   enclosed in either single (') or double (") quotation marks for
+   single line strings or tripple single (''') or tripple double
+   quotation marks (""") for multiline strings - just like strings in
+   Python. 
 
-   The following lines after the first line of multiline strings MUST
-   be indented by 4 spaces. The indentation does not count as part of the
+   The following lines after the first line of multiline strings MUST be
+   indented by 4 spaces. The indentation does not count as part of the
    test-string and will be automatically removed before the test-result
    is compared.
 
-The following examples are motivated by a common requirement of electronic
-document processing which is the normalization of the document. Let's
-assume that we want to perform the following three types of normalization
-to our text-data:
+The following examples are motivated by a common requirement of
+electronic document processing which is the normalization of the
+document. Let's assume that we want to perform the following three types
+of normalization to our text-data:
 
-1. The "GAP"-nodes between "markup"-nodes shall be dropped from the syntax
-   tree. After all gaps of one or more empty lines merely serve as
-   delimiters for paragraphs. Generally, delimiters are not needed in a
-   syntax-tree any more, because the document structure is expressed by
-   the tree-structure.
+1. The "GAP"-nodes between "markup"-nodes shall be dropped from the
+   syntax tree. After all gaps of one or more empty lines merely serve
+   as delimiters for paragraphs. Generally, delimiters are not needed in
+   a syntax-tree any more, because the document structure is expressed
+   by the tree-structure.
 
-2. Line-feeds within paragraphs should be replaced by single blank characters
-   to achieve a stronger regularity of the text-content. After all the exact
-   place where a linefeed occurs is not relevant, anyway, and may change
-   depending on the output-form or device.
+2. Line-feeds within paragraphs should be replaced by single blank
+   characters to achieve a stronger regularity of the text-content.
+   After all the exact place where a linefeed occurs is not relevant,
+   anyway, and may change depending on the output-form or device.
 
 3. Sequences of blank characters should be normalized to a single blank
    character to indicate.
 
+Testing the tree-structure directly
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 As mentioned test-cases for ASTs consist of two parts, a match-test-case
-and a related AST-test-case. A simple trick for writing the AST-test-case
-quickly is to write the match-test first, then let the test-script run
-and copy and paste the AST from the report-file to the test-file
-(".ini"-file) as AST-test case. Finally, edit this AST to its desired
-shape. Take this as starting point for programming the AST-transformation
-or earlier tree-simplifications via the ``@disposable``- and ``@drop``-
-directives.
+and a related AST-test-case. A simple trick for writing the
+AST-test-case quickly is to write the match-test first, then let the
+test-script run and copy and paste the AST from the report-file to the
+test-file (".ini"-file) as AST-test case. Finally, edit this AST to its
+desired shape. Take this as starting point for programming the
+AST-transformation or earlier tree-simplifications via the
+``@disposable``- and ``@drop``- directives.
 
 Here is the full test case for dropping GAP-nodes::
 
@@ -1135,15 +1138,17 @@ Here is the full test case for dropping GAP-nodes::
               (markup
                 (text "and another paragraph")))))
 
-Note, that the AST-test-case has the same name, in this case "A1", and that the
-code of the AST-test is, of course, not enclosed in quotation marks. The
-code describing the tree can either - like in the example, above - be denoted
-as S-expression or as XML. The results will be reported as S-expression,
-never the less. (If you prefer XML-output, you need to change the respective
-configuration value for tree-serializations.)
+Note, that the AST-test-case has the same name, in this case "A1", and
+that the code of the AST-test is, of course, not enclosed in quotation
+marks. The code describing the tree can either - like in the example,
+above - be denoted as S-expression or as XML. The results will be
+reported as S-expression, never the less. (If you prefer XML-output, you
+need to change the respective configuration value for
+tree-serializations.)
 
-Since we have not yet adjusted the grammar and AST-transformation-code in order to
-drop the GAP-nodes, running the test-script, yields a failure of the AST-Test "A1"::
+Since we have not yet adjusted the grammar and AST-transformation-code
+in order to drop the GAP-nodes, running the test-script, yields a
+failure of the AST-Test "A1"::
 
 	Abstract syntax tree test "A1" for parser "document" failed:
         ...
@@ -1158,12 +1163,17 @@ drop the GAP-nodes, running the test-script, yields a failure of the AST-Test "A
 		             (GAP "" "" "")
 		             (markup (text "and another paragraph")))))
 
-The required adjustments in order to run the test successfully are quite trivial:
-Simply add the "GAP"-symbol to both the ``@disposable`` and the ``@drop``-directive
-of the grammar and the reported AST-test-failure will disappear.
+The required adjustments in order to run the test successfully are quite
+trivial: Simply add the "GAP"-symbol to both the ``@disposable`` and the
+``@drop``-directive of the grammar and the reported AST-test-failure
+will disappear.
 
-For the conversion of line-feeds to single-whitespace-characters, we will use
-a simple string comparison instead of a full tree comparison as test (see above)::
+Testing the string-content of a tree
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For the conversion of line-feeds to single-whitespace-characters, we
+will use a simple string comparison instead of a full tree comparison as
+test (see above)::
 
 [match:text]
 A1*: """Text in
@@ -1172,13 +1182,13 @@ A1*: """Text in
 [AST:text]
 A1: "Text in two lines"
 
-This time, because it is a string comparison, the test code must stand within
-quotation marks. We mark the match test with an asterix "*" in order to receive
-output for the CST in the report, too. This will be helpful for engineering
-the AST-transformations that we need for the normalization. The AST-test shows
-what kind of result, we expect in the end. Again, as we have not yet changed
-our grammar or parser-script, we will receive an error message when running the
-test-script::
+This time, because it is a string comparison, the test code must stand
+within quotation marks. We mark the match test with an asterix "*" in
+order to receive output for the CST in the report, too. This will be
+helpful for engineering the AST-transformations that we need for the
+normalization. The AST-test shows what kind of result, we expect in the
+end. Again, as we have not yet changed our grammar or parser-script, we
+will receive an error message when running the test-script::
 
 	AST-test A1* for parser text or deserialization of expected value failed:
         ...
@@ -1186,42 +1196,48 @@ test-script::
 		Received:  Text in
 	two lines
 
-As we did not specify the expected result as an (S-expression) tree but as a string,
-the expected and received results are also printed as a strings in the error-message.
-Also, the error-meassge is slightly more vague, because there is the possibility that
-the comparison of expected and received result failed due to the expected result
-having unintentionally been misspecified, which is not the case, here, howeever.
+As we did not specify the expected result as an (S-expression) tree but
+as a string, the expected and received results are also printed as a
+strings in the error-message. Also, the error-meassge is slightly more
+vague, because there is the possibility that the comparison of expected
+and received result failed due to the expected result having
+unintentionally been misspecified, which is not the case, here,
+howeever.
 
-If we look up the AST and CST-trees in the report file, we find that both read as::
+If we look up the AST and CST-trees in the report file, we find that
+both read as::
 
   (text "Text in" "two lines")
 
-Note, that multiline-text in tree-nodes is rendered by DHParser as a seuqence of
-strings rather than a multiline string with line-feeds. So, the "text"-node
-really consists of one string with a line-break in between. The line-break is
-not explicit in form of an "LF"-node, because it has just like the significant
-whitespace and character-sequences that make up the text-element been added
-to the ``@disposable``-directive in the grammar. This LF and L nodes will be
-merged with CHARS-nodes wherever possible during the parsing stage, already.
+Note, that multiline-text in tree-nodes is rendered by DHParser as a
+seuqence of strings rather than a multiline string with line-feeds. So,
+the "text"-node really consists of one string with a line-break in
+between. The line-break is not explicit in form of an "LF"-node, because
+it has just like the significant whitespace and character-sequences that
+make up the text-element been added to the ``@disposable``-directive in
+the grammar. This LF and L nodes will be merged with CHARS-nodes
+wherever possible during the parsing stage, already.
 
-There are two possible strategies for replacing the line-feeds with whitespace:
-Either a) by replacing the line-feed-characters in the string-content of the
-text-nodes during AST-transformation by writing a dedicated
-transformation-procedure or b) removing LF from the list of disposable symbols
-in the grammar, then exchanging its content of each LF-node with a single
-whitespace characters and, maybe also changeing its name to "L" in the course
-of doing so, both during the AST-transformation-stage and, finally,
-merging any CHARS- and L-nodes within all nodes where they could possibly
-appear (i.e. text, bold and emphasis) into a single flat node, again.
+There are two possible strategies for replacing the line-feeds with
+whitespace: Either a) by replacing the line-feed-characters in the
+string-content of the text-nodes during AST-transformation by writing a
+dedicated transformation-procedure or b) removing LF from the list of
+disposable symbols in the grammar, then exchanging its content of each
+LF-node with a single whitespace characters and, maybe also changeing
+its name to "L" in the course of doing so, both during the
+AST-transformation-stage and, finally, merging any CHARS- and L-nodes
+within all nodes where they could possibly appear (i.e. text, bold and
+emphasis) into a single flat node, again.
 
 Although, b) is more complicated, we will follow b), because this is the
-more general approach. So, we start by adjusting our list of disposable nodes, i.e.
-node that like anonymous-nodes can be flattened during parsing, already. It then
-reads::
+more general approach. So, we start by adjusting our list of disposable
+nodes, i.e. node that like anonymous-nodes can be flattened during
+parsing, already. It then reads::
 
     @ disposable  = WS, EOF, LINE, GAP, LLF, L, CHARS, TEXT, ESCAPED, inner_emph, inner_bold
 
-If we run the test script, the result of the test in the report file now reads::
+If we run the test script, the result of the test in the report file now
+reads::
 
     Match-test "A1*"
     -----------------
@@ -1248,21 +1264,25 @@ If we run the test script, the result of the test in the report file now reads::
 
         (text (:Text "Text in") (LF "" "") (:Text "two lines"))
 
-As expected, the AST-error is duly reported, and the CST and the AST are identical, since
-we have not yet programmed the AST-transformation to change the line-feed nodes ("LF")
-into whitespace-nodes.
+As expected, the AST-error is duly reported, and the CST and the AST are
+identical, since we have not yet programmed the AST-transformation to
+change the line-feed nodes ("LF") into whitespace-nodes.
 
-What might appear surprising is the occurrence of ":Text"-nodes
-inside the "text"-nodes. ":Text" is DHParsers stock name for anonymous leaf-nodes.
-(":Text"-nodes can be thought of as the equivalent to the plain-text parts inside
-`mixed-content XML-tags <https://www.w3.org/TR/xml/#sec-mixed-content>`_.) ":Text"-tags
-are created when the parser merges anonymous leaf-nodes of different types.
-(See the :ref:`definition of anonymous nodes <definition_anonymos_nodes>`
-and ref:`simplifying_syntax_trees` to understand the role of anonymous nodes
-and "early merging" of leaf-nodes.)
+What might appear surprising is the occurrence of ":Text"-nodes inside
+the "text"-nodes. ":Text" is DHParsers stock name for anonymous
+leaf-nodes. (":Text"-nodes can be thought of as the equivalent to the
+plain-text parts inside `mixed-content XML-tags
+<https://www.w3.org/TR/xml/#sec-mixed-content>`_.) ":Text"-tags are
+created when the parser merges anonymous leaf-nodes of different types.
+(See the :ref:`definition of anonymous nodes
+<definition_anonymos_nodes>` and ref:`simplifying_syntax_trees` to
+understand the role of anonymous nodes and "early merging" of
+leaf-nodes.)
 
-Now, let's adjust the tree-transformation so that all line-feeds will be replaced
-by whitespaces::
+Now, let's adjust the tree-transformation so that all line-feeds will be
+replaced by whitespaces. (For the general understanding of this kind of
+quasi-declarative tree-transformations, see
+:ref:`declarative_tree_transformation`)::
 
     outline_AST_transformation_table = {
         "LF": [replace_content_with(' '), change_name(':L')],
@@ -1272,29 +1292,59 @@ by whitespaces::
     }
 
 Compared to the earlier version of the transformation-table one entry
-("markup, bold, ...") has been changed in several ways and another entry ("LF")
-has been added. Let's look at the differences one by one::
+("markup, bold, ...") has been changed in several ways and another entry
+("LF") has been added. Let's look at the differences one by one::
 
 1. First of all, the entry "LF" has been added. The transformations that
    are performed on "LF"-nodes replaces their content with a single
-   whitespace and then renames these nodes to ":L"
-   (anonymous significant whitespace).
+   whitespace and then renames these nodes to ":L" (anonymous
+   significant whitespace).
 
-   The latter is not strictly necessary, but helpful (for debugging)
-   to avoid surprises, since with the change of the content,
-   the semantics of the name "LF" are not appropriate any more.
+   The latter is not strictly necessary, but helpful (for debugging) to
+   avoid surprises, since with the change of the content, the semantics
+   of the name "LF" are not appropriate any more.
 
 2. Then, "text" has been added to the list of elements within which
-   adjacent child-elements with purely textual content are merged. Therefore
-   the key of this table entry now reads "markup, bold, emphasis, text".
+   adjacent child-elements with purely textual content are merged.
+   Therefore the key of this table entry now reads "markup, bold,
+   emphasis, text".
 
-3. Then, the list of elements, passed to the boolean check "is_one_of" in the
-   condition-clause of the :py:func:`~transform.merge_adjacent` has been adjusted
-   by adding ":Text" and removing the ":LF", which cannot occur anymore, anyway,
-   because the transformations are applied depth-first by DHParser and before
-   the LF-child-node is merged with other nodes by its parent-element, it
-   has been renamed.
+3. Then, the list of elements, passed to the boolean check "is_one_of"
+   in the condition-clause of the :py:func:`~transform.merge_adjacent`
+   has been adjusted by adding ":Text" and removing the ":LF", which
+   cannot occur anymore, anyway, because the transformations are applied
+   depth-first by DHParser and before the LF-child-node is merged with
+   other nodes by its parent-element, it has been renamed.
 
+   Note that :py:func:`~transform.merge_adjacent` is a transformation
+   that (potentially) merges (some of) the *children* of the node on
+   which it is called or, more precisely, of the last node in the
+   path on which it is called.
+
+4. Following the merging of adjacent nodes, the
+   :py:func`~transform.reduce_single_child`-transformation will be 
+   applied under the condition that the path on which it is called
+   is a "text"-node. 
+   
+   This is done to ensure that "text"-nodes 
+   always come out as leaf-nodes and are not nested within themselves.
+   By contrast, "bold" and "emphasis" are always supposed to be
+   branch nodes, even in the case they contain a single "text"-node
+   as child. 
+
+   The deeper reason for both modeling "text"-nodes as leaf nodes and
+   "markup", "bold", "emphasis" as branch-nodes is that it makes 
+   further processing easier when the same brand of nodes (i.e. nodes
+   with the same name) always have the same type (branch or leave).
+
+With these changes in place the indirect test of the AST by its
+string-content succeeds. There are no line-feeds anymore in the
+string, but only whitespaces.
+
+We will use the same strategy for the last normalization step,
+i.e. normalizing sequences of whitespace to single whitespaces.
+
+TO BE CONTINUED
 
 
 Testing the processing-pipeline

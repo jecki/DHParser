@@ -66,6 +66,7 @@ In the following the functional and declarative scaffolding for tree
 transformations provided by the module :py:mod:`DHParser.transform` will be
 described.
 
+.. _declarative_tree_transformation:
 
 Declarative Tree-Transformation
 -------------------------------
