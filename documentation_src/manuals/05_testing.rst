@@ -1280,9 +1280,10 @@ understand the role of anonymous nodes and "early merging" of
 leaf-nodes.)
 
 Now, let's adjust the tree-transformation so that all line-feeds will be
-replaced by whitespaces. (For the general understanding of this kind of
+replaced by whitespaces. The following shows one possible way how this
+can be achieved. (For the general understanding of this kind of
 quasi-declarative tree-transformations, see
-:ref:`declarative_tree_transformation`)::
+:ref:`declarative_tree_transformation`.)::
 
     outline_AST_transformation_table = {
         "LF": [replace_content_with(' '), change_name(':L')],
@@ -1343,8 +1344,54 @@ string, but only whitespaces.
 
 We will use the same strategy for the last normalization step,
 i.e. normalizing sequences of whitespace to single whitespaces.
+Let's again draw up a test-case, first::
 
-TO BE CONTINUED
+    [match:text]
+    A2: "Testing  whitespace   normalization"
+
+    [AST:text]
+    A2: "Testing whitespace normalization"
+
+Now, in order to normalize whitespace we could just as before
+devise a tree-transformation for "L" or ":L"-nodes. However,
+there is also another solution that exists in combining
+significant whitespace that is strictly defined as a single
+whitespace character (0x20) with insignificant whitespace,
+which is more performant, because the normalization already
+happens in the parsing stage (as a byproduct of the
+elimination of insignificant whitespace). We only need to
+change the definition of "L" from  ``/[ \t]+/`` to::
+
+    L  = /[ \t]/~
+
+Here, the tilde character "~" stands for
+:ref:`insignificant whitespace <insignificant_whitespace>`.
+This simple change suffices to normalize (horizontal) whitespace
+and make the test succeed. Again, coding the AST-test as
+simple string suffices, because the actual tree-structure
+is not involved, here. Of course, we could also have written
+a tree-test, which, since we decided to ensure that text-nodes
+are always leaf-nodes after the AST-transformation, is quite
+trivial in this case::
+
+    [AST:text]
+    A2: (text "Testing whitespace normalization")
+
+It is also possible to test the
+concrete-syntax-tree (CST) in just the same way as the
+AST. Since the last normalization is performed in the
+parsing stage, already, it might appear more logical
+to test the CST rather than the AST. A reason to refrain
+from CST-tests is that the CST can be awfully verbose.
+And if the AST-test succeeds one can most of the time
+assume that the CST has been correct as well.
+
+In this example, however, the CST-test is just as simple
+as the AST-test. In fact, it differs just by a single
+letter::
+
+    [CST:text]
+    A2: (text "Testing whitespace normalization")
 
 
 Testing the processing-pipeline
@@ -1358,7 +1405,8 @@ Conventional Unit-Testing
 -------------------------
 
 - Sometimes it becomes necessary to fallback to conventional
-  unit-testing.
+  unit-testing. For example when testing if error messages
+  are reported, correctly.
 
 - How this is done
 

@@ -107,7 +107,7 @@ class outlineGrammar(Grammar):
     r"""Parser for an outline source file.
     """
     emphasis = Forward()
-    source_hash__ = "84441cbc5206578ce8e96e16ce34b7e5"
+    source_hash__ = "218874e12dc28aa77cda2de736633302"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
     disposable__ = re.compile('WS$|EOF$|LINE$|GAP$|LLF$|L$|CHARS$|TEXT$|ESCAPED$|inner_emph$|inner_bold$')
     static_analysis_pending__ = []  # type: List[bool]
@@ -123,7 +123,7 @@ class outlineGrammar(Grammar):
     WS = Drop(Synonym(GAP))
     PARSEP = Series(dwsp__, RegExp('\\n'), dwsp__, RegExp('\\n'))
     LF = RegExp('[ \\t]*\\n[ \\t]*(?!\\n)')
-    L = RegExp('[ \\t]+')
+    L = Series(RegExp('[ \\t]'), dwsp__)
     LLF = Alternative(L, LF)
     ESCAPED = Series(Drop(Text("\\")), RegExp('.'))
     CHARS = RegExp('[^\\s\\\\_*]+')

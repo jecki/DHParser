@@ -882,6 +882,8 @@ you'd have to insert a symbol for whitespace. The same problem
 exists when it comes to allowing comments, because you'd
 probably allow to insert comments in as many places as possible.
 
+.. _insignificant_whitespace:
+
 insignificant whitespace
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
