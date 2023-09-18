@@ -927,7 +927,7 @@ def md5(*txt):
     return md5_hash.hexdigest()
 
 
-def compile_python_object(python_src: str, catch_obj_regex="DSL") -> Any:
+def compile_python_object(python_src: str, catch_obj_regex="DSLGrammar") -> Any:
     """
     Compiles the python source code and returns the (first) object
     the name of which is matched by ``catch_obj_regex``. If catch_obj
@@ -939,7 +939,7 @@ def compile_python_object(python_src: str, catch_obj_regex="DSL") -> Any:
     namespace = {}  # type: Dict[str, Any]
     exec(code, namespace)  # safety risk?
     if catch_obj_regex.pattern:
-        matches = [key for key in namespace if catch_obj_regex.match(key)]
+        matches = [key for key in namespace if catch_obj_regex.fullmatch(key)]
         if len(matches) < 1:
             raise ValueError("No object matching /%s/ defined in source code." %
                              catch_obj_regex.pattern)
