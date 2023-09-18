@@ -21,8 +21,10 @@ unit-testing framework allows to::
 
 Because writing grammars can be difficult, refactoring and testing of
 grammars is crucial for the success of a project. Also, one and the
-same formal language can be described by different grammars and the way
-the grammar is written influences the shape of the syntax-tree that the
+same formal language can be described by different grammars. (Here,
+two formal languages are considered equal if the set
+of grammatically correct sentences is the same.)
+The grammar used influences the shape of the syntax-tree that the
 parser yields. Therefore, it is quite common to rewrite a grammar or
 parts of it more than once during the course of developing a formal
 notation. For example, in the first iteration one tries to find a
