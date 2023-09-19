@@ -144,10 +144,8 @@ class jsonGrammar(Grammar):
     _element.set(Alternative(object, array, string, number, _bool, null))
     json = Series(dwsp__, _element, _EOF)
     root__ = json
-    
-    
-parsing: PseudoJunction = create_parser_junction(
-    jsonGrammar)
+        
+parsing: PseudoJunction = create_parser_junction(jsonGrammar)
 get_grammar = parsing.factory # for backwards compatibility, only    
 
 

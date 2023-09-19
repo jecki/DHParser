@@ -135,10 +135,8 @@ class miniXMLGrammar(Grammar):
     skip_rules__ = {'STag': [re.compile(r'[^<>]*>')],
                     'ETag': [re.compile(r'[^<>]*')]}
     root__ = document
-    
-    
-parsing: PseudoJunction = create_parser_junction(
-    miniXMLGrammar)
+        
+parsing: PseudoJunction = create_parser_junction(miniXMLGrammar)
 get_grammar = parsing.factory # for backwards compatibility, only    
 
 

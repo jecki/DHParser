@@ -927,25 +927,29 @@ def md5(*txt):
     return md5_hash.hexdigest()
 
 
-def compile_python_object(python_src: str, catch_obj_regex="DSLGrammar") -> Any:
+def compile_python_object(python_src: str, catch_obj="DSLGrammar") -> Any:
     """
     Compiles the python source code and returns the (first) object
-    the name of which is matched by ``catch_obj_regex``. If catch_obj
-    is the empty string, the namespace dictionary will be returned.
+    the name of which is either equal to or matched by ``catch_obj_regex``.
+    If catch_obj is the empty string, the namespace dictionary will be returned.
     """
-    if isinstance(catch_obj_regex, str):
-        catch_obj_regex = re.compile(catch_obj_regex)
     code = compile(python_src, '<string>', 'exec')
     namespace = {}  # type: Dict[str, Any]
     exec(code, namespace)  # safety risk?
-    if catch_obj_regex.pattern:
-        matches = [key for key in namespace if catch_obj_regex.fullmatch(key)]
+    if catch_obj:
+        if isinstance(catch_obj, str):
+            try:
+                obj = namespace[catch_obj]
+                return obj
+            except KeyError:
+                catch_obj = re.compile(catch_obj)
+        matches = [key for key in namespace if catch_obj.fullmatch(key)]
         if len(matches) < 1:
             raise ValueError("No object matching /%s/ defined in source code." %
-                             catch_obj_regex.pattern)
+                             catch_obj.pattern)
         elif len(matches) > 1:
             raise ValueError("Ambiguous matches for %s : %s" %
-                             (str(catch_obj_regex), str(matches)))
+                             (str(catch_obj), str(matches)))
         return namespace[matches[0]] if matches else None
     else:
         return namespace

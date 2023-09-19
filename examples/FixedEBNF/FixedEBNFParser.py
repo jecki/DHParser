@@ -164,10 +164,8 @@ class FixedEBNFGrammar(Grammar):
     resume_rules__ = {'definition': [re.compile(r'\n\s*(?=@|\w+\w*\s*=)')],
                       'directive': [re.compile(r'\n\s*(?=@|\w+\w*\s*=)')]}
     root__ = syntax
-    
-    
-parsing: PseudoJunction = create_parser_junction(
-    FixedEBNFGrammar)
+        
+parsing: PseudoJunction = create_parser_junction(FixedEBNFGrammar)
 get_grammar = parsing.factory # for backwards compatibility, only    
 
 

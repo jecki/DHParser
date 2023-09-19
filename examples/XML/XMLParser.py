@@ -168,10 +168,8 @@ class XMLGrammar(Grammar):
                       'ETag': [re.compile(r'(?=>)')],
                       'Attribute': [re.compile(r'(?=>|\/>)')]}
     root__ = document
-    
-    
-parsing: PseudoJunction = create_parser_junction(
-    XMLGrammar)
+        
+parsing: PseudoJunction = create_parser_junction(XMLGrammar)
 get_grammar = parsing.factory # for backwards compatibility, only    
 
 

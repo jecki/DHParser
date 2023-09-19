@@ -112,10 +112,8 @@ class ArithmeticGrammar(Grammar):
     term = Series(factor, ZeroOrMore(Series(Alternative(DIV, MUL), factor)))
     expression.set(Series(term, ZeroOrMore(Series(Alternative(PLUS, MINUS), term))))
     root__ = expression
-    
-    
-parsing: PseudoJunction = create_parser_junction(
-    ArithmeticGrammar)
+        
+parsing: PseudoJunction = create_parser_junction(ArithmeticGrammar)
 get_grammar = parsing.factory # for backwards compatibility, only    
 
 

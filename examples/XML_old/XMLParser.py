@@ -133,10 +133,8 @@ class XMLGrammar(Grammar):
     element.set(Alternative(emptyElement, Series(STag, content, ETag, mandatory=1)))
     document = Series(prolog, element, Option(Misc), EOF)
     root__ = document
-    
-    
-parsing: PseudoJunction = create_parser_junction(
-    XMLGrammar)
+        
+parsing: PseudoJunction = create_parser_junction(XMLGrammar)
 get_grammar = parsing.factory # for backwards compatibility, only    
 
 

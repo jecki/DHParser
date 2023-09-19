@@ -202,10 +202,8 @@ class XML_DTDGrammar(Grammar):
     extSubsetDecl.set(ZeroOrMore(Alternative(markupdecl, conditionalSect, DeclSep)))
     document = Series(prolog, element, Option(Misc), EOF)
     root__ = document
-    
-    
-parsing: PseudoJunction = create_parser_junction(
-    XML_DTDGrammar)
+        
+parsing: PseudoJunction = create_parser_junction(XML_DTDGrammar)
 get_grammar = parsing.factory # for backwards compatibility, only    
 
 

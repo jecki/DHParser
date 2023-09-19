@@ -278,10 +278,8 @@ class LaTeXGrammar(Grammar):
     _block_environment.set(Alternative(Series(Lookahead(_has_block_start), _known_environment), generic_block))
     latexdoc = Series(preamble, document, mandatory=1)
     root__ = latexdoc
-    
-    
-parsing: PseudoJunction = create_parser_junction(
-    LaTeXGrammar)
+        
+parsing: PseudoJunction = create_parser_junction(LaTeXGrammar)
 get_grammar = parsing.factory # for backwards compatibility, only    
 
 

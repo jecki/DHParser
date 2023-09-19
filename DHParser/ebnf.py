@@ -3274,7 +3274,7 @@ def compile_ebnf_ast(ast: RootNode) -> str:
 ########################################################################
 
 def compile_ebnf(ebnf_source: str, branding: str = 'DSL', *, preserve_AST: bool = False) \
-        -> CompilationResult:
+        -> CompilationResult:   # -> (result, messages, AST)
     """
     Compiles an `ebnf_source` (file_name or EBNF-string) and returns
     a tuple of the python code of the compiler, a list of warnings or errors

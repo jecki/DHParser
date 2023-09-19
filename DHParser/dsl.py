@@ -327,7 +327,7 @@ def grammar_provider(ebnf_src: str,
     if log_name and is_logging():  append_log(log_name, grammar_src)
     imports = DHPARSER_IMPORTS  
     parsing_stage = compile_python_object('\n'.join([imports, additional_code, grammar_src]),
-                                          r'parsing$')  # r'get_(?:\w+_)?grammar$'
+                                          r'parsing')  # r'get_(?:\w+_)?grammar$'
     if callable(parsing_stage.factory):
         parsing_stage.factory.python_src__ = grammar_src
         return parsing_stage.factory
@@ -376,9 +376,9 @@ def load_compiler_suite(compiler_suite: str) -> \
         sections = split_source(compiler_suite, source)
         _, imports, preprocessor_py, parser_py, ast_py, compiler_py, _ = sections
         # TODO: Compile in one step and pick parts from namespace later ?
-        preprocessor = compile_python_object(imports + preprocessor_py, r'preprocessing$').factory
-        parser = compile_python_object(imports + parser_py, r'parsing$').factory
-        ast = compile_python_object(imports + ast_py, r'ASTTransformation$').factory
+        preprocessor = compile_python_object(imports + preprocessor_py, r'preprocessing').factory
+        parser = compile_python_object(imports + parser_py, r'parsing').factory
+        ast = compile_python_object(imports + ast_py, r'ASTTransformation').factory
     else:
         # Assume source is an ebnf grammar.
         # Is there really any reasonable application case for this?
@@ -392,7 +392,7 @@ def load_compiler_suite(compiler_suite: str) -> \
         preprocessor = get_ebnf_preprocessor
         parser = get_ebnf_grammar
         ast = get_ebnf_transformer
-    compiler = compile_python_object(imports + compiler_py, r'compiling$').factory
+    compiler = compile_python_object(imports + compiler_py, r'compiling').factory
     if callable(preprocessor) and callable(parser) and callable(Callable) and callable(compiler):
         return preprocessor, parser, ast, compiler
     raise ValueError('Could not generate compiler suite from source code!')
