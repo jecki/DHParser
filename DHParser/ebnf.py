@@ -122,6 +122,8 @@ from a grammar, step by step::
     ... minus      = `-`
     ... NUMBER     = /(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?/~
     ... VARIABLE   = /[A-Za-z]/~"""
+
+    >>> # 1. Compilation of an EBNF-grammar into Python-source-code
     >>> ebnf_parser = ConfigurableEBNFGrammar()
     >>> ebnf_transformer = EBNFTransform()
     >>> ebnf_compiler = EBNFCompiler()
@@ -162,11 +164,13 @@ from a grammar, step by step::
     get_grammar = parsing.factory # for backwards compatibility, only    
     <BLANKLINE>
 
+    >>> # 2. Execution of the Python-source and extraction of the Grammar-class
     >>> code = compile(DHPARSER_IMPORTS + python_src, '<string>', 'exec')
     >>> namespace = {}
     >>> exec(code, namespace)
     >>> ArithmeticGrammar = namespace['ArithmeticGrammar']
 
+    >>> # 3. Instantiation of the Grammar class and parsing of an expression
     >>> arithmetic_parser = ArithmeticGrammar()
     >>> syntax_tree = arithmetic_parser("2 + 3 * 4")
     >>> print(syntax_tree.as_sxpr())
@@ -181,6 +185,37 @@ from a grammar, step by step::
         (mul "*")
         (factor
           (NUMBER "4"))))
+
+Of course, the first part, compiling of the grammar to Python-code,
+could also have been achieved with::
+
+    >>> python_src = compile_ebnf(arithmetic_ebnf, "Arithmetic").result
+
+And for the execution of the Python-source and extraction of the Grammar-class,
+one can use :py:func:`DHParser.toolkit.compile_python_object`::
+
+    >>> from DHParser import toolkit
+    >>> ArithmeticGrammar = toolkit.compile_python_object(
+    ...     DHPARSER_IMPORTS + python_src, "ArithmeticGrammar")
+    >>> arithmetic_parser = ArithmeticGrammar()
+    >>> syntax_tree_2 = arithmetic_parser("2 + 3 * 4")
+    >>> assert syntax_tree_2.equals(syntax_tree)
+
+The recommended canonical way for the last step, howver, would be::
+
+    >>> parsing = toolkit.compile_python_object(
+    ...     DHPARSER_IMPORTS + python_src, "parsing")
+    >>> arithmetic_parser = parsing.factory()
+    >>> syntax_tree_3 = arithmetic_parser("2 + 3 * 4")
+    >>> assert syntax_tree_3.equals(syntax_tree)
+
+By using the factory function of the parsing-junction to
+get a grammar-object instead of instantiating it directly, it is avoided
+to instantiate the grammar-object more than once per thread. Re-using
+the same grammar-object is more efficient
+than re-instantiating it for every new document to be parsed. At the same-time
+grammar-objects must not be shared between threads or processes. (See also
+:py:class:`~toolkit.ThreadLocalSingletonFactory`.)
 '''
 
 from __future__ import annotations
