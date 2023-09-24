@@ -22,11 +22,64 @@ and deserialization of node-trees, navigating and searching node-trees as well
 as annotating node-trees with attributes and error messages.
 
 ``nodetree`` can also be seen as a document-tree-library
-for handling any kind of XML-data. In contrast to
+for handling any kind of XML or S-expression-data. In contrast to
 `Elementtree <https://docs.python.org/3/library/xml.etree.elementtree.html>`_
 and `lxml <https://lxml.de/>`_, nodetree maps mixed content to dedicated nodes,
 which simplifies the programming of algorithms that run on the data stored
-in the (XML-)tree."""
+in the (XML-)tree.
+
+The source code of module ``nodetree`` consists of four main sections:
+
+1.  Node-class, i.e. Node, FrozenNode and RootNode as well as a number
+    of top-level functions closely related to these. The Node-classes in
+    turn provide several fgroups of functionality:
+
+    a. Capturing segements of documents and organizing it in trees.
+       (A node is either a "leaf"-node with string-content or a
+       "branch"-node with children.)
+
+    b. Retaining its source-position in the document (important for
+       error reporting, in particluar when errors occurr later in
+       the processing-pipeline.)
+
+    c. Storing and retrieving of (XML-)attributes. Like
+       XML-attributes, attribute-names are strings, but other than
+       XML-attributes, attributes attached to Node-objects can
+       take any Python-type as value that is serializable with
+       "str()".
+
+    d. Tree-traversal, in particular node- and path-selection based
+       on arbitrary criteria (passed as match-node or match-path-function)
+
+    e. Experimental (XML-)milestone-support. See also:
+       :py:class:`~nodetree.ContextMapping`
+
+    f. A very simple method for tree-"evaluation". (More elaborate
+       scaffolings for evaluation tree are found in :py:mod:`~traverse`
+       and :py:mod:`compile`.)
+
+    g. Functions for serialization and deserialization as XML, S-Expression,
+       JSON as well as conversion to and from ElemenTree/LXML-representations.
+
+    h. Class RootNode serving as both root-node of the tree and a hub
+       for storing data for the tree as a whole (as, for example, the
+       list of errors that have occurred during parsing or further
+       processing) as well as information on the current processing-stage.
+
+2.  Attribute-handling: Functions to handle attributes-values that
+    are organized as blank separated sets of strings, like for example
+    the class-attribute in HTML.
+
+3.  Path-Navigation: Functions that help navigating with paths through
+    the tree. A path is the list of nodes that connects the root-node
+    of the tree with one particular node inside or at the leaf of the
+    tree.
+
+4.  Context-mappings: A Class (:py:class:`~nodetree.ContextMapping`) for
+    relating the flat string-content of a document-tree to its
+    structure. This allows using the string-content for searching in the
+    document and then switching to the tree-structure to manipulate it.
+"""
 
 from __future__ import annotations
 
@@ -145,10 +198,11 @@ __all__ = ('WHITESPACE_PTYPE',
 
 #######################################################################
 #
-# parser-related definitions
+# Node-classes (Node, FrozenNode, RootNode) and related functions
 #
 #######################################################################
 
+## parser-related-definitions #########################################
 
 WHITESPACE_PTYPE = ':Whitespace'
 TOKEN_PTYPE = ':Text'
@@ -161,16 +215,9 @@ LEAF_PTYPES = frozenset({WHITESPACE_PTYPE, TOKEN_PTYPE, MIXED_CONTENT_TEXT_PTYPE
 
 ZOMBIE_TAG = "ZOMBIE__"
 
+## support functions ##################################################
 
-#######################################################################
-#
-# support functions
-#
-#######################################################################
-
-
-# support functions for searching and navigating trees #################
-
+# support functions for searching and navigating trees
 
 # criteria for finding nodes:
 # - node itself (equality)
@@ -306,7 +353,7 @@ def create_path_match_function(criterion: PathSelector) -> PathMatchFunction:
                     % (repr(criterion), type(criterion)))
 
 
-# support functions for tree-serialization ############################
+# support functions for tree-serialization
 
 
 RX_IS_SXPR = re.compile(r'\s*\(')
@@ -402,11 +449,8 @@ def restore_tag_name(tag_name: str) -> str:
     return tag_name
 
 
-#######################################################################
-#
-# Node class
-#
-#######################################################################
+## Node class #########################################################
+
 
 ChildrenType: TypeAlias = Tuple['Node', ...]
 StrictResultType: TypeAlias = Union[ChildrenType, StringView, str]
@@ -827,10 +871,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return self._attributes
 
     @attr.setter
-    def attr(self, attr_dict: Dict[str, str]):
+    def attr(self, attr_dict: Dict[str, Any]):
         self._attributes = attr_dict
 
-    def get_attr(self, attribute: str, default: str) -> str:
+    def get_attr(self, attribute: str, default: Any) -> Any:
         """
         Returns the value of 'attribute' if attribute exists. If not, the
         default value is returned. This function has the same semantics
@@ -2163,6 +2207,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return node
 
 
+## functions for handling tuples of Node-objects ######################
+
+
 def content_of(segment: Union[Node, Tuple[Node, ...], StringView, str],
                select: PathSelector = LEAF_PATH,
                ignore: PathSelector = NO_PATH) -> str:
@@ -2216,9 +2263,989 @@ def strlen_of(segment: Union[Node, Sequence[Node, ...], StringView, str],
     return _strlen_of(segment, match_func, skip_func)
 
 
+## FrozenNode - an immutable version Node ########################
+
+
+class FrozenNode(Node):
+    """
+    FrozenNode is an immutable kind of Node, i.e. it must not be changed
+    after initialization. The purpose is mainly to allow certain kinds of
+    optimizations, like not having to instantiate empty nodes (because they
+    are always the same and will be dropped while parsing, anyway) and
+    to be able to trigger errors if the program tries to treat such
+    temporary nodes as a regular ones. (See :py:mod:`DHParser.parse`)
+
+    Frozen nodes must only be used temporarily during parsing or
+    tree-transformation and should not occur in the product of the
+    transformation anymore. This can be verified with
+    :py:func:`tree_sanity_check()`. Or, as comparison criterion for
+    content equality when picking or selecting nodes or paths from
+    a tree (see :py:func:`create_match_function()`).
+    """
+
+    def __init__(self, name: str, result: ResultType, leafhint: bool = True) -> None:
+        if isinstance(result, str) or isinstance(result, StringView):
+            result = str(result)
+        else:
+            raise TypeError('FrozenNode only accepts string as result. '
+                            '(Only leaf-nodes can be frozen nodes.)')
+        super(FrozenNode, self).__init__(name, result, True)
+
+    @property
+    def result(self) -> Union[Tuple[Node, ...], StringView, str]:
+        return self._result
+
+    @result.setter
+    def result(self, result: ResultType):
+        raise TypeError('FrozenNode does not allow re-assignment of results.')
+
+    @property
+    def attr(self):
+        try:
+            return self._attributes
+        except AttributeError:
+            return OrderedDict()  # assignments will be void!
+
+    @attr.setter
+    def attr(self, attr_dict: Dict[str, Any]):
+        if self.has_attr():
+            raise AssertionError("Frozen nodes' attributes can only be set once")
+        else:
+            self._attributes = attr_dict
+
+    @property
+    def pos(self):
+        return -1
+
+    def with_pos(self, pos: cython.int) -> Node:
+        raise NotImplementedError("Position values cannot be assigned to frozen nodes!")
+
+    def to_json_obj(self, as_dict: bool=False, include_pos: bool=True) -> List:
+        raise NotImplementedError("Frozen nodes cannot and be serialized as JSON!")
+
+    @staticmethod
+    def from_json_obj(json_obj: Union[Dict, Sequence]) -> Node:
+        raise NotImplementedError("Frozen nodes cannot be deserialized from JSON!")
+
+
+PLACEHOLDER = FrozenNode('__PLACEHOLDER__', '')
+EMPTY_NODE = FrozenNode(EMPTY_PTYPE, '')
+
+
+def tree_sanity_check(tree: Node) -> bool:
+    """
+    Sanity check for node-trees: One and the same node must never appear
+    twice in the node-tree. Frozen Nodes (EMTPY_NODE, PLACEHOLDER)
+    should only exist temporarily and must have been dropped or eliminated
+    before any kind of tree generation (i.e. parsing) or transformation
+    is finished.
+    :param tree: the root of the tree to be checked
+    :returns: `True`, if the tree is "sane", `False` otherwise.
+    """
+    node_set = set()  # type: Set[Node]
+    for node in tree.select_if(lambda nd: True, include_root=True):
+        if not isinstance(node, Node) or node in node_set or isinstance(node, FrozenNode):
+            return False
+        node_set.add(node)
+    return True
+
+
+## RootNode - manage global properties of trees, like error messages ##
+
+
+EMPTY_SET_SENTINEL = frozenset()  # needed by RootNode.as_xml()
+
+
+def default_divisable() -> AbstractSet[str]:
+    return LEAF_PTYPES
+
+
+class RootNode(Node):
+    """The root node for the node-tree is a special kind of node that keeps
+    and manages global properties of the tree as a whole. These are first and
+    foremost the list off errors that occurred during tree generation
+    (i.e. parsing) or any transformation of the tree.
+
+    Other properties concern the customization of the XML-serialization and
+    meta-data about the procesed document and processing stage.
+
+    Although errors are local properties that occur on a specific point or
+    chunk of source code, instead of attaching the errors to the nodes on
+    which they have occurred, the list of errors in managed globally by the
+    root-node object. Otherwise, it would be hard to keep track of the
+    errors when during the transformation of trees node are replaced or
+    dropped that might also contain error messages.
+
+    The root node can be instantiated before the tree is fully parsed. This is
+    necessary, because the root node is needed for managing error messages
+    during the parsing process, already. In order to connect the root node to
+    the tree, when parsing is finished, the swallow()-method must be called.
+
+    :ivar errors:  A list of all errors that have occurred so far during
+        processing (i.e. parsing, AST-transformation, compiling) of this tree.
+        The errors are ordered by the time of their being added to the list.
+    :ivar errors_sorted: (read-only property) The list of errors ordered by
+        their position.
+    :ivar error_nodes: A mapping of node-ids to a list of errors that
+        occurred on the node with the respective id.
+    :ivar error_positions: A mapping of locations to a set of ids of nodes
+        that contain an error at that particular location.
+    :ivar error_flag: the highest warning or error level of all errors
+        that occurred.
+
+    :ivar source:  The source code (after preprocessing)
+    :ivar source_mapping:  A source mapping function to map source code
+        positions to the positions of the non-preprocessed source.
+        See module `preprocess`
+    :ivar lbreaks: A list of indices of all linebreaks in the source.
+
+    :ivar inline_tags: see `Node.as_xml()` for an explanation.
+    :ivar string_tags: see `Node.as_xml()` for an explanation.
+    :ivar empty_tags: see `Node.as_xml()` for an explanation.
+
+    :ivar docname: a name for the document
+    :ivar stage: a name for the current processing stage or the empty string
+        (default). This name if present is used for verifying the stage in
+        :py:func:`DHParser.compile.run_pipeline`. If ``stage`` contains the
+        empty string, stage-verification is turned off (which may result
+        in obscure error messages in case a tree-transformation is run on
+        the wrong stage.) Stage-names should be considered as case-insensitive,
+        i.e. "AST" is treated as the same stage as "ast".
+    :ivar serialization_type: The kind of serialization for the
+        current processing stage. Can be one of 'XML', 'json',
+        'indented', 'S-expression' or 'default'. (The latter picks
+        the default serialization from the configuration.)
+
+    :ivar data: Compiled data. If the data still is a tree this
+        simply contains a reference to self.
+    """
+
+    def __new__(cls, *args, **kwargs):
+        if len(args) == 1 and isinstance(args[0], RootNode):
+            return args[0]  # avoid creating a root-node form a root-node
+        return Node.__new__(cls)
+
+    def __init__(self, node: Optional[Node] = None,
+                 source: Union[str, StringView] = '',
+                 source_mapping: Optional[SourceMapFunc] = None):
+        if node is self:  return   # happens if you initialize a RootNode with a RootNode, see __new__ above
+        super().__init__('__not_yet_ready__', '')
+        self.errors: List[Error] = []
+        self._error_set: Set[Error] = set()
+        self.error_nodes: Dict[int, List[Error]] = dict()   # id(node) -> error list
+        self.error_positions: Dict[int, Set[int]] = dict()  # pos -> set of id(node)
+        self.error_flag: ErrorCode = ErrorCode(0)
+        self.source: Union[str, StringView] = source
+        self.lbreaks: List[int] = linebreaks(source)
+
+        # customization for XML-Representation
+        self.inline_tags: Set[str] = set()
+        self.string_tags: Set[str] = {MIXED_CONTENT_TEXT_PTYPE}
+        self.empty_tags: Set[str] = set()
+
+        # meta-data
+        self.docname: str = ''
+        self.stage: str = ''
+        self.serialization_type: str = 'default'
+
+        if node is not None:
+            self.swallow(node, source, source_mapping)
+        else:
+            self.source_mapping: SourceMapFunc = gen_neutral_srcmap_func(source) \
+                if source_mapping is None else source_mapping
+
+        # Data resembling the compiled tree. Default is the tree itself.
+        self.data = self
+
+    def __str__(self):
+        errors = self.errors_sorted
+        if errors:
+            e_pos = errors[0].pos
+            content = self.content
+            return content[:e_pos] + ' <<< Error on "%s" | %s >>> ' % \
+                (content[e_pos - self.pos:], '; '.join(e.message for e in errors))
+        return self.content
+
+    def __deepcopy__(self, memodict={}):
+        old_node_ids = [id(nd) for nd in self.select_if(lambda n: True, include_root=True)]
+        duplicate = self.__class__(None)
+        if self._children:
+            duplicate._children = copy.deepcopy(self._children, memodict)
+            duplicate._result = duplicate._children
+        else:
+            duplicate._children = tuple()
+            duplicate._result = self._result
+        duplicate._pos = self._pos
+        new_node_ids = [id(nd) for nd in duplicate.select_if(lambda n: True, include_root=True)]
+        map_id = dict(zip(old_node_ids, new_node_ids))
+        if self.has_attr():
+            duplicate.attr.update(self._attributes)
+            # duplicate._attributes = copy.deepcopy(self._attributes)  # this is blocked by cython
+        duplicate.errors = copy.deepcopy(self.errors, memodict)
+        duplicate._error_set = {error for error in duplicate.errors}
+        duplicate.error_nodes = {map_id.get(i, i): el[:] for i, el in self.error_nodes.items()}
+        duplicate.error_positions = {pos: {map_id.get(i, i) for i in s}
+                                     for pos, s in self.error_positions.items()}
+        duplicate.source = self.source
+        duplicate.source_mapping = self.source_mapping
+        duplicate.lbreaks = copy.deepcopy(self.lbreaks, memodict)
+        duplicate.error_flag = self.error_flag
+
+        duplicate.inline_tags = self.inline_tags
+        duplicate.string_tags = self.string_tags
+        duplicate.empty_tags = self.empty_tags
+
+        duplicate.docname = self.docname
+        duplicate.stage = self.stage
+        duplicate.serialization_type = self.serialization_type
+
+        if self.data == self:
+            duplicate.data = duplicate
+        else:
+            duplicate.data = copy.deepcopy(self.data)
+
+        duplicate.name = self.name
+
+        # copy fields attached by the user
+        ssize = len(self.__dict__)
+        dsize = len(duplicate.__dict__)
+        if dsize < ssize:
+            for k, v in reversed(self.__dict__.items()):
+                setattr(duplicate, k, v)
+                dsize += 1
+                if dsize == ssize:
+                    break
+
+        return duplicate
+
+    def swallow(self, node: Optional[Node],
+                source: Union[str, StringView] = '',
+                source_mapping: Optional[SourceMapFunc] = None) \
+            -> RootNode:
+        """
+        Put `self` in the place of `node` by copying all its data.
+        Returns self.
+
+        This is done by the parse.Grammar object after
+        parsing has finished, so that the Grammar object always
+        returns a node-tree rooted in a RootNode object.
+
+        It is possible to add errors to a RootNode object, before it
+        has actually swallowed the root of the node-tree.
+        """
+        if source and source != self.source:
+            self.source = source
+            self.lbreaks = linebreaks(source)
+        self.source_mapping: SourceMapFunc = gen_neutral_srcmap_func(source) \
+            if source_mapping is None else source_mapping
+        if self.name != '__not_yet_ready__':
+            raise AssertionError('RootNode.swallow() has already been called!')
+        if node is None:
+            self.name = ZOMBIE_TAG
+            self.with_pos(0)
+            self.new_error(self, 'Parser did not match!', PARSER_STOPPED_BEFORE_END)
+            return self
+        self._result = node._result
+        self._children = node._children
+        self._pos = node._pos
+        self.name = node.name
+        if node.has_attr():
+            self._attributes = node._attributes
+        # self._content = node._content
+        if id(node) in self.error_nodes:
+            self.error_nodes[id(self)] = self.error_nodes[id(node)]
+        if self.source:
+            add_source_locations(self.errors, self.source_mapping)
+        return self
+
+    def continue_with_data(self, data: Any):
+        """Drops the swallowed tree in favor of the (non-tree) data resulting
+        from the compilation of the tree. The data can then be retrieved from
+        the field ``self.data``, which before the tree has been dropped contains
+        a reference to the tree itself.
+        """
+        if data != self:
+            self.data = data
+            self.result = "TREE HAS BEEN DESTROYED!"
+
+    def add_error(self, node: Optional[Node], error: Error) -> RootNode:
+        """
+        Adds an Error object to the tree, locating it at a specific node.
+        """
+        assert isinstance(error, Error)
+        if error in self._error_set:
+            return self  # prevent duplication of errors
+        if not node:
+            # find the first leaf-node from the left that could contain the error
+            # judging from its position
+            pos_list = []
+            node_list = []
+            nd = None
+            for nd in self.select_if(lambda nd: not nd._children):
+                assert nd.pos >= 0
+                if nd.pos <= error.pos < nd.pos + nd.strlen():
+                    node = nd
+                    break
+                pos_list.append(nd.pos)
+                node_list.append(nd)
+            else:
+                if nd is None:
+                    node = self
+                else:
+                    node_list.append(nd)
+                    i = bisect.bisect(pos_list, error.pos)
+                    node = node_list[i]
+        else:
+            assert isinstance(node, Node)
+            assert isinstance(node, FrozenNode) or node.pos <= error.pos, \
+                "Wrong error position when processing error: %s\n" % str(error) + \
+                "%i <= %i <= %i ?" % (node.pos, error.pos, node.pos + max(1, node.strlen() - 1))
+            assert node.pos >= 0, "Errors cannot be assigned to nodes without position!"
+        self.error_nodes.setdefault(id(node), []).append(error)
+        if node.pos <= error.pos <= node.pos + max(node.strlen(), 1):  # node.pos == error.pos:
+            self.error_positions.setdefault(error.pos, set()).add(id(node))
+        if self.source:
+            add_source_locations([error], self.source_mapping)
+        self.errors.append(error)
+        self._error_set.add(error)
+        self.error_flag = max(self.error_flag, error.code)
+        return self
+
+    def new_error(self,
+                  node: Node,
+                  message: str,
+                  code: ErrorCode = ERROR) -> RootNode:
+        """
+        Adds an error to this tree, locating it at a specific node.
+
+        :param node:    the node where the error occurred
+        :param message: a string with the error message
+        :param code:    an error code to identify the type of the error
+        """
+        error = Error(message, node.pos, code)
+        self.add_error(node, error)
+        return self
+
+    def node_errors(self, node: Node) -> List[Error]:
+        """
+        Returns the List of errors that occurred on the node or any child node
+        at the position of the node that has already been removed from the tree,
+        for example, because it was an anonymous empty child node.
+        The position of the node is here understood to cover the range:
+        [node.pos, node.pos + node.strlen()[
+        """
+        node_id = id(node)           # type: int
+        errors = []                  # type: List[Error]
+        start_pos = node.pos
+        end_pos = node.pos + max(node.strlen(), 1)
+        error_node_ids = set()
+        for pos, ids in self.error_positions.items():   # TODO: use bisect here...
+            if start_pos <= pos < end_pos:
+                error_node_ids.update(ids)
+        for nid in error_node_ids:
+            if nid == node_id:
+                # add the node's errors
+                errors.extend(self.error_nodes[nid])
+            elif node._children:
+                for _ in node.select_if(lambda n: id(n) == nid):
+                    break
+                else:
+                    # node is not connected to tree anymore, but since errors
+                    # should not get lost, display its errors on its parent
+                    errors.extend(self.error_nodes[nid])
+        return errors
+
+    def transfer_errors(self, src: Node, dest: Node):
+        """
+        Transfers errors to a different node. While errors never get lost
+        during AST-transformation, because they are kept by the RootNode,
+        the nodes they are connected to may be dropped in the course of the
+        transformation. This function allows attaching errors from a node that
+        will be dropped to a different node.
+        """
+        srcId = id(src)
+        destId = id(dest)
+        if srcId != destId and srcId in self.error_nodes:
+            errorList = self.error_nodes[srcId]
+            self.error_nodes.setdefault(destId, []).extend(errorList)
+            del self.error_nodes[srcId]
+            for nodeSet in self.error_positions.values():
+                nodeSet.discard(srcId)
+                nodeSet.add(destId)
+
+    @property
+    def errors_sorted(self) -> List[Error]:
+        """
+        Returns the list of errors, ordered bv their position.
+        """
+        errors = self.errors[:]
+        errors.sort(key=lambda e: e.pos)
+        return errors
+
+    def error_safe(self, level: ErrorCode = ERROR) -> RootNode:
+        """
+        Asserts that the given tree does not contain any errors with a
+        code equal or higher than the given level.
+        Returns the tree if this is the case, raises an `AssertionError`
+        otherwise.
+        """
+        if has_errors(self.errors, level):
+            raise AssertionError('\n'.join(['Tree-sanity-check failed, because of:'] +
+                                           [str(e) for e in only_errors(self.errors, level)]))
+        return self
+
+    def did_match(self) -> bool:
+        """
+        Returns True, if the parser that has generated this tree did
+        match, False otherwise. Depending on wether the Grammar-object that
+        that generated the node-tree was called with `complete_match=True`
+        or not this requires either the complete document to have been
+        matched or only the beginning.
+
+        Note: If the parser did match, this does not mean that it must
+        have matched without errors. It simply means the no
+        PARSER_STOPPED_BEFORE_END-error has occurred.
+        """
+        return self.name != '__not_yet_ready__' \
+            and not any(e.code == PARSER_STOPPED_BEFORE_END for e in self.errors)
+
+    def as_xml(self, src: Optional[str] = None,
+               indentation: int = 2,
+               inline_tags: AbstractSet[str] = EMPTY_SET_SENTINEL,
+               string_tags: AbstractSet[str] = EMPTY_SET_SENTINEL,
+               empty_tags: AbstractSet[str] = EMPTY_SET_SENTINEL,
+               strict_mode: bool=True) -> str:
+        return super().as_xml(
+            src, indentation,
+            inline_tags=self.inline_tags if inline_tags is EMPTY_SET_SENTINEL else inline_tags,
+            string_tags=self.string_tags if string_tags is EMPTY_SET_SENTINEL else string_tags,
+            empty_tags=self.empty_tags if empty_tags is EMPTY_SET_SENTINEL else empty_tags,
+            strict_mode=strict_mode)
+
+    def serialize(self, how: str = '') -> str:
+        if not how:
+            how = self.serialization_type or 'default'
+        return super().serialize(how)
+
+
+## S-expression- and XML-parsers and JSON-reader ######################
+
+
+RX_SXPR_INNER_PARSER = re.compile(r'[\w:]+')
+RX_SXPR_NOTEXT = re.compile(r'(?:(?!\)).)*', re.DOTALL)
+RX_SXPR_TEXT = {qtmark: re.compile(qtmark + r'.*?' + qtmark, re.DOTALL)
+                for qtmark in ['"""', "'''", '"', "'"]}
+
+
+def parse_sxpr(sxpr: Union[str, StringView]) -> RootNode:
+    """
+    Generates a tree of nodes from an S-expression.
+
+    This can - among other things - be used for deserialization of trees that
+    have been serialized with `Node.as_sxpr()` or as a convenient way to
+    generate test data.
+
+    Example:
+    >>> parse_sxpr("(a (b c))").as_sxpr(flatten_threshold=0)
+    '(a\\n  (b "c"))'
+
+    `parse_sxpr()` does not initialize the node's `pos`-values. This can be
+    done with `Node.with_pos()`:
+
+    >>> tree = parse_sxpr('(A (B "x") (C "y"))').with_pos(0)
+    >>> tree['C'].pos
+    1
+    """
+    remaining = sxpr  # type: Union[str, StringView]
+
+    @cython.locals(level=cython.int, k=cython.int)
+    def next_block(s: StringView) -> Iterator[StringView]:
+        """Generator that yields all characters until the next closing bracket
+        that does not match an opening bracket matched earlier within the same
+        package.
+        """
+        s = s.strip()
+        try:
+            while s[0] != ')':
+                if s[0] != '(':
+                    raise ValueError('"(" expected, not ' + s[:10])
+                # assert s[0] == '(', s
+                level = 1
+                k = 1
+                while level > 0:
+                    if s[k] in ("'", '"'):
+                        k = s.find(str(s[k]), k + 1)
+                    if k < 0:
+                        raise IndexError()
+                    if s[k] == '(':
+                        level += 1
+                    elif s[k] == ')':
+                        level -= 1
+                    k += 1
+                yield s[:k]
+                s = s[k:].strip()
+        except IndexError:
+            errmsg = ('Malformed S-expression. Unprocessed part: "%s"' % s) if s \
+                else 'Malformed S-expression. Closing bracket(s) ")" missing.'
+            raise ValueError(errmsg)
+        nonlocal remaining
+        remaining = s
+
+    @cython.locals(pos=cython.int, i=cython.int, k=cython.int, m=cython.int, L=cython.int)
+    def parse_attrs(sxpr: StringView, attr_start: str, attributes: Dict[str, Any]) -> Tuple[str, int]:
+        pos: int = -1
+        L: int = len(attr_start)
+        while sxpr[:L] == attr_start:
+            i = sxpr.find('"')
+            k = sxpr.find(')')
+            if k > i:
+                k = sxpr.find(')', sxpr.find('"', i + 1))
+            if i < 0:
+                i = k + 1
+            if k < 0:
+                raise ValueError('Unbalanced parantheses in S-Expression: ' + str(sxpr))
+            # read very special attribute pos
+            if sxpr[L:L + 3] == "pos" and (L == 1 or 0 < k < i):
+                pos = int(str(sxpr[L + 3:k].strip(' \'"').split(' ')[0]))
+            # ignore very special attribute err
+            elif sxpr[L:L + 3] == "err" and 0 <= sxpr.find('`', L + 3) < k:
+                m = sxpr.find('(', L + 3)
+                while 0 <= m < k:
+                    m = sxpr.find('(', k)
+                    k = max(k, sxpr.find(')', max(m, 0)))
+            # read attr
+            else:
+                attr = str(sxpr[L:i].strip())
+                if not RX_ATTR_NAME.match(attr):
+                    raise ValueError('Illegal attribute name: ' + attr)
+                value = sxpr[i:k].strip()[1:-1]
+                attributes[attr] = str(value)
+            sxpr = sxpr[k + 1:].strip()
+        return sxpr, pos
+
+    @cython.locals(pos=cython.int, i=cython.int, end=cython.int)
+    def inner_parser(sxpr: StringView) -> Node:
+        if sxpr[0] != '(':
+            raise ValueError('"(" expected, not ' + sxpr[:10])
+        # assert sxpr[0] == '(', sxpr
+        sxpr = sxpr[1:].strip()
+        match = sxpr.match(RX_SXPR_INNER_PARSER)
+        if match is None:
+            raise AssertionError('Malformed S-expression Node-tagname or identifier expected, '
+                                 'not "%s"' % sxpr[:40].replace('\n', ''))
+        end = sxpr.index(match.end())
+        tagname = sxpr[:end]
+        name, class_name = (tagname.split(':') + [''])[:2]
+        sxpr = sxpr[end:].strip()
+        attributes = OrderedDict()  # type: Dict[str, Any]
+        # parse attr
+        if sxpr[:2] == '(@':  # SXML-style
+            sxpr, pos = parse_attrs(sxpr[2:].lstrip(), "(", attributes)
+            assert sxpr[0] == ')'
+            sxpr = sxpr[1:].lstrip()
+        else:  # DHParser-style
+            sxpr, pos = parse_attrs(sxpr, "`(", attributes)
+        if sxpr[0] == '(':
+            result = tuple(inner_parser(block)
+                           for block in next_block(sxpr))  # type: Union[Tuple[Node, ...], str]
+        else:
+            lines = []
+            while sxpr and sxpr[0:1] != ')':
+                # parse content
+                for qtmark in ['"""', "'''", '"', "'"]:
+                    match = sxpr.match(RX_SXPR_TEXT[qtmark])
+                    if match:
+                        end = sxpr.index(match.end())
+                        i = len(qtmark)
+                        lines.append(str(sxpr[i:end - i]))
+                        sxpr = sxpr[end:].strip()
+                        break
+                else:
+                    match = sxpr.match(RX_SXPR_NOTEXT)
+                    end = sxpr.index(match.end())
+                    lines.append(str(sxpr[:end]))
+                    sxpr = sxpr[end:]
+            result = "\n".join(lines)  # # type: Union[Tuple[Node, ...], str]
+            nonlocal remaining
+            remaining = sxpr
+        node = Node(str(name or ':' + class_name), result)
+        node._pos = pos
+        if attributes:
+            node.attr.update(attributes)
+        return node
+
+    xpr = StringView(sxpr).strip() if isinstance(sxpr, str) else sxpr.strip()  # type: StringView
+    tree = inner_parser(xpr)
+    if remaining != ')':
+        raise ValueError('Malformed S-expression. Superfluous characters: ' + remaining[1:])
+    return RootNode(tree)
+
+
+def parse_sxml(sxml: Union[str, StringView]) -> RootNode:
+    """Generates a tree of nodes from `SXML <https://okmij.org/ftp/Scheme/SXML.html>`_.
+    Example::
+
+        >>> sxml = '(employee(@ (branch "Secret Service") (id "007")) "James Bond")'
+        >>> tree = parse_sxml(sxml)
+        >>> print(tree.as_xml())
+        <employee branch="Secret Service" id="007">James Bond</employee>
+    """
+    return parse_sxpr(sxml)
+
+
+RX_WHITESPACE_TAIL = re.compile(r'\s*$')
+RX_XML_ATTRIBUTES = re.compile(r'\s*(?P<attr>[\w:_.-]+)\s*=\s*"(?P<value>.*?)"\s*')
+RX_XML_SPECIAL_TAG = re.compile(r'<(?![?!])')
+RX_XML_OPENING_TAG = re.compile(r'<\s*(?P<tagname>[\w:_.-]+)\s*')
+RX_XML_CLOSING_TAG = re.compile(r'</\s*(?P<tagname>[\w:_.-]+)\s*>')
+RX_XML_HEADER = re.compile(r'<(?![?!])')
+
+
+EMPTY_TAGS_SENTINEL = set()
+
+
+def parse_xml(xml: Union[str, StringView],
+              string_tag: str = TOKEN_PTYPE,
+              ignore_pos: bool = False,
+              out_empty_tags: Set[str] = EMPTY_TAGS_SENTINEL,
+              strict_mode: bool = True) -> RootNode:
+    """
+    Generates a tree of nodes from a (Pseudo-)XML-source.
+
+    :param xml: The XML-string to be parsed into a tree of Nodes
+    :param string_tag: A tag-name that will be used for
+        strings inside mixed-content-tags.
+    :param ignore_pos: if True, '_pos'-attributes will be understood as
+        normal XML-attributes. Otherwise, '_pos' will be understood as a
+        special attribute, the value of which will be written to `node._pos`
+        and not transferred to the `node.attr`-dictionary.
+    :param out_empty_tags: A set that is filled with the names of those
+        tags that are empty tags, e.g. "<br/>"
+    :param strict_mode: If True, errors are raised if XML
+        contains stylistic or interoperability errors, like using one
+        and the same tag-name for empty and non-empty tags, for example.
+    """
+
+    xml = StringView(str(xml))
+    non_empty_tags: Set[str] = set()
+    dual_use_notified: Set[str] = set()
+
+    if out_empty_tags is EMPTY_TAGS_SENTINEL:
+        out_empty_tags = set()
+
+    def get_pos_str(substring: StringView) -> str:
+        """Returns line:column indicating where substring is located within
+        the whole xml-string."""
+        nonlocal xml
+        pos = len(xml) - len(substring)
+        l, c = line_col(linebreaks(xml), pos)
+        return f'{l}:{c}'
+
+    def parse_attributes(s: StringView) -> Tuple[StringView, Dict[str, Any]]:
+        """
+        Parses a sequence of XML-Attributes. Returns the string-slice
+        beginning after the end of the attr.
+        """
+        attributes = OrderedDict()  # type: Dict[str, Any]
+        eot = s.find('>')
+        restart = 0
+        for match in s.finditer(RX_XML_ATTRIBUTES):
+            if s.index(match.start()) >= eot:
+                break
+            d = match.groupdict()
+            attributes[d['attr']] = d['value']
+            restart = s.index(match.end())
+        return s[restart:], attributes
+
+    def skip_comment(s: StringView) -> StringView:
+        assert s[:4] == "<!--"
+        i = s.find('-->')
+        if i < 0:
+            if strict_mode:
+                raise ValueError(get_pos_str(s) + " comment is never closed!")
+            else:
+                return s[4:]
+        else:
+            return s[i + 3:]
+
+    def skip_special_tag(s: StringView) -> StringView:
+        """Skip special tags, e.g. <?...>, <!...>, and return the string
+        view at the position of the next normal tag."""
+        assert s[:2] in ('<!', '<?')
+        assert s[:4] != '<!--'
+        m = s.search(RX_XML_SPECIAL_TAG)
+        i = s.index(m.start()) if m else len(s)
+        k = s.rfind(">", end=i)
+        return s[k+1:] if k >= 0 else s[2:]
+
+    def parse_opening_tag(s: StringView) -> Tuple[StringView, str, OrderedDict, bool]:
+        """
+        Parses an opening tag. Returns the string segment following
+        the opening tag, the tag name, a dictionary of attr and
+        a flag indicating whether the tag is actually a solitary tag as
+        indicated by a slash at the end, i.e. <br/>.
+        """
+        match = s.match(RX_XML_OPENING_TAG)
+        assert match
+        tagname = match.groupdict()['tagname']
+        section = s[s.index(match.end()):]
+        s, attributes = parse_attributes(section)
+        i = s.find('>')
+        assert i >= 0
+        return s[i + 1:], tagname, attributes, s[i - 1] == "/"
+
+    def parse_closing_tag(s: StringView) -> Tuple[StringView, str]:
+        """
+        Parses a closing tag and returns the string segment, just after
+        the closing tag.
+        """
+        match = s.match(RX_XML_CLOSING_TAG)
+        assert match, 'XML-closing-tag expected, but found: ' + s[:20]
+        tagname = match.groupdict()['tagname']
+        return s[s.index(match.end()):], tagname
+
+    def parse_leaf_content(s: StringView) -> Tuple[StringView, StringView]:
+        """
+        Parses a piece of the content of a tag, just until the next opening,
+        closing or solitary tag is reached.
+        """
+        i = 0
+        while s[i] != "<":  # or s[max(0, i - 1)] == "\\":
+            i = s.find("<", i + 1)
+            assert i > 0
+        return s[i:], s[:i]
+
+    def parse_full_content(s: StringView) -> Tuple[StringView, Node]:
+        """
+        Parses the full content of a tag, starting right at the beginning
+        of the opening tag and ending right after the closing tag.
+        """
+        nonlocal non_empty_tags, dual_use_notified
+        res = []  # type: List[Node]
+        substring = s
+        s, tagname, attrs, solitary = parse_opening_tag(s)
+        name, class_name = (tagname.split(":") + [''])[:2]
+        if solitary:
+            if tagname in non_empty_tags:
+                if strict_mode and tagname not in dual_use_notified:
+                    print(get_pos_str(substring) +
+                        f' "{tagname}" is used as empty as well as non-empty element!'
+                        f' This can cause errors when re-serializing data as XML!')
+                    dual_use_notified.add(tagname)
+                    # raise ValueError(get_pos_str(substring) +
+                    #     f' "{tagname}" is used as empty as well as non-empty element!'
+                    #     f' This can cause errors when re-serializing data as XML!'
+                    #     f' Use parse_xml(..., strict_mode=False) to suppress this error!')
+                non_empty_tags.remove(tagname)
+            out_empty_tags.add(tagname)
+        else:
+            if tagname in out_empty_tags:
+                if strict_mode and tagname not in dual_use_notified:
+                    print(get_pos_str(substring) +
+                        f' "{tagname}" is used as empty as well as non-empty element!'
+                        f' This can cause errors when re-serializing data as XML!')
+                    dual_use_notified.add(tagname)
+                    # raise ValueError(get_pos_str(substring) +
+                    #     f' "{tagname}" is used as empty as well as non-empty element!'
+                    #     f' This can cause errors when re-serializing data as XML!'
+                    #     f' Use parse_xml(..., strict_mode=False) to suppress this error!')
+            else:
+                non_empty_tags.add(tagname)
+            while s and not s[:2] == "</":
+                s, leaf = parse_leaf_content(s)
+                if leaf and (leaf.find('\n') < 0 or not leaf.match(RX_WHITESPACE_TAIL)):
+                    res.append(Node(string_tag, leaf))
+                if s[:1] == "<":
+                    if s[:4] == '<!--':
+                        s = skip_comment(s)
+                    elif s[:2] in ("<?", "<!"):
+                        s = skip_special_tag(s)
+                    elif s[:2] != "</":
+                        s, child = parse_full_content(s)
+                        res.append(child)
+            s, closing_tagname = parse_closing_tag(s)
+            if tagname != closing_tagname:
+                if strict_mode:
+                    raise ValueError(
+                        f'{get_pos_str(substring)} - {get_pos_str(s)}'
+                        f' Tag-name mismatch: <{tagname}>...</{closing_tagname}>!'
+                        f' Use parse_xml(..., strict_mode=False) to suppress this error,'
+                        f' but do not expect sound results if you do!')
+                else:
+                    print(f'{get_pos_str(substring)} - {get_pos_str(s)}'
+                          f' Tag-name mismatch: <{tagname}>...</{closing_tagname}>!')
+        if len(res) == 1 and res[0].name == string_tag:
+            result = res[0].result  # type: Union[Tuple[Node, ...], StringView, str]
+        else:
+            result = tuple(res)
+
+        if name and not class_name:  name = restore_tag_name(name)
+        if class_name:  class_name = ':' + class_name
+        node = Node(name + class_name, result)
+        if not ignore_pos and '_pos' in attrs:
+            node._pos = int(attrs['_pos'])
+            del attrs['_pos']
+        if attrs:
+            node.attr.update(attrs)
+        return s, node
+
+    match_header = xml.search(RX_XML_HEADER)
+    start = xml.index(match_header.start()) if match_header else 0
+    _, tree = parse_full_content(xml[start:])
+    return RootNode(tree)
+
+
+class DHParser_JSONEncoder(json.JSONEncoder):
+    """A JSON-encoder that also encodes ``nodetree.Node`` as valid json objects.
+    Node-objects are encoded using Node.as_json.
+    """
+    def default(self, obj):
+        if isinstance(obj, Node):
+            return cast(Node, obj).to_json_obj()
+        elif obj is JSONnull or isinstance(obj, JSONnull):
+            return None
+        return json.JSONEncoder.default(self, obj)
+
+
+def parse_json(json_str: str) -> RootNode:
+    """
+    Parses a JSON-representation of a node-tree. Other than
+    and parse_xml, this function does not convert any json-document into
+    a node-tree, but only json-documents that represents a node-tree, e.g.
+    a json-document that has been produced by `Node.as_json()`!
+    """
+    json_obj = json.loads(json_str, object_pairs_hook=lambda pairs: OrderedDict(pairs))
+    return RootNode(Node.from_json_obj(json_obj))
+
+
+def deserialize(xml_sxpr_or_json: str) -> Optional[Node]:
+    """
+    Parses either XML or S-expressions or a JSON representation of a
+    syntax-tree. Which of these is detected automatically.
+    """
+    if RX_IS_XML.match(xml_sxpr_or_json):
+        return parse_xml(xml_sxpr_or_json)
+    elif RX_IS_SXPR.match(xml_sxpr_or_json):
+        return parse_sxpr(xml_sxpr_or_json)
+    elif re.fullmatch(r'\s*', xml_sxpr_or_json):
+        return None
+    else:
+        try:
+            return parse_json(xml_sxpr_or_json)
+        except json.decoder.JSONDecodeError:
+            m = re.match(r'\s*(.*)\n?', xml_sxpr_or_json)
+            snippet = m.group(1) if m else ''
+            raise ValueError('Snippet is neither S-expression nor XML: ' + snippet + ' ...')
+
+
 #######################################################################
 #
-# Functions related to the Node class
+# Attribute handling
+#
+#######################################################################
+
+
+def validate_token_sequence(token_sequence: str) -> bool:
+    """Returns True, if `token_sequence` is properly formed.
+
+    Token sequences are strings or words which are separated by
+    single blanks with no leading or trailing blank.
+    """
+    return token_sequence[:1] != ' ' and token_sequence[-1:] != ' ' \
+        and token_sequence.find('  ') < 0
+
+
+def has_token(token_sequence: str, tokens: str) -> bool:
+    """Returns true, if `token` is contained in the blank-spearated
+    token sequence. If `token` itself is a blank-separated sequence of
+    tokens, True is returned if all tokens are contained in
+    `token_sequence`::
+
+        >>> has_token('bold italic', 'italic')
+        True
+        >>> has_token('bold italic', 'normal')
+        False
+        >>> has_token('bold italic', 'italic bold')
+        True
+        >>> has_token('bold italic', 'bold normal')
+        False
+    """
+    # assert validate_token_sequence(token_sequence)
+    # assert validate_token_sequence(token)
+    return not tokens or set(tokens.split(' ')) <= set(token_sequence.split(' '))
+
+
+def add_token(token_sequence: str, tokens: str) -> str:
+    """Adds the tokens from 'tokens' that are not already contained in
+    `token_sequence` to the end of `token_sequence`::
+
+        >>> add_token('', 'italic')
+        'italic'
+        >>> add_token('bold italic', 'large')
+        'bold italic large'
+        >>> add_token('bold italic', 'bold')
+        'bold italic'
+        >>> add_token('red thin', 'stroked red')
+        'red thin stroked'
+    """
+    for tk in tokens.split(' '):
+        if tk and token_sequence.find(tk) < 0:
+            token_sequence += ' ' + tk
+    return token_sequence.lstrip()
+
+
+def remove_token(token_sequence, tokens: str) -> str:
+    """
+    Removes all `tokens` from  `token_sequence`::
+
+        >>> remove_token('red thin stroked', 'thin')
+        'red stroked'
+        >>> remove_token('red thin stroked', 'blue')
+        'red thin stroked'
+        >>> remove_token('red thin stroked', 'blue stroked')
+        'red thin'
+    """
+    for tk in tokens.split(' '):
+        token_sequence = token_sequence.replace(tk, '').strip().replace('  ', ' ')
+    return token_sequence
+
+
+def eq_tokens(token_sequence1: str, token_sequence2: str) -> bool:
+    """Returns True if bothe token sequences contain the same tokens,
+    no matter in what order::
+
+        >>> eq_tokens('red thin stroked', 'stroked red thin')
+        True
+        >>> eq_tokens('red thin', 'thin blue')
+        False
+    """
+    return set(token_sequence1.split(' ')) - {''} == set(token_sequence2.split(' ')) - {''}
+
+
+def has_token_on_attr(node: Node, tokens: str, attribute: str):
+    """Returns True, if 'attribute' of 'node' contains all 'tokens'."""
+    return has_token(node.get_attr(attribute, ''), tokens)
+
+
+def add_token_to_attr(node: Node, tokens: str, attribute: str):
+    """Adds all `tokens` to `attribute` of `node`."""
+    if tokens:
+        node.attr[attribute] = add_token(node.get_attr(attribute, ''), tokens)
+
+
+def remove_token_from_attr(node: Node, tokens: str, attribute: str):
+    """Removes all `tokens` from `attribute` of `node`."""
+    node.attr[attribute] = remove_token(node.get_attr(attribute, ''), tokens)
+
+
+has_class = functools.partial(has_token_on_attr, attribute='class')
+add_class = functools.partial(add_token_to_attr, attribute='class')
+remove_class = functools.partial(remove_token_from_attr, attribute='class')
+
+
+#######################################################################
+#
+# Path-Handling
 #
 #######################################################################
 
@@ -2534,8 +3561,11 @@ def path_sanity_check(path: Path) -> bool:
     return all(path[i] in path[i - 1]._children for i in range(1, len(path)))
 
 
-# splitting and insertion of nodes ####################################
-
+#######################################################################
+#
+# Context Mappings, splitting and insertion of new nodes into a tree
+#
+#######################################################################
 
 def insert_node(leaf_path: Path, rel_pos: int, node: Node,
                 divisable_leaves: Container = LEAF_PTYPES) -> Node:
@@ -3784,1022 +4814,6 @@ class LocalContentMapping(ContentMapping):
                *attr_dict, **attributes) -> Node:
         return super().markup(start_pos + self.pos_offset, end_pos + self.pos_offset, name,
                               *attr_dict, **attributes)
-
-
-# Attribute handling ##################################################
-
-
-def validate_token_sequence(token_sequence: str) -> bool:
-    """Returns True, if `token_sequence` is properly formed.
-
-    Token sequences are strings or words which are separated by
-    single blanks with no leading or trailing blank.
-    """
-    return token_sequence[:1] != ' ' and token_sequence[-1:] != ' ' \
-        and token_sequence.find('  ') < 0
-
-
-def has_token(token_sequence: str, tokens: str) -> bool:
-    """Returns true, if `token` is contained in the blank-spearated
-    token sequence. If `token` itself is a blank-separated sequence of
-    tokens, True is returned if all tokens are contained in
-    `token_sequence`::
-
-        >>> has_token('bold italic', 'italic')
-        True
-        >>> has_token('bold italic', 'normal')
-        False
-        >>> has_token('bold italic', 'italic bold')
-        True
-        >>> has_token('bold italic', 'bold normal')
-        False
-    """
-    # assert validate_token_sequence(token_sequence)
-    # assert validate_token_sequence(token)
-    return not tokens or set(tokens.split(' ')) <= set(token_sequence.split(' '))
-
-
-def add_token(token_sequence: str, tokens: str) -> str:
-    """Adds the tokens from 'tokens' that are not already contained in
-    `token_sequence` to the end of `token_sequence`::
-
-        >>> add_token('', 'italic')
-        'italic'
-        >>> add_token('bold italic', 'large')
-        'bold italic large'
-        >>> add_token('bold italic', 'bold')
-        'bold italic'
-        >>> add_token('red thin', 'stroked red')
-        'red thin stroked'
-    """
-    for tk in tokens.split(' '):
-        if tk and token_sequence.find(tk) < 0:
-            token_sequence += ' ' + tk
-    return token_sequence.lstrip()
-
-
-def remove_token(token_sequence, tokens: str) -> str:
-    """
-    Removes all `tokens` from  `token_sequence`::
-
-        >>> remove_token('red thin stroked', 'thin')
-        'red stroked'
-        >>> remove_token('red thin stroked', 'blue')
-        'red thin stroked'
-        >>> remove_token('red thin stroked', 'blue stroked')
-        'red thin'
-    """
-    for tk in tokens.split(' '):
-        token_sequence = token_sequence.replace(tk, '').strip().replace('  ', ' ')
-    return token_sequence
-
-
-def eq_tokens(token_sequence1: str, token_sequence2: str) -> bool:
-    """Returns True if bothe token sequences contain the same tokens,
-    no matter in what order::
-
-        >>> eq_tokens('red thin stroked', 'stroked red thin')
-        True
-        >>> eq_tokens('red thin', 'thin blue')
-        False
-    """
-    return set(token_sequence1.split(' ')) - {''} == set(token_sequence2.split(' ')) - {''}
-
-
-def has_token_on_attr(node: Node, tokens: str, attribute: str):
-    """Returns True, if 'attribute' of 'node' contains all 'tokens'."""
-    return has_token(node.get_attr(attribute, ''), tokens)
-
-
-def add_token_to_attr(node: Node, tokens: str, attribute: str):
-    """Adds all `tokens` to `attribute` of `node`."""
-    if tokens:
-        node.attr[attribute] = add_token(node.get_attr(attribute, ''), tokens)
-
-
-def remove_token_from_attr(node: Node, tokens: str, attribute: str):
-    """Removes all `tokens` from `attribute` of `node`."""
-    node.attr[attribute] = remove_token(node.get_attr(attribute, ''), tokens)
-
-
-has_class = functools.partial(has_token_on_attr, attribute='class')
-add_class = functools.partial(add_token_to_attr, attribute='class')
-remove_class = functools.partial(remove_token_from_attr, attribute='class')
-
-
-#######################################################################
-#
-# FrozenNode - an immutable Node
-#
-#######################################################################
-
-
-class FrozenNode(Node):
-    """
-    FrozenNode is an immutable kind of Node, i.e. it must not be changed
-    after initialization. The purpose is mainly to allow certain kinds of
-    optimizations, like not having to instantiate empty nodes (because they
-    are always the same and will be dropped while parsing, anyway) and
-    to be able to trigger errors if the program tries to treat such
-    temporary nodes as a regular ones. (See :py:mod:`DHParser.parse`)
-
-    Frozen nodes must only be used temporarily during parsing or
-    tree-transformation and should not occur in the product of the
-    transformation anymore. This can be verified with
-    :py:func:`tree_sanity_check()`. Or, as comparison criterion for
-    content equality when picking or selecting nodes or paths from
-    a tree (see :py:func:`create_match_function()`).
-    """
-
-    def __init__(self, name: str, result: ResultType, leafhint: bool = True) -> None:
-        if isinstance(result, str) or isinstance(result, StringView):
-            result = str(result)
-        else:
-            raise TypeError('FrozenNode only accepts string as result. '
-                            '(Only leaf-nodes can be frozen nodes.)')
-        super(FrozenNode, self).__init__(name, result, True)
-
-    @property
-    def result(self) -> Union[Tuple[Node, ...], StringView, str]:
-        return self._result
-
-    @result.setter
-    def result(self, result: ResultType):
-        raise TypeError('FrozenNode does not allow re-assignment of results.')
-
-    @property
-    def attr(self):
-        try:
-            return self._attributes
-        except AttributeError:
-            return OrderedDict()  # assignments will be void!
-
-    @attr.setter
-    def attr(self, attr_dict: Dict[str, Any]):
-        if self.has_attr():
-            raise AssertionError("Frozen nodes' attributes can only be set once")
-        else:
-            self._attributes = attr_dict
-
-    @property
-    def pos(self):
-        return -1
-
-    def with_pos(self, pos: cython.int) -> Node:
-        raise NotImplementedError("Position values cannot be assigned to frozen nodes!")
-
-    def to_json_obj(self, as_dict: bool=False, include_pos: bool=True) -> List:
-        raise NotImplementedError("Frozen nodes cannot and be serialized as JSON!")
-
-    @staticmethod
-    def from_json_obj(json_obj: Union[Dict, Sequence]) -> Node:
-        raise NotImplementedError("Frozen nodes cannot be deserialized from JSON!")
-
-
-PLACEHOLDER = FrozenNode('__PLACEHOLDER__', '')
-EMPTY_NODE = FrozenNode(EMPTY_PTYPE, '')
-
-
-def tree_sanity_check(tree: Node) -> bool:
-    """
-    Sanity check for node-trees: One and the same node must never appear
-    twice in the node-tree. Frozen Nodes (EMTPY_NODE, PLACEHOLDER)
-    should only exist temporarily and must have been dropped or eliminated
-    before any kind of tree generation (i.e. parsing) or transformation
-    is finished.
-    :param tree: the root of the tree to be checked
-    :returns: `True`, if the tree is "sane", `False` otherwise.
-    """
-    node_set = set()  # type: Set[Node]
-    for node in tree.select_if(lambda nd: True, include_root=True):
-        if not isinstance(node, Node) or node in node_set or isinstance(node, FrozenNode):
-            return False
-        node_set.add(node)
-    return True
-
-
-#######################################################################
-#
-# RootNode - manage global properties of trees, like error messages
-#
-#######################################################################
-
-EMPTY_SET_SENTINEL = frozenset()  # needed by RootNode.as_xml()
-
-
-def default_divisable() -> AbstractSet[str]:
-    return LEAF_PTYPES
-
-
-class RootNode(Node):
-    """The root node for the node-tree is a special kind of node that keeps
-    and manages global properties of the tree as a whole. These are first and
-    foremost the list off errors that occurred during tree generation
-    (i.e. parsing) or any transformation of the tree.
-
-    Other properties concern the customization of the XML-serialization and
-    meta-data about the procesed document and processing stage.
-
-    Although errors are local properties that occur on a specific point or
-    chunk of source code, instead of attaching the errors to the nodes on
-    which they have occurred, the list of errors in managed globally by the
-    root-node object. Otherwise, it would be hard to keep track of the
-    errors when during the transformation of trees node are replaced or
-    dropped that might also contain error messages.
-
-    The root node can be instantiated before the tree is fully parsed. This is
-    necessary, because the root node is needed for managing error messages
-    during the parsing process, already. In order to connect the root node to
-    the tree, when parsing is finished, the swallow()-method must be called.
-
-    :ivar errors:  A list of all errors that have occurred so far during
-        processing (i.e. parsing, AST-transformation, compiling) of this tree.
-        The errors are ordered by the time of their being added to the list.
-    :ivar errors_sorted: (read-only property) The list of errors ordered by
-        their position.
-    :ivar error_nodes: A mapping of node-ids to a list of errors that
-        occurred on the node with the respective id.
-    :ivar error_positions: A mapping of locations to a set of ids of nodes
-        that contain an error at that particular location.
-    :ivar error_flag: the highest warning or error level of all errors
-        that occurred.
-
-    :ivar source:  The source code (after preprocessing)
-    :ivar source_mapping:  A source mapping function to map source code
-        positions to the positions of the non-preprocessed source.
-        See module `preprocess`
-    :ivar lbreaks: A list of indices of all linebreaks in the source.
-
-    :ivar inline_tags: see `Node.as_xml()` for an explanation.
-    :ivar string_tags: see `Node.as_xml()` for an explanation.
-    :ivar empty_tags: see `Node.as_xml()` for an explanation.
-
-    :ivar docname: a name for the document
-    :ivar stage: a name for the current processing stage or the empty string
-        (default). This name if present is used for verifying the stage in
-        :py:func:`DHParser.compile.run_pipeline`. If ``stage`` contains the
-        empty string, stage-verification is turned off (which may result
-        in obscure error messages in case a tree-transformation is run on
-        the wrong stage.) Stage-names should be considered as case-insensitive,
-        i.e. "AST" is treated as the same stage as "ast".
-    :ivar serialization_type: The kind of serialization for the
-        current processing stage. Can be one of 'XML', 'json',
-        'indented', 'S-expression' or 'default'. (The latter picks
-        the default serialization from the configuration.)
-
-    :ivar data: Compiled data. If the data still is a tree this
-        simply contains a reference to self.
-    """
-
-    def __new__(cls, *args, **kwargs):
-        if len(args) == 1 and isinstance(args[0], RootNode):
-            return args[0]  # avoid creating a root-node form a root-node
-        return Node.__new__(cls)
-
-    def __init__(self, node: Optional[Node] = None,
-                 source: Union[str, StringView] = '',
-                 source_mapping: Optional[SourceMapFunc] = None):
-        if node is self:  return   # happens if you initialize a RootNode with a RootNode, see __new__ above
-        super().__init__('__not_yet_ready__', '')
-        self.errors: List[Error] = []
-        self._error_set: Set[Error] = set()
-        self.error_nodes: Dict[int, List[Error]] = dict()   # id(node) -> error list
-        self.error_positions: Dict[int, Set[int]] = dict()  # pos -> set of id(node)
-        self.error_flag: ErrorCode = ErrorCode(0)
-        self.source: Union[str, StringView] = source
-        self.lbreaks: List[int] = linebreaks(source)
-
-        # customization for XML-Representation
-        self.inline_tags: Set[str] = set()
-        self.string_tags: Set[str] = {MIXED_CONTENT_TEXT_PTYPE}
-        self.empty_tags: Set[str] = set()
-
-        # meta-data
-        self.docname: str = ''
-        self.stage: str = ''
-        self.serialization_type: str = 'default'
-
-        if node is not None:
-            self.swallow(node, source, source_mapping)
-        else:
-            self.source_mapping: SourceMapFunc = gen_neutral_srcmap_func(source) \
-                if source_mapping is None else source_mapping
-
-        # Data resembling the compiled tree. Default is the tree itself.
-        self.data = self
-
-    def __str__(self):
-        errors = self.errors_sorted
-        if errors:
-            e_pos = errors[0].pos
-            content = self.content
-            return content[:e_pos] + ' <<< Error on "%s" | %s >>> ' % \
-                (content[e_pos - self.pos:], '; '.join(e.message for e in errors))
-        return self.content
-
-    def __deepcopy__(self, memodict={}):
-        old_node_ids = [id(nd) for nd in self.select_if(lambda n: True, include_root=True)]
-        duplicate = self.__class__(None)
-        if self._children:
-            duplicate._children = copy.deepcopy(self._children, memodict)
-            duplicate._result = duplicate._children
-        else:
-            duplicate._children = tuple()
-            duplicate._result = self._result
-        duplicate._pos = self._pos
-        new_node_ids = [id(nd) for nd in duplicate.select_if(lambda n: True, include_root=True)]
-        map_id = dict(zip(old_node_ids, new_node_ids))
-        if self.has_attr():
-            duplicate.attr.update(self._attributes)
-            # duplicate._attributes = copy.deepcopy(self._attributes)  # this is blocked by cython
-        duplicate.errors = copy.deepcopy(self.errors, memodict)
-        duplicate._error_set = {error for error in duplicate.errors}
-        duplicate.error_nodes = {map_id.get(i, i): el[:] for i, el in self.error_nodes.items()}
-        duplicate.error_positions = {pos: {map_id.get(i, i) for i in s}
-                                     for pos, s in self.error_positions.items()}
-        duplicate.source = self.source
-        duplicate.source_mapping = self.source_mapping
-        duplicate.lbreaks = copy.deepcopy(self.lbreaks, memodict)
-        duplicate.error_flag = self.error_flag
-
-        duplicate.inline_tags = self.inline_tags
-        duplicate.string_tags = self.string_tags
-        duplicate.empty_tags = self.empty_tags
-
-        duplicate.docname = self.docname
-        duplicate.stage = self.stage
-        duplicate.serialization_type = self.serialization_type
-
-        if self.data == self:
-            duplicate.data = duplicate
-        else:
-            duplicate.data = copy.deepcopy(self.data)
-
-        duplicate.name = self.name
-
-        # copy fields attached by the user
-        ssize = len(self.__dict__)
-        dsize = len(duplicate.__dict__)
-        if dsize < ssize:
-            for k, v in reversed(self.__dict__.items()):
-                setattr(duplicate, k, v)
-                dsize += 1
-                if dsize == ssize:
-                    break
-
-        return duplicate
-
-    def swallow(self, node: Optional[Node],
-                source: Union[str, StringView] = '',
-                source_mapping: Optional[SourceMapFunc] = None) \
-            -> RootNode:
-        """
-        Put `self` in the place of `node` by copying all its data.
-        Returns self.
-
-        This is done by the parse.Grammar object after
-        parsing has finished, so that the Grammar object always
-        returns a node-tree rooted in a RootNode object.
-
-        It is possible to add errors to a RootNode object, before it
-        has actually swallowed the root of the node-tree.
-        """
-        if source and source != self.source:
-            self.source = source
-            self.lbreaks = linebreaks(source)
-        self.source_mapping: SourceMapFunc = gen_neutral_srcmap_func(source) \
-            if source_mapping is None else source_mapping
-        if self.name != '__not_yet_ready__':
-            raise AssertionError('RootNode.swallow() has already been called!')
-        if node is None:
-            self.name = ZOMBIE_TAG
-            self.with_pos(0)
-            self.new_error(self, 'Parser did not match!', PARSER_STOPPED_BEFORE_END)
-            return self
-        self._result = node._result
-        self._children = node._children
-        self._pos = node._pos
-        self.name = node.name
-        if node.has_attr():
-            self._attributes = node._attributes
-        # self._content = node._content
-        if id(node) in self.error_nodes:
-            self.error_nodes[id(self)] = self.error_nodes[id(node)]
-        if self.source:
-            add_source_locations(self.errors, self.source_mapping)
-        return self
-
-    def continue_with_data(self, data: Any):
-        """Drops the swallowed tree in favor of the (non-tree) data resulting
-        from the compilation of the tree. The data can then be retrieved from
-        the field ``self.data``, which before the tree has been dropped contains
-        a reference to the tree itself.
-        """
-        if data != self:
-            self.data = data
-            self.result = "TREE HAS BEEN DESTROYED!"
-
-    def add_error(self, node: Optional[Node], error: Error) -> RootNode:
-        """
-        Adds an Error object to the tree, locating it at a specific node.
-        """
-        assert isinstance(error, Error)
-        if error in self._error_set:
-            return self  # prevent duplication of errors
-        if not node:
-            # find the first leaf-node from the left that could contain the error
-            # judging from its position
-            pos_list = []
-            node_list = []
-            nd = None
-            for nd in self.select_if(lambda nd: not nd._children):
-                assert nd.pos >= 0
-                if nd.pos <= error.pos < nd.pos + nd.strlen():
-                    node = nd
-                    break
-                pos_list.append(nd.pos)
-                node_list.append(nd)
-            else:
-                if nd is None:
-                    node = self
-                else:
-                    node_list.append(nd)
-                    i = bisect.bisect(pos_list, error.pos)
-                    node = node_list[i]
-        else:
-            assert isinstance(node, Node)
-            assert isinstance(node, FrozenNode) or node.pos <= error.pos, \
-                "Wrong error position when processing error: %s\n" % str(error) + \
-                "%i <= %i <= %i ?" % (node.pos, error.pos, node.pos + max(1, node.strlen() - 1))
-            assert node.pos >= 0, "Errors cannot be assigned to nodes without position!"
-        self.error_nodes.setdefault(id(node), []).append(error)
-        if node.pos <= error.pos <= node.pos + max(node.strlen(), 1):  # node.pos == error.pos:
-            self.error_positions.setdefault(error.pos, set()).add(id(node))
-        if self.source:
-            add_source_locations([error], self.source_mapping)
-        self.errors.append(error)
-        self._error_set.add(error)
-        self.error_flag = max(self.error_flag, error.code)
-        return self
-
-    def new_error(self,
-                  node: Node,
-                  message: str,
-                  code: ErrorCode = ERROR) -> RootNode:
-        """
-        Adds an error to this tree, locating it at a specific node.
-
-        :param node:    the node where the error occurred
-        :param message: a string with the error message
-        :param code:    an error code to identify the type of the error
-        """
-        error = Error(message, node.pos, code)
-        self.add_error(node, error)
-        return self
-
-    # def pop_last_error(self) -> Error:
-    #     """
-    #     Removes and returns the last error that has been added from the tree.
-    #     :return: the last error that had been added and which has now been removed
-    #     """
-    #     assert self.errors
-    #     error = self.errors.pop()
-    #     self._error_set.remove(error)
-    #     for nid, el in self.error_nodes.items():
-    #         if el and el[-1] == error:
-    #             el.pop()
-    #             break
-    #     if not el:
-    #         del self.error_nodes[nid]
-    #         for epos, ids in self.error_positions:
-    #             if nid in ids:
-    #                 ids.remove(nid)
-    #                 break
-    #         if not ids:
-    #             del self.self.error_positions[epos]
-    #     if error.code == self.error_flag:
-    #         emax = 0
-    #         for e in self.errors:
-    #             if e.code == error.code:  break
-    #             if e.code > emax:  emax = e.code
-    #         else:
-    #             self.error_flag = emax
-    #     return error
-
-    def node_errors(self, node: Node) -> List[Error]:
-        """
-        Returns the List of errors that occurred on the node or any child node
-        at the position of the node that has already been removed from the tree,
-        for example, because it was an anonymous empty child node.
-        The position of the node is here understood to cover the range:
-        [node.pos, node.pos + node.strlen()[
-        """
-        node_id = id(node)           # type: int
-        errors = []                  # type: List[Error]
-        start_pos = node.pos
-        end_pos = node.pos + max(node.strlen(), 1)
-        error_node_ids = set()
-        for pos, ids in self.error_positions.items():   # TODO: use bisect here...
-            if start_pos <= pos < end_pos:
-                error_node_ids.update(ids)
-        for nid in error_node_ids:
-            if nid == node_id:
-                # add the node's errors
-                errors.extend(self.error_nodes[nid])
-            elif node._children:
-                for _ in node.select_if(lambda n: id(n) == nid):
-                    break
-                else:
-                    # node is not connected to tree anymore, but since errors
-                    # should not get lost, display its errors on its parent
-                    errors.extend(self.error_nodes[nid])
-        return errors
-
-    def transfer_errors(self, src: Node, dest: Node):
-        """
-        Transfers errors to a different node. While errors never get lost
-        during AST-transformation, because they are kept by the RootNode,
-        the nodes they are connected to may be dropped in the course of the
-        transformation. This function allows attaching errors from a node that
-        will be dropped to a different node.
-        """
-        srcId = id(src)
-        destId = id(dest)
-        if srcId != destId and srcId in self.error_nodes:
-            errorList = self.error_nodes[srcId]
-            self.error_nodes.setdefault(destId, []).extend(errorList)
-            del self.error_nodes[srcId]
-            for nodeSet in self.error_positions.values():
-                nodeSet.discard(srcId)
-                nodeSet.add(destId)
-
-    @property
-    def errors_sorted(self) -> List[Error]:
-        """
-        Returns the list of errors, ordered bv their position.
-        """
-        errors = self.errors[:]
-        errors.sort(key=lambda e: e.pos)
-        return errors
-
-    def error_safe(self, level: ErrorCode = ERROR) -> RootNode:
-        """
-        Asserts that the given tree does not contain any errors with a
-        code equal or higher than the given level.
-        Returns the tree if this is the case, raises an `AssertionError`
-        otherwise.
-        """
-        if has_errors(self.errors, level):
-            raise AssertionError('\n'.join(['Tree-sanity-check failed, because of:'] +
-                                           [str(e) for e in only_errors(self.errors, level)]))
-        return self
-
-    def did_match(self) -> bool:
-        """
-        Returns True, if the parser that has generated this tree did
-        match, False otherwise. Depending on wether the Grammar-object that
-        that generated the node-tree was called with `complete_match=True`
-        or not this requires either the complete document to have been
-        matched or only the beginning.
-
-        Note: If the parser did match, this does not mean that it must
-        have matched without errors. It simply means the no
-        PARSER_STOPPED_BEFORE_END-error has occurred.
-        """
-        return self.name != '__not_yet_ready__' \
-            and not any(e.code == PARSER_STOPPED_BEFORE_END for e in self.errors)
-
-    def as_xml(self, src: Optional[str] = None,
-               indentation: int = 2,
-               inline_tags: AbstractSet[str] = EMPTY_SET_SENTINEL,
-               string_tags: AbstractSet[str] = EMPTY_SET_SENTINEL,
-               empty_tags: AbstractSet[str] = EMPTY_SET_SENTINEL,
-               strict_mode: bool=True) -> str:
-        return super().as_xml(
-            src, indentation,
-            inline_tags=self.inline_tags if inline_tags is EMPTY_SET_SENTINEL else inline_tags,
-            string_tags=self.string_tags if string_tags is EMPTY_SET_SENTINEL else string_tags,
-            empty_tags=self.empty_tags if empty_tags is EMPTY_SET_SENTINEL else empty_tags,
-            strict_mode=strict_mode)
-
-    def serialize(self, how: str = '') -> str:
-        if not how:
-            how = self.serialization_type or 'default'
-        return super().serialize(how)
-
-
-
-#######################################################################
-#
-# S-expression- and XML-parsers and JSON-reader, ElementTree-converter
-#
-#######################################################################
-
-RX_SXPR_INNER_PARSER = re.compile(r'[\w:]+')
-RX_SXPR_NOTEXT = re.compile(r'(?:(?!\)).)*', re.DOTALL)
-RX_SXPR_TEXT = {qtmark: re.compile(qtmark + r'.*?' + qtmark, re.DOTALL)
-                for qtmark in ['"""', "'''", '"', "'"]}
-
-
-def parse_sxpr(sxpr: Union[str, StringView]) -> RootNode:
-    """
-    Generates a tree of nodes from an S-expression.
-
-    This can - among other things - be used for deserialization of trees that
-    have been serialized with `Node.as_sxpr()` or as a convenient way to
-    generate test data.
-
-    Example:
-    >>> parse_sxpr("(a (b c))").as_sxpr(flatten_threshold=0)
-    '(a\\n  (b "c"))'
-
-    `parse_sxpr()` does not initialize the node's `pos`-values. This can be
-    done with `Node.with_pos()`:
-
-    >>> tree = parse_sxpr('(A (B "x") (C "y"))').with_pos(0)
-    >>> tree['C'].pos
-    1
-    """
-    remaining = sxpr  # type: Union[str, StringView]
-
-    @cython.locals(level=cython.int, k=cython.int)
-    def next_block(s: StringView) -> Iterator[StringView]:
-        """Generator that yields all characters until the next closing bracket
-        that does not match an opening bracket matched earlier within the same
-        package.
-        """
-        s = s.strip()
-        try:
-            while s[0] != ')':
-                if s[0] != '(':
-                    raise ValueError('"(" expected, not ' + s[:10])
-                # assert s[0] == '(', s
-                level = 1
-                k = 1
-                while level > 0:
-                    if s[k] in ("'", '"'):
-                        k = s.find(str(s[k]), k + 1)
-                    if k < 0:
-                        raise IndexError()
-                    if s[k] == '(':
-                        level += 1
-                    elif s[k] == ')':
-                        level -= 1
-                    k += 1
-                yield s[:k]
-                s = s[k:].strip()
-        except IndexError:
-            errmsg = ('Malformed S-expression. Unprocessed part: "%s"' % s) if s \
-                else 'Malformed S-expression. Closing bracket(s) ")" missing.'
-            raise ValueError(errmsg)
-        nonlocal remaining
-        remaining = s
-
-    @cython.locals(pos=cython.int, i=cython.int, k=cython.int, m=cython.int, L=cython.int)
-    def parse_attrs(sxpr: StringView, attr_start: str, attributes: Dict[str, Any]) -> Tuple[str, int]:
-        pos: int = -1
-        L: int = len(attr_start)
-        while sxpr[:L] == attr_start:
-            i = sxpr.find('"')
-            k = sxpr.find(')')
-            if k > i:
-                k = sxpr.find(')', sxpr.find('"', i + 1))
-            if i < 0:
-                i = k + 1
-            if k < 0:
-                raise ValueError('Unbalanced parantheses in S-Expression: ' + str(sxpr))
-            # read very special attribute pos
-            if sxpr[L:L + 3] == "pos" and (L == 1 or 0 < k < i):
-                pos = int(str(sxpr[L + 3:k].strip(' \'"').split(' ')[0]))
-            # ignore very special attribute err
-            elif sxpr[L:L + 3] == "err" and 0 <= sxpr.find('`', L + 3) < k:
-                m = sxpr.find('(', L + 3)
-                while 0 <= m < k:
-                    m = sxpr.find('(', k)
-                    k = max(k, sxpr.find(')', max(m, 0)))
-            # read attr
-            else:
-                attr = str(sxpr[L:i].strip())
-                if not RX_ATTR_NAME.match(attr):
-                    raise ValueError('Illegal attribute name: ' + attr)
-                value = sxpr[i:k].strip()[1:-1]
-                attributes[attr] = str(value)
-            sxpr = sxpr[k + 1:].strip()
-        return sxpr, pos
-
-    @cython.locals(pos=cython.int, i=cython.int, end=cython.int)
-    def inner_parser(sxpr: StringView) -> Node:
-        if sxpr[0] != '(':
-            raise ValueError('"(" expected, not ' + sxpr[:10])
-        # assert sxpr[0] == '(', sxpr
-        sxpr = sxpr[1:].strip()
-        match = sxpr.match(RX_SXPR_INNER_PARSER)
-        if match is None:
-            raise AssertionError('Malformed S-expression Node-tagname or identifier expected, '
-                                 'not "%s"' % sxpr[:40].replace('\n', ''))
-        end = sxpr.index(match.end())
-        tagname = sxpr[:end]
-        name, class_name = (tagname.split(':') + [''])[:2]
-        sxpr = sxpr[end:].strip()
-        attributes = OrderedDict()  # type: Dict[str, Any]
-        # parse attr
-        if sxpr[:2] == '(@':  # SXML-style
-            sxpr, pos = parse_attrs(sxpr[2:].lstrip(), "(", attributes)
-            assert sxpr[0] == ')'
-            sxpr = sxpr[1:].lstrip()
-        else:  # DHParser-style
-            sxpr, pos = parse_attrs(sxpr, "`(", attributes)
-        if sxpr[0] == '(':
-            result = tuple(inner_parser(block)
-                           for block in next_block(sxpr))  # type: Union[Tuple[Node, ...], str]
-        else:
-            lines = []
-            while sxpr and sxpr[0:1] != ')':
-                # parse content
-                for qtmark in ['"""', "'''", '"', "'"]:
-                    match = sxpr.match(RX_SXPR_TEXT[qtmark])
-                    if match:
-                        end = sxpr.index(match.end())
-                        i = len(qtmark)
-                        lines.append(str(sxpr[i:end - i]))
-                        sxpr = sxpr[end:].strip()
-                        break
-                else:
-                    match = sxpr.match(RX_SXPR_NOTEXT)
-                    end = sxpr.index(match.end())
-                    lines.append(str(sxpr[:end]))
-                    sxpr = sxpr[end:]
-            result = "\n".join(lines)  # # type: Union[Tuple[Node, ...], str]
-            nonlocal remaining
-            remaining = sxpr
-        node = Node(str(name or ':' + class_name), result)
-        node._pos = pos
-        if attributes:
-            node.attr.update(attributes)
-        return node
-
-    xpr = StringView(sxpr).strip() if isinstance(sxpr, str) else sxpr.strip()  # type: StringView
-    tree = inner_parser(xpr)
-    if remaining != ')':
-        raise ValueError('Malformed S-expression. Superfluous characters: ' + remaining[1:])
-    return RootNode(tree)
-
-
-def parse_sxml(sxml: Union[str, StringView]) -> RootNode:
-    """Generates a tree of nodes from `SXML <https://okmij.org/ftp/Scheme/SXML.html>`_.
-    Example::
-
-        >>> sxml = '(employee(@ (branch "Secret Service") (id "007")) "James Bond")'
-        >>> tree = parse_sxml(sxml)
-        >>> print(tree.as_xml())
-        <employee branch="Secret Service" id="007">James Bond</employee>
-    """
-    return parse_sxpr(sxml)
-
-
-RX_WHITESPACE_TAIL = re.compile(r'\s*$')
-RX_XML_ATTRIBUTES = re.compile(r'\s*(?P<attr>[\w:_.-]+)\s*=\s*"(?P<value>.*?)"\s*')
-RX_XML_SPECIAL_TAG = re.compile(r'<(?![?!])')
-RX_XML_OPENING_TAG = re.compile(r'<\s*(?P<tagname>[\w:_.-]+)\s*')
-RX_XML_CLOSING_TAG = re.compile(r'</\s*(?P<tagname>[\w:_.-]+)\s*>')
-RX_XML_HEADER = re.compile(r'<(?![?!])')
-
-
-EMPTY_TAGS_SENTINEL = set()
-
-
-def parse_xml(xml: Union[str, StringView],
-              string_tag: str = TOKEN_PTYPE,
-              ignore_pos: bool = False,
-              out_empty_tags: Set[str] = EMPTY_TAGS_SENTINEL,
-              strict_mode: bool = True) -> RootNode:
-    """
-    Generates a tree of nodes from a (Pseudo-)XML-source.
-
-    :param xml: The XML-string to be parsed into a tree of Nodes
-    :param string_tag: A tag-name that will be used for
-        strings inside mixed-content-tags.
-    :param ignore_pos: if True, '_pos'-attributes will be understood as
-        normal XML-attributes. Otherwise, '_pos' will be understood as a
-        special attribute, the value of which will be written to `node._pos`
-        and not transferred to the `node.attr`-dictionary.
-    :param out_empty_tags: A set that is filled with the names of those
-        tags that are empty tags, e.g. "<br/>"
-    :param strict_mode: If True, errors are raised if XML
-        contains stylistic or interoperability errors, like using one
-        and the same tag-name for empty and non-empty tags, for example.
-    """
-
-    xml = StringView(str(xml))
-    non_empty_tags: Set[str] = set()
-    dual_use_notified: Set[str] = set()
-
-    if out_empty_tags is EMPTY_TAGS_SENTINEL:
-        out_empty_tags = set()
-
-    def get_pos_str(substring: StringView) -> str:
-        """Returns line:column indicating where substring is located within
-        the whole xml-string."""
-        nonlocal xml
-        pos = len(xml) - len(substring)
-        l, c = line_col(linebreaks(xml), pos)
-        return f'{l}:{c}'
-
-    def parse_attributes(s: StringView) -> Tuple[StringView, Dict[str, Any]]:
-        """
-        Parses a sequence of XML-Attributes. Returns the string-slice
-        beginning after the end of the attr.
-        """
-        attributes = OrderedDict()  # type: Dict[str, Any]
-        eot = s.find('>')
-        restart = 0
-        for match in s.finditer(RX_XML_ATTRIBUTES):
-            if s.index(match.start()) >= eot:
-                break
-            d = match.groupdict()
-            attributes[d['attr']] = d['value']
-            restart = s.index(match.end())
-        return s[restart:], attributes
-
-    def skip_comment(s: StringView) -> StringView:
-        assert s[:4] == "<!--"
-        i = s.find('-->')
-        if i < 0:
-            if strict_mode:
-                raise ValueError(get_pos_str(s) + " comment is never closed!")
-            else:
-                return s[4:]
-        else:
-            return s[i + 3:]
-
-    def skip_special_tag(s: StringView) -> StringView:
-        """Skip special tags, e.g. <?...>, <!...>, and return the string
-        view at the position of the next normal tag."""
-        assert s[:2] in ('<!', '<?')
-        assert s[:4] != '<!--'
-        m = s.search(RX_XML_SPECIAL_TAG)
-        i = s.index(m.start()) if m else len(s)
-        k = s.rfind(">", end=i)
-        return s[k+1:] if k >= 0 else s[2:]
-
-    def parse_opening_tag(s: StringView) -> Tuple[StringView, str, OrderedDict, bool]:
-        """
-        Parses an opening tag. Returns the string segment following
-        the opening tag, the tag name, a dictionary of attr and
-        a flag indicating whether the tag is actually a solitary tag as
-        indicated by a slash at the end, i.e. <br/>.
-        """
-        match = s.match(RX_XML_OPENING_TAG)
-        assert match
-        tagname = match.groupdict()['tagname']
-        section = s[s.index(match.end()):]
-        s, attributes = parse_attributes(section)
-        i = s.find('>')
-        assert i >= 0
-        return s[i + 1:], tagname, attributes, s[i - 1] == "/"
-
-    def parse_closing_tag(s: StringView) -> Tuple[StringView, str]:
-        """
-        Parses a closing tag and returns the string segment, just after
-        the closing tag.
-        """
-        match = s.match(RX_XML_CLOSING_TAG)
-        assert match, 'XML-closing-tag expected, but found: ' + s[:20]
-        tagname = match.groupdict()['tagname']
-        return s[s.index(match.end()):], tagname
-
-    def parse_leaf_content(s: StringView) -> Tuple[StringView, StringView]:
-        """
-        Parses a piece of the content of a tag, just until the next opening,
-        closing or solitary tag is reached.
-        """
-        i = 0
-        while s[i] != "<":  # or s[max(0, i - 1)] == "\\":
-            i = s.find("<", i + 1)
-            assert i > 0
-        return s[i:], s[:i]
-
-    def parse_full_content(s: StringView) -> Tuple[StringView, Node]:
-        """
-        Parses the full content of a tag, starting right at the beginning
-        of the opening tag and ending right after the closing tag.
-        """
-        nonlocal non_empty_tags, dual_use_notified
-        res = []  # type: List[Node]
-        substring = s
-        s, tagname, attrs, solitary = parse_opening_tag(s)
-        name, class_name = (tagname.split(":") + [''])[:2]
-        if solitary:
-            if tagname in non_empty_tags:
-                if strict_mode and tagname not in dual_use_notified:
-                    print(get_pos_str(substring) +
-                        f' "{tagname}" is used as empty as well as non-empty element!'
-                        f' This can cause errors when re-serializing data as XML!')
-                    dual_use_notified.add(tagname)
-                    # raise ValueError(get_pos_str(substring) +
-                    #     f' "{tagname}" is used as empty as well as non-empty element!'
-                    #     f' This can cause errors when re-serializing data as XML!'
-                    #     f' Use parse_xml(..., strict_mode=False) to suppress this error!')
-                non_empty_tags.remove(tagname)
-            out_empty_tags.add(tagname)
-        else:
-            if tagname in out_empty_tags:
-                if strict_mode and tagname not in dual_use_notified:
-                    print(get_pos_str(substring) +
-                        f' "{tagname}" is used as empty as well as non-empty element!'
-                        f' This can cause errors when re-serializing data as XML!')
-                    dual_use_notified.add(tagname)
-                    # raise ValueError(get_pos_str(substring) +
-                    #     f' "{tagname}" is used as empty as well as non-empty element!'
-                    #     f' This can cause errors when re-serializing data as XML!'
-                    #     f' Use parse_xml(..., strict_mode=False) to suppress this error!')
-            else:
-                non_empty_tags.add(tagname)
-            while s and not s[:2] == "</":
-                s, leaf = parse_leaf_content(s)
-                if leaf and (leaf.find('\n') < 0 or not leaf.match(RX_WHITESPACE_TAIL)):
-                    res.append(Node(string_tag, leaf))
-                if s[:1] == "<":
-                    if s[:4] == '<!--':
-                        s = skip_comment(s)
-                    elif s[:2] in ("<?", "<!"):
-                        s = skip_special_tag(s)
-                    elif s[:2] != "</":
-                        s, child = parse_full_content(s)
-                        res.append(child)
-            s, closing_tagname = parse_closing_tag(s)
-            if tagname != closing_tagname:
-                if strict_mode:
-                    raise ValueError(
-                        f'{get_pos_str(substring)} - {get_pos_str(s)}'
-                        f' Tag-name mismatch: <{tagname}>...</{closing_tagname}>!'
-                        f' Use parse_xml(..., strict_mode=False) to suppress this error,'
-                        f' but do not expect sound results if you do!')
-                else:
-                    print(f'{get_pos_str(substring)} - {get_pos_str(s)}'
-                          f' Tag-name mismatch: <{tagname}>...</{closing_tagname}>!')
-        if len(res) == 1 and res[0].name == string_tag:
-            result = res[0].result  # type: Union[Tuple[Node, ...], StringView, str]
-        else:
-            result = tuple(res)
-
-        if name and not class_name:  name = restore_tag_name(name)
-        if class_name:  class_name = ':' + class_name
-        node = Node(name + class_name, result)
-        if not ignore_pos and '_pos' in attrs:
-            node._pos = int(attrs['_pos'])
-            del attrs['_pos']
-        if attrs:
-            node.attr.update(attrs)
-        return s, node
-
-    match_header = xml.search(RX_XML_HEADER)
-    start = xml.index(match_header.start()) if match_header else 0
-    _, tree = parse_full_content(xml[start:])
-    return RootNode(tree)
-
-
-class DHParser_JSONEncoder(json.JSONEncoder):
-    """A JSON-encoder that also encodes ``nodetree.Node`` as valid json objects.
-    Node-objects are encoded using Node.as_json.
-    """
-    def default(self, obj):
-        if isinstance(obj, Node):
-            return cast(Node, obj).to_json_obj()
-        elif obj is JSONnull or isinstance(obj, JSONnull):
-            return None
-        return json.JSONEncoder.default(self, obj)
-
-
-def parse_json(json_str: str) -> RootNode:
-    """
-    Parses a JSON-representation of a node-tree. Other than
-    and parse_xml, this function does not convert any json-document into
-    a node-tree, but only json-documents that represents a node-tree, e.g.
-    a json-document that has been produced by `Node.as_json()`!
-    """
-    json_obj = json.loads(json_str, object_pairs_hook=lambda pairs: OrderedDict(pairs))
-    return RootNode(Node.from_json_obj(json_obj))
-
-
-def deserialize(xml_sxpr_or_json: str) -> Optional[Node]:
-    """
-    Parses either XML or S-expressions or a JSON representation of a
-    syntax-tree. Which of these is detected automatically.
-    """
-    if RX_IS_XML.match(xml_sxpr_or_json):
-        return parse_xml(xml_sxpr_or_json)
-    elif RX_IS_SXPR.match(xml_sxpr_or_json):
-        return parse_sxpr(xml_sxpr_or_json)
-    elif re.fullmatch(r'\s*', xml_sxpr_or_json):
-        return None
-    else:
-        try:
-            return parse_json(xml_sxpr_or_json)
-        except json.decoder.JSONDecodeError:
-            m = re.match(r'\s*(.*)\n?', xml_sxpr_or_json)
-            snippet = m.group(1) if m else ''
-            raise ValueError('Snippet is neither S-expression nor XML: ' + snippet + ' ...')
 
 
 # if __name__ == "__main__":

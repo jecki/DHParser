@@ -2807,8 +2807,8 @@ factory-wrapper, just as a simple parsing function::
 
 If the custom-parsing function is implemented without a wrapper in the
 Python-code, it needs to be wrapped into a `@Custom(...)`-clause within
-the grammar, however. This tells DHParser that it should not expect
-parsing-function invoked in the grammar to be factory::
+the grammar, however. This tells DHParser that it should not expect the
+parsing-function invoked in the grammar to be factory-function::
 
     >>> word_grammar = """@reduction = merge
     ...     document = @Custom(parse_word)"""
@@ -2855,8 +2855,8 @@ custom parser class::
     (document "Hello")
 
 In contrast to the former two methods, implementing one's own custom
-Parser-classes in addition to giving access to the
-:py:class:`~parse.Grammar`-object allows to manipulate the location
+Parser-classes has the benefits of giving access to the
+:py:class:`~parse.Grammar`-object and to allow the manipulation of the location
 pointer. A possible use case is when you'd like to store the
 unstructured source-data of some part of the source-document in the
 parsing tree, next to the data structured by the parser::

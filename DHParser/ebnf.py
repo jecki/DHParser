@@ -1582,7 +1582,7 @@ class EBNFCompiler(Compiler):
 
     :ivar defined_directives:  A dictionary of all directives that have already
             been defined, mapped onto the list of nodes where they have
-            been (re-)defined. With the exception of those directives
+            been (re-)defined. Except for those directives
             contained in EBNFDirectives.REPEATABLE_DIRECTIVES, directives
             must only be defined once.
 
