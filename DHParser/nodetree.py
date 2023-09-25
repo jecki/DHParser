@@ -30,9 +30,10 @@ in the (XML-)tree.
 
 The source code of module ``nodetree`` consists of four main sections:
 
-1.  Node-class, i.e. Node, FrozenNode and RootNode as well as a number
+1.  Node-classes, i.e. :py:class:`Node`, :py:class:`FrozenNode` and
+    :py:class`RootNode` as well as a number
     of top-level functions closely related to these. The Node-classes in
-    turn provide several fgroups of functionality:
+    turn provide several groups of functionality:
 
     a. Capturing segements of documents and organizing it in trees.
        (A node is either a "leaf"-node with string-content or a
@@ -51,17 +52,17 @@ The source code of module ``nodetree`` consists of four main sections:
     d. Tree-traversal, in particular node- and path-selection based
        on arbitrary criteria (passed as match-node or match-path-function)
 
-    e. Experimental (XML-)milestone-support. See also:
-       :py:class:`~nodetree.ContextMapping`
+    e. Experimental (XML-)milestone-support: :py:meth:`Node.milestone_segment`.
+       See also: :py:class:`ContextMapping`
 
-    f. A very simple method for tree-"evaluation". (More elaborate
+    f. A very simple method for tree-"evaluation":  (More elaborate
        scaffolings for evaluation tree are found in :py:mod:`~traverse`
        and :py:mod:`compile`.)
 
     g. Functions for serialization and deserialization as XML, S-Expression,
        JSON as well as conversion to and from ElemenTree/LXML-representations.
 
-    h. Class RootNode serving as both root-node of the tree and a hub
+    h. Class :py:class:`RootNode` serving as both root-node of the tree and a hub
        for storing data for the tree as a whole (as, for example, the
        list of errors that have occurred during parsing or further
        processing) as well as information on the current processing-stage.
@@ -75,7 +76,7 @@ The source code of module ``nodetree`` consists of four main sections:
     of the tree with one particular node inside or at the leaf of the
     tree.
 
-4.  Context-mappings: A Class (:py:class:`~nodetree.ContextMapping`) for
+4.  Context-mappings: A Class (:py:class:`ContextMapping`) for
     relating the flat string-content of a document-tree to its
     structure. This allows using the string-content for searching in the
     document and then switching to the tree-structure to manipulate it.
@@ -1413,6 +1414,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 return trl
         return []
 
+    # milestone support ### EXPERIMENTAL!!! ###
+
     def _reconstruct_path_recursive(self, node: Node) -> Path:
         """
         Determines the chain of ancestors of a node that leads up to self. Other than
@@ -1432,7 +1435,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def reconstruct_path(self, node: Node) -> Path:
         """
-        Determines the chain of ancestors of a node that leads up to self.
+        Determines the chain of ancestors of a node that leads up to self. Note:
+        The use of this quite ineffecient method can most of the time be avoided
+        by traversing the tree with the path-selector-methods
+        (e.g. :py:meth:`Node.select_path`) right from the start.
+
         :param node: the descendant node, the ancestry of which shall be determined.
         :return: the list of nodes starting with self and leading to `node`
         :raises: ValueError, in case `node` does not occur in the tree rooted in `self`
@@ -1446,24 +1453,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         else:
             raise ValueError('Node "%s" does not occur in the tree %s '
                              % (node.name, flatten_sxpr(self.as_sxpr())))
-
-    # milestone support ### EXPERIMENTAL!!! ###
-
-    # def find_nearest_common_ancestor(self, A: Node, B: Node) -> Node:
-    #     """
-    #     Finds the nearest common ancestor of the two nodes A and B.
-    #     :param A: a node in the tree
-    #     :param B: another node in the tree
-    #     :return: the nearest common ancestor
-    #     :raises: ValueError in case `A` and `B` are not both rooted in `self`
-    #     """
-    #     trlA = self.reconstruct_path(A)
-    #     trlB = self.reconstruct_path(B)
-    #     for a,b in zip(trlA, trlB):
-    #         if a != b:
-    #             break
-    #         common_ancestor = a
-    #     return common_ancestor
 
     def milestone_segment(self, begin: Union[Path, Node], end: Union[Path, Node]) -> Node:
         """
@@ -3140,7 +3129,7 @@ def deserialize(xml_sxpr_or_json: str) -> Optional[Node]:
 
 #######################################################################
 #
-# Attribute handling
+# Attribute-handling
 #
 #######################################################################
 

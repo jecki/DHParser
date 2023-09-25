@@ -1151,7 +1151,7 @@ def has_non_autocaptured_symbols(ptrail: ParserTrail) -> Optional[bool]:
 
 ########################################################################
 #
-# Grammar class, central administration of all parser of a grammar
+# Grammar class, central administration of all parsers in a grammar
 #
 ########################################################################
 
@@ -1237,6 +1237,7 @@ RESERVED_PARSER_NAMES = ('root__', 'dwsp__', 'wsp__', 'comment__', 'root_parser_
 
 def reset_parser(parser):
     return parser.reset()
+
 
 class Grammar:
     r"""
