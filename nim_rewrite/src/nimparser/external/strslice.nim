@@ -28,8 +28,9 @@ proc newStringSlice*(str: string): StringSlice {.noInit.} =
   ## Create a new string slice that references the string. This creates a new
   ## reference to the string, so any changes to the underlying string will be
   ## visible in all slices made from this string.
-  new result
-  new result.str
+  # new result
+  result = new(StringSlice)
+  result.str = new(string)
   result.str[] = str
   result.start = 0
   result.stop = str.len-1
@@ -43,18 +44,18 @@ proc `[]`*(str: StringSlice,
   ## Grab a slice of a string slice. This returns a new string slice that
   ## references the same underlying string.
   if slc.a < 0:
-    raise newException(IndexError, "index out of bounds")
-  new result
+    raise newException(IndexDefect, "index out of bounds")
+  result = new(StringSlice)
   result.str = str.str
   result.start = str.start + slc.a
   when slc.b is BackwardsIndex:
     if slc.b.int > str.len + 1:
-      raise newException(RangeError, "value out of range: " &
+      raise newException(RangeDefect, "value out of range: " &
         $(str.len + 1 - slc.b.int))
     result.stop = str.stop - slc.b.int + 1
   else:
     if slc.b + 1 < slc.a or slc.b > str.high:
-      raise newException(IndexError, "index out of bounds")
+      raise newException(IndexDefect, "index out of bounds")
     result.stop = str.start + slc.b
 
 proc high*(str: StringSlice): int =
