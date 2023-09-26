@@ -9,16 +9,11 @@ import std/sugar
 import std/tables
 import std/unicode
 
+import external/strslice
+
 
 type
   intT = int32
-
-
-type
-  StringView {.acyclic.} = tuple
-    str: ref string
-    pos: intT
-    len: intT
 
 
 type
@@ -28,7 +23,7 @@ type
   NodeObj {.acyclic.} = object of RootObj
     name*: string
     children: seq[Node]
-    text: string  # must be empty if field children is not empty!
+    text: StringSlice  # must be empty if field children is not empty!
     attributes*: Attributes
     sourcePos: intT
   SourcePosUnassignedDefect* = object of Defect
@@ -36,22 +31,18 @@ type
 
 proc init*(node: Node, 
           name: string, 
-          children: seq[Node], 
+          content: seq[Node] or StringSlice or string, 
           attributes: Attributes = Attributes()): Node =
   node.name = name
-  node.children = children
-  node.text = ""
-  node.attributes = attributes
-  node.sourcePos = -1
-  return node
-
-proc init*(node: Node, 
-           name: string, 
-           text: string, 
-           attributes: Attributes = Attributes()): Node =
-  node.name = name
-  node.children = @[]
-  node.text = text
+  when content is seq[Node]:
+    node.children = content
+    node.text = nil
+  elif content is StringSlice:
+    node.children = @[]
+    node.text = content
+  else:  # content is string
+    node.children = @[]
+    node.text = StringSlice(content)
   node.attributes = attributes
   node.sourcePos = -1
   return node
@@ -73,7 +64,7 @@ func isAnonymous*(node: Node): bool = node.name.len == 0 or node.name[0] == ':'
 
 func content*(node: Node): string =
   if node.isLeaf:
-    result = node.text
+    result = $node.text
   else:
     # result = ""
     for child in node.children:
@@ -92,7 +83,11 @@ proc `result=`*(node: Node, children: seq[Node]) =
 
 func runeLen*(node: Node): int =
   if node.isLeaf:
-    result = node.text.runeLen
+    result = 0
+    var i = node.text.start
+    while i <= node.text.stop:
+      inc(i, runeLenAt(node.text.str[], Natural(i)))
+      inc(result)
   else:
     # result = 0
     for child in node.children:
@@ -109,7 +104,7 @@ proc assignSourcePos(node: Node, sourcePos: intT) : intT =
   node.sourcePos = sourcePos
   var pos = sourcePos
   if node.isLeaf:
-    return pos + intT(node.text.runeLen)
+    return pos + intT(node.runeLen)
   else:
     for child in node.children:
       if not child.isNil:
