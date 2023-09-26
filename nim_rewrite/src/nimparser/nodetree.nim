@@ -11,6 +11,17 @@ import std/unicode
 
 
 type
+  intT = int32
+
+
+type
+  StringView {.acyclic.} = tuple
+    str: ref string
+    pos: intT
+    len: intT
+
+
+type
   Attributes* = OrderedTable[string, string]
   Node* = ref NodeObj not nil
   NodeOrNil* = ref NodeObj
@@ -19,7 +30,7 @@ type
     children: seq[Node]
     text: string  # must be empty if field children is not empty!
     attributes*: Attributes
-    sourcePos: int
+    sourcePos: intT
   SourcePosUnassignedDefect* = object of Defect
   SourcePosReAssigmentDefect* = object of Defect
 
@@ -87,28 +98,28 @@ func runeLen*(node: Node): int =
     for child in node.children:
       result += child.runeLen
 
-func sourcePos*(node: Node): int =
+func sourcePos*(node: Node): intT =
   if node.sourcePos < 0:
     raise newException(SourcePosUnassignedDefect, "source position has not yet been assigned")
   return node.sourcePos
 
-proc assignSourcePos(node: Node, sourcePos: int) : int =
+proc assignSourcePos(node: Node, sourcePos: intT) : intT =
   if node.sourcePos >= 0:
     raise newException(SourcePosReAssigmentDefect, "source position must not be reassigned!")
   node.sourcePos = sourcePos
   var pos = sourcePos
   if node.isLeaf:
-    return pos + node.text.runeLen
+    return pos + intT(node.text.runeLen)
   else:
     for child in node.children:
       if not child.isNil:
         pos += child.assignSourcePos(pos)
   return pos
 
-proc `sourcePos=`*(node: Node, sourcePos: int) =
+proc `sourcePos=`*(node: Node, sourcePos: intT) =
   discard node.assignSourcePos(sourcePos)
 
-proc withSourcePos*(node: Node, sourcePos: int): Node =
+proc withSourcePos*(node: Node, sourcePos: intT): Node =
   discard node.assignSourcePos(sourcePos)
   return node
 
