@@ -6,9 +6,9 @@ import std/math
 import std/options
 import std/strformat
 import std/strutils
+import std/re
 
-import regex
-
+import strslice
 import nodetree
 
 
@@ -44,7 +44,7 @@ type
   GrammarRef* = ref GrammarObj not nil
   GrammarObj = object of RootObj
     name: string
-    document: string
+    document: StringSlice
     roots: seq[Parser]
     returnItem: ReturnItemProc
     returnSequence: ReturnSequenceProc
@@ -115,7 +115,7 @@ proc returnSeqFlatten(parser: Parser, nodes: seq[Node]): Node =
   return newNode(parser.nodeName, "")
 
 
-let GrammarPlaceholder = GrammarRef(name: "__Placeholder__")
+let GrammarPlaceholder = GrammarRef(name: "__Placeholder__", document: newStringSlice(""))
 
 
 ## basic parser-procedures and -methods
@@ -201,10 +201,12 @@ type
   TextRef = ref TextObj not nil
   TextObj = object of ParserObj
     text: string
+    slice: StringSlice
 
 proc init*(textParser: TextRef, text: string): TextRef =
   discard Parser(textParser).init(":Text")
   textParser.text = text
+  textParser.slice = toStringSlice(text)
   return textParser
 
 proc Text*(text: string): TextRef =
@@ -215,11 +217,11 @@ method parse*(self: TextRef, location: int): ParsingResult =
     import nodetree
     doAssert Text("A")("A").node.asSxpr() == "(:Text \"A\")"
 
-  if self.grammar.document.continuesWith(self.text, location):
+  if self.grammar.document.str[].continuesWith(self.text, location):
     if self.dropContent:
       return (EMPTY_NODE, location + self.text.len)
     elif self.text != "" or not self.disposable:
-      return (newNode(self.nodeName, self.text), location + self.text.len)
+      return (newNode(self.nodeName, self.slice), location + self.text.len)
     return (EMPTY_NODE, location)
   return (nil, location)
 
@@ -248,9 +250,9 @@ method parse*(self: RegexRef, location: int): ParsingResult =
     import nodetree, regex
     doAssert Regex(re"\w+")("ABC").node.asSxpr() == "(:Regex \"ABC\")"
 
-  var match: RegexMatch
-  if self.grammar.document.find(self.regex, match, location):
-    let text = self.grammar.document[match.boundaries]
+  var l = matchLen(self.grammar.document.str, self.regex, location)
+  if l >= 0:
+    let text = self.grammar.document[location..<location+l]
     if self.dropContent:
       return (EMPTY_NODE, location + text.len)
     elif text != "" or not self.disposable:

@@ -2,6 +2,7 @@
 {.experimental: "strictFuncs".}
 
 import std/enumerate
+import std/options
 import std/sequtils
 import std/strformat
 import std/strutils
@@ -9,12 +10,7 @@ import std/sugar
 import std/tables
 import std/unicode
 
-import external/strslice
-
-
-type
-  intT = int32
-
+import strslice
 
 type
   Attributes* = OrderedTable[string, string]
@@ -23,26 +19,23 @@ type
   NodeObj {.acyclic.} = object of RootObj
     name*: string
     children: seq[Node]
-    text: StringSlice  # must be empty if field children is not empty!
+    text: StringSliceOrNil  # must be none if field children is not empty!
     attributes*: Attributes
-    sourcePos: intT
+    sourcePos: int32
   SourcePosUnassignedDefect* = object of Defect
   SourcePosReAssigmentDefect* = object of Defect
 
 proc init*(node: Node, 
           name: string, 
-          content: seq[Node] or StringSlice or string, 
+          content: seq[Node] or StringSlice or ref string or string, 
           attributes: Attributes = Attributes()): Node =
   node.name = name
   when content is seq[Node]:
     node.children = content
     node.text = nil
-  elif content is StringSlice:
+  else:
     node.children = @[]
-    node.text = content
-  else:  # content is string
-    node.children = @[]
-    node.text = StringSlice(content)
+    node.text = toStringSlice(content)
   node.attributes = attributes
   node.sourcePos = -1
   return node
@@ -58,63 +51,81 @@ template newNode*(args: varargs[untyped]): Node =
 
 func isLeaf*(node: Node): bool = node.children.len == 0
 
-func isEmpty*(node: Node): bool = node.children.len == 0 and node.text.len == 0
+proc isEmpty*(node: Node): bool = 
+  if node.children.len != 0:
+    return false
+  else:
+     let s: StringSliceOrNil = node.text
+     if not isNil(s):  return false  else: return true
 
 func isAnonymous*(node: Node): bool = node.name.len == 0 or node.name[0] == ':'
 
 func content*(node: Node): string =
   if node.isLeaf:
-    result = $node.text
+    let s: StringSliceOrNil = node.text
+    if not isNil(s):  $(s)  else: return ""
   else:
-    # result = ""
     for child in node.children:
       result &= child.content
 
 func children*(node: Node): seq[Node] =
   return node.children
 
-proc `result=`*(node: Node, text: string) =
-  node.text = text
-  if node.children.len > 0:  node.children = @[]
+proc `result=`*(node: Node, text: StringSlice or ref string or string) =
+  if node.children.len > 0:  
+    node.children = @[]
+    node.text = toStringSlice(text)
+  elif not isNil(node.text):
+    when text is StringSlice:
+      node.text = text
+    elif text is ref string:
+      node.text.str = text
+    else:
+      node.text.str[] = text
+  else:  # practically unreachable
+    node.text = toStringSlice(text)
+
 
 proc `result=`*(node: Node, children: seq[Node]) =
   node.children = children
-  node.text = ""
+  node.text = nil
 
-func runeLen*(node: Node): int =
+proc runeLen*(node: Node): int =
   if node.isLeaf:
     result = 0
-    var i = node.text.start
-    while i <= node.text.stop:
-      inc(i, runeLenAt(node.text.str[], Natural(i)))
-      inc(result)
+    let text: StringSliceOrNil = node.text
+    if not isNil(text):
+      var i = text.start
+      while i <= text.stop:
+        inc(i, runeLenAt(text.str[], Natural(i)))
+        inc(result)
   else:
     # result = 0
     for child in node.children:
       result += child.runeLen
 
-func sourcePos*(node: Node): intT =
+func sourcePos*(node: Node): int32 =
   if node.sourcePos < 0:
     raise newException(SourcePosUnassignedDefect, "source position has not yet been assigned")
   return node.sourcePos
 
-proc assignSourcePos(node: Node, sourcePos: intT) : intT =
+proc assignSourcePos(node: Node, sourcePos: int32) : int32 =
   if node.sourcePos >= 0:
     raise newException(SourcePosReAssigmentDefect, "source position must not be reassigned!")
   node.sourcePos = sourcePos
   var pos = sourcePos
   if node.isLeaf:
-    return pos + intT(node.runeLen)
+    return pos + int32(node.runeLen)
   else:
     for child in node.children:
       if not child.isNil:
         pos += child.assignSourcePos(pos)
   return pos
 
-proc `sourcePos=`*(node: Node, sourcePos: intT) =
+proc `sourcePos=`*(node: Node, sourcePos: int32) =
   discard node.assignSourcePos(sourcePos)
 
-proc withSourcePos*(node: Node, sourcePos: intT): Node =
+proc withSourcePos*(node: Node, sourcePos: int32): Node =
   discard node.assignSourcePos(sourcePos)
   return node
 
@@ -173,7 +184,7 @@ proc asSxpr*(node: NodeOrNil): string =
       attrStrs[i] = fmt"""`({attr} "{value}")"""
     attrStrs.join(" ")
 
-  func opening(node: Node): string =
+  proc opening(node: Node): string =
     if node.attributes.len == 0:
       if node.isLeaf and node.runeLen < 60:
         fmt"({node.name} "
@@ -184,7 +195,7 @@ proc asSxpr*(node: NodeOrNil): string =
 
   func closing(node: Node): string = ")"
 
-  func leafdata(node: Node): seq[string] =
+  proc leafdata(node: Node): seq[string] =
     func esc(s: string): string =
       s.replace("\\", "\\\\").replace(""""""", """\"""")
 

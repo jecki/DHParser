@@ -687,6 +687,7 @@ class Parser:
         grammar.most_recent_error__ = ParserError(self, node, node.strlen(), location, error,
                                                   first_throw=False)
         next_location = len(grammar.document__)
+        return node, next_location
 
     @cython.locals(next_location=cython.int, gap=cython.int, i=cython.int, save_suspend_memoization=cython.bint)
     def __call__(self: Parser, location: cython.int) -> ParsingResult:
