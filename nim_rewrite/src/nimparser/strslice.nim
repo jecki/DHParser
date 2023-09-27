@@ -148,7 +148,7 @@ proc strip*(s: StringSlice, first = true, last = true): StringSlice {.noInit.} =
   ## Strips whitespace from both sides (controllable with the ``first`` and
   ## ``last`` arguments) of the string slice and returns a new string slice
   ## with the same underlying string.
-  new result
+  result = new(StringSlice)
   result.str = s.str
   result.start = s.start
   result.stop = s.stop
