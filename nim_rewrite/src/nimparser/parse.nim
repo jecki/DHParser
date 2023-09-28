@@ -44,7 +44,7 @@ type
   GrammarRef* = ref GrammarObj not nil
   GrammarObj = object of RootObj
     name: string
-    document: StringSlice
+    document: StringSlice = EMPTY_STRSLICE
     roots: seq[Parser]
     returnItem: ReturnItemProc
     returnSequence: ReturnSequenceProc

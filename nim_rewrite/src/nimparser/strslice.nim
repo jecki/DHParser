@@ -18,27 +18,41 @@ import strutils
 
 type
   StringSlice* = ref StringSliceObj not nil
-  StringSliceOrNil* = ref StringSliceObj
   StringSliceObj* = object
     buf: ref string not nil
     start: int32
     stop: int32
+
+proc ensureStrRef(): ref string not nil =
+  new(result)
+
+proc EmptyStrRef(): ref string not nil =
+  result = ensureStrRef()
+  result[] = ""
+
+let EMPTY_STRSLICE* = StringSlice(buf: EmptyStrRef(), start: 0, stop: 0)
+
 
 proc newStringSlice*(str: ref string or string): StringSlice {.noInit.} =
   ## Create a new string slice that references the string. This creates a new
   ## reference to the string, so any changes to the underlying string will be
   ## visible in all slices made from this string.
   # new result
-  result = new(StringSlice)
   when str is ref string:
+    result = new(StringSlice)
     result.buf = str
+    result.start = 0
+    result.stop = str.len.int32 - 1
   else:
-    let s: ref string = new(string)
-    if not isNil(s):
-      s[] = str
-      result.buf = s
-  result.start = 0
-  result.stop = str.len.int32 - 1
+    if str.len == 0:  
+      result = EMPTY_STRSLICE
+    else:
+      result = new(StringSlice)
+      result.buf = ensureStrRef()
+      result.buf[] = str
+      result.start = 0
+      result.stop = str.len.int32 - 1
+
 
 converter toStringSlice*(str: StringSlice or ref string or string): StringSlice {.noInit.} =
   ## Automatic converter to create a string slice from a string
@@ -168,6 +182,7 @@ iterator items*(a: StringSlice): char =
   ## Iterate over each character in a string slice
   for i in a.start..a.stop:
     yield a.buf[i]
+
 
 when isMainModule:
   let

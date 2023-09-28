@@ -2,7 +2,6 @@
 {.experimental: "strictFuncs".}
 
 import std/enumerate
-import std/options
 import std/sequtils
 import std/strformat
 import std/strutils
@@ -19,7 +18,7 @@ type
   NodeObj {.acyclic.} = object of RootObj
     name*: string
     children: seq[Node]
-    text: StringSliceOrNil  # must be none if field children is not empty!
+    text: StringSlice
     attributes*: Attributes
     sourcePos: int32
   SourcePosUnassignedDefect* = object of Defect
@@ -32,7 +31,7 @@ proc init*(node: Node,
   node.name = name
   when content is seq[Node]:
     node.children = content
-    node.text = nil
+    node.text = EMPTY_STRSLICE
   else:
     node.children = @[]
     node.text = toStringSlice(content)
@@ -40,30 +39,18 @@ proc init*(node: Node,
   node.sourcePos = -1
   return node
 
-
 template newNode*(args: varargs[untyped]): Node =
   new(Node).init(args)
-  # let node: NodeOrNil = new(Node)
-  # if isNil(node):
-  #   raise newException(OSError, "Creation of Node-object failed!")
-  # else:
-  #   node.init(args)
 
 func isLeaf*(node: Node): bool = node.children.len == 0
 
-proc isEmpty*(node: Node): bool = 
-  if node.children.len != 0:
-    return false
-  else:
-     let s: StringSliceOrNil = node.text
-     if not isNil(s):  return false  else: return true
+proc isEmpty*(node: Node): bool = node.children.len == 0 and node.text.len == 0
 
 func isAnonymous*(node: Node): bool = node.name.len == 0 or node.name[0] == ':'
 
 func content*(node: Node): string =
   if node.isLeaf:
-    let s: StringSliceOrNil = node.text
-    if not isNil(s):  $(s)  else: return ""
+    return node.text.str[]
   else:
     for child in node.children:
       result &= child.content
@@ -88,19 +75,17 @@ proc `result=`*(node: Node, text: StringSlice or ref string or string) =
 
 proc `result=`*(node: Node, children: seq[Node]) =
   node.children = children
-  node.text = nil
+  node.text = EMPTY_STRSLICE
 
-proc runeLen*(node: Node): int =
+proc runeLen*(node: Node): int32 =
+  result = 0
   if node.isLeaf:
-    result = 0
-    let text: StringSliceOrNil = node.text
-    if not isNil(text):
-      var i = text.start
-      while i <= text.stop:
-        inc(i, runeLenAt(text.str[], Natural(i)))
-        inc(result)
+    let last = node.text.last
+    var i = node.text.first
+    while i <= last:
+      inc(i, runeLenAt(node.text.str[], Natural(i)))
+      inc(result)
   else:
-    # result = 0
     for child in node.children:
       result += child.runeLen
 
