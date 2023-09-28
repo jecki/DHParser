@@ -26,9 +26,11 @@ type
 
 proc `$`*(str: StringSlice): string =
   ## Converts a string slice to a string
-  if not isNil(str) and not isNil(str.str):
-      str.str[str.start .. str.stop]
-  else: ""
+  return str.str[str.start .. str.stop]
+
+  # if not isNil(str) and not isNil(str.str):
+  #     str.str[str.start .. str.stop]
+  # else: ""
 
 proc newStringSlice*(str: ref string or string): StringSlice {.noInit.} =
   ## Create a new string slice that references the string. This creates a new
