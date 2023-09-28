@@ -20,17 +20,9 @@ type
   StringSlice* = ref StringSliceObj not nil
   StringSliceOrNil* = ref StringSliceObj
   StringSliceObj* = object
-    str*: ref string not nil
-    start*: int32
-    stop*: int32
-
-proc `$`*(str: StringSlice): string =
-  ## Converts a string slice to a string
-  return str.str[str.start .. str.stop]
-
-  # if not isNil(str) and not isNil(str.str):
-  #     str.str[str.start .. str.stop]
-  # else: ""
+    buf: ref string not nil
+    start: int32
+    stop: int32
 
 proc newStringSlice*(str: ref string or string): StringSlice {.noInit.} =
   ## Create a new string slice that references the string. This creates a new
@@ -39,12 +31,12 @@ proc newStringSlice*(str: ref string or string): StringSlice {.noInit.} =
   # new result
   result = new(StringSlice)
   when str is ref string:
-    result.str = str
+    result.buf = str
   else:
     let s: ref string = new(string)
     if not isNil(s):
       s[] = str
-      result.str = s
+      result.buf = s
   result.start = 0
   result.stop = str.len.int32 - 1
 
@@ -52,6 +44,15 @@ converter toStringSlice*(str: StringSlice or ref string or string): StringSlice 
   ## Automatic converter to create a string slice from a string
   when str is StringSlice: str  else: newStringSlice(str)
 
+proc `$`*(str: StringSlice): string =
+  ## Converts a string slice to a string
+  return str.buf[str.start .. str.stop]
+
+func str*(str: StringSlice): ref string not nil = str.buf
+
+func first*(str: StringSlice): int32 = str.start
+
+func last*(str: StringSlice): int32 = str.stop
 
 proc `[]`*(str: StringSlice,
            slc: HSlice[int, int or BackwardsIndex]): StringSlice {.noInit.} =
@@ -60,7 +61,7 @@ proc `[]`*(str: StringSlice,
   if slc.a < 0:
     raise newException(IndexDefect, "index out of bounds")
   result = new(StringSlice)
-  result.str = str.str
+  result.buf = str.buf
   result.start = str.start + slc.a.int32
   when slc.b is BackwardsIndex:
     if slc.b.int > str.len + 1:
@@ -91,10 +92,10 @@ proc startsWith*[T: StringSlice or string](str: StringSlice, sub: T): bool =
   if sub.len > str.len: return false
   when T is StringSlice:
     for i in sub.start..sub.stop:
-      if str.str[i + str.start - sub.start] != sub.str[i]: return false
+      if str.buf[i + str.start - sub.start] != sub.buf[i]: return false
   else:
     for idx, c in sub:
-      if str.str[idx + str.start] != c: return false
+      if str.buf[idx + str.start] != c: return false
   return true
 
 proc `==`*[T: StringSlice or string](str: StringSlice, cmp: T): bool =
@@ -103,7 +104,7 @@ proc `==`*[T: StringSlice or string](str: StringSlice, cmp: T): bool =
   if str.len != cmp.len: return false
   when T is StringSlice:
     for i in cmp.start..cmp.stop:
-      if str.str[i + str.start - cmp.start] != cmp.str[i]: return false
+      if str.buf[i + str.start - cmp.start] != cmp.buf[i]: return false
     return true
   else:
     return str.startsWith(cmp)
@@ -112,7 +113,7 @@ proc find*(a: SkipTable, s: StringSlice, sub: string,
   start: Natural = 0, last: Natural = 0): int32 =
   ## Finds a string in a string slice. Calls the similar procedure from
   ## ``strutils`` but with updated start and last references.
-  result = strutils.find(a, s.str[], sub, start + s.start, last + s.start).int32 - s.start
+  result = strutils.find(a, s.buf[], sub, start + s.start, last + s.start).int32 - s.start
   if result < 0 or result > s.stop - sub.high:
     result = -1
 
@@ -120,7 +121,7 @@ proc find*(s: StringSlice, sub: char,
   start: Natural = 0, last: Natural = 0): int32 =
   ## Finds a string in a string slice. Calls the similar procedure from
   ## ``strutils`` but with updated start and last references.
-  result = strutils.find(s.str[], sub, start + s.start, last + s.start).int32 - s.start
+  result = strutils.find(s.buf[], sub, start + s.start, last + s.start).int32 - s.start
   if result < 0 or result > s.stop:
     result = -1
 
@@ -128,7 +129,7 @@ proc find*(s: StringSlice, sub: string,
   start: Natural = 0, last: Natural = 0): int =
   ## Finds a string in a string slice. Calls the similar procedure from
   ## ``strutils`` but with updated start and last references.
-  result = strutils.find(s.str[], sub, start + s.start, s.start + (if last == 0: s.stop - s.start else: last.int32)) - s.start
+  result = strutils.find(s.buf[], sub, start + s.start, s.start + (if last == 0: s.stop - s.start else: last.int32)) - s.start
   if result < 0 or result > s.stop - sub.high:
     result = -1
 
@@ -138,7 +139,7 @@ proc find*(s: StringSlice, sub: StringSlice,
   ## when both string slices are from the same base string, as it will compare
   ## only the indices. Otherwise it will convert the string slice to find into
   ## a regular string and call the normal find operation.
-  if s.str == sub.str:
+  if s.buf == sub.buf:
     if sub.start >= s.start + start and sub.stop - s.start <= s.stop - (s.start + last):
       sub.start - s.start
     else:
@@ -151,22 +152,22 @@ proc strip*(s: StringSlice, first = true, last = true): StringSlice {.noInit.} =
   ## ``last`` arguments) of the string slice and returns a new string slice
   ## with the same underlying string.
   result = new(StringSlice)
-  result.str = s.str
+  result.buf = s.buf
   result.start = s.start
   result.stop = s.stop
   if first:
     for i in result.start..result.stop:
-      if not (result.str[i] in Whitespace): break
+      if not (result.buf[i] in Whitespace): break
       result.start += 1
   if last:
     for i in countdown(result.stop, result.start):
-      if not (result.str[i] in Whitespace): break
+      if not (result.buf[i] in Whitespace): break
       result.stop -= 1
 
 iterator items*(a: StringSlice): char =
   ## Iterate over each character in a string slice
   for i in a.start..a.stop:
-    yield a.str[i]
+    yield a.buf[i]
 
 when isMainModule:
   let
