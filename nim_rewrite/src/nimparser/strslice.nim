@@ -24,13 +24,15 @@ type
     stop: int32
 
 proc ensureStrRef(): ref string not nil =
+  ## Create a new ref string object that is sure to be not nil.
   new(result)
 
-proc EmptyStrRef(): ref string not nil =
+proc ensureEmptyStrRef(): ref string not nil =
+  ## Create a new empty ref string that is sure to be not nil.
   result = ensureStrRef()
   result[] = ""
 
-let EMPTY_STRSLICE* = StringSlice(buf: EmptyStrRef(), start: 0, stop: 0)
+let EMPTY_STRSLICE* = StringSlice(buf: ensureEmptyStrRef(), start: 0, stop: 0)
 
 
 proc newStringSlice*(str: ref string or string): StringSlice {.noInit.} =
