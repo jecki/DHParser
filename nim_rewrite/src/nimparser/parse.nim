@@ -44,7 +44,7 @@ type
   GrammarRef* = ref GrammarObj not nil
   GrammarObj = object of RootObj
     name: string
-    document: StringSlice = EMPTY_STRSLICE
+    document: StringSlice
     roots: seq[Parser]
     returnItem: ReturnItemProc
     returnSequence: ReturnSequenceProc
@@ -202,11 +202,13 @@ type
   TextObj = object of ParserObj
     text: string
     slice: StringSlice
+    empty: bool
 
 proc init*(textParser: TextRef, text: string): TextRef =
   discard Parser(textParser).init(":Text")
   textParser.text = text
   textParser.slice = toStringSlice(text)
+  textParser.empty = (text.len == 0)
   return textParser
 
 proc Text*(text: string): TextRef =
@@ -220,9 +222,9 @@ method parse*(self: TextRef, location: int): ParsingResult =
   if self.grammar.document.str[].continuesWith(self.text, location):
     if self.dropContent:
       return (EMPTY_NODE, location + self.text.len)
-    elif self.text != "" or not self.disposable:
-      return (newNode(self.nodeName, self.slice), location + self.text.len)
-    return (EMPTY_NODE, location)
+    elif self.disposable and self.empty:
+      return (EMPTY_NODE, location)  
+    return (newNode(self.nodeName, self.slice), location + self.text.len)
   return (nil, location)
 
 
@@ -237,6 +239,8 @@ type
   RegexObj = object of ParserObj
     regex: Regex
 
+proc rx(rx_str: string): Regex = re("(*UTF8)(*UCP)" & rx_str)
+
 proc init*(regexParser: RegexRef, regex: Regex): RegexRef =
   discard Parser(regexParser).init(":Regex")
   regexParser.regex = regex
@@ -250,14 +254,14 @@ method parse*(self: RegexRef, location: int): ParsingResult =
     import nodetree, regex
     doAssert Regex(re"\w+")("ABC").node.asSxpr() == "(:Regex \"ABC\")"
 
-  var l = matchLen(self.grammar.document.str, self.regex, location)
+  var l = matchLen(self.grammar.document.str[], self.regex, location)
   if l >= 0:
-    let text = self.grammar.document[location..<location+l]
+    let text: StringSlice = self.grammar.document[location..<location+l]
     if self.dropContent:
       return (EMPTY_NODE, location + text.len)
-    elif text != "" or not self.disposable:
-      return (newNode(self.nodeName, text), location + text.len)
-    return (EMPTY_NODE, location)
+    elif self.disposable and text == "":
+      return (EMPTY_NODE, location)
+    return (newNode(self.nodeName, text), location + text.len)
   return (nil, location)
 
 
