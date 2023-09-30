@@ -4,6 +4,7 @@
 
 import std/math
 import std/options
+import std/sets
 import std/strformat
 import std/strutils
 import std/re
@@ -36,6 +37,7 @@ type
     grammar: GrammarRef
     symbol: ParserOrNil
     subParsers: seq[Parser]
+    closure: HashSet[Parser]
     parseProxy: ParseProc not nil
 
   # the GrammarObj
@@ -140,6 +142,8 @@ proc init*(parser: Parser, ptype: string = ":Parser"): Parser =
   parser.grammar = GrammarPlaceholder
   parser.symbol = nil
   parser.subParsers = @[]
+  # parser.closure = initHashSet[Parser]()
+  parser.closure.init()
   parser.parseProxy = callParseMethod
   return parser
 
@@ -218,7 +222,9 @@ method parse*(self: TextRef, location: int): ParsingResult =
   runnableExamples:
     import nodetree
     doAssert Text("A")("A").node.asSxpr() == "(:Text \"A\")"
-
+ 
+  echo $self.grammar.document
+  echo self.text
   if self.grammar.document.str[].continuesWith(self.text, location):
     if self.dropContent:
       return (EMPTY_NODE, location + self.text.len)
@@ -303,6 +309,7 @@ proc init*(repeat: RepeatRef, parser: Parser, repRange: Range): RepeatRef =
   discard Parser(repeat).init(":Repeat")
   repeat.subParsers = @[parser]
   repeat.repRange = repRange
+  return repeat
 
 proc Repeat*(parser: Parser, repRange: Range): RepeatRef =
   return new(RepeatRef).init(parser, repRange)
@@ -356,6 +363,9 @@ when isMainModule:
 #   echo $cst
   echo Text("A")("A").node.asSxpr
   doAssert Text("A")("A").node.asSxpr == "(:Text \"A\")"
+  echo Regex(rx"\w+")("ABC").node.asSxpr
+  doAssert Regex(rx"\w+")("ABC").node.asSxpr == "(:Regex \"ABC\")"
+  echo Repeat(Text("A"), (1u32, 3u32))("AA").node.asSxpr
 
 
 

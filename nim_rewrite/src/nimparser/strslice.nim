@@ -35,13 +35,13 @@ proc ensureEmptyStrRef(): ref string not nil =
 let EMPTY_STRSLICE* = StringSlice(buf: ensureEmptyStrRef(), start: 0, stop: 0)
 
 
-proc newStringSlice*(str: ref string or string): StringSlice {.noInit.} =
+proc newStringSlice*(str: ref string or string): StringSlice =
   ## Create a new string slice that references the string. This creates a new
   ## reference to the string, so any changes to the underlying string will be
   ## visible in all slices made from this string.
   # new result
   when str is ref string:
-    result = new(StringSlice)
+    result = new StringSlice
     result.buf = str
     result.start = 0
     result.stop = str.len.int32 - 1
@@ -49,19 +49,20 @@ proc newStringSlice*(str: ref string or string): StringSlice {.noInit.} =
     if str.len == 0:  
       result = EMPTY_STRSLICE
     else:
-      result = new(StringSlice)
+      result = new StringSlice 
       result.buf = ensureStrRef()
       result.buf[] = str
       result.start = 0
       result.stop = str.len.int32 - 1
 
 
-converter toStringSlice*(str: StringSlice or ref string or string): StringSlice {.noInit.} =
+converter toStringSlice*(str: StringSlice or ref string or string): StringSlice  =
   ## Automatic converter to create a string slice from a string
-  when str is StringSlice: str  else: newStringSlice(str)
+  when str is StringSlice: str  else: newStringSlice str
 
 proc `$`*(str: StringSlice): string =
   ## Converts a string slice to a string
+  if str.start == str.stop:  return ""
   return str.buf[str.start .. str.stop]
 
 func str*(str: StringSlice): ref string not nil = str.buf
@@ -71,12 +72,12 @@ func first*(str: StringSlice): int32 = str.start
 func last*(str: StringSlice): int32 = str.stop
 
 proc `[]`*(str: StringSlice,
-           slc: HSlice[int, int or BackwardsIndex]): StringSlice {.noInit.} =
+           slc: HSlice[int, int or BackwardsIndex]): StringSlice =
   ## Grab a slice of a string slice. This returns a new string slice that
   ## references the same underlying string.
   if slc.a < 0:
     raise newException(IndexDefect, "index out of bounds")
-  result = new(StringSlice)
+  result = new StringSlice
   result.buf = str.buf
   result.start = str.start + slc.a.int32
   when slc.b is BackwardsIndex:
@@ -97,7 +98,7 @@ proc len*(str: StringSlice): int32 =
   ## Get the length of a string slice
   str.high + 1
 
-proc `&`*(sl1, sl2: StringSlice): StringSlice {.noInit.} =
+proc `&`*(sl1, sl2: StringSlice): StringSlice =
   ## Concatenate two string slices like the regular `&` operator does for
   ## strings. WARNING: This creates a new underlying string.
   newStringSlice($sl1 & $sl2)
