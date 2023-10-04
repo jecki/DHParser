@@ -2166,9 +2166,10 @@ class Grammar:
         elif parser.pname:
             symbol = parser
         else:
-            self.root_parser__.apply_to_trail(find_symbol_for_parser)
-            for resume_parser in self.unconnected_parsers__:
-                resume_parser.apply_to_trail(find_symbol_for_parser)
+            if not self.root_parser__.apply_to_trail(find_symbol_for_parser):
+                for resume_parser in self.unconnected_parsers__:
+                    if resume_parser.apply_to_trail(find_symbol_for_parser):
+                        break
             if symbol is None:
                 raise AttributeError('Parser %s (%i) is not contained in Grammar!'
                                      % (str(parser), id(parser)))

@@ -52,7 +52,8 @@ from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.error import is_error, is_fatal, Error, FATAL, \
     TREE_PROCESSING_CRASH, COMPILER_CRASH, AST_TRANSFORM_CRASH, has_errors
 from DHParser.log import log_parsing_history, log_ST, is_logging
-from DHParser.toolkit import load_if_file, is_filename, re, TypeAlias
+from DHParser.toolkit import load_if_file, is_filename, re, TypeAlias, \
+    deprecation_warning, ThreadLocalSingletonFactory
 
 
 __all__ = ('CompilerError',
@@ -615,10 +616,28 @@ def run_pipeline(junctions: Set[Junction],
         expected_stage = junction[field]
         stage_type = 'source stage' if field == 0 else 'target stage'
         if given_stage.lower() != expected_stage.lower():
-            raise AssertionError(f'Expected {stage_type} "{expected_stage}" but found '
-                f'"{given_stage}" in "{junction[0]} -> {junction[2]}"-transformation! '
-                'Possible causes:  a) wrong stage name specified in junction  b) stage name not '
+            if isinstance(junction[1], ThreadLocalSingletonFactory):
+                func = junction[1].class_or_factory.__name__
+            else:
+                func = junction[1].__name__
+            error_msg = (f'Expected {stage_type} "{expected_stage}" but found '
+                f'"{given_stage}" when applying {junction[0]}->{junction[2]} ({func})! '
+                'Possible causes: a) wrong stage name specified in junction  b) stage name not '
                 f'updated by compilation-function  c) internal error of DHParser. {further_info}')
+            import traceback
+            stack = traceback.extract_stack()
+            for call in stack:
+                if call.line.find('run_grammar_tests') >= 0:
+                    if call.line.find('get_') >= 0:
+                        # Be kind and backwards-compatible with old code
+                        deprecation_warning(f'Your transformation {junction[0]}->{junction[2]}: '
+                            f"{func} failed to update RootNode.stage "
+                            f'with the name of the target stage: "{junction[2]}"! '
+                            f'Future versions of DHParser might fail right here.')
+                        print(error_msg)
+                        break
+            else:
+                raise AssertionError(error_msg)
 
     def normalize_name(name: str) -> str:
         NAME = name.upper()
