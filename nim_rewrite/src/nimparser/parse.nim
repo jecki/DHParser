@@ -142,7 +142,7 @@ proc init*(parser: Parser, ptype: string = ":Parser"): Parser =
   parser.grammar = GrammarPlaceholder
   parser.symbol = nil
   parser.subParsers = @[]
-  # parser.closure = initHashSet[Parser]()
+  # parser.closure = toHashSet[Parser]()
   parser.closure.init()
   parser.parseProxy = callParseMethod
   return parser

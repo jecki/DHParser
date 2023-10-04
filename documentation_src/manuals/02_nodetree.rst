@@ -800,7 +800,7 @@ string content may miss phrases separated by a page break::
     >>> tree = parse_xml('<doc>xyz New<pb/>York xyz</doc>')
     >>> print(tree.content)
     xyz NewYork xyz
-    >>> re.search('New\s+York', tree.content)
+    >>> re.search(r'New\s+York', tree.content)
 
 Currently, the only remedy is to either allow redundant encoding
 of textual meanings within the string-content or adding specific

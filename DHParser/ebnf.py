@@ -107,7 +107,7 @@ as the public API of the ebnf-module.
 THis said, here is how a Python-parser can be generated 
 from a grammar, step by step::
 
-    >>> arithmetic_ebnf = """
+    >>> arithmetic_ebnf = r"""
     ... @ whitespace  = vertical
     ... @ literalws   = right                
     ... @ drop        = whitespace, strings
@@ -1112,7 +1112,7 @@ def parse_ebnf(ebnf: str) -> Node:
 def pythonize_identifier(path: Path):
     """A mekshift solution to allow identifiers with dashes: replace - by _"""
     assert not path[-1].children
-    path[-1]._result = re.sub('(?<=\w)-(?=\w)', '_', path[-1]._result)
+    path[-1]._result = re.sub(r'(?<=\w)-(?=\w)', '_', path[-1]._result)
 
 
 EBNF_AST_transformation_table = {

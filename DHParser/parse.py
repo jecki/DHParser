@@ -4599,7 +4599,7 @@ class Forward(UnaryParser):
     nested, e.g.::
 
         >>> class Arithmetic(Grammar):
-        ...     '''
+        ...     r'''
         ...     expression =  term  { ("+" | "-") term }
         ...     term       =  factor  { ("*" | "/") factor }
         ...     factor     =  INTEGER | "("  expression  ")"

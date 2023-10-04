@@ -69,7 +69,7 @@ transform node-trees. As an example we use a rudimentary XML-parser that
 only parses tags and text but no empty elements, attributes, comments,
 processing instructions, declarations and the like::
 
-    >>> mini_xml_grammar = """
+    >>> mini_xml_grammar = r"""
     ...     @ whitespace  = /\s*/
     ...     @ disposable  = EOF
     ...     @ drop        = EOF, whitespace, strings
@@ -281,7 +281,7 @@ Compiling to other structures
 
 Here is an excerpt from that Compiler-class, again:
 
-    >>> json_grammar = '''
+    >>> json_grammar = r'''
     ... @literalws  = right  # eat insignificant whitespace to the right of literals
     ... @whitespace = /\s*/  # regular expression for insignificant whitespace
     ... @drop       = whitespace, strings  # silently drop bare strings and whitespace

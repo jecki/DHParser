@@ -477,7 +477,7 @@ without a value, whenever a bool value or null occurs in the input::
     ...     member     = string ":" ~ _element
     ...     array      = "[" ~ ( _element ( "," ~ _element )* )? "]" ~
     ...     string     = `"` _CHARS `"` ~
-    ...       _CHARS   = /[^"\\\\]+/ | /\\[\/bnrt\\]/
+    ...       _CHARS   = /[^"\\\\]+/ | /\\[\\/bnrt\\]/
     ...     number     = _INT _FRAC? _EXP? ~
     ...       _INT     = /[-]/? ( /[1-9][0-9]+/ | /[0-9]/ )
     ...       _FRAC    = /[.]/ /[0-9]+/
@@ -594,7 +594,7 @@ and tilde (whitespace) -marker. Also, we already added the
     ...     member     = string ":" ~ _element
     ...     array      = "[" ~ ( _element ( "," ~ _element )* )? "]" ~
     ...     string     = `"` _CHARS `"` ~
-    ...       _CHARS   = /[^"\\\\]+/ | /\\[\/bnrt\\]/  -> HIDE
+    ...       _CHARS   = /[^"\\\\]+/ | /\\[\\/bnrt\\]/  -> HIDE
     ...     number     = _INT _FRAC? _EXP? ~
     ...       _INT     = /[-]/? ( /[1-9][0-9]+/ | /[0-9]/ ) -> HIDE
     ...       _FRAC    = /[.]/ /[0-9]+/  -> HIDE
@@ -1413,7 +1413,7 @@ deliver understandable error-messages::
     ... string          = `"` §characters `"` ~
     ... characters      = { plain | escape }
     ... plain           = /[^"\\\\]+/
-    ... escape          = /\\[\/bnrt\\]/'''
+    ... escape          = /\\[\\/bnrt\\]/'''
     >>> json_string = create_parser(grammar, 'json_string')
     >>> print(json_string('"alpha"'))
     "alpha"
@@ -1437,10 +1437,10 @@ Therefore, the more specific conditions should always be placed first
 and the more general or fallback conditions should be placed
 below these::
 
-    >>> grammar = ("@ string_error  = /\\\/, 'Illegal escape sequence »{1}« "
+    >>> grammar = ("@ string_error  = /\\\\/, 'Illegal escape sequence »{1}« "
     ...            "Allowed values are b,n,r,t,u'") + grammar
     >>> json_string = create_parser(grammar, 'json_string')
-    >>> for e in json_string('"al\pha"').errors:  print(e)
+    >>> for e in json_string(r'"al\pha"').errors:  print(e)
     1:4: Error (1010): Illegal escape sequence »\pha"...« Allowed values are b,n,r,t,u
 
 Here, the more specific and more understandable error message
@@ -1734,7 +1734,7 @@ example, the skip-directive picks up parsing with the string-
 parser when an error was raised by the string-parser::
 
     >>> grammar = '''
-    ... @ string_error  = /\\\/, 'Illegal escape sequence »{1}«'
+    ... @ string_error  = /\\\\/, 'Illegal escape sequence »{1}«'
     ... @ string_error  = '', 'Illegal character "{1}" in string.'
     ... @ string_skip   = /(?=")/
     ... string          = `"` §characters `"` ~
@@ -1773,7 +1773,7 @@ point for reentry is the location *after* the next match of the regular
 expression::
 
     >>> grammar = grammar.replace('@ string_skip   = /(?=")/',
-    ...                           '@ string_resume = /("\s*)/')
+    ...                           r'@ string_resume = /("\s*)/')
     >>> json_string = create_parser(grammar, 'json_string')
     >>> tree = json_string('"al\\pha"')
     >>> print(tree.content)
@@ -1861,7 +1861,7 @@ complete text from the error location to the reentry-point.
 As an example, let's try this with a parser for arbitrarily nested lists
 of positive integers. First, we write our grammar without any re-entry rules::
 
-    >>> number_list_grammar = '''@ literalws   = right
+    >>> number_list_grammar = r'''@ literalws   = right
     ... @ disposable  = /_\w+/
     ... @ drop        = _EOF, whitespace, strings
     ... _document = ~ [ list ] §_EOF
@@ -2486,7 +2486,7 @@ tag-names::
     ... @ disposable  = EOF
     ... @ drop        = EOF, whitespace, strings
     ... document = ~ element ~ §EOF
-    ... @element_resume = ('</' /\w+/ '>')
+    ... @element_resume = ('</' /\\w+/ '>')
     ... element  = STag §content ETag
     ... STag     = '<' TagName §'>'
     ... ETag     = '</' ::TagName §'>'
@@ -2512,7 +2512,7 @@ We can try to avoid this problem by "popping" one element from the stack
 within our resume rule. This is of course only possible, if we specify our
 resume rule as full PEG-expression, not just a regular expression::
 
-    >>> new_resume_rule = "@element_resume = (:?TagName '</' /\w+/ '>')"
+    >>> new_resume_rule = r"@element_resume = (:?TagName '</' /\w+/ '>')"
 
 The regular expression ``/\s*(?=>)/`` merely has the purpose to cover
 ending-tags that fail to parse because of superfluous blanks before the
@@ -2560,7 +2560,7 @@ required empirical information for this approach.)
 
 A more robust rule-set for our mini-XML-grammar might be::
 
-    >>> miniXML = '''
+    >>> miniXML = r'''
     ... @ whitespace  = /\s*/
     ... @ disposable  = EOF
     ... @ drop        = EOF, whitespace, strings
@@ -2768,7 +2768,7 @@ function - as in the example above.
 
 This also works for parsing functions without arguments, of course::
 
-    >>> word_parser_factory = """
+    >>> word_parser_factory = r"""
     ... def parse_word() -> CustomParseFunc:
     ...     RX_WORD = re.compile(r'\w+')
     ...     def inner_parse_word(rest: StringView) -> Optional[Node]:
@@ -2798,7 +2798,7 @@ but without argument::
 to the custom parser it can also be implemented without a
 factory-wrapper, just as a simple parsing function::
 
-    >>> plain_word_parser = """
+    >>> plain_word_parser = r"""
     ... def parse_word(rest: StringView) -> Optional[Node]:
     ...     m = rest.match(re.compile(r'\w+'))
     ...     if m:
