@@ -1759,10 +1759,9 @@ class EBNFCompiler(Compiler):
                     '    def prepare(self, root: RootNode) -> None:',
                     '        assert root.stage == "AST", f"Source stage `AST` expected, '
                                                          '`but `{root.stage}` found."',
+                    f'        root.stage = "{self.grammar_name}"'
                     '',
                     '    def finalize(self, result: Any) -> Any:',
-                    '        if isinstance(self.tree, RootNode):',
-                    f'            self.tree.stage = "{self.grammar_name}"',
                     '        return result',
                     '']
         c = Compiler()

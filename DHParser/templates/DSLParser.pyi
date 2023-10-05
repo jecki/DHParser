@@ -9,7 +9,7 @@
 
 # # change the names of the source and destination stages. Source
 # # ("{NAME}") in this example must be the name of some earlier stage, though.
-# postprocessing: Junction = create_transition("{NAME}", "refined", PostProcessing)
+# postprocessing: Junction = create_junction(PostProcessing, "{NAME}", "refined")
 #
 
 #######################################################################

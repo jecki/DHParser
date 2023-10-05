@@ -603,9 +603,12 @@ def never(path: Path) -> bool:
     return False
 
 @transformation_factory(collections.abc.Callable)
-def neg(path: Path, bool_func: collections.abc.Callable) -> bool:
-    """Returns the inverted boolean result of `bool_func(path)`"""
-    return not bool_func(path)
+def neg(path: Path, bool_func: collections.abc.Callable) -> Optional[bool]:
+    """Returns the inverted boolean result of ``bool_func(path)``,
+    unless the result is None. In that case None is passed through."""
+    cond =  bool_func(path)
+    if cond is None:  return None
+    return not cond
 
 
 @transformation_factory(collections.abc.Set)
@@ -633,6 +636,24 @@ def all_of(path: Path, bool_func_set: AbstractSet[collections.abc.Callable]) -> 
 # the last element of the list is the node itself.
 #
 #######################################################################
+
+@transformation_factory(collections.abc.Callable)
+def three_valued(path: Path, cond_true: Callable, cond_false: Callable) -> Optional[bool]:
+    """Returns True, if ``cond_true`` evaluates to True, 
+    Rweturns False, if ``cond_true`` does not evaluate to True but
+    cond_false evaluates to True. Returns None, otherwise.
+    
+    Note that this means that the first parameter has precedence.
+    Expresses as truth-table, this looks like::
+
+        T T -> T
+        T F -> T
+        F T -> F
+        F F -> None
+    """
+    if cond_true(path):  return True
+    elif cond_false(path):  return False
+    else: return None
 
 
 def is_single_child(path: Path) -> bool:
@@ -979,15 +1000,17 @@ def reduce_single_child(path: Path):
 @transformation_factory(collections.abc.Callable)
 def replace_or_reduce(path: Path, condition: Callable = is_named):
     """
-    Replaces node by a single child, if condition is met on child,
-    otherwise (i.e. if the child is anonymous) reduces the child.
+    Replaces node by a single child, if condition is True on child.
+    Reduces the child, if condition is not True and not None.
+    If the condition is None nothing is changed.
     """
     node = path[-1]
     if len(node._children) == 1:
         child = node._children[0]
-        if condition(path):
+        cond = condition(path)
+        if cond:
             _replace_by(node, child, cast(RootNode, path[0]))
-        else:
+        elif cond is not None:
             _reduce_child(node, child, cast(RootNode, path[0]))
 
 

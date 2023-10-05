@@ -11,7 +11,7 @@ import collections
 from functools import partial
 import os
 import sys
-from typing import Tuple, List, Union, Any, Optional, Callable, cast
+from typing import Tuple, List, Union, Any, Optional, Callable, Set, cast
 
 try:
     import regex as re
@@ -64,7 +64,8 @@ from DHParser.transform import is_empty, remove_if, TransformationDict, Transfor
     replace_content_with, forbid, assert_content, remove_infix_operator, add_error, error_on, \
     left_associative, lean_left, node_maker, has_descendant, neg, has_ancestor, insert, \
     positions_of, replace_child_names, add_attributes, delimit_children, merge_connected, \
-    has_attr, has_parent, has_children, has_child, apply_unless, apply_ifelse, traverse
+    has_attr, has_parent, has_children, has_child, apply_unless, apply_ifelse, traverse, \
+    three_valued
 from DHParser import parse as parse_namespace__
 
 import DHParser.versionnumber
@@ -166,8 +167,9 @@ outline_AST_transformation_table = {
     # "*": [],  # fallback for nodes that do not appear in this table
     # ">": [],   # called for each node after calling its specific rules
     "markup, bold, emphasis, text":
-          [merge_adjacent(is_one_of('text', ':Text', ':L', ':LF'), 'text'),
-           apply_if(reduce_single_child, is_one_of('text'))],
+          [merge_adjacent(is_one_of('text', ':Text', ':L', ':RegExp', ':CHARS'), 'text'),
+           apply_if(replace_by_single_child, is_one_of({'text'}))],
+          # apply_if(reduce_single_child, has_child({'text'}))],
     "LF": [replace_content_with(' '), change_name(':L')],
     ":GAP": [change_name('GAP')]
 }
@@ -187,6 +189,20 @@ ASTTransformation: Junction = Junction(
 #
 #######################################################################
 
+
+def flatten_children(parent: Node, which: Set[str]):
+    """Replaces children of "parent" named "which" by the 
+    children of "which"."""
+    children = []
+    for child in parent.children:
+        if child.name in which:
+            assert child.children or not child.result
+            children.extend(child.children)
+        else:
+            children.append(child)
+    parent.result = tuple(children)
+
+
 class outlineCompiler(Compiler):
     """Compiler for the abstract-syntax-tree of a 
         outline source file.
@@ -202,73 +218,80 @@ class outlineCompiler(Compiler):
 
     def prepare(self, root: RootNode) -> None:
         assert root.stage == "AST", f"Source stage `CST` expected, `but `{root.stage}` found."
+        root.stage = "DOM"
 
     def finalize(self, result: Any) -> Any:
-        if isinstance(self.tree, RootNode):
-            self.tree.stage = "outline"
         return result
 
     def on_document(self, node):
-        return self.fallback_compiler(node)
+        node = self.fallback_compiler(node)
+        flatten_children(node, {"main"})
+        node.name = "body"
+        return node
 
-    # def on_main(self, node):
-    #     return node
+    def on_main(self, node):
+        node = self.fallback_compiler(node)
+        node['heading'].name = 'h1'
+        flatten_children(node, {"section", "blocks"})
+        return node
 
-    # def on_section(self, node):
-    #     return node
+    def on_section(self, node):
+        node = self.fallback_compiler(node)
+        node['heading'].name = 'h2'
+        flatten_children(node, {"subsection", "blocks"})
+        return node
 
-    # def on_subsection(self, node):
-    #     return node
+    def on_subsection(self, node):
+        node = self.fallback_compiler(node)
+        flatten_children(node, {"subsubsection", "blocks"})
+        node['heading'].name = 'h3'
+        return node
 
-    # def on_subsubsection(self, node):
-    #     return node
+    def on_subsubsection(self, node):
+        node = self.fallback_compiler(node)
+        flatten_children(node, {"s5section", "blocks"})
+        node['heading'].name = 'h4'        
+        return node
 
-    # def on_s5section(self, node):
-    #     return node
+    def on_s5section(self, node):
+        node = self.fallback_compiler(node)        
+        node['heading'].name = 'h5'
+        flatten_children(node, {"s6section", "blocks"})
+        return node
 
-    # def on_s6section(self, node):
-    #     return node
+    def on_s6section(self, node):
+        node = self.fallback_compiler(node)
+        node['heading'].name = 'h6'
+        flatten_children(node, {"blocks"})
+        return node
 
-    # def on_heading(self, node):
-    #     return node
-
-    # def on_blocks(self, node):
-    #     return node
-
-    # def on_block(self, node):
-    #     return node
-
-    # def on_line(self, node):
-    #     return node
-
-    # def on_lf(self, node):
-    #     return node
-
-    # def on_is_heading(self, node):
-    #     return node
-
-    # def on_LINE(self, node):
-    #     return node
-
-    # def on_WS(self, node):
-    #     return node
-
-    # def on_S(self, node):
-    #     return node
-
-    # def on_PARSEP(self, node):
-    #     return node
-
-    # def on_NEVER_MATCH(self, node):
-    #     return node
-
-    # def on_EOF(self, node):
-    #     return node
-
+    def on_markup(self, node):
+        node = self.fallback_compiler(node)
+        if node[0].name == 'indent':
+            node.attr['style'] = "text-indent: 2em;"
+            del node[0]
+        if len(node.children) == 1 and node[0].name == 'text':
+           reduce_single_child(self.path)
+        node.name = "p"
+        return node
+    
+    def on_bold(self, node):
+        node = self.fallback_compiler(node)
+        if len(node.children) == 1 and node[0].name == 'text':
+            reduce_single_child(self.path)
+        node.name = "b"
+        return node
+    
+    def on_emphasis(self, node):
+        node = self.fallback_compiler(node)
+        if len(node.children) == 1 and node[0].name == 'text':
+            reduce_single_child(self.path)
+        node.name = "i"
+        return node
 
 
 compiling: Junction = create_junction(
-    outlineCompiler, "AST", "outline")
+    outlineCompiler, "AST", "DOM")
 
 
 #######################################################################
@@ -283,13 +306,41 @@ compiling: Junction = create_junction(
 #
 #######################################################################
 
-# class PostProcessing(Compiler):
-#     ...
+HTML_TMPL = """<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <title>{title}</title>
+    <meta charset="utf8"/>
+</head>
+{body}
+</html>
+"""
 
-# # change the names of the source and destination stages. Source
-# # ("outline") in this example must be the name of some earlier stage, though.
-# postprocessing: Junction = create_transition("outline", "refined", PostProcessing)
-#
+
+class HTMLSerializer(Compiler):
+    def __init__(self):
+        super().__init__()
+        self.forbid_returning_None = False
+
+    def reset(self):
+        super().reset()
+        self.title = ''
+
+    def prepare(self, root: RootNode) -> None:
+        assert root.stage == "DOM", f"Source stage `DOM` expected, `but `{root.stage}` found."
+        root.stage = "html"
+        h1 = root.pick('h1')
+        self.title = h1.content if h1 else ''
+
+    def on_body(self, node: Node) -> str:
+        body = node.as_xml(string_tags={'text'})
+        return HTML_TMPL.format(title=self.title, body=body)
+    
+    def wildcard(self, node: Node) -> str:
+        return node.as_xml(string_tags={'text'})
+
+serializing: Junction = create_junction(HTMLSerializer, "DOM", "html")
+
 
 #######################################################################
 
@@ -297,12 +348,12 @@ compiling: Junction = create_junction(
 # (See DHParser.compile for a description of junctions)
 
 # add your own post-processing junctions, here, e.g. postprocessing.junction
-junctions = set([ASTTransformation, compiling])
+junctions = set([ASTTransformation, compiling, serializing])
 # put your targets of interest, here. A target is the name of result (or stage)
 # of any transformation, compilation or postprocessing step after parsing.
 # Serializations of the stages listed here will be written to disk when
 # calling process_file() or batch_process().
-targets = set([compiling.dst])
+targets = set([compiling.dst, serializing.dst])
 # add one or more serializations for those targets that are node-trees
 serializations = expand_table(dict([('*', ['sxpr'])]))
 

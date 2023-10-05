@@ -114,9 +114,8 @@ if __name__ == '__main__':
                           force=False)
         sys.path.append('.')
         from outlineParser import parsing, ASTTransformation, junctions, targets
-        test_targets = {'AST'}
         error_report = run_grammar_tests(arg, parsing.factory, ASTTransformation.factory,
-                                         junctions, test_targets)
+                                         junctions, targets)
         if error_report:
             print('\n')
             print(error_report)
