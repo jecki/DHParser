@@ -13,6 +13,8 @@
 
 {.experimental: "strictNotNil".}
 {.experimental: "strictFuncs".}
+{.experimental: "strictDefs".}
+{.experimental: "strictCaseObjects".}
 
 import strutils
 

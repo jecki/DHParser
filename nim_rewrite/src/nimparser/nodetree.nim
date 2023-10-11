@@ -1,5 +1,7 @@
 {.experimental: "strictNotNil".}
 {.experimental: "strictFuncs".}
+{.experimental: "strictDefs".}
+{.experimental: "strictCaseObjects".}
 
 import std/enumerate
 import std/sequtils

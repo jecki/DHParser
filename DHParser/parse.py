@@ -892,12 +892,12 @@ class Parser:
         Traversal is pre-order. Stops the further application of ``func`` and
         returns ``True`` once ``func`` has returned ``True``.
 
+
         If ``func`` has been applied to all descendant parsers without issuing
         a stop signal by returning ``True``, ``False`` is returned.
 
         if apply is called for the first time on the parser, the parser will be
         conntected to ``grammar``
-
         This use of the return value allows to use the ``apply``-method both
         to issue tests on all descendant parsers (including self) which may be
         decided already after some parsers have been visited without any need

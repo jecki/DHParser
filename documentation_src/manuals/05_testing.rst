@@ -1399,8 +1399,55 @@ letter::
 Testing the processing-pipeline
 -------------------------------
 
-- Also, later stages of the processing pipeline can be tested with
-  the same apparatus as long as their results are serializable
+Also, later stages of the :ref:`processing pipeline <processing_pipline>`
+can be tested with the same apparatus as long as their results are
+either node-trees or serializable as strings. To illustrate both of
+these cases, let us extend our "outline"-parser so that it transforms
+the input documents to HTML in two steps.
+
+In the first step the
+abstract syntaxtree is transformed into a DOM-tree (kind of). In the second step
+the DOM-tree is serialized as an HTML document. With DHParser's
+:py:meth:`~nodetree.Node.as_xml`-function the second step is
+almost trvivial, but for the sake of illustration we will nevertheless
+implement this as a separate processsing stage. This also has the benefit
+that we can test the structure of the DOM-tree independently from
+the formatting of the final HTML-document.
+
+In true test-driven-development spirit, we start to look at the ASTs for
+a couple of examples and then ask ourselves what the DOM should look like
+for these examples. We write down the DOM-trees as tests and then start
+to program the necessary transformations. With the transformations in place,
+we finally run our tests to see if everything works as expected. So let's
+go ahead and write some test or, what amounts to the same, pick some of
+the already written tests and look at the resulting AST in the report file.
+Here are some tests::
+
+    [match:emphasis]
+    D1: "*emphasized*"
+
+    [match:blocks]
+    D1: """First paragraph of text.
+
+    Next paragraph
+    of text."""
+
+    [match:document]
+    D1: M4: """# Simple Test
+
+        ## A test of bold- and emphasis-markup
+
+          This paragraph contains *emphasized
+        text* that spreads over two lines.
+
+          But what ist this: ** *emphasized* and bold**
+        or * **bold** and emphasized*?"""
+
+The ASTs reported in the report .md-files after the test have been run are:
+
+
+
+
 
 
 Conventional Unit-Testing

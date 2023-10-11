@@ -190,19 +190,6 @@ ASTTransformation: Junction = Junction(
 #######################################################################
 
 
-def flatten_children(parent: Node, which: Set[str]):
-    """Replaces children of "parent" named "which" by the 
-    children of "which"."""
-    children = []
-    for child in parent.children:
-        if child.name in which:
-            assert child.children or not child.result
-            children.extend(child.children)
-        else:
-            children.append(child)
-    parent.result = tuple(children)
-
-
 class outlineCompiler(Compiler):
     """Compiler for the abstract-syntax-tree of a 
         outline source file.
@@ -221,48 +208,49 @@ class outlineCompiler(Compiler):
         root.stage = "DOM"
 
     def finalize(self, result: Any) -> Any:
+        if result.name == 'blocks':  result.name = 'div'
         return result
 
     def on_document(self, node):
         node = self.fallback_compiler(node)
-        flatten_children(node, {"main"})
+        flatten([node], is_one_of("main"))
         node.name = "body"
         return node
 
     def on_main(self, node):
         node = self.fallback_compiler(node)
         node['heading'].name = 'h1'
-        flatten_children(node, {"section", "blocks"})
+        flatten([node], is_one_of("section", "blocks"))
         return node
 
     def on_section(self, node):
         node = self.fallback_compiler(node)
         node['heading'].name = 'h2'
-        flatten_children(node, {"subsection", "blocks"})
+        flatten([node], is_one_of("subsection", "blocks"))
         return node
 
     def on_subsection(self, node):
         node = self.fallback_compiler(node)
-        flatten_children(node, {"subsubsection", "blocks"})
+        flatten([node], is_one_of("subsubsection", "blocks"))
         node['heading'].name = 'h3'
         return node
 
     def on_subsubsection(self, node):
         node = self.fallback_compiler(node)
-        flatten_children(node, {"s5section", "blocks"})
+        flatten([node], is_one_of("s5section", "blocks"))
         node['heading'].name = 'h4'        
         return node
 
     def on_s5section(self, node):
         node = self.fallback_compiler(node)        
         node['heading'].name = 'h5'
-        flatten_children(node, {"s6section", "blocks"})
+        flatten([node], is_one_of("s6section", "blocks"))
         return node
 
     def on_s6section(self, node):
         node = self.fallback_compiler(node)
         node['heading'].name = 'h6'
-        flatten_children(node, {"blocks"})
+        flatten([node], is_one_of("blocks"))
         return node
 
     def on_markup(self, node):

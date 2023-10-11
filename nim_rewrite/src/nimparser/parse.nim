@@ -1,6 +1,9 @@
-{.experimental: "strictNotNil".} 
 {.experimental: "callOperator".}
+{.experimental: "strictNotNil".} 
 {.experimental: "strictFuncs".}
+{.experimental: "strictDefs".}
+{.experimental: "strictCaseObjects".}
+
 
 import std/math
 import std/options
