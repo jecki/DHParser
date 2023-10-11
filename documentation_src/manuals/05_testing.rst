@@ -1443,7 +1443,9 @@ Here are some tests::
           But what ist this: ** *emphasized* and bold**
         or * **bold** and emphasized*?"""
 
-The ASTs reported in the report .md-files after the test have been run are:
+The report files show the following ASTs for these tests::
+
+
 
 
 
