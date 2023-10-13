@@ -2578,6 +2578,8 @@ class SmartRE(RegExp):
     captured group (named as the group or as the number of the group,
     in case it  is not a named group). The space between groups is dropped.
 
+    EXPERIMENTAL
+
     Example::
 
         >>> name = SmartRE(r'(?P<christian_name>\w+)\s+(?P<family_name>\w+)').name("name")
