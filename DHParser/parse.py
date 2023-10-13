@@ -2614,7 +2614,7 @@ class SmartRE(RegExp):
                 if L > 1 or self.node_name[0:1] != ':':
                     return Node(self.node_name, result), end
                 elif L == 1:
-                    return result[0]
+                    return result[0], end
                 return EMPTY_NODE, end
             return EMPTY_NODE, location
         return None, location
