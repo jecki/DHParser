@@ -272,6 +272,13 @@ class TestEBNFParser:
         rx = re.compile(rs[1:-1])
         assert rx.match(r'\\')
 
+    def test_SmartRE(self):
+        ebnf = r"name = /(?P<first_name>\w+)\s+(?P<last_name>\w+)/"
+        gr = create_parser(ebnf, 'SmartRETest')
+        src = 'Arthur Schopenhauer'
+        result = gr(src)
+        assert result.as_sxpr() == '(name (first_name "Arthur") (last_name "Schopenhauer"))'
+
     def test_literal(self):
         snippet = '"text" '
         result = self.EBNF(snippet, 'literal')

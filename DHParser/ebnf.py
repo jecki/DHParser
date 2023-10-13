@@ -248,7 +248,7 @@ from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_
     STRUCTURAL_ERROR_IN_AST, SYMBOL_NAME_IS_PYTHON_KEYWORD, UNDEFINED_SYMBOL, ERROR, FATAL, \
     WRONG_NUMBER_OF_ARGUMENTS, UNKNOWN_MACRO_ARGUMENT, \
     UNDEFINED_MACRO, RECURSIVE_MACRO_CALL, UNUSED_MACRO_ARGUMENTS_WARNING, has_errors
-from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, \
+from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, SmartRE, \
     Drop, Lookahead, NegativeLookahead, Alternative, Series, Option, ZeroOrMore, OneOrMore, \
     Text, Capture, Retrieve, Pop, optional_last_value, GrammarError, Whitespace, Always, Never, \
     Synonym, INFINITE, matching_bracket, ParseFunc, update_scanner, CombinedParser, parser_names
@@ -1261,7 +1261,7 @@ from DHParser.log import start_logging, suspend_logging, resume_logging
 from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode, Path
 from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar, Parser, \\
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, ERR, \\
-    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \\
+    Option, NegativeLookbehind, OneOrMore, RegExp, SmartRE, Retrieve, Series, Capture, TreeReduction, \\
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, mixin_comment, \\
     last_value, matching_bracket, optional_last_value
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \\
@@ -3154,10 +3154,10 @@ class EBNFCompiler(Compiler):
         # return 'Drop(Text(' + text + '))' if drop else 'Text(' + text + ')'
 
 
-    def REGEXP_PARSER(self, regexp, drop):
-        return f'{self.P["Drop"]}({self.P["RegExp"]}({regexp}))' if drop \
-            else f'{self.P["RegExp"]}({regexp})'
-        # return 'Drop(RegExp(' + regexp + '))' if drop else 'RegExp(' + regexp + ')'
+    def REGEXP_PARSER(self, pattern, drop):
+        REClass = "SmartRE" if pattern.find('(?P<') >= 0 else "RegExp"
+        return f'{self.P["Drop"]}({self.P[REClass]}({pattern}))' if drop \
+            else f'{self.P[REClass]}({pattern})'
 
 
     def WSPC_PARSER(self, force_drop=False):

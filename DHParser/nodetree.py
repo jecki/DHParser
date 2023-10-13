@@ -1725,8 +1725,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 if render_pos:
                     if src:
                         line, col = line_col(lbreaks, node.pos)
-                        txt.append((' (pos "%i %i %i")' if sxml else ' `(pos %i %i %i)')
-                                   % (node.pos, line, col))
+                        txt.append((' (pos "%i:%i %i")' if sxml else ' `(pos %i %i  %i)')
+                                   % (line, col, node.pos))
                     else:
                         txt.append((' (pos "%i")' if sxml else ' `(pos %i)') % node.pos)
                 if has_errors and not node.has_attr('err'):

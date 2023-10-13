@@ -1,4 +1,4 @@
-DHParser Version 1.5.1
+DHParser Version 1.6.0
 ......................
 
 - Better support for processing-pipelines: compily.py, dsl.py
@@ -7,6 +7,9 @@ DHParser Version 1.5.1
 - compile.py, dsl.py, testing.py: Testing of processing stages beyond
   the AST is now fully supported, as long as the results can be
   serialized as strings.
+- SmartRE-parser (EXPERIMENTAL) added for more seamless integration
+  of regular expressions: If regular expressions contain named groups,
+  these will appear as named nodes in the tree.
 
 
 DHParser Version 1.5.0

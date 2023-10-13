@@ -144,6 +144,7 @@ parser_names = ('Always',
                 'Text',
                 'DropText',
                 'RegExp',
+                'SmartRE',
                 'RE',
                 'TKN',
                 'DTKN',
@@ -2571,6 +2572,52 @@ class RegExp(LeafParser):
         return self.__class__.__name__, self.regexp.pattern
 
 
+class SmartRE(RegExp):
+    r"""
+    Regular expression parser that returns a tree with a node for every
+    captured group (named as the group or as the number of the group,
+    in case it  is not a named group). The space between groups is dropped.
+
+    Example::
+
+        >>> name = SmartRE(r'(?P<christian_name>\w+)\s+(?P<family_name>\w+)').name("name")
+        >>> Grammar(name)("Arthur Schopenhauer").as_sxpr()
+        '(name (christian_name "Arthur") (family_name "Schopenhauer"))'
+
+    EBNF-Notation:  ``/ ... /``
+
+    EBNF-Example:   ``name = /(?P<first_name>\w+)\s+(?P<last_name>\w+)/``
+    """
+    def __init__(self, regexp) -> None:
+        pattern = regexp if isinstance(regexp, str) else regexp.pattern
+        assert pattern.find('(?P<') >= 0, f"Named group(s) missing in SmartRE: {pattern}"
+        super(SmartRE, self).__init__(regexp)
+
+    def _parse(self, location: cython.int) -> ParsingResult:
+        try:
+            match = self.regexp.match(self._grammar.text__, location)
+        except KeyboardInterrupt:
+            raise KeyboardInterrupt(f'Stopped while processing regular expression:  {self.regexp}'
+                f'  at pos {location}:  {self._grammar.text__[location:location + 40]}  ...')
+        if match:
+            captures = match.groupdict()
+            if sum(len(content) for content in captures.values()) or not self.disposable:
+                end = match.end()
+                if self.drop_content:
+                    return EMPTY_NODE, end
+                result = tuple(Node(name, content) for name, content in captures.items()
+                               if content or not self.disposable)
+                for nd in result:  nd._pos = match.start(nd.name)
+                L = len(result)
+                if L > 1 or self.node_name[0:1] != ':':
+                    return Node(self.node_name, result), end
+                elif L == 1:
+                    return result[0]
+                return EMPTY_NODE, end
+            return EMPTY_NODE, location
+        return None, location
+
+
 def DropText(text: str) -> Text:
     return cast(Text, Drop(Text(text)))
 
@@ -3023,7 +3070,7 @@ def TreeReduction(root_or_parserlist: Union[Parser, Collection[Parser]],
             elif level == CombinedParser.MERGE_TREETOPS:
                 cast(CombinedParser, parser)._return_value = parser._return_value_flatten
                 cast(CombinedParser, parser)._return_values = parser._return_values_merge_treetops
-            else:  # level == CombinedParser.SQUEEZE_TIGHT
+            else:  # level == CombinedParser.MERGE_LEAVES
                 cast(CombinedParser, parser)._return_value = parser._return_value_flatten
                 cast(CombinedParser, parser)._return_values = parser._return_values_merge_leaves
 
