@@ -37,10 +37,11 @@ type
     disposable: bool
     dropContent: bool
     eqClass: uint
-    grammar: GrammarRef
+    grammarVar: GrammarRef
     symbol: ParserOrNil
     subParsers: seq[Parser]
-    closure: HashSet[Parser]
+    cycleReached: bool
+    # closure: HashSet[Parser]
     parseProxy: ParseProc not nil
 
   # the GrammarObj
@@ -50,7 +51,7 @@ type
   GrammarObj = object of RootObj
     name: string
     document: StringSlice
-    roots: seq[Parser]
+    root: seq[Parser]
     returnItem: ReturnItemProc
     returnSequence: ReturnSequenceProc
 
@@ -61,6 +62,7 @@ let
    EmptyPType* = ":EMPTY"
    EmptyNode* = newNode(EmptyPType, "")
 
+## Parser-object infrastructure
 
 proc `$`*(r: ParsingResult): string =
   let tree = $r.node
@@ -68,6 +70,32 @@ proc `$`*(r: ParsingResult): string =
     return fmt"node: {tree}, location: {r.location}"
   else:
     return fmt"node:\n{tree}\nlocation: {r.location}"
+
+
+proc cycleGuard[T](self: Parser, f: proc(): T, alt: T): T =
+  if self.cycleReached:
+    return alt
+  else:
+    self.cycleReached = true
+    result = f()
+    self.cycleReached = false
+
+proc cycleGuard(self: Parser, f: proc()) =
+  if not self.cycleReached:
+    self.cycleReached = true
+    f()
+    self.cycleReached = false
+
+proc `grammar=`*(self: Parser, grammar: GrammarRef) =
+  echo ">>>" & self.nodeName
+  self.grammarVar = grammar
+  for p_lent in self.subParsers:
+    var p = p_lent
+    self.cycleGuard(proc() = p.grammarVar = grammar)
+
+
+proc grammar(self: Parser) : GrammarRef {.inline.} =
+  return self.grammarVar
 
 
 ## procedures performing early tree-reduction on return values of parsers
@@ -120,6 +148,19 @@ proc returnSeqFlatten(parser: Parser, nodes: seq[Node]): Node =
   return newNode(parser.nodeName, "")
 
 
+proc init(grammar: GrammarRef, name: string, document: StringSlice): GrammarRef =
+  grammar.name = name
+  grammar.document = document
+  grammar.root = @[]
+  grammar.returnItem = returnItemFlatten
+  grammar.returnSequence = returnSeqFlatten
+  return grammar
+
+
+proc Grammar(name: string, document: StringSlice): GrammarRef =
+  return new(GrammarRef).init(name, document)
+
+
 let GrammarPlaceholder = GrammarRef(name: "__Placeholder__", document: newStringSlice(""))
 
 
@@ -145,8 +186,8 @@ proc init*(parser: Parser, ptype: string = ":Parser"): Parser =
   parser.grammar = GrammarPlaceholder
   parser.symbol = nil
   parser.subParsers = @[]
-  # parser.closure = toHashSet[Parser]()
-  parser.closure.init()
+  parser.cycleReached = false
+  # parser.closure.init()
   parser.parseProxy = callParseMethod
   return parser
 
@@ -175,7 +216,7 @@ proc `()`*(parser: Parser, location: int): ParsingResult =
 
 
 proc `()`*(parser: Parser, document: string, location: int = 0): ParsingResult =
-  parser.grammar = GrammarRef(name: "adhoc", document: document)  # TODO: do some thing propper here
+  parser.grammar = Grammar("adhoc", StringSlice(document))  # TODO: do some thing propper here
   if parser.parseProxy == callParseMethod:
     return parser.parse(location)
   else:
