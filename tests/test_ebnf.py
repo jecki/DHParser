@@ -279,6 +279,16 @@ class TestEBNFParser:
         result = gr(src)
         assert result.as_sxpr() == '(name (first_name "Arthur") (last_name "Schopenhauer"))'
 
+        ebnf = (r"""@disposable = name
+                name = /(?P<first_name>\w*)\s*(?P<last_name>\w*)/""")
+        gr = create_parser(ebnf, 'SmartRETest')
+        result = gr('Nietzsche')
+        assert result.as_sxpr() == '(first_name "Nietzsche")'
+        result = gr('')
+        assert result.as_sxpr() == '(:EMPTY)'
+        result = gr('$$$')
+        assert result.errors
+
     def test_literal(self):
         snippet = '"text" '
         result = self.EBNF(snippet, 'literal')
