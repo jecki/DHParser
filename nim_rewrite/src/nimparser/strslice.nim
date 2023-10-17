@@ -34,7 +34,7 @@ proc ensureEmptyStrRef(): ref string not nil =
   result = ensureStrRef()
   result[] = ""
 
-let EMPTY_STRSLICE* = StringSlice(buf: ensureEmptyStrRef(), start: 0, stop: 0)
+let EmptyStrSlice* = StringSlice(buf: ensureEmptyStrRef(), start: 0, stop: 0)
 
 
 proc newStringSlice*(str: ref string or string): StringSlice =
@@ -49,7 +49,7 @@ proc newStringSlice*(str: ref string or string): StringSlice =
     result.stop = str.len.int32 - 1
   else:
     if str.len == 0:  
-      result = EMPTY_STRSLICE
+      result = EmptyStrSlice
     else:
       result = new StringSlice 
       result.buf = ensureStrRef()

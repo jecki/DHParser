@@ -52,8 +52,8 @@ type
     name: string
     document: StringSlice
     root: seq[Parser]
-    returnItem: ReturnItemProc
-    returnSequence: ReturnSequenceProc
+    returnItem: ReturnItemProc not nil
+    returnSequence: ReturnSequenceProc not nil
 
 
 ## Special Node-Singletons
@@ -86,13 +86,18 @@ proc cycleGuard(self: Parser, f: proc()) =
     f()
     self.cycleReached = false
 
-proc `grammar=`*(self: Parser, grammar: GrammarRef) =
-  echo ">>>" & self.nodeName
-  self.grammarVar = grammar
-  for p_lent in self.subParsers:
-    var p = p_lent
-    self.cycleGuard(proc() = p.grammarVar = grammar)
+# proc `grammar=`*(self: Parser, grammar: GrammarRef) =
+#   echo ">>>" & self.nodeName
+#   self.grammarVar = grammar
+#   for p in self.subParsers:
+#     var p_borrowed = p
+#     self.cycleGuard(proc() = p_borrowed.grammar = grammar)
 
+proc `grammar=`*(self: Parser, grammar: GrammarRef) =
+  self.cycleGuard(proc() = 
+    self.grammarVar = grammar
+    for p in self.subParsers:
+      p.grammar = grammar)
 
 proc grammar(self: Parser) : GrammarRef {.inline.} =
   return self.grammarVar
@@ -147,8 +152,18 @@ proc returnSeqFlatten(parser: Parser, nodes: seq[Node]): Node =
     return EmptyNode
   return newNode(parser.nodeName, "")
 
+proc returnItemPlaceholder(parser: Parser, node: NodeOrNil): Node =
+  result = EmptyNode
+  raise newException(AssertionDefect, "returnItem called on GrammaPlacholder")
 
-proc init(grammar: GrammarRef, name: string, document: StringSlice): GrammarRef =
+proc returnSeqPlaceholder(parser: Parser, nodes: seq[Node]): Node =
+  result = EmptyNode
+  raise newException(AssertionDefect, "returnItem called on GrammaPlacholder")
+
+
+proc init(grammar: GrammarRef, name: string, document: StringSlice,
+          returnItem: ReturnItemProc = returnItemFlatten,
+          returnSequence: ReturnSequenceProc = returnSeqFlatten): GrammarRef =
   grammar.name = name
   grammar.document = document
   grammar.root = @[]
@@ -156,12 +171,10 @@ proc init(grammar: GrammarRef, name: string, document: StringSlice): GrammarRef 
   grammar.returnSequence = returnSeqFlatten
   return grammar
 
+template Grammar(args: varargs[untyped]): GrammarRef =
+  new(GrammarRef).init(args)
 
-proc Grammar(name: string, document: StringSlice): GrammarRef =
-  return new(GrammarRef).init(name, document)
-
-
-let GrammarPlaceholder = GrammarRef(name: "__Placeholder__", document: newStringSlice(""))
+let GrammarPlaceholder = Grammar("__Placeholder__", EmptyStrSlice, returnItemPlaceholder, returnSeqPlaceholder)
 
 
 ## basic parser-procedures and -methods
@@ -183,7 +196,7 @@ proc init*(parser: Parser, ptype: string = ":Parser"): Parser =
   parser.parserType = ptype
   parser.disposable = true
   parser.dropContent = false
-  parser.grammar = GrammarPlaceholder
+  parser.grammarVar = GrammarPlaceholder
   parser.symbol = nil
   parser.subParsers = @[]
   parser.cycleReached = false
@@ -267,13 +280,11 @@ method parse*(self: TextRef, location: int): ParsingResult =
     import nodetree
     doAssert Text("A")("A").node.asSxpr() == "(:Text \"A\")"
  
-  echo $self.grammar.document
-  echo self.text
   if self.grammar.document.str[].continuesWith(self.text, location):
     if self.dropContent:
-      return (EMPTY_NODE, location + self.text.len)
+      return (EmptyNode, location + self.text.len)
     elif self.disposable and self.empty:
-      return (EMPTY_NODE, location)  
+      return (EmptyNode, location)  
     return (newNode(self.nodeName, self.slice), location + self.text.len)
   return (nil, location)
 
@@ -308,9 +319,9 @@ method parse*(self: RegexRef, location: int): ParsingResult =
   if l >= 0:
     let text: StringSlice = self.grammar.document[location..<location+l]
     if self.dropContent:
-      return (EMPTY_NODE, location + text.len)
+      return (EmptyNode, location + text.len)
     elif self.disposable and text == "":
-      return (EMPTY_NODE, location)
+      return (EmptyNode, location)
     return (newNode(self.nodeName, text), location + text.len)
   return (nil, location)
 
@@ -400,11 +411,9 @@ method is_optional(self: RepeatRef): Option[bool] =
 ## Test-code
 
 when isMainModule:
-#   let
-#     t = "t".assignName Text("A")
-#   #  t = new(Text).initText("A")
-#   let cst = t("A")
-#   echo $cst
+  let  t = "t".assignName Text("X")
+  let cst = t("Y")
+  echo $cst
   echo Text("A")("A").node.asSxpr
   doAssert Text("A")("A").node.asSxpr == "(:Text \"A\")"
   echo Regex(rx"\w+")("ABC").node.asSxpr

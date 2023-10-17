@@ -33,7 +33,7 @@ proc init*(node: Node,
   node.name = name
   when content is seq[Node]:
     node.children = content
-    node.text = EMPTY_STRSLICE
+    node.text = EmptyStrSlice
   else:
     node.children = @[]
     node.text = toStringSlice(content)
@@ -77,7 +77,7 @@ proc `result=`*(node: Node, text: StringSlice or ref string or string) =
 
 proc `result=`*(node: Node, children: seq[Node]) =
   node.children = children
-  node.text = EMPTY_STRSLICE
+  node.text = EmptyStrSlice
 
 proc runeLen*(node: Node): int32 =
   result = 0
