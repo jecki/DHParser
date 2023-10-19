@@ -25,7 +25,7 @@ from DHParser.trace import set_tracer, trace_history
 
 class TestLookahaeads:
     def test_ignore_regex_lookaheads(self):
-        lang = "doc = ~ /(?![0-9])\w+/"
+        lang = r"doc = ~ /(?![0-9])\w+/"
         parser = create_parser(lang)
         set_tracer(parser, trace_history)
         _ = parser('abc')

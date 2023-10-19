@@ -143,7 +143,7 @@ from a grammar, step by step::
         parser_initialization__ = ["upon instantiation"]
         COMMENT__ = r''
         comment_rx__ = RX_NEVER_MATCH
-        WHITESPACE__ = r'\s*'
+        WHITESPACE__ = r'\\s*'
         WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
         wsp__ = Whitespace(WSP_RE__)
         dwsp__ = Drop(Whitespace(WSP_RE__))

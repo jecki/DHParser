@@ -1615,7 +1615,7 @@ class TestMemoization:
         cst = grammar('"camma", "beta", "alpha"')
 
     def test_memoization_early_tree_reduction(self):
-        lang = """@reduction = merge
+        lang = r"""@reduction = merge
         @disposable = /_\w+/
         doc = VollerName EOF | Angabe EOF
         Angabe = [VollerName ","] Buchtitel [_L] Jahr
