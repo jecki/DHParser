@@ -108,7 +108,7 @@ class outlineGrammar(Grammar):
     r"""Parser for an outline source file.
     """
     emphasis = Forward()
-    source_hash__ = "218874e12dc28aa77cda2de736633302"
+    source_hash__ = "25ae464c18d501388ee75294574efcdf"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
     disposable__ = re.compile('WS$|EOF$|LINE$|GAP$|LLF$|L$|CHARS$|TEXT$|ESCAPED$|inner_emph$|inner_bold$')
     static_analysis_pending__ = []  # type: List[bool]
@@ -148,10 +148,8 @@ class outlineGrammar(Grammar):
     emphasis.set(Alternative(Series(Drop(Text("*")), NegativeLookahead(Drop(Text("*"))), inner_emph, Drop(Text("*")), mandatory=2), Series(Drop(Text("_")), NegativeLookahead(Drop(Text("_"))), inner_emph, Drop(Text("_")), mandatory=2)))
     document = Series(main, Option(WS), EOF, mandatory=2)
     root__ = document
-    
-    
-parsing: PseudoJunction = create_parser_junction(
-    outlineGrammar)
+        
+parsing: PseudoJunction = create_parser_junction(outlineGrammar)
 get_grammar = parsing.factory # for backwards compatibility, only    
 
 

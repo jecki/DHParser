@@ -145,9 +145,9 @@ Test-reports
 ^^^^^^^^^^^^
 
 After the test has been run, the results can be found in the
-"REPORT"-subdirectory of the tests-directory. For each test-file that
-has been executed the REPORT-subdirectory contains a Markdown-file with
-the detailed results.
+"REPORT"-subdirectory of the tests-directory. For each test-file that has been
+executed the REPORT-subdirectory contains a Markdown-file with the detailed
+results.
 
 Failures and successes as such will also directly be reported in the
 terminal-output of the command. If all tests have been successful, the
@@ -1399,29 +1399,26 @@ letter::
 Testing the processing-pipeline
 -------------------------------
 
-Also, later stages of the :ref:`processing pipeline <processing_pipline>`
-can be tested with the same apparatus as long as their results are
-either node-trees or serializable as strings. To illustrate both of
-these cases, let us extend our "outline"-parser so that it transforms
-the input documents to HTML in two steps.
+Also, later stages of the :ref:`processing pipeline <processing_pipline>` can be
+tested with the same apparatus as long as their results are either node-trees or
+serializable as strings. To illustrate both of these cases, let us extend our
+"outline"-parser so that it transforms the input documents to HTML in two steps.
 
-In the first step the
-abstract syntaxtree is transformed into a DOM-tree (kind of). In the second step
-the DOM-tree is serialized as an HTML document. With DHParser's
-:py:meth:`~nodetree.Node.as_xml`-function the second step is
-almost trvivial, but for the sake of illustration we will nevertheless
-implement this as a separate processsing stage. This also has the benefit
-that we can test the structure of the DOM-tree independently from
-the formatting of the final HTML-document.
+In the first step the abstract syntaxtree is transformed into a DOM-tree (kind
+of). In the second step the DOM-tree is serialized as an HTML document. With
+DHParser's :py:meth:`~nodetree.Node.as_xml`-function the second step is almost
+trvivial, but for the sake of illustration we will nevertheless implement this
+as a separate processsing stage. This also has the benefit that we can test the
+structure of the DOM-tree independently from the formatting of the final
+HTML-document.
 
-In true test-driven-development spirit, we start to look at the ASTs for
-a couple of examples and then ask ourselves what the DOM should look like
-for these examples. We write down the DOM-trees as tests and then start
-to program the necessary transformations. With the transformations in place,
-we finally run our tests to see if everything works as expected. So let's
-go ahead and write some test or, what amounts to the same, pick some of
-the already written tests and look at the resulting AST in the report file.
-Here are some tests::
+In true test-driven-development spirit, we start to look at the ASTs for a
+couple of examples and then ask ourselves what the DOM should look like for
+these examples. We write down the DOM-trees as tests and then start to program
+the necessary transformations. With the transformations in place, we finally run
+our tests to see if everything works as expected. So let's go ahead and write
+some test or, what amounts to the same, pick some of the already written tests
+and look at the resulting AST in the report file. Here are some tests::
 
     [match:emphasis]
     D1: "*emphasized*"
@@ -1478,50 +1475,60 @@ and structures in the AST would be. Here ist a list:
   other node, i.e. the text-node will be dissolved and its content will
   directly be attached to the parent node.
 
-* the simplemost case is that of the ``bold`` and  ``emphasis``-
-  nodes which can simply be renamed to [b](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/b) and [i](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/i), respectively. (Alternatively, they could be renamed to [span](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/span) with either the CSS-properties ``font-weight: bold`` or ``font-style: italic`` in the style-attribute of that node.). Example::
+* the simplemost case is that of the ``bold`` and  ``emphasis``- nodes which can
+  simply be renamed to
+  [b](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/b) and
+  [i](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/i),
+  respectively. (Alternatively, they could be renamed to
+  [span](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/span) with
+  either the CSS-properties ``font-weight: bold`` or ``font-style: italic`` in
+  the style-attribute of that node.). Example::
 
       (bold (text "bold"))  -> (b "bold")
 
-* ``markup``-blocks should be renamed to [p](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/p), which HTML uses for paragraphs.
-  ``indent``-nodes which grammar can occur only as the first child inside a ``markup``-node
-  (as can be seen in the grammar), shall be removed after adding the property
-  ``text-indent: 2em`` to the style-attribute of the parent ``markup``-node. 
+* ``markup``-blocks should be renamed to
+  [p](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/p), which HTML
+  uses for paragraphs. ``indent``-nodes which grammar can occur only as the
+  first child inside a ``markup``-node (as can be seen in the grammar), shall be
+  removed after adding the property ``text-indent: 2em`` to the style-attribute
+  of the parent ``markup``-node. 
 
-* ``heading``-nodes must be renamed to ``h1``, ``h2``, ``h3`` ... ``h6`` according
-  their place in the hierarchy of nested ``main``, ``section``, ``subsection`` ... 
-  ``s6section``-elements.
+* ``heading``-nodes must be renamed to ``h1``, ``h2``, ``h3`` ... ``h6``
+  according their place in the hierarchy of nested ``main``, ``section``,
+  ``subsection`` ... ``s6section``-elements.
 
-* After that the ``main``, ``section``, ... -elements can either be dissolve (i.e. reduced)
-  or renamed to "[section](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/section)".
-  The yields a semantically more explicit DOM while the former yields a more concise
-  document-tree. We will go for the more concise tree.
+* After that the ``main``, ``section``, ... -elements can either be dissolve
+  (i.e. reduced) or renamed to
+  "[section](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/section)".
+  The yields a semantically more explicit DOM while the former yields a more
+  concise document-tree. We will go for the more concise tree.
 
 * Finally, the ``document``-node can simply be renamed to
-  "[body](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/body)". 
+  "[body](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/body)".
   Later, when serializing as HTML we only need to add a header and the enclosind
   "html"-tags 
 
 Having made up our mind about how to transform the AST into a DOM-tree, we could
-now transform the AST shown abose by hand into a DOM-tree to get our first 
-test-case. However, a much more pragmatic approach is to program the transformation
-first (or ask an artifical intelligence to do it, following the above recipe) and
-then correct the output, which - on the first try - most probably still contains
-errors, by hand and add it as test case. 
+now transform the AST shown abose by hand into a DOM-tree to get our first
+test-case. However, a much more pragmatic approach is to program the
+transformation first (or ask an artifical intelligence to do it, following the
+above recipe) and then correct the output, which - on the first try - most
+probably still contains errors, by hand and add it as test case. 
 
 There are many different ways of programming a tree-transformation. DHParser
 offers scaffolding-code for several of these, most notably a table-based
-tree-transformation (see :ref:`asttransformation`) and a object-oriented, class-based
-approach (see :ref:`compiling`), both of which are variants of the 
+tree-transformation (see :ref:`asttransformation`) and a object-oriented,
+class-based approach (see :ref:`compiling`), both of which are variants of the
 well-known visitor-pattern. As of now, DHParser does not offer a pattern-maching
 approach like XSLT. The following is a solution with the class-based approach.
 The table-based approch is usually much more concise, but less readable.
 
 In the (autogenerated) ``outlineParser.py``-file there is already an empty
 ``outlineCompiler``-class in the "COMPILE SECTION" which can filled in an
-renamed as follows. (The methods ``on_section(self, node)`` ... ``on_s5section(self, node)`` have been left out, because they follow the same pattern as ``on_mail(self, node)``. It
-is left as an exercise to the reader to fill these in or, even better, to
-rewrite the code with less repetition.)::
+renamed as follows. (The methods ``on_section(self, node)`` ...
+``on_s5section(self, node)`` have been left out, because they follow the same
+pattern as ``on_mail(self, node)``. It is left as an exercise to the reader to
+fill these in or, even better, to rewrite the code with less repetition.)::
 
     class DOMTransformer(Compiler):
         def prepare(self, root: RootNode) -> None:
