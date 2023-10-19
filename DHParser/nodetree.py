@@ -2814,7 +2814,7 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> RootNode:
 
     @cython.locals(pos=cython.int, i=cython.int, end=cython.int)
     def inner_parser(sxpr: StringView) -> Node:
-        if sxpr[0] != '(':
+        if sxpr[0:1] != '(':
             raise ValueError('"(" expected, not ' + sxpr[:10])
         # assert sxpr[0] == '(', sxpr
         sxpr = sxpr[1:].strip()
@@ -2834,7 +2834,7 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> RootNode:
             sxpr = sxpr[1:].lstrip()
         else:  # DHParser-style
             sxpr, pos = parse_attrs(sxpr, "`(", attributes)
-        if sxpr[0] == '(':
+        if sxpr[0:1] == '(':
             result = tuple(inner_parser(block)
                            for block in next_block(sxpr))  # type: Union[Tuple[Node, ...], str]
         else:

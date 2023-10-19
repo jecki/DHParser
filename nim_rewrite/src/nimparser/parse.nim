@@ -412,14 +412,14 @@ method is_optional(self: RepeatRef): Option[bool] =
 
 when isMainModule:
   let  t = "t".assignName Text("X")
-  let cst = t("Y")
+  let cst = t("X")
   echo $cst
   echo Text("A")("A").node.asSxpr
   doAssert Text("A")("A").node.asSxpr == "(:Text \"A\")"
   echo Regex(rx"\w+")("ABC").node.asSxpr
   doAssert Regex(rx"\w+")("ABC").node.asSxpr == "(:Regex \"ABC\")"
-  echo Repeat(Text("A"), (1u32, 3u32))("AA").node.asSxpr
-
+  echo Repeat(Text("A"), (1u32, 3u32))("AAAA").node.asSxpr
+  echo ("r".assignName Repeat(Text("A"), (1u32, 3u32)))("A").node.asSxpr
 
 
 

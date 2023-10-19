@@ -190,13 +190,13 @@ ASTTransformation: Junction = Junction(
 #######################################################################
 
 
-class outlineCompiler(Compiler):
-    """Compiler for the abstract-syntax-tree of a 
-        outline source file.
+class DOMTransformer(Compiler):
+    """Transforms the abstract-syntax-tree to a DOM-tree
+    with HTML-based node-names.
     """
 
     def __init__(self):
-        super(outlineCompiler, self).__init__()
+        super(DOMTransformer, self).__init__()
         self.forbid_returning_None = True  # set to False if any compilation-method is allowed to return None
 
     def reset(self):
@@ -204,7 +204,7 @@ class outlineCompiler(Compiler):
         # initialize your variables here, not in the constructor!
 
     def prepare(self, root: RootNode) -> None:
-        assert root.stage == "AST", f"Source stage `CST` expected, `but `{root.stage}` found."
+        assert root.stage == "AST", f"Source stage `AST` expected, `but `{root.stage}` found."
         root.stage = "DOM"
 
     def finalize(self, result: Any) -> Any:
@@ -279,7 +279,7 @@ class outlineCompiler(Compiler):
 
 
 compiling: Junction = create_junction(
-    outlineCompiler, "AST", "DOM")
+    DOMTransformer, "AST", "DOM")
 
 
 #######################################################################
