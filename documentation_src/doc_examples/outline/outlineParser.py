@@ -188,13 +188,13 @@ ASTTransformation: Junction = Junction(
 #######################################################################
 
 
-class DOMTransformer(Compiler):
+class DOMCompiler(Compiler):
     """Transforms the abstract-syntax-tree to a DOM-tree
     with HTML-based node-names.
     """
 
     def __init__(self):
-        super(DOMTransformer, self).__init__()
+        super(DOMCompiler, self).__init__()
         self.forbid_returning_None = True  # set to False if any compilation-method is allowed to return None
 
     def reset(self):
@@ -215,41 +215,29 @@ class DOMTransformer(Compiler):
         node.name = "body"
         return node
 
-    def on_main(self, node):
+    def compile_structure(self, node, heading_name, flatten_children):
         node = self.fallback_compiler(node)
-        node['heading'].name = 'h1'
-        flatten([node], is_one_of("section", "blocks"))
+        node['heading'].name = heading_name
+        flatten([node], is_one_of(*flatten_children))
         return node
+
+    def on_main(self, node):
+        return self.compile_structure("h1", ("section", "blocks"))
 
     def on_section(self, node):
-        node = self.fallback_compiler(node)
-        node['heading'].name = 'h2'
-        flatten([node], is_one_of("subsection", "blocks"))
-        return node
+        return self.compile_structure("h2", ("subsection", "blocks"))
 
     def on_subsection(self, node):
-        node = self.fallback_compiler(node)
-        flatten([node], is_one_of("subsubsection", "blocks"))
-        node['heading'].name = 'h3'
-        return node
+        return self.compile_structure("h3", ("subsubsection", "blocks"))
 
     def on_subsubsection(self, node):
-        node = self.fallback_compiler(node)
-        flatten([node], is_one_of("s5section", "blocks"))
-        node['heading'].name = 'h4'        
-        return node
+        return self.compile_structure("h4", ("s5section", "blocks"))
 
     def on_s5section(self, node):
-        node = self.fallback_compiler(node)        
-        node['heading'].name = 'h5'
-        flatten([node], is_one_of("s6section", "blocks"))
-        return node
+        return self.compile_structure("h5", ("s6section", "blocks"))
 
     def on_s6section(self, node):
-        node = self.fallback_compiler(node)
-        node['heading'].name = 'h6'
-        flatten([node], is_one_of("blocks"))
-        return node
+        return self.compile_structure("h6", ("blocks",))
 
     def on_markup(self, node):
         node = self.fallback_compiler(node)
@@ -277,7 +265,7 @@ class DOMTransformer(Compiler):
 
 
 compiling: Junction = create_junction(
-    DOMTransformer, "AST", "DOM")
+    DOMCompiler, "AST", "DOM")
 
 
 #######################################################################

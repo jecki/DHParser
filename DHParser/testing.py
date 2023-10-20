@@ -53,7 +53,7 @@ from DHParser.compile import run_pipeline, extract_data
 from DHParser.error import Error, is_error, PARSER_LOOKAHEAD_MATCH_ONLY, \
     PARSER_LOOKAHEAD_FAILURE_ONLY, MANDATORY_CONTINUATION_AT_EOF, \
     MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, CAPTURE_STACK_NOT_EMPTY_NON_ROOT_ONLY, \
-    AUTOCAPTURED_SYMBOL_NOT_CLEARED_NON_ROOT
+    AUTOCAPTURED_SYMBOL_NOT_CLEARED_NON_ROOT, PYTHON_ERROR_IN_TEST
 from DHParser.log import is_logging, clear_logs, local_log_dir, log_parsing_history
 from DHParser.parse import Lookahead
 from DHParser.server import RX_CONTENT_LENGTH, RE_DATA_START, JSONRPC_HEADER_BYTES
@@ -683,12 +683,16 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                     err = Error(f'Python Error in compilation-test {test_name} of parser '
                                 f'{parser_name} failed with: {str(e)}\n{traceback.format_exc()}\n'
                                 f'Processing of {test_name}:{parser_name} stopped at this point.',
-                                pos=0, line=1, column=0)
+                                pos=0, code=PYTHON_ERROR_IN_TEST, line=1, column=0)
                     add_errors_to_errata([err], '?', test_name, parser_name)
                     targets = dict()
                 t_errors: Dict[str, List[Error]] = {}
                 for stage in list(transformation_stages) + [t for t in targets if t in show]:
-                    tests.setdefault(f'__{stage}__', {})[test_name] = targets[stage][0]
+                    try:
+                        tests.setdefault(f'__{stage}__', {})[test_name] = targets[stage][0]
+                    except KeyError as ke:
+                        for e in errata: print(e)
+                        raise(ke)
                     t_errors[stage] = [e for e in targets[stage][1] if e not in old_errors]
                     for e in t_errors[stage]:
                         old_errors.add(e)

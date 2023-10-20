@@ -254,7 +254,6 @@ UNKNOWN_MACRO_ARGUMENT                   = ErrorCode(1170)
 UNDEFINED_MACRO                          = ErrorCode(1180)
 RECURSIVE_MACRO_CALL                     = ErrorCode(1190)
 
-
 ERROR_WHILE_RECOVERING_FROM_ERROR        = ErrorCode(1301)
 
 # EBNF-specific and static analysis errors
@@ -269,6 +268,10 @@ BAD_ORDER_OF_ALTERNATIVES                = ErrorCode(1570)
 BAD_REPETITION_COUNT                     = ErrorCode(1580)
 MALFORMED_REGULAR_EXPRESSION             = ErrorCode(1585)
 EMPTY_GRAMMAR_ERROR                      = ErrorCode(1590)
+
+# Other Errors
+
+PYTHON_ERROR_IN_TEST                     = ErrorCode(1710)
 
 # fatal errors
 
