@@ -560,11 +560,16 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                     return deserialize(compare)
                 except ValueError as e:
                     test_code_str = "\n\t".join(test_code.split("\n"))
-                    errata.append(f'{stage}-test {test_name} for parser {parser_name} '
-                                  f'or deserialization of expected value failed:\n'
-                                  f'\tExpr.:     {test_code_str}\n'
-                                  f'\tExpected:  {compare}\n'
-                                  f'\tReceived:  {content}')
+                    e_str = str(e)
+                    if e_str.find('Malformed S-expression') >= 0:
+                        errata.append(f'{stage}-test {test_name} for parser {parser_name} '
+                                      f'failed because of\n\t{e_str}\n{compare}')
+                    else:
+                        errata.append(f'{stage}-test {test_name} for parser {parser_name} '
+                                      f'failed with: {e_str}:\n'
+                                      f'\tExpr.:     {test_code_str}\n'
+                                      f'\tExpected:  {compare}\n'
+                                      f'\tReceived:  {content}\n')
                     return None
         return compare
 
@@ -627,6 +632,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
             #     print('    Test: ' + str(test_name))
 
             errflag = len(errata)
+            err: Optional[Error] = None
             clean_test_name = str(test_name).replace('*', '')
             try:
                 cst = parser(test_code, parser_name)
@@ -690,13 +696,15 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 for stage in list(transformation_stages) + [t for t in targets if t in show]:
                     try:
                         tests.setdefault(f'__{stage}__', {})[test_name] = targets[stage][0]
+                        t_errors[stage] = [e for e in targets[stage][1] if e not in old_errors]
+                        for e in t_errors[stage]:
+                            old_errors.add(e)
+                        add_errors_to_errata(t_errors[stage], stage, test_name, parser_name)
                     except KeyError as ke:
-                        for e in errata: print(e)
-                        raise(ke)
-                    t_errors[stage] = [e for e in targets[stage][1] if e not in old_errors]
-                    for e in t_errors[stage]:
-                        old_errors.add(e)
-                    add_errors_to_errata(t_errors[stage], stage, test_name, parser_name)
+                        # ignore key errors in case they are only consequential errors
+                        # of earlier errors
+                        if err.code != PYTHON_ERROR_IN_TEST:
+                            raise(ke)
                 # keep test-items, so that the order of the items is the same as
                 # in which they are processed in the pipeline.
                 for t in targets:

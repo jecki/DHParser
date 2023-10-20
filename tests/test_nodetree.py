@@ -86,11 +86,24 @@ class TestParseSxpression:
         s = parse_sxpr('(A 250)')
         assert flatten_sxpr(s.as_sxpr()) == '(A "250")'
 
-    def test_parse_s_expression_malformed(self):
+    def test_parse_s_expression_malformed_1(self):
         try:
             s = parse_sxpr('(A (B 1) (C (D (E 2) (F 3)) (G 4) (H (I 5) (J 6)) (K 7)')
             assert False, "ValueError exptected!"
         except ValueError:
+            pass
+
+    def test_parse_s_expression_malformed(self):
+        try:  # one ")" too much
+            s = parse_sxpr('''(document
+              (main
+                (heading "No gaps. please")
+                (markup
+                  (text "one paragraph"))
+                (markup
+                  (text "and another paragraph")))))''')
+            assert False, "ValueError exptected!"
+        except ValueError as e:
             pass
 
     def test_endlessloop_error(self):

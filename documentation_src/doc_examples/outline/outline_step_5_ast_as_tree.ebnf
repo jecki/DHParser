@@ -5,7 +5,7 @@
 @ whitespace  = /[ \t]*/  # only horizontal whitespace, no linefeeds
 @ reduction   = merge     # simplify tree as much as possible
 @ disposable  = WS, EOF, LINE, GAP, LLF, L, # LF,
-                CHARS, TEXT, ESCAPED, inner_emph, inner_bold, blocks
+                CHARS, TEXT, ESCAPED, inner_emph, inner_bold
 @ drop        = WS, EOF, GAP, backticked, whitespace
 
 #:  Outline

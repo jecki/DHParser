@@ -108,9 +108,9 @@ class outlineGrammar(Grammar):
     r"""Parser for an outline source file.
     """
     emphasis = Forward()
-    source_hash__ = "25ae464c18d501388ee75294574efcdf"
+    source_hash__ = "b712b509302999dce4802970355c930c"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('WS$|EOF$|LINE$|GAP$|LLF$|L$|CHARS$|TEXT$|ESCAPED$|inner_emph$|inner_bold$')
+    disposable__ = re.compile('WS$|EOF$|LINE$|GAP$|LLF$|L$|CHARS$|TEXT$|ESCAPED$|inner_emph$|inner_bold$|blocks$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -206,38 +206,39 @@ class DOMCompiler(Compiler):
         root.stage = "DOM"
 
     def finalize(self, result: Any) -> Any:
-        if result.name == 'blocks':  result.name = 'div'
+        if result.name in ('main', 'section', 'subsection', 'subsubsection',
+                           's5section', 's6section', 'blocks', ':blocks'):
+            result.name = 'div'
         return result
 
     def on_document(self, node):
         node = self.fallback_compiler(node)
-        flatten([node], is_one_of("main"))
         node.name = "body"
         return node
 
-    def compile_structure(self, node, heading_name, flatten_children):
+    def compile_structure(self, node, heading_name):
         node = self.fallback_compiler(node)
         node['heading'].name = heading_name
-        flatten([node], is_one_of(*flatten_children))
+        replace_by_children(self.path)
         return node
 
     def on_main(self, node):
-        return self.compile_structure("h1", ("section", "blocks"))
+        return self.compile_structure(node, "h1")
 
     def on_section(self, node):
-        return self.compile_structure("h2", ("subsection", "blocks"))
+        return self.compile_structure(node, "h2")
 
     def on_subsection(self, node):
-        return self.compile_structure("h3", ("subsubsection", "blocks"))
+        return self.compile_structure(node, "h3")
 
     def on_subsubsection(self, node):
-        return self.compile_structure("h4", ("s5section", "blocks"))
+        return self.compile_structure(node, "h4")
 
     def on_s5section(self, node):
-        return self.compile_structure("h5", ("s6section", "blocks"))
+        return self.compile_structure(node, "h5")
 
     def on_s6section(self, node):
-        return self.compile_structure("h6", ("blocks",))
+        return self.compile_structure(node, "h6")
 
     def on_markup(self, node):
         node = self.fallback_compiler(node)
@@ -305,6 +306,14 @@ class HTMLSerializer(Compiler):
         root.stage = "html"
         h1 = root.pick('h1')
         self.title = h1.content if h1 else ''
+
+    # # This would be cumbersome for testing
+    # def finalize(self, result: Any) -> Any:
+    #     if result.startswith('<!DOCTYPE html>'):
+    #         return result
+    #     else:
+    #         body = '\n'.join(['<body>', result, '</body>'])
+    #         return HTML_TMPL.format(title=self.title, body=body)
 
     def on_body(self, node: Node) -> str:
         body = node.as_xml(string_tags={'text'})

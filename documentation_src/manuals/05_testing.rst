@@ -971,7 +971,7 @@ more exercises in test-driven grammar-development::
    inline-element in order to to so. "markup" or "text" or "both"?  
    Or should new, intermediary symbols be introduced?
 
-3. You may have noticed that headins starting with one or more 
+3. You may have noticed that headings starting with one or more 
    `#`-characters must be separated with at least one empty line 
    from any preeceding text-blocks (other headings do not count
    as text block!). If you haven't noticed this, verify this
@@ -1233,10 +1233,11 @@ emphasis) into a single flat node, again.
 
 Although, b) is more complicated, we will follow b), because this is the
 more general approach. So, we start by adjusting our list of disposable
-nodes, i.e. node that like anonymous-nodes can be flattened during
+nodes, i.e. nodes that like anonymous-nodes can be flattened during
 parsing, already. It then reads::
 
-    @ disposable  = WS, EOF, LINE, GAP, LLF, L, CHARS, TEXT, ESCAPED, inner_emph, inner_bold
+    @ disposable  = WS, EOF, LINE, GAP, LLF, L, CHARS, TEXT, ESCAPED, 
+                    inner_emph, inner_bold, blocks
 
 If we run the test script, the result of the test in the report file now
 reads::
@@ -1441,72 +1442,99 @@ and look at the resulting AST in the report file. Here are some tests::
         or * **bold** and emphasized*?"""
 
 The report files show the following ASTs for these tests::
+    
+    (emphasis (text "emphasized"))
+
+    (:blocks 
+      (markup (text "First paragraph of text.")) 
+      (markup (text "Next paragraph of text.")))
+
+In case you wonder why there is a colon in front of "blocks":
+This is due to the fact that we have added
+"blocks" to the list of disposable nodes in our grammar, earlier.
+In cases where a disposable node cannot be disposed as in this case
+where it cannot be flattened, because it is the root node, it will be marked
+with a colon just like an "anonymous" node. In the following
+example has been flattened during parsing as expected, leaving
+the "markup"-nodes as direct children of "section"::
 
     (document
       (main
         (heading "Simple Test")
         (section
           (heading "A test of bold- and emphasis-markup")
-          (blocks
-            (markup
-              (indent "  ")
-              (text "This paragraph contains ")
+          (markup
+            (indent "  ")
+            (text "This paragraph contains ")
+            (emphasis
+              (text "emphasized text"))
+            (text " that spreads over two lines."))
+          (markup
+            (indent "  ")
+            (text "But what ist this: ")
+            (bold
               (emphasis
-                (text "emphasized text"))
-              (text " that spreads over two lines."))
-            (markup
-              (indent "  ")
-              (text "But what ist this: ")
+                (text "emphasized"))
+              (text " and bold"))
+            (text " or ")
+            (emphasis
               (bold
-                (emphasis
-                  (text "emphasized"))
-                (text " and bold"))
-              (text " or ")
-              (emphasis
-                (bold
-                  (text "bold"))
-                (text " and emphasized"))
-              (text "?"))))))
+                (text "bold"))
+              (text " and emphasized"))
+            (text "?")))))
 
 Now, let's think about what the HTML-equivalents for the node-names
 and structures in the AST would be. Here ist a list:
 
-* ``text``- nodes should be reduced when they are the single child of some
-  other node, i.e. the text-node will be dissolved and its content will
-  directly be attached to the parent node.
+1. "text"- nodes should be reduced when they are the single child of some
+   other node, i.e. the text-node will be dissolved and its content will
+   directly be attached to the parent node.
 
-* the simplemost case is that of the ``bold`` and  ``emphasis``- nodes which can
-  simply be renamed to
-  [b](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/b) and
-  [i](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/i),
-  respectively. (Alternatively, they could be renamed to
-  [span](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/span) with
-  either the CSS-properties ``font-weight: bold`` or ``font-style: italic`` in
-  the style-attribute of that node.). Example::
+2. the simplemost case is that of the "bold" and  "emphasis"- nodes which can
+   simply be renamed to
+   [b](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/b) and
+   [i](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/i),
+   respectively. (Alternatively, they could be renamed to
+   [span](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/span) with
+   either the CSS-properties "font-weight: bold" or "font-style: italic" in
+   the style-attribute of that node.). Example::
 
-      (bold (text "bold"))  -> (b "bold")
+        (bold (text "bold"))  -> (b "bold")
 
-* ``markup``-blocks should be renamed to
-  [p](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/p), which HTML
-  uses for paragraphs. ``indent``-nodes which grammar can occur only as the
-  first child inside a ``markup``-node (as can be seen in the grammar), shall be
-  removed after adding the property ``text-indent: 2em`` to the style-attribute
-  of the parent ``markup``-node. 
+3. "markup"-blocks should be renamed to
+   [p](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/p), which HTML
+   uses for paragraphs. "indent"-nodes which grammar can occur only as the
+   first child inside a "markup"-node (as can be seen in the grammar), shall be
+   removed after adding the property "text-indent: 2em" to the style-attribute
+   of the parent "markup"-node, e.g.::
+       
+        (markup (text "some text"))  -> (p "some text") 
 
-* ``heading``-nodes must be renamed to ``h1``, ``h2``, ``h3`` ... ``h6``
-  according their place in the hierarchy of nested ``main``, ``section``,
-  ``subsection`` ... ``s6section``-elements.
+4. "heading"-nodes must be renamed to "h1", "h2", "h3" ... "h6"
+   according their place in the hierarchy of nested "main", "section",
+   "subsection" ... "s6section"-elements.
 
-* After that the ``main``, ``section``, ... -elements can either be dissolve
-  (i.e. reduced) or renamed to
-  "[section](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/section)".
-  The yields a semantically more explicit DOM while the former yields a more
-  concise document-tree. We will go for the more concise tree.
+5. After that the "main", "section", ... -elements can either be dissolve
+   (i.e. reduced) or renamed to
+   "[section](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/section)".
+   The yields a semantically more explicit DOM while the former yields a more
+   concise document-tree. We will go for the more concise tree::
 
-* Finally, the ``document``-node can simply be renamed to
-  "[body](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/body)".
-  Later, when serializing as HTML we only need to add a header and the enclosind
-  "html"-tags 
+        (section
+          (heading "Section 1")
+          (markup
+            (indent "    ")
+            (text "A paragraph of text"))  
+
+        -> 
+
+        (h1 "Section 1")
+        (p `(style "text-indent: 2em;") "A paragraph of text")
+
+6. Finally, the "document"-node can simply be renamed to
+   "[body](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/body)".
+   Later, when serializing as HTML we only need to add a header and the enclosind
+   "html"-tags.
 
 Having made up our mind about how to transform the AST into a DOM-tree, we could
 now transform the AST shown abose by hand into a DOM-tree to get our first
@@ -1523,38 +1551,99 @@ well-known visitor-pattern. As of now, DHParser does not offer a pattern-maching
 approach like XSLT. The following is a solution with the class-based approach.
 The table-based approch is usually much more concise, but less readable.
 
-In the (autogenerated) ``outlineParser.py``-file there is already an empty
+In the (autogenerated) "outlineParser.py"-file there is already an empty
 ``outlineCompiler``-class in the "COMPILE SECTION" which can filled in and
-renamed as follows::
+renamed as follows. Let's set out with the glue-code::
 
     class DOMCompiler(Compiler):
         def prepare(self, root: RootNode) -> None:
             assert root.stage == "AST", f"Source stage `AST` expected, `but `{root.stage}`found."
             root.stage = "DOM"
 
+In the prepare-method the destination-stage should needs to set so that the 
+processing-pipeline can keep track of the progress. This is essential for
+the processing pipeline to work. The check of the source-stage with the
+assertion-statement is not necessary but helps to locate potential programming
+errors in case something goes wrong. 
+
+Next, we define the finalize-method. This might be surprising at first, because
+after the AST has been run through all visitor-methods the tree should only
+consist of HTML-nodes already. This, however, is only true if we serve complete
+documents to our processing-pipeline. But during unit-testing, we only
+serve snippets of documents to the pipeline in most cases. Thus, we cannot 
+assume that the visitor-method of the root-node of complete documents 
+"on_document()" or any other visitor-method will be called under any 
+circumstances. 
+
+Generally speaking, all transformations in the processing-pipeline should
+be designed in such a way that they work not only on entire documents but
+also on parts of documents. Usually this only requires little extra-effort.
+In cases where this is not possible, the only alternative that is left is
+to write mockups for each unit-test that represent complete documents. 
+This is much more cumbersome and not well supported by DHParser's 
+testing-framework which groups the tests by symbols-names of the 
+parts of the grammar that shall be tested. 
+
+In our case it could happen that the root-node is not a valid 
+HTML-tag-name after compiling an AST that does not represent an
+entire document. We can use the finalize-method to rename the
+root-node (whatever that may be) to "div" in cases where its name
+is not that of an HTML-tag. While it would not do much harm to
+leave it as it is (HTML5 allows custom tag names and most internet
+browsers a pretty tolerant even towards invalid tag-names), it
+can be confusing to get test-outputs that look like mistakes. 
+It is up to you to decide whether you accept this oddity as an
+testing-artifact or whether to resolve it. Since the results
+will be passed on to a further stage (HTML-serialization), it
+seems more appropriate to avoid testing-artifacts.
+
+We could either check the root-node's name against a list of valid
+tag-names or against a list of potentially left-behind tag-names
+from the AST. In our case it is easier to pursue the latter
+strategy, because only "container"-nodes, i.e. nodes that can
+contain more than one child and at the same time are meant to 
+be flattened if possible can become "left behind". (In case
+you think this would be hard to know or analyse beforehand: 
+Don't worry! You can start to provide for these cases when they
+occur and you can even confine yourself to those cases that
+come up in your test - because, as said, this is a harmless
+problem, if it is a problem at all.) So, let's just rename
+all of these node-names to "div" if they appear as root-name::
+
         def finalize(self, result: Any) -> Any:
-            if result.name == 'blocks':  result.name = 'div'
+            if result.name in ('main', 'section', 'subsection', 'subsubsection',
+                               's5section', 's6section', 'blocks', ':blocks'):  
+                result.name = 'div'
             return result
 
         def on_document(self, node):
             node = self.fallback_compiler(node)
-            flatten([node], is_one_of("main"))
             node.name = "body"
             return node
 
-        def on_main(self, node):
+        def compile_structure(self, node, heading_name):
             node = self.fallback_compiler(node)
-            node['heading'].name = 'h1'
-            flatten([node], is_one_of("section", "blocks"))
+            node['heading'].name = heading_name
+            replace_by_children(self.path)
             return node
 
-        ... 
+        def on_main(self, node):
+            return self.compile_structure(node, "h1")
+
+        def on_section(self, node):
+            return self.compile_structure(node, "h2")
+
+        def on_subsection(self, node):
+            return self.compile_structure(node, "h3")
+
+        def on_subsubsection(self, node):
+            return self.compile_structure(node, "h4")
+
+        def on_s5section(self, node):
+            return self.compile_structure(node, "h5")
 
         def on_s6section(self, node):
-            node = self.fallback_compiler(node)
-            node['heading'].name = 'h6'
-            flatten([node], is_one_of("blocks"))
-            return node
+            return self.compile_structure(node, "h6")
 
         def on_markup(self, node):
             node = self.fallback_compiler(node)
@@ -1578,7 +1667,7 @@ renamed as follows::
             if len(node.children) == 1 and node[0].name == 'text':
                 reduce_single_child(self.path)
             node.name = "i"
-            return node 
+            return node
 
 The methods ``on_section(self, node)`` ...
 ``on_s5section(self, node)`` have been left out, because they follow the same
