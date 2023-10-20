@@ -590,6 +590,8 @@ three remaining stages are covered by the "standard pipeline" (i.e.
 parsing, AST-transformation, compilation). The following stages,
 starting from data-XML, form the extended pipeline.
 
+.. _junctions: 
+
 In order to support extended processing pipeline
 :py:mod:`DHParser.compile` uses the very simple concept of junctions,
 where a junctions is the connection of an earlier stage (origin) in the

@@ -335,10 +335,10 @@ junctions = set([ASTTransformation, compiling, serializing])
 # put your targets of interest, here. A target is the name of result (or stage)
 # of any transformation, compilation or postprocessing step after parsing.
 # Serializations of the stages listed here will be written to disk when
-# calling process_file() or batch_process().
+# calling process_file() or batch_process() and also appear in test-reports.
 targets = set([compiling.dst, serializing.dst])
 # add one or more serializations for those targets that are node-trees
-serializations = expand_table(dict([('*', ['sxpr'])]))
+serializations = expand_table(dict([('DOM', ['xml']), ('*', ['sxpr'])]))
 
 #######################################################################
 

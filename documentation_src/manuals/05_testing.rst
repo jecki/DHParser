@@ -1413,7 +1413,10 @@ as a separate processsing stage. This also has the benefit that we can test the
 structure of the DOM-tree independently from the formatting of the final
 HTML-document.
 
-In true test-driven-development spirit, we start to look at the ASTs for a
+Preparing tests for a processing-stage
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In true test-driven-development spirit, we start by looking at the ASTs for a
 couple of examples and then ask ourselves what the DOM should look like for
 these examples. We write down the DOM-trees as tests and then start to program
 the necessary transformations. With the transformations in place, we finally run
@@ -1568,7 +1571,7 @@ errors in case something goes wrong.
 
 Next, we define the finalize-method. This might be surprising at first, because
 after the AST has been run through all visitor-methods the tree should only
-consist of HTML-nodes already. This, however, is only true if we serve complete
+consist of HTML-nodes, already. This, however, is only true if we serve complete
 documents to our processing-pipeline. But during unit-testing, we only
 serve snippets of documents to the pipeline in most cases. Thus, we cannot 
 assume that the visitor-method of the root-node of complete documents 
@@ -1584,31 +1587,29 @@ This is much more cumbersome and not well supported by DHParser's
 testing-framework which groups the tests by symbols-names of the 
 parts of the grammar that shall be tested. 
 
-In our case it could happen that the root-node is not a valid 
-HTML-tag-name after compiling an AST that does not represent an
-entire document. We can use the finalize-method to rename the
-root-node (whatever that may be) to "div" in cases where its name
-is not that of an HTML-tag. While it would not do much harm to
-leave it as it is (HTML5 allows custom tag names and most internet
-browsers a pretty tolerant even towards invalid tag-names), it
-can be confusing to get test-outputs that look like mistakes. 
-It is up to you to decide whether you accept this oddity as an
-testing-artifact or whether to resolve it. Since the results
-will be passed on to a further stage (HTML-serialization), it
-seems more appropriate to avoid testing-artifacts.
+In our case it could happen that the root-node is not a valid
+HTML-tag-name after compiling an AST that does not represent an entire
+document. We can use the finalize-method to rename the root-node
+(whatever that may be) to "div" in cases where its name is not that of
+an HTML-tag. While it would not do much harm to leave it as it is (HTML5
+allows custom tag names and most internet browsers a pretty tolerant
+even towards invalid tag-names), it can be confusing to get test-outputs
+that look like mistakes. Also, since the results will be passed on to a
+further processing-stage (HTML-serialization), it it is better to avoid
+testing-artifacts at this stage.
 
-We could either check the root-node's name against a list of valid
-tag-names or against a list of potentially left-behind tag-names
-from the AST. In our case it is easier to pursue the latter
-strategy, because only "container"-nodes, i.e. nodes that can
-contain more than one child and at the same time are meant to 
-be flattened if possible can become "left behind". (In case
-you think this would be hard to know or analyse beforehand: 
-Don't worry! You can start to provide for these cases when they
-occur and you can even confine yourself to those cases that
-come up in your test - because, as said, this is a harmless
-problem, if it is a problem at all.) So, let's just rename
-all of these node-names to "div" if they appear as root-name::
+In order to fix left-behind node-names, We could either check the
+root-node's name against a list of valid tag-names or against a list of
+potentially left-behind tag-names from the AST. In our case it is easier
+to pursue the latter strategy, because only "container"-nodes, i.e.
+nodes that can contain more than one child and at the same time are
+meant to be flattened if possible can become "left behind". (In case you
+think this would be hard to know or analyse beforehand: Don't worry! You
+can start to provide for these cases when they occur and you can even
+confine yourself to those cases that come up in your test - because, as
+said, this is a harmless problem, if it is a problem at all.) So, let's
+just rename all of these node-names to "div" if they appear as
+root-name::
 
         def finalize(self, result: Any) -> Any:
             if result.name in ('main', 'section', 'subsection', 'subsubsection',
@@ -1616,10 +1617,27 @@ all of these node-names to "div" if they appear as root-name::
                 result.name = 'div'
             return result
 
+The following visitor-method for the document-node is self-explaining.
+As described in :ref:`compiling`, visitor-methods are called by the
+scafolding code of :py:class:`~compile.Compiler` when the tree-traversal
+reaches the node with the name that corresponds to the name of the
+visitor-method. The scaffolding code also updates the
+``self.path``-variable (which we will make use of, further below). The
+traversal of the child-nodes must explicitly be triggered by the
+visitor-method by calling :py:meth:`~compile.Compiler.fallback_compiler`
+which is usually done at the begining of the visitor-method. Every
+visitor-method is required to return the compilation-result::
+
         def on_document(self, node):
             node = self.fallback_compiler(node)
             node.name = "body"
             return node
+
+Since the transformation of the structural-components 
+(i.e. sections, subsections etc.) is very similar for each of
+these components we factor out the similarities to a meta-method
+for these components which is called by the visitor-methods for
+the structural-components::
 
         def compile_structure(self, node, heading_name):
             node = self.fallback_compiler(node)
@@ -1645,6 +1663,12 @@ all of these node-names to "div" if they appear as root-name::
         def on_s6section(self, node):
             return self.compile_structure(node, "h6")
 
+Finally, we provide visitor-methods for the paragraph and
+inline-elements. For the actual transformation-work, we are,
+of course, free to delegate to the transformation-methods
+of :py:mod:`~transform` like :py:func:`~transform.replace_by_children`
+or :py:func:`~transform.reduce_single_child`::
+
         def on_markup(self, node):
             node = self.fallback_compiler(node)
             if node[0].name == 'indent':
@@ -1669,13 +1693,43 @@ all of these node-names to "div" if they appear as root-name::
             node.name = "i"
             return node
 
-The methods ``on_section(self, node)`` ...
-``on_s5section(self, node)`` have been left out, because they follow the same
-pattern as ``on_mail(self, node)``. It is of course possible to write a 
-meta-method that is called by the varios
+Before the test-reports yields the results of this processing-stage 
+for the match-tests defined in the test-files, the :py:ref:`junctions <junction>` 
+for this stage needs to be declared::
 
+    compiling: Junction = create_junction(DOMCompiler, "AST", "DOM")
 
+and the junction must be added to the list of junctions and - if it is
+to appear in the test report - to the list of targets of interest as
+well, both of which are defined in the "outlineParser"-module right
+after the various transformations::
 
+    junctions = set([ASTTransformation, compiling])
+    targets = set([compiling.dst, serializing.dst])
+
+When we run the test-script ("tst_outline_grammar.py") again, the
+results will not only report the AST but also the DOM-stage, e.g.::
+
+  Test of parser: "emphasis"
+  ==========================
+
+  Match-test "M1"
+  ----------------
+
+  ### Test-code:
+      *emphasized*
+
+  ### AST
+      (emphasis (text "emphasized"))
+
+  ### DOM
+      (i "emphasized")
+
+By default, stages the results of which are trees are serialized as
+S-expressions.
+
+Writing tests for a processing-stage
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 
 Conventional Unit-Testing

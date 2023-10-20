@@ -400,6 +400,7 @@ def get_report(test_unit) -> str:
                     result = tests[stage][test_name]
                     report.append(f'\n### {stage.strip("_")}\n')
                     if isinstance(result, Node):
+                        # TODO: Use the serializations-variable from the generated ...Parser.py-script, here, somehow
                         result_str = cast(Node, result).serialize('default')
                     else:
                         result_str = str(result)
