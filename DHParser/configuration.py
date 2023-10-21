@@ -436,11 +436,11 @@ CONFIG_PRESET['infinite_loop_warning'] = True
 #                 kind of tree.
 _serializations = frozenset({'XML', 'HTML', 'json', 'indented', 'tree',
                              'S-expression', 'sxpr', 'SXML', 'SXML1', 'SXML2'})
-CONFIG_PRESET['cst_serialization'] = 'sxpr'
-CONFIG_PRESET['ast_serialization'] = 'sxpr'
+CONFIG_PRESET['CST_serialization'] = 'sxpr'
+CONFIG_PRESET['AST_serialization'] = 'sxpr'
 CONFIG_PRESET['default_serialization'] = 'sxpr'
-ALLOWED_PRESET_VALUES['cst_serialization'] = _serializations
-ALLOWED_PRESET_VALUES['ast_serialization'] = _serializations
+ALLOWED_PRESET_VALUES['CST_serialization'] = _serializations
+ALLOWED_PRESET_VALUES['AST_serialization'] = _serializations
 ALLOWED_PRESET_VALUES['default_serialization'] = _serializations
 
 # Defines the maximum line length for flattened S-expressions.

@@ -28,6 +28,8 @@ type
 proc ensureStrRef(): ref string not nil =
   ## Create a new ref string object that is sure to be not nil.
   new(result)
+  # var s: ref string = new(string)
+  # if not isNil(s):  return s
 
 proc ensureEmptyStrRef(): ref string not nil =
   ## Create a new empty ref string that is sure to be not nil.
@@ -51,7 +53,7 @@ proc newStringSlice*(str: ref string or string): StringSlice =
     if str.len == 0:  
       result = EmptyStrSlice
     else:
-      result = new StringSlice 
+      result = new StringSlice
       result.buf = ensureStrRef()
       result.buf[] = str
       result.start = 0
@@ -195,6 +197,9 @@ when isMainModule:
     s2 = newStringSlice("Hello world")
     s3 = s2[6 .. ^1]
     s4 = s2[2 .. ^1]
+    s5 = toStringSlice("")
+
+  echo s5
 
   assert s1.find("world") == 6
   assert s2.find("world") == 6
@@ -229,3 +234,4 @@ when isMainModule:
   assert upToFour.find(threeToFive) == -1
 
   echo s2 == s1
+  echo s2 != s1

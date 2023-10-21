@@ -2090,9 +2090,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         switch = how.lower()
 
         if switch == 'ast':
-            switch = get_config_value('ast_serialization').lower()
+            switch = get_config_value('AST_serialization').lower()
         elif switch == 'cst':
-            switch = get_config_value('cst_serialization').lower()
+            switch = get_config_value('CST_serialization').lower()
         elif switch == 'default':
             switch = get_config_value('default_serialization').lower()
 

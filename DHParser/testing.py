@@ -354,7 +354,7 @@ def indent(txt):
     lines[0] = '    ' + lines[0]
     return "\n    ".join(lines)
 
-def get_report(test_unit) -> str:
+def get_report(test_unit, serializations: Dict[str, List[str]] = dict()) -> str:
     """
     Returns a text-report of the results of a grammar unit test. The report
     lists the source of all tests as well as the error messages, if a test
@@ -387,10 +387,10 @@ def get_report(test_unit) -> str:
             cst = tests.get('__CST__', {}).get(test_name, None)
             if cst and (not ast or str(test_name).endswith('*')):
                 report.append('\n### CST\n')
-                report.append(indent(cst.serialize('CST')))
+                report.append(indent(cst.serialize(serializations.get('CST', 'CST'))))
             if ast:
                 report.append('\n### AST\n')
-                report.append(indent(ast.serialize('AST')))
+                report.append(indent(ast.serialize(serializations.get('AST', 'AST'))))
 
             compilation_stages = [key for key in tests
                                   if key[:2] + key[-2:] == '____' and key not in
@@ -401,7 +401,8 @@ def get_report(test_unit) -> str:
                     report.append(f'\n### {stage.strip("_")}\n')
                     if isinstance(result, Node):
                         # TODO: Use the serializations-variable from the generated ...Parser.py-script, here, somehow
-                        result_str = cast(Node, result).serialize('default')
+                        result_str = cast(Node, result).serialize(
+                            serializations.get(stage, serializations.get('*', 'default')))
                     else:
                         result_str = str(result)
                     report.append(indent(result_str))
