@@ -369,6 +369,7 @@ def get_report(test_unit, serializations: Dict[str, List[str]] = dict()) -> str:
     which would unnecessarily bloat the test reports.
     """
     report = []
+    srl = { k: v[0] for k, v in serializations.items()}
     save = get_config_value('xml_attribute_error_handling')
     set_config_value('xml_attribute_error_handling', 'fix')
     for parser_name, tests in test_unit.items():
@@ -387,10 +388,10 @@ def get_report(test_unit, serializations: Dict[str, List[str]] = dict()) -> str:
             cst = tests.get('__CST__', {}).get(test_name, None)
             if cst and (not ast or str(test_name).endswith('*')):
                 report.append('\n### CST\n')
-                report.append(indent(cst.serialize(serializations.get('CST', 'CST'))))
+                report.append(indent(cst.serialize(srl.get('CST', 'CST'))))
             if ast:
                 report.append('\n### AST\n')
-                report.append(indent(ast.serialize(serializations.get('AST', 'AST'))))
+                report.append(indent(ast.serialize(srl.get('AST', 'AST'))))
 
             compilation_stages = [key for key in tests
                                   if key[:2] + key[-2:] == '____' and key not in
@@ -400,9 +401,8 @@ def get_report(test_unit, serializations: Dict[str, List[str]] = dict()) -> str:
                     result = tests[stage][test_name]
                     report.append(f'\n### {stage.strip("_")}\n')
                     if isinstance(result, Node):
-                        # TODO: Use the serializations-variable from the generated ...Parser.py-script, here, somehow
                         result_str = cast(Node, result).serialize(
-                            serializations.get(stage, serializations.get('*', 'default')))
+                            srl.get(stage, srl.get('*', 'default')))
                     else:
                         result_str = str(result)
                     report.append(indent(result_str))
@@ -447,7 +447,7 @@ def md_codeblock(code: str) -> str:
 
 
 def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT', verbose=False,
-                 junctions=set(), show=set()):
+                 junctions=set(), show=set(), serializations: Dict[str, List[str]]=dict()):
     """
     Unit tests for a grammar-parser and ast-transformations.
 
@@ -845,7 +845,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
 
     # write test-report
     if report:
-        test_report = get_report(test_unit)
+        test_report = get_report(test_unit, serializations)
         if test_report:
             try:
                 os.mkdir(report)   # is a process-Lock needed, here?
@@ -893,7 +893,8 @@ def grammar_suite(directory, parser_factory, transformer_factory,
                   fn_patterns=('*test*',),
                   ignore_unknown_filetypes=False,
                   report='REPORT', verbose=True,
-                  junctions=set(), show=set()):
+                  junctions=set(), show=set(),
+                  serializations: Dict[str, List[str]]=dict()):
     """
     Runs all grammar unit tests in a directory. A file is considered a test
     unit, if it has the word "test" in its name.
@@ -925,7 +926,7 @@ def grammar_suite(directory, parser_factory, transformer_factory,
         results = []
         for filename in tests:
             parameters = (filename, parser_factory, transformer_factory,
-                          report, verbose, junctions, show)
+                          report, verbose, junctions, show, serializations)
             results.append(pool.submit(grammar_unit, *parameters))
         done, not_done = concurrent.futures.wait(results)
         assert not not_done, str(not_done)
