@@ -171,15 +171,26 @@ def finalize_presets(fail_on_error: bool=False):
     #     THREAD_LOCALS.config = {}  # reset THREAD_LOCALS
 
 
+RENAMED_KEYS = {
+    'ast_serialization': 'AST_serialization',
+    'cst_serialization': 'CST_serialization'
+}
+
+
 def set_preset_value(key: str, value: Any, allow_new_key: bool=False):
     global CONFIG_PRESET, ACCESSING_PRESETS, PRESETS_CHANGED
     if not ACCESSING_PRESETS:
         raise AssertionError('Presets must be made accessible with access_presets() first, '
                              'before they can be set!')
-    if not allow_new_key and key not in CONFIG_PRESET:
-        raise ValueError(
-            '"%s" is not a valid config variable. Use "allow_new_key=True" to add new variables '
-            'or choose one of %s' % (key, list(CONFIG_PRESET.keys())))
+    if not allow_new_key:
+        oldkey = key
+        if key not in CONFIG_PRESET:  key = RENAMED_KEYS.get(key, key)
+        if key not in CONFIG_PRESET:
+            raise ValueError(
+                '"%s" is not a valid config variable. Use "allow_new_key=True" to add  '
+                ' new variables or choose one of %s' % (key, list(CONFIG_PRESET.keys())))
+        elif oldkey != key:
+            print(f'Deprecation Warning: Key {oldkey} has been renamed to {key}!')
     validate_value(key, value)
     CONFIG_PRESET[key] = value
     PRESETS_CHANGED = True
@@ -341,10 +352,15 @@ def set_config_value(key: str, value: Any, allow_new_key: bool = False):
     """
     with access_lock:
         cfg = _config_dict()
-        if not allow_new_key and key not in cfg and key not in CONFIG_PRESET:
-            raise ValueError(
-                '"%s" is not a valid config variable. Use "allow_new_key=True" to '
-                'add new variables or choose one of %s' % (key, list(cfg.keys())))
+        if not allow_new_key:
+            oldkey = key
+            if key not in CONFIG_PRESET:  key = RENAMED_KEYS.get(key, key)
+            if key not in CONFIG_PRESET:
+                raise ValueError(
+                    '"%s" is not a valid config variable. Use "allow_new_key=True" to '
+                    'add new variables or choose one of %s' % (key, list(cfg.keys())))
+            elif oldkey != key:
+                print(f'Deprecation Warning: Key {oldkey} has been renamed to {key}!')
         validate_value(key, value)
         cfg[key] = value
 
