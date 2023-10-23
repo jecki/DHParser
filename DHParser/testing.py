@@ -447,7 +447,7 @@ def md_codeblock(code: str) -> str:
 
 
 def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT', verbose=False,
-                 junctions=set(), show=set(), serializations: Dict[str, List[str]]=dict()):
+                 junctions=set(), show=set(), serializations: Dict[str, List[str]] = dict()):
     """
     Unit tests for a grammar-parser and ast-transformations.
 
@@ -894,7 +894,7 @@ def grammar_suite(directory, parser_factory, transformer_factory,
                   ignore_unknown_filetypes=False,
                   report='REPORT', verbose=True,
                   junctions=set(), show=set(),
-                  serializations: Dict[str, List[str]]=dict()):
+                  serializations: Dict[str, List[str]] = dict()):
     """
     Runs all grammar unit tests in a directory. A file is considered a test
     unit, if it has the word "test" in its name.
@@ -1319,7 +1319,7 @@ async def stdio(limit=asyncio.streams._DEFAULT_LIMIT, loop=None):
 
 
 class MockStream:
-    """Simulations a stream that can be written to from one side and read from
+    """Simulates a stream that can be written to from one side and read from
     from the other side like a pipe. Usage pattern::
 
         pipe = MockStream()

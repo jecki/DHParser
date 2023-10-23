@@ -114,8 +114,7 @@ if __name__ == '__main__':
         recompile_grammar(os.path.join(scriptdir, '{name}.ebnf'),
                           force=False)
         sys.path.append('.')
-        from {name}Parser import parsing, ASTTransformation, junctions, targets
-        test_targets = targets  # <- CHANGE TEXT-TARGET-SET, HERE, IF NEEDED
+        from {name}Parser import parsing, ASTTransformation, junctions, test_targets
         error_report = run_grammar_tests(arg, parsing.factory, ASTTransformation.factory,
                                          junctions, test_targets)
         if error_report:

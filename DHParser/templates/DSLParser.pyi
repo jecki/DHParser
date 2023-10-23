@@ -19,11 +19,17 @@
 
 # add your own post-processing junctions, here, e.g. postprocessing.junction
 junctions = set([ASTTransformation, compiling])
+
 # put your targets of interest, here. A target is the name of result (or stage)
 # of any transformation, compilation or postprocessing step after parsing.
 # Serializations of the stages listed here will be written to disk when
 # calling process_file() or batch_process() and also appear in test-reports.
 targets = set([compiling.dst])
+
+# provide a set of those stages for which you would like to see the output
+# in the test-report files, here.
+test_targets = targets
+
 # add one or more serializations for those targets that are node-trees
 serializations = expand_table(dict([('*', ['sxpr'])]))
 
