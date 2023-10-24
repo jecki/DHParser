@@ -402,7 +402,7 @@ def get_report(test_unit, serializations: Dict[str, List[str]] = dict()) -> str:
                     report.append(f'\n### {stage.strip("_")}\n')
                     if isinstance(result, Node):
                         result_str = cast(Node, result).serialize(
-                            srl.get(stage, srl.get('*', 'default')))
+                            srl.get(stage.strip('_'), srl.get('*', 'default')))
                     else:
                         result_str = str(result)
                     report.append(indent(result_str))

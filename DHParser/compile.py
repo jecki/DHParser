@@ -64,6 +64,7 @@ __all__ = ('CompilerError',
            'FullCompilationResult',
            'process_tree',
            'Junction',
+           'end_points',
            'extract_data',
            'run_pipeline',
            'NoTransformation',
@@ -574,6 +575,13 @@ Junction = namedtuple('Junction',
      'factory',            ## type: CompilerFactory
      'dst'],               ## type: string
     module=__name__)
+
+
+def end_points(junctions: Iterable[Junction]) -> Set[str]:
+    """Returns all "final" destination stages, i.e. destinations
+    that are not a source of another junction."""
+    sources = { j.src for j in junctions }
+    return { j.dst for j in junctions if j.dst not in sources }
 
 
 def extract_data(tree_or_data: Union[RootNode, Node, Any]) -> Any:

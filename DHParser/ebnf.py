@@ -1248,7 +1248,7 @@ except (ImportError, ModuleNotFoundError):
         dhparserdir = scriptdir[:i + 10]  # 10 = len("/DHParser/")
         if dhparserdir not in sys.path:  sys.path.insert(0, dhparserdir)
 
-from DHParser.compile import Compiler, compile_source, Junction, full_compile
+from DHParser.compile import Compiler, compile_source, Junction, end_points, full_compile
 from DHParser.configuration import set_config_value, get_config_value, access_thread_locals, \\
     access_presets, finalize_presets, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN
 from DHParser import dsl

@@ -32,7 +32,7 @@ except (ImportError, ModuleNotFoundError):
         dhparserdir = scriptdir[:i + 10]  # 10 = len("/DHParser/")
         if dhparserdir not in sys.path:  sys.path.insert(0, dhparserdir)
 
-from DHParser.compile import Compiler, compile_source, Junction, full_compile
+from DHParser.compile import Compiler, compile_source, Junction, end_points, full_compile
 from DHParser.configuration import set_config_value, get_config_value, access_thread_locals, \
     access_presets, finalize_presets, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN
 from DHParser import dsl
@@ -326,6 +326,10 @@ serializing: Junction = create_junction(HTMLSerializer, "DOM", "html")
 
 
 #######################################################################
+#
+# Processing-Pipeline
+#
+#######################################################################
 
 # Add your own stages to the junctions and target-lists, below
 # (See DHParser.compile for a description of junctions)
@@ -336,9 +340,12 @@ junctions = set([ASTTransformation, compiling, serializing])
 # of any transformation, compilation or postprocessing step after parsing.
 # Serializations of the stages listed here will be written to disk when
 # calling process_file() or batch_process() and also appear in test-reports.
-targets = set([compiling.dst, serializing.dst])
+targets = end_points(junctions)
+test_targets = {j.dst for j in junctions}
+
 # add one or more serializations for those targets that are node-trees
-serializations = expand_table(dict([('DOM', ['xml']), ('*', ['sxpr'])]))
+serializations = expand_table({'DOM': ['xml'], '*': ['sxpr']})
+
 
 #######################################################################
 

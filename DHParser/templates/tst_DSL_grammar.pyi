@@ -54,7 +54,7 @@ def recompile_grammar(grammar_src, force):
 
 
 def run_grammar_tests(fn_pattern, parser_factory, transformer_factory,
-                      junctions=set(), targets=set()):
+                      junctions=set(), targets=set(), serializations=set()):
     if fn_pattern.find('/') >= 0 or fn_pattern.find('\\') >= 0:
         testdir, fn_pattern = os.path.split(fn_pattern)
         if not testdir.startswith('/') or not testdir[1:2] == ':':
@@ -65,7 +65,7 @@ def run_grammar_tests(fn_pattern, parser_factory, transformer_factory,
     error_report = testing.grammar_suite(
         testdir, parser_factory, transformer_factory,
         fn_patterns=[fn_pattern], report='REPORT', verbose=True,
-        junctions=junctions, show=targets)
+        junctions=junctions, show=targets, serializations=serializations)
     return error_report
 
 
@@ -114,9 +114,10 @@ if __name__ == '__main__':
         recompile_grammar(os.path.join(scriptdir, '{name}.ebnf'),
                           force=False)
         sys.path.append('.')
-        from {name}Parser import parsing, ASTTransformation, junctions, test_targets
+        from {name}Parser import parsing, ASTTransformation, \
+            junctions, test_targets, serializations
         error_report = run_grammar_tests(arg, parsing.factory, ASTTransformation.factory,
-                                         junctions, test_targets)
+                                         junctions, test_targets, serializations)
         if error_report:
             print('\n')
             print(error_report)

@@ -12,6 +12,11 @@
 # postprocessing: Junction = create_junction(PostProcessing, "{NAME}", "refined")
 #
 
+
+#######################################################################
+#
+# Processing-Pipeline
+#
 #######################################################################
 
 # Add your own stages to the junctions and target-lists, below
@@ -24,15 +29,22 @@ junctions = set([ASTTransformation, compiling])
 # of any transformation, compilation or postprocessing step after parsing.
 # Serializations of the stages listed here will be written to disk when
 # calling process_file() or batch_process() and also appear in test-reports.
-targets = set([compiling.dst])
+targets = end_points(junctions)
+# alternative: targets = set([compiling.dst])
 
 # provide a set of those stages for which you would like to see the output
-# in the test-report files, here.
-test_targets = targets
+# in the test-report files, here. (AST is always included)
+test_targets = set(j.dst for j in junctions)
+# alternative: test_targets = targets
 
 # add one or more serializations for those targets that are node-trees
 serializations = expand_table(dict([('*', ['sxpr'])]))
 
+
+#######################################################################
+#
+# Main program
+#
 #######################################################################
 
 def compile_src(source: str, target: str = "{NAME}") -> Tuple[Any, List[Error]]:
