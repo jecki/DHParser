@@ -11,7 +11,8 @@
 # # ("{NAME}") in this example must be the name of some earlier stage, though.
 # postprocessing: Junction = create_junction(PostProcessing, "{NAME}", "refined")
 #
-
+# DON'T FORGET TO ADD ALL POSTPROCESSING-JUNCTIONS TO THE GLOBAL
+# "junctions"-set BELOW!
 
 #######################################################################
 #
