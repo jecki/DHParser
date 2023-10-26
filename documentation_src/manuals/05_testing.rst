@@ -1710,23 +1710,24 @@ after the various transformations::
 When we run the test-script ("tst_outline_grammar.py") again, the
 results will not only report the AST but also the DOM-stage, e.g.::
 
-  Test of parser: "emphasis"
-  ==========================
+    Test of parser: "emphasis"
+    ==========================
 
-  Match-test "M1"
-  ----------------
+    Match-test "M1"
+    ----------------
 
-  ### Test-code:
-      *emphasized*
-
-  ### AST
-      (emphasis (text "emphasized"))
-
-  ### DOM
-      (i "emphasized")
+    ### Test-code:
+        *emphasized*
+    ### AST
+        (emphasis (text "emphasized"))
+    ### DOM
+        (i "emphasized")
 
 By default, stages the results of which are trees are serialized as
-S-expressions.
+S-expressions. This can be changed by adjusting the global
+"serializations"-variable in the ...Parser.py-script::
+
+    serializations = {}     
 
 Writing tests for a processing-stage
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

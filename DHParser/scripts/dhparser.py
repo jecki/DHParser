@@ -7,7 +7,7 @@ Copyright 2016  by Eckhart Arnold (arnold@badw.de)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+You may obtain a copy of the Licenseq at
 
     http://www.apache.org/licenses/LICENSE-2.0
 
@@ -24,16 +24,9 @@ import sys
 from typing import cast
 
 scriptdir = os.path.dirname(os.path.abspath(__file__))
-i = scriptdir.find('DHParser')
-k = len('DHParser-submodule') if scriptdir[i:].startswith('DHParser-submodule') \
-    else len('DHParser')
-if i >= 0:
-    dhparserdir = scriptdir[:i + k]
-    if dhparserdir not in sys.path:
-        sys.path.append(dhparserdir)
-else:
-    dhparserdir = ''
-
+dhparserdir = os.path.abspath(os.path.join(scriptdir, '..', '..'))
+if dhparserdir not in sys.path:
+    sys.path.append(dhparserdir)
 
 from DHParser.compile import compile_source
 from DHParser.configuration import access_presets, set_preset_value, finalize_presets
