@@ -1941,7 +1941,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         def list_flavor(node):
             jo = [node.name,
                   [list_flavor(nd) for nd in node._children]
-                  if node._children else str(node.result)]
+                  if node._children else str(node._result)]
             pos = node._pos
             if include_pos and pos >= 0:
                 jo.append(pos)
@@ -1957,7 +1957,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     # lists must be used instead of dictionaries!
                     jo = {node.name: [[nd.name, dict_flavor(nd)[nd.name]]
                                       for nd in node._children]
-                                     if node._children else node._result}
+                                     if node._children else str(node._result)}
                     break
                 else:
                     names.add(nd.name)
@@ -3094,6 +3094,8 @@ class DHParser_JSONEncoder(json.JSONEncoder):
             return cast(Node, obj).to_json_obj()
         elif obj is JSONnull or isinstance(obj, JSONnull):
             return None
+        elif isinstance(obj, StringView):
+            obj = str(obj)
         return json.JSONEncoder.default(self, obj)
 
 
