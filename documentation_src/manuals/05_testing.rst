@@ -1727,7 +1727,19 @@ By default, stages the results of which are trees are serialized as
 S-expressions. This can be changed by adjusting the global
 "serializations"-variable in the ...Parser.py-script::
 
-    serializations = {}     
+    serializations: dict[str, list[str]] = {'DOM': ['XML'], '*', :['Sxpr']
+
+"serializations" is a dictionary where the keys are the names of the
+stage (of the data) and the values are lists of serialization-types
+which can be any of "sxpr" (S-expression), "SXML" (S-expression conforming to
+the `SXML-specification <sxml_spec>`_), "XML" or "tree" (a simple indented tree).
+The serialization of test results is determined by the first item from the 
+value-list. The other items are only used when serializing the output of the
+...Parser.py-script. The output for a given stage will be serialized in
+all formats of the list associated to this stage.
+
+
+
 
 Writing tests for a processing-stage
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1746,3 +1758,4 @@ Conventional Unit-Testing
 .. _CommonMark: https://spec.commonmark.org/0.30/#emphasis-and-strong-emphasis
 .. _GROBID: https://github.com/kermitt2/grobid
 .. _Zacherl 2022: http://www.kit.gwi.uni-muenchen.de/?band=82908&v=2#subchapter:5-2-abbildung-von-semi-strukturierten-texten 
+.. _sxml_spec: https://okmij.org/ftp/papers/SXML-paper.pdf
