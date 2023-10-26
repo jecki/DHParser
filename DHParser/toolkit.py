@@ -1359,7 +1359,7 @@ def pp_json_str(jsons: str) -> str:
 #######################################################################
 
 class SingleThreadExecutor(concurrent.futures.Executor):
-    """SingleThreadExecutor is a replacement for
+    r"""SingleThreadExecutor is a replacement for
     concurrent.future.ProcessPoolExecutor and
     concurrent.future.ThreadPoolExecutor that executes any submitted
     task immediately in the submitting thread. This helps to avoid
@@ -1372,6 +1372,8 @@ class SingleThreadExecutor(concurrent.futures.Executor):
     """
 
     def submit(self, fn, *args, **kwargs) -> concurrent.futures.Future:
+        """Run function "fn" with the given args and kwargs synchronously
+        without multithreading or multiprocessing."""
         future = concurrent.futures.Future()
         try:
             result = fn(*args, **kwargs)

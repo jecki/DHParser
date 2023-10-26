@@ -693,13 +693,13 @@ The full documentation of all functions can be found in module
 important of these:
 
 * :py:func:`~transform.transformation_factory`: A decorator that turns
-   parameterized transformation of probing functions into simple
-   transformation or probing functions with a singe argument.
+  parameterized transformation of probing functions into simple
+  transformation or probing functions with a singe argument.
 
 * :py:func:`~transform.traverse`: Traverses a tree or sub-tree
-   depth-first and calls zero or more transformation functions
-   on each node picked from the transformation table by the name
-   of the node.
+  depth-first and calls zero or more transformation functions
+  on each node picked from the transformation table by the name
+  of the node.
 
 * :py:func:`~transform.transformer`: This is a variant of
   :py:func:`~transform.traverse` that only works on full trees,
@@ -773,35 +773,35 @@ Content-Changing Transformations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * :py:func:`~transform.lstrip`, :py:func:`~transform.rstrip`,
-  :py:func:`~transform.strip`. Recursively removes all leading, trailing or
-      both child-nodes that fulfill a given condition like
-      'is_whitespace'.
+  :py:func:`~transform.strip`. Recursively removes all leading,
+  trailing or both child-nodes that fulfill a given condition like
+  'is_whitespace'.
 
 * :py:func:`~transform.remove_children_if`. Removes all children that
-      fulfil a given condition.
+  fulfil a given condition.
 
 * :py:func:`~transform.remove_children`. A more specialized form of
-      'remove_children_if' that removes children based on their names.
+  'remove_children_if' that removes children based on their names.
 
 * :py:func:`~transform.remove_content`: Removes all children, the string
-      content of which matches a given regular expression.
+  content of which matches a given regular expression.
 
 * :py:func:`~transform.remove_brackets`: Removes any leading or trailing
-      sequence of (insignificant) whitespaces, anonymous text or
-      anonymous regular expression nodes, e.g. ``(formula (:Text "(")
-      (number "5") (operator "+") (number "3") (:Text ")") (:Whitespace
-      " "))`` -> ``(formula (number "5") (operator "+") (number "3"))``
+  sequence of (insignificant) whitespaces, anonymous text or
+  anonymous regular expression nodes, e.g. ``(formula (:Text "(")
+  (number "5") (operator "+") (number "3") (:Text ")") (:Whitespace
+  " "))`` -> ``(formula (number "5") (operator "+") (number "3"))``
 
 * :py:func:`~transform.remove_tokens`: Removes and tokens, i.e.
-     anonymous Text-nodes, e.g. ``(plus (number "5") (:Text "+") (number
-     3))`` -> ``(plus (number "5") (number 3))``
+  anonymous Text-nodes, e.g. ``(plus (number "5") (:Text "+") (number
+  3))`` -> ``(plus (number "5") (number 3))``
 
 * :py:func:`~transform.remove_if`: Removes the last node of the path
-      from its parent's children. (Note: This transformation breaks the
-      rule not to touch a node's parent's children-tuple! But, depending
-      on the use case, the meaning of the transformation might become
-      clearer when using "remove_if" on the node to be removed rather
-      than "remove_children_if" on its parent node.)
+  from its parent's children. (Note: This transformation breaks the
+  rule not to touch a node's parent's children-tuple! But, depending
+  on the use case, the meaning of the transformation might become
+  clearer when using "remove_if" on the node to be removed rather
+  than "remove_children_if" on its parent node.)
 
 
 Conditional Transformations
@@ -812,66 +812,66 @@ transformations depending on the result of a probing function or boolean
 combination of probing functions.
 
 * :py:func:`~transform.apply_if`: Applies a transformation or sequence
-      of transformations if the given probing function returns True.
-      Note, that the transformation is the first parameter while the
-      probing-function (or if-condition) comes second, e.g.
-      ``apply_if([replace_content_with(' '), change_name('blank')],
-      content_matches(r'\s+'))`` (normalizes nodes that contain only
-      whitespace to nodes with single blanks and the name to 'blank').
+  of transformations if the given probing function returns True.
+  Note, that the transformation is the first parameter while the
+  probing-function (or if-condition) comes second, e.g.
+  ``apply_if([replace_content_with(' '), change_name('blank')],
+  content_matches(r'\s+'))`` (normalizes nodes that contain only
+  whitespace to nodes with single blanks and the name to 'blank').
 
 * :py:func:`~transform.apply_unless`: Applies a transformation or
-      sequence of transformations if the given probing function does not
-      return True. (Again, the probing function is listed last in  the
-      parameter-list.)
+  sequence of transformations if the given probing function does not
+  return True. (Again, the probing function is listed last in  the
+  parameter-list.)
 
 * :py:func:`~transform.apply_ifelse`: Applies either of two
-      transformation-functions depending on the truth-value the given
-      probing function (last parameter!) returns.
+  transformation-functions depending on the truth-value the given
+  probing function (last parameter!) returns.
 
 
 Probing Functions
 ^^^^^^^^^^^^^^^^^
 
 * :py:func:`~transform.is_anonymous`: Returns True, if the node either
-      does not have name at all, or a name that starts with a colon ":"
-      as do those nodes that have been generated by an unnamed parse.
+  does not have name at all, or a name that starts with a colon ":"
+  as do those nodes that have been generated by an unnamed parse.
 
 * :py:func:`~transform.is_empty`: Returns True, if the node has neither
-      children nor any string content (i.e. not even blanks).
+  children nor any string content (i.e. not even blanks).
 
 * :py:func:`~transform.is_token`: Returns True, if the node's name is
-      ":Text" (which means that it is an anonymous node produces by the
-      String-Text-Parser) or any other of the given Token-names.
+  ":Text" (which means that it is an anonymous node produces by the
+  String-Text-Parser) or any other of the given Token-names.
 
 * :py:func:`~transform.is_one_of`: Returns True, if the node has one of
-      the given names.
+  the given names.
 
 * :py:func:`~transform.not_one_of`: The opposite of the above. Returns
-      True, if the node has none of the given names.
+  True, if the node has none of the given names.
 
 * :py:func:`~transform.name_matches`: Returns True, if the node's name
-      matches the given regular expression completely.
+  matches the given regular expression completely.
 
 * :py:func:`~transform.content_matches`: Returns True, if the node's
-      content matches the given regular expression completely.
+  content matches the given regular expression completely.
 
 * :py:func:`~transform.has_content`: Returns True, if the node's content
-      is the same as the given string. (This is a faster special case of
-      the the above.)
+  is the same as the given string. (This is a faster special case of
+  the the above.)
 
 * :py:func:`~transform.has_attr`: Checks whether the node has a
-      particular attribute and if a value is given, also whether the
-      attributes value is the given value.
+  particular attribute and if a value is given, also whether the
+  attributes value is the given value.
 
 * :py:func:`~transform.has_ancestor`: Checks whether the node has an has
-      an has an ancestor with one of the given names.
+  an has an ancestor with one of the given names.
 
 * :py:func:`~transform.has_descendant`: Checks whether the node has a
-      descendant with one of the given names. There are further
-      functions like :py:func:`~transform.has_parent`,
-      :py:func:`~transform.has_child`, :py:func:`~transform.has_sibling`
-      to check for immediate ancestors, descendants or for neighbors on
-      the same level.
+  descendant with one of the given names. There are further
+  functions like :py:func:`~transform.has_parent`,
+  :py:func:`~transform.has_child`, :py:func:`~transform.has_sibling`
+  to check for immediate ancestors, descendants or for neighbors on
+  the same level.
 
 
 
@@ -879,17 +879,17 @@ Boolean Combinators
 ^^^^^^^^^^^^^^^^^^^
 
 * :py:func:`~transform.any_of`: Returns True, if any one of the zero or
-      more given probing functions returns True. Note that like Python's
-      "any()" this is False if the set of given functions is empty.
+  more given probing functions returns True. Note that like Python's
+  "any()" this is False if the set of given functions is empty.
 
 * :py:func:`~transform.all_of`: Returns True, if all of the zero or more
-      given probing functions return True. Note that like Python's
-      "all()" this is True if the set of given functions if empty, e.g.
-      ``remove_if(all_of([is_empty, is_anonymous]))`` (remove a node if
-      it is both empty and anonymous).
+  given probing functions return True. Note that like Python's
+  "all()" this is True if the set of given functions if empty, e.g.
+  ``remove_if(all_of([is_empty, is_anonymous]))`` (remove a node if
+  it is both empty and anonymous).
 
 * :py:func:`~transform.neg`: Inverts the boolean return value of the
-      given probing function.
+  given probing function.
 
 
 .. _MathJAX: https://www.mathjax.org/

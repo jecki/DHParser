@@ -218,7 +218,7 @@ to quickly turn the additional output of the CST in the test-report
 on and off by simply placing an asterisk ``*`` after the test name
 of any match test or removing it after the debugging has been done.
 If for example, your test's name is "M1" you'd simply write ``M!*:
-...``` in the test-ini-file.
+...``` in the test-input-file with the ".ini"-ending.
 
 In case a test fails, the error-messages will appear in the report-file.
 DHParser will still attempt to produce an abstract-syntax-tree (AST)
@@ -318,7 +318,7 @@ understand the causes of unexpected parser-behavior, quickly.
 .. TIP:: Parsing-logs are by default only generated for failed test.
     In case you'd like to see the parsing-log for a successful test,
     a simple trick is to flip the type of the test from "match" to
-    "fail" in the .ini-file or vice versa.
+    "fail" in the ".ini"-file or vice versa.
 
     The test with the flipped type will then be reported as a failure,
     but the parsing-log is just the same as if it was a success. Once,
@@ -446,10 +446,10 @@ that has been stored in file
 "tests/LOGS/fail_document_F2_parser.log.html".
 There you find the suspicious lines:
 
-= == ================================================= ===== ===========================================
-3	1	document->main->section->subsection-> `###`	       DROP	 #### BADLY NESTED SubSubSection 1.1.1 ##...
-3	4	document->main->section->subsection->heading->LINE MATCH # BADLY NESTED SubSubSection 1.1.1 ### S...
-= == ================================================= ===== ===========================================
+= = ================================================== ===== ===========================================
+3 1 document->main->section->subsection-> `###`        DROP  #### BADLY NESTED SubSubSection 1.1.1 ##...
+3 4 document->main->section->subsection->heading->LINE MATCH # BADLY NESTED SubSubSection 1.1.1 ### S...
+= = ================================================== ===== ===========================================
 
 Obviously, the parser "subsection" found its marker consisting
 of three ``#``-signs, but then it did not stop short at the next
@@ -770,10 +770,10 @@ definition of the markup-parser, we make sure that a bold-element
 is not accidentally captured as an emphasized-element containing
 another emphasized element.
 
-The "mandatory marker" ``§`` ensures that errors when marking 
+The "mandatory marker" ``§`` ensures that errors when marking
 up bold or emphasized text will be located precisely. (See :ref:`mandatory_items`.)
 For example, neither bold text nor emphasized text must start or end with whitespace,
-e.g. ``* emphasized *`` must be written as `` *emphasized* ``, instead.
+e.g. ``* emphasized *`` must be written as ``*emphasized*``, instead.
 
 The introduction of "inner_emph" and "inner_bold" is due to the fact that
 the beginning- and the end-markers for emphasis and bold-text, respectively, is
@@ -815,7 +815,7 @@ enclosed by ``<`` and ``>`` as an exercise!)
 
 Before we stop the bottom-up-approach at this point, there is one last
 touch we might want to add: The abstract syntax tree (AST) still looks
-rather verbose, e.g.:
+rather verbose, e.g.::
 
     (markup
       (text
@@ -831,7 +831,7 @@ text from highlighted elements (i.e. emphasized and bold text), we
 add the more atomic elements, LLF, L, LF, CHARS, TEXT, ESCAPED  to
 the list of disposables at the beginning of the EBNF-grammar, which
 makes them disappear, merging their content in the higher-level elements.
-Thus we change the @disposable-directive at the top of the grammar to:
+Thus we change the @disposable-directive at the top of the grammar to::
 
     @ disposable  = WS, EOF, LINE, GAP, LLF, L, LF,
                     CHARS, TEXT, ESCAPED, inner_emph, inner_bold
@@ -955,7 +955,7 @@ As far as explaining the basics of test-driven-grammar-development goes,
 this should suffice as an example. Admittedly, as far as coding a grammar
 for Markdown, there are still a few things to do, which are here
 left as an exercise to the reader. Here are some suggestions for
-more exercises in test-driven grammar-development::
+more exercises in test-driven grammar-development:
 
 1.  The AST still keeps the content of L, LF and GAP literally,
     although L and LF are merged with adjacent text-nodes during
@@ -972,7 +972,7 @@ more exercises in test-driven grammar-development::
    Or should new, intermediary symbols be introduced?
 
 3. You may have noticed that headings starting with one or more 
-   `#`-characters must be separated with at least one empty line 
+   ``#``-characters must be separated with at least one empty line
    from any preceding text-blocks (other headings do not count
    as text block!). If you haven't noticed this, verify this
    with suitable match- or fail-tests! 
@@ -1177,12 +1177,12 @@ For the conversion of line-feeds to single-whitespace-characters, we
 will use a simple string comparison instead of a full tree comparison as
 test (see above)::
 
-[match:text]
-A1*: """Text in
-    two lines"""
+    [match:text]
+    A1*: """Text in
+        two lines"""
 
-[AST:text]
-A1: "Text in two lines"
+    [AST:text]
+    A1: "Text in two lines"
 
 This time, because it is a string comparison, the test code must stand
 within quotation marks. We mark the match test with an asterisk "*" in
@@ -1278,7 +1278,7 @@ plain-text parts inside `mixed-content XML-tags
 <https://www.w3.org/TR/xml/#sec-mixed-content>`_.) ":Text"-tags are
 created when the parser merges anonymous leaf-nodes of different types.
 (See the :ref:`definition of anonymous nodes
-<definition_anonymos_nodes>` and ref:`simplifying_syntax_trees` to
+<definition_anonymous_nodes>` and ref:`simplifying_syntax_trees` to
 understand the role of anonymous nodes and "early merging" of
 leaf-nodes.)
 
@@ -1297,7 +1297,7 @@ quasi-declarative tree-transformations, see
 
 Compared to the earlier version of the transformation-table one entry
 ("markup, bold, ...") has been changed in several ways and another entry
-("LF") has been added. Let's look at the differences one by one::
+("LF") has been added. Let's look at the differences one by one:
 
 1. First of all, the entry "LF" has been added. The transformations that
    are performed on "LF"-nodes replaces their content with a single
@@ -1400,7 +1400,7 @@ letter::
 Testing the processing-pipeline
 -------------------------------
 
-Also, later stages of the :ref:`processing pipeline <processing_pipline>` can be
+Also, later stages of the :ref:`processing pipeline <processing_pipelines>` can be
 tested with the same apparatus as long as their results are either node-trees or
 serializable as strings. To illustrate both of these cases, let us extend our
 "outline"-parser so that it transforms the input documents to HTML in two steps.
@@ -1567,7 +1567,22 @@ In the prepare-method the destination-stage should needs to set so that the
 processing-pipeline can keep track of the progress. This is essential for
 the processing pipeline to work. The check of the source-stage with the
 assertion-statement is not necessary but helps to locate potential programming
-errors in case something goes wrong. 
+errors in case something goes wrong.
+
+.. Note:: We use the term "stage" in two different meanings (which, however,
+    are easily distinguished by the context) to denote either:
+
+    1. the data-stage which denotes the state the data is in at a specific
+        point in the processing pipeline, e.g. source document,
+        preprocessed source documtnet, AST, CST, etc.
+
+    2. the "processing-" or "transformation-stage" which denotes a
+       transformation-function from one data-stage to the next.
+
+    In the source code, the name ``stage`` is always used for the data-stage,
+    while the transformation stage is either a ``Junction``-tuple or the
+    transformation-callable that is returned by the ``factory``-field of
+    that tuple.
 
 Next, we define the finalize-method. This might be surprising at first, because
 after the AST has been run through all visitor-methods the tree should only
@@ -1694,18 +1709,20 @@ or :py:func:`~transform.reduce_single_child`::
             return node
 
 Before the test-reports yields the results of this processing-stage 
-for the match-tests defined in the test-files, the :py:ref:`junctions <junction>` 
-for this stage needs to be declared::
+for the match-tests defined in the test-files, the
+:py:ref:`junction <junctions>` for this stage needs to be declared::
 
     compiling: Junction = create_junction(DOMCompiler, "AST", "DOM")
 
-and the junction must be added to the list of junctions and - if it is
-to appear in the test report - to the list of targets of interest as
-well, both of which are defined in the "outlineParser"-module right
-after the various transformations::
+and the junction must be added to the list of junctions which is defined
+a bit further below in the Processing-Pipeline-section::
 
-    junctions = set([ASTTransformation, compiling])
-    targets = set([compiling.dst, serializing.dst])
+    junctions: Set[Junction] = {ASTTransformation, compiling}
+
+By default, all destinations of all available junctions will be written
+to the test-report. If this is not desired, the variable "test_targets"
+in the same section must be supplied with a set of names of those
+data-stages that shall be reported.
 
 When we run the test-script ("tst_outline_grammar.py") again, the
 results will not only report the AST but also the DOM-stage, e.g.::
@@ -1735,25 +1752,222 @@ which can be any of "sxpr" (S-expression), "SXML" (S-expression conforming to
 the `SXML-specification <sxml_spec>`_), "XML" or "tree" (a simple indented tree).
 The serialization of test results is determined by the first item from the 
 value-list. The other items are only used when serializing the output of the
-...Parser.py-script. The output for a given stage will be serialized in
-all formats of the list associated to this stage.
+...Parser.py-script. The asterisk "*" is a joker which means that any stage
+that has not been explicitly specified with a key in the serializations-dictionary
+will use the serialization(s) associated to the asterisk.
 
-
+The output for a given stage will be serialized in
+all formats of the list associated to this stage. Because often the same value
+will be associated to several keys, it can be helpful to use a "multi-keyword table"
+the kind of which is also used for specifying AST-transformations.
+See :py:func:`~toolkit.expand_table`.
 
 
 Writing tests for a processing-stage
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Once the junctions for the steps beyond AST-transformation have been specified,
+writing test for data-stages beyond the AST is as simple as writing an AST-test.
+If the data at the respective stage is tree-data, you can write down the expected
+tree as an XML-snippet or S-expression. In case the data is of any other type,
+you write the expected string that results from applying "str()" to the test-data
+at that stage.
+
+Since the DOM-tree is still tree-data, we specify the expected result
+in a tree-serialization-format, say, as as S-expression. As mentioned earlier,
+it is a pragmatic approach to run the test first and then copy and past the
+result for the DOM-tree from the report-file and adjust these by hand so that they
+reflect what we want the results to look like in this stage (although they do not
+yes, but thats what test-driven-development is about).
+
+Note that the same symbol names from the grammar are used to specify tests for
+later processing stages. It does not matter if the name of the root-node has been
+changed as in this-case where the "document"-root-node is renamed to "body".
+The test must never the less be specified as "[DOM:document]", because it takes
+the data that has been passed on from the [match:document]-test.
+
+This is what the DOM-test look like in the test-input-file (".ini"-file)::
+
+    [match:emphasis]
+    D1: "*emphasized*"
+
+    [match:blocks]
+    D1: """First paragraph of text.
+
+    Next paragraph
+    of text."""
+
+    [match:document]
+    D1: M4: """# Simple Test
+
+        ## A test of bold- and emphasis-markup
+
+          This paragraph contains *emphasized
+        text* that spreads over two lines.
+
+          But what ist this: ** *emphasized* and bold**
+        or * **bold** and emphasized*?"""
+
+    ...
+
+    [DOM:emphasis]
+    D1: (i "emphasized")
+
+    [DOM:blocks]
+    D1: (div (p "First paragraph of text.") (p "Next paragraph of text."))
+
+    [DOM:document]  # element-name reflects the original grammar-symbol!
+    D1: (body
+        (h1 "Simple Test")
+        (h2 "A test of bold- and emphasis-markup")
+        (p `(style "text-indent: 2em;")
+          (text "This paragraph contains ")
+          (i "emphasized text")
+          (text " that spreads over two lines."))
+        (p `(style "text-indent: 2em;")
+          (text "But what ist this: ")
+          (b
+            (i "emphasized")
+            (text " and bold"))
+          (text " or ")
+          (i
+            (b "bold")
+            (text " and emphasized"))
+          (text "?")))
+
+The next time, we run the test, the DOM-trees that a generated during the test will
+be matched against the trees specified unter the "[DOM:...]"-headings of the test-file.
+
+Writing tests for the last stage, the HTML-output, is just the same. Again, we will,
+for the sake of simplicity start with the transformation. The transformation from the
+DOM-tree to actual HTML is pretty simple, because we only need to add an HTML-header
+and a serialize the DOM-tree as XML. For the header, we can simply write a
+string-template::
+
+    HTML_TMPL = """<!DOCTYPE html>
+    <html lang="en-GB">
+    <head>
+        <title>{title}</title>
+        <meta charset="utf8"/>
+    </head>
+    {body}
+    </html>
+    """
+
+    class HTMLSerializer(Compiler):
+        def prepare(self, root: RootNode) -> None:
+            assert root.stage == "DOM", f"Source stage `DOM` expected, `but `{root.stage}` found."
+            root.stage = "html"
+            h1 = root.pick('h1')
+            self.title = h1.content if h1 else ''
+
+        def on_body(self, node: Node) -> str:
+            body = node.as_xml(string_tags={'text'})
+            return HTML_TMPL.format(title=self.title, body=body)
+
+        def wildcard(self, node: Node) -> str:
+            return node.as_xml(string_tags={'text'})
+
+    serializing: Junction = create_junction(HTMLSerializer, "DOM", "html")
+
+Again, don't forget to add the "serializing"-junction to the set of
+junctions that define the processing-pipeline::
+
+    junctions: Set[Junction] = {ASTTransformation, compiling, serializing}
+
+The HTML-Serializer above is pretty straight-forward. Almost all of the work
+is done by :py:meth:`~nodetree.Node.as_xml` called in the wildcard-method.
+Note that the wildcard-method does not even descend into the tree, it
+just returns the XML-serilized tree for whatever element is the root
+element of the DOM-tree received from the last stage.
+
+We add the html-header in the
+visitor-method of the root-element (body) and not in the wildcard-method
+for serializing all other nodes or in the "finalize"-method which is
+not even present, here. This has the effect that the header is only
+added in tests of entire documents, but not of single elements
+which would be cumbersome.
+
+Other than the AST->DOM-transformation we return the HTML-document
+or the (HTML-snippets from tests of document-parts) as strings.
+Therefore we must specify the test-code for the html-stage also
+in form of strings. This means that the formatting of the
+html-test-code must be exactly the same as that returned by the
+DOM->html-transformation with the same linebreaks, indentation
+and all::
+
+    [html:emphasis]
+    D1: "<i>emphasized</i>"
+
+    [html:blocks]
+    D1: """<div>
+          <p>First paragraph of text.</p>
+          <p>Next paragraph of text.</p>
+        </div>"""
+
+
+    [html:document]
+    D1: """<!DOCTYPE html>
+        <html lang="en-GB">
+        <head>
+            <title>Simple Test</title>
+            <meta charset="utf8"/>
+        </head>
+        <body>
+          <h1>Simple Test</h1>
+          <h2>A test of bold- and emphasis-markup</h2>
+          <p style="text-indent: 2em;">
+            This paragraph contains
+            <i>emphasized text</i>
+            that spreads over two lines.
+          </p>
+          <p style="text-indent: 2em;">
+            But what ist this:
+            <b>
+              <i>emphasized</i>
+              and bold
+            </b>
+            or
+            <i>
+              <b>bold</b>
+              and emphasized
+            </i>
+            ?
+          </p>
+        </body>
+        </html>"""
+
+
 
 Conventional Unit-Testing
 -------------------------
 
-- Sometimes it becomes necessary to fallback to conventional
-  unit-testing. For example when testing if error messages
-  are reported, correctly.
+All though, the DHParser's testing-framework is by now quite comprehensive
+there are situation where you might want to resort to conventional
+unit-testing:
 
-- How this is done
+1. Testing for the occurrence of particular error-codes or error-messages.
+   As of Version 1.6 DHParser's testing framework has no support for
+   testing errors. This may change with future versions.
 
+2. Testing of data-stages in which the data is not compositional, any more
+   in the sense that you could test isolated pieces of code (without
+   context) and still receive meaningful results.
+
+   This assumption which is true for parsing of context-free grammars
+   (save for the use of lookahead and lookbehind-parsers for which
+   DHParsers testing-framework offers some workarounds, however),
+   might not be true for later processing stages, any more.
+   The assumption context-independence is inbread into the DHParser's
+   testing-framework and will therefore not change in the future.
+
+Therefore, we will illustrate how conventional unit-testing works.
+Let's assume that we want to test error-localisation (a common
+pain-point of parser-building) and error-reporting in case
+something goes wrong. The glue code for a conventional unit-test
+looks like this::
+
+    TO BE CONTINUED...
 
 .. _CommonMark: https://spec.commonmark.org/0.30/#emphasis-and-strong-emphasis
 .. _GROBID: https://github.com/kermitt2/grobid

@@ -293,13 +293,9 @@ HTML_TMPL = """<!DOCTYPE html>
 
 
 class HTMLSerializer(Compiler):
-    def __init__(self):
-        super().__init__()
-        self.forbid_returning_None = False
-
-    def reset(self):
-        super().reset()
-        self.title = ''
+    # def reset(self):
+    #     super().reset()
+    #     self.title = ''
 
     def prepare(self, root: RootNode) -> None:
         assert root.stage == "DOM", f"Source stage `DOM` expected, `but `{root.stage}` found."
@@ -344,7 +340,7 @@ targets = end_points(junctions)
 test_targets = {j.dst for j in junctions}
 
 # add one or more serializations for those targets that are node-trees
-serializations = expand_table({'DOM': ['xml'], '*': ['sxpr']})
+serializations = expand_table({'DOM': ['sxpr'], '*': ['sxpr']})
 
 
 #######################################################################

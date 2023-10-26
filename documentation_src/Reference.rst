@@ -26,13 +26,11 @@ Module ``compile``
 .. automodule:: compile
    :members:
 
-
 Module ``parse``
 ----------------
 
 .. automodule:: parse
    :members:
-
 
 Module ``dsl``
 --------------
@@ -40,13 +38,11 @@ Module ``dsl``
 .. automodule:: dsl
    :members:
 
-
 Module ``preprocess``
 ---------------------
 
 .. automodule:: preprocess
    :members:
-
 
 Module ``error``
 ----------------
@@ -59,7 +55,6 @@ Module ``testing``
 
 .. automodule:: testing
    :members:
-
 
 Module ``trace``
 ----------------

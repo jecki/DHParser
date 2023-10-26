@@ -1271,8 +1271,8 @@ Attribute-handling
 * :py:func:`~nodetree.ad_token_to_attr`: Removes a token from a particular
       attribute of a node.
 * :py:func:`~nodetree.has_class`, :py:func:`~nodetree.has_class`,
-  :py:func:`~nodetree.has_class`: the same as above, only that these methods
-      manipulate the tokens specifically of the class-attribute
+      :py:func:`~nodetree.has_class`: the same as above, only that
+      these methods manipulate the tokens specifically of the class-attribute
 
 
 class RootNode

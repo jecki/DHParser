@@ -2,9 +2,9 @@ DHParser
 ========
 
 ![](https://img.shields.io/pypi/v/DHParser) 
-![](https://img.shields.io/pypi/status/DHParser) 
-![](https://img.shields.io/pypi/pyversions/DHParser) 
+![](https://img.shields.io/pypi/status/DHParser)
 ![](https://img.shields.io/pypi/l/DHParser)
+![](https://img.shields.io/pypi/pyversions/DHParser)
 
 DHParser - Rapid prototyping of formal grammars and 
 domain specific languages (DSL) in the Digital Humanities
@@ -19,7 +19,7 @@ Purpose
 
 DHParser has been developed with three main purposes in mind:
 
-1. Developing for domain specific languages and notations, either existing
+1. Developing parsers for domain specific languages and notations, either existing
    notations, like, LaTeX, or newly created DSLs, like the
    [Medieval-Latin-Dictionary-DSL](https://gitlab.lrz.de/badw-it/mlw-dsl-oeffentlich).
 
