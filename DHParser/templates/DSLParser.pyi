@@ -12,7 +12,7 @@
 # postprocessing: Junction = create_junction(PostProcessing, "{NAME}", "refined")
 #
 # DON'T FORGET TO ADD ALL POSTPROCESSING-JUNCTIONS TO THE GLOBAL
-# "junctions"-set BELOW!
+# "junctions"-set IN SECTION "Processing-Pipeline" BELOW!
 
 #######################################################################
 #
@@ -23,7 +23,7 @@
 # Add your own stages to the junctions and target-lists, below
 # (See DHParser.compile for a description of junctions)
 
-# add your own post-processing junctions, here, e.g. postprocessing.junction
+# ADD YOUR OWN POST-PROCESSING-JUNCTIONS HERE:
 junctions = set([ASTTransformation, compiling])
 
 # put your targets of interest, here. A target is the name of result (or stage)
