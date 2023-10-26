@@ -388,7 +388,7 @@ def traverse(tree: Node,
         table = {name: cast(Sequence[Callable], smart_list(call))
                  for name, call in list(transformation_table.items())}
         table = expand_table(table)
-        # substitute key for insiginificant whitespace
+        # substitute key for insignificant whitespace
         assert '+' not in table, 'Symbol "+" in processing table is obsolete, use "<" instead'
         if '~' in table:
             if ':Whitespace' in table:
@@ -640,7 +640,7 @@ def all_of(path: Path, bool_func_set: AbstractSet[collections.abc.Callable]) -> 
 @transformation_factory(collections.abc.Callable)
 def three_valued(path: Path, cond_true: Callable, cond_false: Callable) -> Optional[bool]:
     """Returns True, if ``cond_true`` evaluates to True, 
-    Rweturns False, if ``cond_true`` does not evaluate to True but
+    Returns False, if ``cond_true`` does not evaluate to True but
     cond_false evaluates to True. Returns None, otherwise.
     
     Note that this means that the first parameter has precedence.
@@ -895,7 +895,7 @@ def update_attr(dest: Node, src: Union[Node, Tuple[Node, ...]], root: RootNode):
 def swap_attributes(node: Node, other: Node):
     """
     Exchanges the attributes between node and other. This might be
-    needed when re-aranging trees.
+    needed when re-arranging trees.
     """
     NA = node.has_attr()
     OA = other.has_attr()
@@ -1150,7 +1150,7 @@ def collapse_children_if(path: Path,
     """
     (Recursively) merges the content of all adjacent child nodes that
     fulfill the given `condition` into a single leaf node with the tag-name
-    `taget_tag`. Nodes that do not fulfil the condition will be preserved.
+    `target_tag`. Nodes that do not fulfil the condition will be preserved.
 
     >>> sxpr = '(place (abbreviation "p.") (page "26") (superscript "b") (mark ",") (page "18"))'
     >>> tree = parse_sxpr(sxpr)
@@ -1212,7 +1212,7 @@ def merge_adjacent(path: Path, condition: Callable, preferred_name: str = ''):
     first node of the merge will be chosen. (Note that the assignment
     of the preferred name only happens if a merge actually took place,
     i.e. if there are at least two nodes that have been merged.
-    `´merge_adjaced()`` will not rename single nodes.)
+    `´merge_adjacent()`` will not rename single nodes.)
 
     'merge_adjacent' differs from :py:func:`collapse_children_if` in
     two respects:
@@ -1222,8 +1222,8 @@ def merge_adjacent(path: Path, condition: Callable, preferred_name: str = ''):
        the 'preferred_name' passed to `merge_adjacent` is only used
        if it actually occurs among the nodes to be merged.
 
-    This, if 'merge_adjacent' is subsituted for 'collapse_children_if'
-    in doc-string example of the latter function, the exmpale yields::
+    This, if 'merge_adjacent' is substituted for 'collapse_children_if'
+    in doc-string example of the latter function, the example yields::
 
         >>> sxpr = '(place (abbreviation "p.") (page "26") (superscript "b") (mark ",") (page "18"))'
         >>> tree = parse_sxpr(sxpr)
@@ -1470,7 +1470,7 @@ def lean_left(path: Path, operators: AbstractSet[str]):
     This transformation is needed, if you want to get the order of
     precedence right, when writing a grammar, say, for arithmetic
     that avoids left-recursion. (DHParser does support left-recursion
-    but left-recursive grammars might not be compatibale with
+    but left-recursive grammars might not be compatible with
     other PEG-frameworks any more.)
 
     ATTENTION: This transformation function moves forward recursively,

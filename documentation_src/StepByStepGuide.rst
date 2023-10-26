@@ -312,7 +312,7 @@ and the definition of the rule on the right hand side.
     distinguishes two phases, *scanning* and *parsing*, where a lexical scanner
     would take a stream of characters and yield a sequence of tokens and the
     actual parser would then operate on the stream of tokens. DHParser,
-    however, is an instance of a *scannerless parser* where the functionality
+    however, is an instance of a *scanner-less parser* where the functionality
     of the lexical scanner is seamlessly integrated into the
     parser. This is done by allowing regular expressions in the definiendum of
     grammar symbols. The regular expressions do the work of the lexical
@@ -587,7 +587,7 @@ kinds of debugging information have been written into a newly created
 subdirectory "LOGS". (Beware that any files in the "LOGS" directory may be
 overwritten or deleted by any of the DHParser scripts upon the next run! So
 don't store any important data there.) The most interesting file in the
-"LGOS"-directory is the full parser log. We'll ignore the other files and just
+"LOGS"-directory is the full parser log. We'll ignore the other files and just
 open the file "macbeth_full_parser.log.html" in an internet-browser. As the
 parsing history tends to become quite long, this usually takes a while, but
 luckily not in the case of our short demo example::

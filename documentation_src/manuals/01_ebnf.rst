@@ -563,7 +563,7 @@ has already been eliminated at the parsing stage.
 Since DHParser version 1.5.1 there also exists an alternative syntax to
 specify symbols that are to be considered disposable and elements that are
 to be dropped by local ``->SKIP`` (drop) and ``->HIDE`` (dispose) markers
-within the grammer, rather than with directives. These markers must be appended
+within the grammar, rather than with directives. These markers must be appended
 to the parser (skip/drop) or to the symbol definition (hide/dispose), e.g.::
 
     WHITESPACE = /\s+/ ->SKIP
@@ -573,7 +573,7 @@ There is a subtle difference between the two markers, in so far as the
 or at its very end, while the "->HIDE" marker may only appear at the very
 end of the definition. (The reason is that while it makes sense to drop nodes
 returned by anonymous parsers, it does not make sense to dispose (i.e. hide)
-anonymous nodes, because these will be elimniated ("flattened"), anyway.)
+anonymous nodes, because these will be eliminated ("flattened"), anyway.)
 
 The names of the makers have been chosen to reflect existing EBNF-practices.
 If you find this confusing, you can also write "->DROP" instead of "->SKIP" for
@@ -2122,9 +2122,9 @@ contain fenced code itself.::
 Here, a possible remedy is to employ a preprocessor, that distinguishes
 the fenced code from quoted fences and replaces the non-quoted fences by
 context-free opening and closing markers that can then be captured at
-parsing stage. Using preprocessors is often a clean and pragmatic
-solution and DHParser includes dedicated support for preprocessors.
-However, introducing preprocessors also hast some downsides. One
+parsing stage. Using pre-processors is often a clean and pragmatic
+solution and DHParser includes dedicated support for pre-processors.
+However, introducing pre-processors also hast some downsides. One
 disadvantage is that a preprocessor requires a makeshift parser of its
 own that must be strong enough not to stumble over the syntactic
 constructs that do not concern the preprocessor like comments for
@@ -2409,13 +2409,13 @@ a longer stretch of whitespace than represented by its present
 value, i.e. the last value on the "INDENT"-symbol's value-stack.
 
 DHParser makes sure that the value-stack of each captured
-variable will properly be unwinded when returning from a
+variable will properly be un-winded when returning from a
 non-match to an earlier position in the document. However, there
 is one case where this does not work, namely, if a symbol has matched
 the empty string. Because value-stack unwinding is tied to the
 position in the text instead of the call stack (which DHParser
 only keeps track of when testing or debugging), it is impossible
-to decide where a zero-length capture must be unwinded or not
+to decide where a zero-length capture must be un-winded or not
 in case DHParser returns exactly to the position of that capture.
 In this case DHParser does not unwind the capture. This can lead
 to a non-empty value stack at the end of the parsing process which

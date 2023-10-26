@@ -112,7 +112,7 @@ class FlexibleEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "ee35274ea4019ef630c4a3b21f9d00a8"
+    source_hash__ = "69ceb8fb9820f22f25d0d13c8b07df6d"
     disposable__ = re.compile('is_mdef$|component$|pure_elem$|countable$|no_range$|FOLLOW_UP$|ANY_SUFFIX$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

@@ -110,7 +110,7 @@ class XMLGrammar(Grammar):
     r"""Parser for a XML source file.
     """
     element = Forward()
-    source_hash__ = "2960187a6fc88fcf8c7f4189fa1004a7"
+    source_hash__ = "0ece6749318db285bad59e6b8a8776f9"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
     disposable__ = re.compile('BOM$|Misc$|NameStartChar$|NameChars$|CommentChars$|PubidChars$|prolog$|PubidCharsSingleQuoted$|VersionNum$|EncName$|Reference$|CData$|EOF$|tagContent$')
     static_analysis_pending__ = []  # type: List[bool]

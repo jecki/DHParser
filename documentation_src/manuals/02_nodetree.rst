@@ -13,7 +13,7 @@ Node-objects
 ------------
 
 Syntax trees are composed of Node-objects which are linked
-unidirectionally from parent to children. Nodes can contain either
+uni-directionally from parent to children. Nodes can contain either
 child-nodes, in which case they are informally called "branch-nodes", or
 text-strings, in which case they informally called "leaf nodes", but not
 both at the same time. (There is no mixed content as in XML!)
@@ -222,7 +222,7 @@ json objects into trees composed of Node-objects.
     Node-trees that is used when serializing into these formats. There is no
     function to deserialize indented text.
 
-In order to make parameterizing serialization easier, the Node-class also
+In order to make it easier to parameterize serialization, the Node-class also
 defines a generic :py:meth:`~nodetree.Node.serialize()`-method next to the more
 specialized :py:meth:`~nodetree.Node.as_sxpr`-,
 :py:meth:`~nodetree.Node.as_json`- and
@@ -890,9 +890,9 @@ those tags, the borders of which the new markup runs across, to be split
 by that markup::
 
     >>> hard_xml_copy = copy.deepcopy(hard_xml)
-    >>> divisability_map = {'foreign': {'location', ':Text'},
+    >>> divisibility_map = {'foreign': {'location', ':Text'},
     ...                     '*': {':Text'}}
-    >>> mapping = ContentMapping(hard_xml_copy, divisability=divisability_map)
+    >>> mapping = ContentMapping(hard_xml_copy, divisibility=divisibility_map)
     >>> match = re.search(r"Stadt\s+München", mapping.content)
     >>> _ = mapping.markup(match.start(), match.end(), "foreign",
     ...                    {'lang': 'de'})
@@ -916,9 +916,9 @@ by that markup::
 See the difference? This time the <foreign>-element remains intact,
 while the <location>-element has been split. This behavior can be
 configures by the divisibility-map that is passed to the parameter
-``divisability`` of the ContentMapping-constructor. It maps elements
+``divisibility`` of the ContentMapping-constructor. It maps elements
 (or, rather, their names) to sets of elements that can be cut by them.
-The asterix ``*`` is a wildcard and contains those elements that can be
+The asterisk ``*`` is a wildcard and contains those elements that can be
 cut by any other element. An element that does not appear in the
 value-set anywhere in the mapping cannot be cut by any other element. It
 is also possible to pass a simple set of element-names instead of a
@@ -949,9 +949,9 @@ Let's try this on the previous example::
 
     >>> hard_xml_copy = copy.deepcopy(hard_xml)
     >>> match = re.search(r"Stadt\s+München", hard_xml_copy.content)
-    >>> divisability_map = {'foreign': {'location', ':Text'},
+    >>> divisibility_map = {'foreign': {'location', ':Text'},
     ...                     '*': {':Text'}}
-    >>> mapping = ContentMapping(hard_xml_copy, divisability=divisability_map,
+    >>> mapping = ContentMapping(hard_xml_copy, divisibility=divisibility_map,
     ...                          chain_attr_name="chain")
     >>> _ = mapping.markup(match.start(), match.end(), "foreign",
     ...                    {'lang': 'de'})

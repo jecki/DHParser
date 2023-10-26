@@ -215,7 +215,7 @@ is usually less informative than the AST. Typically, you'll want to
 see it only in very particular cases and only when debugging the
 AST-generation. For this purpose, DHParser's testing-framework allows
 to quickly turn the additional output of the CST in the test-report
-on and off by simply placing an asterix ``*`` after the test name
+on and off by simply placing an asterisk ``*`` after the test name
 of any match test or removing it after the debugging has been done.
 If for example, your test's name is "M1" you'd simply write ``M!*:
 ...``` in the test-ini-file.
@@ -268,7 +268,7 @@ L C  parser call sequence                success text matched or failed
 = == =================================== ======= ===========================================
 
 Typically, the parsing-log is a quite long and the error becomes
-apparaent only at the very end. So it is advisable to scroll right to
+apparent only at the very end. So it is advisable to scroll right to
 the bottom of the page to see what has caused the test to fail by
 looking at the error message (which for the sake of brevity has been
 omitted from the above excerpt, though the error number 1010 for
@@ -292,7 +292,7 @@ MATCH   the parser matched a part of the following text
 DROP    the parser matched but the matched text was dropped from the CST
 FAIL    the parser failed to match the following text
 !MATCH  the parser matched but as part of a negative lookahead it's a fail
-!FAIL   the parser failed but as part of a negativ lookahead it's a match
+!FAIL   the parser failed but as part of a negative lookahead it's a match
 ERROR   a syntax error was detected during parsing
 ======= ==================================================================
 
@@ -638,7 +638,7 @@ above should be clear enough with the given comments.
 The next step will be a little bit more complicated: We would like
 to allow inline-markup inside paragraphs. Loosely following the
 Markdown conventions we would like to use a single underscore character
-(``_``) to mark emphasized text, e.g. ``_emphasized_``, and doubl
+(``_``) to mark emphasized text, e.g. ``_emphasized_``, and double
 underscore markers to mark bold text, e.g.  ``__bold__``. Again, we
 start with writing test-code. We assume "emphasis" as the name of the
 parser for emphasized text and "bold" for bold text::
@@ -784,11 +784,11 @@ emphasis and bold are not redundantly nested within themselves.
 
 Both "inner_emph" and "inner_bold" allow - other than "text" - leading 
 and trailing (insignificant) whitespace before and after its content in
-case it precedes or succedes a nested emphasis or bold marker. This allows 
+case it precedes or succeeds a nested emphasis or bold marker. This allows 
 to disambiguate nested bold and emphasized elements
 when necessary by adding whitespace. (Because the whitespace between
 bold and emphasis markers is only needed to disambiguate, it is treated
-as insignificat whitespace.) Otherwise::
+as insignificant whitespace.) Otherwise::
 
     * **bold** text inside emphasized text that can be parsed*
 
@@ -810,7 +810,7 @@ The reason, this has not been done is that while we would like to
 flatten ESCAPED chars and other TEXT but not the markup-structures. If
 we add further inline-elements like internet-links for example we
 would not add more intermediaries but rather extend the
-"markup"-parser-definition. (You may want to try to add internetlinks
+"markup"-parser-definition. (You may want to try to add internet links
 enclosed by ``<`` and ``>`` as an exercise!)
 
 Before we stop the bottom-up-approach at this point, there is one last
@@ -826,9 +826,9 @@ rather verbose, e.g.:
           (CHARS "is")))
     ...
 
-Since, for further processing, we are only interested in distinguighing
+Since, for further processing, we are only interested in distinguishing
 text from highlighted elements (i.e. emphasized and bold text), we
-add the more attomic elements, LLF, L, LF, CHARS, TEXT, ESCAPED  to
+add the more atomic elements, LLF, L, LF, CHARS, TEXT, ESCAPED  to
 the list of disposables at the beginning of the EBNF-grammar, which
 makes them disappear, merging their content in the higher-level elements.
 Thus we change the @disposable-directive at the top of the grammar to:
@@ -915,7 +915,7 @@ bottom-up-approach::
     blocks  = !is_heading markup { GAP !is_heading markup }
 
 The abstract syntax-tree is, as expected, much more verbose,
-because now it reflects the detail-strukture of the markup::
+because now it reflects the detailed structure of the markup::
 
     (document
       (main
@@ -951,7 +951,7 @@ because now it reflects the detail-strukture of the markup::
                 (text " and emphasized"))
               (text "?"))))))
 
-As far as explainig the basics of test-driven-grammar-development goes,
+As far as explaining the basics of test-driven-grammar-development goes,
 this should suffice as an example. Admittedly, as far as coding a grammar
 for Markdown, there are still a few things to do, which are here
 left as an exercise to the reader. Here are some suggestions for
@@ -973,7 +973,7 @@ more exercises in test-driven grammar-development::
 
 3. You may have noticed that headings starting with one or more 
    `#`-characters must be separated with at least one empty line 
-   from any preeceding text-blocks (other headings do not count
+   from any preceding text-blocks (other headings do not count
    as text block!). If you haven't noticed this, verify this
    with suitable match- or fail-tests! 
 
@@ -1081,7 +1081,7 @@ There exist two different types of AST-tests:
 2. Tests of the concatenated string-content (or "flat string-content")
    of the tree. In this case, the test-code consists of a string that is
    enclosed in either single (') or double (") quotation marks for
-   single line strings or tripple single (''') or tripple double
+   single line strings or triple single (''') or triple double
    quotation marks (""") for multiline strings - just like strings in
    Python. 
 
@@ -1185,7 +1185,7 @@ A1*: """Text in
 A1: "Text in two lines"
 
 This time, because it is a string comparison, the test code must stand
-within quotation marks. We mark the match test with an asterix "*" in
+within quotation marks. We mark the match test with an asterisk "*" in
 order to receive output for the CST in the report, too. This will be
 helpful for engineering the AST-transformations that we need for the
 normalization. The AST-test shows what kind of result, we expect in the
@@ -1200,11 +1200,11 @@ will receive an error message when running the test-script::
 
 As we did not specify the expected result as an (S-expression) tree but
 as a string, the expected and received results are also printed as a
-strings in the error-message. Also, the error-meassge is slightly more
+strings in the error-message. Also, the error-message is slightly more
 vague, because there is the possibility that the comparison of expected
 and received result failed due to the expected result having
-unintentionally been misspecified, which is not the case, here,
-howeever.
+unintentionally been miss-specified, which is not the case, here,
+however.
 
 If we look up the AST and CST-trees in the report file, we find that
 both read as::
@@ -1212,7 +1212,7 @@ both read as::
   (text "Text in" "two lines")
 
 Note, that multiline-text in tree-nodes is rendered by DHParser as a
-seuqence of strings rather than a multiline string with line-feeds. So,
+sequence of strings rather than a multiline string with line-feeds. So,
 the "text"-node really consists of one string with a line-break in
 between. The line-break is not explicit in form of an "LF"-node, because
 it has just like the significant whitespace and character-sequences that
@@ -1225,7 +1225,7 @@ whitespace: Either a) by replacing the line-feed-characters in the
 string-content of the text-nodes during AST-transformation by writing a
 dedicated transformation-procedure or b) removing LF from the list of
 disposable symbols in the grammar, then exchanging its content of each
-LF-node with a single whitespace characters and, maybe also changeing
+LF-node with a single whitespace characters and, maybe also changing
 its name to "L" in the course of doing so, both during the
 AST-transformation-stage and, finally, merging any CHARS- and L-nodes
 within all nodes where they could possibly appear (i.e. text, bold and
@@ -1405,11 +1405,11 @@ tested with the same apparatus as long as their results are either node-trees or
 serializable as strings. To illustrate both of these cases, let us extend our
 "outline"-parser so that it transforms the input documents to HTML in two steps.
 
-In the first step the abstract syntaxtree is transformed into a DOM-tree (kind
+In the first step the abstract syntax-tree is transformed into a DOM-tree (kind
 of). In the second step the DOM-tree is serialized as an HTML document. With
 DHParser's :py:meth:`~nodetree.Node.as_xml`-function the second step is almost
-trvivial, but for the sake of illustration we will nevertheless implement this
-as a separate processsing stage. This also has the benefit that we can test the
+trivial, but for the sake of illustration we will nevertheless implement this
+as a separate processing stage. This also has the benefit that we can test the
 structure of the DOM-tree independently from the formatting of the final
 HTML-document.
 
@@ -1540,9 +1540,9 @@ and structures in the AST would be. Here ist a list:
    "html"-tags.
 
 Having made up our mind about how to transform the AST into a DOM-tree, we could
-now transform the AST shown abose by hand into a DOM-tree to get our first
+now transform the AST shown above by hand into a DOM-tree to get our first
 test-case. However, a much more pragmatic approach is to program the
-transformation first (or ask an artifical intelligence to do it, following the
+transformation first (or ask an artificial intelligence to do it, following the
 above recipe) and then correct the output, which - on the first try - most
 probably still contains errors, by hand and add it as test case. 
 
@@ -1550,9 +1550,9 @@ There are many different ways of programming a tree-transformation. DHParser
 offers scaffolding-code for several of these, most notably a table-based
 tree-transformation (see :ref:`asttransformation`) and a object-oriented,
 class-based approach (see :ref:`compiling`), both of which are variants of the
-well-known visitor-pattern. As of now, DHParser does not offer a pattern-maching
+well-known visitor-pattern. As of now, DHParser does not offer a pattern-matching
 approach like XSLT. The following is a solution with the class-based approach.
-The table-based approch is usually much more concise, but less readable.
+The table-based approach is usually much more concise, but less readable.
 
 In the (autogenerated) "outlineParser.py"-file there is already an empty
 ``outlineCompiler``-class in the "COMPILE SECTION" which can filled in and
@@ -1604,7 +1604,7 @@ potentially left-behind tag-names from the AST. In our case it is easier
 to pursue the latter strategy, because only "container"-nodes, i.e.
 nodes that can contain more than one child and at the same time are
 meant to be flattened if possible can become "left behind". (In case you
-think this would be hard to know or analyse beforehand: Don't worry! You
+think this would be hard to know or analyze beforehand: Don't worry! You
 can start to provide for these cases when they occur and you can even
 confine yourself to those cases that come up in your test - because, as
 said, this is a harmless problem, if it is a problem at all.) So, let's
@@ -1619,13 +1619,13 @@ root-name::
 
 The following visitor-method for the document-node is self-explaining.
 As described in :ref:`compiling`, visitor-methods are called by the
-scafolding code of :py:class:`~compile.Compiler` when the tree-traversal
+scaffolding code of :py:class:`~compile.Compiler` when the tree-traversal
 reaches the node with the name that corresponds to the name of the
 visitor-method. The scaffolding code also updates the
 ``self.path``-variable (which we will make use of, further below). The
 traversal of the child-nodes must explicitly be triggered by the
 visitor-method by calling :py:meth:`~compile.Compiler.fallback_compiler`
-which is usually done at the begining of the visitor-method. Every
+which is usually done at the beginning of the visitor-method. Every
 visitor-method is required to return the compilation-result::
 
         def on_document(self, node):

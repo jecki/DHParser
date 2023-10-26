@@ -1213,7 +1213,7 @@ class TestMarkupInsertion:
                          "in Bavaria</location> in this sentence.</hard>")
         divisability_map = {'foreign': {'location', ':Text'},
                                         '*': {':Text'}}
-        mapping = ContentMapping(tree, divisability=divisability_map,
+        mapping = ContentMapping(tree, divisibility=divisability_map,
                                  chain_attr_name = "chain")
         match = re.search(r"Stadt\s+München", mapping.content)
         _ = mapping.markup(match.start(), match.end(), "foreign", {'lang': 'de'})

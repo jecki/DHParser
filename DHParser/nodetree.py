@@ -35,12 +35,12 @@ The source code of module ``nodetree`` consists of four main sections:
     of top-level functions closely related to these. The Node-classes in
     turn provide several groups of functionality:
 
-    a. Capturing segements of documents and organizing it in trees.
+    a. Capturing segments of documents and organizing it in trees.
        (A node is either a "leaf"-node with string-content or a
        "branch"-node with children.)
 
     b. Retaining its source-position in the document (important for
-       error reporting, in particluar when errors occurr later in
+       error reporting, in particular when errors occur later in
        the processing-pipeline.)
 
     c. Storing and retrieving of (XML-)attributes. Like
@@ -56,7 +56,7 @@ The source code of module ``nodetree`` consists of four main sections:
        See also: :py:class:`ContextMapping`
 
     f. A very simple method for tree-"evaluation":  (More elaborate
-       scaffolings for evaluation tree are found in :py:mod:`~traverse`
+       scaffolding for evaluation tree are found in :py:mod:`~traverse`
        and :py:mod:`compile`.)
 
     g. Functions for serialization and deserialization as XML, S-Expression,
@@ -326,7 +326,7 @@ def create_path_match_function(criterion: PathSelector) -> PathMatchFunction:
         a name or a container (usually a set) of multiple tag names,
         a regular expression pattern or another match function.
 
-    :returns: a match-function (Prail -> bool) for the given criterion.
+    :returns: a match-function (Path -> bool) for the given criterion.
     """
     if isinstance(criterion, int):
         return lambda trl: id(trl[-1]) == criterion
@@ -368,9 +368,9 @@ def flatten_sxpr(sxpr: str, threshold: int = -1) -> str:
 
     The ``threshold`` value is a maximum number of
     characters allowed in the flattened expression. If this number
-    is exceeded the unflattened S-expression is returned. A
+    is exceeded the un-flattened S-expression is returned. A
     negative number means that the S-expression will always be
-    flattened. Zero or (any postive integer <= 3) essentially means
+    flattened. Zero or (any positive integer <= 3) essentially means
     that the expression will not be flattened. Example::
 
         >>> flatten_sxpr('(a\\n    (b\\n        c\\n    )\\n)\\n')
@@ -766,7 +766,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         self._result = str(self._result)
         return self._result
 
-        # unoptimized algorithm (strings will be copied over and over again for each level of the tree)
+        # un-optimized algorithm (strings will be copied over and over 
+        # again for each level of the tree!)
         # return "".join(child.content for child in self._children) if self._children \
         #     else str(self._result)
 
@@ -1064,7 +1065,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """Returns the child node with the given index if ``key``
         is an integer or the first child node with the given tag name. If no
         child with the given index or name exists, the ``surrogate`` is
-        returned instead. This mimics the behaviour of Python's dictionary's
+        returned instead. This mimics the behavior of Python's dictionary's
         ``get()``-method.
 
         The type of the return value is always the same type as that of the
@@ -1436,7 +1437,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def reconstruct_path(self, node: Node) -> Path:
         """
         Determines the chain of ancestors of a node that leads up to self. Note:
-        The use of this quite ineffecient method can most of the time be avoided
+        The use of this quite inefficient method can most of the time be avoided
         by traversing the tree with the path-selector-methods
         (e.g. :py:meth:`Node.select_path`) right from the start.
 
@@ -1539,11 +1540,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         ``evaluate()`` can operate in two modes. In the basic mode, shown, in the
         example, only the evaluated values of the children are passed to each
         function in the action dictionary. However, if evaluate is called with
-        passing the begining of the path to its ``path``-argument, each function
+        passing the beginning of the path to its ``path``-argument, each function
         will be called with the current path as its first argument and the
         evaluated values of its children as the following arguments,
         e.g. ``result = node.evaluate(actions, path=[node])``
-        This more sophisticaed mode gives the action function access to the
+        This more sophisticated mode gives the action function access to the
         nodes of the tree as well.
 
         :param actions: A dictionary that maps node-names to action functions.
@@ -1551,7 +1552,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             argument (before the evaluation results of the children) to each action.
             Start with a list of the node itself to trigger passing the path.
         :raises KeyError: if an action is missing in the table, use the joker
-            '*' to vaoid this error, e.g. ``{ ..., '*': lambda node: node.content, ...}``.
+            '*' to void this error, e.g. ``{ ..., '*': lambda node: node.content, ...}``.
         :raises ValueError: in case any of the action functions cannot handle the
             passed arguments.
         :return: the result of the evaluation
@@ -1697,7 +1698,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         :param sxml:  If >= 1, attributes are rendered according to the
             `SXML <https://okmij.org/ftp/Scheme/SXML.html>`_ -conventions,
             e.g. `` (@ (attr "value")`` instead of `` `(attr "value") ``
-            if 2, the attribute node (@) will always be presen, even is empty.
+            if 2, the attribute node (@) will always be present, even is empty.
         :returns: A string containing the S-expression serialization of the tree.
         """
         left_bracket, right_bracket, density = ('(', ')', 1) if compact else ('(', ')', 0)
@@ -2129,7 +2130,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                  empty_tags: AbstractSet[str] = frozenset()):
         """Returns the tree as standard-library- or lxml-ElementTree.
 
-        :param ET: The ElementTree-library to be used. If None, the STL ElemtentTree
+        :param ET: The ElementTree-library to be used. If None, the STL ElementTree
             will be used.
         :param string_tags: A set of tags the content of which will be written without
             tag-name into the mixed content of the parent.
@@ -2345,7 +2346,7 @@ def tree_sanity_check(tree: Node) -> bool:
 EMPTY_SET_SENTINEL = frozenset()  # needed by RootNode.as_xml()
 
 
-def default_divisable() -> AbstractSet[str]:
+def default_divisible() -> AbstractSet[str]:
     return LEAF_PTYPES
 
 
@@ -2356,7 +2357,7 @@ class RootNode(Node):
     (i.e. parsing) or any transformation of the tree.
 
     Other properties concern the customization of the XML-serialization and
-    meta-data about the procesed document and processing stage.
+    meta-data about the processed document and processing stage.
 
     Although errors are local properties that occur on a specific point or
     chunk of source code, instead of attaching the errors to the nodes on
@@ -3557,7 +3558,7 @@ def path_sanity_check(path: Path) -> bool:
 #######################################################################
 
 def insert_node(leaf_path: Path, rel_pos: int, node: Node,
-                divisable_leaves: Container = LEAF_PTYPES) -> Node:
+                divisible_leaves: Container = LEAF_PTYPES) -> Node:
     """Inserts a node at a specific position into the last or
     eventually second but last node in the path. The path must be
     a "leaf"-path, i.e. a path that ends in a leaf. Returns the
@@ -3576,7 +3577,7 @@ def insert_node(leaf_path: Path, rel_pos: int, node: Node,
         if rel_pos == leaf_len:
             parent.insert(i + 1, node)
             return parent
-        if leaf.name in divisable_leaves:
+        if leaf.name in divisible_leaves:
             content = leaf.content
             parent.result = parent.result[:i] + \
                             (Node(leaf.name, content[:rel_pos]), node,
@@ -3836,7 +3837,7 @@ def deep_split(path: Path, i: cython.int, left_biased: bool=True,
 def can_split(t: Path, i: cython.int, left_biased: bool = True, greedy: bool = True,
               match_func: PathMatchFunction = ANY_PATH,
               skip_func: PathMatchFunction = NO_PATH,
-              divisable: AbstractSet[str] = LEAF_PTYPES) -> int:
+              divisible: AbstractSet[str] = LEAF_PTYPES) -> int:
     """Returns the negative index of the first node in the path, from which
     on all nodes can be split or do not need to be split, because the
     split-index lies to the left or right of the node.
@@ -3850,16 +3851,16 @@ def can_split(t: Path, i: cython.int, left_biased: bool = True, greedy: bool = T
         -2
         >>> can_split([tree, tree[0], tree[0][0]], 3)
         -2
-        >>> # anonymous nodes, like ":Text" are always divisable
-        >>> can_split([tree, tree[0], tree[0][0]], 1, divisable=set())
+        >>> # anonymous nodes, like ":Text" are always divisible
+        >>> can_split([tree, tree[0], tree[0][0]], 1, divisible=set())
         -1
         >>> # However, non anonymous nodes aren't ...
         >>> tree = parse_sxpr('(doc (p (Text "ABC")))')
-        >>> can_split([tree, tree[0], tree[0][0]], 1, divisable=set())
+        >>> can_split([tree, tree[0], tree[0][0]], 1, divisible=set())
         0
         >>> # ... unless explicitly mentioned
         >>> tree = parse_sxpr('(doc (p (Text "ABC")))')
-        >>> can_split([tree, tree[0], tree[0][0]], 1, divisable={'Text'})
+        >>> can_split([tree, tree[0], tree[0][0]], 1, divisible={'Text'})
         -1
         >>> tree = parse_sxpr('(X (Z "!?") (A (B "123") (C "456")))')
         >>> can_split(tree.pick_path('B'), 0)
@@ -3882,7 +3883,7 @@ def can_split(t: Path, i: cython.int, left_biased: bool = True, greedy: bool = T
     k = 0
     for k in range(len(t) - 1):
         node = t[-k - 1]
-        if i != 0 and i != len(node._result) and not (node.anonymous or node.name in divisable):
+        if i != 0 and i != len(node._result) and not (node.anonymous or node.name in divisible):
             break
         parent = t[-k - 2]
         i = split_node(node, parent, i, left_biased)
@@ -3921,7 +3922,7 @@ def markup_right(path: Path, i: cython.int, name: str, attr_dict: Dict[str, Any]
                  greedy: bool = True,
                  match_func: PathMatchFunction = ANY_PATH,
                  skip_func: PathMatchFunction = NO_PATH,
-                 divisable: AbstractSet[str] = LEAF_PTYPES,
+                 divisible: AbstractSet[str] = LEAF_PTYPES,
                  chain_attr_name: str = ''):
     """Markup the content from string position i within the last node of
     the path up to the very end of the content of the first node of the
@@ -3935,65 +3936,65 @@ def markup_right(path: Path, i: cython.int, name: str, attr_dict: Dict[str, Any]
         >>> X = copy.deepcopy(tree)
         >>> C_path = X.pick_path('C')
         >>> all_tags = {'A', 'B', 'C', 'D', 'E', 'F', 'X'}
-        >>> markup_right(C_path, 2, 'em', dict(), divisable=all_tags)
+        >>> markup_right(C_path, 2, 'em', dict(), divisible=all_tags)
         >>> print(X.as_sxpr())
         (X (A (C "12")) (em (A (C "3") (D "456")) (B (E "789") (F "abc")) (G "def")))
         >>> X = copy.deepcopy(tree)
         >>> C_path = X.pick_path('C')
-        >>> markup_right(C_path, 2, 'em', dict(), divisable=all_tags - {'A'})
+        >>> markup_right(C_path, 2, 'em', dict(), divisible=all_tags - {'A'})
         >>> print(X.as_sxpr())
         (X (A (C "12") (em (C "3") (D "456"))) (em (B (E "789") (F "abc")) (G "def")))
         >>> X = copy.deepcopy(tree)
         >>> D_path = X.pick_path('D')
-        >>> markup_right(D_path, 2, 'em', dict(), divisable=all_tags - {'A'})
+        >>> markup_right(D_path, 2, 'em', dict(), divisible=all_tags - {'A'})
         >>> print(X.as_sxpr())
         (X (A (C "123") (D "45") (em (D "6"))) (em (B (E "789") (F "abc")) (G "def")))
         >>> X = copy.deepcopy(tree)
         >>> D_path = X.pick_path('D')
-        >>> markup_right(D_path, 2, 'em', dict(), divisable=all_tags - {'A', 'D'})
+        >>> markup_right(D_path, 2, 'em', dict(), divisible=all_tags - {'A', 'D'})
         >>> print(X.as_sxpr())
         (X (A (C "123") (D (:Text "45") (em "6"))) (em (B (E "789") (F "abc")) (G "def")))
         >>> X = copy.deepcopy(tree)
         >>> E_path = X.pick_path('E')
-        >>> markup_right(E_path, 1, 'em', dict(), divisable=all_tags - {'E'})
+        >>> markup_right(E_path, 1, 'em', dict(), divisible=all_tags - {'E'})
         >>> print(X.as_sxpr())
         (X (A (C "123") (D "456")) (B (E (:Text "7") (em "89")) (em (F "abc"))) (em (G "def")))
         >>> X = copy.deepcopy(tree)
         >>> E_path = X.pick_path('E')
-        >>> markup_right(E_path, 1, 'em', dict(), divisable=all_tags - {'B'})
+        >>> markup_right(E_path, 1, 'em', dict(), divisible=all_tags - {'B'})
         >>> print(X.as_sxpr())
         (X (A (C "123") (D "456")) (B (E "7") (em (E "89") (F "abc"))) (em (G "def")))
         >>> X = copy.deepcopy(tree)
         >>> E_path = X.pick_path('E')
-        >>> markup_right(E_path, 1, 'em', dict(), divisable=all_tags)
+        >>> markup_right(E_path, 1, 'em', dict(), divisible=all_tags)
         >>> print(X.as_sxpr())
         (X (A (C "123") (D "456")) (B (E "7")) (em (B (E "89") (F "abc")) (G "def")))
         >>> X = copy.deepcopy(tree)
         >>> G_path = X.pick_path('G')
-        >>> markup_right(E_path, 3, 'em', dict(), divisable=all_tags)
+        >>> markup_right(E_path, 3, 'em', dict(), divisible=all_tags)
         >>> print(X.as_sxpr())
         (X (A (C "123") (D "456")) (B (E "789") (F "abc")) (G "def"))
 
         # edge cases
         >>> X = parse_sxpr('(A "123")')
-        >>> markup_right([X], 1, 'em', dict(), divisable={'A'})
+        >>> markup_right([X], 1, 'em', dict(), divisible={'A'})
         >>> print(X.as_sxpr())
         (A (:Text "1") (em "23"))
         >>> X = parse_sxpr('(A "123")')
-        >>> markup_right([X], 1, 'em', dict(), divisable=set())
+        >>> markup_right([X], 1, 'em', dict(), divisible=set())
         >>> print(X.as_sxpr())
         (A (:Text "1") (em "23"))
         >>> X = parse_sxpr('(A "123")')
-        >>> markup_right([X], 0, 'em', dict(), divisable={'A'})
+        >>> markup_right([X], 0, 'em', dict(), divisible={'A'})
         >>> print(X.as_sxpr())
         (A (em "123"))
         >>> X = parse_sxpr('(A "123")')
-        >>> markup_right([X], 3, 'em', dict(), divisable={'A'})
+        >>> markup_right([X], 3, 'em', dict(), divisible={'A'})
         >>> print(X.as_sxpr())
         (A "123")
     """
     assert path
-    k = max(can_split(path, i, True, greedy, match_func, skip_func, divisable) - 1, -len(path))
+    k = max(can_split(path, i, True, greedy, match_func, skip_func, divisible) - 1, -len(path))
     # k is parent-index of first node to split
     i = deep_split(path[k:], i, True, greedy, match_func, skip_func, chain_attr_name)
 
@@ -4027,7 +4028,7 @@ def markup_left(path: Path, i: cython.int, name: str, attr_dict: Dict[str, Any],
                 greedy: bool = True,
                 match_func: PathMatchFunction = ANY_PATH,
                 skip_func: PathMatchFunction = NO_PATH,
-                divisable: AbstractSet[str] = LEAF_PTYPES,
+                divisible: AbstractSet[str] = LEAF_PTYPES,
                 chain_attr_name: str = ''):
     """Markup the content from string position i within the last node of
     the path up to the very end of the content of the first node of the
@@ -4041,65 +4042,65 @@ def markup_left(path: Path, i: cython.int, name: str, attr_dict: Dict[str, Any],
         >>> X = copy.deepcopy(tree)
         >>> C_path = X.pick_path('C')
         >>> all_tags = {'A', 'B', 'C', 'D', 'E', 'F', 'X'}
-        >>> markup_left(C_path, 2, 'em', dict(), divisable=all_tags)
+        >>> markup_left(C_path, 2, 'em', dict(), divisible=all_tags)
         >>> print(X.as_sxpr())
         (X (em (A (C "12"))) (A (C "3") (D "456")) (B (E "789") (F "abc")) (G "def"))
         >>> X = copy.deepcopy(tree)
         >>> C_path = X.pick_path('C')
-        >>> markup_left(C_path, 2, 'em', dict(), divisable=all_tags - {'A'})
+        >>> markup_left(C_path, 2, 'em', dict(), divisible=all_tags - {'A'})
         >>> print(X.as_sxpr())
         (X (A (em (C "12")) (C "3") (D "456")) (B (E "789") (F "abc")) (G "def"))
         >>> X = copy.deepcopy(tree)
         >>> C_path = X.pick_path('C')
-        >>> markup_left(C_path, 0, 'em', dict(), divisable=all_tags - {'A'})
+        >>> markup_left(C_path, 0, 'em', dict(), divisible=all_tags - {'A'})
         >>> print(X.as_sxpr())
         (X (A (C "123") (D "456")) (B (E "789") (F "abc")) (G "def"))
         >>> X = copy.deepcopy(tree)
         >>> D_path = X.pick_path('D')
-        >>> markup_left(D_path, 2, 'em', dict(), divisable=all_tags - {'A'})
+        >>> markup_left(D_path, 2, 'em', dict(), divisible=all_tags - {'A'})
         >>> print(X.as_sxpr())
         (X (A (em (C "123") (D "45")) (D "6")) (B (E "789") (F "abc")) (G "def"))
         >>> X = copy.deepcopy(tree)
         >>> D_path = X.pick_path('D')
-        >>> markup_left(D_path, 2, 'em', dict(), divisable=all_tags - {'A', 'D'})
+        >>> markup_left(D_path, 2, 'em', dict(), divisible=all_tags - {'A', 'D'})
         >>> print(X.as_sxpr())
         (X (A (em (C "123")) (D (em "45") (:Text "6"))) (B (E "789") (F "abc")) (G "def"))
         >>> X = copy.deepcopy(tree)
         >>> E_path = X.pick_path('E')
-        >>> markup_left(E_path, 1, 'em', dict(), divisable=all_tags - {'E'})
+        >>> markup_left(E_path, 1, 'em', dict(), divisible=all_tags - {'E'})
         >>> print(X.as_sxpr())
         (X (em (A (C "123") (D "456"))) (B (E (em "7") (:Text "89")) (F "abc")) (G "def"))
         >>> X = copy.deepcopy(tree)
         >>> E_path = X.pick_path('E')
-        >>> markup_left(E_path, 1, 'em', dict(), divisable=all_tags - {'B'})
+        >>> markup_left(E_path, 1, 'em', dict(), divisible=all_tags - {'B'})
         >>> print(X.as_sxpr())
         (X (em (A (C "123") (D "456"))) (B (em (E "7")) (E "89") (F "abc")) (G "def"))
         >>> X = copy.deepcopy(tree)
         >>> E_path = X.pick_path('E')
-        >>> markup_left(E_path, 1, 'em', dict(), divisable=all_tags)
+        >>> markup_left(E_path, 1, 'em', dict(), divisible=all_tags)
         >>> print(X.as_sxpr())
         (X (em (A (C "123") (D "456")) (B (E "7"))) (B (E "89") (F "abc")) (G "def"))
 
         # edge cases
         >>> X = parse_sxpr('(A "123")')
-        >>> markup_left([X], 1, 'em', dict(), divisable={'A'})
+        >>> markup_left([X], 1, 'em', dict(), divisible={'A'})
         >>> print(X.as_sxpr())
         (A (em "1") (:Text "23"))
         >>> X = parse_sxpr('(A "123")')
-        >>> markup_left([X], 1, 'em', dict(), divisable=set())
+        >>> markup_left([X], 1, 'em', dict(), divisible=set())
         >>> print(X.as_sxpr())
         (A (em "1") (:Text "23"))
         >>> X = parse_sxpr('(A "123")')
-        >>> markup_left([X], 3, 'em', dict(), divisable={'A'})
+        >>> markup_left([X], 3, 'em', dict(), divisible={'A'})
         >>> print(X.as_sxpr())
         (A (em "123"))
         >>> X = parse_sxpr('(A "123")')
-        >>> markup_left([X], 0, 'em', dict(), divisable={'A'})
+        >>> markup_left([X], 0, 'em', dict(), divisible={'A'})
         >>> print(X.as_sxpr())
         (A "123")
     """
     assert path
-    k = max(can_split(path, i, False, greedy, match_func, skip_func, divisable) - 1, -len(path))
+    k = max(can_split(path, i, False, greedy, match_func, skip_func, divisible) - 1, -len(path))
     i = deep_split(path[k:], i, False, greedy, match_func, skip_func, chain_attr_name)
 
     if chain_attr_name and chain_attr_name not in attr_dict:
@@ -4230,7 +4231,7 @@ class ContentMapping:
     :ivar auto_cleanup: Update the content mapping after the markup has been finished.
         Should always be true, if it is intended to reuse the same content mapping
         for further markups in the same range or other purposes.
-    :param divisability: A dictionary that contains the information which tags
+    :param divisibility: A dictionary that contains the information which tags
         (or nodes as identified by their name) are "harder" than other tags. Each
         key-tag in the dictionary is harder than (i.e. is  allowed to split up) up
         all tags in the associated value (which is a set of node, or for that matter,
@@ -4245,7 +4246,7 @@ class ContentMapping:
                  select: PathSelector = LEAF_PATH,
                  ignore: PathSelector = NO_PATH,
                  greedy: bool = True,
-                 divisability: Union[Dict[str, Container], Container, str] = LEAF_PTYPES,
+                 divisibility: Union[Dict[str, Container], Container, str] = LEAF_PTYPES,
                  chain_attr_name: str = '',
                  auto_cleanup: bool = True):
         self.origin: Node = origin
@@ -4253,20 +4254,20 @@ class ContentMapping:
         self.select_func: PathMatchFunction = select_func
         self.ignore_func: PathMatchFunction = ignore_func
         self.greedy: bool = greedy
-        if isinstance(divisability, Dict):
-            if '*' not in divisability:  divisability['*'] = set()
-            self.divisability: Dict[str, Container] = divisability
-        elif isinstance(divisability, str):
+        if isinstance(divisibility, Dict):
+            if '*' not in divisibility:  divisibility['*'] = set()
+            self.divisability: Dict[str, Container] = divisibility
+        elif isinstance(divisibility, str):
             for delimiter in (';', ',', ' '):
-                lst = divisability.split(delimiter)
+                lst = divisibility.split(delimiter)
                 if len(lst) > 1:
                     self.divisability = {'*': {s.strip() for s in lst}}
                     break
             else:
-                raise ValueError(f'String value "{divisability}" of parameter "divisability" '
+                raise ValueError(f'String value "{divisibility}" of parameter "divisability" '
                                  f'does not look like a list node-names!')
         else:
-            self.divisability = {'*': divisability}
+            self.divisability = {'*': divisibility}
         self.chain_attr_name: str = chain_attr_name
         self.auto_cleanup = auto_cleanup
 
@@ -4544,7 +4545,7 @@ class ContentMapping:
     def markup(self, start_pos: cython.int, end_pos: cython.int, name: str,
                *attr_dict, **attributes) -> Node:
         """ Marks the span [start_pos, end_pos[ up by adding one or more Node's
-        with ``name``, eventually cutting through ``divisable`` nodes. Returns the
+        with ``name``, eventually cutting through ``divisible`` nodes. Returns the
         nearest common ancestor of ``start_pos`` and ``end_pos``.
 
         :param cm:  A context mapping of the document (or a part therof) where the
@@ -4589,7 +4590,7 @@ class ContentMapping:
             (X (l ",.") (em (A (O "123") (P "456")) (m "!?")) (B (Q "789") (R "abc"))
              (n "+-"))
             >>> X = copy.deepcopy(tree)
-            >>> t = ContentMapping(X, divisability={'A'})
+            >>> t = ContentMapping(X, divisibility={'A'})
             >>> _ = t.markup(5, 10, 'em')
             >>> printw(X.as_sxpr(flatten_threshold=-1))
             (X (l ",.") (A (O "123")) (em (A (P "456")) (m "!?")) (B (Q "789") (R "abc"))
@@ -4625,7 +4626,7 @@ class ContentMapping:
             (X (l (:Text ",") (em ".")) (em (A (O "123") (P "456")) (m "!?") (B (Q "789")
              (R "abc"))) (n (em "+") (:Text "-")))
             >>> X = copy.deepcopy(tree)
-            >>> t = ContentMapping(X, divisability={'em': {'l', 'n'}})
+            >>> t = ContentMapping(X, divisibility={'em': {'l', 'n'}})
             >>> _ = t.markup(1, 17, 'em')
             >>> printw(X.as_sxpr(flatten_threshold=-1))
             (X (l ",") (em (l ".") (A (O "123") (P "456")) (m "!?") (B (Q "789") (R "abc"))
@@ -4652,12 +4653,12 @@ class ContentMapping:
         if self.chain_attr_name and self.chain_attr_name not in attr_dict:
             attr_dict[self.chain_attr_name] = gen_chain_ID()
 
-        divisable = self.divisability.get(name, self.divisability.get('*', frozenset()))
+        divisible = self.divisability.get(name, self.divisability.get('*', frozenset()))
 
         if not common_ancestor._children:
             attr_dict.pop(self.chain_attr_name, None)
             markup_leaf(common_ancestor, pos_A, pos_B, name, attr_dict)
-            if i != 0 and (common_ancestor.name in divisable or common_ancestor.anonymous):
+            if i != 0 and (common_ancestor.name in divisible or common_ancestor.anonymous):
                 ur_ancestor = path_A[i - 1]
                 t = ur_ancestor.index(common_ancestor)
                 ur_ancestor.result = ur_ancestor[:t] + common_ancestor.children + ur_ancestor[t + 1:]
@@ -4672,9 +4673,9 @@ class ContentMapping:
         stump_B = path_B[i:]
 
         q = can_split(
-            stump_A, pos_A, False, self.greedy, self.select_func, self.ignore_func, divisable)
+            stump_A, pos_A, False, self.greedy, self.select_func, self.ignore_func, divisible)
         r = can_split(
-            stump_B, pos_B, True, self.greedy, self.select_func, self.ignore_func, divisable)
+            stump_B, pos_B, True, self.greedy, self.select_func, self.ignore_func, divisible)
 
         i = -1
         k = -1
@@ -4696,7 +4697,7 @@ class ContentMapping:
             nd._pos = common_ancestor[i]._pos
             markup_left(stump_B[1:], pos_B, name, attr_dict,
                         self.greedy, self.select_func, self.ignore_func,
-                        divisable, self.chain_attr_name)
+                        divisible, self.chain_attr_name)
             common_ancestor.result = common_ancestor[:i] + (nd,) + common_ancestor[t:]
         elif k >= 0:
             t = common_ancestor.index(stump_A[1])
@@ -4704,17 +4705,17 @@ class ContentMapping:
             nd._pos = common_ancestor[t + 1]._pos
             markup_right(stump_A[1:], pos_A, name, attr_dict,
                          self.greedy, self.select_func, self.ignore_func,
-                         divisable, self.chain_attr_name)
+                         divisible, self.chain_attr_name)
             common_ancestor.result = common_ancestor[:t + 1] + (nd,) + common_ancestor[k:]
         else:
             t = common_ancestor.index(stump_A[1])
             u = common_ancestor.index(stump_B[1])
             markup_right(stump_A[1:], pos_A, name, attr_dict,
                          self.greedy, self.select_func, self.ignore_func,
-                         divisable, self.chain_attr_name)
+                         divisible, self.chain_attr_name)
             markup_left(stump_B[1:], pos_B, name, attr_dict,
                         self.greedy, self.select_func, self.ignore_func,
-                        divisable, self.chain_attr_name)
+                        divisible, self.chain_attr_name)
             if u - t > 1:
                 nd = Node(name, common_ancestor[t + 1:u]).with_attr(attr_dict)
                 nd._pos = common_ancestor[t + 1]._pos
@@ -4738,11 +4739,11 @@ class LocalContentMapping(ContentMapping):
                  select: PathSelector = LEAF_PATH,
                  ignore: PathSelector = NO_PATH,
                  greedy: bool = True,
-                 divisability: Union[Dict[str, Container], Container, str] = LEAF_PTYPES,
+                 divisibility: Union[Dict[str, Container], Container, str] = LEAF_PTYPES,
                  chain_attr_name: str = '',
                  auto_cleanup: bool = True):
         ancestor, index = find_common_ancestor(start_path, end_path)
-        super().__init__(self, ancestor, select, ignore, greedy, divisability,
+        super().__init__(self, ancestor, select, ignore, greedy, divisibility,
                          chain_attr_name, auto_cleanup)
         self.stump: Path = start_path[:index]
         start_path_tail = start_path[index:]

@@ -69,9 +69,9 @@ interact with the other modules directly.
 :py:mod:`dsl` - contains high-level functions for compiling
    ebnf-grammars and domain specific languages "on the fly".
 
-:py:mod:`preprocess` - provides support for DSL-preprocessors as well as source
+:py:mod:`preprocess` - provides support for DSL-pre-processors as well as source
    mapping of (error-)locations from the preprocessed document to the original
-   document(s). Preprocessors are a practical means for adding features to
+   document(s). Pre-processors are a practical means for adding features to
    a DSL which are difficult or impossible to define with context-free-grammars
    in EBNF-notation, like for example scoping based on indentation (as used
    by Python) or chaining of source-texts via an "include"-directive.

@@ -60,8 +60,8 @@ by a comment-block with a sections name::
    for the Python-parser code the compiler produces.
 
 The most notable difference to ordinary DHParser-projects is that
-the DHParser.ebnf-module contains two :py:class:`~parse.Grammar`-classes, one for parsing
-code that strictly follows DHParser's EBNF-syntax
+the DHParser.ebnf-module contains two :py:class:`~parse.Grammar`-classes, one
+for parsing code that strictly follows DHParser's EBNF-syntax
 (:py:class:`ConfigurableEBNFGrammar`) and another one that is able to
 parse many different brands of EBNF-syntax (:py:class:`HeuristicEBNFGrammar`)
 at the cost of parsing speed. When parsing or compiling an EBNF-grammar with
@@ -94,17 +94,17 @@ These are supplemented by the quick-use-functions:
 * :py:func:`~ebnf.transform_ebnf`
 * :py:func:`~ebnf.compile_ebnf`
 
-The following example shows how the classes and functions of the 
+The following example shows how the classes and functions of the
 ebnf-module can be connected to produce runnable Python-code from
 an EBNF-grammar. It is meant as a help to understand the role of
 these classes better as well as - in a simplified manner - the
 basic working mechanisms of higher level functions like
 :py:func:`DHParser.dsl.create_parser`. In any practical application,
 the use of the high-level functions from :py:mod:`DHParser.dsl` is
-to be preferred. One can think of the DHParser.dsl-module 
+to be preferred. One can think of the DHParser.dsl-module
 as the public API of the ebnf-module.
 
-THis said, here is how a Python-parser can be generated 
+THis said, here is how a Python-parser can be generated
 from a grammar, step by step::
 
     >>> arithmetic_ebnf = r"""

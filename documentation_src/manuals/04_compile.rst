@@ -190,7 +190,7 @@ It is not necessary to call the handlers of the child-nodes right at
 the beginning of the handler as these patterns suggest, or to call
 them at all. Rather, the compilation-method decides if and when and, possibly,
 also for which children the compilation-methods will be called. Other,
-than the traversal implemented in :py:mod:`~transfom`, which is always
+than the traversal implemented in :py:mod:`~transform`, which is always
 depth-first, the order of the traversal can be determined freely and may
 even vary for different sub-trees.
 
@@ -784,7 +784,7 @@ class Compile
 
    * :py:meth:`~compile.Compiler.fallback_compiler`: A method that will be
         be called on nodes for the type or name, for that matter, of which
-        no ``on_NME(onde)``-method has been defined. This method should ony
+        no ``on_NME(node)``-method has been defined. This method should ony
         be called for purely tree-transforming Compiler-objects.
 
 Types and Functions
@@ -793,7 +793,7 @@ Types and Functions
    * :py:data:`~compile.Copiler.CompilationResult`: A named tuple-type
         that stores the result of a compilation: (result: Any, messages:
         list[:py:class:`~error.Error``], AST:
-        Optioal[:py:class:`~nodetree.RootNode`])
+        Optional[:py:class:`~nodetree.RootNode`])
 
    * :py:func:`compile.compile_source`: A functions that calls
         preprocessor, parser, transformer and compiler in sequence on a

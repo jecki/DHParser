@@ -297,7 +297,7 @@ It is called "smart", because it allows to list several tag names within
 one and the same dictionary keys, thus assigning each one of them to one
 and the same sequences of transformation functions. (You could think of
 the transformation table as a simple "embedded" or `internal DSL (Domain
-Specific Languag)
+Specific Language)
 <https://martinfowler.com/bliki/DomainSpecificLanguage.html>`_ realized
 within Python, if you liked.) This is quite useful, because it allows to
 cover similar idioms used at different places of a grammar (and with
@@ -305,8 +305,8 @@ different tag-names) with the same sequence of transformation functions,
 without having to type the same list of functions over and over again.
 
 The transformation table has three special keys: ``<``, ``>``, ``*``.
-The asterix ``*`` is a joker, which means that the sequence of
-transformations assigned to the asterix will be called for every node,
+The asterisk ``*`` is a joker, which means that the sequence of
+transformations assigned to the asterisk will be called for every node,
 the tag-name of which does not occur in the table. The ``<``-key marks a
 sequence of functions that will be executed before any of the individual
 sequences assigned to particular tag-names (including the joker ``*``)
@@ -341,7 +341,7 @@ the transformation-table of the LaTeX-Parser example::
 The first entry of the dictionary turns nodes with the either of the
 names "hide_from_toc" or "no_numbering" into empty nodes, which is
 reasonable, because these markers which in the LaTeX-source consist of a
-simple asterix (*) that is appended to a section-command or a command for an
+simple asterisk (*) that is appended to a section-command or a command for an
 equation array shall not be printed as part of the text. At the same
 time, it is reasonable to keep the empty nodes as flags to indicate to
 latter processing stages that a certain section or chapter shall not
@@ -370,7 +370,7 @@ that contains the actual environment as a single child, say::
 
 (This can easily be checked by marking one or more of the
 environment-tests in the "test_grammar"-subfolder of the LaTeX-example
-with an asterix so as to show the concrete syntax tree in the test
+with an asterisk so as to show the concrete syntax tree in the test
 report.) Now, since we are only interested in the actual environment, it
 is only reasonable to replace any "_known_environment"-node in the
 concrete syntax tree by the actual environment it contains as its single
@@ -432,7 +432,7 @@ content of all of its children (if any). Here it serves to yield the
 string content for sub-trees the structure of which is not relevant for
 further processing. "urlstring", to pick this one out, is defined as
 ``urlstring = [protocol] { path } [target]``. Each of the components of
-urlstring has a syntax of its own, which results in an intricate
+"urlstring" has a syntax of its own, which results in an intricate
 tree-structure when parsed.
 
 Given that this structure is not relevant in the further processing of
@@ -490,7 +490,7 @@ The following three entries apply custom functions, specifically written
 for the LaTeX example case. ``replace_Umlaut`` replaces LaTeX-Umlaute
 like ``\"a`` by their unicode-counterpart, in this case "ä".
 ``replace_quotationmark`` does the same for quotation marks. And
-``streamline_whitspace`` compresses any whitespace either to a single
+``streamline_whitespace`` compresses any whitespace either to a single
 blank or single linefeed.
 
 Finally, the entry for ``WARN_Komma`` adds a syntax warning to all nodes with
@@ -729,7 +729,7 @@ transformation function as argument.
   children, if possible, e.g. ``(root (a (b "x") (c "y")))`` ->
   ``(root (b "x") (c "y"))``
 
-* :py:func:`~transform.raduce_single_child`: "Reduces" a single child
+* :py:func:`~transform.reduce_single_child`: "Reduces" a single child
   to its parent. ``(a (b "x"))`` -> ``(a "x")``
 
 * :py:func:`~transform.change_name`: Changes the name of the node.
@@ -788,9 +788,9 @@ Content-Changing Transformations
 
 * :py:func:`~transform.remove_brackets`: Removes any leading or trailing
       sequence of (insignificant) whitespaces, anonymous text or
-      anonymous regular expression nodes, e.g. ``(formular (:Text "(")
+      anonymous regular expression nodes, e.g. ``(formula (:Text "(")
       (number "5") (operator "+") (number "3") (:Text ")") (:Whitespace
-      " "))`` -> ``(formular (number "5") (operator "+") (number "3"))``
+      " "))`` -> ``(formula (number "5") (operator "+") (number "3"))``
 
 * :py:func:`~transform.remove_tokens`: Removes and tokens, i.e.
      anonymous Text-nodes, e.g. ``(plus (number "5") (:Text "+") (number
@@ -863,7 +863,7 @@ Probing Functions
       particular attribute and if a value is given, also whether the
       attributes value is the given value.
 
-* :py:func:`~transfrom.has_ancestor`: Checks whether the node has an has
+* :py:func:`~transform.has_ancestor`: Checks whether the node has an has
       an has an ancestor with one of the given names.
 
 * :py:func:`~transform.has_descendant`: Checks whether the node has a

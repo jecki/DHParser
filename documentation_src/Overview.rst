@@ -928,7 +928,7 @@ Preprocessor-section - usually must be edited by hand in order to allow
 the ``..Parser.py``-script to return the parsed data in the desired
 form.
 
-Because for most typical DSL-projects, preprocessors are not needed, the
+Because for most typical DSL-projects, pre-processors are not needed, the
 Preprocessor-section will be not be discussed, here. The other two
 sections, AST (for Abstract Syntax Tree) and Compiler, contain skeletons
 for (different kinds of) tree-transformations that can be edited at will

@@ -28,7 +28,7 @@ DHParser has been developed with three main purposes in mind:
    this does not hold like TeX, it is often still possible to describe a 
    reasonably large subset of the formal language with a context free grammar.) 
 
-2. Developing parsers for semistructured or informally structured
+2. Developing parsers for semi-structured or informally structured
    text-data. 
    
    This kind of data is typically what you get when retro-digitizing
@@ -151,7 +151,7 @@ key_value_store.py:
     grammar = '''@ drop = whitespace, strings
     key_store   = ~ { entry }
     entry       = key "="~ value          # ~ means: insignificant whitespace 
-    key         = /\w+/~                  # Scannerless parsing: Use regular
+    key         = /\w+/~                  # Scanner-less parsing: Use regular
     value       = /\"[^"\n]*\"/~          # expressions wherever you like'''
 
     # generating a parser is almost as simple as compiling a regular expression
