@@ -4153,7 +4153,7 @@ def _breed_leaf_selector(select: PathSelector,
 
 
 def leaf_paths(criterion: PathSelector) -> PathMatchFunction:
-    """Creates a path-match function that matches only and all leaf path
+    """Creates a path-match function that matches only and all leaf paths
     for those paths that the criterion matches. Warning: This may be
     slower than a custom algorithm that matches only leaf-paths right
     from the start. Example::
