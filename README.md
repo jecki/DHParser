@@ -39,8 +39,7 @@ DHParser has been developed with three main purposes in mind:
    of well-designed formal languages. Thus, DHParser's elaborated
    testing and debugging-framework for grammars.
 
-   (See Florian Zacherl's [Dissertation on the retro-digitalization of
-   dictionary data](http://www.kit.gwi.uni-muenchen.de/?band=82908&v=1)
+   (See Florian Zacherl's [Dissertation on the retro-digitalization of dictionary data](http://www.kit.gwi.uni-muenchen.de/?band=82908&v=1)
    for an interesting case study. I am confident that the development of
    a suitable formal grammar is much easier with an elaborated framework
    like DHParser than with the PHP-parsing-expression-grammar-kit that
