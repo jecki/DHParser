@@ -1328,7 +1328,7 @@ def parse_word(s: StringView) -> Optional[Node]:
 
 GRAMMAR_FACTORY = '''    
 parsing: PseudoJunction = create_parser_junction({NAME}Grammar)
-get_grammar = parsing.factory # for backwards compatibility, only    
+get_grammar = parsing.factory # for backwards compatibility, only
 '''
 
 

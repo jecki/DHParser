@@ -1,0 +1,29 @@
+    class ArithmeticGrammar(Grammar):
+        r"""Parser for an Arithmetic source file.
+        """
+        expression = Forward()
+        disposable__ = re.compile('..(?<=^)')
+        static_analysis_pending__ = []  # type: List[bool]
+        parser_initialization__ = ["upon instantiation"]
+        COMMENT__ = r''
+        comment_rx__ = RX_NEVER_MATCH
+        WHITESPACE__ = r'\s*'
+        WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
+        wsp__ = Whitespace(WSP_RE__)
+        dwsp__ = Drop(Whitespace(WSP_RE__))
+        VARIABLE = Series(RegExp('[A-Za-z]'), dwsp__)
+        NUMBER = Series(RegExp('(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?'), dwsp__)
+        minus = Text("-")
+        div = Series(Text("/"), dwsp__)
+        mul = Series(Text("*"), dwsp__)
+        sub = Series(Text("-"), dwsp__)
+        add = Series(Text("+"), dwsp__)
+        group = Series(Series(Drop(Text("(")), dwsp__), expression, Series(Drop(Text(")")), dwsp__))
+        factor = Series(Option(minus), Alternative(NUMBER, VARIABLE, group))
+        term = Series(factor, ZeroOrMore(Series(Alternative(div, mul), factor)))
+        expression.set(Series(term, ZeroOrMore(Series(Alternative(add, sub), term))))
+        root__ = expression
+    <BLANKLINE>
+    parsing: PseudoJunction = create_parser_junction(ArithmeticGrammar)
+    get_grammar = parsing.factory # for backwards compatibility, only
+    <BLANKLINE>
