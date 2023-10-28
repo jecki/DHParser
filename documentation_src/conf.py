@@ -28,7 +28,7 @@ if dhparser_path not in sys.path:
 # -- Project information -----------------------------------------------------
 
 project = 'DHParser'
-copyright = '2018-2021, Eckhart Arnold'
+copyright = '2018-2023, Eckhart Arnold'
 author = 'Eckhart Arnold'
 
 # The short X.Y version
@@ -97,7 +97,8 @@ add_module_names = False
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-# html_theme = 'sphinx_rtd_theme'  # 'alabaster'  # 'sphinx_rtd_theme'
+html_theme = 'sphinxdoc'  # 'alabaster'  # 'sphinx_rtd_theme'
+html_theme_path = ['.']
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the

@@ -49,13 +49,13 @@ Install DHParser
 
     $ python -m pip install --user DHParser
 
-Resources
----------
+Documentation
+-------------
 
 .. toctree::
    :glob:
    :maxdepth: 2
-   :caption: Contents:
+
 
    Overview.rst
    StepByStepGuide.rst
