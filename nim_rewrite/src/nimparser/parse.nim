@@ -329,27 +329,37 @@ method parse*(self: RegexRef, location: int): ParsingResult =
 ## Combined Parsers
 ## ----------------
 ##
-## Combined "meta"-parsers are parsers that call other parsers.
+## Combined "meta"-parsers are parsers that call other parsers
+## ("contained parsers").
 
 proc infiniteLoopWarning(parser: Parser, node: NodeOrNil, location: int) =
   return
 
-# use Repeat as generalized parser instead!
-# type
-#   OptionRef = ref OptionObj not nil
-#   OptionObj = object of ParserObj
-#
-# proc init*(option: OptionRef, parser: Parser): OptionRef =
-#   discard Parser(option).init(":Option")
-#   option.subParsers = @[parser]
-#   return option
-#
-# proc Option*(parser: Parser): OptionRef =
-#   return new(OptionRef).init(parser)
-#
-# method parse(self: OptionRef, location: int): ParsingResult =
-#   let pr = self.subParsers[0](location)
-#   return (self.grammar.returnItem(self, pr.node), pr.location)
+
+## Repeat-Parsers
+## ^^^^^^^^^^^^^^
+## 
+## A familiy of combined parsers that apply the contained parser and
+## match if the contained parser matches at least n-times in sequence
+## and at most k-times, where n is the "lower bound" and k the
+## upper bound and k >= n.
+## 
+## Repeat 
+##    is the most general repeat-parser, where the lower bound
+##    and upper bound are passed as parameters on initializiation.
+## 
+## Option
+##    matches always, no matter whether the contained parser matches
+##    or not. If it matches it is applied once before "Option" returns.
+## 
+## ZeroOrMore
+##    matches always. If it matches the contained parser is applied
+##    as often as possible, i.e. until it does not match the beginning
+##    of the rest of the document, any more.
+## 
+## OneOrMore
+##    fails if the contained parser does not match. Otherwise, it returns
+##    as many matches of the contained parser as possible.
 
 
 type
@@ -358,9 +368,12 @@ type
   RepeatObj = object of ParserObj
     repRange: Range
 
-const inf = 2^32 - 1
+const inf = 2u32^32 - 1
 
-proc init*(repeat: RepeatRef, parser: Parser, repRange: Range): RepeatRef =
+proc init*(repeat: RepeatRef, 
+           parser: Parser, 
+           repRange: Range, 
+           name: string = ":Repeat"): RepeatRef =
   discard Parser(repeat).init(":Repeat")
   repeat.subParsers = @[parser]
   repeat.repRange = repRange
@@ -368,6 +381,16 @@ proc init*(repeat: RepeatRef, parser: Parser, repRange: Range): RepeatRef =
 
 proc Repeat*(parser: Parser, repRange: Range): RepeatRef =
   return new(RepeatRef).init(parser, repRange)
+
+proc Option*(parser: Parser): RepeatRef =
+  return new(RepeatRef).init(parser, (0u32, 1u32), ":Option")
+
+proc ZeroOrMore(parser: Parser): RepeatRef =
+  return new(RepeatRef).init(parser, (0u32, inf), ":ZeroOrMore")
+
+proc OneOrMore(parser: Parser): RepeatRef =
+  return new(RepeatRef).init(parser, (1u32, inf), ":OneOrMore")
+
 
 method parse*(self: RepeatRef, location: int): ParsingResult =
   ## Examples:

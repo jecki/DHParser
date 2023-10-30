@@ -281,7 +281,8 @@ Let's see, how our XMLTransformer-object produces the actual data tree::
 Compiling to other structures
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Here is an excerpt from that Compiler-class, again:
+To demonstrate the compilation of tree-data to types of data, we use 
+a simplified JSON-grammar as starting point::
 
     >>> json_grammar = r'''
     ... @literalws  = right  # eat insignificant whitespace to the right of literals
