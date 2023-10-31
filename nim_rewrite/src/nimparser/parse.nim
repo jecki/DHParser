@@ -5,6 +5,7 @@
 {.experimental: "strictCaseObjects".}
 
 
+import std/enumerate
 import std/math
 import std/options
 import std/sets
@@ -14,6 +15,7 @@ import std/re
 
 import strslice
 import nodetree
+import error
 
 
 ## Parser Base and Grammar
@@ -26,8 +28,9 @@ import nodetree
 ## that are shared by all parsers of the ensemble, like memoizing data.
 
 type
-  ParsingResult = tuple[node: NodeOrNil, location: int]
-  ParseProc = proc(parser: Parser, location: int): ParsingResult
+  ParsingResult = tuple[node: NodeOrNil, location: int32]
+  ParsingException = object of CatchableError
+  ParseProc = proc(parser: Parser, location: int32) : ParsingResult {.raises: [ParsingException].}
   Parser* = ref ParserObj not nil
   ParserOrNil = ref ParserObj
   ParserObj = object of RootObj
@@ -45,8 +48,8 @@ type
     parseProxy: ParseProc not nil
 
   # the GrammarObj
-  ReturnItemProc = proc(parser: Parser, node: NodeOrNil): Node
-  ReturnSequenceProc = proc(parser: Parser, nodes: seq[Node]): Node
+  ReturnItemProc = proc(parser: Parser, node: NodeOrNil): Node {.raises: [].}
+  ReturnSequenceProc = proc(parser: Parser, nodes: seq[Node]): Node {.raises: [].}
   GrammarRef* = ref GrammarObj not nil
   GrammarObj = object of RootObj
     name: string
@@ -179,12 +182,12 @@ let GrammarPlaceholder = Grammar("__Placeholder__", EmptyStrSlice, returnItemPla
 
 ## basic parser-procedures and -methods
 
-method parse*(self: Parser, location: int): ParsingResult {.base.} =
+method parse*(self: Parser, location: int32): ParsingResult {.base raises: [ParsingException].} =
   echo "Parser.parse"
   result = (nil, 0)
 
 
-proc callParseMethod(parser: Parser, location: int): ParsingResult =
+proc callParseMethod(parser: Parser, location: int32): ParsingResult =
   return parser.parse(location)
 
 
@@ -220,7 +223,7 @@ proc assignName*(name: string, parser: Parser): Parser =
   # TODO: assign name as symbol to sub-parsers
 
 
-proc `()`*(parser: Parser, location: int): ParsingResult =
+proc `()`*(parser: Parser, location: int32): ParsingResult {.raises: [ParsingException].} =
   # is this faster than simply calling parser.parseProxy?
   if parser.parseProxy == callParseMethod:
     return parser.parse(location)
@@ -228,7 +231,7 @@ proc `()`*(parser: Parser, location: int): ParsingResult =
     return parser.parseProxy(parser, location)
 
 
-proc `()`*(parser: Parser, document: string, location: int = 0): ParsingResult =
+proc `()`*(parser: Parser, document: string, location: int32 = 0i32): ParsingResult =
   parser.grammar = Grammar("adhoc", StringSlice(document))  # TODO: do some thing propper here
   if parser.parseProxy == callParseMethod:
     return parser.parse(location)
@@ -266,6 +269,7 @@ type
     empty: bool
 
 proc init*(textParser: TextRef, text: string): TextRef =
+  assert text.len < 2^32
   discard Parser(textParser).init(":Text")
   textParser.text = text
   textParser.slice = toStringSlice(text)
@@ -275,17 +279,17 @@ proc init*(textParser: TextRef, text: string): TextRef =
 proc Text*(text: string): TextRef =
   return new(TextRef).init(text)
 
-method parse*(self: TextRef, location: int): ParsingResult =
+method parse*(self: TextRef, location: int32): ParsingResult =
   runnableExamples:
     import nodetree
     doAssert Text("A")("A").node.asSxpr() == "(:Text \"A\")"
  
   if self.grammar.document.str[].continuesWith(self.text, location):
     if self.dropContent:
-      return (EmptyNode, location + self.text.len)
+      return (EmptyNode, location + int32(self.text.len))
     elif self.disposable and self.empty:
       return (EmptyNode, location)  
-    return (newNode(self.nodeName, self.slice), location + self.text.len)
+    return (newNode(self.nodeName, self.slice), location + int32(self.text.len))
   return (nil, location)
 
 
@@ -310,12 +314,12 @@ proc init*(regexParser: RegexRef, regex: Regex): RegexRef =
 proc Regex*(regex: Regex): RegexRef =
   return new(RegexRef).init(regex)
 
-method parse*(self: RegexRef, location: int): ParsingResult =
+method parse*(self: RegexRef, location: int32): ParsingResult =
   runnableExamples:
     import nodetree, regex
     doAssert Regex(re"\w+")("ABC").node.asSxpr() == "(:Regex \"ABC\")"
 
-  var l = matchLen(self.grammar.document.str[], self.regex, location)
+  var l = matchLen(self.grammar.document.str[], self.regex, location).int32
   if l >= 0:
     let text: StringSlice = self.grammar.document[location..<location+l]
     if self.dropContent:
@@ -330,17 +334,17 @@ method parse*(self: RegexRef, location: int): ParsingResult =
 ## ----------------
 ##
 ## Combined "meta"-parsers are parsers that call other parsers
-## ("contained parsers").
+## ("sub-parsers").
 
-proc infiniteLoopWarning(parser: Parser, node: NodeOrNil, location: int) =
+proc infiniteLoopWarning(parser: Parser, node: NodeOrNil, location: int32) =
   return
 
 
 ## Repeat-Parsers
 ## ^^^^^^^^^^^^^^
 ## 
-## A familiy of combined parsers that apply the contained parser and
-## match if the contained parser matches at least n-times in sequence
+## A familiy of combined parsers that apply the sub-parser and
+## match if the sub-parser matches at least n-times in sequence
 ## and at most k-times, where n is the "lower bound" and k the
 ## upper bound and k >= n.
 ## 
@@ -349,17 +353,17 @@ proc infiniteLoopWarning(parser: Parser, node: NodeOrNil, location: int) =
 ##    and upper bound are passed as parameters on initializiation.
 ## 
 ## Option
-##    matches always, no matter whether the contained parser matches
+##    matches always, no matter whether the sub-parser matches
 ##    or not. If it matches it is applied once before "Option" returns.
 ## 
 ## ZeroOrMore
-##    matches always. If it matches the contained parser is applied
+##    matches always. If it matches the sub-parser is applied
 ##    as often as possible, i.e. until it does not match the beginning
 ##    of the rest of the document, any more.
 ## 
 ## OneOrMore
-##    fails if the contained parser does not match. Otherwise, it returns
-##    as many matches of the contained parser as possible.
+##    fails if the sub-parser does not match. Otherwise, it returns
+##    as many matches of the sub-parser as possible.
 
 
 type
@@ -370,14 +374,16 @@ type
 
 const inf = 2u32^32 - 1
 
+
 proc init*(repeat: RepeatRef, 
            parser: Parser, 
            repRange: Range, 
            name: string = ":Repeat"): RepeatRef =
-  discard Parser(repeat).init(":Repeat")
+  discard Parser(repeat).init(name)
   repeat.subParsers = @[parser]
   repeat.repRange = repRange
   return repeat
+
 
 proc Repeat*(parser: Parser, repRange: Range): RepeatRef =
   return new(RepeatRef).init(parser, repRange)
@@ -392,7 +398,7 @@ proc OneOrMore(parser: Parser): RepeatRef =
   return new(RepeatRef).init(parser, (1u32, inf), ":OneOrMore")
 
 
-method parse*(self: RepeatRef, location: int): ParsingResult =
+method parse*(self: RepeatRef, location: int32): ParsingResult {.raises: [ParsingException].} =
   ## Examples:
   runnableExamples:
     doAssert true
@@ -429,6 +435,100 @@ method is_optional(self: RepeatRef): Option[bool] =
     return some(true)
   else:
     return none(bool)
+
+
+## Alternative-Parser
+## ^^^^^^^^^^^^^^^^^^
+## 
+## The Alternative-parser matches if the first of series
+## of parsers matches that are applied in order. It fails
+## if none of theses parsers matches.
+
+
+type 
+  AlternativeRef = ref AlternativeObj not nil
+  AlternativeObj = object of ParserObj
+    
+
+proc init*(alternative: AlternativeRef, parsers: seq[Parser]): AlternativeRef =
+  discard Parser(alternative).init(":Alternative")
+  return alternative
+
+
+method parse*(self: AlternativeRef, location: int32): ParsingResult = 
+  var
+    loc = location 
+    node: NodeOrNil
+  for parser in self.subParsers:
+    (node, loc) = parser(loc)
+    if not isNil(node):
+      return (self.grammar.returnItem(self, node), loc)
+  return (nil, location)
+
+
+## Series-Parser
+## ^^^^^^^^^^^^^
+## 
+## The Series-parser calls a series of other parsers ("sub-parsers") in
+## sequence. It matches, if the whole series of sub-parsers matches.
+## It fails if one of these parsers does not match. In this case the 
+## sub-parsers following in the list will not be applied, any more.
+## 
+## Series parsers can be initialized with a "mandatory"-threshold which
+## is an index (counted from zero) to the sequence of sub-parsers. If 
+## all sub-parsers up to this index have matched then the following 
+## parsers are considered "mandatory" which means that if any of these 
+## parsers does not match the Series-parser will not only fail to match, 
+## but also report an unexpected continuation error.
+
+type
+  SeriesRef = ref SeriesObj not nil
+  SeriesObj = object of ParserObj
+    mandatory: uint32
+
+proc init*(series: SeriesRef,
+           parsers: seq[Parser],
+           mandatory: uint32 = inf): SeriesRef =
+  discard Parser(series).init(":Series")
+  series.subParsers = parsers
+  series.mandatory = mandatory
+  return series
+
+
+proc Series*(parsers: seq[Parser], mandatory: uint32 = inf): SeriesRef =
+  return new(SeriesRef).init(parsers, mandatory)
+
+
+proc reentry(self: SeriesRef, location: int32): ParsingResult =
+  return (nil, -1)  # placeholder
+
+proc violation(self: SeriesRef,
+                        location: int32,
+                        wasLookAhead: bool,
+                        whatExpected: string,
+                        reloc: int32,
+                        error_node: NodeOrNil): 
+                        tuple[err: ErrorRef, location: int32] =
+  return (Error("mandatory violation detected", location), location)
+  
+
+method parse*(self: SeriesRef, location: int32): ParsingResult {.raises: [ParsingException].} =
+  var
+    results = newSeqOfCap[Node](self.subParsers.len)
+    loc = location
+    reloc = 0i32
+    error: ErrorOrNil
+    node: NodeOrNil
+  for pos, parser in enumerate(self.subParsers):
+    (node, loc) = parser(loc)
+    if isNil(node):
+      if pos.uint32 < self.mandatory:
+        return (nil, location)
+      else:
+        # TODO: Fill the placeholder in!
+        (node, reloc) = self.reentry(loc)
+        (error, loc) = self.violation(loc, false, parser.name, reloc, node)
+      
 
 
 ## Test-code

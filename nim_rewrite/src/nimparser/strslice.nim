@@ -76,7 +76,7 @@ func first*(str: StringSlice): int32 = str.start
 func last*(str: StringSlice): int32 = str.stop
 
 proc `[]`*(str: StringSlice,
-           slc: HSlice[int, int or BackwardsIndex]): StringSlice =
+           slc: HSlice[int32, int32 or BackwardsIndex]): StringSlice =
   ## Grab a slice of a string slice. This returns a new string slice that
   ## references the same underlying string.
   if slc.a < 0:
@@ -195,8 +195,8 @@ when isMainModule:
   let
     s1 = "Hello world"
     s2 = newStringSlice("Hello world")
-    s3 = s2[6 .. ^1]
-    s4 = s2[2 .. ^1]
+    s3 = s2[6i32 .. ^1]
+    s4 = s2[2i32 .. ^1]
     s5 = toStringSlice("")
 
   echo s5
@@ -215,10 +215,10 @@ when isMainModule:
   var
     s = "0123456789"
     ss = s.toStringSlice
-    upToFour = ss[0..4]
-    upToFive = ss[0..5]
-    upToSix = ss[0..6]
-    threeToFive = ss[3..5]
+    upToFour = ss[0i32..4i32]
+    upToFive = ss[0i32..5i32]
+    upToSix = ss[0i32..6i32]
+    threeToFive = ss[3i32..5i32]
 
   assert s.find("123", last = 5) == ss.find("123", last = 5)
   assert s.find("456", last = 5) == ss.find("456", last = 5)

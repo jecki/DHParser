@@ -3164,6 +3164,13 @@ def Custom(custom_parser: Union[Parser, CustomParseFunc, str]) -> Parser:
         raise ValueError(f'Illegal parameter {custom_parser} of type {type(custom_parser)}')
 
 
+########################################################################
+#
+# One-ary parsers
+#
+########################################################################
+
+
 class UnaryParser(CombinedParser):
     """
     Base class of all unary parsers, i.e. parser that contains
@@ -3232,36 +3239,6 @@ class LateBindingUnary(UnaryParser):
     @sub_parsers.setter
     def sub_parsers(self, f: FrozenSet):
         pass
-
-class NaryParser(CombinedParser):
-    """
-    Base class of all Nary parsers, i.e. parser that
-    contains one or more other parsers, like the alternative
-    parser for example.
-
-    The NaryOperator base class supplies ``__deepcopy__()`` and methods
-    for n-ary parsers. The ``__deepcopy__()``-method needs to be overwritten,
-    however, if the constructor of a derived class takes additional
-    parameters.
-    """
-
-    def __init__(self, *parsers: Parser) -> None:
-        super(NaryParser, self).__init__()
-        # assert all([isinstance(parser, Parser) for parser in parsers]), str(parsers)
-        if len(parsers) == 0:
-            raise ValueError('Cannot initialize NaryParser with zero parsers.')
-        # assert all(isinstance(p, Parser) for p in parsers)
-        self.parsers = parsers  # type: Tuple[Parser, ...]
-        self.sub_parsers = frozenset(parsers)
-
-    def __deepcopy__(self, memo):
-        parsers = copy.deepcopy(self.parsers, memo)
-        duplicate = self.__class__(*parsers)
-        copy_combined_parser_attrs(self, duplicate)
-        return duplicate
-
-    def _signature(self) -> Hashable:
-        return (self.__class__.__name__,) + tuple(p.signature() for p in self.parsers)
 
 
 class Option(UnaryParser):
@@ -3550,260 +3527,42 @@ class Counted(UnaryParser):
         return self.__class__.__name__, self.parser.signature(), self.repetitions
 
 
-NO_MANDATORY = 2**30
+########################################################################
+#
+# N-ary parsers
+#
+########################################################################
 
 
-class MandatoryNary(NaryParser):
-    r"""MandatoryNary is the parent class for N-ary parsers that can be
-    configured to fail with a parsing error rather than returning a non-match,
-    if all contained parsers from a specific subset of non-mandatory parsers
-    have already matched successfully, so that only "mandatory" parsers are
-    left for matching. The idea is that once all non-mandatory parsers have
-    been consumed it is clear that this parser is a match so that the failure
-    to match any of the following mandatory parsers indicates a syntax
-    error in the processed document at the location were a mandatory parser
-    fails to match.
-
-    For the sake of simplicity, the division between the set of non-mandatory
-    parsers and mandatory parsers is realized by an index into the list
-    of contained parsers. All parsers from the mandatory-index onward are
-    considered mandatory once all parsers up to the index have been consumed.
-
-    In the following example, ``Series`` is a descendant of ``MandatoryNary``::
-
-        >>> fraction = Series(Text('.'), RegExp(r'[0-9]+'), mandatory=1).name('fraction')
-        >>> number = (RegExp(r'[0-9]+') + Option(fraction)).name('number')
-        >>> num_parser = Grammar(TreeReduction(number, CombinedParser.MERGE_TREETOPS))
-        >>> num_parser('25').as_sxpr()
-        '(number "25")'
-        >>> num_parser('3.1415').as_sxpr()
-        '(number (:RegExp "3") (fraction ".1415"))'
-        >>> str(num_parser('3.1415'))
-        '3.1415'
-        >>> str(num_parser('3.'))
-        '3. <<< Error on "" | \'/[0-9]+/\' expected by parser \'fraction\', but »...« found instead! >>> '
-
-    In this example, the first item of the fraction, i.e. the decimal dot,
-    is non-mandatory, because only the parser with an index of one or more
-    are mandatory (``mandator=1``). In this case this is only the regular
-    expression parser capturing the decimal digits after the dot. This means,
-    if there is no dot, the fraction parser simply will not match. However,
-    if there is a dot, it will fail with an error if the following mandatory
-    item, i.e. the decimal digits, are missing.
-
-    :ivar mandatory:  Number of the element starting at which the element
-        and all following elements are considered "mandatory". This means
-        that rather than returning a non-match an error message is issued.
-        The default value is NO_MANDATORY, which means that no elements
-        are mandatory. NOTE: The semantics of the mandatory-parameter
-        might change depending on the subclass implementing it.
+class NaryParser(CombinedParser):
     """
-    def __init__(self, *parsers: Parser,
-                 mandatory: int = NO_MANDATORY) -> None:
-        super(MandatoryNary, self).__init__(*parsers)
-        length = len(self.parsers)
-        if mandatory < 0:
-            mandatory += length
-        self.mandatory = mandatory  # type: int
+    Base class of all Nary parsers, i.e. parser that
+    contains one or more other parsers, like the alternative
+    parser for example.
+
+    The NaryOperator base class supplies ``__deepcopy__()`` and methods
+    for n-ary parsers. The ``__deepcopy__()``-method needs to be overwritten,
+    however, if the constructor of a derived class takes additional
+    parameters.
+    """
+
+    def __init__(self, *parsers: Parser) -> None:
+        super(NaryParser, self).__init__()
+        # assert all([isinstance(parser, Parser) for parser in parsers]), str(parsers)
+        if len(parsers) == 0:
+            raise ValueError('Cannot initialize NaryParser with zero parsers.')
+        # assert all(isinstance(p, Parser) for p in parsers)
+        self.parsers = parsers  # type: Tuple[Parser, ...]
+        self.sub_parsers = frozenset(parsers)
 
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
-        duplicate = self.__class__(*parsers, mandatory=self.mandatory)
+        duplicate = self.__class__(*parsers)
         copy_combined_parser_attrs(self, duplicate)
         return duplicate
 
-    def get_reentry_point(self, location: cython.int) -> Tuple[int, Node]:
-        """Returns a tuple of integer index of the closest reentry point and a Node
-        capturing all text from ``rest`` up to this point or ``(-1, None)`` if no
-        reentry-point was found. If no reentry-point was found or the
-        skip-list ist empty, -1 and a zombie-node are returned.
-        """
-        text_ = self.grammar.document__[location:]
-        skip = tuple(self.grammar.skip_rules__.get(self.symbol, []))
-        if skip:
-            gr = self._grammar
-            reloc, zombie = reentry_point(text_, skip, gr.comment_rx__, gr.reentry_search_window__)
-            return reloc, zombie
-        return -1, Node(ZOMBIE_TAG, '')
-
-    def mandatory_violation(self,
-                            location: cython.int,
-                            failed_on_lookahead: bool,
-                            expected: str,
-                            reloc: int,
-                            err_node: Node) -> Tuple[Error, int]:
-        """
-        Chooses the right error message in case of a mandatory violation and
-        returns an error with this message, an error node, to which the error
-        is attached, and the text segment where parsing is to continue.
-
-        This is a helper function that abstracts functionality that is
-        needed by the Interleave-parser as well as the Series-parser.
-
-        :param location: the point, where the mandatory violation happend.
-                As usual the string view represents the remaining text from
-                this point.
-        :param failed_on_lookahead: True if the violating parser was a
-                Lookahead-Parser.
-        :param expected:  the expected (but not found) text at this point.
-        :param err_node: A zombie-node that captures the text from the
-                position where the error occurred to a suggested
-                reentry-position.
-        :param reloc: A position value that represents the reentry point for
-                parsing after the error occurred.
-
-        :return:   a tuple of an error object and a string view for the
-                continuation the parsing process
-        """
-        grammar = self._grammar
-        text_ = self.grammar.document__[location:]
-        err_node._pos = -1  # bad hack to avoid error in case position is re-set
-        err_node.with_pos(location)  # for testing artifacts
-        error_code = MANDATORY_CONTINUATION
-        found = text_[:10].replace('\n', '\\n') + '...'
-        sym = self.grammar.associated_symbol__(self).pname
-        err_msgs = self.grammar.error_messages__.get(sym, [])
-        for search, message in err_msgs:
-            is_func = callable(search)           # search rule is a function: StringView -> bool
-            is_str = isinstance(search, str)     # search rule is a simple string
-            is_rxs = not is_func and not is_str  # search rule is a regular expression
-            if (is_func and cast(Callable, search)(text_)) \
-                    or (is_rxs and text_.match(search)) \
-                    or (is_str and text_.startswith(cast(str, search))):
-                try:
-                    msg, error_code = extract_error_code(
-                        message.format(expected, found), MANDATORY_CONTINUATION)
-                    break
-                except (ValueError, KeyError, IndexError) as e:
-                    error = Error("Malformed error format string »{}« leads to »{}«"
-                                  .format(message, str(e)),
-                                  location, MALFORMED_ERROR_STRING)
-                    grammar.tree__.add_error(err_node, error)
-        else:
-            msg = '%s expected by parser %s, but »%s« found instead!' \
-                  % (repr(expected), repr(sym), found)
-        if failed_on_lookahead and not text_:
-            if grammar.start_parser__ is grammar.root_parser__:
-                error_code = MANDATORY_CONTINUATION_AT_EOF
-            else:
-                error_code = MANDATORY_CONTINUATION_AT_EOF_NON_ROOT
-        error = Error(msg, location, error_code,
-                      length=max(self.grammar.ff_pos__ - location, 1))
-        grammar.tree__.add_error(err_node, error)
-        if reloc >= 0:
-            # signal error to tracer directly, because this error is not raised!
-            grammar.most_recent_error__ = ParserError(
-                self, err_node, reloc, location, error, first_throw=False)
-        return error, location + max(reloc, 0)
-
-    def static_analysis(self) -> List['AnalysisError']:
-        errors = super().static_analysis()
-        msg = []
-        length = len(self.parsers)
-        sym = self.grammar.associated_symbol__(self).pname
-        # if self.mandatory == NO_MANDATORY and sym in self.grammar.error_messages__:
-        #     msg.append('Custom error messages require that parameter "mandatory" is set!')
-        # elif self.mandatory == NO_MANDATORY and sym in self.grammar.skip_rules__:
-        #     msg.append('Search expressions for skipping text require parameter '
-        #                '"mandatory" to be set!')
-        if length == 0:
-            msg.append('Number of elements %i is below minimum length of 1' % length)
-        elif length >= NO_MANDATORY:
-            msg.append('Number of elements %i of series exceeds maximum length of %i'
-                       % (length, NO_MANDATORY))
-        elif not (0 <= self.mandatory < length or self.mandatory == NO_MANDATORY):
-            msg.append('Illegal value %i for mandatory-parameter in a parser with %i elements!'
-                       % (self.mandatory, length))
-        if msg:
-            msg.insert(0, 'Illegal configuration of mandatory Nary-parser '
-                       + self.location_info())
-            errors.append(self.static_error('\n'.join(msg), BAD_MANDATORY_SETUP))
-        return errors
-
-
-class Series(MandatoryNary):
-    r"""
-    Matches if each of a series of parsers matches exactly in the order of
-    the series.
-
-    Example::
-
-        >>> variable_name = RegExp(r'(?!\d)\w') + RE(r'\w*')
-        >>> Grammar(variable_name)('variable_1').content
-        'variable_1'
-        >>> str(Grammar(variable_name)('1_variable'))
-        ' <<< Error on "1_variable" | Parser "root->/(?!\\\\d)\\\\w/" did not match: »1_variable« >>> '
-
-    EBNF-Notation: ``... ...``    (sequence of parsers separated by a blank or new line)
-
-    EBNF-Example:  ``series = letter letter_or_digit``
-    """
-    # RX_ARGUMENT = re.compile(r'\s(\S)')
-
-    @cython.locals(location_=cython.int, pos=cython.int, reloc=cython.int, mandatory=cython.int)
-    def _parse(self, location: cython.int) -> ParsingResult:
-        results = []  # type: List[Node]
-        location_ = location
-        error = None  # type: Optional[Error]
-        mandatory = self.mandatory  # type: int
-        for pos, parser in enumerate(self.parsers):
-            node, location_ = parser(location_)
-            if node is None:
-                if pos < mandatory:
-                    return None, location
-                else:
-                    parser_str = str(parser) if is_context_sensitive(parser) else parser.repr
-                    reloc, node = self.get_reentry_point(location_)
-                    error, location_ = self.mandatory_violation(
-                        location_, isinstance(parser, Lookahead), parser_str, reloc, node)
-                    # check if parsing of the series can be resumed somewhere
-                    if reloc >= 0:
-                        nd, location_ = parser(location_)  # try current parser again
-                        if nd is not None:
-                            results.append(node)
-                            node = nd
-                    else:
-                        results.append(node)
-                        break
-            if node._result or not node.name[0] == ':':  # node.anonymous:  # drop anonymous empty nodes
-                results.append(node)
-        # assert len(results) <= len(self.parsers) \
-        #        or len(self.parsers) >= len([p for p in results if p.name != ZOMBIE_TAG])
-        ret_node = self._return_values(tuple(results))  # type: Node
-        if error and reloc < 0:  # no worry: reloc is always defined when error is True
-            # parser will be moved forward, even if no relocation point has been found
-            raise ParserError(self, ret_node.with_pos(location_),
-                              location_ - location,
-                              location, error, first_throw=True)
-        return ret_node, location_
-
-    def __repr__(self):
-        L = len(self.parsers)
-        if L == 2 or L == 3 and isinstance(self.parsers[2], Whitespace):
-            if isinstance(self.parsers[1], Whitespace) and isinstance(self.parsers[0], Text):
-                return f'"{cast(Text, self.parsers[0]).text}"'
-            if isinstance(self.parsers[0], Whitespace) and isinstance(self.parsers[1], Text):
-                return f'"{cast(Text, self.parsers[1]).text}"'
-        return " ".join([parser.repr for parser in self.parsers[:self.mandatory]]
-                        + (['§'] if self.mandatory != NO_MANDATORY else [])
-                        + [parser.repr for parser in self.parsers[self.mandatory:]])
-
-    # The following operator definitions add syntactical sugar, so one can write:
-    # ``RE('\d+') + Optional(RE('\.\d+)`` instead of ``Series(RE('\d+'), Optional(RE('\.\d+))``
-
-    def __add__(self, other: Parser) -> 'Series':
-        return Series(self, other)
-
-    def __radd__(self, other: Parser) -> 'Series':
-        return Series(other, self)
-
-    def __iadd__(self, other: Parser) -> 'Series':
-        return Series(self, other)
-
-    def is_optional(self) -> Optional[bool]:
-        if all(p.is_optional() for p in self.parsers):
-            return True
-        return super().is_optional()
+    def _signature(self) -> Hashable:
+        return (self.__class__.__name__,) + tuple(p.signature() for p in self.parsers)
 
 
 def starting_string(parser: Parser) -> str:
@@ -4013,6 +3772,262 @@ def longest_match(strings: List[str], text: Union[StringView, str], n: int = 1) 
 #                 + ' could possibly solve this problem.',
 #                 DUPLICATE_PARSERS_IN_ALTERNATIVE))
 #         return errors
+
+
+NO_MANDATORY = 2**30
+
+
+class MandatoryNary(NaryParser):
+    r"""MandatoryNary is the parent class for N-ary parsers that can be
+    configured to fail with a parsing error rather than returning a non-match,
+    if all contained parsers from a specific subset of non-mandatory parsers
+    have already matched successfully, so that only "mandatory" parsers are
+    left for matching. The idea is that once all non-mandatory parsers have
+    been consumed it is clear that this parser is a match so that the failure
+    to match any of the following mandatory parsers indicates a syntax
+    error in the processed document at the location were a mandatory parser
+    fails to match.
+
+    For the sake of simplicity, the division between the set of non-mandatory
+    parsers and mandatory parsers is realized by an index into the list
+    of contained parsers. All parsers from the mandatory-index onward are
+    considered mandatory once all parsers up to the index have been consumed.
+
+    In the following example, ``Series`` is a descendant of ``MandatoryNary``::
+
+        >>> fraction = Series(Text('.'), RegExp(r'[0-9]+'), mandatory=1).name('fraction')
+        >>> number = (RegExp(r'[0-9]+') + Option(fraction)).name('number')
+        >>> num_parser = Grammar(TreeReduction(number, CombinedParser.MERGE_TREETOPS))
+        >>> num_parser('25').as_sxpr()
+        '(number "25")'
+        >>> num_parser('3.1415').as_sxpr()
+        '(number (:RegExp "3") (fraction ".1415"))'
+        >>> str(num_parser('3.1415'))
+        '3.1415'
+        >>> str(num_parser('3.'))
+        '3. <<< Error on "" | \'/[0-9]+/\' expected by parser \'fraction\', but »...« found instead! >>> '
+
+    In this example, the first item of the fraction, i.e. the decimal dot,
+    is non-mandatory, because only the parser with an index of one or more
+    are mandatory (``mandator=1``). In this case this is only the regular
+    expression parser capturing the decimal digits after the dot. This means,
+    if there is no dot, the fraction parser simply will not match. However,
+    if there is a dot, it will fail with an error if the following mandatory
+    item, i.e. the decimal digits, are missing.
+
+    :ivar mandatory:  Number of the element starting at which the element
+        and all following elements are considered "mandatory". This means
+        that rather than returning a non-match an error message is issued.
+        The default value is NO_MANDATORY, which means that no elements
+        are mandatory. NOTE: The semantics of the mandatory-parameter
+        might change depending on the subclass implementing it.
+    """
+    def __init__(self, *parsers: Parser,
+                 mandatory: int = NO_MANDATORY) -> None:
+        super(MandatoryNary, self).__init__(*parsers)
+        length = len(self.parsers)
+        if mandatory < 0:
+            mandatory += length
+        self.mandatory = mandatory  # type: int
+
+    def __deepcopy__(self, memo):
+        parsers = copy.deepcopy(self.parsers, memo)
+        duplicate = self.__class__(*parsers, mandatory=self.mandatory)
+        copy_combined_parser_attrs(self, duplicate)
+        return duplicate
+
+    def get_reentry_point(self, location: cython.int) -> Tuple[int, Node]:
+        """Returns a tuple of integer index of the closest reentry point and a Node
+        capturing all text from ``rest`` up to this point or ``(-1, None)`` if no
+        reentry-point was found. If no reentry-point was found or the
+        skip-list ist empty, -1 and a zombie-node are returned.
+        """
+        text_ = self.grammar.document__[location:]
+        skip = tuple(self.grammar.skip_rules__.get(self.symbol, []))
+        if skip:
+            gr = self._grammar
+            reloc, zombie = reentry_point(text_, skip, gr.comment_rx__, gr.reentry_search_window__)
+            return reloc, zombie
+        return -1, Node(ZOMBIE_TAG, '')
+
+    def mandatory_violation(self,
+                            location: cython.int,
+                            failed_on_lookahead: bool,
+                            expected: str,
+                            reloc: int,
+                            err_node: Node) -> Tuple[Error, int]:
+        """
+        Chooses the right error message in case of a mandatory violation and
+        returns an error with this message, an error node, to which the error
+        is attached, and the text segment where parsing is to continue.
+
+        This is a helper function that abstracts functionality that is
+        needed by the Interleave-parser as well as the Series-parser.
+
+        :param location: the point, where the mandatory violation happend.
+                As usual the string view represents the remaining text from
+                this point.
+        :param failed_on_lookahead: True if the violating parser was a
+                Lookahead-Parser.
+        :param expected:  the expected (but not found) text at this point.
+        :param err_node: A zombie-node that captures the text from the
+                position where the error occurred to a suggested
+                reentry-position.
+        :param reloc: A position value that represents the reentry point for
+                parsing after the error occurred.
+
+        :return:   a tuple of an error object and a location for the
+                continuation the parsing process
+        """
+        grammar = self._grammar
+        text_ = self.grammar.document__[location:]
+        err_node._pos = -1  # bad hack to avoid error in case position is re-set
+        err_node.with_pos(location)  # for testing artifacts
+        error_code = MANDATORY_CONTINUATION
+        found = text_[:10].replace('\n', '\\n') + '...'
+        sym = self.grammar.associated_symbol__(self).pname
+        err_msgs = self.grammar.error_messages__.get(sym, [])
+        for search, message in err_msgs:
+            is_func = callable(search)           # search rule is a function: StringView -> bool
+            is_str = isinstance(search, str)     # search rule is a simple string
+            is_rxs = not is_func and not is_str  # search rule is a regular expression
+            if (is_func and cast(Callable, search)(text_)) \
+                    or (is_rxs and text_.match(search)) \
+                    or (is_str and text_.startswith(cast(str, search))):
+                try:
+                    msg, error_code = extract_error_code(
+                        message.format(expected, found), MANDATORY_CONTINUATION)
+                    break
+                except (ValueError, KeyError, IndexError) as e:
+                    error = Error("Malformed error format string »{}« leads to »{}«"
+                                  .format(message, str(e)),
+                                  location, MALFORMED_ERROR_STRING)
+                    grammar.tree__.add_error(err_node, error)
+        else:
+            msg = '%s expected by parser %s, but »%s« found instead!' \
+                  % (repr(expected), repr(sym), found)
+        if failed_on_lookahead and not text_:
+            if grammar.start_parser__ is grammar.root_parser__:
+                error_code = MANDATORY_CONTINUATION_AT_EOF
+            else:
+                error_code = MANDATORY_CONTINUATION_AT_EOF_NON_ROOT
+        error = Error(msg, location, error_code,
+                      length=max(self.grammar.ff_pos__ - location, 1))
+        grammar.tree__.add_error(err_node, error)
+        if reloc >= 0:
+            # signal error to tracer directly, because this error is not raised!
+            grammar.most_recent_error__ = ParserError(
+                self, err_node, reloc, location, error, first_throw=False)
+        return error, location + max(reloc, 0)
+
+    def static_analysis(self) -> List['AnalysisError']:
+        errors = super().static_analysis()
+        msg = []
+        length = len(self.parsers)
+        sym = self.grammar.associated_symbol__(self).pname
+        # if self.mandatory == NO_MANDATORY and sym in self.grammar.error_messages__:
+        #     msg.append('Custom error messages require that parameter "mandatory" is set!')
+        # elif self.mandatory == NO_MANDATORY and sym in self.grammar.skip_rules__:
+        #     msg.append('Search expressions for skipping text require parameter '
+        #                '"mandatory" to be set!')
+        if length == 0:
+            msg.append('Number of elements %i is below minimum length of 1' % length)
+        elif length >= NO_MANDATORY:
+            msg.append('Number of elements %i of series exceeds maximum length of %i'
+                       % (length, NO_MANDATORY))
+        elif not (0 <= self.mandatory < length or self.mandatory == NO_MANDATORY):
+            msg.append('Illegal value %i for mandatory-parameter in a parser with %i elements!'
+                       % (self.mandatory, length))
+        if msg:
+            msg.insert(0, 'Illegal configuration of mandatory Nary-parser '
+                       + self.location_info())
+            errors.append(self.static_error('\n'.join(msg), BAD_MANDATORY_SETUP))
+        return errors
+
+
+class Series(MandatoryNary):
+    r"""
+    Matches if each of a series of parsers matches exactly in the order of
+    the series.
+
+    Example::
+
+        >>> variable_name = RegExp(r'(?!\d)\w') + RE(r'\w*')
+        >>> Grammar(variable_name)('variable_1').content
+        'variable_1'
+        >>> str(Grammar(variable_name)('1_variable'))
+        ' <<< Error on "1_variable" | Parser "root->/(?!\\\\d)\\\\w/" did not match: »1_variable« >>> '
+
+    EBNF-Notation: ``... ...``    (sequence of parsers separated by a blank or new line)
+
+    EBNF-Example:  ``series = letter letter_or_digit``
+    """
+    # RX_ARGUMENT = re.compile(r'\s(\S)')
+
+    @cython.locals(location_=cython.int, pos=cython.int, reloc=cython.int, mandatory=cython.int)
+    def _parse(self, location: cython.int) -> ParsingResult:
+        results = []  # type: List[Node]
+        location_ = location
+        error = None  # type: Optional[Error]
+        mandatory = self.mandatory  # type: int
+        for pos, parser in enumerate(self.parsers):
+            node, location_ = parser(location_)
+            if node is None:
+                if pos < mandatory:
+                    return None, location
+                else:
+                    parser_str = str(parser) if is_context_sensitive(parser) else parser.repr
+                    reloc, node = self.get_reentry_point(location_)
+                    error, location_ = self.mandatory_violation(
+                        location_, isinstance(parser, Lookahead), parser_str, reloc, node)
+                    # check if parsing of the series can be resumed somewhere
+                    if reloc >= 0:
+                        nd, location_ = parser(location_)  # try current parser again
+                        if nd is not None:
+                            results.append(node)
+                            node = nd
+                    else:
+                        results.append(node)
+                        break
+            if node._result or not node.name[0] == ':':  # node.anonymous:  # drop anonymous empty nodes
+                results.append(node)
+        # assert len(results) <= len(self.parsers) \
+        #        or len(self.parsers) >= len([p for p in results if p.name != ZOMBIE_TAG])
+        ret_node = self._return_values(tuple(results))  # type: Node
+        if error and reloc < 0:  # no worry: reloc is always defined when error is True
+            # parser will be moved forward, even if no relocation point has been found
+            raise ParserError(self, ret_node.with_pos(location_),
+                              location_ - location,
+                              location, error, first_throw=True)
+        return ret_node, location_
+
+    def __repr__(self):
+        L = len(self.parsers)
+        if L == 2 or L == 3 and isinstance(self.parsers[2], Whitespace):
+            if isinstance(self.parsers[1], Whitespace) and isinstance(self.parsers[0], Text):
+                return f'"{cast(Text, self.parsers[0]).text}"'
+            if isinstance(self.parsers[0], Whitespace) and isinstance(self.parsers[1], Text):
+                return f'"{cast(Text, self.parsers[1]).text}"'
+        return " ".join([parser.repr for parser in self.parsers[:self.mandatory]]
+                        + (['§'] if self.mandatory != NO_MANDATORY else [])
+                        + [parser.repr for parser in self.parsers[self.mandatory:]])
+
+    # The following operator definitions add syntactical sugar, so one can write:
+    # ``RE('\d+') + Optional(RE('\.\d+)`` instead of ``Series(RE('\d+'), Optional(RE('\.\d+))``
+
+    def __add__(self, other: Parser) -> 'Series':
+        return Series(self, other)
+
+    def __radd__(self, other: Parser) -> 'Series':
+        return Series(other, self)
+
+    def __iadd__(self, other: Parser) -> 'Series':
+        return Series(self, other)
+
+    def is_optional(self) -> Optional[bool]:
+        if all(p.is_optional() for p in self.parsers):
+            return True
+        return super().is_optional()
 
 
 class Interleave(MandatoryNary):
