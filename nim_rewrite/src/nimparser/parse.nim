@@ -29,7 +29,16 @@ import error
 
 type
   ParsingResult = tuple[node: NodeOrNil, location: int32]
-  ParsingException = object of CatchableError
+  ParsingException = ref object of CatchableError
+    parser: Parser
+    node: Node
+    node_orig_len: int32
+    location: int32
+    error: ErrorRef
+    first_throw: bool
+  ParserFlags = enum isLeaf, noMemoization, isNary, isFlowParser, isLookahead,
+   isContextSensitive, isDisposable, dropContent
+  ParserFlagSet = set[ParserFlags]
   ParseProc = proc(parser: Parser, location: int32) : ParsingResult {.raises: [ParsingException].}
   Parser* = ref ParserObj not nil
   ParserOrNil = ref ParserObj
@@ -37,8 +46,7 @@ type
     name: string
     nodeName: string
     parserType: string
-    disposable: bool
-    dropContent: bool
+    flags: ParserFlagSet
     eqClass: uint
     grammarVar: GrammarRef
     symbol: ParserOrNil
@@ -48,15 +56,15 @@ type
     parseProxy: ParseProc not nil
 
   # the GrammarObj
-  ReturnItemProc = proc(parser: Parser, node: NodeOrNil): Node {.raises: [].}
-  ReturnSequenceProc = proc(parser: Parser, nodes: seq[Node]): Node {.raises: [].}
+  ReturnItemProc = proc(parser: Parser, node: NodeOrNil): Node {.raises: [].} not nil
+  ReturnSequenceProc = proc(parser: Parser, nodes: seq[Node]): Node {.raises: [].} not nil
   GrammarRef* = ref GrammarObj not nil
   GrammarObj = object of RootObj
     name: string
     document: StringSlice
     root: seq[Parser]
-    returnItem: ReturnItemProc not nil
-    returnSequence: ReturnSequenceProc not nil
+    returnItem: ReturnItemProc
+    returnSequence: ReturnSequenceProc
 
 
 ## Special Node-Singletons
@@ -64,6 +72,8 @@ type
 let
    EmptyPType* = ":EMPTY"
    EmptyNode* = newNode(EmptyPType, "")
+   ZombiePType = "__ZOMBIE"
+
 
 ## Parser-object infrastructure
 
@@ -109,31 +119,31 @@ proc grammar(self: Parser) : GrammarRef {.inline.} =
 ## procedures performing early tree-reduction on return values of parsers
 
 proc returnItemAsIs(parser: Parser, node: NodeOrNil): Node =
-  if parser.dropContent:
+  if dropContent in parser.flags:
     return EmptyNode
   if isNil(node):
     return newNode(parser.nodeName, "")
   return newNode(parser.nodeName, @[Node(node)])
 
 proc returnSeqAsIs(parser: Parser, nodes: seq[Node]): Node =
-  if parser.dropContent:
+  if dropContent in parser.flags:
     return EmptyNode
   return newNode(parser.nodeName, nodes)
 
 proc returnItemFlatten(parser: Parser, node: NodeOrNil): Node =
   if not isNil(node):
-    if parser.disposable:
-      if parser.dropContent:
+    if isDisposable in parser.flags:
+      if dropContent in parser.flags:
         return EmptyNode
       return node
     if node.isAnonymous:
       return newNode(parser.nodeName, @[Node(node)])
-  elif parser.disposable:
+  elif isDisposable in parser.flags:
     return EmptyNode
   return newNode(parser.nodeName, "")
 
 proc returnSeqFlatten(parser: Parser, nodes: seq[Node]): Node =
-  if parser.dropContent:
+  if dropContent in parser.flags:
     return EmptyNode
   let N = nodes.len
   if N > 1:
@@ -145,13 +155,13 @@ proc returnSeqFlatten(parser: Parser, nodes: seq[Node]): Node =
           res.add(item)
       elif not child.isEmpty or not anonymous:
         res.add(child)
-    if res.len > 0 or not parser.disposable:
+    if res.len > 0 or not (isDisposable in parser.flags):
       return newNode(parser.nodeName, res)
     else:
       return EmptyNode
   elif N == 1:
     return parser.grammar.returnItem(parser, nodes[0])
-  if parser.disposable:
+  if isDisposable in parser.flags:
     return EmptyNode
   return newNode(parser.nodeName, "")
 
@@ -170,8 +180,8 @@ proc init(grammar: GrammarRef, name: string, document: StringSlice,
   grammar.name = name
   grammar.document = document
   grammar.root = @[]
-  grammar.returnItem = returnItemFlatten
-  grammar.returnSequence = returnSeqFlatten
+  grammar.returnItem = returnItem
+  grammar.returnSequence = returnSequence
   return grammar
 
 template Grammar(args: varargs[untyped]): GrammarRef =
@@ -197,8 +207,7 @@ proc init*(parser: Parser, ptype: string = ":Parser"): Parser =
   parser.name = ""
   parser.nodeName = ptype
   parser.parserType = ptype
-  parser.disposable = true
-  parser.dropContent = false
+  parser.flags = {isDisposable}
   parser.grammarVar = GrammarPlaceholder
   parser.symbol = nil
   parser.subParsers = @[]
@@ -216,7 +225,7 @@ proc assignName*(name: string, parser: Parser): Parser =
   if name[0] == ':':
     parser.name = name[1 .. ^1]
   else:
-    parser.disposable = false
+    parser.flags.excl isDisposable
     parser.name = name
   parser.symbol = parser
   return parser
@@ -232,6 +241,7 @@ proc `()`*(parser: Parser, location: int32): ParsingResult {.raises: [ParsingExc
 
 
 proc `()`*(parser: Parser, document: string, location: int32 = 0i32): ParsingResult =
+  assert parser.grammar == GrammarPlaceholder
   parser.grammar = Grammar("adhoc", StringSlice(document))  # TODO: do some thing propper here
   if parser.parseProxy == callParseMethod:
     return parser.parse(location)
@@ -239,7 +249,7 @@ proc `()`*(parser: Parser, document: string, location: int32 = 0i32): ParsingRes
     return parser.parseProxy(parser, location)
 
 
-method is_optional(self: Parser): Option[bool] {.base.} =
+method isOptional(self: Parser): Option[bool] {.base.} =
   ## Returns some(true), if the parser can never fail, i.e. never yields nil
   ## instead of a node.
   ## Returns some(false), if the parser can fail.
@@ -271,6 +281,7 @@ type
 proc init*(textParser: TextRef, text: string): TextRef =
   assert text.len < 2^32
   discard Parser(textParser).init(":Text")
+  textParser.flags.incl isLeaf
   textParser.text = text
   textParser.slice = toStringSlice(text)
   textParser.empty = (text.len == 0)
@@ -285,9 +296,9 @@ method parse*(self: TextRef, location: int32): ParsingResult =
     doAssert Text("A")("A").node.asSxpr() == "(:Text \"A\")"
  
   if self.grammar.document.str[].continuesWith(self.text, location):
-    if self.dropContent:
+    if dropContent in self.flags:
       return (EmptyNode, location + int32(self.text.len))
-    elif self.disposable and self.empty:
+    elif isDisposable in self.flags and self.empty:
       return (EmptyNode, location)  
     return (newNode(self.nodeName, self.slice), location + int32(self.text.len))
   return (nil, location)
@@ -309,6 +320,7 @@ proc rx(rx_str: string): Regex = re("(*UTF8)(*UCP)" & rx_str)
 proc init*(regexParser: RegexRef, regex: Regex): RegexRef =
   discard Parser(regexParser).init(":Regex")
   regexParser.regex = regex
+  regexParser.flags.incl isLeaf
   return regexParser
 
 proc Regex*(regex: Regex): RegexRef =
@@ -322,9 +334,9 @@ method parse*(self: RegexRef, location: int32): ParsingResult =
   var l = matchLen(self.grammar.document.str[], self.regex, location).int32
   if l >= 0:
     let text: StringSlice = self.grammar.document[location..<location+l]
-    if self.dropContent:
+    if dropContent in self.flags:
       return (EmptyNode, location + text.len)
-    elif self.disposable and text == "":
+    elif isDisposable in self.flags and text == "":
       return (EmptyNode, location)
     return (newNode(self.nodeName, text), location + text.len)
   return (nil, location)
@@ -430,7 +442,7 @@ method parse*(self: RepeatRef, location: int32): ParsingResult {.raises: [Parsin
   return (self.grammar.returnSequence(self, nodes), loc)
 
 
-method is_optional(self: RepeatRef): Option[bool] =
+method isOptional(self: RepeatRef): Option[bool] =
   if self.repRange.min == 0:
     return some(true)
   else:
@@ -444,16 +456,19 @@ method is_optional(self: RepeatRef): Option[bool] =
 ## of parsers matches that are applied in order. It fails
 ## if none of theses parsers matches.
 
-
 type 
   AlternativeRef = ref AlternativeObj not nil
   AlternativeObj = object of ParserObj
-    
 
-proc init*(alternative: AlternativeRef, parsers: seq[Parser]): AlternativeRef =
+
+proc init*(alternative: AlternativeRef, parsers: openarray[Parser]): AlternativeRef =
   discard Parser(alternative).init(":Alternative")
+  alternative.subParsers = @parsers
+  alternative.flags.incl isNary
   return alternative
 
+proc Alternative*(parsers: varargs[Parser]): AlternativeRef =
+  new(AlternativeRef).init(parsers)
 
 method parse*(self: AlternativeRef, location: int32): ParsingResult = 
   var
@@ -464,6 +479,12 @@ method parse*(self: AlternativeRef, location: int32): ParsingResult =
     if not isNil(node):
       return (self.grammar.returnItem(self, node), loc)
   return (nil, location)
+
+method isOptional(self: AlternativeRef): Option[bool] =
+  if self.subParsers.len >= 0:
+    for p in self.subParsers:
+      if p.isOptional.get(false):  return some(true)
+  return none(bool)
 
 
 ## Series-Parser
@@ -486,21 +507,24 @@ type
   SeriesObj = object of ParserObj
     mandatory: uint32
 
+
 proc init*(series: SeriesRef,
-           parsers: seq[Parser],
+           parsers: openarray[Parser],
            mandatory: uint32 = inf): SeriesRef =
   discard Parser(series).init(":Series")
-  series.subParsers = parsers
+  series.flags.incl isNary
+  series.subParsers = @parsers
   series.mandatory = mandatory
   return series
 
+proc Series*(parsers: varargs[Parser]): SeriesRef =
+  return new(SeriesRef).init(parsers)
 
-proc Series*(parsers: seq[Parser], mandatory: uint32 = inf): SeriesRef =
+proc Series*(parsers: varargs[Parser], mandatory: uint32 = inf): SeriesRef =
   return new(SeriesRef).init(parsers, mandatory)
 
-
-proc reentry(self: SeriesRef, location: int32): ParsingResult =
-  return (nil, -1)  # placeholder
+proc reentry(self: SeriesRef, location: int32): tuple[nd: Node, reloc: int32] =
+  return (newNode(ZombiePType, ""), -1)  # placeholder
 
 proc violation(self: SeriesRef,
                         location: int32,
@@ -517,8 +541,9 @@ method parse*(self: SeriesRef, location: int32): ParsingResult {.raises: [Parsin
     results = newSeqOfCap[Node](self.subParsers.len)
     loc = location
     reloc = 0i32
-    error: ErrorOrNil
-    node: NodeOrNil
+    error: ErrorOrNil = nil
+    node, nd: NodeOrNil
+    someNode: Node
   for pos, parser in enumerate(self.subParsers):
     (node, loc) = parser(loc)
     if isNil(node):
@@ -526,9 +551,26 @@ method parse*(self: SeriesRef, location: int32): ParsingResult {.raises: [Parsin
         return (nil, location)
       else:
         # TODO: Fill the placeholder in!
-        (node, reloc) = self.reentry(loc)
+        (someNode, reloc) = self.reentry(loc)
         (error, loc) = self.violation(loc, false, parser.name, reloc, node)
-      
+        if reloc >= 0:
+          (nd, loc) = parser(loc)
+          if not isNil(nd):
+            results.add(someNode)
+            someNode = nd
+          if not someNode.isEmpty or not someNode.isAnonymous:
+             results.add(someNode)
+        else:
+          results.add(someNode)
+          break
+    elif not node.isEmpty or not node.isAnonymous:
+      results.add(node)
+  someNode = self.grammar.returnSequence(self, results)
+  if not isNil(error):
+    raise ParsingException(parser: self, node: someNode.withSourcePos(location),
+                           node_orig_len: loc - location, location: location,
+                           error: error, first_throw: true)
+  return (someNode, loc)
 
 
 ## Test-code
@@ -542,8 +584,14 @@ when isMainModule:
   echo Regex(rx"\w+")("ABC").node.asSxpr
   doAssert Regex(rx"\w+")("ABC").node.asSxpr == "(:Regex \"ABC\")"
   echo Repeat(Text("A"), (1u32, 3u32))("AAAA").node.asSxpr
-  echo ("r".assignName Repeat(Text("A"), (1u32, 3u32)))("A").node.asSxpr
-
+  echo ("r".assignName Repeat(Text("A"), (1u32, 3u32)))("AA").node.asSxpr
+  echo Series(Text("A"), Text("B"), Text("C"), mandatory=1u32)("ABC").node.asSxpr
+  try:
+    echo Series(Text("A"), Text("B"), Text("C"), mandatory=1u32)("ABX").node.asSxpr
+  except ParsingException:
+    echo "Expected Exception"
+  echo Alternative(Text("A"), Text("B"))("B").node.asSxpr
+  doAssert Alternative(Text("A"), Text("B"))("B").node.asSxpr == "(:Text \"B\")"
 
 
 

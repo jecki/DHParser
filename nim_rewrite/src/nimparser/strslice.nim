@@ -36,7 +36,7 @@ proc ensureEmptyStrRef(): ref string not nil =
   result = ensureStrRef()
   result[] = ""
 
-let EmptyStrSlice* = StringSlice(buf: ensureEmptyStrRef(), start: 0, stop: 0)
+let EmptyStrSlice* = StringSlice(buf: ensureEmptyStrRef(), start: 0, stop: -1)
 
 
 proc newStringSlice*(str: ref string or string): StringSlice =
@@ -66,7 +66,7 @@ converter toStringSlice*(str: StringSlice or ref string or string): StringSlice 
 
 proc `$`*(str: StringSlice): string =
   ## Converts a string slice to a string
-  if str.start == str.stop:  return ""
+  if str.stop < 0:  return ""
   return str.buf[str.start .. str.stop]
 
 func str*(str: StringSlice): ref string not nil = str.buf
@@ -198,8 +198,13 @@ when isMainModule:
     s3 = s2[6i32 .. ^1]
     s4 = s2[2i32 .. ^1]
     s5 = toStringSlice("")
+    s6 = toStringSlice("a")
 
-  echo s5
+  echo $s2
+  echo $s5
+  echo s5.len
+  echo $s6
+  echo s6.len
 
   assert s1.find("world") == 6
   assert s2.find("world") == 6

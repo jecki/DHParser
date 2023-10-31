@@ -81,7 +81,7 @@ proc `result=`*(node: Node, children: seq[Node]) =
 
 proc runeLen*(node: Node): int32 =
   result = 0
-  if node.isLeaf:
+  if node.isLeaf and node.text.len > 0:
     let last = node.text.last
     var i = node.text.first
     while i <= last:
@@ -123,7 +123,7 @@ proc serialize(node: Node,
                opening, closing: proc(nd: Node) : string,
                leafdata: proc(nd: Node): seq[string],
                ind: int = 0): seq[string] =
-  # result = newSeq[string]()
+  result = newSeq[string]()
   var open = opening(node)
   var close = closing(node)
   let openLF = open.endsWith("\n")
@@ -222,3 +222,4 @@ when isMainModule:
   echo n.children[0].sourcePos
   echo n.children[1].sourcePos
 
+  echo newNode("ZOMBIE__", "").asSxpr
