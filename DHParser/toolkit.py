@@ -353,7 +353,12 @@ def deprecation_warning(message: str):
         try:
             raise DeprecationWarning(message)
         except DeprecationWarning as e:
-            if get_config_value('deprecation_policy') == 'warn':
+            try:
+                deprecation_policy = get_config_value('deprecation_policy')
+            except AssertionError as e:
+                deprecation_policy = 'warn'
+                print(e)
+            if deprecation_policy == 'warn':
                 stacktrace = traceback.format_exc()
                 print(stacktrace)
             else:
