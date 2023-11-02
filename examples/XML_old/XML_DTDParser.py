@@ -48,7 +48,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     has_errors, ERROR, FATAL, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 
-from DHParser.dsl import PseudoJunction, create_parser_junction
+from DHParser.pipeline import PseudoJunction, create_parser_junction
 
 from DHParser.dsl import PseudoJunction, create_parser_junction
 
@@ -105,7 +105,7 @@ class XML_DTDGrammar(Grammar):
     element = Forward()
     extSubsetDecl = Forward()
     ignoreSectContents = Forward()
-    source_hash__ = "9bb4342068b4a7aa92eaf752c6a6b6c0"
+    source_hash__ = "aa83ebfa12b24731138d796a9d7010f5"
     disposable__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -212,7 +212,7 @@ class XML_DTDGrammar(Grammar):
     root__ = document
         
 parsing: PseudoJunction = create_parser_junction(XML_DTDGrammar)
-get_grammar = parsing.factory # for backwards compatibility, only    
+get_grammar = parsing.factory # for backwards compatibility, only
 
 
 #######################################################################

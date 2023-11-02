@@ -378,7 +378,7 @@ child node.
 
 The same effect can also be achieved by early tree-reduction during the
 parsing stage (see :ref:`Simplifying Trees <simplifying_syntax_trees>`
-in the documentation of the :doc:`01_ebnf`-module.) by listing the
+in the documentation of the :doc:`01_EBNF-grammars`-module.) by listing the
 symbol "_known_environment" in the ``@disposable``-directive at the
 beginning of the grammar. In cases as simple as this one, it is
 preferable way to eliminate superfluous nodes as early as possible by

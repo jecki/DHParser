@@ -5,7 +5,7 @@ DHParser is both suitable for small projects or "on the fly" use of
 parsing expression grammars as a more powerful substitute for regular
 expressions and for big projects. (The workflow for the latter is
 described in the :doc:`StepByStepGuide` as well
-as :doc:`manuals/06_testing`)
+as :doc:`manuals/05_testing`)
 The following manuals provide a comprehensive exposition of the
 capabilities of DHParser. Each manual is related to one of the
 major modules of DHParser. It is recommended to read the :doc:`Overview`,

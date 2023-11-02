@@ -50,7 +50,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     has_attr, has_parent, ThreadLocalSingletonFactory, TreeReduction, CombinedParser, \
     apply_unless, ERROR
 
-from DHParser.dsl import PseudoJunction, create_parser_junction
+from DHParser.pipeline import PseudoJunction, create_parser_junction
 
 from DHParser.dsl import PseudoJunction, create_parser_junction
 
@@ -83,7 +83,7 @@ class XMLGrammar(Grammar):
     r"""Parser for a XML source file.
     """
     element = Forward()
-    source_hash__ = "184fb98e87099b9191161d7099e25ceb"
+    source_hash__ = "bda6d1cdb3dc8a563fb81db234585390"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
     disposable__ = re.compile('Misc$|NameStartChar$|NameChars$|CommentChars$|PubidChars$|PubidCharsSingleQuoted$|VersionNum$|EncName$|Reference$|CData$|EOF$')
     static_analysis_pending__ = []  # type: List[bool]
@@ -135,7 +135,7 @@ class XMLGrammar(Grammar):
     root__ = document
         
 parsing: PseudoJunction = create_parser_junction(XMLGrammar)
-get_grammar = parsing.factory # for backwards compatibility, only    
+get_grammar = parsing.factory # for backwards compatibility, only
 
 
 #######################################################################

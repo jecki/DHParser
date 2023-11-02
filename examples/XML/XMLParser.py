@@ -24,12 +24,13 @@ try:
     import regex as re
 except ImportError:
     import re
-from DHParser.compile import Compiler, compile_source, Junction, full_compile
+from DHParser.compile import Compiler, compile_source
+from DHParser.pipeline import full_pipeline, Junction, PseudoJunction, create_preprocess_junction, \
+    create_parser_junction, create_junction
 from DHParser.configuration import set_config_value, get_config_value, access_thread_locals, \
     access_presets, finalize_presets, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN
 from DHParser import dsl
-from DHParser.dsl import recompile_grammar, create_parser_junction, \
-    create_preprocess_junction, create_junction, PseudoJunction, never_cancel
+from DHParser.dsl import recompile_grammar, never_cancel
 from DHParser.ebnf import grammar_changed
 from DHParser.error import ErrorCode, Error, canonical_error_strings, has_errors, NOTICE, \
     WARNING, ERROR, FATAL
@@ -110,7 +111,7 @@ class XMLGrammar(Grammar):
     r"""Parser for a XML source file.
     """
     element = Forward()
-    source_hash__ = "0ece6749318db285bad59e6b8a8776f9"
+    source_hash__ = "f8ee1e325e6d5eccff653ddb703dc460"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
     disposable__ = re.compile('BOM$|Misc$|NameStartChar$|NameChars$|CommentChars$|PubidChars$|prolog$|PubidCharsSingleQuoted$|VersionNum$|EncName$|Reference$|CData$|EOF$|tagContent$')
     static_analysis_pending__ = []  # type: List[bool]
@@ -170,7 +171,7 @@ class XMLGrammar(Grammar):
     root__ = document
         
 parsing: PseudoJunction = create_parser_junction(XMLGrammar)
-get_grammar = parsing.factory # for backwards compatibility, only    
+get_grammar = parsing.factory # for backwards compatibility, only
 
 
 #######################################################################

@@ -40,20 +40,19 @@ from collections import namedtuple
 import copy
 import functools
 import os
-import traceback
 from typing import Any, Optional, Tuple, List, Set, Dict, Union, Callable
 
 from DHParser.configuration import get_config_value
-from DHParser.preprocess import PreprocessorFunc, PreprocessorFactory
+from DHParser.preprocess import PreprocessorFunc
 from DHParser.nodetree import Node, RootNode, EMPTY_PTYPE, Path
 from DHParser.transform import TransformerFunc
-from DHParser.parse import ParserFunc, ParserFactory
+from DHParser.parse import ParserFunc
 from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.error import is_error, is_fatal, Error, FATAL, \
     TREE_PROCESSING_CRASH, COMPILER_CRASH, AST_TRANSFORM_CRASH, has_errors
 from DHParser.log import log_parsing_history, log_ST, is_logging
 from DHParser.toolkit import load_if_file, is_filename, re, TypeAlias, \
-    deprecation_warning, ThreadLocalSingletonFactory
+    deprecated
 
 
 __all__ = ('CompilerError',
@@ -61,15 +60,9 @@ __all__ = ('CompilerError',
            'CompilerFunc',
            'CompilerFactory',
            'CompilationResult',
-           'FullCompilationResult',
-           'process_tree',
-           'Junction',
-           'end_points',
-           'extract_data',
-           'run_pipeline',
            'NoTransformation',
            'compile_source',
-           'full_compile')
+           'process_tree')
 
 
 class CompilerError(Exception):
@@ -384,11 +377,6 @@ CompilationResult = namedtuple('CompilationResult',
     module=__name__)
 
 
-# compilation and postprocessing result:
-# Dict: target-stage-name -> (result, errors)
-FullCompilationResult = Dict[str, Tuple[Any, List[Error]]]
-
-
 def NoTransformation(root: RootNode) -> RootNode:
     """Simply passes through the unaltered node-tree."""
     return root
@@ -569,170 +557,33 @@ def process_tree(tp: CompilerFunc, tree: RootNode) -> Any:
             result = tp(tree)
     return result
 
-
-Junction = namedtuple('Junction',
-    ['src',                ## type: string
-     'factory',            ## type: CompilerFactory
-     'dst'],               ## type: string
-    module=__name__)
-
-
-def end_points(junctions: Iterable[Junction]) -> Set[str]:
-    """Returns all "final" destination stages, i.e. destinations
-    that are not a source of another junction."""
-    sources = { j.src for j in junctions }
-    return { j.dst for j in junctions if j.dst not in sources }
-
-
-def extract_data(tree_or_data: Union[RootNode, Node, Any]) -> Any:
-    """Retrieves the data from the given tree or just passes the data through
-    if argument ``tree_or_data`` is not of type RootNode."""
-    if isinstance(tree_or_data, RootNode):
-        return tree_or_data.data
-    return tree_or_data
-
-
-def run_pipeline(junctions: Set[Junction],
-                 source_stages: Dict[str, RootNode],
-                 target_stages: Set[str]) -> FullCompilationResult:
-    """
-    Runs all the intermediary compilation-steps that are necessary to produce
-    the "target-stages" from the given "source-stages". Here, each source-stage
-    consists of a name for that stage, say "AST", and a node-tree that
-    represents the data at this stage of the processing pipeline. In the
-    target-stage, the data can be a node-tree or data of any other kind.
-
-    The stages or connected through chains of junctions, where a junction is
-    essentially a function that transforms a tree from one particular stage
-    (identified by its name) to another stage, again identified by its name.
-
-    TODO: Parallelize processing of junctions? Requires copying a lot ot tree-data!?
-    """
-    def cmp_junctions(a, b) -> int:
-        if a[-1] == b[0]:
-            return -1
-        if b[-1] == a[0]:
-            return 1
-        if b[-1] > a[-1]:
-            return -1
-        else:
-            return 0
-
-    def verify_stage(given_stage, junction, field, further_info=''):
-        if not given_stage:  return  # verification is considered as turned off
-        assert field in (0, 2)
-        expected_stage = junction[field]
-        stage_type = 'source stage' if field == 0 else 'target stage'
-        if given_stage.lower() != expected_stage.lower():
-            if isinstance(junction[1], ThreadLocalSingletonFactory):
-                func = junction[1].class_or_factory.__name__
-            else:
-                func = junction[1].__name__
-            error_msg = (f'Expected {stage_type} "{expected_stage}" but found '
-                f'"{given_stage}" when applying {junction[0]}->{junction[2]} ({func})! '
-                'Possible causes: a) wrong stage name specified in junction  b) stage name not '
-                f'updated by compilation-function  c) internal error of DHParser. {further_info}')
-            import traceback
-            stack = traceback.extract_stack()
-            for call in stack:
-                if call.line.find('run_grammar_tests') >= 0:
-                    if call.line.find('get_') >= 0:
-                        # Be kind and backwards-compatible with old code
-                        deprecation_warning(f'Your transformation {junction[0]}->{junction[2]}: '
-                            f"{func} failed to update RootNode.stage "
-                            f'with the name of the target stage: "{junction[2]}"! '
-                            f'Future versions of DHParser might fail right here.')
-                        print(error_msg)
-                        break
-            else:
-                raise AssertionError(error_msg)
-
-    def normalize_name(name: str) -> str:
-        NAME = name.upper()
-        return NAME if NAME in ('AST', 'CST') else name
-
-    def normalize_junction(j: Junction):
-        SRC = j[0].upper()
-        if SRC == 'CST':
-            return Junction('CST', j[1], normalize_name(j[2]))
-        elif SRC == 'AST' and SRC != j[0]:
-            return Junction('AST', j[1], j[2])
-        else:
-            return j
-
-    t_to_j = {normalize_name(j[-1]): normalize_junction(j) for j in junctions}
-    target_stages = {normalize_name(t) for t in target_stages}
-    source_stages = {normalize_name(s): source_stages[s] for s in source_stages}
-    steps = []
-    targets = target_stages.copy()
-    already_reached = targets | source_stages.keys()
-    while targets:
-        try:
-            j_sequence = [t_to_j[t] for t in targets if t not in source_stages]
-            j_sequence.sort(key=functools.cmp_to_key(cmp_junctions))
-            steps.append(j_sequence)
-        except KeyError as e:
-            raise AssertionError(f"{e.args[0]} is not a valid target.") from e
-        targets = {j[0] for j in steps[-1] if j[0] not in already_reached}
-        already_reached |= targets
-        for step in steps[:-1]:
-            for j in steps[-1]:
-                try:
-                    step.remove(j)
-                except ValueError:
-                    pass
-    if not (target_stages <= already_reached):
-        raise ValueError(f'Target-stages: {target_stages - already_reached} '
-                         f'cannot be reached with junctions: {junctions}.')
-    sources = [j[0] for step in steps for j in step]
-    disposables = {s for s in set(sources) if s not in target_stages and sources.count(s) <= 1}
-    steps.reverse()
-    results: Dict[str, Any] = source_stages.copy()
-    errata: Dict[str, List[Error]] = {s: source_stages[s].errors_sorted for s in source_stages}
-    for step in steps:
-        for junction in step:
-            t = junction[-1]
-            if t not in results:
-                s = junction[0]
-                tree = results[s] if s in disposables else copy.deepcopy(results[s])
-                if s not in target_stages:
-                    sources.remove(s)
-                    if sources.count(s) <= 1:
-                        disposables.add(s)
-                if tree is None:
-                    results[t] = None
-                    errata[t] = []
-                else:
-                    if not isinstance(tree, RootNode):
-                        raise ValueError(f'Object in stage "{s}" is not a tree but a {type(tree)}'
-                                         f' and, therefore, cannot be processed to {t}')
-                    verify_stage(tree.stage, junction, 0)
-                    results[t] = process_tree(junction[1](), tree)
-                    if tree.stage == s:  # tree stage hasn't been set by the processing function
-                        tree.stage = junction[2]
-                    else:
-                        verify_stage(tree.stage, junction, 2)
-                    errata[t] = copy.copy(tree.errors_sorted)
-    return {t: (extract_data(results[t]), errata[t]) for t in results.keys()}
-
-
-def full_compile(source: str,
-                 preprocessor_factory: PreprocessorFactory,
-                 parser_factory: ParserFactory,
-                 junctions: Set[Junction],
-                 target_stages: Set[str]) -> FullCompilationResult:
-    """Compiles and post-processes the source into the given target stages.
-    Mind that if there are fatal errors earlier in the pipeline some or all
-    target stages might not be reached and thus not be included in the result."""
-    cst, msgs, _ = compile_source(source, preprocessor_factory(), parser_factory())
-    if has_errors(msgs, FATAL):
-        return {ts: (cst, msgs) for ts in target_stages}
-    return run_pipeline(junctions, {cst.stage: cst}, target_stages)
-
-
 # TODO: Verify compiler against grammar,
 #       i.e. make sure that for all on_X()-methods, `X` is the name of a parser
 #       Does that make sense? Tag names could change during AST-Transformation!
 # TODO: AST validation against an ASDL-Specification or other structural validation
 #       of trees
+
+
+Junction = namedtuple('Junction', ['src', 'factory', 'dst'], module=__name__)  # DEPRECATED, use: pipeline.Junction
+FullCompilationResult = Dict[str, Tuple[Any, List[Error]]]  # DEPRECATED, use pipeline.PipelineResult
+
+
+@deprecated('extract_data() has movee to the pipeline-module! Use "from DHParser.pipeline import extract_data"')
+def extract_data(tree_or_data):
+    from DHParser import pipeline
+    return extract_data(tree_or_data)
+
+
+@deprecated('end_points() has moved to the pipeline-module! Use "from DHParser.pipeline import end_points"')
+def end_points(junctions):
+    from DHParser import pipeline
+    return pipeline.end_points(junctions)
+
+
+@deprecated('full_pipeline() has moved to the pipeline-module! Use "from DHParser.pipeline import full_compile"')
+def full_compile(source: str, preprocessor_factory, parser_factory,
+                 junctions, target_stages):
+    from DHParser import pipeline
+    return pipeline.full_pipeline(source, preprocessor_factory, parser_factory,
+                                  junctions, target_stages)
 

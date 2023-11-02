@@ -31,6 +31,7 @@ from .error import *
 from .log import *
 # from .lsp import *
 from .parse import *
+from .pipeline import *
 from .preprocess import *
 # from .server import *
 from .stringview import *
@@ -41,23 +42,24 @@ from .trace import *
 from .transform import *
 from .versionnumber import *
 
-__all__ = (compile.__all__ +
-           configuration.__all__ +
-           dsl.__all__ +
-           ebnf.__all__ +
-           error.__all__ +
-           log.__all__ +
-           # lsp.__all__ +
-           parse.__all__ +
-           preprocess.__all__ +
-           # server.__all__ +
-           stringview.__all__ +
-           nodetree.__all__ +
-           # testing.__all__ +
-           toolkit.__all__ +
-           trace.__all__ +
-           transform.__all__ +
-           versionnumber.__all__)
+__all__ = set().union(compile.__all__,
+                      configuration.__all__,
+                      dsl.__all__,
+                      ebnf.__all__,
+                      error.__all__,
+                      log.__all__,
+                      # lsp.__all__,
+                      parse.__all__,
+                      pipeline.__all__,
+                      preprocess.__all__,
+                      # server.__all__,
+                      stringview.__all__,
+                      nodetree.__all__,
+                      # testing.__all__,
+                      toolkit.__all__,
+                      trace.__all__,
+                      transform.__all__,
+                      versionnumber.__all__)
 
 name = "DHParser"
 __title__ = "DHParser"

@@ -26,12 +26,13 @@ try:
     import regex as re
 except ImportError:
     import re
-from DHParser.compile import Compiler, compile_source, Junction, full_compile
+from DHParser.compile import Compiler, compile_source
+from DHParser.pipeline import full_pipeline, Junction, PseudoJunction, create_preprocess_junction, \
+    create_parser_junction, create_junction
 from DHParser.configuration import set_config_value, get_config_value, access_thread_locals, \
     access_presets, finalize_presets, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN
 from DHParser import dsl
-from DHParser.dsl import recompile_grammar, create_parser_junction, create_preprocess_junction, \
-    create_junction, PseudoJunction, never_cancel
+from DHParser.dsl import recompile_grammar, never_cancel
 from DHParser.ebnf import grammar_changed
 from DHParser.error import ErrorCode, Error, canonical_error_strings, has_errors, ERROR, FATAL
 from DHParser.log import start_logging, suspend_logging, resume_logging
@@ -88,7 +89,7 @@ class ArithmeticGrammar(Grammar):
     r"""Parser for an Arithmetic source file.
     """
     expression = Forward()
-    source_hash__ = "9364c6b72d746c3a482fbfb7a119936d"
+    source_hash__ = "fea13cde6655420cda0e61bdb511e1d6"
     disposable__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -114,7 +115,7 @@ class ArithmeticGrammar(Grammar):
     root__ = expression
         
 parsing: PseudoJunction = create_parser_junction(ArithmeticGrammar)
-get_grammar = parsing.factory # for backwards compatibility, only    
+get_grammar = parsing.factory # for backwards compatibility, only
 
 
 #######################################################################

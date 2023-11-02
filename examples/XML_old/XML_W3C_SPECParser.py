@@ -48,7 +48,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     has_errors, ERROR, FATAL, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 
-from DHParser.dsl import PseudoJunction, create_parser_junction
+from DHParser.pipeline import PseudoJunction, create_parser_junction
 
 from DHParser.dsl import PseudoJunction, create_parser_junction
 
@@ -105,7 +105,7 @@ class XML_W3C_SPECGrammar(Grammar):
     element = Forward()
     extSubsetDecl = Forward()
     ignoreSectContents = Forward()
-    source_hash__ = "bf6578e28bdce58ac0fa897f256c88d2"
+    source_hash__ = "02d4a765fa5ea62c3bb12d3364050f42"
     disposable__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -196,7 +196,7 @@ class XML_W3C_SPECGrammar(Grammar):
     root__ = document
         
 parsing: PseudoJunction = create_parser_junction(XML_W3C_SPECGrammar)
-get_grammar = parsing.factory # for backwards compatibility, only    
+get_grammar = parsing.factory # for backwards compatibility, only
 
 
 #######################################################################

@@ -26,12 +26,13 @@ try:
     import regex as re
 except ImportError:
     import re
-from DHParser.compile import Compiler, compile_source, Junction, full_compile
+from DHParser.compile import Compiler, compile_source
+from DHParser.pipeline import full_pipeline, Junction, PseudoJunction, create_preprocess_junction, \
+    create_parser_junction, create_junction
 from DHParser.configuration import set_config_value, get_config_value, access_thread_locals, \
     access_presets, finalize_presets, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN
 from DHParser import dsl
-from DHParser.dsl import recompile_grammar, create_parser_junction, create_preprocess_junction, \
-    create_junction, PseudoJunction, never_cancel
+from DHParser.dsl import recompile_grammar, never_cancel
 from DHParser.ebnf import grammar_changed
 from DHParser.error import ErrorCode, Error, canonical_error_strings, has_errors, ERROR, FATAL
 from DHParser.log import start_logging, suspend_logging, resume_logging
@@ -87,7 +88,7 @@ def get_preprocessor() -> PreprocessorFunc:
 class readme_exampleGrammar(Grammar):
     r"""Parser for a readme_example source file.
     """
-    source_hash__ = "f2645e05d087caf5f2267a939c3b1a9b"
+    source_hash__ = "e9c3894e46c7831ebbada4cb92bd40d9"
     disposable__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -104,7 +105,7 @@ class readme_exampleGrammar(Grammar):
     root__ = key_store
         
 parsing: PseudoJunction = create_parser_junction(readme_exampleGrammar)
-get_grammar = parsing.factory # for backwards compatibility, only    
+get_grammar = parsing.factory # for backwards compatibility, only
 
 
 #######################################################################

@@ -32,12 +32,13 @@ except (ImportError, ModuleNotFoundError):
         dhparserdir = scriptdir[:i + 10]  # 10 = len("/DHParser/")
         if dhparserdir not in sys.path:  sys.path.insert(0, dhparserdir)
 
-from DHParser.compile import Compiler, compile_source, Junction, end_points, full_compile
+from DHParser.compile import Compiler, compile_source
+from DHParser.pipeline import full_pipeline, Junction, end_points, PseudoJunction, create_preprocess_junction, \
+    create_parser_junction, create_junction
 from DHParser.configuration import set_config_value, get_config_value, access_thread_locals, \
     access_presets, finalize_presets, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN
 from DHParser import dsl
-from DHParser.dsl import recompile_grammar, create_parser_junction, \
-    create_preprocess_junction, create_junction, PseudoJunction, never_cancel
+from DHParser.dsl import recompile_grammar, never_cancel
 from DHParser.ebnf import grammar_changed
 from DHParser.error import ErrorCode, Error, canonical_error_strings, has_errors, NOTICE, \
     WARNING, ERROR, FATAL
@@ -350,7 +351,7 @@ def compile_src(source: str, target: str = "outline".lower()) -> Tuple[Any, List
     as well as a (possibly empty) list or errors or warnings that have occurred in the
     process.
     """
-    full_compilation_result = full_compile(
+    full_compilation_result = full_pipeline(
         source, preprocessing.factory, parsing.factory, junctions, set([target]))
     return full_compilation_result[target]
 

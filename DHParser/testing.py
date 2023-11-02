@@ -49,7 +49,7 @@ else:
     from collections import OrderedDict
 
 from DHParser.configuration import get_config_value, set_config_value
-from DHParser.compile import run_pipeline, extract_data
+from DHParser.pipeline import extract_data, run_pipeline
 from DHParser.error import Error, is_error, PARSER_LOOKAHEAD_MATCH_ONLY, \
     PARSER_LOOKAHEAD_FAILURE_ONLY, MANDATORY_CONTINUATION_AT_EOF, \
     MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, CAPTURE_STACK_NOT_EMPTY_NON_ROOT_ONLY, \

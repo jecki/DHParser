@@ -24,12 +24,13 @@ try:
     import regex as re
 except ImportError:
     import re
-from DHParser.compile import Compiler, compile_source, Junction, full_compile
+from DHParser.compile import Compiler, compile_source
+from DHParser.pipeline import full_pipeline, Junction, PseudoJunction, create_preprocess_junction, \
+    create_parser_junction, create_junction
 from DHParser.configuration import set_config_value, get_config_value, access_thread_locals, \
     access_presets, finalize_presets, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN
 from DHParser import dsl
-from DHParser.dsl import recompile_grammar, create_parser_junction, \
-    create_preprocess_junction, create_junction, PseudoJunction, never_cancel
+from DHParser.dsl import recompile_grammar, never_cancel
 from DHParser.ebnf import grammar_changed
 from DHParser.error import ErrorCode, Error, canonical_error_strings, has_errors, NOTICE, \
     WARNING, ERROR, FATAL
@@ -115,7 +116,7 @@ class XML_W3C_SPECGrammar(Grammar):
     element = Forward()
     extSubsetDecl = Forward()
     ignoreSectContents = Forward()
-    source_hash__ = "bf6578e28bdce58ac0fa897f256c88d2"
+    source_hash__ = "02d4a765fa5ea62c3bb12d3364050f42"
     disposable__ = re.compile('..(?<=^)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -206,7 +207,7 @@ class XML_W3C_SPECGrammar(Grammar):
     root__ = document
         
 parsing: PseudoJunction = create_parser_junction(XML_W3C_SPECGrammar)
-get_grammar = parsing.factory # for backwards compatibility, only    
+get_grammar = parsing.factory # for backwards compatibility, only
 
 
 #######################################################################

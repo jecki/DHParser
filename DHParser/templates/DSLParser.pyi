@@ -53,7 +53,7 @@ def compile_src(source: str, target: str = "{NAME}") -> Tuple[Any, List[Error]]:
     as well as a (possibly empty) list or errors or warnings that have occurred in the
     process.
     """
-    full_compilation_result = full_compile(
+    full_compilation_result = full_pipeline(
         source, preprocessing.factory, parsing.factory, junctions, set([target]))
     return full_compilation_result[target]
 
