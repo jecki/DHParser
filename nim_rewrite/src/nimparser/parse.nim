@@ -529,7 +529,7 @@ method parse*(self: SeriesRef, location: int32): ParsingResult {.raises: [Parsin
       if pos.uint32 < self.mandatory:
         return (nil, location)
       else:
-        # TODO: Fill the placeholder in!
+        # TODO: Fill the placeholders: reentry and violation in!
         (someNode, reloc) = self.reentry(loc)
         (error, loc) = self.violation(loc, false, parser.name, reloc, node)
         if reloc >= 0:
