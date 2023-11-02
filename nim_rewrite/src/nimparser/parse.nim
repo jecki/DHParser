@@ -249,14 +249,6 @@ proc `()`*(parser: Parser, document: string, location: int32 = 0i32): ParsingRes
     return parser.parseProxy(parser, location)
 
 
-method isOptional(self: Parser): Option[bool] {.base.} =
-  ## Returns some(true), if the parser can never fail, i.e. never yields nil
-  ## instead of a node.
-  ## Returns some(false), if the parser can fail.
-  ## Returns none(bool), if it is not known whether the parser can fail
-  return  none(bool)
-
-
 ## Leaf Parsers
 ## ------------
 ##
@@ -442,13 +434,6 @@ method parse*(self: RepeatRef, location: int32): ParsingResult {.raises: [Parsin
   return (self.grammar.returnSequence(self, nodes), loc)
 
 
-method isOptional(self: RepeatRef): Option[bool] =
-  if self.repRange.min == 0:
-    return some(true)
-  else:
-    return none(bool)
-
-
 ## Alternative-Parser
 ## ^^^^^^^^^^^^^^^^^^
 ## 
@@ -479,12 +464,6 @@ method parse*(self: AlternativeRef, location: int32): ParsingResult =
     if not isNil(node):
       return (self.grammar.returnItem(self, node), loc)
   return (nil, location)
-
-method isOptional(self: AlternativeRef): Option[bool] =
-  if self.subParsers.len >= 0:
-    for p in self.subParsers:
-      if p.isOptional.get(false):  return some(true)
-  return none(bool)
 
 
 ## Series-Parser
