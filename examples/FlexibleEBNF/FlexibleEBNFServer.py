@@ -169,7 +169,7 @@ def compile_EBNF(text: str, diagnostics_signature: bytes) -> (str, bytes):
     signature = b''.join(msg.signature() for msg in messages)
     if signature != diagnostics_signature:
         # publish diagnostics only if the same diagnostics have not been reported earlier, already
-        diagnostics = [msg.diagnosticObj() for msg in messages]
+        diagnostics = [msg.diagnostic_obj() for msg in messages]
         return json_dumps(diagnostics), signature  # TODO: bytes is not a JSON-type proper!
     else:
         return '[]', signature

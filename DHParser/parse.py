@@ -2599,9 +2599,10 @@ class SmartRE(RegExp):
     def _parse(self, location: cython.int) -> ParsingResult:
         try:
             match = self.regexp.match(self._grammar.text__, location)
-        except KeyboardInterrupt:
+        except KeyboardInterrupt as e:
             raise KeyboardInterrupt(f'Stopped while processing regular expression:  {self.regexp}'
-                f'  at pos {location}:  {self._grammar.text__[location:location + 40]}  ...')
+                f'  at pos {location}:  {self._grammar.text__[location:location + 40]}  ...') \
+                from e
         if match:
             captures = match.groupdict()
             if sum(len(content) for content in captures.values()) or not self.disposable:

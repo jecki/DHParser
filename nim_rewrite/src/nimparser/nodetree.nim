@@ -153,10 +153,10 @@ proc serialize(node: Node,
     var childBlocks = collect(newSeqofCap(node.children.len)):
       for child in node.children:
         serialize(child, opening, closing, leafdata, ind + indentation)
-    if not openLF and child_blocks[0][0].len > 0:
-      result[^1] &= child_blocks[0][0]
-      child_blocks[0].delete(0)  # causes SIGSEGV (read from nil) on nim doc?
-    result = concat(result, concat(child_blocks))
+    if not openLF and childBlocks[0][0].len > 0:
+      result[^1] &= childBlocks[0][0]
+      childBlocks[0].delete(0)  # causes SIGSEGV (read from nil) on nim doc?
+    result = concat(result, concat(childBlocks))
     if closeLF:
       result.add(close)
     else:

@@ -249,6 +249,13 @@ proc `()`*(parser: Parser, document: string, location: int32 = 0i32): ParsingRes
     return parser.parseProxy(parser, location)
 
 
+proc `$`*(parser: Parser): string =
+  var args: seq[string] = newSeqOfCap[string](parser.subParsers.len)
+  for p in parser.subParsers:
+    if not isNil(p):  args.add($p)
+  return [parser.name, parser.parserType, "(", args.join(", "), ")"].join("")
+  
+
 ## Leaf Parsers
 ## ------------
 ##
@@ -332,6 +339,11 @@ method parse*(self: RegexRef, location: int32): ParsingResult =
       return (EmptyNode, location)
     return (newNode(self.nodeName, text), location + text.len)
   return (nil, location)
+
+
+## TODO: SmartRE
+## ^^^^^^^
+
 
 
 ## Combined Parsers
@@ -550,6 +562,48 @@ method parse*(self: SeriesRef, location: int32): ParsingResult {.raises: [Parsin
                            node_orig_len: loc - location, location: location,
                            error: error, first_throw: true)
   return (someNode, loc)
+
+
+## TODO Intereave-Parser
+## ^^^^^^^^^^^^^^^^
+
+## Lookahead
+## ^^^^^^^^^
+
+type
+  LookaheadRef = ref LookaheadObj not nil
+  LookaheadObj = object of ParserObj
+    positive: bool
+
+
+proc init*(lookahead: LookaheadRef,
+           parser: Parser,
+           positive: bool = true): LookaheadRef =
+  discard Parser(lookahead).init(":Lookahead")
+  lookahead.subParsers = @[parser]
+  lookahead.positive = positive
+  return lookahead
+
+
+proc Lookahead(parser: Parser, positive: bool = true): LookaheadRef =
+  return new(LookaheadRef).init(parser, positive)
+
+
+method parse*(self: LookaheadRef, location: int32): ParsingResult {.raises: [ParsingException].} =
+  var 
+    loc: int32
+    node: NodeOrNil
+  
+  (node, loc) = self.subParsers[0](location)
+  if self.positive xor isNil(node):
+    if isDisposable in self.flags:
+      node = EmptyNode
+    else:
+      node = newNode(self.nodeName, "")
+    return (node, location)
+  else:
+    return (nil, location)
+  
 
 
 ## Test-code
