@@ -249,11 +249,11 @@ proc `()`*(parser: Parser, document: string, location: int32 = 0i32): ParsingRes
     return parser.parseProxy(parser, location)
 
 
-proc `$`*(parser: Parser): string =
+method `$`*(parser: Parser): string =
   var args: seq[string] = newSeqOfCap[string](parser.subParsers.len)
   for p in parser.subParsers:
     if not isNil(p):  args.add($p)
-  return [parser.name, parser.parserType, "(", args.join(", "), ")"].join("")
+  return [parser.name, ":", parser.parserType, "(", args.join(", "), ")"].join("")
   
 
 ## Leaf Parsers
@@ -301,6 +301,12 @@ method parse*(self: TextRef, location: int32): ParsingResult =
       return (EmptyNode, location)  
     return (newNode(self.nodeName, self.slice), location + int32(self.text.len))
   return (nil, location)
+
+method `$`*(parser: TextRef): string =
+  if parser.text.contains("\""):
+    return ["\"", parser.text.replace("\"", "\\\""), "\""].join()
+  else:
+    return ["\"", parser.text, "\""].join()
 
 
 ## Regex-Parser
