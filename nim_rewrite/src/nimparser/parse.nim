@@ -12,6 +12,7 @@ import std/sets
 import std/strformat
 import std/strutils
 import std/re
+import std/sugar
 
 import strslice
 import nodetree
@@ -58,21 +59,38 @@ type
   # the GrammarObj
   ReturnItemProc = proc(parser: Parser, node: NodeOrNil): Node {.raises: [].} not nil
   ReturnSequenceProc = proc(parser: Parser, nodes: seq[Node]): Node {.raises: [].} not nil
-  GrammarRef* = ref GrammarObj not nil
+  GrammarFlags* = enum postfixNotation
+  GrammarFlagSet = set[GrammarFlags]
+  GrammarRef = ref GrammarObj not nil
   GrammarObj = object of RootObj
     name: string
+    flags: GrammarFlagSet
     document: StringSlice
     root: seq[Parser]
     returnItem: ReturnItemProc
     returnSequence: ReturnSequenceProc
 
-
-## Special Node-Singletons
+const
+  # Parser-Names
+  ParserName = ":Parser"
+  TextName = ":Text"
+  RegexName = ":Regex"
+  RepeatName = ":Repeat"
+  OptionName = ":Option"
+  ZeroOrMoreName = ":ZeroOrMore"
+  OneOrMoreName = ":OneOrMore"
+  AlternativeName = ":Alternative"
+  SeriesName = ":Series"
+  InterleaveName = ":Interleave"
+  LookaheadName = ":Lookahead"
+  NaryParsers = [AlternativeName, SeriesName, InterleaveName]
+  # Node-Names  
+  ZombieName = "__ZOMBIE"
+  EmptyName* = ":EMPTY"
 
 let
-   EmptyPType* = ":EMPTY"
-   EmptyNode* = newNode(EmptyPType, "")
-   ZombiePType = "__ZOMBIE"
+  EmptyNode* = newNode(EmptyName, "")
+
 
 
 ## Parser-object infrastructure
@@ -174,10 +192,13 @@ proc returnSeqPlaceholder(parser: Parser, nodes: seq[Node]): Node =
   raise newException(AssertionDefect, "returnItem called on GrammaPlacholder")
 
 
-proc init(grammar: GrammarRef, name: string, document: StringSlice,
+proc init(grammar: GrammarRef, name: string, 
+          flags: GrammarFlagSet = {},
+          document: StringSlice = EmptyStrSlice,
           returnItem: ReturnItemProc = returnItemFlatten,
           returnSequence: ReturnSequenceProc = returnSeqFlatten): GrammarRef =
   grammar.name = name
+  grammar.flags = flags
   grammar.document = document
   grammar.root = @[]
   grammar.returnItem = returnItem
@@ -187,7 +208,9 @@ proc init(grammar: GrammarRef, name: string, document: StringSlice,
 template Grammar(args: varargs[untyped]): GrammarRef =
   new(GrammarRef).init(args)
 
-let GrammarPlaceholder = Grammar("__Placeholder__", EmptyStrSlice, returnItemPlaceholder, returnSeqPlaceholder)
+let GrammarPlaceholder = Grammar("__Placeholder__", 
+  returnItem = returnItemPlaceholder, 
+  returnSequence = returnSeqPlaceholder)
 
 
 ## basic parser-procedures and -methods
@@ -201,7 +224,7 @@ proc callParseMethod(parser: Parser, location: int32): ParsingResult =
   return parser.parse(location)
 
 
-proc init*(parser: Parser, ptype: string = ":Parser"): Parser =
+proc init*(parser: Parser, ptype: string = ParserName): Parser =
   assert ptype != "" and ptype[0] == ':'
 
   parser.name = ""
@@ -242,19 +265,23 @@ proc `()`*(parser: Parser, location: int32): ParsingResult {.raises: [ParsingExc
 
 proc `()`*(parser: Parser, document: string, location: int32 = 0i32): ParsingResult =
   assert parser.grammar == GrammarPlaceholder
-  parser.grammar = Grammar("adhoc", StringSlice(document))  # TODO: do some thing propper here
+  parser.grammar = Grammar("adhoc", document=StringSlice(document))  # TODO: do some thing propper here
   if parser.parseProxy == callParseMethod:
     return parser.parse(location)
   else:
     return parser.parseProxy(parser, location)
 
 
-method `$`*(parser: Parser): string =
+method `$`*(parser: Parser): string {.base.} =
   var args: seq[string] = newSeqOfCap[string](parser.subParsers.len)
   for p in parser.subParsers:
     if not isNil(p):  args.add($p)
-  return [parser.name, ":", parser.parserType, "(", args.join(", "), ")"].join("")
+  [parser.name, ":", parser.parserType, "(", args.join(", "), ")"].join("")
   
+
+proc repr(parser: Parser): string =
+  if parser.name.len > 0:  parser.name  else:  $parser
+
 
 ## Leaf Parsers
 ## ------------
@@ -279,7 +306,7 @@ type
 
 proc init*(textParser: TextRef, text: string): TextRef =
   assert text.len < 2^32
-  discard Parser(textParser).init(":Text")
+  discard Parser(textParser).init(TextName)
   textParser.flags.incl isLeaf
   textParser.text = text
   textParser.slice = toStringSlice(text)
@@ -303,10 +330,7 @@ method parse*(self: TextRef, location: int32): ParsingResult =
   return (nil, location)
 
 method `$`*(parser: TextRef): string =
-  if parser.text.contains("\""):
-    return ["\"", parser.text.replace("\"", "\\\""), "\""].join()
-  else:
-    return ["\"", parser.text, "\""].join()
+  ["\"", parser.text.replace("\"", "\\\""), "\""].join()
 
 
 ## Regex-Parser
@@ -316,20 +340,30 @@ method `$`*(parser: TextRef): string =
 ##
 
 type
+  RegexInfo = tuple[reStr: string, regex: Regex]
   RegexRef = ref RegexObj not nil
   RegexObj = object of ParserObj
+    reStr: string  # string-representation of re
     regex: Regex
 
-proc rx(rx_str: string): Regex = re("(*UTF8)(*UCP)" & rx_str)
+proc rx(rx_str: string): RegexInfo = (rx_str, re("(*UTF8)(*UCP)" & rx_str))
 
-proc init*(regexParser: RegexRef, regex: Regex): RegexRef =
-  discard Parser(regexParser).init(":Regex")
-  regexParser.regex = regex
+proc mrx(multiline_rx_str: string): RegexInfo = 
+  (multiline_rx_str, rex("(*UTF8)(*UCP)" & multiline_rx_str))
+
+proc init*(regexParser: RegexRef, rxInfo: RegexInfo): RegexRef =
+  discard Parser(regexParser).init(RegexName)
+  regexParser.reStr = rxInfo.reStr
+  regexParser.regex = rxInfo.regex
   regexParser.flags.incl isLeaf
   return regexParser
 
-proc Regex*(regex: Regex): RegexRef =
-  return new(RegexRef).init(regex)
+proc Regex*(reInfo: RegexInfo): RegexRef =
+  return new(RegexRef).init(reInfo)
+
+proc Regex*(reStr: string): RegexRef =
+  let reInfo = if reStr.contains("\n"):  mrx(reStr)  else:  rx(reStr)
+  return new(RegexRef).init(reInfo)
 
 method parse*(self: RegexRef, location: int32): ParsingResult =
   runnableExamples:
@@ -345,6 +379,9 @@ method parse*(self: RegexRef, location: int32): ParsingResult =
       return (EmptyNode, location)
     return (newNode(self.nodeName, text), location + text.len)
   return (nil, location)
+
+method `$`*(parser: RegexRef): string =
+  ["/", parser.reStr.replace("/", r"\/"), "/"].join()
 
 
 ## TODO: SmartRE
@@ -400,7 +437,8 @@ const inf = 2u32^32 - 1
 proc init*(repeat: RepeatRef, 
            parser: Parser, 
            repRange: Range, 
-           name: string = ":Repeat"): RepeatRef =
+           name: string = RepeatName): RepeatRef =
+  assert repRange[1] > repRange[0]
   discard Parser(repeat).init(name)
   repeat.subParsers = @[parser]
   repeat.repRange = repRange
@@ -411,14 +449,13 @@ proc Repeat*(parser: Parser, repRange: Range): RepeatRef =
   return new(RepeatRef).init(parser, repRange)
 
 proc Option*(parser: Parser): RepeatRef =
-  return new(RepeatRef).init(parser, (0u32, 1u32), ":Option")
+  return new(RepeatRef).init(parser, (0u32, 1u32), OptionName)
 
 proc ZeroOrMore(parser: Parser): RepeatRef =
-  return new(RepeatRef).init(parser, (0u32, inf), ":ZeroOrMore")
+  return new(RepeatRef).init(parser, (0u32, inf), ZeroOrMoreName)
 
 proc OneOrMore(parser: Parser): RepeatRef =
-  return new(RepeatRef).init(parser, (1u32, inf), ":OneOrMore")
-
+  return new(RepeatRef).init(parser, (1u32, inf), OneOrMoreName)
 
 method parse*(self: RepeatRef, location: int32): ParsingResult {.raises: [ParsingException].} =
   ## Examples:
@@ -451,6 +488,31 @@ method parse*(self: RepeatRef, location: int32): ParsingResult {.raises: [Parsin
     lastLoc = loc
   return (self.grammar.returnSequence(self, nodes), loc)
 
+method `$`*(parser: RepeatRef): string =
+  let 
+    postfix = postfixNotation in parser.grammar.flags
+    subP = parser.subParsers[0]
+  var
+    subStr: string
+  
+  if (postfix and subP.name.len == 0 and
+      subP.parserType in NaryParsers): 
+    subStr = ["(", repr(parser.subParsers[0]), ")"].join()  
+  else:  
+    subStr = repr(parser.subParsers[0])
+
+  if parser.repRange == (0u32, 1u32):
+    if postfix:  subStr & "?"  else:  ["[", subStr, "]"].join()   
+  elif parser.repRange == (0u32, inf):
+    if postfix:  subStr & "*"
+    else:  ["{", subStr, "}"].join()    
+  elif parser.repRange == (1u32, inf):
+    if postfix:  subStr & "+"
+    else:  ["{", subStr, "}+"].join()
+  else:
+    let (min, max) = parser.repRange
+    [subStr, "(", $min, ", ", $max, ")"].join()
+
 
 ## Alternative-Parser
 ## ^^^^^^^^^^^^^^^^^^
@@ -465,7 +527,7 @@ type
 
 
 proc init*(alternative: AlternativeRef, parsers: openarray[Parser]): AlternativeRef =
-  discard Parser(alternative).init(":Alternative")
+  discard Parser(alternative).init(AlternativeName)
   alternative.subParsers = @parsers
   alternative.flags.incl isNary
   return alternative
@@ -482,6 +544,11 @@ method parse*(self: AlternativeRef, location: int32): ParsingResult =
     if not isNil(node):
       return (self.grammar.returnItem(self, node), loc)
   return (nil, location)
+
+method `$`*(parser: AlternativeRef): string =
+  let subStrs = collect(newSeqOfCap(parser.subParsers.len)):  
+    for subP in parser.subParsers:  repr(subP)
+  subStrs.join("|")
 
 
 ## Series-Parser
@@ -508,7 +575,7 @@ type
 proc init*(series: SeriesRef,
            parsers: openarray[Parser],
            mandatory: uint32 = inf): SeriesRef =
-  discard Parser(series).init(":Series")
+  discard Parser(series).init(SeriesName)
   series.flags.incl isNary
   series.subParsers = @parsers
   series.mandatory = mandatory
@@ -521,7 +588,7 @@ proc Series*(parsers: varargs[Parser], mandatory: uint32 = inf): SeriesRef =
   return new(SeriesRef).init(parsers, mandatory)
 
 proc reentry(self: SeriesRef, location: int32): tuple[nd: Node, reloc: int32] =
-  return (newNode(ZombiePType, ""), -1)  # placeholder
+  return (newNode(ZombieName, ""), -1)  # placeholder
 
 proc violation(self: SeriesRef,
                         location: int32,
@@ -570,6 +637,19 @@ method parse*(self: SeriesRef, location: int32): ParsingResult {.raises: [Parsin
   return (someNode, loc)
 
 
+method `$`*(parser: SeriesRef): string =
+  let subStrs = collect(newSeqOfCap(parser.subParsers.len)):
+    for (i, subP) in enumerate(parser.subParsers):
+      let 
+        subStr = repr(subP)
+        marker = if i == parser.mandatory.int: "§" else: ""
+      if subP.parserType == AlternativeName and subP.name.len == 0:
+        [marker, "(", subStr, ")"].join()
+      else: 
+        if marker.len > 0: marker & subStr else: subStr
+  subStrs.join(" ")
+
+
 ## TODO Intereave-Parser
 ## ^^^^^^^^^^^^^^^^
 
@@ -585,7 +665,7 @@ type
 proc init*(lookahead: LookaheadRef,
            parser: Parser,
            positive: bool = true): LookaheadRef =
-  discard Parser(lookahead).init(":Lookahead")
+  discard Parser(lookahead).init(LookAheadName)
   lookahead.subParsers = @[parser]
   lookahead.positive = positive
   return lookahead
@@ -612,6 +692,8 @@ method parse*(self: LookaheadRef, location: int32): ParsingResult {.raises: [Par
   
 
 
+
+
 ## Test-code
 
 when isMainModule:
@@ -631,6 +713,6 @@ when isMainModule:
     echo "Expected Exception"
   echo Alternative(Text("A"), Text("B"))("B").node.asSxpr
   doAssert Alternative(Text("A"), Text("B"))("B").node.asSxpr == "(:Text \"B\")"
-
-
+  doAssert $Alternative(Text("A"), Text("B")) == "\"A\"|\"B\""
+  doAssert $Series(Text("A"), Text("B"), Text("C"), mandatory=1u32) == "\"A\" §\"B\" \"C\""
 
