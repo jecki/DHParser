@@ -83,6 +83,12 @@ const
   SeriesName = ":Series"
   InterleaveName = ":Interleave"
   LookaheadName = ":Lookahead"
+  LookbehindName = ":Lookbehind"
+  CaptureName = ":Capture"
+  RetrieveName = ":Retrieve"
+  PopName = ":Pop"
+  SynonymName = ":Synonym"
+  ForwardName = ":Forward"
   NaryParsers = [AlternativeName, SeriesName, InterleaveName]
   # Node-Names  
   ZombieName = "__ZOMBIE"
@@ -272,11 +278,11 @@ proc `()`*(parser: Parser, document: string, location: int32 = 0i32): ParsingRes
     return parser.parseProxy(parser, location)
 
 
-method `$`*(parser: Parser): string {.base.} =
-  var args: seq[string] = newSeqOfCap[string](parser.subParsers.len)
-  for p in parser.subParsers:
+method `$`*(self: Parser): string {.base.} =
+  var args: seq[string] = newSeqOfCap[string](self.subParsers.len)
+  for p in self.subParsers:
     if not isNil(p):  args.add($p)
-  [parser.name, ":", parser.parserType, "(", args.join(", "), ")"].join("")
+  [self.name, ":", self.parserType, "(", args.join(", "), ")"].join("")
   
 
 proc repr(parser: Parser): string =
@@ -329,8 +335,8 @@ method parse*(self: TextRef, location: int32): ParsingResult =
     return (newNode(self.nodeName, self.slice), location + int32(self.text.len))
   return (nil, location)
 
-method `$`*(parser: TextRef): string =
-  ["\"", parser.text.replace("\"", "\\\""), "\""].join()
+method `$`*(self: TextRef): string =
+  ["\"", self.text.replace("\"", "\\\""), "\""].join()
 
 
 ## Regex-Parser
@@ -380,8 +386,8 @@ method parse*(self: RegexRef, location: int32): ParsingResult =
     return (newNode(self.nodeName, text), location + text.len)
   return (nil, location)
 
-method `$`*(parser: RegexRef): string =
-  ["/", parser.reStr.replace("/", r"\/"), "/"].join()
+method `$`*(self: RegexRef): string =
+  ["/", self.reStr.replace("/", r"\/"), "/"].join()
 
 
 ## TODO: SmartRE
@@ -488,29 +494,29 @@ method parse*(self: RepeatRef, location: int32): ParsingResult {.raises: [Parsin
     lastLoc = loc
   return (self.grammar.returnSequence(self, nodes), loc)
 
-method `$`*(parser: RepeatRef): string =
+method `$`*(self: RepeatRef): string =
   let 
-    postfix = postfixNotation in parser.grammar.flags
-    subP = parser.subParsers[0]
+    postfix = postfixNotation in self.grammar.flags
+    subP = self.subParsers[0]
   var
     subStr: string
   
   if (postfix and subP.name.len == 0 and
       subP.parserType in NaryParsers): 
-    subStr = ["(", repr(parser.subParsers[0]), ")"].join()  
+    subStr = ["(", repr(self.subParsers[0]), ")"].join()  
   else:  
-    subStr = repr(parser.subParsers[0])
+    subStr = repr(self.subParsers[0])
 
-  if parser.repRange == (0u32, 1u32):
+  if self.repRange == (0u32, 1u32):
     if postfix:  subStr & "?"  else:  ["[", subStr, "]"].join()   
-  elif parser.repRange == (0u32, inf):
+  elif self.repRange == (0u32, inf):
     if postfix:  subStr & "*"
     else:  ["{", subStr, "}"].join()    
-  elif parser.repRange == (1u32, inf):
+  elif self.repRange == (1u32, inf):
     if postfix:  subStr & "+"
     else:  ["{", subStr, "}+"].join()
   else:
-    let (min, max) = parser.repRange
+    let (min, max) = self.repRange
     [subStr, "(", $min, ", ", $max, ")"].join()
 
 
@@ -545,9 +551,9 @@ method parse*(self: AlternativeRef, location: int32): ParsingResult =
       return (self.grammar.returnItem(self, node), loc)
   return (nil, location)
 
-method `$`*(parser: AlternativeRef): string =
-  let subStrs = collect(newSeqOfCap(parser.subParsers.len)):  
-    for subP in parser.subParsers:  repr(subP)
+method `$`*(self: AlternativeRef): string =
+  let subStrs = collect(newSeqOfCap(self.subParsers.len)):  
+    for subP in self.subParsers:  repr(subP)
   subStrs.join("|")
 
 
@@ -570,7 +576,6 @@ type
   SeriesRef = ref SeriesObj not nil
   SeriesObj = object of ParserObj
     mandatory: uint32
-
 
 proc init*(series: SeriesRef,
            parsers: openarray[Parser],
@@ -636,13 +641,12 @@ method parse*(self: SeriesRef, location: int32): ParsingResult {.raises: [Parsin
                            error: error, first_throw: true)
   return (someNode, loc)
 
-
-method `$`*(parser: SeriesRef): string =
-  let subStrs = collect(newSeqOfCap(parser.subParsers.len)):
-    for (i, subP) in enumerate(parser.subParsers):
+method `$`*(self: SeriesRef): string =
+  let subStrs = collect(newSeqOfCap(self.subParsers.len)):
+    for (i, subP) in enumerate(self.subParsers):
       let 
         subStr = repr(subP)
-        marker = if i == parser.mandatory.int: "§" else: ""
+        marker = if i == self.mandatory.int: "§" else: ""
       if subP.parserType == AlternativeName and subP.name.len == 0:
         [marker, "(", subStr, ")"].join()
       else: 
@@ -653,6 +657,9 @@ method `$`*(parser: SeriesRef): string =
 ## TODO Intereave-Parser
 ## ^^^^^^^^^^^^^^^^
 
+## Control-Flow-Parsers
+## --------------------
+##
 ## Lookahead
 ## ^^^^^^^^^
 
@@ -667,13 +674,12 @@ proc init*(lookahead: LookaheadRef,
            positive: bool = true): LookaheadRef =
   discard Parser(lookahead).init(LookAheadName)
   lookahead.subParsers = @[parser]
+  lookahead.flags.incl {isFlowParser, isLookahead} 
   lookahead.positive = positive
   return lookahead
 
-
 proc Lookahead(parser: Parser, positive: bool = true): LookaheadRef =
   return new(LookaheadRef).init(parser, positive)
-
 
 method parse*(self: LookaheadRef, location: int32): ParsingResult {.raises: [ParsingException].} =
   var 
@@ -690,6 +696,78 @@ method parse*(self: LookaheadRef, location: int32): ParsingResult {.raises: [Par
   else:
     return (nil, location)
   
+method `$`*(self: LookaheadRef): string =
+  let 
+    prefix = if self.positive: "&" else: "<-&"
+    subP = self.subParsers[0]
+  if subP.parserType in NaryParsers and subP.name.len == 0:
+    [prefix, "(", repr(subP), ")"].join()
+  else:
+    prefix & repr(subP)
+
+
+## TODO: Lookbehind
+## ^^^^^^^^^
+
+## Context-Sensitive-Parsers 
+## -------------------------
+
+## TODO: CAPTURE
+## ^^^^^^^
+
+
+## TODO: Retrieve
+## ^^^^^^^^
+
+
+## TODO: Pop
+## ^^^
+
+
+## Aliasing-Parsers
+## ----------------
+
+## TODO: Synonym
+## ^^^^^^^
+
+## Forward
+## ^^^^^^^
+
+type
+  ForwardRef = ref ForwardObj not nil
+  ForwardObj = object of ParserObj
+
+
+proc init*(forward: ForwardRef): ForwardRef =
+  discard Parser(forward).init(ForwardName)
+  return forward
+
+proc Forward*(): ForwardRef =
+  return new(ForwardRef).init()
+
+proc set*(forward: ForwardRef, parser: Parser) =
+  forward.subParsers = @[parser]
+  if forward.name.len > 0 and parser.name.len == 0:
+    parser.name = forward.name
+    if isDisposable in forward.flags:
+      parser.flags.incl isDisposable
+    if not (dropContent in parser.flags):
+      if not (isDisposable in forward.flags):
+        parser.flags.excl isDisposable
+      forward.flags.incl dropContent
+    else:
+      forward.flags.incl dropContent
+    forward.name = ""
+
+
+method parse*(self: ForwardRef, location: int32): ParsingResult {.raises: [ParsingException].} =
+  return self.subParsers[0](location)
+
+  
+method `$`*(self: ForwardRef): string =
+  if self.name.len > 0:  
+    return self.name
+  return self.cycleGuard(proc(): string = repr(self.subParsers[0]), "...")
 
 
 
