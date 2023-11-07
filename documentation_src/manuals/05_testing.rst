@@ -1,4 +1,4 @@
-Testing
+  Testing
 =======
 
 DHParser provides a powerful unit-testing framework that allows testing
@@ -76,8 +76,8 @@ double quotation-marks ``"``. *Multi-line-strings must always be
 indented by four spaces for all lines except the first line!* (The
 indentation will automatically be removed before running the test.)
 
-.. ATTENTION:: The names for fail-test must differ from the names of
-    match tests! One way to do so is the mark the test with a special
+.. ATTENTION:: The names for fail-tests must differ from the names of
+    match-tests! One way to do so is to mark the test with a special
     letter like "M" for match-test and "F" for fail-tests, respectively.
     E.G.: "M1", "M2", "M3", ... and "F1", "F2", "F3", ...
 

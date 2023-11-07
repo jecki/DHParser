@@ -556,6 +556,20 @@ method `$`*(self: AlternativeRef): string =
     for subP in self.subParsers:  repr(subP)
   subStrs.join("|")
 
+proc `|`*(alternative: AlternativeRef, other: AlternativeRef): AlternativeRef =
+  alternative.subParsers &= other.subParsers
+  return alternative
+
+proc `|`*(alternative: AlternativeRef, other: Parser): AlternativeRef =
+  alternative.subParsers.add(other)
+  return alternative
+
+proc `|`*(other: Parser, alternative: AlternativeRef): AlternativeRef =
+  alternative.subParsers = @[other] & alternative.subParsers
+  return alternative
+
+proc `|`*(parser: Parser, other: Parser): AlternativeRef = Alternative(parser, other)
+
 
 ## Series-Parser
 ## ^^^^^^^^^^^^^
@@ -654,6 +668,25 @@ method `$`*(self: SeriesRef): string =
   subStrs.join(" ")
 
 
+proc `&`*(series: SeriesRef, other: SeriesRef): SeriesRef =
+  series.subParsers &= other.subParsers
+  if series.mandatory == inf and other.mandatory != inf:
+    series.mandatory = series.subParsers.len.uint32 + other.mandatory  
+  return series
+
+proc `&`*(series: SeriesRef, other: Parser): SeriesRef =
+  series.subParsers.add(other)
+  return series
+
+proc `&`*(other: Parser, series: SeriesRef): SeriesRef =
+  series.subParsers = @[other] & series.subParsers
+  if series.mandatory != inf:
+    series.mandatory += 1
+  return series
+
+proc `&`*(parser: Parser, other: Parser): SeriesRef = Series(parser, other)
+
+
 ## TODO Intereave-Parser
 ## ^^^^^^^^^^^^^^^^
 
@@ -749,15 +782,13 @@ proc set*(forward: ForwardRef, parser: Parser) =
   forward.subParsers = @[parser]
   if forward.name.len > 0 and parser.name.len == 0:
     parser.name = forward.name
-    if isDisposable in forward.flags:
-      parser.flags.incl isDisposable
-    if not (dropContent in parser.flags):
-      if not (isDisposable in forward.flags):
-        parser.flags.excl isDisposable
-      forward.flags.incl dropContent
-    else:
-      forward.flags.incl dropContent
-    forward.name = ""
+  if isDisposable in forward.flags:  parser.flags.incl isDisposable
+  if dropContent in parser.flags:
+    forward.flags.incl dropContent
+  else:
+    if not (isDisposable in forward.flags):  parser.flags.excl isDisposable
+    forward.flags.excl dropContent
+  forward.name = ""
 
 
 method parse*(self: ForwardRef, location: int32): ParsingResult {.raises: [ParsingException].} =
@@ -793,4 +824,4 @@ when isMainModule:
   doAssert Alternative(Text("A"), Text("B"))("B").node.asSxpr == "(:Text \"B\")"
   doAssert $Alternative(Text("A"), Text("B")) == "\"A\"|\"B\""
   doAssert $Series(Text("A"), Text("B"), Text("C"), mandatory=1u32) == "\"A\" §\"B\" \"C\""
-
+  echo $((Text("A")|Text("B"))|(Text("C")|Text("D")|Text("E")))
