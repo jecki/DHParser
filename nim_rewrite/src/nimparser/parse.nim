@@ -48,7 +48,8 @@ type
     nodeName: string
     ptype: string
     flags: ParserFlagSet
-    eqClass: uint
+    uniqueID: int32
+    equivID: int32
     grammarVar: GrammarRef
     symbol: ParserOrNil
     subParsers: seq[Parser]
@@ -116,35 +117,6 @@ proc parserType(parser: Parser): string =
     parser.ptype 
 
 
-# proc cycleGuard[T](self: Parser, f: proc(): T, alt: T): T =
-#   if self.cycleReached:
-#     return alt
-#   else:
-#     self.cycleReached = true
-#     result = f()
-#     self.cycleReached = false
-
-# proc cycleGuard(self: Parser, f: proc()) =
-#   if not self.cycleReached:
-#     self.cycleReached = true
-#     f()
-#     self.cycleReached = false
-
-# proc `grammar=`*(self: Parser, grammar: GrammarRef) =
-#   echo ">>>" & self.nodeName
-#   self.grammarVar = grammar
-#   for p in self.subParsers:
-#     var p_borrowed = p
-#     self.cycleGuard(proc() = p_borrowed.grammar = grammar)
-
-
-proc reset_visited(parser: Parser) = 
-  if parser.visited:
-    parser.visited = false
-    for p in parser.subParsers:
-      p.reset_visited()
-
-
 proc visit(parser: Parser, visitor: (Parser) -> bool): bool = 
   if not parser.visited:
     parser.visited = true
@@ -154,21 +126,15 @@ proc visit(parser: Parser, visitor: (Parser) -> bool): bool =
     return false
   return false
 
+proc reset_visited(parser: Parser) = 
+  if parser.visited:
+    parser.visited = false
+    for p in parser.subParsers:
+      p.reset_visited()
 
 proc apply*(parser: Parser, visitor: (Parser) -> bool): bool =
   result = parser.visit(visitor)
   parser.reset_visited()
-
-
-proc `grammar=`*(parser: Parser, grammar: GrammarRef) =
-  proc visitor(parser: Parser): bool =
-    assert parser.grammarVar != grammar
-    parser.grammarVar = grammar
-    return false
-  discard parser.apply(visitor)
-
-proc grammar(parser: Parser) : GrammarRef {.inline.} =
-  return parser.grammarVar
 
 
 ## procedures performing early tree-reduction on return values of parsers
@@ -215,7 +181,7 @@ proc returnSeqFlatten(parser: Parser, nodes: seq[Node]): Node =
     else:
       return EmptyNode
   elif N == 1:
-    return parser.grammar.returnItem(parser, nodes[0])
+    return parser.grammarVar.returnItem(parser, nodes[0])
   if isDisposable in parser.flags:
     return EmptyNode
   return newNode(parser.nodeName, "")
@@ -252,14 +218,13 @@ let GrammarPlaceholder = Grammar("__Placeholder__",
 
 ## basic parser-procedures and -methods
 
+
 method parse*(self: Parser, location: int32): ParsingResult {.base raises: [ParsingException].} =
   echo "Parser.parse"
   result = (nil, 0)
 
-
 proc callParseMethod(parser: Parser, location: int32): ParsingResult =
   return parser.parse(location)
-
 
 proc init*(parser: Parser, ptype: string = ParserName): Parser =
   assert ptype != "" and ptype[0] == ':'
@@ -267,6 +232,8 @@ proc init*(parser: Parser, ptype: string = ParserName): Parser =
   parser.nodeName = ptype
   parser.ptype = ptype
   parser.flags = {isDisposable}
+  parser.uniqueID = 0
+  parser.equivID = 0
   parser.grammarVar = GrammarPlaceholder
   parser.symbol = nil
   parser.subParsers = @[]
@@ -275,6 +242,18 @@ proc init*(parser: Parser, ptype: string = ParserName): Parser =
   parser.parseProxy = callParseMethod
   return parser
 
+proc `grammar=`*(parser: Parser, grammar: GrammarRef) =
+  var uniqueID: int32 = 0
+  proc visitor(parser: Parser): bool =
+    assert parser.grammarVar == GrammarPlaceholder
+    parser.grammarVar = grammar
+    uniqueID += 1
+    parser.uniqueID = uniqueID
+    return false
+  discard parser.apply(visitor)
+
+proc grammar(parser: Parser) : GrammarRef {.inline.} =
+  return parser.grammarVar
 
 proc assignName(name: string, parser: Parser): Parser =
   assert parser.name == ""
@@ -590,8 +569,11 @@ method `$`*(self: AlternativeRef): string =
   subStrs.join("|")
 
 proc `|`*(alternative: AlternativeRef, other: AlternativeRef): AlternativeRef =
-  if alternative.name != "" or other.name != "": return Alternative(alternative, other)
-  alternative.subParsers &= other.subParsers
+  if alternative.name != "": return Alternative(alternative, other)
+  if other.name == "":
+    alternative.subParsers &= other.subParsers    
+  else:
+    alternative.subParsers.add(other)
   return alternative
 
 proc `|`*(alternative: AlternativeRef, other: Parser): AlternativeRef =
