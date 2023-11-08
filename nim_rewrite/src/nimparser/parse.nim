@@ -46,14 +46,14 @@ type
   ParserObj = object of RootObj
     name: string
     nodeName: string
-    parserType: string
+    ptype: string
     flags: ParserFlagSet
     eqClass: uint
     grammarVar: GrammarRef
     symbol: ParserOrNil
     subParsers: seq[Parser]
-    cycleReached: bool
     # closure: HashSet[Parser]
+    visited: bool
     parseProxy: ParseProc not nil
 
   # the GrammarObj
@@ -109,19 +109,26 @@ proc `$`*(r: ParsingResult): string =
     return fmt"node:\n{tree}\nlocation: {r.location}"
 
 
-proc cycleGuard[T](self: Parser, f: proc(): T, alt: T): T =
-  if self.cycleReached:
-    return alt
+proc parserType(parser: Parser): string = 
+  if parser.ptype == ForwardName and parser.subParsers.len > 0:  
+    parser.subParsers[0].ptype 
   else:
-    self.cycleReached = true
-    result = f()
-    self.cycleReached = false
+    parser.ptype 
 
-proc cycleGuard(self: Parser, f: proc()) =
-  if not self.cycleReached:
-    self.cycleReached = true
-    f()
-    self.cycleReached = false
+
+# proc cycleGuard[T](self: Parser, f: proc(): T, alt: T): T =
+#   if self.cycleReached:
+#     return alt
+#   else:
+#     self.cycleReached = true
+#     result = f()
+#     self.cycleReached = false
+
+# proc cycleGuard(self: Parser, f: proc()) =
+#   if not self.cycleReached:
+#     self.cycleReached = true
+#     f()
+#     self.cycleReached = false
 
 # proc `grammar=`*(self: Parser, grammar: GrammarRef) =
 #   echo ">>>" & self.nodeName
@@ -130,14 +137,38 @@ proc cycleGuard(self: Parser, f: proc()) =
 #     var p_borrowed = p
 #     self.cycleGuard(proc() = p_borrowed.grammar = grammar)
 
-proc `grammar=`*(self: Parser, grammar: GrammarRef) =
-  self.cycleGuard(proc() = 
-    self.grammarVar = grammar
-    for p in self.subParsers:
-      p.grammar = grammar)
 
-proc grammar(self: Parser) : GrammarRef {.inline.} =
-  return self.grammarVar
+proc reset_visited(parser: Parser) = 
+  if parser.visited:
+    parser.visited = false
+    for p in parser.subParsers:
+      p.reset_visited()
+
+
+proc visit(parser: Parser, visitor: (Parser) -> bool): bool = 
+  if not parser.visited:
+    parser.visited = true
+    if visitor(parser):  return true
+    for p in parser.subParsers:
+      if p.visit(visitor):  return true
+    return false
+  return false
+
+
+proc apply*(parser: Parser, visitor: (Parser) -> bool): bool =
+  result = parser.visit(visitor)
+  parser.reset_visited()
+
+
+proc `grammar=`*(parser: Parser, grammar: GrammarRef) =
+  proc visitor(parser: Parser): bool =
+    assert parser.grammarVar != grammar
+    parser.grammarVar = grammar
+    return false
+  discard parser.apply(visitor)
+
+proc grammar(parser: Parser) : GrammarRef {.inline.} =
+  return parser.grammarVar
 
 
 ## procedures performing early tree-reduction on return values of parsers
@@ -232,21 +263,20 @@ proc callParseMethod(parser: Parser, location: int32): ParsingResult =
 
 proc init*(parser: Parser, ptype: string = ParserName): Parser =
   assert ptype != "" and ptype[0] == ':'
-
   parser.name = ""
   parser.nodeName = ptype
-  parser.parserType = ptype
+  parser.ptype = ptype
   parser.flags = {isDisposable}
   parser.grammarVar = GrammarPlaceholder
   parser.symbol = nil
   parser.subParsers = @[]
-  parser.cycleReached = false
+  parser.visited = false
   # parser.closure.init()
   parser.parseProxy = callParseMethod
   return parser
 
 
-proc assignName*(name: string, parser: Parser): Parser =
+proc assignName(name: string, parser: Parser): Parser =
   assert parser.name == ""
   assert name != ""
 
@@ -260,6 +290,9 @@ proc assignName*(name: string, parser: Parser): Parser =
   return parser
   # TODO: assign name as symbol to sub-parsers
 
+proc assign*[T: Parser](name: string, parser: T): T =
+  T(assignName(name, parser))
+
 
 proc `()`*(parser: Parser, location: int32): ParsingResult {.raises: [ParsingException].} =
   # is this faster than simply calling parser.parseProxy?
@@ -269,7 +302,7 @@ proc `()`*(parser: Parser, location: int32): ParsingResult {.raises: [ParsingExc
     return parser.parseProxy(parser, location)
 
 
-proc `()`*(parser: Parser, document: string, location: int32 = 0i32): ParsingResult =
+proc `()`*(parser: Parser, document: string, location: int32 = 0): ParsingResult =
   assert parser.grammar == GrammarPlaceholder
   parser.grammar = Grammar("adhoc", document=StringSlice(document))  # TODO: do some thing propper here
   if parser.parseProxy == callParseMethod:
@@ -286,7 +319,7 @@ method `$`*(self: Parser): string {.base.} =
   
 
 proc repr(parser: Parser): string =
-  if parser.name.len > 0:  parser.name  else:  $parser
+  if parser.name != "":  parser.name  else:  $parser
 
 
 ## Leaf Parsers
@@ -316,7 +349,7 @@ proc init*(textParser: TextRef, text: string): TextRef =
   textParser.flags.incl isLeaf
   textParser.text = text
   textParser.slice = toStringSlice(text)
-  textParser.empty = (text.len == 0)
+  textParser.empty = (text == "")
   return textParser
 
 proc Text*(text: string): TextRef =
@@ -329,10 +362,10 @@ method parse*(self: TextRef, location: int32): ParsingResult =
  
   if self.grammar.document.str[].continuesWith(self.text, location):
     if dropContent in self.flags:
-      return (EmptyNode, location + int32(self.text.len))
+      return (EmptyNode, location + self.text.len.int32)
     elif isDisposable in self.flags and self.empty:
       return (EmptyNode, location)  
-    return (newNode(self.nodeName, self.slice), location + int32(self.text.len))
+    return (newNode(self.nodeName, self.slice), location + self.text.len.int32)
   return (nil, location)
 
 method `$`*(self: TextRef): string =
@@ -437,7 +470,7 @@ type
   RepeatObj = object of ParserObj
     repRange: Range
 
-const inf = 2u32^32 - 1
+const inf = uint32(2^32 - 1)
 
 
 proc init*(repeat: RepeatRef, 
@@ -472,7 +505,7 @@ method parse*(self: RepeatRef, location: int32): ParsingResult {.raises: [Parsin
     loc = location
     lastLoc = location
     node: NodeOrNil = nil
-  for i in countup(uint32(1), self.repRange.min):
+  for i in countup(1u32, self.repRange.min):
     (node, loc) = self.subParsers[0](loc)
     if isNil(node):
       return (nil, lastLoc)
@@ -501,7 +534,7 @@ method `$`*(self: RepeatRef): string =
   var
     subStr: string
   
-  if (postfix and subP.name.len == 0 and
+  if (postfix and subP.name == "" and
       subP.parserType in NaryParsers): 
     subStr = ["(", repr(self.subParsers[0]), ")"].join()  
   else:  
@@ -557,14 +590,17 @@ method `$`*(self: AlternativeRef): string =
   subStrs.join("|")
 
 proc `|`*(alternative: AlternativeRef, other: AlternativeRef): AlternativeRef =
+  if alternative.name != "" or other.name != "": return Alternative(alternative, other)
   alternative.subParsers &= other.subParsers
   return alternative
 
 proc `|`*(alternative: AlternativeRef, other: Parser): AlternativeRef =
+  if alternative.name != "":  return Alternative(alternative, other)
   alternative.subParsers.add(other)
   return alternative
 
 proc `|`*(other: Parser, alternative: AlternativeRef): AlternativeRef =
+  if alternative.name != "":  return Alternative(other, alternative)  
   alternative.subParsers = @[other] & alternative.subParsers
   return alternative
 
@@ -661,24 +697,30 @@ method `$`*(self: SeriesRef): string =
       let 
         subStr = repr(subP)
         marker = if i == self.mandatory.int: "§" else: ""
-      if subP.parserType == AlternativeName and subP.name.len == 0:
+      if subP.parserType in [AlternativeName, SeriesName] and subP.name == "":
         [marker, "(", subStr, ")"].join()
       else: 
-        if marker.len > 0: marker & subStr else: subStr
+        if marker != "": marker & subStr else: subStr
   subStrs.join(" ")
 
 
 proc `&`*(series: SeriesRef, other: SeriesRef): SeriesRef =
-  series.subParsers &= other.subParsers
-  if series.mandatory == inf and other.mandatory != inf:
-    series.mandatory = series.subParsers.len.uint32 + other.mandatory  
+  if series.name != "":  return Series(series, other)
+  if other.name == "":
+    series.subParsers &= other.subParsers
+    if series.mandatory == inf and other.mandatory != inf:
+      series.mandatory = series.subParsers.len.uint32 + other.mandatory  
+  else:
+    series.subParsers.add(other)
   return series
 
 proc `&`*(series: SeriesRef, other: Parser): SeriesRef =
+  if series.name != "":  return Series(series, other)
   series.subParsers.add(other)
   return series
 
 proc `&`*(other: Parser, series: SeriesRef): SeriesRef =
+  if series.name != "":  return Series(other, series)
   series.subParsers = @[other] & series.subParsers
   if series.mandatory != inf:
     series.mandatory += 1
@@ -733,7 +775,7 @@ method `$`*(self: LookaheadRef): string =
   let 
     prefix = if self.positive: "&" else: "<-&"
     subP = self.subParsers[0]
-  if subP.parserType in NaryParsers and subP.name.len == 0:
+  if subP.parserType in NaryParsers and subP.name == "":
     [prefix, "(", repr(subP), ")"].join()
   else:
     prefix & repr(subP)
@@ -780,7 +822,7 @@ proc Forward*(): ForwardRef =
 
 proc set*(forward: ForwardRef, parser: Parser) =
   forward.subParsers = @[parser]
-  if forward.name.len > 0 and parser.name.len == 0:
+  if forward.name != "" and parser.name == "":
     parser.name = forward.name
   if isDisposable in forward.flags:  parser.flags.incl isDisposable
   if dropContent in parser.flags:
@@ -788,17 +830,13 @@ proc set*(forward: ForwardRef, parser: Parser) =
   else:
     if not (isDisposable in forward.flags):  parser.flags.excl isDisposable
     forward.flags.excl dropContent
-  forward.name = ""
-
 
 method parse*(self: ForwardRef, location: int32): ParsingResult {.raises: [ParsingException].} =
   return self.subParsers[0](location)
 
   
 method `$`*(self: ForwardRef): string =
-  if self.name.len > 0:  
-    return self.name
-  return self.cycleGuard(proc(): string = repr(self.subParsers[0]), "...")
+  repr(self.subParsers[0])
 
 
 
@@ -806,8 +844,8 @@ method `$`*(self: ForwardRef): string =
 ## Test-code
 
 when isMainModule:
-  let  t = "t".assignName Text("X")
-  let cst = t("X")
+  let txt = "txt".assignName Text("X")
+  let cst = txt("X")
   echo $cst
   echo Text("A")("A").node.asSxpr
   doAssert Text("A")("A").node.asSxpr == "(:Text \"A\")"
@@ -825,3 +863,15 @@ when isMainModule:
   doAssert $Alternative(Text("A"), Text("B")) == "\"A\"|\"B\""
   doAssert $Series(Text("A"), Text("B"), Text("C"), mandatory=1u32) == "\"A\" §\"B\" \"C\""
   echo $((Text("A")|Text("B"))|(Text("C")|Text("D")|Text("E")))
+
+  let root = "root".assign Forward()
+  let t = "t".assign Text("A") & root
+  let s = "s".assign root & t & t
+  root.set(s)
+  echo $root
+  echo $t
+  echo $root.subParsers[0].subparsers.len
+  echo $s
+  echo $t.parserType
+  echo " "
+  root.grammar = Grammar("adhoc1")
