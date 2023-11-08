@@ -48,11 +48,12 @@ type
     nodeName: string
     ptype: string
     flags: ParserFlagSet
-    uniqueID: int32
-    equivID: int32
+    uniqueID: uint32
+    # equivID: uint32
     grammarVar: GrammarRef
     symbol: ParserOrNil
     subParsers: seq[Parser]
+    cycleReached: bool
     # closure: HashSet[Parser]
     visited: bool
     parseProxy: ParseProc not nil
@@ -110,14 +111,19 @@ proc `$`*(r: ParsingResult): string =
     return fmt"node:\n{tree}\nlocation: {r.location}"
 
 
-proc parserType(parser: Parser): string = 
-  if parser.ptype == ForwardName and parser.subParsers.len > 0:  
-    parser.subParsers[0].ptype 
+proc parserType(parser: Parser): string =
+  if parser.ptype == ForwardName and parser.subParsers.len > 0:
+    parser.subParsers[0].ptype
   else:
-    parser.ptype 
+    parser.ptype
 
+proc cycleGuard(self: Parser, f: proc()) =
+  if not self.cycleReached:
+    self.cycleReached = true
+    f()
+    self.cycleReached = false
 
-proc visit(parser: Parser, visitor: (Parser) -> bool): bool = 
+proc visit(parser: Parser, visitor: (Parser) -> bool): bool =
   if not parser.visited:
     parser.visited = true
     if visitor(parser):  return true
@@ -126,7 +132,7 @@ proc visit(parser: Parser, visitor: (Parser) -> bool): bool =
     return false
   return false
 
-proc reset_visited(parser: Parser) = 
+proc reset_visited(parser: Parser) =
   if parser.visited:
     parser.visited = false
     for p in parser.subParsers:
@@ -218,22 +224,24 @@ let GrammarPlaceholder = Grammar("__Placeholder__",
 
 ## basic parser-procedures and -methods
 
-
 method parse*(self: Parser, location: int32): ParsingResult {.base raises: [ParsingException].} =
   echo "Parser.parse"
   result = (nil, 0)
 
+
 proc callParseMethod(parser: Parser, location: int32): ParsingResult =
   return parser.parse(location)
 
+
 proc init*(parser: Parser, ptype: string = ParserName): Parser =
   assert ptype != "" and ptype[0] == ':'
+
   parser.name = ""
   parser.nodeName = ptype
   parser.ptype = ptype
   parser.flags = {isDisposable}
   parser.uniqueID = 0
-  parser.equivID = 0
+  # parser.equivID = 0
   parser.grammarVar = GrammarPlaceholder
   parser.symbol = nil
   parser.subParsers = @[]
@@ -243,12 +251,13 @@ proc init*(parser: Parser, ptype: string = ParserName): Parser =
   return parser
 
 proc `grammar=`*(parser: Parser, grammar: GrammarRef) =
-  var uniqueID: int32 = 0
+  var uniqueID: uint32 = 0
   proc visitor(parser: Parser): bool =
     assert parser.grammarVar == GrammarPlaceholder
     parser.grammarVar = grammar
     uniqueID += 1
     parser.uniqueID = uniqueID
+    # parser.equivID = uniqueID  # TODO: Determine "equivalent" parsers, here
     return false
   discard parser.apply(visitor)
 
@@ -420,14 +429,14 @@ proc infiniteLoopWarning(parser: Parser, node: NodeOrNil, location: int32) =
 ## Repeat-Parsers
 ## ^^^^^^^^^^^^^^
 ## 
-## A familiy of combined parsers that apply the sub-parser and
+## A family of combined parsers that apply the sub-parser and
 ## match if the sub-parser matches at least n-times in sequence
 ## and at most k-times, where n is the "lower bound" and k the
 ## upper bound and k >= n.
 ## 
 ## Repeat 
 ##    is the most general repeat-parser, where the lower bound
-##    and upper bound are passed as parameters on initializiation.
+##    and upper bound are passed as parameters on initialization.
 ## 
 ## Option
 ##    matches always, no matter whether the sub-parser matches
@@ -469,10 +478,10 @@ proc Repeat*(parser: Parser, repRange: Range): RepeatRef =
 proc Option*(parser: Parser): RepeatRef =
   return new(RepeatRef).init(parser, (0u32, 1u32), OptionName)
 
-proc ZeroOrMore(parser: Parser): RepeatRef =
+proc ZeroOrMore*(parser: Parser): RepeatRef =
   return new(RepeatRef).init(parser, (0u32, inf), ZeroOrMoreName)
 
-proc OneOrMore(parser: Parser): RepeatRef =
+proc OneOrMore*(parser: Parser): RepeatRef =
   return new(RepeatRef).init(parser, (1u32, inf), OneOrMoreName)
 
 method parse*(self: RepeatRef, location: int32): ParsingResult {.raises: [ParsingException].} =
@@ -571,7 +580,7 @@ method `$`*(self: AlternativeRef): string =
 proc `|`*(alternative: AlternativeRef, other: AlternativeRef): AlternativeRef =
   if alternative.name != "": return Alternative(alternative, other)
   if other.name == "":
-    alternative.subParsers &= other.subParsers    
+    alternative.subParsers &= other.subParsers
   else:
     alternative.subParsers.add(other)
   return alternative
@@ -582,7 +591,7 @@ proc `|`*(alternative: AlternativeRef, other: Parser): AlternativeRef =
   return alternative
 
 proc `|`*(other: Parser, alternative: AlternativeRef): AlternativeRef =
-  if alternative.name != "":  return Alternative(other, alternative)  
+  if alternative.name != "":  return Alternative(other, alternative)
   alternative.subParsers = @[other] & alternative.subParsers
   return alternative
 
@@ -691,7 +700,7 @@ proc `&`*(series: SeriesRef, other: SeriesRef): SeriesRef =
   if other.name == "":
     series.subParsers &= other.subParsers
     if series.mandatory == inf and other.mandatory != inf:
-      series.mandatory = series.subParsers.len.uint32 + other.mandatory  
+      series.mandatory = series.subParsers.len.uint32 + other.mandatory
   else:
     series.subParsers.add(other)
   return series
@@ -812,6 +821,8 @@ proc set*(forward: ForwardRef, parser: Parser) =
   else:
     if not (isDisposable in forward.flags):  parser.flags.excl isDisposable
     forward.flags.excl dropContent
+  forward.name = ""
+
 
 method parse*(self: ForwardRef, location: int32): ParsingResult {.raises: [ParsingException].} =
   return self.subParsers[0](location)
