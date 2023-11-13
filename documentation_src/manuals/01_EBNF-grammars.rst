@@ -825,7 +825,7 @@ We will not worry about the more sub-structure of the S-nodes right now. If
 we are not interested in the comments, we could use the ``@disposable``,
 ``@drop`` and ``@reduction = merge``-directives to simplify these at the
 parsing stage. Or, we could extract the comments and normalize the whitespace
-at a later tree-processing stage. For now, let's just check wether our
+at a later tree-processing stage. For now, let's just check whether our
 comments work as expected::
 
     >>> syntax_tree = extended_parser('What{check this again!} is work?')
@@ -908,7 +908,7 @@ it is to be considered bad practice to define a symbol as
 optional. Rather, a symbol should always match something and
 only at the places where it is used, it should be marked as
 optional. If this rule is obeyed, it is always easy to tell,
-wether some element is optional or not at a specific place
+whether some element is optional or not at a specific place
 in the Grammar. Otherwise, it can become quite confusing
 indeed. However, since the tilde character is usually used
 very often, it is more convenient not to mark it with a

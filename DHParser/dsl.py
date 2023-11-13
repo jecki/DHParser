@@ -541,7 +541,7 @@ def compile_on_disk(source_file: str,
         elif imports.find("from DHParser.") < 0 \
                 or imports.find('PseudoJunction') < 0 \
                 or imports.find('create_parser_junction') < 0:
-            imports += "\nfrom DHParser.dsl import PseudoJunction, create_parser_junction\n"
+            imports += "\nfrom DHParser.pipeline import PseudoJunction, create_parser_junction\n"
         if RX_WHITESPACE.fullmatch(preprocessor):
             preprocessor = ebnf_compiler.gen_preprocessor_skeleton()
         if RX_WHITESPACE.fullmatch(ast):

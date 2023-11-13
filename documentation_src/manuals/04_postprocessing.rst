@@ -489,7 +489,7 @@ class Compile
   * :py:meth:`~compile.Compiler.wildcard`: An overridable compilation-method
         that will be called when no specific compilation method, i.e.
         ``on_NAME(node)`` has been defined. It defaults to redirecting to
-        :py:meth:`~compile.Commpiler.fallback_compiler`.
+        :py:meth:`~compile.Compiler.fallback_compiler`.
 
    * :py:meth:`~compile.Compiler.fallback_compiler`: A method that will be
         be called on nodes for the type or name, for that matter, of which
@@ -499,7 +499,7 @@ class Compile
 Types and Functions
 ^^^^^^^^^^^^^^^^^^^
 
-   * :py:data:`~compile.Copiler.CompilationResult`: A named tuple-type
+   * :py:data:`~compile.Compiler.CompilationResult`: A named tuple-type
         that stores the result of a compilation: (result: Any, messages:
         list[:py:class:`~error.Error``], AST:
         Optional[:py:class:`~nodetree.RootNode`])
@@ -709,7 +709,7 @@ This is how our extension of the standard-pipeline looks like::
      | one-line json |
      -----------------
             |
-            |--- bytearry-convert
+            |--- bytearray-convert
             |
     --------------------
     | transmission obj |

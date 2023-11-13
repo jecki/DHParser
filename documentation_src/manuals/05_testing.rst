@@ -20,18 +20,17 @@ unit-testing framework allows to::
       transformations (as long as their result is serializable).
 
 Because writing grammars can be difficult, refactoring and testing of
-grammars is crucial for the success of a project. Also, one and the
-same formal language can be described by different grammars. (Here,
-two formal languages are considered equal if the set
-of grammatically correct sentences is the same.)
-The grammar used influences the shape of the syntax-tree that the
-parser yields. Therefore, it is quite common to rewrite a grammar or
-parts of it more than once during the course of developing a formal
-notation. For example, in the first iteration one tries to find a
-grammar that matches the given or intended notation. In the second
-iteration, the grammar is refined to yield a well-shaped syntax-tree to
-make further processing easier. Unit-tests help to safeguard this
-process against breaking earlier changes by later changes.
+grammars is crucial for the success of a project. Also, one and the same
+formal language can be described by different grammars. (Here, two formal
+languages are considered equal if the set of grammatically correct sentences
+is the same.) The grammar used influences the shape of the syntax-tree that
+the parser yields. Therefore, it is quite common to rewrite a grammar or
+parts of it more than once during the course of developing a formal notation.
+For example, in the first iteration one tries to find a grammar that matches
+the given or intended notation. In the second iteration, the grammar is
+refined to yield a well-shaped syntax-tree to make further processing easier.
+Unit-tests help to safeguard this process against breaking earlier changes by
+later changes.
 
 Writing grammar-tests
 ---------------------
@@ -96,7 +95,7 @@ current-directory and then run all test-files in this directory, where
 any file is considered a test-file the name of which matches the
 glob-pattern ``*_test_*.ini``.
 
-.. tip:: It is a good idea to add the DHParser-projects's
+.. tip:: It is a good idea to add the DHParser-project's
     ``tst_..._grammar.py``-script to the executable tools
     of your Python-IDE. Then it suffices to simply point to
     the test in the IDE's file-manager and pick the tool
@@ -132,7 +131,7 @@ and will, therefore, be overlooked, if the script is called without any
 arguments. This can be quite useful, if you want to experiment with
 tests that you might not (yet) want to add to your regular test-suite.
 
-.. TIP:: It is a good idea to add the DHParser-projects's
+.. TIP:: It is a good idea to add the DHParser-project's
     ``tst_..._grammar.py``-script to the executable tools
     of your Python-IDE. Then it suffices to simply point to
     the test in the IDE's file-manager and pick the tool
@@ -1015,7 +1014,7 @@ frequently.
 
 In Digital-Humanities-Test-scenarios, formal grammars are not only used
 for parsing strictly defined formal notations (e.g. LaTeX) but also for
-retro-digitalization or, rather, re-structuring of "semi-structured"
+retro-digitization or, rather, re-structuring of "semi-structured"
 human-written documents with a notation the rules of which are only
 verbally described, often somewhat vague and incomplete and in practice
 not always followed diligently. Examples are dictionaries (see `Zacherl
@@ -1778,7 +1777,7 @@ in a tree-serialization-format, say, as as S-expression. As mentioned earlier,
 it is a pragmatic approach to run the test first and then copy and past the
 result for the DOM-tree from the report-file and adjust these by hand so that they
 reflect what we want the results to look like in this stage (although they do not
-yes, but thats what test-driven-development is about).
+yes, but that is what test-driven-development is about).
 
 Note that the same symbol names from the grammar are used to specify tests for
 later processing stages. It does not matter if the name of the root-node has been
@@ -1878,7 +1877,7 @@ junctions that define the processing-pipeline::
 The HTML-Serializer above is pretty straight-forward. Almost all of the work
 is done by :py:meth:`~nodetree.Node.as_xml` called in the wildcard-method.
 Note that the wildcard-method does not even descend into the tree, it
-just returns the XML-serilized tree for whatever element is the root
+just returns the XML-serialized tree for whatever element is the root
 element of the DOM-tree received from the last stage.
 
 We add the html-header in the
@@ -1958,7 +1957,7 @@ unit-testing:
    (save for the use of lookahead and lookbehind-parsers for which
    DHParsers testing-framework offers some workarounds, however),
    might not be true for later processing stages, any more.
-   The assumption context-independence is inbread into the DHParser's
+   The assumption context-independence is baked into DHParser's
    testing-framework and will therefore not change in the future.
 
 Therefore, we will illustrate how conventional unit-testing works.

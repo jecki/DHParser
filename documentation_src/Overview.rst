@@ -1311,9 +1311,9 @@ respects from the popular `pygls`_-module:
 
 * DHParser uses the more lightweight `TypedDict`_ -dictionaries instead
   of `pydantic`_-modules. The TypedDict-definitions in the
-  DHParser.lsp-module are auto-generated from the `language server
-  protocol specification`_ with `ts2python`_, a package that has itself
-  been build with DHParser.
+  DHParser.lsp-module are auto-generated from the
+  `language server protocol specification`_ with `ts2python`_,
+  a package that has itself been build with DHParser.
 
 * The DHParser.server-module also provides some boilerplate code to support
   parallel execution via multiprocessing.
@@ -1382,7 +1382,7 @@ whole fascicle of different medieval latin dictionary articles through
 DHParser in batch-mode), pypy is a even quite a bit slower than the
 python-interpreter. (Compiling one fascicle of the medieval latin
 dictionary in batch mode with multiprocessing takes about three times
-longe with pypy3 than with CPython!) So, presently, I'd recommend
+as long with pypy3!) So, presently, I'd recommend
 staying with `Cython`_ when trying to speed-up DHParser.
 
 DHParser uses a variant of a recursive descent parser, a so called
@@ -1392,7 +1392,7 @@ time, although I am not sure if the proof also accounts for the "seed
 and grow"-algorithm that has been implemented to support left-recursive
 grammars. Other than that, you can rest assured that there will be no
 nasty runtime surprises as they can happen with regular-expression
-engines or uncached recursive-descent-parsers.
+engines or un-cached recursive-descent-parsers.
 
 
 
