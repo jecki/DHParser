@@ -46,7 +46,7 @@ type
   ParserOrNil = ref ParserObj
   ParserObj = object of RootObj
     name: string
-    nodeName: string
+    nodeName: ref string not nil
     ptype: string
     flags: ParserFlagSet
     uniqueID: uint32
@@ -276,7 +276,7 @@ proc handle_parsing_exception(pe: ParsingException): ParsingResult {.raises: [Pa
 proc fatal(parser: Parser, msg: string, location: int32, code: ErrorCode = A_FATALITY): ParsingResult 
   {.raises: [ParsingException].} =
   let 
-    node = newNode(ZombieName, msg).withSourcePos(location)
+    node = newNode(ZombieName, msg).withPos(location)
     error: ErrorRef = Error(msg, location, code)
   parser.grammar.errors.add(error)
   result = (node, location)
@@ -308,7 +308,7 @@ proc memoizationWrapper(parser: Parser, location: int32): ParsingResult {.raises
       grammar.farthestFail = location
       grammar.farthestParser = parser
     elif node != EmptyNode:
-      node.setPos(location)
+      node.sourcePos = location
 
     if memoize in grammar.flags:
       parser.visited[location] = result
@@ -321,7 +321,8 @@ proc memoizationWrapper(parser: Parser, location: int32): ParsingResult {.raises
 proc init*(parser: Parser, ptype: string = ParserName): Parser =
   assert ptype != "" and ptype[0] == ':'
   parser.name = ""
-  parser.nodeName = ptype
+  new(parser.nodeName)
+  parser.nodeName[] = ptype
   parser.ptype = ptype
   parser.flags = {isDisposable}
   parser.uniqueID = 0
@@ -339,7 +340,7 @@ proc assignName(name: string, parser: Parser): Parser =
   assert parser.name == ""
   assert name != ""
 
-  parser.nodeName = name
+  parser.nodeName[] = name
   if name[0] == ':':
     parser.name = name[1 .. ^1]
   else:
@@ -759,7 +760,7 @@ method parse*(self: SeriesRef, location: int32): ParsingResult {.raises: [Parsin
       results.add(node)
   someNode = self.grammar.returnSequence(self, results)
   if not isNil(error):
-    raise ParsingException(parser: self, node: someNode.withSourcePos(location),
+    raise ParsingException(parser: self, node: someNode.withPos(location),
                            node_orig_len: loc - location, location: location,
                            error: error, first_throw: true)
   return (someNode, loc)
