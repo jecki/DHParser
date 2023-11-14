@@ -96,8 +96,14 @@ func sourcePos*(node: Node): int32 =
     raise newException(SourcePosUnassignedDefect, "source position has not yet been assigned")
   return node.sourcePos
 
+
+proc setPos*(node: Node, pos: int32) {.inline.} =
+  ## Use with care
+  node.sourcePos = pos
+
+
 proc assignSourcePos(node: Node, sourcePos: int32) : int32 =
-  if node.sourcePos >= 0:
+  if node.sourcePos >= 0 and node.sourcePos != sourcePos:
     raise newException(SourcePosReAssigmentDefect, "source position must not be reassigned!")
   node.sourcePos = sourcePos
   var pos = sourcePos
@@ -223,3 +229,4 @@ when isMainModule:
   echo n.children[1].sourcePos
 
   echo newNode("ZOMBIE__", "").asSxpr
+  n.setPos(3)

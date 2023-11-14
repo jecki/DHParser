@@ -13,6 +13,7 @@ import std/strformat
 import std/strutils
 import std/re
 import std/sugar
+import std/tables
 
 import strslice
 import nodetree
@@ -38,7 +39,7 @@ type
     error: ErrorRef
     first_throw: bool
   ParserFlags = enum isLeaf, noMemoization, isNary, isFlowParser, isLookahead,
-   isContextSensitive, isDisposable, dropContent
+   isContextSensitive, isDisposable, dropContent, applyTracker
   ParserFlagSet = set[ParserFlags]
   ParseProc = proc(parser: Parser, location: int32) : ParsingResult {.raises: [ParsingException].}
   Parser* = ref ParserObj not nil
@@ -49,30 +50,34 @@ type
     ptype: string
     flags: ParserFlagSet
     uniqueID: uint32
-    # equivID: uint32
     grammarVar: GrammarRef
     symbol: ParserOrNil
     subParsers: seq[Parser]
-    cycleReached: bool
-    # closure: HashSet[Parser]
-    visited: bool
-    parseProxy: ParseProc not nil
+    call: ParseProc not nil
+    visited: Table[int, ParsingResult]
 
   # the GrammarObj
   ReturnItemProc = proc(parser: Parser, node: NodeOrNil): Node {.raises: [].} not nil
   ReturnSequenceProc = proc(parser: Parser, nodes: seq[Node]): Node {.raises: [].} not nil
-  GrammarFlags* = enum postfixNotation
+  GrammarFlags* = enum postfixNotation, memoize
   GrammarFlagSet = set[GrammarFlags]
   GrammarRef = ref GrammarObj not nil
   GrammarObj = object of RootObj
     name: string
     flags: GrammarFlagSet
-    document: StringSlice
-    root: seq[Parser]
     returnItem: ReturnItemProc
     returnSequence: ReturnSequenceProc
+    document: StringSlice
+    errors: seq[ErrorRef]
+    farthestFail: int32
+    farthestParser: ParserOrNil
+    recursionCounter: uint16
+
+
 
 const
+  RecursionLimit = 1536
+
   # Parser-Names
   ParserName = ":Parser"
   TextName = ":Text"
@@ -111,36 +116,44 @@ proc `$`*(r: ParsingResult): string =
     return fmt"node:\n{tree}\nlocation: {r.location}"
 
 
-proc parserType(parser: Parser): string =
+proc parserType*(parser: Parser): string =
   if parser.ptype == ForwardName and parser.subParsers.len > 0:
     parser.subParsers[0].ptype
   else:
     parser.ptype
 
-proc cycleGuard(self: Parser, f: proc()) =
-  if not self.cycleReached:
-    self.cycleReached = true
-    f()
-    self.cycleReached = false
 
-proc visit(parser: Parser, visitor: (Parser) -> bool): bool =
-  if not parser.visited:
-    parser.visited = true
+proc parserName*(parser: Parser): string = 
+  if parser.ptype == ForwardName and parser.subParsers.len > 0:
+    parser.subParsers[0].name
+  else:
+    parser.name
+
+
+# proc cycleGuard(self: Parser, f: proc()) =
+#   if not self.cycleReached:
+#     self.cycleReached = true
+#     f()
+#     self.cycleReached = false
+
+proc trackingApply(parser: Parser, visitor: (Parser) -> bool): bool =
+  if not (applyTracker in parser.flags):
+    parser.flags.incl applyTracker
     if visitor(parser):  return true
     for p in parser.subParsers:
-      if p.visit(visitor):  return true
+      if p.trackingApply(visitor):  return true
     return false
   return false
 
-proc reset_visited(parser: Parser) =
-  if parser.visited:
-    parser.visited = false
+proc resetApplyTracker(parser: Parser) =
+  if applyTracker in parser.flags:
+    parser.flags.excl applyTracker
     for p in parser.subParsers:
-      p.reset_visited()
+      p.resetApplyTracker()
 
 proc apply*(parser: Parser, visitor: (Parser) -> bool): bool =
-  result = parser.visit(visitor)
-  parser.reset_visited()
+  result = parser.trackingApply(visitor)
+  parser.resetApplyTracker()
 
 
 ## procedures performing early tree-reduction on return values of parsers
@@ -201,21 +214,32 @@ proc returnSeqPlaceholder(parser: Parser, nodes: seq[Node]): Node =
   raise newException(AssertionDefect, "returnItem called on GrammaPlacholder")
 
 
+proc cleanUp(grammar: GrammarRef) =
+  grammar.flags.excl memoize
+  grammar.errors = @[]
+  grammar.recursionCounter = 0
+  grammar.farthestFail = -1
+  grammar.farthestParser = nil
+
+
+
 proc init(grammar: GrammarRef, name: string, 
-          flags: GrammarFlagSet = {},
+          flags: GrammarFlagSet = {memoize},
           document: StringSlice = EmptyStrSlice,
           returnItem: ReturnItemProc = returnItemFlatten,
           returnSequence: ReturnSequenceProc = returnSeqFlatten): GrammarRef =
   grammar.name = name
   grammar.flags = flags
-  grammar.document = document
-  grammar.root = @[]
   grammar.returnItem = returnItem
   grammar.returnSequence = returnSequence
+  grammar.document = document
+  grammar.cleanUp()
   return grammar
+
 
 template Grammar(args: varargs[untyped]): GrammarRef =
   new(GrammarRef).init(args)
+
 
 let GrammarPlaceholder = Grammar("__Placeholder__", 
   returnItem = returnItemPlaceholder, 
@@ -229,26 +253,9 @@ method parse*(self: Parser, location: int32): ParsingResult {.base raises: [Pars
   result = (nil, 0)
 
 
-proc callParseMethod(parser: Parser, location: int32): ParsingResult =
-  return parser.parse(location)
+proc grammar(parser: Parser) : GrammarRef {.inline.} =
+  return parser.grammarVar
 
-
-proc init*(parser: Parser, ptype: string = ParserName): Parser =
-  assert ptype != "" and ptype[0] == ':'
-
-  parser.name = ""
-  parser.nodeName = ptype
-  parser.ptype = ptype
-  parser.flags = {isDisposable}
-  parser.uniqueID = 0
-  # parser.equivID = 0
-  parser.grammarVar = GrammarPlaceholder
-  parser.symbol = nil
-  parser.subParsers = @[]
-  parser.visited = false
-  # parser.closure.init()
-  parser.parseProxy = callParseMethod
-  return parser
 
 proc `grammar=`*(parser: Parser, grammar: GrammarRef) =
   var uniqueID: uint32 = 0
@@ -261,8 +268,72 @@ proc `grammar=`*(parser: Parser, grammar: GrammarRef) =
     return false
   discard parser.apply(visitor)
 
-proc grammar(parser: Parser) : GrammarRef {.inline.} =
-  return parser.grammarVar
+
+proc handle_parsing_exception(pe: ParsingException): ParsingResult {.raises: [ParsingException].}=
+  if isNil(pe):  return (nil, 0)  else:  return (pe.node, pe.location)
+
+
+proc fatal(parser: Parser, msg: string, location: int32, code: ErrorCode = A_FATALITY): ParsingResult 
+  {.raises: [ParsingException].} =
+  let 
+    node = newNode(ZombieName, msg).withSourcePos(location)
+    error: ErrorRef = Error(msg, location, code)
+  parser.grammar.errors.add(error)
+  result = (node, location)
+  raise ParsingException(parser: parser, node: node, node_orig_len: node.runeLen, 
+                         location: location, error: error)
+ 
+
+proc memoizationWrapper(parser: Parser, location: int32): ParsingResult {.raises: [ParsingException].} =
+  try:
+    if location in parser.visited:
+      return parser.visited[location]
+
+    let 
+      grammar: GrammarRef = parser.grammar
+       
+    if grammar.recursionCounter > RecursionLimit: 
+      return fatal(parser, "Too many nested parser calls", location, RecursionLimitReached)
+
+    let memoization = memoize in grammar.flags
+    grammar.flags.incl memoize  
+
+    try:
+      result = parser.parse(location)
+    except ParsingException as pe:
+      result = handle_parsing_exception(pe)
+
+    let node = result.node  # isNil(result.node) does not work...
+    if isNil(node):
+      grammar.farthestFail = location
+      grammar.farthestParser = parser
+    elif node != EmptyNode:
+      node.setPos(location)
+
+    if memoize in grammar.flags:
+      parser.visited[location] = result
+      if not memoization:  grammar.flags.excl memoize
+      
+  except KeyError:
+    return fatal(parser, "Totally unexpected KeyError", location)
+
+
+proc init*(parser: Parser, ptype: string = ParserName): Parser =
+  assert ptype != "" and ptype[0] == ':'
+  parser.name = ""
+  parser.nodeName = ptype
+  parser.ptype = ptype
+  parser.flags = {isDisposable}
+  parser.uniqueID = 0
+  # parser.equivID = 0
+  parser.grammarVar = GrammarPlaceholder
+  parser.symbol = nil
+  parser.subParsers = @[]
+  # parser.closure.init()
+  parser.call = memoizationWrapper
+  parser.visited = initTable[int, ParsingResult]()
+  return parser
+
 
 proc assignName(name: string, parser: Parser): Parser =
   assert parser.name == ""
@@ -282,21 +353,24 @@ proc assign*[T: Parser](name: string, parser: T): T =
   T(assignName(name, parser))
 
 
-proc `()`*(parser: Parser, location: int32): ParsingResult {.raises: [ParsingException].} =
-  # is this faster than simply calling parser.parseProxy?
-  if parser.parseProxy == callParseMethod:
-    return parser.parse(location)
-  else:
-    return parser.parseProxy(parser, location)
+method cleanUp(self: Parser) =
+  self.visited.clear()
 
+
+proc `()`*(parser: Parser, location: int32): ParsingResult {.inline raises: [ParsingException].} =
+  parser.call(parser, location)
 
 proc `()`*(parser: Parser, document: string, location: int32 = 0): ParsingResult =
-  assert parser.grammar == GrammarPlaceholder
-  parser.grammar = Grammar("adhoc", document=StringSlice(document))  # TODO: do some thing propper here
-  if parser.parseProxy == callParseMethod:
-    return parser.parse(location)
-  else:
-    return parser.parseProxy(parser, location)
+  if parser.grammar == GrammarPlaceholder:
+    parser.grammar = Grammar("adhoc", document=StringSlice(document))
+  else:  
+    parser.grammar.document = StringSlice(document)
+  result = parser.call(parser, location)
+  discard parser.apply(
+    proc (p: Parser): bool =
+      p.cleanUp()
+      return false
+  )
 
 
 method `$`*(self: Parser): string {.base.} =
@@ -308,6 +382,12 @@ method `$`*(self: Parser): string {.base.} =
 
 proc repr(parser: Parser): string =
   if parser.name != "":  parser.name  else:  $parser
+
+
+proc getSubParsers*(parser: Parser): seq[Parser] =
+  collect(newSeqOfCap(parser.subParsers.len)):
+    for p in parser.subParsers:  p
+  
 
 
 ## Leaf Parsers
@@ -373,9 +453,9 @@ type
     reStr: string  # string-representation of re
     regex: Regex
 
-proc rx(rx_str: string): RegexInfo = (rx_str, re("(*UTF8)(*UCP)" & rx_str))
+proc rx*(rx_str: string): RegexInfo = (rx_str, re("(*UTF8)(*UCP)" & rx_str))
 
-proc mrx(multiline_rx_str: string): RegexInfo = 
+proc mrx*(multiline_rx_str: string): RegexInfo = 
   (multiline_rx_str, rex("(*UTF8)(*UCP)" & multiline_rx_str))
 
 proc init*(regexParser: RegexRef, rxInfo: RegexInfo): RegexRef =
@@ -522,7 +602,7 @@ method `$`*(self: RepeatRef): string =
   var
     subStr: string
   
-  if (postfix and subP.name == "" and
+  if (postfix and subP.parserName == "" and
       subP.parserType in NaryParsers): 
     subStr = ["(", repr(self.subParsers[0]), ")"].join()  
   else:  
@@ -643,7 +723,9 @@ proc violation(self: SeriesRef,
                         reloc: int32,
                         error_node: NodeOrNil): 
                         tuple[err: ErrorRef, location: int32] =
-  return (Error("mandatory violation detected", location), location)
+  let error = Error("mandatory violation detected", location)
+  self.grammar.errors.add(error)
+  return (error, reloc)
   
 
 method parse*(self: SeriesRef, location: int32): ParsingResult {.raises: [ParsingException].} =
@@ -688,7 +770,7 @@ method `$`*(self: SeriesRef): string =
       let 
         subStr = repr(subP)
         marker = if i == self.mandatory.int: "§" else: ""
-      if subP.parserType in [AlternativeName, SeriesName] and subP.name == "":
+      if subP.parserType in [AlternativeName, SeriesName] and subP.parserName == "":
         [marker, "(", subStr, ")"].join()
       else: 
         if marker != "": marker & subStr else: subStr
@@ -697,7 +779,7 @@ method `$`*(self: SeriesRef): string =
 
 proc `&`*(series: SeriesRef, other: SeriesRef): SeriesRef =
   if series.name != "":  return Series(series, other)
-  if other.name == "":
+  if other.parserName == "":
     series.subParsers &= other.subParsers
     if series.mandatory == inf and other.mandatory != inf:
       series.mandatory = series.subParsers.len.uint32 + other.mandatory
@@ -766,7 +848,7 @@ method `$`*(self: LookaheadRef): string =
   let 
     prefix = if self.positive: "&" else: "<-&"
     subP = self.subParsers[0]
-  if subP.parserType in NaryParsers and subP.name == "":
+  if subP.parserType in NaryParsers and subP.parserName == "":
     [prefix, "(", repr(subP), ")"].join()
   else:
     prefix & repr(subP)

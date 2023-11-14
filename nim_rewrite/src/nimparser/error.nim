@@ -19,11 +19,13 @@ type
       origDoc: string
 
 const
-    NO_ERROR = ErrorCode(0)
-    A_NOTICE = ErrorCode(1)
-    A_WARNING = ErrorCode(100)
-    AN_ERROR = ErrorCode(1000)
-    A_FATALITY = ErrorCode(10_000)
+    NO_ERROR* = ErrorCode(0)
+    A_NOTICE* = ErrorCode(1)
+    A_WARNING* = ErrorCode(100)
+    AN_ERROR* = ErrorCode(1000)
+    A_FATALITY* = ErrorCode(10_000)
+
+    RecursionLimitReached* = ErrorCode(10_010)
 
 
 proc init*(error: ErrorRef, message: string, pos: int32,
