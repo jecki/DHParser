@@ -19,50 +19,48 @@
 import strutils
 
 type
-  StringSlice* = ref StringSliceObj not nil
-  StringSliceObj* = object
+  # StringSliceRef* = ref StringSlice not nil
+  StringSlice* = object
     buf: ref string not nil
     start: int32
     stop: int32
 
-proc ensureStrRef(): ref string not nil =
-  ## Create a new ref string object that is sure to be not nil.
-  new(result)
-  # var s: ref string = new(string)
-  # if not isNil(s):  return s
+# proc ensureStrRef(): ref string not nil =
+#   ## Create a new ref string object that is sure to be not nil.
+#   new(result)
+#   # var s: ref string = new(string)
+#   # if not isNil(s):  return s
 
-proc ensureEmptyStrRef(): ref string not nil =
-  ## Create a new empty ref string that is sure to be not nil.
-  result = ensureStrRef()
-  result[] = ""
+# proc ensureEmptyStrRef(): ref string not nil =
+#   ## Create a new empty ref string that is sure to be not nil.
+#   result = ensureStrRef()
+#   result[] = ""
 
-let EmptyStrSlice* = StringSlice(buf: ensureEmptyStrRef(), start: 0, stop: -1)
+# let EmptyStrSlice* = StringSlice(buf: ensureEmptyStrRef(), start: 0, stop: -1)
 
 
-proc newStringSlice*(str: ref string or string): StringSlice =
+proc makeStringSlice*(str: ref string or string): StringSlice =
   ## Create a new string slice that references the string. This creates a new
   ## reference to the string, so any changes to the underlying string will be
   ## visible in all slices made from this string.
   # new result
   when str is ref string:
-    result = new StringSlice
-    result.buf = str
-    result.start = 0
-    result.stop = str.len.int32 - 1
+    # result = new StringSlice
+    StringSLice(buf: str, start: 0, stop: str.len.int32 - 1)
   else:
-    if str.len == 0:  
-      result = EmptyStrSlice
-    else:
-      result = new StringSlice
-      result.buf = ensureStrRef()
-      result.buf[] = str
-      result.start = 0
-      result.stop = str.len.int32 - 1
+    var strRef: ref string not nil
+    new(strRef)
+    strRef[] = str
+    StringSlice(buf: strRef, start: 0, stop: str.len.int32 - 1)
+
+
+let EmptyStringSlice* = makeStringSlice("")
 
 
 converter toStringSlice*(str: StringSlice or ref string or string): StringSlice  =
   ## Automatic converter to create a string slice from a string
-  when str is StringSlice: str  else: newStringSlice str
+  when str is StringSlice: str  else: makeStringSlice(str)
+
 
 proc `$`*(str: StringSlice): string =
   ## Converts a string slice to a string
@@ -75,25 +73,6 @@ func first*(str: StringSlice): int32 = str.start
 
 func last*(str: StringSlice): int32 = str.stop
 
-proc `[]`*(str: StringSlice,
-           slc: HSlice[int32, int32 or BackwardsIndex]): StringSlice =
-  ## Grab a slice of a string slice. This returns a new string slice that
-  ## references the same underlying string.
-  if slc.a < 0:
-    raise newException(IndexDefect, "index out of bounds")
-  result = new StringSlice
-  result.buf = str.buf
-  result.start = str.start + slc.a.int32
-  when slc.b is BackwardsIndex:
-    if slc.b.int > str.len + 1:
-      raise newException(RangeDefect, "value out of range: " &
-        $(str.len + 1 - slc.b.int))
-    result.stop = str.stop - slc.b.int32 + 1
-  else:
-    if slc.b + 1 < slc.a or slc.b > str.high:
-      raise newException(IndexDefect, "index out of bounds")
-    result.stop = str.start + slc.b.int32
-
 proc high*(str: StringSlice): int32 =
   ## Get the highest index of a string slice
   str.stop - str.start
@@ -102,10 +81,28 @@ proc len*(str: StringSlice): int32 =
   ## Get the length of a string slice
   str.high + 1
 
+proc `[]`*(str: StringSlice,
+           slc: HSlice[int32, int32 or BackwardsIndex]): StringSlice =
+  ## Grab a slice of a string slice. This returns a new string slice that
+  ## references the same underlying string.
+  if slc.a < 0:
+    raise newException(IndexDefect, "index out of bounds")
+  var stop: int32
+  when slc.b is BackwardsIndex:
+    if slc.b.int > str.len + 1:
+      raise newException(RangeDefect, "value out of range: " &
+        $(str.len + 1 - slc.b.int))
+    stop = str.stop - slc.b.int32 + 1
+  else:
+    if slc.b + 1 < slc.a or slc.b > str.high:
+      raise newException(IndexDefect, "index out of bounds")
+    stop = str.start + slc.b.int32
+  StringSlice(buf: str.buf, start: str.start + slc.a.int32, stop: stop)
+
 proc `&`*(sl1, sl2: StringSlice): StringSlice =
   ## Concatenate two string slices like the regular `&` operator does for
   ## strings. WARNING: This creates a new underlying string.
-  newStringSlice($sl1 & $sl2)
+  makeStringSlice($sl1 & $sl2)
 
 proc startsWith*[T: StringSlice or string](str: StringSlice, sub: T): bool =
   ## Compares a string slice with a string or another string slice of shorter or
@@ -172,10 +169,7 @@ proc strip*(s: StringSlice, first = true, last = true): StringSlice {.noInit.} =
   ## Strips whitespace from both sides (controllable with the ``first`` and
   ## ``last`` arguments) of the string slice and returns a new string slice
   ## with the same underlying string.
-  result = new(StringSlice)
-  result.buf = s.buf
-  result.start = s.start
-  result.stop = s.stop
+  result = StringSlice(buf: s.buf, start: s.start, stop: s.stop)
   if first:
     for i in result.start..result.stop:
       if not (result.buf[i] in Whitespace): break
@@ -194,7 +188,7 @@ iterator items*(a: StringSlice): char =
 when isMainModule:
   let
     s1 = "Hello world"
-    s2 = newStringSlice("Hello world")
+    s2 = makeStringSlice("Hello world")
     s3 = s2[6i32 .. ^1]
     s4 = s2[2i32 .. ^1]
     s5 = toStringSlice("")

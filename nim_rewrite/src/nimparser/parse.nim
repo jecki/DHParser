@@ -225,7 +225,7 @@ proc cleanUp(grammar: GrammarRef) =
 
 proc init(grammar: GrammarRef, name: string, 
           flags: GrammarFlagSet = {memoize},
-          document: StringSlice = EmptyStrSlice,
+          document: StringSlice = EmptyStringSlice,
           returnItem: ReturnItemProc = returnItemFlatten,
           returnSequence: ReturnSequenceProc = returnSeqFlatten): GrammarRef =
   grammar.name = name

@@ -19,9 +19,9 @@ type
   NodeOrNil* = ref NodeObj
   NodeObj {.acyclic.} = object of RootObj
     nameRef*: ref string not nil
-    children: seq[Node]
+    childrenSeq: seq[Node]
     textSlice: StringSlice
-    attributes*: Attributes
+    attributesRef: ref Attributes
     sourcePos*: int32
   SourcePosUnassignedDefect* = object of Defect
   SourcePosReAssigmentDefect* = object of Defect
@@ -29,21 +29,31 @@ type
 proc init*(node: Node, 
            name: ref string or string, 
            data: sink seq[Node] or StringSlice or ref string or string, 
-           attributes: Attributes = Attributes()): Node =
+           attributes: ref Attributes = nil): Node =
   when name is ref string:
     node.nameRef = name
   else:
     new(node.nameRef)
     node.nameRef[] = name
   when data is seq[Node]:
-    node.children = data
-    node.textSlice = EmptyStrSlice
+    node.childrenSeq = data
+    node.textSlice = EmptyStringSlice
   else:
-    node.children = @[]
+    # node.childrenSeq = @[]
     node.textSlice = toStringSlice(data)
-  node.attributes = attributes
+  node.attributesRef = attributes
   node.sourcePos = -1
   return node
+
+proc init*(node: Node, 
+           name: ref string or string, 
+           data: sink seq[Node] or StringSlice or ref string or string, 
+           attributes: Attributes): Node =
+  var attrRef: ref Attributes
+  new(attrRef)
+  attrRef[] = attributes
+  return init(node, name, data, attrRef)
+
 
 template newNode*(args: varargs[untyped]): Node =
   new(Node).init(args)
@@ -56,9 +66,9 @@ proc `name=`*(node: Node, name: ref string or string) =
 
 proc name*(node: Node): string = node.nameRef[]
 
-func isLeaf*(node: Node): bool = node.children.len == 0
+func isLeaf*(node: Node): bool = node.childrenSeq.len == 0
 
-proc isEmpty*(node: Node): bool = node.children.len == 0 and node.textSlice.len == 0
+proc isEmpty*(node: Node): bool = node.childrenSeq.len == 0 and node.textSlice.len == 0
 
 func isAnonymous*(node: Node): bool = node.name.len == 0 or node.name[0] == ':'
 
@@ -67,40 +77,61 @@ func content*(node: Node): string =
     return node.textSlice.str[]
   else:
     result = ""
-    for child in node.children:
+    for child in node.childrenSeq:
       result &= child.content
 
 # func children*(node: Node): seq[Node] =
 #   return node.children
 
 proc `text=`(node: Node, text: StringSlice or ref string or string) {.inline.} = 
-  if node.children.len > 0:  
-    node.children = @[]
-  if node.textSlice == EmptyStrSlice:
+  if node.childrenSeq.len > 0:  
+    node.childrenSeq = @[]
+  if node.textSlice == EmptyStringSlice:
     node.textSlice = toStringSlice(text)
   else:
     when text is StringSlice:
-      node.text = text
+      node.textSlice = text
     elif text is ref string:
-      node.text.str = text
+      node.textSlice.str = text
     else:
-      node.text.str[] = text    
+      node.textSlice.str[] = text    
 
 proc text*(node: Node): string {.inline.} = node.textSlice.str[]
 
 # see: https://nim-lang.org/docs/destructors.html
 
 proc `children=`(node: Node, children: sink seq[Node]) = 
-  node.children = children
-  node.textSlice = EmptyStrSlice
+  node.childrenSeq = children
+  node.textSlice = EmptyStringSlice
 
-proc children*(node: Node): seq[Node] {.inline.} = node.children 
+proc children*(node: Node): seq[Node] {.inline.} = node.childrenSeq
 
 proc `result=`*(node: Node, text: StringSlice or ref string or string) {.inline.} =
   node.`text=` text
 
 proc `result=`*(node: Node, children: sink seq[Node]) =
   node.`children=` children
+
+
+proc `attr=`*(node: Node, attributes: ref Attributes or Attributes = nil) =
+  when attributes is ref Attributes:
+    node.attributesRef = attributes
+  else:
+    new(node.attributesRef)
+    node.attributesRef[] = attributes  
+
+proc attr*(node: Node): Attributes =
+  if isNil(node.attributesRef):
+    new(node.attributesRef)
+  return node.attributesRef[]
+
+proc hasAttr*(node: Node, attr: string = ""): bool =
+  if isNil(node.attributesRef):
+    return false
+  if attr == "":
+    return true
+  return attr in node.attributesRef[]
+
 
 
 proc runeLen*(node: Node): int32 =
@@ -112,7 +143,7 @@ proc runeLen*(node: Node): int32 =
       inc(i, runeLenAt(node.textSlice.str[], Natural(i)))
       inc(result)
   else:
-    for child in node.children:
+    for child in node.childrenSeq:
       result += child.runeLen
 
 
@@ -129,7 +160,7 @@ proc assignSourcePos(node: Node, sourcePos: int32) : int32 =
   if node.isLeaf:
     return pos + int32(node.runeLen)
   else:
-    for child in node.children:
+    for child in node.childrenSeq:
       if not child.isNil:
         pos += child.assignSourcePos(pos)
   return pos
@@ -189,15 +220,15 @@ proc serialize(node: Node,
 
 
 proc asSxpr*(node: NodeOrNil): string =
-  func renderAttrs(node: Node): string =
-    # if node.attributes.len == 0:  return ""
-    var attrStrs = newSeq[string](node.attributes.len)
-    for i, attr, value in enumerate(node.attributes):
+  proc renderAttrs(node: Node): string =
+    # if node.attr.len == 0:  return ""
+    var attrStrs = newSeq[string](node.attr.len)
+    for i, attr, value in enumerate(node.attr):
       attrStrs[i] = fmt"""`({attr} "{value}")"""
     attrStrs.join(" ")
 
   proc opening(node: Node): string =
-    if node.attributes.len == 0:
+    if node.attr.len == 0:
       if node.isLeaf and node.runeLen < 60:
         fmt"({node.name} "
       else:
