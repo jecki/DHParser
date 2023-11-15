@@ -28,7 +28,7 @@ type
 
 proc init*(node: Node, 
            name: ref string or string, 
-           data: seq[Node] or StringSlice or ref string or string, 
+           data: sink seq[Node] or StringSlice or ref string or string, 
            attributes: Attributes = Attributes()): Node =
   when name is ref string:
     node.nameRef = name
