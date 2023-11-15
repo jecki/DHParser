@@ -58,7 +58,7 @@ type
 
   # the GrammarObj
   ReturnItemProc = proc(parser: Parser, node: NodeOrNil): Node {.raises: [].} not nil
-  ReturnSequenceProc = proc(parser: Parser, nodes: seq[Node]): Node {.raises: [].} not nil
+  ReturnSequenceProc = proc(parser: Parser, nodes: sink seq[Node]): Node {.raises: [].} not nil
   GrammarFlags* = enum postfixNotation, memoize
   GrammarFlagSet = set[GrammarFlags]
   GrammarRef = ref GrammarObj not nil
@@ -165,7 +165,7 @@ proc returnItemAsIs(parser: Parser, node: NodeOrNil): Node =
     return newNode(parser.nodeName, "")
   return newNode(parser.nodeName, @[Node(node)])
 
-proc returnSeqAsIs(parser: Parser, nodes: seq[Node]): Node =
+proc returnSeqAsIs(parser: Parser, nodes: sink seq[Node]): Node =
   if dropContent in parser.flags:
     return EmptyNode
   return newNode(parser.nodeName, nodes)
@@ -182,7 +182,7 @@ proc returnItemFlatten(parser: Parser, node: NodeOrNil): Node =
     return EmptyNode
   return newNode(parser.nodeName, "")
 
-proc returnSeqFlatten(parser: Parser, nodes: seq[Node]): Node =
+proc returnSeqFlatten(parser: Parser, nodes: sink seq[Node]): Node =
   if dropContent in parser.flags:
     return EmptyNode
   let N = nodes.len
@@ -209,7 +209,7 @@ proc returnItemPlaceholder(parser: Parser, node: NodeOrNil): Node =
   result = EmptyNode
   raise newException(AssertionDefect, "returnItem called on GrammaPlacholder")
 
-proc returnSeqPlaceholder(parser: Parser, nodes: seq[Node]): Node =
+proc returnSeqPlaceholder(parser: Parser, nodes: sink seq[Node]): Node =
   result = EmptyNode
   raise newException(AssertionDefect, "returnItem called on GrammaPlacholder")
 

@@ -73,7 +73,7 @@ func content*(node: Node): string =
 # func children*(node: Node): seq[Node] =
 #   return node.children
 
-proc `text=`*(node: Node, text: StringSlice or ref string or string) {.inline.} = 
+proc `text=`(node: Node, text: StringSlice or ref string or string) {.inline.} = 
   if node.children.len > 0:  
     node.children = @[]
   if node.textSlice == EmptyStrSlice:
@@ -88,17 +88,19 @@ proc `text=`*(node: Node, text: StringSlice or ref string or string) {.inline.} 
 
 proc text*(node: Node): string {.inline.} = node.textSlice.str[]
 
-proc `children=`*(node: Node, children: seq[Node]) = 
+# see: https://nim-lang.org/docs/destructors.html
+
+proc `children=`(node: Node, children: sink seq[Node]) = 
   node.children = children
   node.textSlice = EmptyStrSlice
 
 proc children*(node: Node): seq[Node] {.inline.} = node.children 
 
 proc `result=`*(node: Node, text: StringSlice or ref string or string) {.inline.} =
-  node.text = text
+  node.`text=` text
 
-proc `result=`*(node: Node, children: seq[Node]) =
-  node.children = children
+proc `result=`*(node: Node, children: sink seq[Node]) =
+  node.`children=` children
 
 
 proc runeLen*(node: Node): int32 =
@@ -247,3 +249,8 @@ when isMainModule:
 
   echo newNode("ZOMBIE__", "").asSxpr
   n.sourcePos = 3
+
+  var
+    s: seq[Node] = @[] 
+    m = newNode("", s)
+  echo $m.isLeaf()
