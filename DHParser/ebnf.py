@@ -1472,6 +1472,20 @@ class EBNFDirectives:
     def keys(self):
         return self.__slots__
 
+    def add_to_disposable_regexp(self, pattern: str):
+        if self.disposable == NEVER_MATCH_PATTERN:
+            self.disposable = pattern
+        else:
+            self.disposable = '(?:%s)|(?:%s)' % (self.disposable, pattern)
+
+    def add_to_disposable_symbols(self, symbols: Union[str, Container[str]]):
+        symbols = {symbols} if isinstance(symbols, str) else set(symbols)
+        for s in frozenset(symbols):
+            if re.match(self.disposable, s):  symbols.remove(s)
+        if symbols:
+            pattern = '$|'.join(symbols) + '$'
+            self.disposable = '(?:%s)|(?:%s)' % (self.disposable, pattern)
+
 
 class EBNFCompilerError(CompilerError):
     r"""Error raised by :py:class:`EBNFCompiler` class. (Not compilation errors
@@ -2402,7 +2416,7 @@ class EBNFCompiler(Compiler):
             self.rules[rule] = self.current_symbols
             self.drop_flag = rule in self.directives['drop'] and rule not in DROP_VALUES
             if node.children[-1].name == 'hide':
-                self.add_to_disposable_regexp(rule + '$')
+                self.directives.add_to_disposable_symbols(rule)
             defn = self.compile(node.children[1])
             if isinstance(defn, str):
                 if defn.find("(") < 0:
@@ -2445,12 +2459,12 @@ class EBNFCompiler(Compiler):
         nd.result = "".join(parts)
         nd.name = "literal"
 
-    def add_to_disposable_regexp(self, pattern):
-        if self.directives.disposable == NEVER_MATCH_PATTERN:
-            self.directives.disposable = pattern
-        else:
-            old_pattern = self.directives.disposable
-            self.directives.disposable = '(?:%s)|(?:%s)' % (old_pattern, pattern)
+    # def add_to_disposable_regexp(self, pattern):
+    #     if self.directives.disposable == NEVER_MATCH_PATTERN:
+    #         self.directives.disposable = pattern
+    #     else:
+    #         old_pattern = self.directives.disposable
+    #         self.directives.disposable = '(?:%s)|(?:%s)' % (old_pattern, pattern)
 
     def on_directive(self, node: Node) -> str:
         for child in node.children:
@@ -2508,7 +2522,7 @@ class EBNFCompiler(Compiler):
                         node, "The regular expression r'%s' matches any symbol, "
                         "which is not allowed!" % re_pattern)
                 else:
-                    self.add_to_disposable_regexp(re_pattern)
+                    self.directives.add_to_disposable_regexp(re_pattern)
             else:
                 args = node.children[1:]
                 symlist = []
@@ -2526,7 +2540,8 @@ class EBNFCompiler(Compiler):
                     self.symbols.setdefault(sym, []).append(node)
                 for phldr in phldr_list:
                     self.symbols.setdefault('$' + phldr, []).append(node)
-                self.add_to_disposable_regexp('$|'.join(symlist + phldr_list) + '$')
+                self.directives.add_to_disposable_symbols(symlist + phldr_list)
+                # self.add_to_disposable_regexp('$|'.join(symlist + phldr_list) + '$')
 
         elif key == 'drop':
             if len(node.children) <= 1:
@@ -2554,7 +2569,8 @@ class EBNFCompiler(Compiler):
                             'name' % (content, str(DROP_VALUES), self.directives.disposable))
             if unmatched:
                 self.directives[key].add(content)
-                self.add_to_disposable_regexp('$|'.join(unmatched) + '$')
+                self.directives.add_to_disposable_symbols(unmatched)
+                # self.add_to_disposable_regexp('$|'.join(unmatched) + '$')
 
         elif key in ('reduction', 'tree_reduction'):
             check_argnum(1)
@@ -2863,7 +2879,8 @@ class EBNFCompiler(Compiler):
         term_code = self.compile(node[0])
         self.drop_flag = save
         if self.current_symbols:
-            self.add_to_disposable_regexp(self.current_symbols[0][0].content + '$')
+            self.directives.add_to_disposable_symbols(self.current_symbols[0][0].content)
+            # self.add_to_disposable_regexp(self.current_symbols[0][0].content + '$')
         return f'{self.P["Drop"]}({term_code})'
 
 
