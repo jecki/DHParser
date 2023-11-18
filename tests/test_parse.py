@@ -1892,7 +1892,8 @@ class TestAlternativeParserDefinitions:
 
     def test_grammar_class(self):
         class JSON_Grammar(Grammar):
-            disposable__ = re.compile(r'_\w+')
+            disposable__ = {"_element", "_dwsp", "_EOF", "_CHARACTERS",
+                            "_bool"}  # re.compile(r'_\w+')
             _element = Forward()
             _dwsp = Drop(Whitespace(r'\s*'))
             _EOF = NegativeLookahead(RegExp('.'))

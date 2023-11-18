@@ -1431,7 +1431,7 @@ class EBNFDirectives:
             be dropped during the parsing process, already.
     :ivar reduction: The reduction level (0-3) for early tree-reduction
             during the parsing stage.
-    :ivar super_ws: Cache for the "super whitespace" which
+    :ivar \_super\_ws: Cache for the "super whitespace" which
             is a regular expression that merges whitespace and
             comments. This property should only be accessed after
             the ``whitespace``- and ``comment``-field have been filled

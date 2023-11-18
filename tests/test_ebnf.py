@@ -70,6 +70,11 @@ class TestDirectives:
         except AttributeError:
             pass
 
+    def test_EBNF_doubleDirectives(self):
+        lang = """
+        @ 
+        """
+
     def test_whitespace_linefeed(self):
         lang = "@ whitespace = linefeed\n" + self.mini_language
         MinilangParser = grammar_provider(lang)

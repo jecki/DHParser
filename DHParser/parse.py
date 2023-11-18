@@ -1305,7 +1305,8 @@ class Grammar:
     field ``parser.pname`` contains the variable name after instantiation
     of the Grammar class. The parser will nevertheless remain anonymous
     with respect to the tag names of the nodes it generates, if its name
-    is matched by the ``disposable__`` regular expression.
+    is included in the ``disposable__``-set or, if ``disposable__``
+    has been defined by a regular expression, matched by that regular expression.
     If one and the same parser is assigned to several class variables
     such as, for example, the parser ``expression`` in the example above,
     which is also assigned to ``root__``, the first name sticks.
@@ -1345,9 +1346,10 @@ class Grammar:
                 where a semi-colon ";" is expected) with more informative error
                 messages.
 
-    :cvar disposable\__: A regular expression to identify names of parsers that are
-                assigned to class fields but shall nevertheless yield anonymous
-                nodes (i.e. nodes the tag name of which starts with a colon ":"
+    :cvar disposable\__: A set of parser-names or a regular expression to
+                identify names of parsers that are assigned to class fields
+                but shall nevertheless yield anonymous nodes (i.e. nodes the
+                tag name of which starts with a colon ":"
                 followed by the parser's class name).
 
     :cvar parser_initialization\__:  Before the grammar class (!) has been initialized,
@@ -1531,7 +1533,7 @@ class Grammar:
     resume_rules__ = dict()        # type: Dict[str, ResumeList]
     skip_rules__ = dict()          # type: Dict[str, ResumeList]
     error_messages__ = dict()      # type: Dict[str, Sequence[PatternMatchType, str]]
-    disposable__ = RX_NEVER_MATCH  # type: RxPatternType
+    disposable__ = frozenset()     # type: Set[str]|RxPatternType
     # some default values
     COMMENT__ = r''  # type: str  # r'#.*'  or r'#.*(?:\n|$)' if combined with horizontal wspc
     WHITESPACE__ = r'[ \t]*(?:\n[ \t]*)?(?!\n)'  # spaces plus at most a single linefeed
@@ -1569,9 +1571,14 @@ class Grammar:
             cdict = cls.__dict__
             # cls.static_analysis_errors__ = []
             cls.parser_names__ = []
+            disposables = cls.disposable__
+            disposables_specified_as_set = isinstance(disposables, AbstractSet)
             for entry, parser in cdict.items():
                 if isinstance(parser, Parser) and entry not in RESERVED_PARSER_NAMES:
-                    anonymous = ":" if cls.disposable__.match(entry) else ""
+                    if disposables_specified_as_set:
+                        anonymous = ":" if entry in disposables else ""
+                    else:
+                        anonymous = ":" if disposables.match(entry) else ""
                     assert anonymous or not parser.drop_content, entry
                     if isinstance(parser, Forward):
                         if not cast(Forward, parser).parser.pname:
