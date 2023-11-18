@@ -2872,7 +2872,7 @@ class EBNFCompiler(Compiler):
 
 
     def on_term(self, node):
-        assert len(node.children) == 2
+        assert len(node.children) == 2, node.as_sxpr()
         assert node[1].name == 'skip'
         save = self.drop_flag
         self.drop_flag = True

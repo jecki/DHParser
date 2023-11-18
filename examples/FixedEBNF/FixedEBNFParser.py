@@ -85,8 +85,8 @@ class FixedEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "cc2e7226cb03c97f61e4b4e5fe377711"
-    disposable__ = re.compile('(?:..(?<=^))|(?:EOF$|ANY_SUFFIX$|countable$|component$|is_mdef$|pure_elem$|FOLLOW_UP$|no_range$)')
+    source_hash__ = "0f50f8a9153895e58f988af26d2f0402"
+    disposable__ = re.compile('(?:..(?<=^))|(?:EOF$|countable$|no_range$|ANY_SUFFIX$|is_mdef$|FOLLOW_UP$|AST_HINT$|pure_elem$|component$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
@@ -100,6 +100,7 @@ class FixedEBNFGrammar(Grammar):
     HEXCODE = RegExp('[A-Fa-f0-9]{1,8}')
     SYM_REGEX = RegExp('(?!\\d)\\w+')
     RE_CORE = RegExp('(?:(?<!\\\\)\\\\(?:/)|[^/])*')
+    AST_HINT = Drop(Text("->"))
     CH_LEADIN = Text("0x")
     RE_LEADOUT = Text("/")
     RE_LEADIN = Text("/")
@@ -138,15 +139,15 @@ class FixedEBNFGrammar(Grammar):
     literals = OneOrMore(literal)
     pure_elem = Series(element, NegativeLookahead(ANY_SUFFIX), mandatory=1)
     procedure = Series(SYM_REGEX, Series(Text("()"), dwsp__))
-    hide = Series(Series(Text("->"), dwsp__), Alternative(Series(Text("HIDE"), dwsp__), Series(Text("Hide"), dwsp__), Series(Text("hide"), dwsp__), Series(Text("DISPOSE"), dwsp__), Series(Text("Dispose"), dwsp__), Series(Text("dispose"), dwsp__)))
-    skip = Series(Series(Text("->"), dwsp__), Alternative(Series(Text("SKIP"), dwsp__), Series(Text("Skip"), dwsp__), Series(Text("skip"), dwsp__), Series(Text("DROP"), dwsp__), Series(Text("Drop"), dwsp__), Series(Text("drop"), dwsp__)))
-    term = Series(Alternative(oneormore, counted, repetition, option, pure_elem), Option(skip))
+    hide = Alternative(Series(Text("HIDE"), dwsp__), Series(Text("Hide"), dwsp__), Series(Text("hide"), dwsp__), Series(Text("DISPOSE"), dwsp__), Series(Text("Dispose"), dwsp__), Series(Text("dispose"), dwsp__))
+    skip = Alternative(Series(Text("SKIP"), dwsp__), Series(Text("Skip"), dwsp__), Series(Text("skip"), dwsp__), Series(Text("DROP"), dwsp__), Series(Text("Drop"), dwsp__), Series(Text("drop"), dwsp__))
+    term = Series(Alternative(oneormore, counted, repetition, option, pure_elem), Option(Series(AST_HINT, dwsp__, skip)))
     difference = Series(term, Option(Series(NegativeLookahead(Text("->")), Series(Text("-"), dwsp__), Alternative(oneormore, pure_elem), mandatory=2)))
     lookaround = Series(flowmarker, Alternative(oneormore, pure_elem), mandatory=1)
     interleave = Series(difference, ZeroOrMore(Series(Series(Text("°"), dwsp__), Option(Series(Text("§"), dwsp__)), difference)))
     sequence = Series(Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(Series(AND, dwsp__, Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround))))
     FOLLOW_UP = Alternative(Text("@"), Text("$"), symbol, EOF)
-    definition = Series(symbol, DEF, dwsp__, Option(Series(OR, dwsp__)), expression, Option(hide), ENDL, dwsp__, Lookahead(FOLLOW_UP), mandatory=1)
+    definition = Series(symbol, DEF, dwsp__, Option(Series(OR, dwsp__)), expression, Option(Series(AST_HINT, dwsp__, hide)), ENDL, dwsp__, Lookahead(FOLLOW_UP), mandatory=1)
     is_mdef = Series(Lookahead(Series(Text("$"), dwsp__)), name, Option(Series(Series(Text("("), dwsp__), placeholder, ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)), Series(Text(")"), dwsp__))), dwsp__, DEF)
     macrobody = Synonym(expression)
     macrodef = Series(Series(Text("$"), dwsp__), name, dwsp__, Option(Series(Series(Text("("), dwsp__), placeholder, ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)), Series(Text(")"), dwsp__), mandatory=1)), DEF, dwsp__, Option(Series(OR, dwsp__)), macrobody, ENDL, dwsp__, Lookahead(FOLLOW_UP))

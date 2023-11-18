@@ -25,8 +25,9 @@
     # or python-style: # ... \n, excluding, however, character markers: #x20
 @ whitespace = /\s*/                            # whitespace includes linefeed
 @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
-@ hide       = is_mdef, component, pure_elem, countable, no_range, FOLLOW_UP, ANY_SUFFIX, EOF
-@ drop       = whitespace, EOF, no_range        # do not include these even in the concrete syntax tree
+@ hide       = is_mdef, component, pure_elem, countable, no_range, FOLLOW_UP,
+               AST_HINT, ANY_SUFFIX, EOF
+@ drop       = whitespace, AST_HINT, EOF, no_range        # do not include these even in the concrete syntax tree
 @ RNG_BRACE_filter = matching_bracket()         # filter or transform content of RNG_BRACE on retrieve
 
 # re-entry-rules for resuming after parsing-error
@@ -45,7 +46,7 @@
 #: top-level
 
 syntax     = ~ { definition | directive | macrodef } EOF
-definition = symbol §:DEF~ [ :OR~ ] expression [hide] :ENDL~ & FOLLOW_UP  # [:OR~] to support v. Rossum's syntax
+definition = symbol §:DEF~ [ :OR~ ] expression [ AST_HINT~ hide ] :ENDL~ & FOLLOW_UP  # [:OR~] to support v. Rossum's syntax
 
 directive  = "@" §symbol "=" component { "," component } & FOLLOW_UP
   # component  = (regexp | literals | procedure | symbol !DEF)
@@ -71,13 +72,13 @@ sequence   = ["§"] ( interleave | lookaround )  # "§" means all following term
 interleave = difference { "°" ["§"] difference }
 lookaround = flowmarker § (oneormore | pure_elem)
 difference = term [!`->` "-" § (oneormore | pure_elem)]
-term       = (oneormore | counted | repetition | option | pure_elem) [skip]
+term       = (oneormore | counted | repetition | option | pure_elem) [ AST_HINT~ skip ]
 
 
 #: tree-reduction-markers
 
-skip       = "->" ("SKIP" | "Skip" | "skip" | "DROP" | "Drop" | "drop")
-hide       = "->" ("HIDE" | "Hide" | "hide" | "DISPOSE" | "Dispose" | "dispose")
+skip       = "SKIP" | "Skip" | "skip" | "DROP" | "Drop" | "drop"
+hide       = "HIDE" | "Hide" | "hide" | "DISPOSE" | "Dispose" | "dispose"
 
 
 #: elements
@@ -170,6 +171,8 @@ RE_LEADIN  = `/` &regex_heuristics | `^/`
 RE_LEADOUT = `/`
 
 CH_LEADIN  = `0x` | `#x`
+
+AST_HINT   = `->`
 
 #: heuristics
 
