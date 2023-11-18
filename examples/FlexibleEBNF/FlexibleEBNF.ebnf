@@ -26,8 +26,8 @@
 @ whitespace = /\s*/                            # whitespace includes linefeed
 @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
 @ hide       = is_mdef, component, pure_elem, countable, no_range, FOLLOW_UP,
-               AST_HINT, ANY_SUFFIX, EOF
-@ drop       = whitespace, AST_HINT, EOF, no_range        # do not include these even in the concrete syntax tree
+               MODIFIER, ANY_SUFFIX, EOF
+@ drop       = whitespace, MODIFIER, EOF, no_range        # do not include these even in the concrete syntax tree
 @ RNG_BRACE_filter = matching_bracket()         # filter or transform content of RNG_BRACE on retrieve
 
 # re-entry-rules for resuming after parsing-error
@@ -46,7 +46,9 @@
 #: top-level
 
 syntax     = ~ { definition | directive | macrodef } EOF
-definition = symbol §:DEF~ [ :OR~ ] expression [ AST_HINT~ hide ] :ENDL~ & FOLLOW_UP  # [:OR~] to support v. Rossum's syntax
+definition = [modifier] symbol §:DEF~ [ :OR~ ] expression [ MODIFIER~ hide ]
+             :ENDL~ & FOLLOW_UP  # [:OR~] to support v. Rossum's syntax
+  modifier = (skip | [hide]) / *: */   # node LF after modifier allowed!
 
 directive  = "@" §symbol "=" component { "," component } & FOLLOW_UP
   # component  = (regexp | literals | procedure | symbol !DEF)
@@ -72,7 +74,7 @@ sequence   = ["§"] ( interleave | lookaround )  # "§" means all following term
 interleave = difference { "°" ["§"] difference }
 lookaround = flowmarker § (oneormore | pure_elem)
 difference = term [!`->` "-" § (oneormore | pure_elem)]
-term       = (oneormore | counted | repetition | option | pure_elem) [ AST_HINT~ skip ]
+term       = (oneormore | counted | repetition | option | pure_elem) [ MODIFIER~ skip ]
 
 
 #: tree-reduction-markers
@@ -172,7 +174,7 @@ RE_LEADOUT = `/`
 
 CH_LEADIN  = `0x` | `#x`
 
-AST_HINT   = `->`
+MODIFIER   = `->`
 
 #: heuristics
 

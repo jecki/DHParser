@@ -243,6 +243,10 @@ class TestReservedSymbols:
         assert not result.error_flag, str(result.as_sxpr())
 
 
+class TestModifiers:
+    lang = ""
+
+
 class TestEBNFParser:
     cases = {
         "list_": {

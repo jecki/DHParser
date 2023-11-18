@@ -107,8 +107,8 @@ class FlexibleEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "19dff5e3409aaa83d2fc202f434bc414"
-    disposable__ = re.compile('(?:..(?<=^))|(?:component$|pure_elem$|AST_HINT$|EOF$|ANY_SUFFIX$|is_mdef$|countable$|no_range$|FOLLOW_UP$)')
+    source_hash__ = "9ab8366ff0f19d654ba258f3ea33de32"
+    disposable__ = re.compile('(?:..(?<=^))|(?:component$|EOF$|ANY_SUFFIX$|MODIFIER$|no_range$|is_mdef$|countable$|FOLLOW_UP$|pure_elem$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
@@ -127,7 +127,7 @@ class FlexibleEBNFGrammar(Grammar):
     more_than_one_blank = RegExp('[^ \\]]*[ ][^ \\]]*[ ]')
     STRICT_SYM_REGEX = RegExp('(?!\\d)\\w+')
     char_range_heuristics = NegativeLookahead(Alternative(RegExp('[\\n]'), more_than_one_blank, Series(dwsp__, literal_heuristics), Series(dwsp__, Option(Alternative(Text("::"), Text(":?"), Text(":"))), STRICT_SYM_REGEX, RegExp('\\s*\\]'))))
-    AST_HINT = Drop(Text("->"))
+    MODIFIER = Drop(Text("->"))
     CH_LEADIN = Capture(Alternative(Text("0x"), Text("#x")), zero_length_warning=False)
     RE_LEADOUT = Capture(Text("/"), zero_length_warning=False)
     RE_LEADIN = Capture(Alternative(Series(Text("/"), Lookahead(regex_heuristics)), Text("^/")), zero_length_warning=False)
@@ -171,13 +171,13 @@ class FlexibleEBNFGrammar(Grammar):
     procedure = Series(SYM_REGEX, Series(Text("()"), dwsp__))
     hide = Alternative(Series(Text("HIDE"), dwsp__), Series(Text("Hide"), dwsp__), Series(Text("hide"), dwsp__), Series(Text("DISPOSE"), dwsp__), Series(Text("Dispose"), dwsp__), Series(Text("dispose"), dwsp__))
     skip = Alternative(Series(Text("SKIP"), dwsp__), Series(Text("Skip"), dwsp__), Series(Text("skip"), dwsp__), Series(Text("DROP"), dwsp__), Series(Text("Drop"), dwsp__), Series(Text("drop"), dwsp__))
-    term = Series(Alternative(oneormore, counted, repetition, option, pure_elem), Option(Series(AST_HINT, dwsp__, skip)))
+    term = Series(Alternative(oneormore, counted, repetition, option, pure_elem), Option(Series(MODIFIER, dwsp__, skip)))
     difference = Series(term, Option(Series(NegativeLookahead(Text("->")), Series(Text("-"), dwsp__), Alternative(oneormore, pure_elem), mandatory=2)))
     lookaround = Series(flowmarker, Alternative(oneormore, pure_elem), mandatory=1)
     interleave = Series(difference, ZeroOrMore(Series(Series(Text("°"), dwsp__), Option(Series(Text("§"), dwsp__)), difference)))
     sequence = Series(Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(Series(NegativeLookahead(Text("@")), NegativeLookahead(Series(symbol, Retrieve(DEF))), Retrieve(AND), dwsp__, Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround))))
     FOLLOW_UP = Alternative(Text("@"), Text("$"), symbol, EOF)
-    definition = Series(symbol, Retrieve(DEF), dwsp__, Option(Series(Retrieve(OR), dwsp__)), expression, Option(Series(AST_HINT, dwsp__, hide)), Retrieve(ENDL), dwsp__, Lookahead(FOLLOW_UP), mandatory=1)
+    definition = Series(symbol, Retrieve(DEF), dwsp__, Option(Series(Retrieve(OR), dwsp__)), expression, Option(Series(MODIFIER, dwsp__, hide)), Retrieve(ENDL), dwsp__, Lookahead(FOLLOW_UP), mandatory=1)
     is_mdef = Series(Lookahead(Series(Text("$"), dwsp__)), name, Option(Series(Series(Text("("), dwsp__), placeholder, ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)), Series(Text(")"), dwsp__))), dwsp__, Retrieve(DEF))
     macrobody = Synonym(expression)
     macrodef = Series(Series(Text("$"), dwsp__), name, dwsp__, Option(Series(Series(Text("("), dwsp__), placeholder, ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)), Series(Text(")"), dwsp__), mandatory=1)), Retrieve(DEF), dwsp__, Option(Series(OR, dwsp__)), macrobody, Retrieve(ENDL), dwsp__, Lookahead(FOLLOW_UP))
