@@ -1375,7 +1375,7 @@ VALID_DIRECTIVES = {
     'literalws': 'Controls implicit whitespace adjacent to literals: left, right, both, none',
     'ignorecase': 'Controls case-sensitivity: True, False',
     '[preprocessor_]tokens': 'List of the names of all preprocessor tokens',
-    'disposable': 'List of symbols that shall not be turned into tag-names',
+    'disposable|hide': 'List of symbols that shall not be turned into tag-names',
     'drop': 'List of tags to be dropped with all their content from the tree, '
             'special values: strings, backticked, whitespace, regexps',
     '[tree_]reduction': 'Reduction level for simplifying the tree while parsing.'
@@ -2511,7 +2511,7 @@ class EBNFCompiler(Compiler):
                             f'does not match the empty beginning of "\\n\\n"!')
             self.directives[key] = value
 
-        elif key == 'disposable':
+        elif key in ('disposable', 'hide'):
             if node.children[1].name == "regexp":
                 if len(node.children) > 2:
                     self.tree.new_error(node, 'Directive "@disposable" can only have one argument'

@@ -440,7 +440,7 @@ EBNF = r"""
 @ whitespace = /\s*/                            # whitespace includes linefeed
 @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
 @ drop       = whitespace                       # do not include whitespace in concrete syntax tree
-@ disposable = pure_elem, element
+@ hide       = pure_elem, element
 
 #: top-level
 

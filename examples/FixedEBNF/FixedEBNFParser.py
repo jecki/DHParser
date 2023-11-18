@@ -61,12 +61,6 @@ from DHParser.transform import is_empty, remove_if, TransformationDict, Transfor
     has_attr, has_parent, traverse
 from DHParser import parse as parse_namespace__
 
-from DHParser.dsl import PseudoJunction, create_parser_junction
-
-from DHParser.dsl import PseudoJunction, create_parser_junction
-
-from DHParser.dsl import PseudoJunction, create_parser_junction
-
 
 #######################################################################
 #
@@ -91,8 +85,8 @@ class FixedEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "52fc788382006c6db92babe1de642f3f"
-    disposable__ = re.compile('is_mdef$|component$|pure_elem$|countable$|no_range$|FOLLOW_UP$|ANY_SUFFIX$|EOF$')
+    source_hash__ = "cc2e7226cb03c97f61e4b4e5fe377711"
+    disposable__ = re.compile('(?:..(?<=^))|(?:EOF$|ANY_SUFFIX$|countable$|component$|is_mdef$|pure_elem$|FOLLOW_UP$|no_range$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}

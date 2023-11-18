@@ -14,7 +14,7 @@
     # or python-style: # ... \n, excluding, however, character markers: #x20
 @ whitespace = /\s*/                            # whitespace includes linefeed
 @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
-@ hide       = is_mdef, component, pure_elem, countable, no_range, FOLLOW_UP, ANY_SUFFIX, EOF
+@ disposable = is_mdef, component, pure_elem, countable, no_range, FOLLOW_UP, ANY_SUFFIX, EOF
 @ drop       = whitespace, EOF, no_range        # do not include these even in the concrete syntax tree
 
 
