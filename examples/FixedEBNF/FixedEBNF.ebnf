@@ -36,7 +36,7 @@
 syntax     = ~ { definition | directive | macrodef } EOF
 definition = [modifier] symbol §DEF~ [ OR~ ] expression [MODIFIER~ hide]
              ENDL~ &FOLLOW_UP  # [OR~] to support v. Rossum's syntax
-  modifier = (skip | [hide]) / *: */   # node LF after modifier allowed!
+  modifier = (drop | [hide]) / *: */   # node LF after modifier allowed!
 
 directive  = "@" §symbol "=" component { "," component } &FOLLOW_UP
   component  = regexp | literals | procedure | symbol !DEF
@@ -61,12 +61,12 @@ sequence   = ["§"] ( interleave | lookaround )  # "§" means all following term
 interleave = difference { "°" ["§"] difference }
 lookaround = flowmarker § (oneormore | pure_elem)
 difference = term [!`->` "-" § (oneormore | pure_elem)]
-term       = (oneormore | counted | repetition | option | pure_elem) [MODIFIER~ skip]
+term       = (oneormore | counted | repetition | option | pure_elem) [MODIFIER~ drop]
 
 
 #: tree-reduction-markers aka "AST-hints"
 
-skip       = "SKIP" | "Skip" | "skip" | "DROP" | "Drop" | "drop"
+drop       = "DROP" | "Drop" | "drop" | "SKIP" | "Skip" | "skip"
 hide       = "HIDE" | "Hide" | "hide" | "DISPOSE" | "Dispose" | "dispose"
 
 

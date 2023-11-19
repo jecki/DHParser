@@ -2511,7 +2511,7 @@ class EBNFCompiler(Compiler):
                             f'does not match the empty beginning of "\\n\\n"!')
             self.directives[key] = value
 
-        elif key in ('disposable', 'hide'):
+        elif key in ('hide', 'disposable'):
             if node.children[1].name == "regexp":
                 if len(node.children) > 2:
                     self.tree.new_error(node, 'Directive "@disposable" can only have one argument'
@@ -2873,7 +2873,7 @@ class EBNFCompiler(Compiler):
 
     def on_term(self, node):
         assert len(node.children) == 2, node.as_sxpr()
-        assert node[1].name == 'skip'
+        assert node[1].name in ('drop', 'skip')  # 'skip' is left for backwards compatibility
         save = self.drop_flag
         self.drop_flag = True
         term_code = self.compile(node[0])

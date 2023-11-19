@@ -39,7 +39,7 @@ from DHParser.error import has_errors, MANDATORY_CONTINUATION, PARSER_STOPPED_BE
     PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS, ERROR, WARNING, UNDEFINED_MACRO, \
     UNKNOWN_MACRO_ARGUMENT, UNUSED_MACRO_ARGUMENTS_WARNING, \
     ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING, SYMBOL_NAME_IS_PYTHON_KEYWORD, canonical_error_strings
-from DHParser.nodetree import WHITESPACE_PTYPE, flatten_sxpr
+from DHParser.nodetree import WHITESPACE_PTYPE, flatten_sxpr, parse_sxpr
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
     EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS, parse_ebnf, \
     transform_ebnf, HeuristicEBNFGrammar, ConfigurableEBNFGrammar, \
@@ -244,8 +244,52 @@ class TestReservedSymbols:
 
 
 class TestModifiers:
-    lang = ""
+    def test_no_modifiers(self):
+        lang = """
+        @reduction = merge
+        list = string [WS] { SEP [WS] string [WS] }
+        string = QUOT /[^"]*/ QUOT
+        SEP = `,`
+        WS = /\s+/
+        QUOT = `"`
+        """
+        parser = create_parser(lang)
+        cst = parser('"alpha", "beta"')
+        assert cst.equals(parse_sxpr(
+            """(list
+              (string
+                (QUOT '"')
+                (:RegExp "alpha")
+                (QUOT '"'))
+              (SEP ",")
+              (WS " ")
+              (string
+                (QUOT '"')
+                (:RegExp "beta")
+                (QUOT '"')))"""))
 
+    def test_hide(self):
+        lang = """
+        @reduction = merge
+        list = string [WS] { SEP [WS] string [WS] }
+        string = QUOT /[^"]*/ QUOT
+        SEP = `,` -> hide
+        WS = /\s+/ -> hide
+        QUOT = `"`
+        """
+        parser = create_parser(lang)
+        cst = parser('"alpha", "beta"')
+        assert cst.equals(parse_sxpr(
+            """(list
+              (string
+                (QUOT '"')
+                (:RegExp "alpha")
+                (QUOT '"'))
+              (:Text ", ")
+              (string
+                (QUOT '"')
+                (:RegExp "beta")
+                (QUOT '"')))"""))
 
 class TestEBNFParser:
     cases = {

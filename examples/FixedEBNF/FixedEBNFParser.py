@@ -85,8 +85,8 @@ class FixedEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "954cfb76e31e7ce25c4cfa04e6624ddb"
-    disposable__ = re.compile('(?:..(?<=^))|(?:is_mdef$|countable$|no_range$|ANY_SUFFIX$|pure_elem$|MODIFIER$|EOF$|component$|FOLLOW_UP$)')
+    source_hash__ = "8d980b10ac1390358ad1d6eb123988da"
+    disposable__ = re.compile('(?:..(?<=^))|(?:is_mdef$|countable$|ANY_SUFFIX$|no_range$|FOLLOW_UP$|component$|EOF$|pure_elem$|MODIFIER$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
@@ -138,10 +138,10 @@ class FixedEBNFGrammar(Grammar):
     ANY_SUFFIX = RegExp('[?*+]')
     literals = OneOrMore(literal)
     pure_elem = Series(element, NegativeLookahead(ANY_SUFFIX), mandatory=1)
-    skip = Alternative(Series(Text("SKIP"), dwsp__), Series(Text("Skip"), dwsp__), Series(Text("skip"), dwsp__), Series(Text("DROP"), dwsp__), Series(Text("Drop"), dwsp__), Series(Text("drop"), dwsp__))
+    drop = Alternative(Series(Text("DROP"), dwsp__), Series(Text("Drop"), dwsp__), Series(Text("drop"), dwsp__), Series(Text("SKIP"), dwsp__), Series(Text("Skip"), dwsp__), Series(Text("skip"), dwsp__))
     hide = Alternative(Series(Text("HIDE"), dwsp__), Series(Text("Hide"), dwsp__), Series(Text("hide"), dwsp__), Series(Text("DISPOSE"), dwsp__), Series(Text("Dispose"), dwsp__), Series(Text("dispose"), dwsp__))
-    modifier = Series(Alternative(skip, Option(hide)), RegExp(': *'))
-    term = Series(Alternative(oneormore, counted, repetition, option, pure_elem), Option(Series(MODIFIER, dwsp__, skip)))
+    modifier = Series(Alternative(drop, Option(hide)), RegExp(' *: *'))
+    term = Series(Alternative(oneormore, counted, repetition, option, pure_elem), Option(Series(MODIFIER, dwsp__, drop)))
     difference = Series(term, Option(Series(NegativeLookahead(Text("->")), Series(Text("-"), dwsp__), Alternative(oneormore, pure_elem), mandatory=2)))
     lookaround = Series(flowmarker, Alternative(oneormore, pure_elem), mandatory=1)
     interleave = Series(difference, ZeroOrMore(Series(Series(Text("°"), dwsp__), Option(Series(Text("§"), dwsp__)), difference)))
