@@ -249,7 +249,7 @@ from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_
     WRONG_NUMBER_OF_ARGUMENTS, UNKNOWN_MACRO_ARGUMENT, \
     UNDEFINED_MACRO, RECURSIVE_MACRO_CALL, UNUSED_MACRO_ARGUMENTS_WARNING, has_errors
 from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, SmartRE, \
-    Drop, Lookahead, NegativeLookahead, Alternative, Series, Option, ZeroOrMore, OneOrMore, \
+    Drop, DropFrom, Lookahead, NegativeLookahead, Alternative, Series, Option, ZeroOrMore, OneOrMore, \
     Text, Capture, Retrieve, Pop, optional_last_value, GrammarError, Whitespace, Always, Never, \
     Synonym, INFINITE, matching_bracket, ParseFunc, update_scanner, CombinedParser, parser_names
 from DHParser.preprocess import PreprocessorFunc, PreprocessorResult, gen_find_include_func, \
@@ -1259,7 +1259,7 @@ from DHParser.error import ErrorCode, Error, canonical_error_strings, has_errors
     WARNING, ERROR, FATAL
 from DHParser.log import start_logging, suspend_logging, resume_logging
 from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode, Path
-from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar, Parser, \\
+from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, DropFrom, AnyChar, Parser, \\
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, ERR, \\
     Option, NegativeLookbehind, OneOrMore, RegExp, SmartRE, Retrieve, Series, Capture, TreeReduction, \\
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, mixin_comment, \\
@@ -2874,14 +2874,18 @@ class EBNFCompiler(Compiler):
     def on_term(self, node):
         assert len(node.children) == 2, node.as_sxpr()
         assert node[1].name in ('drop', 'skip')  # 'skip' is left for backwards compatibility
-        save = self.drop_flag
-        self.drop_flag = True
-        term_code = self.compile(node[0])
-        self.drop_flag = save
-        if self.current_symbols:
-            self.directives.add_to_disposable_symbols(self.current_symbols[0][0].content)
-            # self.add_to_disposable_regexp(self.current_symbols[0][0].content + '$')
-        return f'{self.P["Drop"]}({term_code})'
+        if node[0].name == "symbol":
+            term_code = self.compile(node[0])
+            return f'{self.P["DropFrom"]}({term_code})'
+        else:
+            save = self.drop_flag
+            self.drop_flag = True
+            term_code = self.compile(node[0])
+            self.drop_flag = save
+            if self.current_symbols:
+                self.directives.add_to_disposable_symbols(self.current_symbols[0][0].content)
+                # self.add_to_disposable_regexp(self.current_symbols[0][0].content + '$')
+            return  f'{self.P["Drop"]}({term_code})' if term_code[:4] != "Drop" else term_code
 
 
     def _error_customization(self, node) -> Tuple[Tuple[Node, ...], List[str]]:

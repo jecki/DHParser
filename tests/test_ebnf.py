@@ -283,17 +283,37 @@ class TestModifiers:
 
     def test_drop(self):
         lang = """
-        @reduction = merge
+        @reduction = none
         list = string [WS] { SEP [WS] string [WS] }
         string = (QUOT -> drop) /[^"]*/ QUOT
         SEP = `,` -> drop
         WS = /\s+/ -> drop
-        QUOT = `"` 
+        QUOT = `"`
         """
         parser = create_parser(lang)
-        print(parser.python_src__)
         cst = parser('"alpha", "beta"')
-        print(cst.as_sxpr())
+        assert cst.equals(parse_sxpr(
+            """(list
+              (string
+                (:RegExp "alpha")
+                (QUOT '"'))
+              (:ZeroOrMore
+                (:Series
+                  (string
+                    (:RegExp "beta")
+                    (QUOT '"')))))"""))
+
+        lang = """
+        @reduction = merge
+        list = string [WS] { SEP [WS] string [WS] }
+        string = QUOT /[^"]*/ QUOT
+        SEP = `,` -> drop
+        WS = /\s+/ -> drop
+        QUOT = `"` -> hide
+        """
+        parser = create_parser(lang)
+        cst = parser('"alpha", "beta"')
+        assert cst.as_sxpr() == '''(list (string '"alpha"') (string '"beta"'))'''
 
 
 class TestEBNFParser:

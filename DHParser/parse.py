@@ -107,6 +107,7 @@ __all__ = ('parser_names',
            'LateBindingUnary',
            'NaryParser',
            'Drop',
+           'DropFrom',
            'Synonym',
            'Option',
            'ZeroOrMore',
@@ -155,6 +156,7 @@ parser_names = ('Always',
                 'Custom',
                 'CustomParser',
                 'Drop',
+                'DropFrom',
                 'Synonym',
                 'Option',
                 'ZeroOrMore',
@@ -1100,13 +1102,28 @@ def determine_eq_classes(parsers: Collection[Parser]):
     for p in parsers:
         assign_eq_class(p)
 
+
 def Drop(parser: Parser) -> Parser:
-    """Returns the parser with the ``parser.drop_content``-property set to ``True``."""
-    assert parser.disposable, "Parser must be anonymous to be allowed to drop ist content."
+    """Returns the parser with the ``parser.drop_content``-property set to ``True``.
+    Parser must be anonymous and disposable. Use ```DropFrom`` instead
+    when this requirement ist not met."""
+    assert parser.disposable, "Parser must be anonymous to be allowed to drop its content."
     if isinstance(parser, Forward):
         cast(Forward, parser).parser.drop_content = True
     parser.drop_content = True
     return parser
+
+
+def DropFrom(parser: Parser) -> Parser:
+    """Encapsulates the parser in an anonymous Synonym-Parser and sets the
+    drop_content-flag of the latter. This leaves the drop-flag of the
+    parser itself untouched. This is needed, if you want to drop the
+    result from a named-parser in one particular context where it is
+    referred to, only."""
+    wrapper = Synonym(parser)
+    wrapper.drop_content = True
+    wrapper.disposable = True
+    return wrapper
 
 
 PARSER_PLACEHOLDER = None  # type: Optional[Parser]
