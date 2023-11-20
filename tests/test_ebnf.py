@@ -319,7 +319,7 @@ class TestModifiers:
         @reduction = none
         list = string [WS] { SEP [WS] string [WS] }
         string = ((`'` | QUOT) -> drop) /[^"]*/ (`'` | QUOT)
-        SEP = ((`,` -> drop))
+        SEP = (`,` -> drop)
         WS = /\s+/ -> drop
         QUOT = `"`
         """
