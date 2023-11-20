@@ -63,7 +63,7 @@ macrodef   = "$" name~ ["(" §placeholder { "," placeholder }  ")"]
   macrobody  = expression
   is_mdef    = & "$" name ["(" placeholder { "," placeholder }  ")"] ~:DEF
 
-FOLLOW_UP  = `@` | `$` | symbol | EOF
+FOLLOW_UP  = `@` | `$` | modifier | symbol | EOF
 
 
 #: components

@@ -107,8 +107,8 @@ class FlexibleEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "485791ad18b9f75678a48d4cd8dc9558"
-    disposable__ = re.compile('(?:..(?<=^))|(?:is_mdef$|no_range$|ANY_SUFFIX$|EOF$|component$|FOLLOW_UP$|MODIFIER$|pure_elem$|countable$)')
+    source_hash__ = "5a9ac06991593ffdbced81f5e7546783"
+    disposable__ = re.compile('(?:..(?<=^))|(?:MODIFIER$|FOLLOW_UP$|pure_elem$|countable$|component$|ANY_SUFFIX$|is_mdef$|no_range$|EOF$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
@@ -176,7 +176,7 @@ class FlexibleEBNFGrammar(Grammar):
     lookaround = Series(flowmarker, Alternative(oneormore, pure_elem), mandatory=1)
     interleave = Series(difference, ZeroOrMore(Series(Series(Text("°"), dwsp__), Option(Series(Text("§"), dwsp__)), difference)))
     sequence = Series(Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(Series(NegativeLookahead(Text("@")), NegativeLookahead(Series(symbol, Retrieve(DEF))), Retrieve(AND), dwsp__, Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround))))
-    FOLLOW_UP = Alternative(Text("@"), Text("$"), symbol, EOF)
+    FOLLOW_UP = Alternative(Text("@"), Text("$"), modifier, symbol, EOF)
     definition = Series(Option(modifier), symbol, Retrieve(DEF), dwsp__, Option(Series(Retrieve(OR), dwsp__)), expression, Option(Series(MODIFIER, dwsp__, hide)), Retrieve(ENDL), dwsp__, Lookahead(FOLLOW_UP), mandatory=2)
     is_mdef = Series(Lookahead(Series(Text("$"), dwsp__)), name, Option(Series(Series(Text("("), dwsp__), placeholder, ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)), Series(Text(")"), dwsp__))), dwsp__, Retrieve(DEF))
     macrobody = Synonym(expression)

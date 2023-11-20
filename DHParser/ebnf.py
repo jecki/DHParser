@@ -262,7 +262,7 @@ from DHParser.toolkit import load_if_file, escape_ctrl_chars, md5, \
 from DHParser.transform import TransformerFunc, transformer, remove_brackets, \
     reduce_single_child, replace_by_single_child, is_empty, remove_children, add_error, \
     remove_tokens, remove_anonymous_tokens, flatten, forbid, assert_content, remove_children_if, \
-    all_of, not_one_of, BLOCK_LEAVES
+    all_of, not_one_of, apply_if, neg, has_parent, BLOCK_LEAVES
 from DHParser.versionnumber import __version__
 
 
@@ -2882,10 +2882,14 @@ class EBNFCompiler(Compiler):
             self.drop_flag = True
             term_code = self.compile(node[0])
             self.drop_flag = save
-            if self.current_symbols:
+            if self.current_symbols and len(self.path) >=2 and self.path[-2].name == "definition":
+                curr_sym = self.current_symbols[0][0].content
                 self.directives.add_to_disposable_symbols(self.current_symbols[0][0].content)
                 # self.add_to_disposable_regexp(self.current_symbols[0][0].content + '$')
-            return  f'{self.P["Drop"]}({term_code})' if term_code[:4] != "Drop" else term_code
+                return f'{self.P["Drop"]}({term_code})' if term_code[:4] != "Drop" else term_code
+            else:
+                return f'Synonym({self.P["Drop"]}({term_code}))' \
+                       if term_code[:4] != "Drop" else  f'Synonym({term_code})'
 
 
     def _error_customization(self, node) -> Tuple[Tuple[Node, ...], List[str]]:
