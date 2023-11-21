@@ -324,6 +324,12 @@ class TestModifiers:
         QUOT = `"`
         """
         parser = create_parser(lang)
+        a = parser.python_src__.find('SEP =')
+        b = parser.python_src__.find('\n', a)
+        assert parser.python_src__[a:b].find('Synonym(') >= 0
+        a = parser.python_src__.find('string =')
+        b = parser.python_src__.find('\n', a)
+        assert parser.python_src__[a:b].find('Synonym(') < 0
         cst = parser('"alpha", "beta"')
         assert cst.equals(parse_sxpr(
             """(list

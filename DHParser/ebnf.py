@@ -2872,15 +2872,17 @@ class EBNFCompiler(Compiler):
             self.drop_flag = True
             term_code = self.compile(node[0])
             self.drop_flag = save
-            if self.current_symbols and len(self.path) >=2 and self.path[-2].name == "definition":
+            if self.current_symbols and len(self.path) >=2 \
+                    and self.path[-2].name in ("definition", "macrodef"):
                 curr_sym = self.current_symbols[0][0].content
                 self.directives.add_to_disposable_symbols(self.current_symbols[0][0].content)
                 # self.add_to_disposable_regexp(self.current_symbols[0][0].content + '$')
                 return f'{self.P["Drop"]}({term_code})' if term_code[:4] != "Drop" else term_code
-            else:
+            elif all(self.path[i].name == "group" for i in range(2, len(self.path) - 1)):
                 return f'Synonym({self.P["Drop"]}({term_code}))' \
                        if term_code[:4] != "Drop" else  f'Synonym({term_code})'
-
+            else:
+                return f'{self.P["Drop"]}({term_code})' if term_code[:4] != "Drop" else term_code
 
     def _error_customization(self, node) -> Tuple[Tuple[Node, ...], List[str]]:
         """Generates the customization arguments (mandatory, error_msgs, skip) for
