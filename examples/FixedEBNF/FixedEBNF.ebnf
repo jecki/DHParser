@@ -15,8 +15,8 @@
 @ whitespace = /\s*/                            # whitespace includes linefeed
 @ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
 @ hide       = is_mdef, component, pure_elem, countable, no_range, FOLLOW_UP,
-               ANY_SUFFIX, MODIFIER, EOF
-@ drop       = whitespace, MODIFIER, EOF, no_range   # do not include these even in the concrete syntax tree
+               ANY_SUFFIX, MOD_SYM, MOD_SEP, EOF
+@ drop       = whitespace, MOD_SYM, EOF, no_range   # do not include these even in the concrete syntax tree
 
 
 # re-entry-rules to resume parsing after a syntax-error
@@ -34,9 +34,11 @@
 #: top-level
 
 syntax     = ~ { definition | directive | macrodef } EOF
-definition = [modifier] symbol §DEF~ [ OR~ ] expression [MODIFIER~ hide]
+definition = [modifier] symbol §DEF~ [ OR~ ] expression [MOD_SYM~ hide]
              ENDL~ &FOLLOW_UP  # [OR~] to support v. Rossum's syntax
-  modifier = (drop | [hide]) / *: */   # node LF after modifier allowed!
+  modifier = (drop | [hide]) MOD_SEP   # node LF after modifier allowed!
+  is_def   = [MOD_SEP symbol] DEF
+  MOD_SEP  = / *: */
 
 directive  = "@" §symbol "=" component { "," component } &FOLLOW_UP
   component  = regexp | literals | procedure | symbol !DEF
@@ -61,7 +63,7 @@ sequence   = ["§"] ( interleave | lookaround )  # "§" means all following term
 interleave = difference { "°" ["§"] difference }
 lookaround = flowmarker § (oneormore | pure_elem)
 difference = term [!`->` "-" § (oneormore | pure_elem)]
-term       = (oneormore | counted | repetition | option | pure_elem) [MODIFIER~ drop]
+term       = (oneormore | counted | repetition | option | pure_elem) [MOD_SYM~ drop]
 
 
 #: tree-reduction-markers aka "AST-hints"
@@ -74,7 +76,7 @@ hide       = "HIDE" | "Hide" | "hide" | "DISPOSE" | "Dispose" | "dispose"
 
 countable  = option | oneormore | element
 pure_elem  = element § !ANY_SUFFIX              # element strictly without a suffix
-element    = [retrieveop] symbol !DEF           # negative lookahead to be sure it's not a definition
+element    = [retrieveop] symbol !is_def
            | literal
            | plaintext
            | regexp
@@ -152,7 +154,7 @@ RE_LEADOUT = `/`
 
 CH_LEADIN  = `0x`
 
-MODIFIER   = `->`
+MOD_SYM    = `->`  # symbol for postfix modifier
 
 #: basic-regexes
 

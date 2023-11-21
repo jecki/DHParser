@@ -339,6 +339,30 @@ class TestModifiers:
                     (:Alternative
                       (QUOT '"'))))))"""))
 
+    def test_prefix_modifiers(self):
+        lang = """
+        @reduction = merge
+        list = string [WS] { SEP [WS] string [WS] }
+        string = QUOT /[^"]*/ QUOT
+        DROP:SEP = `,`
+        DROP:WS = /\s+/
+        HIDE:QUOT = `"`
+        """
+        parser = create_parser(lang)
+        cst = parser('"alpha", "beta"')
+        assert cst.as_sxpr() == '''(list (string '"alpha"') (string '"beta"'))'''
+
+        lang = """
+        @reduction = merge
+        list = string [WS] { SEP [WS] string [WS] }
+        string = QUOT /[^"]*/ QUOT
+        DROP:SEP = `,`
+        DROP:WS = /\s+/
+        :QUOT = `"`  # abbreviated HIDE modifier
+        """
+        parser = create_parser(lang)
+        cst = parser('"alpha", "beta"')
+        assert cst.as_sxpr() == '''(list (string '"alpha"') (string '"beta"'))'''
 
 class TestEBNFParser:
     cases = {
