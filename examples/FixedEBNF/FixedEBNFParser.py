@@ -85,8 +85,8 @@ class FixedEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "e3269c240373f324f31b35f4179eb3cc"
-    disposable__ = re.compile('(?:..(?<=^))|(?:countable$|no_range$|ANY_SUFFIX$|is_mdef$|MOD_SEP$|component$|EOF$|FOLLOW_UP$|pure_elem$|MOD_SYM$)')
+    source_hash__ = "fa027d5f4af70893239a5f4f49ebd3d6"
+    disposable__ = re.compile('(?:..(?<=^))|(?:ANY_SUFFIX$|MOD_SYM$|component$|MOD_SEP$|is_mdef$|no_range$|FOLLOW_UP$|pure_elem$|EOF$|countable$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
@@ -148,15 +148,15 @@ class FixedEBNFGrammar(Grammar):
     sequence = Series(Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(Series(AND, dwsp__, Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround))))
     modifier = Series(Alternative(drop, Option(hide)), MOD_SEP)
     FOLLOW_UP = Alternative(Text("@"), Text("$"), modifier, symbol, EOF)
-    is_mdef = Series(Lookahead(Series(Text("$"), dwsp__)), name, Option(Series(Series(Text("("), dwsp__), placeholder, ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)), Series(Text(")"), dwsp__))), dwsp__, DEF)
+    is_mdef = Series(Series(Text("$"), dwsp__), name, Option(Series(Series(Text("("), dwsp__), placeholder, ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)), Series(Text(")"), dwsp__))), dwsp__, DEF)
     macrobody = Synonym(expression)
     definition = Series(Option(modifier), symbol, DEF, dwsp__, Option(Series(OR, dwsp__)), expression, Option(Series(MOD_SYM, dwsp__, hide)), ENDL, dwsp__, Lookahead(FOLLOW_UP), mandatory=2)
     procedure = Series(SYM_REGEX, Series(Text("()"), dwsp__))
     literals = OneOrMore(literal)
-    component = Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(DEF)), Series(Lookahead(Text("$")), NegativeLookahead(is_mdef), placeholder, NegativeLookahead(DEF), mandatory=2), Series(Series(Text("("), dwsp__), expression, Series(Text(")"), dwsp__)), Series(RAISE_EXPR_WO_BRACKETS, expression))
+    component = Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(is_def)), Series(Lookahead(Text("$")), NegativeLookahead(is_mdef), placeholder, NegativeLookahead(is_def), mandatory=2), Series(Series(Text("("), dwsp__), expression, Series(Text(")"), dwsp__)), Series(RAISE_EXPR_WO_BRACKETS, expression))
     macrodef = Series(Series(Text("$"), dwsp__), name, dwsp__, Option(Series(Series(Text("("), dwsp__), placeholder, ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)), Series(Text(")"), dwsp__), mandatory=1)), DEF, dwsp__, Option(Series(OR, dwsp__)), macrobody, ENDL, dwsp__, Lookahead(FOLLOW_UP))
     directive = Series(Series(Text("@"), dwsp__), symbol, Series(Text("="), dwsp__), component, ZeroOrMore(Series(Series(Text(","), dwsp__), component)), Lookahead(FOLLOW_UP), mandatory=1)
-    element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(is_def)), literal, plaintext, regexp, Series(character, dwsp__), any_char, whitespace, group, Series(macro, NegativeLookahead(DEF)), Series(placeholder, NegativeLookahead(DEF)), parser))
+    element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(is_def)), literal, plaintext, regexp, Series(character, dwsp__), any_char, whitespace, group, Series(macro, NegativeLookahead(is_def)), Series(placeholder, NegativeLookahead(is_def)), parser))
     countable.set(Alternative(option, oneormore, element))
     expression.set(Series(sequence, ZeroOrMore(Series(OR, dwsp__, sequence))))
     syntax = Series(dwsp__, ZeroOrMore(Alternative(definition, directive, macrodef)), EOF)

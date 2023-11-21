@@ -6,7 +6,7 @@
 import os
 import sys
 
-LOGGING = ''
+LOGGING = 'LOGS'
 
 scriptpath = os.path.dirname(__file__)
 dhparserdir = os.path.abspath(os.path.join(scriptpath, '../..'))

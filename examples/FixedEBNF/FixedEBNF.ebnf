@@ -41,8 +41,8 @@ definition = [modifier] symbol §DEF~ [ OR~ ] expression [MOD_SYM~ hide]
   MOD_SEP  = / *: */
 
 directive  = "@" §symbol "=" component { "," component } &FOLLOW_UP
-  component  = regexp | literals | procedure | symbol !DEF
-             | &`$` !is_mdef § placeholder !DEF
+  component  = regexp | literals | procedure | symbol !is_def
+             | &`$` !is_mdef § placeholder !is_def
              | "(" expression ")" | RAISE_EXPR_WO_BRACKETS expression
   literals   = { literal }+                       # string chaining, only allowed in directives!
   procedure  = SYM_REGEX "()"                     # procedure name, only allowed in directives!
@@ -50,7 +50,7 @@ directive  = "@" §symbol "=" component { "," component } &FOLLOW_UP
 macrodef   = "$" name~ ["(" §placeholder { "," placeholder }  ")"]
              DEF~ [ OR~ ] macrobody ENDL~ & FOLLOW_UP
   macrobody  = expression
-  is_mdef    = & "$" name ["(" placeholder { "," placeholder }  ")"] ~DEF
+  is_mdef    = "$" name ["(" placeholder { "," placeholder }  ")"] ~DEF
 
 FOLLOW_UP  = `@` | `$` | modifier | symbol | EOF
 
@@ -84,8 +84,8 @@ element    = [retrieveop] symbol !is_def
            | any_char
            | whitespace
            | group
-           | macro !DEF
-           | placeholder !DEF
+           | macro !is_def
+           | placeholder !is_def
            | parser                            # a user defined parser
 ANY_SUFFIX = /[?*+]/
 
