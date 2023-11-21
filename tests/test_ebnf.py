@@ -245,7 +245,7 @@ class TestReservedSymbols:
 
 class TestModifiers:
     def test_no_modifiers(self):
-        lang = """
+        lang = r"""
         @reduction = merge
         list = string [WS] { SEP [WS] string [WS] }
         string = QUOT /[^"]*/ QUOT
@@ -269,7 +269,7 @@ class TestModifiers:
                 (QUOT '"')))"""))
 
     def test_hide(self):
-        lang = """
+        lang = r"""
         @reduction = merge
         list = string [WS] { SEP [WS] string [WS] }
         string = QUOT /[^"]*/ QUOT
@@ -282,7 +282,7 @@ class TestModifiers:
         assert cst.as_sxpr() == '''(list (string '"alpha"') (:Text ", ") (string '"beta"'))'''
 
     def test_drop(self):
-        lang = """
+        lang = r"""
         @reduction = merge
         list = string [WS] { SEP [WS] string [WS] }
         string = QUOT /[^"]*/ QUOT
@@ -294,7 +294,7 @@ class TestModifiers:
         cst = parser('"alpha", "beta"')
         assert cst.as_sxpr() == '''(list (string '"alpha"') (string '"beta"'))'''
 
-        lang = """
+        lang = r"""
         @reduction = none
         list = string [WS] { SEP [WS] string [WS] }
         string = (QUOT -> drop) /[^"]*/ QUOT
@@ -315,7 +315,7 @@ class TestModifiers:
                     (:RegExp "beta")
                     (QUOT '"')))))"""))
 
-        lang = """
+        lang = r"""
         @reduction = none
         list = string [WS] { SEP [WS] string [WS] }
         string = ((`'` | QUOT) -> drop) /[^"]*/ (`'` | QUOT)
@@ -340,7 +340,7 @@ class TestModifiers:
                       (QUOT '"'))))))"""))
 
     def test_prefix_modifiers(self):
-        lang = """
+        lang = r"""
         @reduction = merge
         list = string [WS] { SEP [WS] string [WS] }
         string = QUOT /[^"]*/ QUOT
@@ -352,7 +352,7 @@ class TestModifiers:
         cst = parser('"alpha", "beta"')
         assert cst.as_sxpr() == '''(list (string '"alpha"') (string '"beta"'))'''
 
-        lang = """
+        lang = r"""
         @reduction = merge
         list = string [WS] { SEP [WS] string [WS] }
         string = QUOT /[^"]*/ QUOT

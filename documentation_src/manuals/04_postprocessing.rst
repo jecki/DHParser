@@ -72,9 +72,9 @@ only parses tags and text but no empty elements, attributes, comments,
 processing instructions, declarations and the like::
 
     >>> mini_xml_grammar = r"""
-    ...     @ whitespace  = /\s*/
-    ...     @ disposable  = EOF
-    ...     @ drop        = EOF, whitespace, strings
+    ...     @ whitespace = /\s*/
+    ...     @ hide       = EOF
+    ...     @ drop       = EOF, whitespace, strings
     ...
     ...     document = ~ element ~ §EOF
     ...
@@ -288,7 +288,7 @@ a simplified JSON-grammar as starting point::
     ... @literalws  = right  # eat insignificant whitespace to the right of literals
     ... @whitespace = /\s*/  # regular expression for insignificant whitespace
     ... @drop       = whitespace, strings  # silently drop bare strings and whitespace
-    ... @disposable = /_\w+/  # regular expression to identify disposable symbols
+    ... @hide       = /_\w+/  # regular expression to identify disposable symbols
     ...
     ... json        = ~ _element _EOF
     ... _element    = object | array | string | other_literal
@@ -314,7 +314,7 @@ Let's now test this grammar, with a small piece of JSON::
           (other_literal "3.1415"))))
 
 Despite the early-on simplifications that have been configured by the
-"@disposable"- and the "@drop"-directives, the concrete-syntax-tree, is still a
+"@hide"- and the "@drop"-directives, the concrete-syntax-tree, is still a
 bit verbose. So we, furthermore define an abstract-syntax-tree-transformation::
 
     >>> from DHParser.transform import traverse, remove_tokens, reduce_single_child

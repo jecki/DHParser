@@ -43,7 +43,7 @@ closely resembles the grammar on the `JSON-Website
 
         @literalws  = right
         @drop       = whitespace, strings
-        @disposable = /_\w+/
+        @hide       = /_\w+/
 
         json        = ~ _element _EOF
         _element    = object | array | string | number | _bool | null
@@ -131,7 +131,7 @@ regular expression. Let's do this for a `JSON
     json_grammar = r"""
         @literalws  = right
         @drop       = whitespace, strings
-        @disposable = /_\w+/
+        @hide       = /_\w+/
 
         json        = ~ _element _EOF
         _element    = object | array | string | number | _bool | null
@@ -263,7 +263,7 @@ write our json-Grammar into this file::
     @whitespace = /\s*/  # regular expression for insignificant whitespace
     @comment    = /(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)/  # C++ style comments
     @drop       = whitespace, strings  # silently drop bare strings and whitespace
-    @disposable = /_\w+/  # regular expression to identify disposable symbols
+    @hide       = /_\w+/  # regular expression to identify disposable symbols
 
     #:  compound elements
 
@@ -452,7 +452,7 @@ The :py:mod:`transform`-module contains a number of useful transformation-rules
 that can be combined almost arbitrarily in order to reshape the concrete
 syntax-tree and carve out the abstract syntax tree. However, if the grammar is
 well-designed and if the concrete syntax tree has already been simplified with
-the help of DHParser's ``@disposable``-, ``@reduction``- and
+the help of DHParser's ``@hide``-, ``@reduction``- and
 ``@drop``-directives, only few transformations should remain necessary to
 produce the desired abstract syntax-tree.
 
@@ -843,9 +843,9 @@ again, this can be rewritten with macros as in the following complete
 grammar::
 
     >>> outlined_text_grammar = """@ whitespace  = /[ \\t]*/
-    ... @ reduction   = merge
-    ... @ disposable  = WS, EOF, LINE, S, $outline
-    ... @ drop        = WS, EOF, backticked, whitespace
+    ... @ reduction = merge
+    ... @ hide      = WS, EOF, LINE, S, $outline
+    ... @ drop      = WS, EOF, backticked, whitespace
     ...
     ... $outline($level_sign, $sub_level) =
     ...     [WS] $level_sign !`#` ~ heading [blocks] { [WS] $sub_level }
@@ -1346,7 +1346,7 @@ Performance optimization
 The most important design goals of DHParser have been reliability,
 flexibility and testability. There are some performance optimizations,
 most notably the early tree reduction during the parsing stage that is
-controlled with the ``@drop``  and  ``@disposable``-directives (see
+controlled with the ``@drop``  and  ``@hide``-directives (see
 :any:`simplifying_syntax_trees`) and type-hint modules (.pxd) for
 compiling DHParser with `Cython`_. However, given that the whole project
 has been realized with Python, rather than a compiled language like

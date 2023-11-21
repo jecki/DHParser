@@ -405,10 +405,10 @@ contains a mistake!)::
     # First attempt of any outline-grammar. Can you spot the error?
 
     #  EBNF-Directives
-    @ whitespace  = /[ \t]*/  # only horizontal whitespace, no line-feeds
-    @ reduction   = merge     # simplify tree as much as possible
-    @ disposable  = WS, EOF, LINE, GAP
-    @ drop        = WS, EOF, backticked, whitespace
+    @ whitespace = /[ \t]*/  # only horizontal whitespace, no line-feeds
+    @ reduction  = merge     # simplify tree as much as possible
+    @ hide       = WS, EOF, LINE, GAP
+    @ drop       = WS, EOF, backticked, whitespace
 
     #:  Outline
     document = [WS] main [WS] §EOF
@@ -744,7 +744,7 @@ the CHARS-parser::
 We also need to keep in mind that should we add more inline elements in the
 future that we have to exclude their delimiters from the CHARS-parser
 as well. Now, the test should succeed. (Or, if we have forgotten to add the
-contained parsers of "text" back to the @disposable-directive, we'll find that
+contained parsers of "text" back to the @hide-directive, we'll find that
 the test fails, but that at least, the AST is sound in the sense that all
 ESCAPED characters have been properly captured by the ESCAPE-parser.)
 
@@ -830,10 +830,10 @@ text from highlighted elements (i.e. emphasized and bold text), we
 add the more atomic elements, LLF, L, LF, CHARS, TEXT, ESCAPED  to
 the list of disposables at the beginning of the EBNF-grammar, which
 makes them disappear, merging their content in the higher-level elements.
-Thus we change the @disposable-directive at the top of the grammar to::
+Thus we change the @hide-directive at the top of the grammar to::
 
-    @ disposable  = WS, EOF, LINE, GAP, LLF, L, LF,
-                    CHARS, TEXT, ESCAPED, inner_emph, inner_bold
+    @ hide = WS, EOF, LINE, GAP, LLF, L, LF,
+             CHARS, TEXT, ESCAPED, inner_emph, inner_bold
 
 Now, the syntax-trees look much smoother::
 
@@ -1118,7 +1118,7 @@ test-script run and copy and paste the AST from the report-file to the
 test-file (".ini"-file) as AST-test case. Finally, edit this AST to its
 desired shape. Take this as starting point for programming the
 AST-transformation or earlier tree-simplifications via the
-``@disposable``- and ``@drop``- directives.
+``@hide``- and ``@drop``- directives.
 
 Here is the full test case for dropping GAP-nodes::
 
@@ -1165,7 +1165,7 @@ failure of the AST-Test "A1"::
 		             (markup (text "and another paragraph")))))
 
 The required adjustments in order to run the test successfully are quite
-trivial: Simply add the "GAP"-symbol to both the ``@disposable`` and the
+trivial: Simply add the "GAP"-symbol to both the ``@hide`` and the
 ``@drop``-directive of the grammar and the reported AST-test-failure
 will disappear.
 
@@ -1215,7 +1215,7 @@ sequence of strings rather than a multiline string with line-feeds. So,
 the "text"-node really consists of one string with a line-break in
 between. The line-break is not explicit in form of an "LF"-node, because
 it has just like the significant whitespace and character-sequences that
-make up the text-element been added to the ``@disposable``-directive in
+make up the text-element been added to the ``@hide``-directive in
 the grammar. This LF and L nodes will be merged with CHARS-nodes
 wherever possible during the parsing stage, already.
 
@@ -1235,8 +1235,8 @@ more general approach. So, we start by adjusting our list of disposable
 nodes, i.e. nodes that like anonymous-nodes can be flattened during
 parsing, already. It then reads::
 
-    @ disposable  = WS, EOF, LINE, GAP, LLF, L, CHARS, TEXT, ESCAPED, 
-                    inner_emph, inner_bold, blocks
+    @ hide  = WS, EOF, LINE, GAP, LLF, L, CHARS, TEXT, ESCAPED,
+              inner_emph, inner_bold, blocks
 
 If we run the test script, the result of the test in the report file now
 reads::

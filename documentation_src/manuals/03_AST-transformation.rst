@@ -315,7 +315,7 @@ will be executed after every tag-specific transformation-sequence has
 been processed. Because of the time-penalty incurred, the ``<``- and
 ``>``-keys should only be used when really needed. Most of the time the
 desired result can be achieved more effectively with the
-``@disposable``- and ``@drop``-directives at the parsing-stage, already
+``@hide``- and ``@drop``-directives at the parsing-stage, already
 (see :ref:`simplifying_syntax_trees`)).
 
 To give a better impression of how tree-transformation works and what
@@ -379,10 +379,10 @@ child node.
 The same effect can also be achieved by early tree-reduction during the
 parsing stage (see :ref:`Simplifying Trees <simplifying_syntax_trees>`
 in the documentation of the :doc:`01_EBNF-grammars`-module.) by listing the
-symbol "_known_environment" in the ``@disposable``-directive at the
+symbol "_known_environment" in the ``@hide``-directive at the
 beginning of the grammar. In cases as simple as this one, it is
 preferable way to eliminate superfluous nodes as early as possible by
-using the ``@disposable``-directive.
+using the ``@hide``-directive.
 
 The opposite case where you want to retain the parent node but eliminate
 a single child is demonstrated by the following entry. The symbol

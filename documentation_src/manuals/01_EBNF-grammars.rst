@@ -340,7 +340,13 @@ only as placeholders to render the definition of the grammar a bit
 more readable, not because we are interested in the structure that is
 captured by the production associated with them in its own right::
 
-    >>> disposable_symbols = '@disposable = /_\\w+/ \n'
+    >>> hide_symbols = '@hide = /_\\w+/ \n'
+
+.. HINT: In DHParser-versions below 1.7 the hide-directive was
+   called "disposable" and had to be written as ``@disposable = ...``
+   This has been changed for greater clarity. For backwards-compatibility,
+   the old name "disposable" for the hide-directive will still be 
+   understood by future versions of DHParser, however.  
 
 Instead of passing a comma-separated list of symbols to the directive,
 which would also have been possible, we have leveraged our convention
@@ -349,7 +355,7 @@ symbols that shall by anonymized with a regular expression.
 
 Now, let's examine the effect of these two directives::
 
-    >>> refined_grammar = drop_insignificant_wsp + disposable_symbols + grammar
+    >>> refined_grammar = drop_insignificant_wsp + hide_symbols + grammar
     >>> parser = create_parser(refined_grammar, 'JSON')
     >>> syntax_tree = parser(testdata)
     >>> syntax_tree.content
@@ -379,7 +385,7 @@ obvious, if we look at (a section of) the syntax-tree::
 
 This tree looks more streamlined. But it still contains more structure
 than we might like to see in an abstract syntax tree. In particular, it
-still contains als the delimiters ("[", ",", '"', ...) next to the data. But
+still contains all the delimiters ("[", ",", '"', ...) next to the data. But
 other than in the UTF-8 representation of our json data, the delimiters are
 not needed any more, because the structural information is now retained
 in the tree-structure.
@@ -395,7 +401,7 @@ regular expressions. However, using ``@drop = whitespace, strings, backticked``
 would also drop those parts captured as string that contain data::
 
     >>> refined_grammar = '@drop = whitespace, strings, backticked \n' \
-    ...                   + disposable_symbols + grammar
+    ...                   + hide_symbols + grammar
     >>> parser = create_parser(refined_grammar, 'JSON')
     >>> syntax_tree = parser(testdata)
     >>> print(syntax_tree.pick('array').as_sxpr(flatten_threshold=0))
@@ -440,16 +446,17 @@ are three ways to get around this problem:
    the opposite of the first solution. Here is an excerpt of what
    a JSON-grammar employing this technique would look like::
 
-      @disposable = /_\\w+/
+      @hide = /_\\w+/
       @drop = whitespace, _BEGIN_ARRAY, _END_ARRAY, _KOMMA, _BEGIN_OBJECT, ...
       ...
       array = _BEGIN_ARRAY ~ ( _element ( _KOMMA ~ _element )* )? §_END_ARRAY ~
       ...
 
-   It is important that all symbols listed for dropping are also made
-   disposable, either by listing them in the disposable-directive as well
-   or using names that the regular-expressions for disposables matches.
-   Otherwise, DHParser does not allow to drop the content of named nodes,
+   It is important that all symbols listed for dropping are also listed
+   in the hide-directive or - if the the hide-directive is given a regular 
+   expression instead of a list of names - carry a name that is matched by
+   that regular expression. DHParser does not allow to drop 
+   the content of named nodes unless they are hidden,
    because the default assumption is that symbols in the grammar are
    defined to capture meaningful parts of the document that contain
    relevant data.
@@ -468,7 +475,7 @@ of the ``@drop = ... strings, ...``-directive, leaving an empty named node
 without a value, whenever a bool value or null occurs in the input::
 
     >>> json_gr = '''
-    ...     @disposable = /_\\w+/
+    ...     @hide      = /_\\w+/
     ...     @drop      = whitespace, strings, backticked, _EOF
     ...     json       = ~ _element _EOF
     ...       _EOF     = /$/
@@ -525,7 +532,7 @@ comes into effect. It should be observed that merging only produces the desired
 result, if any delimiters have been dropped previously, because otherwise
 delimiters would be merged with content. Therefore, the ``@reduction = merge``-
 directive should at best only be applied in conjunction with the ``@drop`` and
-``@disposable``-directives.
+``@hide``-directives.
 
 .. _table_reduction_directive:
 
@@ -660,7 +667,7 @@ particular symbol for each kind of whitespace. Those kinds of
 whitespace that are insignificant, i.e. that do not need to
 appear in the data, should be dropped from the syntax-tree.
 With DHParser this can be done already while parsing, using
-the ``@disposable`` and ``@drop``-directives described earlier.
+the ``@hide`` and ``@drop``-directives described earlier.
 
 But let's first look at an example which only includes significant
 whitespace. The following parser parses sequences of paragraphs which
@@ -669,7 +676,7 @@ of main clauses and subordinate clauses which consist of sequences
 of words::
 
     >>> text_gr = '''
-    ...     @ disposable = /_\\w+/
+    ...     @ hide         = /_\\w+/
     ...     document       = PBR* S? paragraph (PBR paragraph)* PBR* S? _EOF
     ...       _EOF         = /$/
     ...     paragraph      = sentence (S sentence)*
@@ -822,7 +829,7 @@ we have succeeded::
       (word "work"))
 
 We will not worry about the more sub-structure of the S-nodes right now. If
-we are not interested in the comments, we could use the ``@disposable``,
+we are not interested in the comments, we could use the ``@hide``,
 ``@drop`` and ``@reduction = merge``-directives to simplify these at the
 parsing stage. Or, we could extract the comments and normalize the whitespace
 at a later tree-processing stage. For now, let's just check whether our
@@ -1056,7 +1063,7 @@ whitespace is to be allowed::
 The complete json-grammar now looks like this::
 
     >>> json_gr = '''
-    ...     @disposable = /_\\w+/
+    ...     @hide      = /_\\w+/
     ...     @drop      = whitespace, strings, backticked, _EOF
     ...     @reduction = merge
     ...     @whitespace= /\\s*/
@@ -1359,7 +1366,7 @@ right hand side of a symbol-definition, where you'd like to use the
 §-marker at more than one place, you can, however, always split it into
 several expression by introducing new symbols. These symbols, if they
 serve no other purpose, can be marked as disposable with the
-``@ disposable``-directive (see :ref:`simplifying_syntax_trees`).
+``@ hide``-directive (see :ref:`simplifying_syntax_trees`).
 
 The §-marker has proven to be a very simple means of pinpointing errors
 the DSL-code, and I recommend to use it from early on in the process of
@@ -1862,8 +1869,8 @@ As an example, let's try this with a parser for arbitrarily nested lists
 of positive integers. First, we write our grammar without any re-entry rules::
 
     >>> number_list_grammar = r'''@ literalws   = right
-    ... @ disposable  = /_\w+/
-    ... @ drop        = _EOF, whitespace, strings
+    ... @ hide   = /_\w+/
+    ... @ drop   = _EOF, whitespace, strings
     ... _document = ~ [ list ] §_EOF
     ... list     = "[" [_items] § "]"
     ... _items   = _item { "," §_item }
@@ -2147,8 +2154,8 @@ The following minimal pseudo-XML-parser captures the value of the
 tag-name so that it can compared with the tag-name of the ending-tag::
 
     >>> miniXML = '''
-    ... @ disposable  = EOF
-    ... @ drop        = EOF, whitespace, strings
+    ... @ hide   = EOF
+    ... @ drop   = EOF, whitespace, strings
     ... document = ~ element ~ §EOF
     ... element  = STag §content ETag
     ... STag     = '<' TagName §'>'
@@ -2189,7 +2196,7 @@ without removing that value from the stack. For this purpose, there is
 the "Retrieve"-operator which is denoted by a single colon `:`::
 
     >>> fencedTextEBNF =  '''@whitespace = vertical
-    ... @disposable = EOF, fence_re
+    ... @hide    = EOF, fence_re
     ... @drop    = whitespace, EOF
     ... document = ~ { text | fenced } EOF
     ... text     = /[^\\~\\n]+/ ~  # /(?:[^\\~]+|\\n)+/
@@ -2345,8 +2352,8 @@ grammar::
 This trick can also be used to parse indentation::
 
     >>> tree_grammar = '''@whitespace = horizontal
-    ... @disposable = EOF, LF, SAME_INDENT
-    ... @drop       = strings, whitespace, EOF, LF, SAME_INDENT
+    ... @hide = EOF, LF, SAME_INDENT
+    ... @drop = strings, whitespace, EOF, LF, SAME_INDENT
     ...
     ... tree     = INDENT node DEDENT /\\s*/ EOF
     ... node     = tag_name [content]
@@ -2483,8 +2490,8 @@ Now let's add a resume-directive to continue after misspelled
 tag-names::
 
     >>> miniXML = '''
-    ... @ disposable  = EOF
-    ... @ drop        = EOF, whitespace, strings
+    ... @ hide   = EOF
+    ... @ drop   = EOF, whitespace, strings
     ... document = ~ element ~ §EOF
     ... @element_resume = ('</' /\\w+/ '>')
     ... element  = STag §content ETag
@@ -2562,8 +2569,8 @@ A more robust rule-set for our mini-XML-grammar might be::
 
     >>> miniXML = r'''
     ... @ whitespace  = /\s*/
-    ... @ disposable  = EOF
-    ... @ drop        = EOF, whitespace, strings
+    ... @ hide   = EOF
+    ... @ drop   = EOF, whitespace, strings
     ...
     ... document = ~ element ~ §EOF
     ... @element_resume = (:?TagName (&('</' :TagName '>') | '</' /\w+/ '>'))
