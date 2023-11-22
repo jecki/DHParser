@@ -930,7 +930,7 @@ def create_evaluation_transition(*args, **kwargs):
     return create_evaluation_junction(*args, **kwargs)
 
 @deprecated('create_junction() has moved to the pipeline-module! Use "from DHParser.pipeline import create_junction"')
-def create_junction(tool, src_stage, dst_stage, hint):
+def create_junction(tool, src_stage, dst_stage, hint = "?"):
     from DHParser import pipeline
     return pipeline.create_junction(tool, src_stage, dst_stage, hint)
 
