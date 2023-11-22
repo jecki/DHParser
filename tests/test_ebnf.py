@@ -370,6 +370,74 @@ class TestModifiers:
         cst = parser('"alpha", "beta"')
         assert cst.as_sxpr() == '''(list (string '"alpha"') (string '"beta"'))'''
 
+    def test_macro_modifiers_drop(self):
+        lang = r'''
+        @reduction = merge
+        @disposable = $phrase
+        @drop = $phrase
+        doc = ~ $phrase(`,`) { `,`~ $phrase(`,`) }
+        $phrase($separator) = /[^.,;]*/ { !$separator /[.,;]/ /[^,.;]/ }
+        '''
+        parser = create_parser(lang)
+        a = parser.python_src__.find('doc =')
+        b = parser.python_src__.find('\n', a)
+        line = parser.python_src__[a:b]
+        assert line.find('.name(') < 0
+        assert line[20:].startswith('Drop(Series')
+
+        lang = r'''
+        @reduction = merge
+        doc = ~ $phrase(`,`) { `,`~ $phrase(`,`) }
+        $phrase($separator) = (/[^.,;]*/ { !$separator /[.,;]/ /[^,.;]/ }) -> DROP
+        '''
+        parser = create_parser(lang)
+        a = parser.python_src__.find('doc =')
+        b = parser.python_src__.find('\n', a)
+        assert line == parser.python_src__[a:b]
+
+        lang = '''
+        @reduction = merge
+        doc = ~ $phrase(`,`) { `,`~ $phrase(`,`) }
+        DROP:$phrase($separator) = /[^.,;]*/ { !$separator /[.,;]/ /[^,.;]/ }
+        '''
+        parser = create_parser(lang)
+        a = parser.python_src__.find('doc =')
+        b = parser.python_src__.find('\n', a)
+        assert line == parser.python_src__[a:b]
+
+    def test_macro_modifiers_hide(self):
+        lang = r'''
+        @reduction = merge
+        @disposable = $phrase
+        doc = ~ $phrase(`,`) { `,`~ $phrase(`,`) }
+        $phrase($separator) = /[^.,;]*/ { !$separator /[.,;]/ /[^,.;]/ }
+        '''
+        parser = create_parser(lang)
+        a = parser.python_src__.find('doc =')
+        b = parser.python_src__.find('\n', a)
+        line = parser.python_src__[a:b]
+        assert line.find('.name(') < 0
+
+        lang = r'''
+        @reduction = merge
+        doc = ~ $phrase(`,`) { `,`~ $phrase(`,`) }
+        $phrase($separator) = (/[^.,;]*/ { !$separator /[.,;]/ /[^,.;]/ }) -> HIDE        
+        '''
+        parser = create_parser(lang)
+        a = parser.python_src__.find('doc =')
+        b = parser.python_src__.find('\n', a)
+        assert line == parser.python_src__[a:b]
+
+        lang = r'''@reduction = merge
+        doc = ~ $phrase(`,`) { `,`~ $phrase(`,`) }
+        HIDE:$phrase($separator) = /[^.,;]*/ { !$separator /[.,;]/ /[^,.;]/ }
+        '''
+        parser = create_parser(lang)
+        a = parser.python_src__.find('doc =')
+        b = parser.python_src__.find('\n', a)
+        assert line == parser.python_src__[a:b]
+
+
 class TestEBNFParser:
     cases = {
         "list_": {

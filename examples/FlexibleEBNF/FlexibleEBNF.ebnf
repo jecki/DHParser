@@ -49,8 +49,8 @@ syntax     = ~ { definition | directive | macrodef } EOF
 definition = [modifier] symbol §:DEF~ [ :OR~ ] expression [ MOD_SYM~ hide ]
              :ENDL~ & FOLLOW_UP  # [:OR~] to support v. Rossum's syntax
   modifier = (drop | [hide]) MOD_SEP   # node LF after modifier allowed!
-  is_def   = [ MOD_SEP symbol ] :DEF
-  _is_def  = [ MOD_SEP symbol ] _DEF
+  is_def   = [ MOD_SEP symbol ] :DEF | MOD_SEP is_mdef
+  _is_def  = [ MOD_SEP symbol ] _DEF | MOD_SEP is_mdef
   MOD_SEP  = / *: */
 
 directive  = "@" §symbol "=" component { "," component } & FOLLOW_UP
@@ -61,8 +61,8 @@ directive  = "@" §symbol "=" component { "," component } & FOLLOW_UP
   literals   = { literal }+                       # string chaining, only allowed in directives!
   procedure  = SYM_REGEX "()"                     # procedure name, only allowed in directives!
 
-macrodef   = "$" name~ ["(" §placeholder { "," placeholder }  ")"]
-             :DEF~ [ OR~ ] macrobody :ENDL~ & FOLLOW_UP
+macrodef   =  [modifier] "$" name~ ["(" §placeholder { "," placeholder }  ")"]
+             :DEF~ [ OR~ ] macrobody [ MOD_SYM~ hide ] :ENDL~ & FOLLOW_UP
   macrobody  = expression
   is_mdef    = "$" name ["(" placeholder { "," placeholder }  ")"] ~:DEF
 

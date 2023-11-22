@@ -85,8 +85,8 @@ class FixedEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "fa027d5f4af70893239a5f4f49ebd3d6"
-    disposable__ = re.compile('(?:..(?<=^))|(?:ANY_SUFFIX$|MOD_SYM$|component$|MOD_SEP$|is_mdef$|no_range$|FOLLOW_UP$|pure_elem$|EOF$|countable$)')
+    source_hash__ = "c825ccd172267a0db4ebac7369bcb7bc"
+    disposable__ = re.compile('(?:..(?<=^))|(?:MOD_SYM$|is_mdef$|component$|countable$|EOF$|FOLLOW_UP$|pure_elem$|no_range$|ANY_SUFFIX$|MOD_SEP$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
@@ -136,9 +136,9 @@ class FixedEBNFGrammar(Grammar):
     retrieveop = Alternative(Series(Text("::"), dwsp__), Series(Text(":?"), dwsp__), Series(Text(":"), dwsp__))
     flowmarker = Alternative(Series(Text("!"), dwsp__), Series(Text("&"), dwsp__), Series(Text("<-!"), dwsp__), Series(Text("<-&"), dwsp__))
     ANY_SUFFIX = RegExp('[?*+]')
-    MOD_SEP = RegExp(' *: *')
+    is_mdef = Series(Series(Text("$"), dwsp__), name, Option(Series(Series(Text("("), dwsp__), placeholder, ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)), Series(Text(")"), dwsp__))), dwsp__, DEF)
     pure_elem = Series(element, NegativeLookahead(ANY_SUFFIX), mandatory=1)
-    is_def = Series(Option(Series(MOD_SEP, symbol)), DEF)
+    MOD_SEP = RegExp(' *: *')
     hide = Alternative(Series(Text("HIDE"), dwsp__), Series(Text("Hide"), dwsp__), Series(Text("hide"), dwsp__), Series(Text("DISPOSE"), dwsp__), Series(Text("Dispose"), dwsp__), Series(Text("dispose"), dwsp__))
     drop = Alternative(Series(Text("DROP"), dwsp__), Series(Text("Drop"), dwsp__), Series(Text("drop"), dwsp__), Series(Text("SKIP"), dwsp__), Series(Text("Skip"), dwsp__), Series(Text("skip"), dwsp__))
     term = Series(Alternative(oneormore, counted, repetition, option, pure_elem), Option(Series(MOD_SYM, dwsp__, drop)))
@@ -148,14 +148,14 @@ class FixedEBNFGrammar(Grammar):
     sequence = Series(Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(Series(AND, dwsp__, Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround))))
     modifier = Series(Alternative(drop, Option(hide)), MOD_SEP)
     FOLLOW_UP = Alternative(Text("@"), Text("$"), modifier, symbol, EOF)
-    is_mdef = Series(Series(Text("$"), dwsp__), name, Option(Series(Series(Text("("), dwsp__), placeholder, ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)), Series(Text(")"), dwsp__))), dwsp__, DEF)
+    is_def = Alternative(Series(Option(Series(MOD_SEP, symbol)), DEF), Series(MOD_SEP, is_mdef))
     macrobody = Synonym(expression)
     definition = Series(Option(modifier), symbol, DEF, dwsp__, Option(Series(OR, dwsp__)), expression, Option(Series(MOD_SYM, dwsp__, hide)), ENDL, dwsp__, Lookahead(FOLLOW_UP), mandatory=2)
     procedure = Series(SYM_REGEX, Series(Text("()"), dwsp__))
     literals = OneOrMore(literal)
     component = Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(is_def)), Series(Lookahead(Text("$")), NegativeLookahead(is_mdef), placeholder, NegativeLookahead(is_def), mandatory=2), Series(Series(Text("("), dwsp__), expression, Series(Text(")"), dwsp__)), Series(RAISE_EXPR_WO_BRACKETS, expression))
-    macrodef = Series(Series(Text("$"), dwsp__), name, dwsp__, Option(Series(Series(Text("("), dwsp__), placeholder, ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)), Series(Text(")"), dwsp__), mandatory=1)), DEF, dwsp__, Option(Series(OR, dwsp__)), macrobody, ENDL, dwsp__, Lookahead(FOLLOW_UP))
     directive = Series(Series(Text("@"), dwsp__), symbol, Series(Text("="), dwsp__), component, ZeroOrMore(Series(Series(Text(","), dwsp__), component)), Lookahead(FOLLOW_UP), mandatory=1)
+    macrodef = Series(Option(modifier), Series(Text("$"), dwsp__), name, dwsp__, Option(Series(Series(Text("("), dwsp__), placeholder, ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)), Series(Text(")"), dwsp__), mandatory=1)), DEF, dwsp__, Option(Series(OR, dwsp__)), macrobody, Option(Series(MOD_SYM, dwsp__, hide)), ENDL, dwsp__, Lookahead(FOLLOW_UP))
     element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(is_def)), literal, plaintext, regexp, Series(character, dwsp__), any_char, whitespace, group, Series(macro, NegativeLookahead(is_def)), Series(placeholder, NegativeLookahead(is_def)), parser))
     countable.set(Alternative(option, oneormore, element))
     expression.set(Series(sequence, ZeroOrMore(Series(OR, dwsp__, sequence))))
