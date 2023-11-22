@@ -1762,11 +1762,7 @@ class Grammar:
             # # if has_errors
             if has_errors([ae.error for ae in analysis_errors], ERROR):
                 raise GrammarError(analysis_errors)
-                # else:
-                    # print(f'\nGrammar warnings in {self.__class__.__name__}!\n')
-                    # for ae in analysis_errors:
-                    #     print(f'{ae.symbol} -> {ae.parser}: {ae.error}')
-                    # print('\n\n')
+
 
     def __str__(self):
         return self.__class__.__name__
@@ -2113,9 +2109,9 @@ class Grammar:
 
 
     def fullmatch(self,
-              parser: Union[str, Parser],
-              string: str,
-              source_mapping: Optional[SourceMapFunc] = None):
+                  parser: Union[str, Parser],
+                  string: str,
+                  source_mapping: Optional[SourceMapFunc] = None):
         """Returns the matched string, if the parser matches the
         complete string or ``None`` if the parser does not match."""
         result = self(string, parser, source_mapping, complete_match=True)
@@ -2433,7 +2429,7 @@ class PreprocessorToken(LeafParser):
         return None, location
 
 
-def extract_error_code(err_msg: str, err_code: ErrorCode=ERROR) -> Tuple[str, ErrorCode]:
+def extract_error_code(err_msg: str, err_code: ErrorCode = ERROR) -> Tuple[str, ErrorCode]:
     """Extracts the error-code-prefix from an error message.
 
     Example::
@@ -2452,9 +2448,9 @@ def extract_error_code(err_msg: str, err_code: ErrorCode=ERROR) -> Tuple[str, Er
             err_msg = err_msg[i + 1:]
         except ValueError:
             pass
-            ## This code does not work, because ErrorCode names
-            ## defined on a higher level
-            ## are not reachable from within the parse-module
+            # # This code does not work, because ErrorCode names
+            # # defined on a higher level
+            # # are not reachable from within the parse-module
             # if re.match(r'[A-Z_]+', err_code_str):
             #     # assume err_code_str is not a number but
             #     # the name of an ErrorCode-constant
@@ -2469,7 +2465,7 @@ class ERR(LeafParser):
     """ERR is a pseudo-parser does not consume any text, but adds an error
     message at the current location."""
 
-    def __init__(self, err_msg: str, err_code: ErrorCode=ERROR) -> None:
+    def __init__(self, err_msg: str, err_code: ErrorCode = ERROR) -> None:
         super(ERR, self).__init__()
         self.err_msg, self.err_code = extract_error_code(err_msg, err_code)
 
@@ -3032,6 +3028,7 @@ class CombinedParser(Parser):
     MERGE_TREETOPS = 2  # "merge" horizontally  (A (:Text "hey ") (:RegExp "you")) -> (A "hey you")
     MERGE_LEAVES = 3  #  (A (:Text "hey ") (:RegExp "you") (C "!")) -> (A (:Text "hey you") (C "!"))
     DEFAULT_OPTIMIZATION = FLATTEN
+
 
 # duplicate this definitions on toplevel for forward-compatibility
 
