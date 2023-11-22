@@ -565,47 +565,49 @@ has already been eliminated at the parsing stage.
 
 .. _alternative_simplification_syntax:
 
-**Alternative Syntax with ->SKIP and ->HIDE**
+**Alternative Syntax with ->DROP and ->HIDE**
 
 Since DHParser version 1.5.1 there also exists an alternative syntax to
 specify symbols that are to be considered disposable and elements that are
-to be dropped by local ``->SKIP`` (drop) and ``->HIDE`` (dispose) markers
+to be dropped by local ``->DROP`` (drop) and ``->HIDE`` (dispose) markers
 within the grammar, rather than with directives. These markers must be appended
 to the parser (skip/drop) or to the symbol definition (hide/dispose), e.g.::
 
-    WHITESPACE = /\s+/ ->SKIP
+    WHITESPACE = /\s+/ ->DROP
 
 There is a subtle difference between the two markers, in so far as the
-"->SKIP"-marker may appear at one or more places inside a (complex) definition
+"->DROP"-marker may appear at one or more places inside a (complex) definition
 or at its very end, while the "->HIDE" marker may only appear at the very
 end of the definition. (The reason is that while it makes sense to drop nodes
 returned by anonymous parsers, it does not make sense to dispose (i.e. hide)
 anonymous nodes, because these will be eliminated ("flattened"), anyway.)
 
-The names of the makers have been chosen to reflect existing EBNF-practices.
-If you find this confusing, you can also write "->DROP" instead of "->SKIP" for
-elements to be dropped and "->DISPOSE" instead of "->HIDE" for disposable symbols.
-Here is the last example, rewritten with "->SKIP" and "->HIDE"-markers. Note, that
-we still use the @drop-directive for whitespace, strings and backticked (strings),
-because otherwise we would have to add a "->SKIP"-marker after each string-literal
+Since existing EBNF-practices vary, you can also use the alias "->SKIP" 
+instead of "->DROP" for elements to be dropped and "->DISPOSE" instead 
+of "->HIDE" for hidden symbols. (Internally, DHParser uses the names
+drop and dispose, but this should not concern users of DHParser.)
+
+Here is the last example, rewritten with "->DROP" and "->HIDE"-markers. Note, that
+we still use the @drop-directive for whitespace, strings and back-ticked (strings),
+because otherwise we would have to add a "->DROP"-marker after each string-literal
 and tilde (whitespace) -marker. Also, we already added the
 "@reduction=merge"-directive::
 
     >>> json_gr = '''
     ...     @drop      = whitespace, strings, backticked
     ...     @reduction = merge
-    ...     json       = ~ _element _EOF
-    ...       _EOF     = /$/ -> SKIP
-    ...     _element   = (object | array | string | number | bool | null) -> HIDE
+    ...     json       = ~ element EOF
+    ...       EOF     = /$/ -> DROP
+    ...     element   = (object | array | string | number | bool | null) -> HIDE
     ...     object     = "{" ~ member ( "," ~ §member )* "}" ~
-    ...     member     = string ":" ~ _element
-    ...     array      = "[" ~ ( _element ( "," ~ _element )* )? "]" ~
-    ...     string     = `"` _CHARS `"` ~
-    ...       _CHARS   = /[^"\\\\]+/ | /\\[\\/bnrt\\]/  -> HIDE
-    ...     number     = _INT _FRAC? _EXP? ~
-    ...       _INT     = /[-]/? ( /[1-9][0-9]+/ | /[0-9]/ ) -> HIDE
-    ...       _FRAC    = /[.]/ /[0-9]+/  -> HIDE
-    ...       _EXP     = /[Ee]/ [/[-+]/] /[0-9]+/ -> HIDE
+    ...     member     = string ":" ~ element
+    ...     array      = "[" ~ ( element ( "," ~ element )* )? "]" ~
+    ...     string     = `"` CHARS `"` ~
+    ...       CHARS   = /[^"\\\\]+/ | /\\[\\/bnrt\\]/  -> HIDE
+    ...     number     = INT FRAC? EXP? ~
+    ...       INT     = /[-]/? ( /[1-9][0-9]+/ | /[0-9]/ ) -> HIDE
+    ...       FRAC    = /[.]/ /[0-9]+/  -> HIDE
+    ...       EXP     = /[Ee]/ [/[-+]/] /[0-9]+/ -> HIDE
     ...     bool       = /true/ ~ | /false/ ~
     ...     null       = /null/ ~                                  '''
     >>> json_parser = create_parser(json_gr, 'JSON')
@@ -616,6 +618,42 @@ and tilde (whitespace) -marker. Also, we already added the
       (number "2.0")
       (string "a string"))
 
+The SKIP and DROP markers can also be used as prefixes to definitions, which may
+make it more obvious for the readers of the grammar which symbols will be hidden 
+or dropped from the syntax-tree. If written as a prefix, they are written with
+a following colon ":" instead of a preceding arrow "->", e.g. "HIDE:" and "DROP:".
+For the sake of simplicity and to mirror the internal conventions of DHParser, 
+where the names of (disposable) anonymous-nodes are preceded by a colon, the word
+"HIDE" can also be left out from the prefix annotation, so that a simple 
+colon at the beginning of a definition suggests a disposable symbol. (This
+should not be confused with a colon in front of a symbol on the left hand side
+of a definition where it marks a "retrievable" value for that symbols. )
+With these conventions our JSON-example looks like the following::
+
+    >>> json_gr = '''
+    ...     @drop      = whitespace, strings, backticked
+    ...     @reduction = merge
+    ...     json       = ~ element EOF
+    ...     DROP:EOF     = /$/
+    ...     :element  = (object | array | string | number | bool | null)
+    ...     object     = "{" ~ member ( "," ~ §member )* "}" ~
+    ...     member     = string ":" ~ element
+    ...     array      = "[" ~ ( element ( "," ~ element )* )? "]" ~
+    ...     string     = `"` CHARS `"` ~
+    ...     :CHARS   = /[^"\\\\]+/ | /\\[\\/bnrt\\]/
+    ...     number     = INT FRAC? EXP? ~
+    ...       :INT     = /[-]/? ( /[1-9][0-9]+/ | /[0-9]/ )
+    ...       :FRAC    = /[.]/ /[0-9]+/
+    ...       :EXP     = /[Ee]/ [/[-+]/] /[0-9]+/
+    ...     bool       = /true/ ~ | /false/ ~
+    ...     null       = /null/ ~                                  '''
+    >>> json_parser = create_parser(json_gr, 'JSON')
+    >>> syntax_tree = json_parser(testdata)
+    >>> print(syntax_tree.pick('array').as_sxpr(flatten_threshold=0))
+    (array
+      (number "1")
+      (number "2.0")
+      (string "a string"))
 
 .. _comments_and_whitespace:
 

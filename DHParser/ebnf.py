@@ -2466,8 +2466,6 @@ class EBNFCompiler(Compiler):
                     defn = f'{self.P["Synonym"]}({defn})'
                 if drop_flag and not defn.startswith(self.P["Drop"] + "("):
                     defn = f'{self.P["Drop"]}({defn})'
-                # TODO: Recursively drop all contained parsers
-                #      (that are not assigned to a symbol!) for optimization. (Maybe better in parse.py...)
             else:
                 assert isinstance(defn, Node)
                 self.tree.new_error(node, 'Structural Error in AST, unexpected node-type: '
