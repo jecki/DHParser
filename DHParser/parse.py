@@ -78,6 +78,7 @@ __all__ = ('parser_names',
            'Parser',
            'AnalysisError',
            'GrammarError',
+           'ensure_drop_propagation',
            'Grammar',
            'is_grammar_placeholder',
            'is_parser_placeholder',
@@ -866,7 +867,7 @@ class Parser:
                 self._descendants_cache = frozenset(visited)  # tuple(p for p in collect(self))
         return self._descendants_cache
 
-    def descendant_trails(self) -> Iterator[ParserTrail]:
+    def descendant_trails(self) -> AbstractSet[ParserTrail]:
         """Returns a set of the trails of self and all descendant
         parsers, avoiding circles. NOTE: The algorithm is rather sloppy and
         the returned set is not really comprehensive, but sufficient to trace
@@ -1259,6 +1260,23 @@ def reset_parser(parser):
     return parser.reset()
 
 
+def _propagate_drop(p: parser):
+    """propagates the drop_content flag to all unnamed children."""
+    assert p.drop_content
+    for c in p.sub_parsers:
+        if not c.pname:
+            c.drop_content = True
+            _propagate_drop(c)
+
+def ensure_drop_propagation(p: parser):
+    if p.drop_content:
+        _propagate_drop(p)
+    else:
+        for c in p.sub_parsers:
+            if not c.pname:
+                ensure_drop_propagation(c)
+
+
 class Grammar:
     r"""
     Class Grammar directs the parsing process and stores global state
@@ -1607,6 +1625,7 @@ class Grammar:
                         # parser.pname = entry
                         # parser.disposable = anonymous
                     cls.parser_names__.append(entry)
+                    ensure_drop_propagation(parser)
             # if cls != Grammar:
             cls.parser_initialization__ = ["done"]  # (over-)write subclass-variable
 

@@ -39,7 +39,7 @@ from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMor
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, \
     Interleave, CombinedParser, Text, EMPTY_NODE, Capture, Drop, Whitespace, \
     GrammarError, Counted, Always, INFINITE, longest_match, extract_error_code, \
-    Option, DTKN, RegExp
+    Option, DTKN, RegExp, ensure_drop_propagation
 from DHParser import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
     parse_ebnf, DHPARSER_IMPORTS, compile_ebnf
@@ -1952,6 +1952,40 @@ class TestConvenientSerialization:
             assert str(s) != '"A"'
         except AttributeError as e:
             assert False, f"AttributeError while serializing parser: {e}"
+
+
+class TestDropPropagation:
+    def test_drop_propagation(self):
+        beta = Series(Text("B"), Drop(OneOrMore(Text("C"))))
+        alpha = Series(Text("A"), beta)
+        assert not alpha.drop_content
+        assert not beta.drop_content
+        assert not alpha.parsers[0].drop_content
+        assert not beta.parsers[0].drop_content
+        assert beta.parsers[1].drop_content
+        assert not beta.parsers[1].parser.drop_content
+
+        ensure_drop_propagation(alpha)
+        assert not alpha.drop_content
+        assert not alpha.drop_content
+        assert not beta.drop_content
+        assert not alpha.parsers[0].drop_content
+        assert not beta.parsers[0].drop_content
+        assert beta.parsers[1].drop_content
+        assert beta.parsers[1].parser.drop_content
+
+        beta = Series(Text("B"), Drop(OneOrMore(Text("C"))))
+        alpha = Series(Text("A"), beta)
+        alpha.drop_content = True
+        ensure_drop_propagation(alpha)
+        assert alpha.drop_content
+        assert alpha.drop_content
+        assert beta.drop_content
+        assert alpha.parsers[0].drop_content
+        assert beta.parsers[0].drop_content
+        assert beta.parsers[1].drop_content
+        assert beta.parsers[1].parser.drop_content
+
 
 
 if __name__ == "__main__":
