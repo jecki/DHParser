@@ -1284,8 +1284,9 @@ from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode, Pat
 from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, DropFrom, AnyChar, Parser, \\
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, ERR, \\
     Option, NegativeLookbehind, OneOrMore, RegExp, SmartRE, Retrieve, Series, Capture, TreeReduction, \\
-    ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, mixin_comment, \\
-    last_value, matching_bracket, optional_last_value
+    ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, \\
+    LateBindingUnary, mixin_comment, last_value, matching_bracket, optional_last_value, \\
+    PARSER_PLACEHOLDER, UninitializedError
 from DHParser.pipeline import end_points, full_pipeline, create_parser_junction, \\
     create_preprocess_junction, create_junction, PseudoJunction 
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \\

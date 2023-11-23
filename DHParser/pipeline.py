@@ -47,7 +47,7 @@ from DHParser.nodetree import RootNode, Node
 from DHParser.parse import Grammar, ParserFactory
 from DHParser.preprocess import PreprocessorFactory, PreprocessorFunc, Tokenizer, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors, \
-    ReadIncludeClass
+    ReadIncludeClass, DeriveFileNameFunc
 from DHParser.toolkit import ThreadLocalSingletonFactory, deprecation_warning, deprecated
 from DHParser.trace import resume_notices_on, set_tracer, trace_history
 from DHParser.transform import TransformerFunc, transformer, TransformationDict
@@ -258,9 +258,9 @@ PseudoJunction = namedtuple('PseudoJunction',
 def _preprocessor_factory(tokenizer: Tokenizer,
                           include_regex,
                           comment_regex,
-                          include_reader) -> PreprocessorFunc:
+                          derive_file_name) -> PreprocessorFunc:
     # below, the second parameter must always be the same as Grammar.COMMENT__!
-    find_next_include = gen_find_include_func(include_regex, comment_regex, include_reader)
+    find_next_include = gen_find_include_func(include_regex, comment_regex, derive_file_name)
     include_prep = partial(preprocess_includes, find_next_include=find_next_include)
     tokenizing_prep = make_preprocessor(tokenizer)
     return chain_preprocessors(include_prep, tokenizing_prep)
@@ -269,14 +269,14 @@ def _preprocessor_factory(tokenizer: Tokenizer,
 def create_preprocess_junction(tokenizer: Tokenizer,
                                include_regex,
                                comment_regex,
-                               include_reader: ReadIncludeClass=ReadIncludeClass) \
+                               derive_file_name: DeriveFileNameFunc=lambda name: name) \
                                 -> PseudoJunction:
     """Creates a factory for thread-safe preprocessing functions as well as a
     thread-safe preprocessing function."""
     preprocessor_factory = partial(
         _preprocessor_factory, tokenizer=tokenizer,
         include_regex=include_regex, comment_regex=comment_regex,
-        include_reader=include_reader)
+        derive_file_name=derive_file_name)
     thread_safe_factory = ThreadLocalSingletonFactory(preprocessor_factory)
     # preprocess = partial(_preprocess, factory=thread_safe_factory)
     return PseudoJunction(thread_safe_factory)  # , preprocess)

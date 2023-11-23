@@ -78,6 +78,7 @@ __all__ = ('parser_names',
            'Parser',
            'AnalysisError',
            'GrammarError',
+           'UninitializedError',
            'ensure_drop_propagation',
            'Grammar',
            'is_grammar_placeholder',
@@ -1253,6 +1254,16 @@ class GrammarError(Exception):
                                 for i, err_tuple in enumerate(self.errors))
 
 
+class UninitializedError(Exception):
+    """An error that results from unintialized objects. This can be
+    a consequence of some broken boot-strapping-process."""
+    def __init__(self, msg: string):
+        self.msg = msg
+
+    def __str__(self):
+        return f'UninitializedError: {self.msg}'
+
+
 RESERVED_PARSER_NAMES = ('root__', 'dwsp__', 'wsp__', 'comment__', 'root_parser__', 'ff_parser__')
 
 
@@ -1272,9 +1283,13 @@ def ensure_drop_propagation(p: parser):
     if p.drop_content:
         _propagate_drop(p)
     else:
-        for c in p.sub_parsers:
-            if not c.pname:
-                ensure_drop_propagation(c)
+        try:
+            for c in p.sub_parsers:
+                if not c.pname:
+                    ensure_drop_propagation(c)
+        except UninitializedError as e:
+            if not isinstance(p, LateBindingUnary):
+                raise e
 
 
 class Grammar:
@@ -3267,6 +3282,9 @@ class LateBindingUnary(UnaryParser):
 
     def resolve_parser_name(self) -> Parser:
         if self.parser is PARSER_PLACEHOLDER:
+            if is_grammar_placeholder(self._grammar):
+                raise UninitializedError(
+                    f'Grammar hast not yet been set in LateBindingUnary "{self}"')
             self.parser = getattr(self.grammar, self.parser_name)
             self.sub_parsers = frozenset({self.parser})
         return self.parser

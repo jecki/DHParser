@@ -40,6 +40,7 @@ from DHParser.error import has_errors, MANDATORY_CONTINUATION, PARSER_STOPPED_BE
     UNKNOWN_MACRO_ARGUMENT, UNUSED_MACRO_ARGUMENTS_WARNING, \
     ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING, SYMBOL_NAME_IS_PYTHON_KEYWORD, canonical_error_strings
 from DHParser.nodetree import WHITESPACE_PTYPE, flatten_sxpr, parse_sxpr
+from DHParser.parse import PARSER_PLACEHOLDER
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
     EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS, parse_ebnf, \
     transform_ebnf, HeuristicEBNFGrammar, ConfigurableEBNFGrammar, \
@@ -2135,6 +2136,7 @@ class TestCustomParsers:
 
     number     = @Custom(parse_number) ~
     
+    number_rx  = /\d+/~
     EOF        = !/./ '''
     py_parse_number = r'''
 def parse_number(s):
@@ -2178,6 +2180,14 @@ def parse_number(base_as_str: str):
         return Node('', num_str)
     return parse_number_func
     '''
+    py_parse_referring_class = r'''
+class ParserNumber(LateBindingUnary):
+    def _parse(self, location):
+        assert self.parser is not PARSER_PLACEHOLDER
+        parser = self.parser
+        result, location_ = parser(location)
+        return result, location_  
+        '''
 
     def test_custom_parser_func(self):
         src, errors, ast = compile_ebnf(self.arithmetic_ebnf)
@@ -2197,6 +2207,12 @@ def parse_number(base_as_str: str):
         src, errors, ast = compile_ebnf(arithmetic_ebnf)
         parser = create_parser(arithmetic_ebnf, additional_code=self.py_parse_factory_func)
         tree = parser('2A + B3')
+        assert not tree.errors
+
+    def test_custom_parser_referring_class(self):
+        arithmetic_ebnf = self.arithmetic_ebnf.replace('@Custom(parse_number)', '@ParserNumber("number_rx")')
+        parser = create_parser(arithmetic_ebnf, additional_code=self.py_parse_referring_class)
+        tree = parser('2 * (12 - 3)')
         assert not tree.errors
 
 class TestErrors:

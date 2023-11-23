@@ -882,10 +882,11 @@ def batch_process(file_names: List[str], out_dir: str,
 PseudoJunction = namedtuple('PseudoJunction', ['factory'], module=__name__)
 
 @deprecated('create_preprocess_junction() has moved to the pipeline-module! Use "from DHParser.pipeline import create_preprocess_junction"')
-def create_preprocess_junction(tokenizer, include_regex, comment_regex, include_reader):
+def create_preprocess_junction(tokenizer, include_regex, comment_regex,
+                               derive_file_name = lambda name: name):
     from DHParser import pipeline
     return pipeline.create_preprocess_junction(
-        tokenizer, include_regex, comment_regex, include_reader)
+        tokenizer, include_regex, comment_regex, derive_file_name)
 
 @deprecated('The name "create_preprocess_transition()" is deprecated. Use "DHParser.pipeline.create_preprocess_junction()" instead.')
 def create_preprocess_transition(*args, **kwargs):
