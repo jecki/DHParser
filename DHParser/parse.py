@@ -561,7 +561,7 @@ class Parser:
         self.disposable = True        # type: bool
         self.drop_content = False     # type: bool
         self.eq_class = id(self)      # type: int
-        self.sub_parsers = frozenset()  # type: AbstractSet[Parser]
+        self._sub_parsers = frozenset()  # type: AbstractSet[Parser]
         # this indirection is required for Cython-compatibility
         self._parse_proxy = self._parse  # type: ParseFunc
         try:
@@ -846,6 +846,14 @@ class Parser:
             pass  # ignore setting of grammar attribute for placeholder parser
         except NameError:  # Cython: No access to _GRAMMAR_PLACEHOLDER, yet :-(
             self._grammar = grammar
+
+    @property
+    def sub_parsers(self) -> FrozenSet[Parser]:
+        return self._sub_parsers
+
+    @sub_parsers.setter
+    def sub_parsers(self, f: FrozenSet):
+        self._sub_parsers = f
 
     def descendants(self, grammar = _GRAMMAR_PLACEHOLDER) -> AbstractSet[Parser]:
         """Returns a set of self and all descendant parsers,
@@ -3294,7 +3302,9 @@ class LateBindingUnary(UnaryParser):
 
     @property
     def sub_parsers(self) -> FrozenSet[Parser]:
-        return frozenset({self.resolve_parser_name()})
+        if not self._sub_parsers:
+            self._sub_parsers = frozenset({self.resolve_parser_name()})
+        return self._sub_parsers
 
     @sub_parsers.setter
     def sub_parsers(self, f: FrozenSet):

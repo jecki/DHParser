@@ -14,7 +14,7 @@ cdef class Parser:
     cdef public bint drop_content
     cdef public str node_name
     cdef public object eq_class
-    cdef public object sub_parsers
+    cdef public object _sub_parsers
     cdef public object _parse_proxy
     cdef public object _grammar
     cdef public object visited
