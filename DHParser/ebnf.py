@@ -403,9 +403,10 @@ class HeuristicEBNFGrammar(Grammar):
         sequence   = ["§"] ( interleave | lookaround )  # "§" means all following terms mandatory
                      { !`@` !(symbol :DEF) :AND~ ["§"] ( interleave | lookaround ) }
         interleave = difference { "°" ["§"] difference }
-        lookaround = flowmarker § (oneormore | pure_elem)
-        difference = term [!`->` "-" § (oneormore | pure_elem)]
+        lookaround = flowmarker § part
+        difference = term [!`->` "-" § part]
         term       = (oneormore | counted | repetition | option | pure_elem) [ MOD_SYM~ drop ]
+        part       = (oneormore | pure_elem) [ MOD_SYM~ drop ]
 
 
         #: tree-reduction-markers aka "AST-hints"
@@ -542,9 +543,9 @@ class HeuristicEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "b53640513d83dd4690476eb14f8e62cb"
+    source_hash__ = "25631c8a102f71a777ab18f7b1ee11f5"
     disposable__ = re.compile(
-        '(?:..(?<=^))|(?:FOLLOW_UP$|pure_elem$|countable$|EOF$|no_range$|ANY_SUFFIX$|MOD_SEP$|component$|MOD_SYM$|is_mdef$)')
+        '(?:..(?<=^))|(?:ANY_SUFFIX$|FOLLOW_UP$|component$|MOD_SYM$|is_mdef$|pure_elem$|EOF$|no_range$|MOD_SEP$|countable$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','),
@@ -649,11 +650,11 @@ class HeuristicEBNFGrammar(Grammar):
                        Series(Text("dispose"), dwsp__))
     drop = Alternative(Series(Text("DROP"), dwsp__), Series(Text("Drop"), dwsp__), Series(Text("drop"), dwsp__),
                        Series(Text("SKIP"), dwsp__), Series(Text("Skip"), dwsp__), Series(Text("skip"), dwsp__))
+    part = Series(Alternative(oneormore, pure_elem), Option(Series(MOD_SYM, dwsp__, drop)))
     term = Series(Alternative(oneormore, counted, repetition, option, pure_elem), Option(Series(MOD_SYM, dwsp__, drop)))
-    difference = Series(term, Option(
-        Series(NegativeLookahead(Text("->")), Series(Text("-"), dwsp__), Alternative(oneormore, pure_elem),
-               mandatory=2)))
-    lookaround = Series(flowmarker, Alternative(oneormore, pure_elem), mandatory=1)
+    difference = Series(term,
+                        Option(Series(NegativeLookahead(Text("->")), Series(Text("-"), dwsp__), part, mandatory=2)))
+    lookaround = Series(flowmarker, part, mandatory=1)
     interleave = Series(difference,
                         ZeroOrMore(Series(Series(Text("°"), dwsp__), Option(Series(Text("§"), dwsp__)), difference)))
     sequence = Series(Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(
@@ -698,7 +699,6 @@ class HeuristicEBNFGrammar(Grammar):
         self.char_range_heuristics_parsefunc__ = self.char_range_heuristics._parse
         self.regex_heuristics_parserfunc__ = self.regex_heuristics._parse
         self.mode__ = 'fixed'
-
 
     @property
     def mode(self) -> str:
@@ -824,9 +824,10 @@ class ConfigurableEBNFGrammar(Grammar):
         sequence   = ["§"] ( interleave | lookaround )  # "§" means all following terms mandatory
                      { AND~ ["§"] ( interleave | lookaround ) }
         interleave = difference { "°" ["§"] difference }
-        lookaround = flowmarker § (oneormore | pure_elem)
-        difference = term [!`->` "-" § (oneormore | pure_elem)]
+        lookaround = flowmarker § part
+        difference = term [!`->` "-" § part]
         term       = (oneormore | counted | repetition | option | pure_elem) [MOD_SYM~ drop]
+        part       = (oneormore | pure_elem) [MOD_SYM~ drop]
 
 
         #: tree-reduction-markers aka "AST-hints"
@@ -933,9 +934,9 @@ class ConfigurableEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "c825ccd172267a0db4ebac7369bcb7bc"
+    source_hash__ = "8c6cd9632a94beeab184261dccaf25f4"
     disposable__ = re.compile(
-        '(?:..(?<=^))|(?:MOD_SYM$|is_mdef$|component$|countable$|EOF$|FOLLOW_UP$|pure_elem$|no_range$|ANY_SUFFIX$|MOD_SEP$)')
+        '(?:..(?<=^))|(?:component$|MOD_SYM$|is_mdef$|countable$|MOD_SEP$|EOF$|pure_elem$|ANY_SUFFIX$|FOLLOW_UP$|no_range$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','),
@@ -979,7 +980,7 @@ class ConfigurableEBNFGrammar(Grammar):
     argument = Alternative(literal, Series(name, dwsp__))
     parser = Series(Series(Text("@"), dwsp__), name, Series(Text("("), dwsp__), Option(argument),
                     Series(Text(")"), dwsp__), mandatory=3)
-    no_range = Drop(Alternative(Drop(NegativeLookahead(multiplier)), Drop(Series(Drop(Lookahead(multiplier)), TIMES))))
+    no_range = Drop(Alternative(NegativeLookahead(multiplier), Series(Lookahead(multiplier), TIMES)))
     macro = Series(Series(Text("$"), dwsp__), name, Series(Text("("), dwsp__), no_range, expression,
                    ZeroOrMore(Series(Series(Text(","), dwsp__), no_range, expression)), Series(Text(")"), dwsp__))
     range = Series(RNG_OPEN, dwsp__, multiplier, Option(Series(RNG_DELIM, dwsp__, multiplier)), RNG_CLOSE, dwsp__)
@@ -1007,11 +1008,11 @@ class ConfigurableEBNFGrammar(Grammar):
                        Series(Text("dispose"), dwsp__))
     drop = Alternative(Series(Text("DROP"), dwsp__), Series(Text("Drop"), dwsp__), Series(Text("drop"), dwsp__),
                        Series(Text("SKIP"), dwsp__), Series(Text("Skip"), dwsp__), Series(Text("skip"), dwsp__))
+    part = Series(Alternative(oneormore, pure_elem), Option(Series(MOD_SYM, dwsp__, drop)))
     term = Series(Alternative(oneormore, counted, repetition, option, pure_elem), Option(Series(MOD_SYM, dwsp__, drop)))
-    difference = Series(term, Option(
-        Series(NegativeLookahead(Text("->")), Series(Text("-"), dwsp__), Alternative(oneormore, pure_elem),
-               mandatory=2)))
-    lookaround = Series(flowmarker, Alternative(oneormore, pure_elem), mandatory=1)
+    difference = Series(term,
+                        Option(Series(NegativeLookahead(Text("->")), Series(Text("-"), dwsp__), part, mandatory=2)))
+    lookaround = Series(flowmarker, part, mandatory=1)
     interleave = Series(difference,
                         ZeroOrMore(Series(Series(Text("°"), dwsp__), Option(Series(Text("§"), dwsp__)), difference)))
     sequence = Series(Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(
@@ -1169,7 +1170,7 @@ EBNF_AST_transformation_table = {
         [],
     "difference":
         [remove_tokens('-'), replace_by_single_child],
-    "term, pure_elem, element":
+    "term, part, pure_elem, element":
         [replace_by_single_child],
     "flowmarker, retrieveop":
         [reduce_single_child],
@@ -2927,6 +2928,9 @@ class EBNFCompiler(Compiler):
             return f'Synonym({self.P["Drop"]}({term_code}))' \
                    if term_code[:4] != "Drop" else  f'Synonym({term_code})'
         return f'{self.P["Drop"]}({term_code})' if term_code[:4] != "Drop" else term_code
+
+    def on_part(self, node):
+        return self.on_term(node)
 
     def _error_customization(self, node) -> Tuple[Tuple[Node, ...], List[str]]:
         """Generates the customization arguments (mandatory, error_msgs, skip) for

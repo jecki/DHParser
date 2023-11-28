@@ -61,9 +61,10 @@ expression = sequence { OR~ sequence }
 sequence   = ["§"] ( interleave | lookaround )  # "§" means all following terms mandatory
              { AND~ ["§"] ( interleave | lookaround ) }
 interleave = difference { "°" ["§"] difference }
-lookaround = flowmarker § (oneormore | pure_elem)
-difference = term [!`->` "-" § (oneormore | pure_elem)]
+lookaround = flowmarker § part
+difference = term [!`->` "-" § part]
 term       = (oneormore | counted | repetition | option | pure_elem) [MOD_SYM~ drop]
+part       = (oneormore | pure_elem) [MOD_SYM~ drop]
 
 
 #: tree-reduction-markers aka "AST-hints"

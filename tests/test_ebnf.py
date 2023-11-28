@@ -438,6 +438,11 @@ class TestModifiers:
         b = parser.python_src__.find('\n', a)
         assert line == parser.python_src__[a:b]
 
+    def test_drop_bug(self):
+        lang = r'''EOF      =  !/./ -> DROP'''
+        parser = create_parser(lang)
+        assert parser.python_src__.rfind("NegativeLookahead(Drop(RegExp('.')))") >= 0
+
 
 class TestEBNFParser:
     cases = {
@@ -2115,7 +2120,7 @@ class TestInclude:
 
 
 class TestCustomParsers:
-    arithmetic_ebnf = '''
+    arithmetic_ebnf = r'''
     @ whitespace  = vertical             
     @ literalws   = right                
     @ comment     = /#.*/                
