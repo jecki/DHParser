@@ -1013,7 +1013,7 @@ def extract_symbols(ebnf_text_or_file: str) -> SymbolsDictType:
 
     ebnf = load_if_file(ebnf_text_or_file)
     deflist = RX_DEFINITION_OR_SECTION.findall(ebnf)
-    deflist = [re.sub(r'(?<=\w)-(?=\w)', '_', dfn) for dfn in deflist if dfn[:2] != '#:']
+    deflist = [(re.sub(r'(?<=\w)-(?=\w)', '_', dfn) if dfn[:2] != '#:' else dfn) for dfn in deflist]
     if not deflist:
         if ebnf_text_or_file.find('\n') < 0 and ebnf_text_or_file.endswith('.ebnf'):
             deflist = ['#: ' + os.path.splitext(ebnf_text_or_file)[0]]
