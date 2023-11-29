@@ -2144,6 +2144,13 @@ class Grammar:
             return str(result)
 
 
+    @property
+    def document_lbreaks__(self) -> List[int]:
+        if not self._document_lbreaks__:
+            self._document_lbreaks__ = linebreaks(self.document__)
+        return self._document_lbreaks__
+
+
     def push_rollback__(self, location, func):
         """
         Adds a rollback function that either removes or re-adds
@@ -2158,13 +2165,6 @@ class Grammar:
         # memoization will be turned back on again in Parser.__call__ after
         # the parser that called push_rollback__() has returned.
         # print("PUSH", self.document__[location:location+10].replace('\n', '\\n'), dict(self.variables__))
-
-
-    @property
-    def document_lbreaks__(self) -> List[int]:
-        if not self._document_lbreaks__:
-            self._document_lbreaks__ = linebreaks(self.document__)
-        return self._document_lbreaks__
 
 
     def rollback_to__(self, location):

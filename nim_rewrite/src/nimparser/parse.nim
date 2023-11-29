@@ -59,6 +59,9 @@ type
   # the GrammarObj
   ReturnItemProc = proc(parser: Parser, node: NodeOrNil): Node {.raises: [].} not nil
   ReturnSequenceProc = proc(parser: Parser, nodes: sink seq[Node]): Node {.raises: [].} not nil
+  RollbackItem = tuple
+    location: int32
+    rollback: proc() {.closure raises: [].} not nil
   GrammarFlags* = enum postfixNotation, memoize
   GrammarFlagSet = set[GrammarFlags]
   GrammarRef = ref GrammarObj not nil
@@ -69,14 +72,14 @@ type
     returnSequence: ReturnSequenceProc
     document: StringSlice
     errors: seq[ErrorRef]
+    rollbackStack: seq[RollbackItem]
+    rollbackLocation: int32
     farthestFail: int32
     farthestParser: ParserOrNil
-    recursionCounter: uint16
-
 
 
 const
-  RecursionLimit = 1536
+  # RecursionLimit = 1536
 
   # Parser-Names
   ParserName = ":Parser"
@@ -128,13 +131,6 @@ proc parserName*(parser: Parser): string =
     parser.subParsers[0].name
   else:
     parser.name
-
-
-# proc cycleGuard(self: Parser, f: proc()) =
-#   if not self.cycleReached:
-#     self.cycleReached = true
-#     f()
-#     self.cycleReached = false
 
 proc trackingApply(parser: Parser, visitor: (Parser) -> bool): bool =
   if not (applyTracker in parser.flags):
@@ -217,10 +213,10 @@ proc returnSeqPlaceholder(parser: Parser, nodes: sink seq[Node]): Node =
 proc cleanUp(grammar: GrammarRef) =
   grammar.flags.excl memoize
   grammar.errors = @[]
-  grammar.recursionCounter = 0
+  grammar.rollbackStack = newSeqOfCap[RollbackItem](20)
+  grammar.rollbackLocation = -2
   grammar.farthestFail = -1
   grammar.farthestParser = nil
-
 
 
 proc init(grammar: GrammarRef, name: string, 
@@ -284,16 +280,28 @@ proc fatal(parser: Parser, msg: string, location: int32, code: ErrorCode = A_FAT
                          location: location, error: error)
  
 
+proc pushRollback(grammar: GrammarRef, item: RollbackItem) =
+  grammar.rollbackStack.add(item)
+  grammar.rollbackLocation = item.location
+  grammar.flags.excl memoize
+
+
+proc rollback(grammar: GrammarRef, location: int32) {.raises: [].} =
+  var rb: RollbackItem
+  if grammar.rollbackStack.len > 0 and grammar.rollbackStack[^1].location >= location:
+    rb = grammar.rollbackStack.pop()
+    rb.rollback()
+    if grammar.rollbackStack.len > 0:
+      grammar.rollbackLocation = grammar.rollbackStack[^1].location
+    else:
+      grammar.rollbackLocation = -2
+
+
 proc memoizationWrapper(parser: Parser, location: int32): ParsingResult {.raises: [ParsingException].} =
   try:
-    if location in parser.visited:
-      return parser.visited[location]
-
-    let 
-      grammar: GrammarRef = parser.grammar
-       
-    if grammar.recursionCounter > RecursionLimit: 
-      return fatal(parser, "Too many nested parser calls", location, RecursionLimitReached)
+    let grammar: GrammarRef = parser.grammar
+    if location < grammar.rollbackLocation:  grammar.rollback(location)
+    if location in parser.visited:  return parser.visited[location]
 
     let memoization = memoize in grammar.flags
     grammar.flags.incl memoize  
@@ -315,7 +323,11 @@ proc memoizationWrapper(parser: Parser, location: int32): ParsingResult {.raises
       if not memoization:  grammar.flags.excl memoize
       
   except KeyError:
-    return fatal(parser, "Totally unexpected KeyError", location)
+    return fatal(parser, "Totally unexpected KeyError" &  getCurrentExceptionMsg(), location)
+
+
+method cleanUp(self: Parser) =
+  self.visited.clear()
 
 
 proc init*(parser: Parser, ptype: string = ParserName): Parser =
@@ -333,8 +345,14 @@ proc init*(parser: Parser, ptype: string = ParserName): Parser =
   # parser.closure.init()
   parser.call = memoizationWrapper
   parser.visited = initTable[int, ParsingResult]()
+  parser.cleanUp()
   return parser
 
+
+proc assignSymbol(parser: Parser, symbol: Parser) =
+  parser.symbol = symbol
+  for p in parser.subParsers:
+    if isNil(p.symbol):  assignSymbol(p, symbol)
 
 proc assignName(name: string, parser: Parser): Parser =
   assert parser.name == ""
@@ -346,16 +364,11 @@ proc assignName(name: string, parser: Parser): Parser =
   else:
     parser.flags.excl isDisposable
     parser.name = name
-  parser.symbol = parser
+  assignSymbol(parser, parser)
   return parser
-  # TODO: assign name as symbol to sub-parsers
 
 proc assign*[T: Parser](name: string, parser: T): T =
   T(assignName(name, parser))
-
-
-method cleanUp(self: Parser) =
-  self.visited.clear()
 
 
 proc `()`*(parser: Parser, location: int32): ParsingResult {.inline raises: [ParsingException].} =
@@ -743,7 +756,7 @@ method parse*(self: SeriesRef, location: int32): ParsingResult {.raises: [Parsin
       if pos.uint32 < self.mandatory:
         return (nil, location)
       else:
-        # TODO: Fill the placeholders: reentry and violation in!
+        # TODO: Fill the placeholders: reentry and violation in, above!
         (someNode, reloc) = self.reentry(loc)
         (error, loc) = self.violation(loc, false, parser.name, reloc, node)
         if reloc >= 0:
@@ -885,10 +898,69 @@ method `$`*(self: LookaheadRef): string =
 type
   ForwardRef = ref ForwardObj not nil
   ForwardObj = object of ParserObj
+    recursionCounter: Table[int32, int32]  # location -> recursion depth
 
+
+proc forwardWrapper(parser: Parser, location: int32): ParsingResult {.raises: [ParsingException].} =
+  try:
+    let grammar: GrammarRef = parser.grammar
+    if location <= grammar.rollbackLocation:  grammar.rollback(location)
+    if location in parser.visited:  return parser.visited[location]
+
+    var depth: int32
+    if location in parser.ForwardRef.recursionCounter:
+      depth = parser.ForwardRef.recursionCounter[location]
+      if depth == 0:
+        grammar.flags.excl memoize
+        result = (nil, location)
+      else:
+        parser.ForwardRef.recursionCounter[location] = depth - 1
+        result = parser.subParsers[0](location)
+        parser.ForwardRef.recursionCounter[location] = depth
+    else:
+      parser.ForwardRef.recursionCounter[location] = 0
+      let memoization = memoize in grammar.flags
+      grammar.flags.incl memoize
+
+      result = parser.subParsers[0](location)
+
+      if not isNil(result.node):
+        depth = 1
+
+        while true:
+          parser.ForwardRef.recursionCounter[location] = depth
+          grammar.flags.incl memoize
+          var rb = grammar.rollbackStack.len
+
+          var nextResult = parser.subParsers[0](location)
+
+          if nextResult.location <= result.location:
+            while grammar.rollbackStack.len > rb:
+              var rbItem = grammar.rollbackStack.pop()
+              rbItem.rollback()
+              if grammar.rollbackStack.len > 0:
+                grammar.rollbackLocation = grammar.rollbackStack[^1].location
+              else:
+                grammar.rollbackLocation = -2
+            break
+
+          result = nextResult
+          depth += 1
+
+      if not memoization:  grammar.flags.excl memoize
+      if memoize in grammar.flags:  parser.visited[location] = result
+  except KeyError:
+    return fatal(parser, "Totally unexpected KeyError: " &  getCurrentExceptionMsg(), location)
+
+
+method cleanUp(self: ForwardRef) =
+  self.recursionCounter.clear()
+  procCall self.Parser.cleanUp()
 
 proc init*(forward: ForwardRef): ForwardRef =
   discard Parser(forward).init(ForwardName)
+  forward.call = forwardWrapper
+  forward.recursionCounter = initTable[int32, int32]()
   return forward
 
 proc Forward*(): ForwardRef =
@@ -896,8 +968,11 @@ proc Forward*(): ForwardRef =
 
 proc set*(forward: ForwardRef, parser: Parser) =
   forward.subParsers = @[parser]
-  if forward.name != "" and parser.name == "":
-    parser.name = forward.name
+  if parser.name == "":
+    if forward.name != "":
+      parser.name = forward.name
+      assignSymbol(parser, parser)
+      forward.symbol = parser       # TODO: Could this lead to problems ?
   if isDisposable in forward.flags:  parser.flags.incl isDisposable
   if dropContent in parser.flags:
     forward.flags.incl dropContent
