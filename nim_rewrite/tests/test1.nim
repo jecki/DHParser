@@ -35,3 +35,16 @@ test "parser-serialization":
   check root.getSubParsers[0].getSubParsers.len == 3
   check $s == "s t t"
   check t.parserType == ":Series"
+
+test "arithmetic":
+  let WS  = "WS".assign                Regex(rx"\s*")
+  let NUMBER = "NUMBER".assign         (Regex(rx"(?:0|(?:[1-9]\d*))(?:\.\d+)?") & WS)
+  let sign = "sign".assign             ((Text("+") | Text("-")) & WS)
+  let expression = "expression".assign Forward()
+  let group = "group".assign           (Text("(") & WS & expression & Text(")") & WS)
+  let factor = "factor".assign         (Option(sign) & (NUMBER | group))
+  let term = "term".assign             (factor & ZeroOrMore((Text("*") | Text("/")) & WS & factor))
+  expression.set                       (term & ZeroOrMore((Text("+") | Text("-")) & WS & term))
+
+  let result = expression("1 + 1")
+  echo result.asSxpr()
