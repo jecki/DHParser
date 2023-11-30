@@ -381,6 +381,9 @@ proc `()`*(parser: Parser, document: string or StringSlice, location: int32 = 0)
     parser.grammar = Grammar("adhoc", document=StringSlice(document))
   else:  
     parser.grammar.document = StringSlice(document)
+    parser.grammar.cleanUp()
+    parser.apply/(proc (parser: Parser): bool =
+      parser.cleanUp())
   result = parser.call(parser, location)
   discard parser.apply(
     proc (p: Parser): bool =
