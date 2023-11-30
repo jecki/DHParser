@@ -74,7 +74,7 @@ func isAnonymous*(node: Node): bool = node.name.len == 0 or node.name[0] == ':'
 
 func content*(node: Node): string =
   if node.isLeaf:
-    return node.textSlice.str[]
+    return $node.textSlice
   else:
     result = ""
     for child in node.childrenSeq:

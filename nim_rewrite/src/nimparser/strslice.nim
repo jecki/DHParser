@@ -59,7 +59,7 @@ let EmptyStringSlice* = makeStringSlice("")
 
 converter toStringSlice*(str: StringSlice or ref string or string): StringSlice  =
   ## Automatic converter to create a string slice from a string
-  when str is StringSlice: str  else: makeStringSlice(str)
+  when str is StringSlice: str  else:  makeStringSlice(str)
 
 
 proc `$`*(str: StringSlice): string =
@@ -96,8 +96,21 @@ proc `[]`*(str: StringSlice,
   else:
     if slc.b + 1 < slc.a or slc.b > str.high:
       raise newException(IndexDefect, "index out of bounds")
-    stop = str.start + slc.b.int32
-  StringSlice(buf: str.buf, start: str.start + slc.a.int32, stop: stop)
+    stop = str.start + slc.b
+  StringSlice(buf: str.buf, start: str.start + slc.a, stop: stop)
+
+proc `[]`*(str: StringSlice,
+           slc: HSlice[int, int]): StringSlice {.inline.} =
+  str[slc.a.int32 .. slc.b.int32]
+
+proc `[]`*(str: StringSlice,
+           slc: HSlice[int32, int]): StringSlice {.inline.} =
+  str[slc.a .. slc.b.int32]
+
+proc `[]`*(str: StringSlice,
+           slc: HSlice[int, int32 or BackwardsIndex]): StringSlice {.inline.} =
+  str[slc.a.int32 .. slc.b]
+
 
 proc `&`*(sl1, sl2: StringSlice): StringSlice =
   ## Concatenate two string slices like the regular `&` operator does for

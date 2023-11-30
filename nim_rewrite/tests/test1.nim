@@ -7,14 +7,30 @@
 
 import unittest
 
+import nimparser/strslice
 import nimparser/nodetree
 import nimparser/parse
+
+test "Node.content":
+  let slice = toStringSlice("ABC")
+  var slice2 = toStringSlice(slice)
+  var node = newNode("TEST", slice2[1..0])
+  check node.content == ""
+  node = newNode("TEXT", slice2[1..^1])
+  check node.content == "BC"
 
 test "Text, simple test":
   check Text("A")("A").node.asSxpr == "(:Text \"A\")"
 
 test "Regex, simple test":
   check Regex(rx"\w+")("ABC").node.asSxpr() == "(:Regex \"ABC\")"
+
+test "Regex in sequence":
+  let number = "number".assign Regex(rx"\d+")
+  let ws = "ws".assign Regex(rx"\s*")
+  let text = toStringSlice("1")
+  check number(text, 0).node.asSxpr == "(number \"1\")"
+  check ws(text, 1).node.asSxpr == "(ws \"\")"
 
 test "Alternative":
   check Alternative(Text("A"), Text("B"))("B").node.asSxpr == "(:Text \"B\")"
@@ -45,6 +61,11 @@ test "arithmetic":
   let factor = "factor".assign         (Option(sign) & (NUMBER | group))
   let term = "term".assign             (factor & ZeroOrMore((Text("*") | Text("/")) & WS & factor))
   expression.set                       (term & ZeroOrMore((Text("+") | Text("-")) & WS & term))
+  # expression.grammar = Grammar("Arithmetic")
 
-  let result = expression("1 + 1")
-  echo result.asSxpr()
+  # echo $(Option(sign) & (NUMBER | group))("1 + 1").node
+  # echo $NUMBER("1").node
+  echo $factor("1 + 1").node
+  # echo $term("1").node
+  # let result = expression("1 + 1")
+  # echo $result.node

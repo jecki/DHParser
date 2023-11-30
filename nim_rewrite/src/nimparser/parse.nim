@@ -233,7 +233,7 @@ proc init(grammar: GrammarRef, name: string,
   return grammar
 
 
-template Grammar(args: varargs[untyped]): GrammarRef =
+template Grammar*(args: varargs[untyped]): GrammarRef =
   new(GrammarRef).init(args)
 
 
@@ -374,7 +374,8 @@ proc assign*[T: Parser](name: string, parser: T): T =
 proc `()`*(parser: Parser, location: int32): ParsingResult {.inline raises: [ParsingException].} =
   parser.call(parser, location)
 
-proc `()`*(parser: Parser, document: string, location: int32 = 0): ParsingResult =
+proc `()`*(parser: Parser, document: string or StringSlice, location: int32 = 0): ParsingResult =
+  let doc = when document is string:  document.toStringSlice  else:  document
   if parser.grammar == GrammarPlaceholder:
     parser.grammar = Grammar("adhoc", document=StringSlice(document))
   else:  
@@ -752,9 +753,8 @@ method parse*(self: SeriesRef, location: int32): ParsingResult {.raises: [Parsin
     someNode: Node
   for pos, parser in enumerate(self.subParsers):
     try:
-      echo $loc & ":  " & $parser
       (node, loc) = parser(loc)
-      echo $loc & ":  " & node.asSxpr()
+      echo "-> " & $node
     except Exception:
       echo getCurrentExceptionMsg()
     if isNil(node):
