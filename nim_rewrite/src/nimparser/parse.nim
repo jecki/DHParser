@@ -752,11 +752,8 @@ method parse*(self: SeriesRef, location: int32): ParsingResult {.raises: [Parsin
     node, nd: NodeOrNil
     someNode: Node
   for pos, parser in enumerate(self.subParsers):
-    try:
-      (node, loc) = parser(loc)
-      echo "-> " & $node
-    except Exception:
-      echo getCurrentExceptionMsg()
+    (node, loc) = parser(loc)
+    # try:  echo "-> " & $node  except Exception:  echo getCurrentExceptionMsg()
     if isNil(node):
       if pos.uint32 < self.mandatory:
         return (nil, location)
@@ -776,6 +773,7 @@ method parse*(self: SeriesRef, location: int32): ParsingResult {.raises: [Parsin
           break
     elif not node.isEmpty or not node.isAnonymous:
       results.add(node)
+  try:  echo "-> " & $results  except Exception:  echo getCurrentExceptionMsg()
   someNode = self.grammar.returnSequence(self, results)
   if not isNil(error):
     raise ParsingException(parser: self, node: someNode.withPos(location),
