@@ -775,6 +775,7 @@ method parse*(self: SeriesRef, location: int32): ParsingResult {.raises: [Parsin
       results.add(node)
   try:  echo "-> " & $results  except Exception:  echo getCurrentExceptionMsg()
   someNode = self.grammar.returnSequence(self, results)
+  try:  echo "=> " & $someNode  except Exception:  echo getCurrentExceptionMsg()
   if not isNil(error):
     raise ParsingException(parser: self, node: someNode.withPos(location),
                            node_orig_len: loc - location, location: location,
