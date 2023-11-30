@@ -173,7 +173,7 @@ proc returnItemFlatten(parser: Parser, node: NodeOrNil): Node =
         return EmptyNode
       return node
     if node.isAnonymous:
-      return newNode(parser.nodeName, Node(node))
+      return node.clone(parser.node_name)
     return newNode(parser.nodeName, node)
   elif isDisposable in parser.flags:
     return EmptyNode
@@ -382,8 +382,6 @@ proc `()`*(parser: Parser, document: string or StringSlice, location: int32 = 0)
   else:  
     parser.grammar.document = StringSlice(document)
     parser.grammar.cleanUp()
-    parser.apply/(proc (parser: Parser): bool =
-      parser.cleanUp())
   result = parser.call(parser, location)
   discard parser.apply(
     proc (p: Parser): bool =
@@ -407,6 +405,13 @@ proc getSubParsers*(parser: Parser): seq[Parser] =
   collect(newSeqOfCap(parser.subParsers.len)):
     for p in parser.subParsers:  p
   
+
+## Modifiers
+## ---------
+
+proc Drop*(parser: Parser): Parser {.inline.} =
+  parser.flags = parser.flags + {dropContent, isDisposable}
+  return parser
 
 
 ## Leaf Parsers

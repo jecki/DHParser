@@ -2803,7 +2803,7 @@ MERGED_PTYPE = MIXED_CONTENT_TEXT_PTYPE
 class CombinedParser(Parser):
     """Class CombinedParser is the base class for all parsers that
     call ("combine") other parsers. It contains functions for the
-    optimization of return values of such parser
+    optimization of return values of such parsers
     (i.e. descendants of classes UnaryParser and NaryParser).
 
     One optimization consists in flattening the tree by eliminating

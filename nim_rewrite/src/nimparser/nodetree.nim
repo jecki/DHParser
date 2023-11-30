@@ -60,9 +60,9 @@ proc init*(node: Node,
   attrRef[] = attributes
   return init(node, name, data, attrRef)
 
-
 template newNode*(args: varargs[untyped]): Node =
   new(Node).init(args)
+
 
 proc `name=`*(node: Node, name: ref string or string) =
   when name is ref string:
@@ -102,7 +102,7 @@ proc `text=`(node: Node, text: StringSlice or ref string or string) {.inline.} =
     else:
       node.textSlice.str[] = text    
 
-proc text*(node: Node): string {.inline.} = node.textSlice.str[]
+proc text*(node: Node): StringSlice {.inline.} = node.textSlice
 
 # see: https://nim-lang.org/docs/destructors.html
 
@@ -177,6 +177,24 @@ proc `pos=`*(node: Node, sourcePos: int32) =
 proc withPos*(node: Node, sourcePos: int32): Node =
   discard node.assignSourcePos(sourcePos)
   return node
+
+
+proc copy*(node: Node): Node =
+  ## Yields a shallow copy of a node
+  if node.isLeaf:
+    if isNil(node.attributesRef):
+      newNode(node.nameRef, node.textSlice)
+    else:
+      newNode(node.nameRef, node.textSlice, node.attr)
+  else:
+    if isNil(node.attributesRef):
+      newNode(node.nameRef, node.childrenSeq)
+    else:
+      newNode(node.nameRef, node.childrenSeq, node.attr)
+
+proc clone*(node: Node, newName: ref string not nil): Node =
+  ## Creates a new node, keeping merely the result of the old node
+  if node.isLeaf:  newNode(newName, node.textSlice)  else:  newNode(newName, node.childrenSeq)
 
 
 const indentation = 2

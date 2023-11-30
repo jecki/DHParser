@@ -53,8 +53,8 @@ test "parser-serialization":
   check t.parserType == ":Series"
 
 test "arithmetic":
-  let WS  = ":WS".assign                Regex(rx"\s*")
-  let NUMBER = "NUMBER".assign         (Regex(rx"(?:0|(?:[1-9]\d*))(?:\.\d+)?") & WS)
+  let WS  = ":WS".assign               Drop(Regex(rx"\s*"))
+  let NUMBER = ":NUMBER".assign        (Regex(rx"(?:0|(?:[1-9]\d*))(?:\.\d+)?") & WS)
   let sign = "sign".assign             ((Text("+") | Text("-")) & WS)
   let expression = "expression".assign Forward()
   let group = "group".assign           (Text("(") & WS & expression & Text(")") & WS)
@@ -63,6 +63,7 @@ test "arithmetic":
   expression.set                       (term & ZeroOrMore((Text("+") | Text("-")) & WS & term))
   expression.grammar = Grammar("Arithmetic")
 
+  echo $factor("1").node
   echo $term("1+1").node
   var result = expression("1 + 1")
   echo $result.node
