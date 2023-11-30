@@ -61,11 +61,7 @@ test "arithmetic":
   let factor = "factor".assign         (Option(sign) & (NUMBER | group))
   let term = "term".assign             (factor & ZeroOrMore((Text("*") | Text("/")) & WS & factor))
   expression.set                       (term & ZeroOrMore((Text("+") | Text("-")) & WS & term))
-  # expression.grammar = Grammar("Arithmetic")
+  expression.grammar = Grammar("Arithmetic")
 
-  # echo $(Option(sign) & (NUMBER | group))("1 + 1").node
-  # echo $NUMBER("1").node
-  echo $factor("1 + 1").node
-  # echo $term("1").node
-  # let result = expression("1 + 1")
-  # echo $result.node
+  let result = expression("1 + 1")
+  echo $result.node

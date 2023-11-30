@@ -28,7 +28,7 @@ type
 
 proc init*(node: Node, 
            name: ref string or string, 
-           data: sink seq[Node] or StringSlice or ref string or string, 
+           data: sink seq[Node] or NodeOrNil or sink StringSlice or ref string or string,
            attributes: ref Attributes = nil): Node =
   when name is ref string:
     node.nameRef = name
@@ -37,6 +37,12 @@ proc init*(node: Node,
     node.nameRef[] = name
   when data is seq[Node]:
     node.childrenSeq = data
+    node.textSlice = EmptyStringSlice
+  elif data is NodeOrNil:
+    if not isNil(data):
+      let nonNilData: Node = data
+      node.childrenSeq = @[nonNilData]
+    # else:  node.childrenSeq = @[]
     node.textSlice = EmptyStringSlice
   else:
     # node.childrenSeq = @[]
@@ -47,7 +53,7 @@ proc init*(node: Node,
 
 proc init*(node: Node, 
            name: ref string or string, 
-           data: sink seq[Node] or StringSlice or ref string or string, 
+           data: sink seq[Node] or NodeOrNil or sink StringSlice or ref string or string,
            attributes: Attributes): Node =
   var attrRef: ref Attributes
   new(attrRef)
@@ -285,3 +291,6 @@ when isMainModule:
     s: seq[Node] = @[] 
     m = newNode("", s)
   echo $m.isLeaf()
+
+  n = newNode("root", newNode("element", "Inhalt"))
+  echo $n

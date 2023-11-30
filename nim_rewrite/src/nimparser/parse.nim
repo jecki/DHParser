@@ -173,7 +173,8 @@ proc returnItemFlatten(parser: Parser, node: NodeOrNil): Node =
         return EmptyNode
       return node
     if node.isAnonymous:
-      return newNode(parser.nodeName, @[Node(node)])
+      return newNode(parser.nodeName, Node(node))
+    return newNode(parser.nodeName, node)
   elif isDisposable in parser.flags:
     return EmptyNode
   return newNode(parser.nodeName, "")
@@ -753,7 +754,6 @@ method parse*(self: SeriesRef, location: int32): ParsingResult {.raises: [Parsin
     someNode: Node
   for pos, parser in enumerate(self.subParsers):
     (node, loc) = parser(loc)
-    # try:  echo "-> " & $node  except Exception:  echo getCurrentExceptionMsg()
     if isNil(node):
       if pos.uint32 < self.mandatory:
         return (nil, location)
@@ -773,9 +773,7 @@ method parse*(self: SeriesRef, location: int32): ParsingResult {.raises: [Parsin
           break
     elif not node.isEmpty or not node.isAnonymous:
       results.add(node)
-  try:  echo "-> " & $results  except Exception:  echo getCurrentExceptionMsg()
   someNode = self.grammar.returnSequence(self, results)
-  try:  echo "=> " & $someNode  except Exception:  echo getCurrentExceptionMsg()
   if not isNil(error):
     raise ParsingException(parser: self, node: someNode.withPos(location),
                            node_orig_len: loc - location, location: location,
@@ -999,37 +997,37 @@ method `$`*(self: ForwardRef): string =
 ## Test-code
 
 when isMainModule:
-  # let txt = "txt".assignName Text("X")
-  # let cst = txt("X")
-  # echo $cst
-  # echo Text("A")("A").node.asSxpr
-  # doAssert Text("A")("A").node.asSxpr == "(:Text \"A\")"
-  # echo Regex(rx"\w+")("ABC").node.asSxpr
-  # doAssert Regex(rx"\w+")("ABC").node.asSxpr == "(:Regex \"ABC\")"
-  # echo Repeat(Text("A"), (1u32, 3u32))("AAAA").node.asSxpr
-  # echo ("r".assignName Repeat(Text("A"), (1u32, 3u32)))("AA").node.asSxpr
-  # echo Series(Text("A"), Text("B"), Text("C"), mandatory=1u32)("ABC").node.asSxpr
-  # try:
-  #   echo Series(Text("A"), Text("B"), Text("C"), mandatory=1u32)("ABX").node.asSxpr
-  # except ParsingException:
-  #   echo "Expected Exception"
-  # echo Alternative(Text("A"), Text("B"))("B").node.asSxpr
-  # doAssert Alternative(Text("A"), Text("B"))("B").node.asSxpr == "(:Text \"B\")"
-  # doAssert $Alternative(Text("A"), Text("B")) == "\"A\"|\"B\""
-  # doAssert $Series(Text("A"), Text("B"), Text("C"), mandatory=1u32) == "\"A\" §\"B\" \"C\""
-  # echo $((Text("A")|Text("B"))|(Text("C")|Text("D")|Text("E")))
-  #
-  # let root = "root".assign Forward()
-  # let t = "t".assign Text("A") & root
-  # let s = "s".assign root & t & t
-  # root.set(s)
-  # echo $root
-  # echo $t
-  # echo $root.subParsers[0].subparsers.len
-  # echo $s
-  # echo $t.parserType
-  # echo " "
-  # root.grammar = Grammar("adhoc1")
+  let txt = "txt".assignName Text("X")
+  let cst = txt("X")
+  echo $cst
+  echo Text("A")("A").node.asSxpr
+  doAssert Text("A")("A").node.asSxpr == "(:Text \"A\")"
+  echo Regex(rx"\w+")("ABC").node.asSxpr
+  doAssert Regex(rx"\w+")("ABC").node.asSxpr == "(:Regex \"ABC\")"
+  echo Repeat(Text("A"), (1u32, 3u32))("AAAA").node.asSxpr
+  echo ("r".assignName Repeat(Text("A"), (1u32, 3u32)))("AA").node.asSxpr
+  echo Series(Text("A"), Text("B"), Text("C"), mandatory=1u32)("ABC").node.asSxpr
+  try:
+    echo Series(Text("A"), Text("B"), Text("C"), mandatory=1u32)("ABX").node.asSxpr
+  except ParsingException:
+    echo "Expected Exception"
+  echo Alternative(Text("A"), Text("B"))("B").node.asSxpr
+  doAssert Alternative(Text("A"), Text("B"))("B").node.asSxpr == "(:Text \"B\")"
+  doAssert $Alternative(Text("A"), Text("B")) == "\"A\"|\"B\""
+  doAssert $Series(Text("A"), Text("B"), Text("C"), mandatory=1u32) == "\"A\" §\"B\" \"C\""
+  echo $((Text("A")|Text("B"))|(Text("C")|Text("D")|Text("E")))
+
+  let root = "root".assign Forward()
+  let t = "t".assign Text("A") & root
+  let s = "s".assign root & t & t
+  root.set(s)
+  echo $root
+  echo $t
+  echo $root.subParsers[0].subparsers.len
+  echo $s
+  echo $t.parserType
+  echo " "
+  root.grammar = Grammar("adhoc1")
 
   let WS  = "WS".assign                Regex(rx"\s*")
   let NUMBER = "NUMBER".assign         (Regex(rx"(?:0|(?:[1-9]\d*))(?:\.\d+)?") & WS)
@@ -1041,9 +1039,6 @@ when isMainModule:
   expression.set                       (term & ZeroOrMore((Text("+") | Text("-")) & WS & term))
   expression.grammar = Grammar("Arithmetic")
 
-  echo $NUMBER
-  echo WS("").node.asSxpr()
-  echo NUMBER("1").node.asSxpr()
   let tree = expression("1 + 1").node
   echo tree.asSxpr()
 
