@@ -358,10 +358,15 @@ proc assignSymbol(parser: Parser, symbol: Parser) =
 proc assignName(name: string, parser: Parser): Parser =
   assert parser.name == ""
   assert name != ""
-
   parser.nodeName[] = name
   if name[0] == ':':
     parser.name = name[1 .. ^1]
+  elif name.len >= 5 and name[4] == ':':
+    if name[0..3] == "DROP":
+      parser.flags.incl dropContent
+    else:
+      assert name[0..3] == "HIDE"
+    parser.name = name[5 .. ^1]
   else:
     parser.flags.excl isDisposable
     parser.name = name
@@ -980,8 +985,7 @@ proc set*(forward: ForwardRef, parser: Parser) =
   forward.subParsers = @[parser]
   if parser.name == "":
     if forward.name != "":
-      parser.name = forward.name
-      assignSymbol(parser, parser)
+      discard assignName(forward.name, parser)
       forward.symbol = parser       # TODO: Could this lead to problems ?
   if isDisposable in forward.flags:  parser.flags.incl isDisposable
   if dropContent in parser.flags:
@@ -1037,8 +1041,8 @@ when isMainModule:
   echo " "
   root.grammar = Grammar("adhoc1")
 
-  let WS  = "WS".assign                Regex(rx"\s*")
-  let NUMBER = "NUMBER".assign         (Regex(rx"(?:0|(?:[1-9]\d*))(?:\.\d+)?") & WS)
+  let WS  = "WS".assign                DROP(Regex(rx"\s*"))
+  let NUMBER = ":NUMBER".assign         (Regex(rx"(?:0|(?:[1-9]\d*))(?:\.\d+)?") & WS)
   let sign = "sign".assign             ((Text("+") | Text("-")) & WS)
   let expression = "expression".assign Forward()
   let group = "group".assign           (Text("(") & WS & expression & Text(")") & WS)
