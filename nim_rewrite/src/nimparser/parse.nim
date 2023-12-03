@@ -84,7 +84,7 @@ const
   # Parser-Names
   ParserName = ":Parser"
   TextName = ":Text"
-  RegexName = ":Regex"
+  RegExpName = ":RegExp"
   RepeatName = ":Repeat"
   OptionName = ":Option"
   ZeroOrMoreName = ":ZeroOrMore"
@@ -452,6 +452,8 @@ proc init*(textParser: TextRef, text: string): TextRef =
 proc Text*(text: string): TextRef =
   return new(TextRef).init(text)
 
+proc txt*(text: string): TextRef {.inline.} = Text(text)
+
 method parse*(self: TextRef, location: int32): ParsingResult =
   runnableExamples:
     import nodetree
@@ -469,42 +471,44 @@ method `$`*(self: TextRef): string =
   ["\"", self.text.replace("\"", "\\\""), "\""].join()
 
 
-## Regex-Parser
+## RegExp-Parser
 ## ^^^^^^^^^^^^
 ##
 ## A parser for regular-expressions
 ##
 
 type
-  RegexInfo = tuple[reStr: string, regex: Regex]
-  RegexRef = ref RegexObj not nil
-  RegexObj = object of ParserObj
+  RegExpInfo = tuple[reStr: string, regex: Regex]
+  RegExpRef = ref RegExpObj not nil
+  RegExpObj = object of ParserObj
     reStr: string  # string-representation of re
     regex: Regex
 
-proc rx*(rx_str: string): RegexInfo = (rx_str, re("(*UTF8)(*UCP)" & rx_str))
+proc rx*(rx_str: string): RegExpInfo = (rx_str, re("(*UTF8)(*UCP)" & rx_str))
 
-proc mrx*(multiline_rx_str: string): RegexInfo = 
+proc mrx*(multiline_rx_str: string): RegExpInfo =
   (multiline_rx_str, rex("(*UTF8)(*UCP)" & multiline_rx_str))
 
-proc init*(regexParser: RegexRef, rxInfo: RegexInfo): RegexRef =
-  discard Parser(regexParser).init(RegexName)
+proc init*(regexParser: RegExpRef, rxInfo: RegExpInfo): RegExpRef =
+  discard Parser(regexParser).init(RegExpName)
   regexParser.reStr = rxInfo.reStr
   regexParser.regex = rxInfo.regex
   regexParser.flags.incl isLeaf
   return regexParser
 
-proc Regex*(reInfo: RegexInfo): RegexRef =
-  return new(RegexRef).init(reInfo)
+proc RegExp*(reInfo: RegExpInfo): RegExpRef =
+  return new(RegExpRef).init(reInfo)
 
-proc Regex*(reStr: string): RegexRef =
+proc RegExp*(reStr: string): RegExpRef =
   let reInfo = if reStr.contains("\n"):  mrx(reStr)  else:  rx(reStr)
-  return new(RegexRef).init(reInfo)
+  return new(RegExpRef).init(reInfo)
 
-method parse*(self: RegexRef, location: int32): ParsingResult =
+proc rxp*(reStr: string): RegExpRef {.inline.} = RegExp(reStr)
+
+method parse*(self: RegExpRef, location: int32): ParsingResult =
   runnableExamples:
     import nodetree, regex
-    doAssert Regex(re"\w+")("ABC").node.asSxpr() == "(:Regex \"ABC\")"
+    doAssert RegExp(re"\w+")("ABC").node.asSxpr() == "(:RegExp \"ABC\")"
 
   var l = matchLen(self.grammar.document.str[], self.regex, location).int32
   if l >= 0:
@@ -516,7 +520,7 @@ method parse*(self: RegexRef, location: int32): ParsingResult =
     return (newNode(self.nodeName, text), location + text.len)
   return (nil, location)
 
-method `$`*(self: RegexRef): string =
+method `$`*(self: RegExpRef): string =
   ["/", self.reStr.replace("/", r"\/"), "/"].join()
 
 
@@ -1009,13 +1013,13 @@ method `$`*(self: ForwardRef): string =
 ## Test-code
 
 when isMainModule:
-  let txt = "txt".assignName Text("X")
-  let cst = txt("X")
+  let doc = "text".assignName Text("X")
+  let cst = doc("X")
   echo $cst
   echo Text("A")("A").node.asSxpr
   doAssert Text("A")("A").node.asSxpr == "(:Text \"A\")"
-  echo Regex(rx"\w+")("ABC").node.asSxpr
-  doAssert Regex(rx"\w+")("ABC").node.asSxpr == "(:Regex \"ABC\")"
+  echo RegExp(rx"\w+")("ABC").node.asSxpr
+  doAssert RegExp(rx"\w+")("ABC").node.asSxpr == "(:RegExp \"ABC\")"
   echo Repeat(Text("A"), (1u32, 3u32))("AAAA").node.asSxpr
   echo ("r".assignName Repeat(Text("A"), (1u32, 3u32)))("AA").node.asSxpr
   echo Series(Text("A"), Text("B"), Text("C"), mandatory=1u32)("ABC").node.asSxpr
@@ -1041,14 +1045,14 @@ when isMainModule:
   echo " "
   root.grammar = Grammar("adhoc1")
 
-  let WS  = "WS".assign                DROP(Regex(rx"\s*"))
-  let NUMBER = ":NUMBER".assign         (Regex(rx"(?:0|(?:[1-9]\d*))(?:\.\d+)?") & WS)
-  let sign = "sign".assign             ((Text("+") | Text("-")) & WS)
+  let WS  = "WS".assign                DROP(rxp"\s*")
+  let NUMBER = ":NUMBER".assign         (rxp"(?:0|(?:[1-9]\d*))(?:\.\d+)?" & WS)
+  let sign = "sign".assign             ((txt"+" | txt"-") & WS)
   let expression = "expression".assign Forward()
-  let group = "group".assign           (Text("(") & WS & expression & Text(")") & WS)
+  let group = "group".assign           (txt"(" & WS & expression & txt")" & WS)
   let factor = "factor".assign         (Option(sign) & (NUMBER | group))
-  let term = "term".assign             (factor & ZeroOrMore((Text("*") | Text("/")) & WS & factor))
-  expression.set                       (term & ZeroOrMore((Text("+") | Text("-")) & WS & term))
+  let term = "term".assign             (factor & ZeroOrMore((txt"*" | txt"/") & WS & factor))
+  expression.set                       (term & ZeroOrMore((txt"+" | txt"-") & WS & term))
   expression.grammar = Grammar("Arithmetic")
 
   let tree = expression("1 + 1").node

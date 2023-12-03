@@ -22,12 +22,12 @@ test "Node.content":
 test "Text, simple test":
   check Text("A")("A").node.asSxpr == "(:Text \"A\")"
 
-test "Regex, simple test":
-  check Regex(rx"\w+")("ABC").node.asSxpr() == "(:Regex \"ABC\")"
+test "RegExp, simple test":
+  check RegExp(rx"\w+")("ABC").node.asSxpr() == "(:RegExp \"ABC\")"
 
-test "Regex in sequence":
-  let number = "number".assign Regex(rx"\d+")
-  let ws = "ws".assign Regex(rx"\s*")
+test "RegExp in sequence":
+  let number = "number".assign RegExp(rx"\d+")
+  let ws = "ws".assign RegExp(rx"\s*")
   let text = toStringSlice("1")
   check number(text, 0).node.asSxpr == "(number \"1\")"
   check ws(text, 1).node.asSxpr == "(ws \"\")"
@@ -53,17 +53,21 @@ test "parser-serialization":
   check t.parserType == ":Series"
 
 test "arithmetic":
-  let WS  = ":WS".assign               Drop(Regex(rx"\s*"))
-  let NUMBER = ":NUMBER".assign        (Regex(rx"(?:0|(?:[1-9]\d*))(?:\.\d+)?") & WS)
-  let sign = "sign".assign             ((Text("+") | Text("-")) & WS)
+  let WS  = "WS".assign                DROP(rxp"\s*")
+  let NUMBER = ":NUMBER".assign         (rxp"(?:0|(?:[1-9]\d*))(?:\.\d+)?" & WS)
+  let sign = "sign".assign             ((txt"+" | txt"-") & WS)
   let expression = "expression".assign Forward()
-  let group = "group".assign           (Text("(") & WS & expression & Text(")") & WS)
+  let group = "group".assign           (txt"(" & WS & expression & txt")" & WS)
   let factor = "factor".assign         (Option(sign) & (NUMBER | group))
-  let term = "term".assign             (factor & ZeroOrMore((Text("*") | Text("/")) & WS & factor))
-  expression.set                       (term & ZeroOrMore((Text("+") | Text("-")) & WS & term))
+  let term = "term".assign             (factor & ZeroOrMore((txt"*" | txt"/") & WS & factor))
+  expression.set                       (term & ZeroOrMore((txt"+" | txt"-") & WS & term))
   expression.grammar = Grammar("Arithmetic")
 
-  echo $factor("1").node
-  echo $term("1+1").node
   var result = expression("1 + 1")
-  echo $result.node
+  assert $result.node == """
+(expression
+  (term
+    (factor "1"))
+  (:Text "+")
+  (term
+    (factor "1")))"""

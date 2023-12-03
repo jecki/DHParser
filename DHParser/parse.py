@@ -804,20 +804,40 @@ class Parser:
             self._parse_proxy = cast(ParseFunc, proxy)
 
     def name(self, pname: str="", disposable: Optional[bool] = None) -> Parser:  # -> Self for Python 3.11 and above...
-        """Sets the parser name to ``pname`` and returns ``self``."""
+        """Sets the parser name to ``pname`` and returns ``self``. If
+        `disposable` is True, the nodes produced by the parser will also be
+        marked as disposable, i.e. they can be eliminated bur their content
+        will be retained. The same can be achived by prefixing the panme-string
+        with a colon ":" or with "HIDE:". Another possible prefix is "DROP:"
+        in which case the nodes will be dropped entirely, including their
+        content. (This is useful to keep delimiters out of the syntax-tree.)
+        """
         assert pname, "Tried to assigned empty name!"
         assert self.pname == "" or self.pname == pname, f'Parser name cannot be reassigned! "{self.pname}" -> "{pname}"'
 
-        self.node_name = pname
         if pname[0:1] == ":":
             self.disposable = True
             if disposable is False:  self.disposable = False
             self.pname = pname[1:]
+            self.node_name = pname
+        elif pname[0:5] == "HIDE:":
+            assert disposable or disposable is None
+            self.disposable = True
+            self.pname = pname[5:]
+            self.node_name = pname[4:]
+        elif pname[0:5] == ":DROP":
+            assert disposable or disposable is None
+            self.disposable = True
+            self.pname = pname[5:]
+            self.node_name = pname[4:]
+            Drop(self)
         else:
             self.disposable = False
             if disposable is True:
                 self.disposable = True
                 self.node_name = ':' + pname
+            else:
+                self.node_name = pname
             self.pname = pname
         return self
 
@@ -986,6 +1006,17 @@ class Parser:
         """Analyses the parser for logical errors after the grammar has been
         instantiated."""
         return []
+
+
+def assign(name: str, parser: Parser) -> Parser:
+    r"""Assigns a name to the given parser. This does the same
+    as the :py:meth:`Parser.name`-method. Example:::
+
+    >>> doc = assign("doc", RegExp(r"\w+"))
+    >>> print(doc.pname)
+    doc
+    """
+    return parser.name(name)
 
 
 class LeafParser(Parser):
@@ -4764,11 +4795,11 @@ class Forward(UnaryParser):
         self.recursion_counter: Dict[int, int] = dict()
         assert not self.pname, "Forward-Parsers mustn't have a name!"
 
-    def name(self, pname: str="", disposable: Optional[bool] = None) -> Parser:
-        """Sets the parser name to ``pname`` and returns ``self``."""
-        self.pname = pname
-        self.disposable = True if disposable is True else False
-        return self
+    # def name(self, pname: str="", disposable: Optional[bool] = None) -> Parser:
+    #     """Sets the parser name to ``pname`` and returns ``self``."""
+    #     self.pname = pname
+    #     self.disposable = True if disposable is True else False
+    #     return self
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__()
