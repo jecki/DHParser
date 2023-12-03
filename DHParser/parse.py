@@ -4200,7 +4200,7 @@ class Interleave(MandatoryNary):
                     if counter[i] >= self.repetitions[i][0]:
                         consumed.add(parser)
                 if self.non_mandatory <= consumed:
-                    if consumed == self.parsers_set:
+                    if len(consumed) == len(self.parsers_set):  # faster than: comsumed == self.parsers_set
                         break
                 else:
                     return None, location

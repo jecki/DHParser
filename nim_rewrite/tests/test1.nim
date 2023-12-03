@@ -39,7 +39,8 @@ test "Alternative":
 
 test "Series":
   check $Series(Text("A"), Text("B"), Text("C"), mandatory=1u32) == "\"A\" §\"B\" \"C\""
-
+  check $(txt"A" & Required(txt"B" & txt"C")) == "\"A\" §\"B\" \"C\""
+  check $(txt"A" & Required(txt"B", txt"C")) == "\"A\" §\"B\" \"C\""
 
 test "parser-serialization":
   let root = "root".assign Forward()

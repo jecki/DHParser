@@ -733,7 +733,7 @@ type
 
 proc init*(series: SeriesRef,
            parsers: openarray[Parser],
-           mandatory: uint32 = inf): SeriesRef =
+           mandatory: uint32): SeriesRef =
   discard Parser(series).init(SeriesName)
   series.flags.incl isNary
   series.subParsers = @parsers
@@ -741,10 +741,18 @@ proc init*(series: SeriesRef,
   return series
 
 proc Series*(parsers: varargs[Parser]): SeriesRef =
-  return new(SeriesRef).init(parsers)
+  return new(SeriesRef).init(parsers, inf)
 
-proc Series*(parsers: varargs[Parser], mandatory: uint32 = inf): SeriesRef =
+proc Series*(parsers: varargs[Parser], mandatory: uint32): SeriesRef =
   return new(SeriesRef).init(parsers, mandatory)
+
+proc Required*(parsers: varargs[Parser]): SeriesRef =
+  return new(SeriesRef).init(parsers, 0)
+
+proc Required*(series: SeriesRef): SeriesRef =
+  series.mandatory = 0
+  return series
+
 
 proc reentry(self: SeriesRef, location: int32): tuple[nd: Node, reloc: int32] =
   return (newNode(ZombieName, ""), -1)  # placeholder
