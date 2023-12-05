@@ -540,10 +540,11 @@ class Parser:
     :ivar _grammar:  A reference to the Grammar object to which the parser
                 is attached.
 
-    :ivar _symbol:  The name of the closest named parser to which this
-                parser is connected in a grammar. If pname is not the
-                empty string, this will become the same as pname, when
-                the property ``symbol`` is read for the first time.
+    :ivar _symbol: The closest named parser to which this
+                parser is connected in a grammar. If the parser itself is
+                named, this is the same as self. _symbol is private and
+                should be accessed only via the symbol-property which
+                will initialize its value on first use.
 
     :ivar _descendants_cache: A cache of all descendant parsers that can be
                 reached from this parser.
@@ -568,7 +569,7 @@ class Parser:
             self._grammar = get_grammar_placeholder()  # type: Grammar
         except NameError:
             pass                      # ensures Cython-compatibility
-        self._symbol = ''             # type: str
+        self._symbol = ''             # type: Parser
         self._descendants_cache = None  # type: Optional[AbstractSet[Parser]]
         self._anon_desc_cache = None    # type: Optional[AbstractSet[Parser]]
         self._desc_trails_cache = None  # type: Optional[AbstractSet[ParserTrail]]
@@ -603,7 +604,7 @@ class Parser:
         This is the closest parser with a pname that contains this parser."""
         if not self._symbol:
             try:
-                self._symbol = self.grammar.associated_symbol__(self).pname
+                self._symbol = self.grammar.associated_symbol__(self)
             except AttributeError:
                 # return an empty string, if parser is not connected to grammar,
                 # but be sure not to save the empty string in self._symbol
@@ -632,7 +633,7 @@ class Parser:
     def _handle_parsing_error(self, pe: ParserError, location: cython.int) -> ParsingResult:
         grammar = self._grammar
         gap = pe.location - location
-        rules = tuple(grammar.resume_rules__.get(self.symbol, []))
+        rules = tuple(grammar.resume_rules__.get(self.symbol.pname, []))
         next_location = pe.location + pe.node_orig_len
         rest = grammar.document__[next_location:]
         i, skip_node = reentry_point(rest, rules, grammar.comment_rx__,
@@ -1000,7 +1001,7 @@ class Parser:
 
 
     def static_error(self, msg: str, code: ErrorCode) -> 'AnalysisError':
-        return AnalysisError(self.symbol, self, Error(msg, 0, code))
+        return AnalysisError(self.symbol.pname, self, Error(msg, 0, code))
 
     def static_analysis(self) -> List['AnalysisError']:
         """Analyses the parser for logical errors after the grammar has been
@@ -2340,7 +2341,7 @@ class Grammar:
         for parser in self.all_parsers__:
             error_list.extend(parser.static_analysis())
             if parser.pname and not has_leaf_parsers(parser):
-                error_list.append(AnalysisError(parser.symbol, parser, Error(
+                error_list.append(AnalysisError(parser.symbol.pname, parser, Error(
                     'Parser %s is entirely cyclical and, therefore, cannot even touch '
                     'the parsed document' % cast('CombinedParser', parser).location_info(),
                     0, PARSER_NEVER_TOUCHES_DOCUMENT)))
@@ -3075,7 +3076,7 @@ class CombinedParser(Parser):
         """Returns a description of the location of the parser within the grammar
         for the purpose of transparent error reporting."""
         return '%s%s in definition of "%s" as %s' \
-            % (self.pname or '_', self.ptype, self.symbol, str(self))
+            % (self.pname or '_', self.ptype, self.symbol.pname, str(self))
 
     NO_TREE_REDUCTION = 0
     FLATTEN = 1  # "flatten" vertically    (A (:Text "data"))  -> (A "data")
@@ -3400,7 +3401,7 @@ def infinite_loop_warning(parser, node, location):
         if node is EMPTY_NODE:  node = Node(EMPTY_PTYPE, '').with_pos(location)
         dsl_error(parser, node,
                   f'Repeating parser did not make any progress! Was inner parser '
-                  f'of "{parser.symbol}" really intended to capture empty text?',
+                  f'of "{parser.symbol.pname}" really intended to capture empty text?',
                   INFINITE_LOOP_WARNING)
 
 
@@ -3944,7 +3945,7 @@ class MandatoryNary(NaryParser):
         skip-list ist empty, -1 and a zombie-node are returned.
         """
         text_ = self.grammar.document__[location:]
-        skip = tuple(self.grammar.skip_rules__.get(self.symbol, []))
+        skip = tuple(self.grammar.skip_rules__.get(self.symbol.pname, []))
         if skip:
             gr = self._grammar
             reloc, zombie = reentry_point(text_, skip, gr.comment_rx__, gr.reentry_search_window__)

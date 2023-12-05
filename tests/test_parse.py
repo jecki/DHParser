@@ -113,7 +113,7 @@ class TestParserClass:
             root__ = word
         gr = MyGrammar()
         regex = gr['word'].parsers[-1].parser
-        result = gr.associated_symbol__(regex).symbol
+        result = gr.associated_symbol__(regex).symbol.pname
         assert result == 'word', result
 
 

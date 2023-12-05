@@ -2394,7 +2394,7 @@ class EBNFCompiler(Compiler):
                 se.msg += f' "{src_lines[se.lineno - 1]}" '
                 raise se
             for sym, parser, err in errors:
-                psym = parser.symbol
+                psym = parser.symbol.pname
                 for dic, key in [(self.rules, sym), (self.rules, psym), (self.macros, psym)]:
                     symdef_node = dic.get(key, [None])[0]
                     if symdef_node:  break
