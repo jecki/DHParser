@@ -115,7 +115,7 @@ __all__ = ('parser_names',
            'ZeroOrMore',
            'OneOrMore',
            'NO_MANDATORY',
-           'MandatoryNary',
+           'ErrorCatchingNary',
            'Series',
            'Alternative',
            'longest_match',
@@ -3879,8 +3879,8 @@ def longest_match(strings: List[str], text: Union[StringView, str], n: int = 1) 
 NO_MANDATORY = 2**30
 
 
-class MandatoryNary(NaryParser):
-    r"""MandatoryNary is the parent class for N-ary parsers that can be
+class ErrorCatchingNary(NaryParser):
+    r"""ErrorCatchingNary is the parent class for N-ary parsers that can be
     configured to fail with a parsing error rather than returning a non-match,
     if all contained parsers from a specific subset of non-mandatory parsers
     have already matched successfully, so that only "mandatory" parsers are
@@ -3895,7 +3895,7 @@ class MandatoryNary(NaryParser):
     of contained parsers. All parsers from the mandatory-index onward are
     considered mandatory once all parsers up to the index have been consumed.
 
-    In the following example, ``Series`` is a descendant of ``MandatoryNary``::
+    In the following example, ``Series`` is a descendant of ``ErrorCatchingNary``::
 
         >>> fraction = Series(Text('.'), RegExp(r'[0-9]+'), mandatory=1).name('fraction')
         >>> number = (RegExp(r'[0-9]+') + Option(fraction)).name('number')
@@ -3926,7 +3926,7 @@ class MandatoryNary(NaryParser):
     """
     def __init__(self, *parsers: Parser,
                  mandatory: int = NO_MANDATORY) -> None:
-        super(MandatoryNary, self).__init__(*parsers)
+        super(ErrorCatchingNary, self).__init__(*parsers)
         length = len(self.parsers)
         if mandatory < 0:
             mandatory += length
@@ -4047,7 +4047,7 @@ class MandatoryNary(NaryParser):
         return errors
 
 
-class Series(MandatoryNary):
+class Series(ErrorCatchingNary):
     r"""
     Matches if each of a series of parsers matches exactly in the order of
     the series.
@@ -4132,7 +4132,7 @@ class Series(MandatoryNary):
         return super().is_optional()
 
 
-class Interleave(MandatoryNary):
+class Interleave(ErrorCatchingNary):
     r"""Parse elements in arbitrary order.
 
     Examples::

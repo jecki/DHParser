@@ -929,7 +929,7 @@ probably allow to insert comments in as many places as possible.
 
 .. _insignificant_whitespace:
 
-insignificant whitespace
+Insignificant Whitespace
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 Coding insignificant whitespace and comments is exactly the

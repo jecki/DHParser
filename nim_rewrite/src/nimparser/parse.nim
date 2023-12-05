@@ -41,7 +41,7 @@ type
   ParserFlags = enum isLeaf, noMemoization, isNary, isFlowParser, isLookahead,
    isContextSensitive, isDisposable, dropContent, applyTracker
   ParserFlagSet = set[ParserFlags]
-  ParseProc = proc(parser: Parser, location: int32) : ParsingResult {.raises: [ParsingException].}
+  ParseProc = proc(parser: Parser, location: int32) : ParsingResult {.nimcall raises: [ParsingException].}
   Parser* = ref ParserObj not nil
   ParserOrNil = ref ParserObj
   ParserObj = object of RootObj
@@ -57,8 +57,8 @@ type
     visited: Table[int, ParsingResult]
 
   # the GrammarObj
-  ReturnItemProc = proc(parser: Parser, node: NodeOrNil): Node {.raises: [].} not nil
-  ReturnSequenceProc = proc(parser: Parser, nodes: sink seq[Node]): Node {.raises: [].} not nil
+  ReturnItemProc = proc(parser: Parser, node: NodeOrNil): Node {.nimcall raises: [].} not nil
+  ReturnSequenceProc = proc(parser: Parser, nodes: sink seq[Node]): Node {.nimcall raises: [].} not nil
   RollbackItem = tuple
     location: int32
     rollback: proc() {.closure raises: [].} not nil
@@ -711,6 +711,53 @@ proc `|`*(other: Parser, alternative: AlternativeRef): AlternativeRef =
 proc `|`*(parser: Parser, other: Parser): AlternativeRef = Alternative(parser, other)
 
 
+
+## ErrorCatchingParser
+## ^^^^^^^^^^^^^^^^^^^
+##
+## ErrorCatchingParser is a base class for parsers that can catch syntax errors.
+## Error-catching-parsers are combined parsers (i.e. parsers that contain other
+## which are called during the parsing-process) that can be
+## configured to fail with a parsing error instead of returning a non-match,
+## if all contained parsers from a specific subset of non-mandatory parsers
+## have already matched successfully, so that only "mandatory" parsers are
+## left for matching. The idea is that once all non-mandatory parsers have
+## been consumed it is clear that this parser is a match so that the failure
+## to match any of the following mandatory parsers indicates a syntax
+## error in the processed document at the location were a mandatory parser
+## fails to match.
+##
+## For the sake of simplicity, the division between the set of non-mandatory
+## parsers and mandatory parsers is realized by an index into the list
+## of contained parsers. All parsers from the mandatory-index onward are
+## considered mandatory once all parsers up to the index have been consumed.
+
+type
+  ReentryRule = proc(rest: StringSlice): tuple[delta: int, skip_node: NodeOrNil]
+  ErrorCatchingParser* = ref ErrorCatchingParserObj not nil
+  ErrorCatchingParserOrNil = ref ErrorCatchingParserObj
+  ErrorCatchingParserObj = object of ParserObj
+    mandatory: uint32
+    skipList: seq[ReentryRule]
+
+proc rule(parser: Parser): ReentryRule =
+  proc skip(rest: StringSlice): tuple[delta: int, skip_node: NodeOrNil]
+
+proc reentry(catcher: ErrorCatchingParser, location: int32): tuple[nd: Node, reloc: int32] =
+  return (newNode(ZombieName, ""), -1)  # placeholder
+
+proc violation(catcher: ErrorCatchingParser,
+               location: int32,
+               wasLookAhead: bool,
+               whatExpected: string,
+               reloc: int32,
+               error_node: NodeOrNil):
+               tuple[err: ErrorRef, location: int32] =
+  let error = Error("mandatory violation detected", location)
+  self.grammar.errors.add(error)
+  return (error, reloc)
+
+
 ## Series-Parser
 ## ^^^^^^^^^^^^^
 ## 
@@ -753,21 +800,6 @@ proc Required*(series: SeriesRef): SeriesRef =
   series.mandatory = 0
   return series
 
-
-proc reentry(self: SeriesRef, location: int32): tuple[nd: Node, reloc: int32] =
-  return (newNode(ZombieName, ""), -1)  # placeholder
-
-proc violation(self: SeriesRef,
-                        location: int32,
-                        wasLookAhead: bool,
-                        whatExpected: string,
-                        reloc: int32,
-                        error_node: NodeOrNil): 
-                        tuple[err: ErrorRef, location: int32] =
-  let error = Error("mandatory violation detected", location)
-  self.grammar.errors.add(error)
-  return (error, reloc)
-  
 
 method parse*(self: SeriesRef, location: int32): ParsingResult {.raises: [ParsingException].} =
   var
