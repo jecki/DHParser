@@ -3987,7 +3987,7 @@ class MandatoryNary(NaryParser):
         err_node.with_pos(location)  # for testing artifacts
         error_code = MANDATORY_CONTINUATION
         found = text_[:10].replace('\n', '\\n') + '...'
-        sym = self.grammar.associated_symbol__(self).pname
+        sym = self.symbol.pname
         err_msgs = self.grammar.error_messages__.get(sym, [])
         for search, message in err_msgs:
             is_func = callable(search)           # search rule is a function: StringView -> bool
