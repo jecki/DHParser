@@ -125,18 +125,22 @@ proc parserType*(parser: Parser): string =
   else:
     parser.ptype
 
-
 proc parserName*(parser: Parser): string = 
   if parser.ptype == ForwardName and parser.subParsers.len > 0:
     parser.subParsers[0].name
   else:
     parser.name
 
+method referredParsers(self: Parser): iterator(): Parser =
+  iterator subParsers(): Parser =
+    for p in self.subParsers:  yield p
+  return subParsers
+
 proc trackingApply(parser: Parser, visitor: (Parser) -> bool): bool =
   if not (applyTracker in parser.flags):
     parser.flags.incl applyTracker
     if visitor(parser):  return true
-    for p in parser.subParsers:
+    for p in parser.referredParsers:
       if p.trackingApply(visitor):  return true
     return false
   return false
@@ -144,7 +148,7 @@ proc trackingApply(parser: Parser, visitor: (Parser) -> bool): bool =
 proc resetApplyTracker(parser: Parser) =
   if applyTracker in parser.flags:
     parser.flags.excl applyTracker
-    for p in parser.subParsers:
+    for p in parser.referredParsers:
       p.resetApplyTracker()
 
 proc apply*(parser: Parser, visitor: (Parser) -> bool): bool =
@@ -793,8 +797,8 @@ proc Series*(parsers: varargs[Parser]): SeriesRef =
 proc Series*(parsers: varargs[Parser], mandatory: uint32): SeriesRef =
   return new(SeriesRef).init(parsers, mandatory)
 
-proc Required*(parsers: varargs[Parser]): SeriesRef =
-  return new(SeriesRef).init(parsers, 0)
+# proc Required*(parsers: varargs[Parser]): SeriesRef =
+#   return new(SeriesRef).init(parsers, 0)
 
 proc Required*(series: SeriesRef): SeriesRef =
   series.mandatory = 0
