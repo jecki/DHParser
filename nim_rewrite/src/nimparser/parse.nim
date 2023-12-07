@@ -53,6 +53,7 @@ type
     grammarVar: GrammarRef
     symbol: ParserOrNil
     subParsers: seq[Parser]
+    referredParsers: ptr seq[Parser]
     call: ParseProc not nil
     visited: Table[int, ParsingResult]
 
@@ -131,16 +132,11 @@ proc parserName*(parser: Parser): string =
   else:
     parser.name
 
-method referredParsers(self: Parser): iterator(): Parser =
-  iterator subParsers(): Parser =
-    for p in self.subParsers:  yield p
-  return subParsers
-
 proc trackingApply(parser: Parser, visitor: (Parser) -> bool): bool =
   if not (applyTracker in parser.flags):
     parser.flags.incl applyTracker
     if visitor(parser):  return true
-    for p in parser.referredParsers:
+    for p in parser.referredParsers[]:
       if p.trackingApply(visitor):  return true
     return false
   return false
@@ -148,7 +144,7 @@ proc trackingApply(parser: Parser, visitor: (Parser) -> bool): bool =
 proc resetApplyTracker(parser: Parser) =
   if applyTracker in parser.flags:
     parser.flags.excl applyTracker
-    for p in parser.referredParsers:
+    for p in parser.referredParsers[]:
       p.resetApplyTracker()
 
 proc apply*(parser: Parser, visitor: (Parser) -> bool): bool =
@@ -347,6 +343,7 @@ proc init*(parser: Parser, ptype: string = ParserName): Parser =
   parser.grammarVar = GrammarPlaceholder
   parser.symbol = nil
   parser.subParsers = @[]
+  parser.referredParsers = addr parser.subParsers
   # parser.closure.init()
   parser.call = memoizationWrapper
   parser.visited = initTable[int, ParsingResult]()
@@ -737,7 +734,21 @@ proc `|`*(parser: Parser, other: Parser): AlternativeRef = Alternative(parser, o
 ## considered mandatory once all parsers up to the index have been consumed.
 
 type
-  ReentryRule = proc(rest: StringSlice): tuple[delta: int, skip_node: NodeOrNil]
+  ReentryKind = enum rkFindPattern, rkFindString, rkFindProc, rkConsumeParser
+  ReentryPointAlgorithm = proc(StringView, start, stop): tuple[pos, length: int32]
+  ReentryRule = object
+    case kind: ReentryKind
+    of rkFindPattern:
+      reStr: string
+      regex: Regex
+    of rkFindString:
+      findString: string
+    of rkFindProc:
+      findProc: ReentryPointAlgorithm
+    of rkConsumeParser:
+      consumeParser: Parser
+
+  # ReentryRule = proc(rest: StringSlice): tuple[delta: int, skip_node: NodeOrNil]
   ErrorCatchingParser* = ref ErrorCatchingParserObj not nil
   ErrorCatchingParserOrNil = ref ErrorCatchingParserObj
   ErrorCatchingParserObj = object of ParserObj
