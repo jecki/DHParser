@@ -30,6 +30,9 @@ import error
 ## that are shared by all parsers of the ensemble, like memoizing data.
 
 type
+  Parser* = ref ParserObj not nil
+  ParserOrNil = ref ParserObj
+
   ParsingResult = tuple[node: NodeOrNil, location: int32]
   ParsingException = ref object of CatchableError
     parser: Parser
@@ -38,12 +41,26 @@ type
     location: int32
     error: ErrorRef
     first_throw: bool
+
+  MatcherKind = enum mkRegex, mkString, mkProc, mkParser
+  MatcherProc = proc(StringView, start, stop): tuple[pos, length: int32]
+  Matcher = object
+    case kind: MatcherKind
+    of mkRegex:
+      reStr: string
+      regex: Regex
+    of mkString:
+      cmpStr: string
+    of mkProc:
+      findProc: MatcherProc
+    of mkParser:
+      consumeParser: Parser
+  ErrorMatcher = tuple[matcher: Matcher, code: ErrorCode, msg: string]
+
   ParserFlags = enum isLeaf, noMemoization, isNary, isFlowParser, isLookahead,
    isContextSensitive, isDisposable, dropContent, applyTracker
   ParserFlagSet = set[ParserFlags]
   ParseProc = proc(parser: Parser, location: int32) : ParsingResult {.nimcall raises: [ParsingException].}
-  Parser* = ref ParserObj not nil
-  ParserOrNil = ref ParserObj
   ParserObj = object of RootObj
     name: string
     nodeName: ref string not nil
@@ -242,6 +259,27 @@ let GrammarPlaceholder = Grammar("__Placeholder__",
   returnItem = returnItemPlaceholder, 
   returnSequence = returnSeqPlaceholder)
 
+## catching syntax errors and resuming after that
+
+proc rule(parser: Parser): ReentryRule =
+  proc skip(rest: StringSlice): tuple[delta: int, skip_node: NodeOrNil]
+
+
+
+proc handle_parsing_exception(pe: ParsingException): ParsingResult {.raises: [ParsingException].}=
+  if isNil(pe):  return (nil, 0)  else:  return (pe.node, pe.location)
+
+
+proc fatal(parser: Parser, msg: string, location: int32, code: ErrorCode = A_FATALITY): ParsingResult
+  {.raises: [ParsingException].} =
+  let
+    node = newNode(ZombieName, msg).withPos(location)
+    error: ErrorRef = Error(msg, location, code)
+  parser.grammar.errors.add(error)
+  result = (node, location)
+  raise ParsingException(parser: parser, node: node, node_orig_len: node.runeLen,
+                         location: location, error: error)
+
 
 ## basic parser-procedures and -methods
 
@@ -264,21 +302,6 @@ proc `grammar=`*(parser: Parser, grammar: GrammarRef) =
     # parser.equivID = uniqueID  # TODO: Determine "equivalent" parsers, here
     return false
   discard parser.apply(visitor)
-
-
-proc handle_parsing_exception(pe: ParsingException): ParsingResult {.raises: [ParsingException].}=
-  if isNil(pe):  return (nil, 0)  else:  return (pe.node, pe.location)
-
-
-proc fatal(parser: Parser, msg: string, location: int32, code: ErrorCode = A_FATALITY): ParsingResult 
-  {.raises: [ParsingException].} =
-  let 
-    node = newNode(ZombieName, msg).withPos(location)
-    error: ErrorRef = Error(msg, location, code)
-  parser.grammar.errors.add(error)
-  result = (node, location)
-  raise ParsingException(parser: parser, node: node, node_orig_len: node.runeLen, 
-                         location: location, error: error)
  
 
 proc pushRollback(grammar: GrammarRef, item: RollbackItem) =
@@ -734,29 +757,14 @@ proc `|`*(parser: Parser, other: Parser): AlternativeRef = Alternative(parser, o
 ## considered mandatory once all parsers up to the index have been consumed.
 
 type
-  ReentryKind = enum rkFindPattern, rkFindString, rkFindProc, rkConsumeParser
-  ReentryPointAlgorithm = proc(StringView, start, stop): tuple[pos, length: int32]
-  ReentryRule = object
-    case kind: ReentryKind
-    of rkFindPattern:
-      reStr: string
-      regex: Regex
-    of rkFindString:
-      findString: string
-    of rkFindProc:
-      findProc: ReentryPointAlgorithm
-    of rkConsumeParser:
-      consumeParser: Parser
-
-  # ReentryRule = proc(rest: StringSlice): tuple[delta: int, skip_node: NodeOrNil]
   ErrorCatchingParser* = ref ErrorCatchingParserObj not nil
   ErrorCatchingParserOrNil = ref ErrorCatchingParserObj
   ErrorCatchingParserObj = object of ParserObj
     mandatory: uint32
-    skipList: seq[ReentryRule]
+    skipList: seq[Matcher]
+    resumeList: seq[Matcher]
+    errorList: seq[ErrorMatcher]
 
-proc rule(parser: Parser): ReentryRule =
-  proc skip(rest: StringSlice): tuple[delta: int, skip_node: NodeOrNil]
 
 proc reentry(catcher: ErrorCatchingParser, location: int32): tuple[nd: Node, reloc: int32] =
   return (newNode(ZombieName, ""), -1)  # placeholder

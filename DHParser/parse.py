@@ -3881,7 +3881,7 @@ NO_MANDATORY = 2**30
 
 class ErrorCatchingNary(NaryParser):
     r"""ErrorCatchingNary is the parent class for N-ary parsers that can be
-    configured to fail with a parsing error rather than returning a non-match,
+    configured to fail with a parsing error in case of a non-match,
     if all contained parsers from a specific subset of non-mandatory parsers
     have already matched successfully, so that only "mandatory" parsers are
     left for matching. The idea is that once all non-mandatory parsers have
