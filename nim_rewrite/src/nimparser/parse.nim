@@ -118,6 +118,7 @@ const
   SynonymName = ":Synonym"
   ForwardName = ":Forward"
   NaryParsers = [AlternativeName, SeriesName, InterleaveName]
+  ErrorCatchers = [SeriesName, InterleaveName]
   # Node-Names  
   ZombieName = "__ZOMBIE"
   EmptyName* = ":EMPTY"
