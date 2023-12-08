@@ -43,7 +43,7 @@ type
     first_throw: bool
 
   MatcherKind = enum mkRegex, mkString, mkProc, mkParser
-  MatcherProc = proc(StringView, start, stop): tuple[pos, length: int32]
+  MatcherProc = proc(text: StringSlice, start: int32, stop: int32): tuple[pos, length: int32]
   Matcher = object
     case kind: MatcherKind
     of mkRegex:
@@ -260,11 +260,29 @@ let GrammarPlaceholder = Grammar("__Placeholder__",
   returnItem = returnItemPlaceholder, 
   returnSequence = returnSeqPlaceholder)
 
+
+## grammar-property of Parser
+
+proc grammar(parser: Parser) : GrammarRef {.inline.} =
+  return parser.grammarVar
+
+
+proc `grammar=`*(parser: Parser, grammar: GrammarRef) =
+  var uniqueID: uint32 = 0
+  proc visitor(parser: Parser): bool =
+    assert parser.grammarVar == GrammarPlaceholder
+    parser.grammarVar = grammar
+    uniqueID += 1
+    parser.uniqueID = uniqueID
+    # parser.equivID = uniqueID  # TODO: Determine "equivalent" parsers, here
+    return false
+  discard parser.apply(visitor)
+
+
 ## catching syntax errors and resuming after that
 
-proc rule(parser: Parser): ReentryRule =
-  proc skip(rest: StringSlice): tuple[delta: int, skip_node: NodeOrNil]
-
+# proc rule(parser: Parser): ReentryRule =
+#   proc skip(rest: StringSlice): tuple[delta: int, skip_node: NodeOrNil]
 
 
 proc handle_parsing_exception(pe: ParsingException): ParsingResult {.raises: [ParsingException].}=
@@ -287,22 +305,6 @@ proc fatal(parser: Parser, msg: string, location: int32, code: ErrorCode = A_FAT
 method parse*(self: Parser, location: int32): ParsingResult {.base raises: [ParsingException].} =
   echo "Parser.parse"
   result = (nil, 0)
-
-
-proc grammar(parser: Parser) : GrammarRef {.inline.} =
-  return parser.grammarVar
-
-
-proc `grammar=`*(parser: Parser, grammar: GrammarRef) =
-  var uniqueID: uint32 = 0
-  proc visitor(parser: Parser): bool =
-    assert parser.grammarVar == GrammarPlaceholder
-    parser.grammarVar = grammar
-    uniqueID += 1
-    parser.uniqueID = uniqueID
-    # parser.equivID = uniqueID  # TODO: Determine "equivalent" parsers, here
-    return false
-  discard parser.apply(visitor)
  
 
 proc pushRollback(grammar: GrammarRef, item: RollbackItem) =
@@ -778,7 +780,7 @@ proc violation(catcher: ErrorCatchingParser,
                error_node: NodeOrNil):
                tuple[err: ErrorRef, location: int32] =
   let error = Error("mandatory violation detected", location)
-  self.grammar.errors.add(error)
+  catcher.grammar.errors.add(error)
   return (error, reloc)
 
 
