@@ -368,7 +368,7 @@ proc init*(parser: Parser, ptype: string = ParserName): Parser =
   # parser.equivID = 0
   parser.grammarVar = GrammarPlaceholder
   parser.symbol = nil
-  parser.subParsers = @[]
+  #parser.subParsers = @[]
   parser.referredParsers = addr parser.subParsers
   # parser.closure.init()
   parser.call = memoizationWrapper
@@ -768,6 +768,17 @@ type
     resumeList: seq[Matcher]
     errorList: seq[ErrorMatcher]
 
+proc init(errorCatching: ErrorCatchingParser,
+          ptype: string, mandatory: uint32,
+          skipList: sink seq[Matcher] = @[],
+          resumeList: sink seq[Matcher] = @[],
+          errorList: sink seq[ErrorMatcher] = @[]): ErrorCatchingParser =
+  discard Parser(errorCatching).init(ptype)
+  errorCatching.mandatory = mandatory
+  errorCatching.skipList = skipList
+  errorCatching.resumeList = resumeList
+  errorCatching.errorList = errorList
+  return errorCatching
 
 proc reentry(catcher: ErrorCatchingParser, location: int32): tuple[nd: Node, reloc: int32] =
   return (newNode(ZombieName, ""), -1)  # placeholder
@@ -801,16 +812,14 @@ proc violation(catcher: ErrorCatchingParser,
 
 type
   SeriesRef = ref SeriesObj not nil
-  SeriesObj = object of ParserObj
-    mandatory: uint32
+  SeriesObj = object of ErrorCatchingParserObj
 
 proc init*(series: SeriesRef,
            parsers: openarray[Parser],
            mandatory: uint32): SeriesRef =
-  discard Parser(series).init(SeriesName)
+  discard ErrorCatchingParser(series).init(SeriesName, mandatory)
   series.flags.incl isNary
   series.subParsers = @parsers
-  series.mandatory = mandatory
   return series
 
 proc Series*(parsers: varargs[Parser]): SeriesRef =
