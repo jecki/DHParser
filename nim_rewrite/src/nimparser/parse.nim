@@ -150,6 +150,14 @@ proc parserName*(parser: Parser): string =
   else:
     parser.name
 
+iterator descendants(parser: Parser): Parser {.closure.} =
+  if not (applyTracker in parser.flags):
+    parser.flags.incl applyTracker
+    yield parser
+    for p in parser.referredParsers[]:
+      let descs = descendants
+      for q in descs(p):  yield q
+
 proc trackingApply(parser: Parser, visitor: (Parser) -> bool): bool =
   if not (applyTracker in parser.flags):
     parser.flags.incl applyTracker
@@ -1132,4 +1140,7 @@ when isMainModule:
 
   let tree = expression("1 + 1").node
   echo tree.asSxpr()
+
+  for p in descendants(expression):
+    echo $p
 
