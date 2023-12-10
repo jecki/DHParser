@@ -62,7 +62,7 @@ type
   ParserFlagSet = set[ParserFlags]
   ParseProc = proc(parser: Parser, location: int32) : ParsingResult {.nimcall raises: [ParsingException].}
   ParserObj = object of RootObj
-    name: string
+    pname: string
     nodeName: ref string not nil
     ptype: string
     flags: ParserFlagSet
@@ -137,18 +137,17 @@ proc `$`*(r: ParsingResult): string =
   else:
     return fmt"node:\n{tree}\nlocation: {r.location}"
 
-
-proc parserType*(parser: Parser): string =
+proc type*(parser: Parser): string =
   if parser.ptype == ForwardName and parser.subParsers.len > 0:
     parser.subParsers[0].ptype
   else:
     parser.ptype
 
-proc parserName*(parser: Parser): string = 
+proc name*(parser: Parser): string =
   if parser.ptype == ForwardName and parser.subParsers.len > 0:
-    parser.subParsers[0].name
+    parser.subParsers[0].pname
   else:
-    parser.name
+    parser.pname
 
 iterator descendants(parser: Parser): Parser {.closure.} =
   if not (traversalTracker in parser.flags):
@@ -157,6 +156,7 @@ iterator descendants(parser: Parser): Parser {.closure.} =
     for p in parser.referredParsers[]:
       let descs = descendants
       for q in descs(p):  yield q
+
 
 proc trackingApply(parser: Parser, visitor: (Parser) -> bool): bool =
   if not (traversalTracker in parser.flags):
@@ -367,7 +367,7 @@ method cleanUp(self: Parser) =
 
 proc init*(parser: Parser, ptype: string = ParserName): Parser =
   assert ptype != "" and ptype[0] == ':'
-  parser.name = ""
+  parser.pname = ""
   new(parser.nodeName)
   parser.nodeName[] = ptype
   parser.ptype = ptype
@@ -391,20 +391,20 @@ proc assignSymbol(parser: Parser, symbol: Parser) =
     if isNil(p.symbol):  assignSymbol(p, symbol)
 
 proc assignName(name: string, parser: Parser): Parser =
-  assert parser.name == ""
+  assert parser.pname == ""
   assert name != ""
   parser.nodeName[] = name
   if name[0] == ':':
-    parser.name = name[1 .. ^1]
+    parser.pname = name[1 .. ^1]
   elif name.len >= 5 and name[4] == ':':
     if name[0..3] == "DROP":
       parser.flags.incl dropContent
     else:
       assert name[0..3] == "HIDE"
-    parser.name = name[5 .. ^1]
+    parser.pname = name[5 .. ^1]
   else:
     parser.flags.excl isDisposable
-    parser.name = name
+    parser.pname = name
   assignSymbol(parser, parser)
   return parser
 
@@ -434,11 +434,11 @@ method `$`*(self: Parser): string {.base.} =
   var args: seq[string] = newSeqOfCap[string](self.subParsers.len)
   for p in self.subParsers:
     if not isNil(p):  args.add($p)
-  [self.name, ":", self.parserType, "(", args.join(", "), ")"].join("")
+  [self.pname, ":", self.type, "(", args.join(", "), ")"].join("")
   
 
 proc repr(parser: Parser): string =
-  if parser.name != "":  parser.name  else:  $parser
+  if parser.pname != "":  parser.pname  else:  $parser
 
 
 proc getSubParsers*(parser: Parser): seq[Parser] =
@@ -670,8 +670,8 @@ method `$`*(self: RepeatRef): string =
   var
     subStr: string
   
-  if (postfix and subP.parserName == "" and
-      subP.parserType in NaryParsers): 
+  if (postfix and subP.name == "" and
+      subP.type in NaryParsers):
     subStr = ["(", repr(self.subParsers[0]), ")"].join()  
   else:  
     subStr = repr(self.subParsers[0])
@@ -726,20 +726,20 @@ method `$`*(self: AlternativeRef): string =
   subStrs.join("|")
 
 proc `|`*(alternative: AlternativeRef, other: AlternativeRef): AlternativeRef =
-  if alternative.name != "": return Alternative(alternative, other)
-  if other.name == "":
+  if alternative.pname != "": return Alternative(alternative, other)
+  if other.pname == "":
     alternative.subParsers &= other.subParsers
   else:
     alternative.subParsers.add(other)
   return alternative
 
 proc `|`*(alternative: AlternativeRef, other: Parser): AlternativeRef =
-  if alternative.name != "":  return Alternative(alternative, other)
+  if alternative.pname != "":  return Alternative(alternative, other)
   alternative.subParsers.add(other)
   return alternative
 
 proc `|`*(other: Parser, alternative: AlternativeRef): AlternativeRef =
-  if alternative.name != "":  return Alternative(other, alternative)
+  if alternative.pname != "":  return Alternative(other, alternative)
   alternative.subParsers = @[other] & alternative.subParsers
   return alternative
 
@@ -860,7 +860,7 @@ method parse*(self: SeriesRef, location: int32): ParsingResult {.raises: [Parsin
       else:
         # TODO: Fill the placeholders: reentry and violation in, above!
         (someNode, reloc) = self.reentry(loc)
-        (error, loc) = self.violation(loc, false, parser.name, reloc, node)
+        (error, loc) = self.violation(loc, false, parser.pname, reloc, node)
         if reloc >= 0:
           (nd, loc) = parser(loc)
           if not isNil(nd):
@@ -886,7 +886,7 @@ method `$`*(self: SeriesRef): string =
       let 
         subStr = repr(subP)
         marker = if i == self.mandatory.int: "§" else: ""
-      if subP.parserType in [AlternativeName, SeriesName] and subP.parserName == "":
+      if subP.type in [AlternativeName, SeriesName] and subP.name == "":
         [marker, "(", subStr, ")"].join()
       else: 
         if marker != "": marker & subStr else: subStr
@@ -894,8 +894,8 @@ method `$`*(self: SeriesRef): string =
 
 
 proc `&`*(series: SeriesRef, other: SeriesRef): SeriesRef =
-  if series.name != "":  return Series(series, other)
-  if other.parserName == "":
+  if series.pname != "":  return Series(series, other)
+  if other.name == "":
     series.subParsers &= other.subParsers
     if series.mandatory == inf and other.mandatory != inf:
       series.mandatory = series.subParsers.len.uint32 + other.mandatory
@@ -904,12 +904,12 @@ proc `&`*(series: SeriesRef, other: SeriesRef): SeriesRef =
   return series
 
 proc `&`*(series: SeriesRef, other: Parser): SeriesRef =
-  if series.name != "":  return Series(series, other)
+  if series.pname != "":  return Series(series, other)
   series.subParsers.add(other)
   return series
 
 proc `&`*(other: Parser, series: SeriesRef): SeriesRef =
-  if series.name != "":  return Series(other, series)
+  if series.pname != "":  return Series(other, series)
   series.subParsers = @[other] & series.subParsers
   if series.mandatory != inf:
     series.mandatory += 1
@@ -964,7 +964,7 @@ method `$`*(self: LookaheadRef): string =
   let 
     prefix = if self.positive: "&" else: "<-&"
     subP = self.subParsers[0]
-  if subP.parserType in NaryParsers and subP.parserName == "":
+  if subP.type in NaryParsers and subP.name == "":
     [prefix, "(", repr(subP), ")"].join()
   else:
     prefix & repr(subP)
@@ -1070,9 +1070,9 @@ proc Forward*(): ForwardRef =
 
 proc set*(forward: ForwardRef, parser: Parser) =
   forward.subParsers = @[parser]
-  if parser.name == "":
-    if forward.name != "":
-      discard assignName(forward.name, parser)
+  if parser.pname == "":
+    if forward.pname != "":
+      discard assignName(forward.pname, parser)
       forward.symbol = parser       # TODO: Could this lead to problems ?
   if isDisposable in forward.flags:  parser.flags.incl isDisposable
   if dropContent in parser.flags:
@@ -1080,7 +1080,7 @@ proc set*(forward: ForwardRef, parser: Parser) =
   else:
     if not (isDisposable in forward.flags):  parser.flags.excl isDisposable
     forward.flags.excl dropContent
-  forward.name = ""
+  forward.pname = ""
 
 
 method parse*(self: ForwardRef, location: int32): ParsingResult {.raises: [ParsingException].} =
@@ -1124,7 +1124,7 @@ when isMainModule:
   echo $t
   echo $root.subParsers[0].subparsers.len
   echo $s
-  echo $t.parserType
+  echo $t.type
   echo " "
   root.grammar = Grammar("adhoc1")
 
