@@ -1,0 +1,27 @@
+apply-callback
+expression
+expression := term {("+"|"-") WS term}
+term := factor {("*"|"/") WS factor}
+factor := [sign] (NUMBER|group)
+[sign]
+sign := ("+"|"-") WS
+"+"|"-"
+"+"
+"-"
+WS := /\s*/
+NUMBER|group
+NUMBER := /(?:0|(?:[1-9]\d*))(?:\.\d+)?/ WS
+/(?:0|(?:[1-9]\d*))(?:\.\d+)?/
+group := "(" WS expression ")" WS
+"("
+")"
+{("*"|"/") WS factor}
+("*"|"/") WS factor
+"*"|"/"
+"*"
+"/"
+{("+"|"-") WS term}
+("+"|"-") WS term
+"+"|"-"
+"+"
+"-"

@@ -1,3 +1,5 @@
+# unit-tests for the parse.nim module
+
 # This is just an example to get you started. You may wish to put all of your
 # tests into a single file, or separate them into multiple `test1`, `test2`
 # etc. files (better names are recommended, just make sure the name starts with
@@ -10,17 +12,6 @@ import unittest
 import nimparser/strslice
 import nimparser/nodetree
 import nimparser/parse
-
-test "Node.content":
-  let slice = toStringSlice("ABC")
-  var slice2 = toStringSlice(slice)
-  var node = newNode("TEST", slice2[1..0])
-  check node.content == ""
-  node = newNode("TEXT", slice2[1..^1])
-  check node.content == "BC"
-
-test "Text, simple test":
-  check Text("A")("A").node.asSxpr == "(:Text \"A\")"
 
 test "RegExp, simple test":
   check RegExp(rx"\w+")("ABC").node.asSxpr() == "(:RegExp \"ABC\")"

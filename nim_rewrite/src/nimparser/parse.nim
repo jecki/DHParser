@@ -58,7 +58,7 @@ type
   ErrorMatcher = tuple[matcher: Matcher, code: ErrorCode, msg: string]
 
   ParserFlags = enum isLeaf, noMemoization, isNary, isFlowParser, isLookahead,
-   isContextSensitive, isDisposable, dropContent, applyTracker
+   isContextSensitive, isDisposable, dropContent, traversalTracker
   ParserFlagSet = set[ParserFlags]
   ParseProc = proc(parser: Parser, location: int32) : ParsingResult {.nimcall raises: [ParsingException].}
   ParserObj = object of RootObj
@@ -151,31 +151,31 @@ proc parserName*(parser: Parser): string =
     parser.name
 
 iterator descendants(parser: Parser): Parser {.closure.} =
-  if not (applyTracker in parser.flags):
-    parser.flags.incl applyTracker
+  if not (traversalTracker in parser.flags):
+    parser.flags.incl traversalTracker
     yield parser
     for p in parser.referredParsers[]:
       let descs = descendants
       for q in descs(p):  yield q
 
 proc trackingApply(parser: Parser, visitor: (Parser) -> bool): bool =
-  if not (applyTracker in parser.flags):
-    parser.flags.incl applyTracker
+  if not (traversalTracker in parser.flags):
+    parser.flags.incl traversalTracker
     if visitor(parser):  return true
     for p in parser.referredParsers[]:
       if p.trackingApply(visitor):  return true
     return false
   return false
 
-proc resetApplyTracker(parser: Parser) =
-  if applyTracker in parser.flags:
-    parser.flags.excl applyTracker
+proc resetTraversalTracker(parser: Parser) =
+  if traversalTracker in parser.flags:
+    parser.flags.excl traversalTracker
     for p in parser.referredParsers[]:
-      p.resetApplyTracker()
+      p.resetTraversalTracker()
 
 proc apply*(parser: Parser, visitor: (Parser) -> bool): bool =
   result = parser.trackingApply(visitor)
-  parser.resetApplyTracker()
+  parser.resetTraversalTracker()
 
 
 ## procedures performing early tree-reduction on return values of parsers
@@ -1141,6 +1141,15 @@ when isMainModule:
   let tree = expression("1 + 1").node
   echo tree.asSxpr()
 
+  echo "descendants-iterator"
   for p in descendants(expression):
-    echo $p
+    echo if p.name.len > 0:  $p.name & " := " & $p  else:  $p
+  expression.resetTraversalTracker()
+
+  echo "apply-callback"
+  proc visitor(p: Parser): bool =
+    echo if p.name.len > 0:  $p.name & " := " & $p  else:  $p
+    return false
+
+  discard expression.apply(visitor)
 
