@@ -3,13 +3,7 @@
 {.experimental: "strictDefs".}
 {.experimental: "strictCaseObjects".}
 
-import std/enumerate
-import std/sequtils
-import std/strformat
-import std/strutils
-import std/sugar
-import std/tables
-import std/unicode
+import std/[enumerate, sequtils, strformat, strutils, sugar, tables, unicode]
 
 import strslice
 

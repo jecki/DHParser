@@ -5,15 +5,7 @@
 {.experimental: "strictCaseObjects".}
 
 
-import std/enumerate
-import std/math
-import std/options
-import std/sets
-import std/strformat
-import std/strutils
-import std/re
-import std/sugar
-import std/tables
+import std/[enumerate, math, options, sets, strformat, strutils, re, sugar, tables]
 
 import strslice
 import nodetree
@@ -42,6 +34,7 @@ type
     error: ErrorRef
     first_throw: bool
 
+  # Matchers are needed for error-resumption
   MatcherKind = enum mkRegex, mkString, mkProc, mkParser
   MatcherProc = proc(text: StringSlice, start: int32, stop: int32): tuple[pos, length: int32]
   Matcher = object
@@ -70,7 +63,6 @@ type
     grammarVar: GrammarRef
     symbol: ParserOrNil
     subParsers: seq[Parser]
-    referredParsers: ptr seq[Parser]
     call: ParseProc not nil
     visited: Table[int, ParsingResult]
 
@@ -149,11 +141,18 @@ proc name*(parser: Parser): string =
   else:
     parser.pname
 
+method refdParsers*(self: Parser): seq[Parser] =
+  ## Returns all directly referred parsers. The result is always a superset
+  ## of the self.subParsers. An example for a parser that is referred by
+  ## self but not a sub-parser, would be a parser that is used for resuming
+  ## from a parsing error thrown by self.
+  return self.subParsers
+
 iterator descendants(parser: Parser): Parser {.closure.} =
   if not (traversalTracker in parser.flags):
     parser.flags.incl traversalTracker
     yield parser
-    for p in parser.referredParsers[]:
+    for p in parser.refdParsers:
       let descs = descendants
       for q in descs(p):  yield q
 
@@ -162,7 +161,7 @@ proc trackingApply(parser: Parser, visitor: (Parser) -> bool): bool =
   if not (traversalTracker in parser.flags):
     parser.flags.incl traversalTracker
     if visitor(parser):  return true
-    for p in parser.referredParsers[]:
+    for p in parser.refdParsers:
       if p.trackingApply(visitor):  return true
     return false
   return false
@@ -170,7 +169,7 @@ proc trackingApply(parser: Parser, visitor: (Parser) -> bool): bool =
 proc resetTraversalTracker(parser: Parser) =
   if traversalTracker in parser.flags:
     parser.flags.excl traversalTracker
-    for p in parser.referredParsers[]:
+    for p in parser.refdParsers:
       p.resetTraversalTracker()
 
 proc apply*(parser: Parser, visitor: (Parser) -> bool): bool =
@@ -377,7 +376,6 @@ proc init*(parser: Parser, ptype: string = ParserName): Parser =
   parser.grammarVar = GrammarPlaceholder
   parser.symbol = nil
   #parser.subParsers = @[]
-  parser.referredParsers = addr parser.subParsers
   # parser.closure.init()
   parser.call = memoizationWrapper
   parser.visited = initTable[int, ParsingResult]()
@@ -775,6 +773,7 @@ type
     skipList: seq[Matcher]
     resumeList: seq[Matcher]
     errorList: seq[ErrorMatcher]
+    referredParsers: seq[Parser]
 
 proc init(errorCatching: ErrorCatchingParser,
           ptype: string, mandatory: uint32,
@@ -787,6 +786,22 @@ proc init(errorCatching: ErrorCatchingParser,
   errorCatching.resumeList = resumeList
   errorCatching.errorList = errorList
   return errorCatching
+
+method refdParsers*(self: ErrorCatchingParser): lent seq[Parser] =
+  if self.referredParsers.len == 0:
+    self.referredParsers = self.subParsers
+    for matcher in self.skipList:
+      if matcher.kind == mkParser:
+        self.referredParsers.add(matcher.consumeParser)
+    for matcher in self.resumeList:
+      if matcher.kind == mkParser:
+        self.referredParsers.add(matcher.consumeParser)
+    for errMatcher in self.errorList:
+      if errMatcher.matcher.kind == mkParser:
+        self.referredParsers.add(errMatcher.matcher.consumeParser)
+  else:
+    assert self.referredParsers.len >= self.subParsers.len
+  self.referredParsers
 
 proc reentry(catcher: ErrorCatchingParser, location: int32): tuple[nd: Node, reloc: int32] =
   return (newNode(ZombieName, ""), -1)  # placeholder

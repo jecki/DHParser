@@ -16,7 +16,7 @@
 {.experimental: "strictDefs".}
 {.experimental: "strictCaseObjects".}
 
-import strutils
+import std/strutils
 
 type
   # StringSliceRef* = ref StringSlice not nil
