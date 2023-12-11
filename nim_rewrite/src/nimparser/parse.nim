@@ -65,6 +65,7 @@ type
     subParsers: seq[Parser]
     call: ParseProc not nil
     visited: Table[int, ParsingResult]
+  ParserIterator = iterator(parser: Parser): Parser
 
   # the GrammarObj
   ReturnItemProc = proc(parser: Parser, node: NodeOrNil): Node {.nimcall raises: [].} not nil
@@ -148,6 +149,12 @@ method refdParsers*(self: Parser): seq[Parser] =
   ## from a parsing error thrown by self.
   return self.subParsers
 
+iterator subParsersIter(parser: Parser): Parser {.closure.} =
+  for p in parser.subParsers:
+    yield p
+
+
+
 iterator descendants(parser: Parser): Parser {.closure.} =
   if not (traversalTracker in parser.flags):
     parser.flags.incl traversalTracker
@@ -155,6 +162,7 @@ iterator descendants(parser: Parser): Parser {.closure.} =
     for p in parser.refdParsers:
       let descs = descendants
       for q in descs(p):  yield q
+
 
 
 proc trackingApply(parser: Parser, visitor: (Parser) -> bool): bool =
