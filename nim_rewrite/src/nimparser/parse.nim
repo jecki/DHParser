@@ -791,14 +791,20 @@ method refdParsers*(self: ErrorCatchingParser): lent seq[Parser] =
   if self.referredParsers.len == 0:
     self.referredParsers = self.subParsers
     for matcher in self.skipList:
-      if matcher.kind == mkParser:
+      case matcher.kind:
+      of mkParser:
         self.referredParsers.add(matcher.consumeParser)
+      else:  discard
     for matcher in self.resumeList:
-      if matcher.kind == mkParser:
+      case matcher.kind:
+      of mkParser:
         self.referredParsers.add(matcher.consumeParser)
+      else:  discard
     for errMatcher in self.errorList:
-      if errMatcher.matcher.kind == mkParser:
+      case errMatcher.matcher.kind:
+      of mkParser:
         self.referredParsers.add(errMatcher.matcher.consumeParser)
+      else:  discard
   else:
     assert self.referredParsers.len >= self.subParsers.len
   self.referredParsers
@@ -840,6 +846,7 @@ type
 proc init*(series: SeriesRef,
            parsers: openarray[Parser],
            mandatory: uint32): SeriesRef =
+  assert parsers.len >= 1
   discard ErrorCatchingParser(series).init(SeriesName, mandatory)
   series.flags.incl isNary
   series.subParsers = @parsers
