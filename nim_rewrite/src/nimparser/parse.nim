@@ -55,9 +55,9 @@ type
   ParserFlagSet = set[ParserFlags]
   ParseProc = proc(parser: Parser, location: int32) : ParsingResult {.nimcall raises: [ParsingException].}
   ParserObj = object of RootObj
+    ptype: string
     pname: string
     nodeName: ref string not nil
-    ptype: string
     flags: ParserFlagSet
     uniqueID: uint32
     grammarVar: GrammarRef
@@ -119,16 +119,72 @@ const
 let
   EmptyNode* = newNode(EmptyName, "")
 
+## Grammar class
+
+# Forward declarations
+proc returnItemFlatten(parser: Parser, node: NodeOrNil): Node {.raises: [].}
+proc returnSeqFlatten(parser: Parser, nodes: sink seq[Node]): Node {.raises: [].}
+proc returnItemPlaceholder(parser: Parser, node: NodeOrNil): Node {.raises: [].}
+proc returnSeqPlaceholder(parser: Parser, nodes: sink seq[Node]): Node {.raises: [].}
+
+proc cleanUp(grammar: GrammarRef) =
+  grammar.flags.excl memoize
+  grammar.errors = @[]
+  grammar.rollbackStack = newSeqOfCap[RollbackItem](20)
+  grammar.rollbackLocation = -2
+  grammar.farthestFail = -1
+  grammar.farthestParser = nil
+
+proc init(grammar: GrammarRef, name: string,
+          flags: GrammarFlagSet = {memoize},
+          document: StringSlice = EmptyStringSlice,
+          returnItem: ReturnItemProc = returnItemFlatten,
+          returnSequence: ReturnSequenceProc = returnSeqFlatten): GrammarRef =
+  grammar.name = name
+  grammar.flags = flags
+  grammar.returnItem = returnItem
+  grammar.returnSequence = returnSequence
+  grammar.document = document
+  grammar.cleanUp()
+  return grammar
+
+template Grammar*(args: varargs[untyped]): GrammarRef =
+  new(GrammarRef).init(args)
+
+let GrammarPlaceholder = Grammar("__Placeholder__",
+  returnItem = returnItemPlaceholder,
+  returnSequence = returnSeqPlaceholder)
+
+
+## Parser-class
+
+# forward declarations
+proc memoizationWrapper(parser: Parser, location: int32): ParsingResult {.raises: [ParsingException].}
+proc apply*(parser: Parser, visitor: (Parser) -> bool): bool
+
+method cleanUp(self: Parser) =
+  self.visited.clear()
+
+proc init*(parser: Parser, ptype: string = ParserName): Parser =
+  assert ptype != "" and ptype[0] == ':'
+  parser.pname = ""
+  new(parser.nodeName)
+  parser.nodeName[] = ptype
+  parser.ptype = ptype
+  parser.flags = {isDisposable}
+  parser.uniqueID = 0
+  # parser.equivID = 0
+  parser.grammarVar = GrammarPlaceholder
+  parser.symbol = nil
+  #parser.subParsers = @[]
+  # parser.closure.init()
+  parser.call = memoizationWrapper
+  parser.visited = initTable[int, ParsingResult]()
+  parser.cleanUp()
+  return parser
 
 
 ## Parser-object infrastructure
-
-proc `$`*(r: ParsingResult): string =
-  let tree = $r.node
-  if tree.find('\n') < 0:
-    return fmt"node: {tree}, location: {r.location}"
-  else:
-    return fmt"node:\n{tree}\nlocation: {r.location}"
 
 proc type*(parser: Parser): string =
   if parser.ptype == ForwardName and parser.subParsers.len > 0:
@@ -142,6 +198,135 @@ proc name*(parser: Parser): string =
   else:
     parser.pname
 
+proc assignSymbol(parser: Parser, symbol: Parser) =
+  parser.symbol = symbol
+  for p in parser.subParsers:
+    if isNil(p.symbol):  assignSymbol(p, symbol)
+
+proc assignName(name: string, parser: Parser): Parser =
+  assert parser.pname == ""
+  assert name != ""
+  parser.nodeName[] = name
+  if name[0] == ':':
+    parser.pname = name[1 .. ^1]
+  elif name.len >= 5 and name[4] == ':':
+    if name[0..3] == "DROP":
+      parser.flags.incl dropContent
+    else:
+      assert name[0..3] == "HIDE"
+    parser.pname = name[5 .. ^1]
+  else:
+    parser.flags.excl isDisposable
+    parser.pname = name
+  assignSymbol(parser, parser)
+  return parser
+
+proc assign*[T: Parser](name: string, parser: T): T =
+  T(assignName(name, parser))
+
+proc grammar(parser: Parser) : GrammarRef {.inline.} =
+  return parser.grammarVar
+
+proc `grammar=`*(parser: Parser, grammar: GrammarRef) =
+  var uniqueID: uint32 = 0
+  proc visitor(parser: Parser): bool =
+    assert parser.grammarVar == GrammarPlaceholder
+    parser.grammarVar = grammar
+    uniqueID += 1
+    parser.uniqueID = uniqueID
+    # parser.equivID = uniqueID  # TODO: Determine "equivalent" parsers, here
+    return false
+  discard parser.apply(visitor)
+
+## catching syntax errors and resuming after that
+
+proc handle_parsing_exception(pe: ParsingException): ParsingResult {.raises: [ParsingException].}=
+  if isNil(pe):  return (nil, 0)  else:  return (pe.node, pe.location)
+
+
+proc fatal(parser: Parser, msg: string, location: int32, code: ErrorCode = A_FATALITY): ParsingResult
+  {.raises: [ParsingException].} =
+  let
+    node = newNode(ZombieName, msg).withPos(location)
+    error: ErrorRef = Error(msg, location, code)
+  parser.grammar.errors.add(error)
+  result = (node, location)
+  raise ParsingException(parser: parser, node: node, node_orig_len: node.runeLen,
+                         location: location, error: error)
+
+
+## parsering-procedures and -methods
+
+method parse*(self: Parser, location: int32): ParsingResult {.base raises: [ParsingException].} =
+  echo "Parser.parse"
+  result = (nil, 0)
+
+
+proc pushRollback(grammar: GrammarRef, item: RollbackItem) =
+  grammar.rollbackStack.add(item)
+  grammar.rollbackLocation = item.location
+  grammar.flags.excl memoize
+
+
+proc rollback(grammar: GrammarRef, location: int32) {.raises: [].} =
+  var rb: RollbackItem
+  if grammar.rollbackStack.len > 0 and grammar.rollbackStack[^1].location >= location:
+    rb = grammar.rollbackStack.pop()
+    rb.rollback()
+    if grammar.rollbackStack.len > 0:
+      grammar.rollbackLocation = grammar.rollbackStack[^1].location
+    else:
+      grammar.rollbackLocation = -2
+
+
+proc memoizationWrapper(parser: Parser, location: int32): ParsingResult {.raises: [ParsingException].} =
+  try:
+    let grammar: GrammarRef = parser.grammar
+    if location < grammar.rollbackLocation:  grammar.rollback(location)
+    if location in parser.visited:  return parser.visited[location]
+
+    let memoization = memoize in grammar.flags
+    grammar.flags.incl memoize
+
+    try:
+      result = parser.parse(location)
+    except ParsingException as pe:
+      result = handle_parsing_exception(pe)
+
+    let node = result.node  # isNil(result.node) does not work...
+    if isNil(node):
+      grammar.farthestFail = location
+      grammar.farthestParser = parser
+    elif node != EmptyNode:
+      node.sourcePos = location
+
+    if memoize in grammar.flags:
+      parser.visited[location] = result
+      if not memoization:  grammar.flags.excl memoize
+
+  except KeyError:
+    return fatal(parser, "Totally unexpected KeyError" &  getCurrentExceptionMsg(), location)
+
+proc `()`*(parser: Parser, location: int32): ParsingResult {.inline raises: [ParsingException].} =
+  parser.call(parser, location)
+
+proc `()`*(parser: Parser, document: string or StringSlice, location: int32 = 0): ParsingResult =
+  let doc = when document is string:  document.toStringSlice  else:  document
+  if parser.grammar == GrammarPlaceholder:
+    parser.grammar = Grammar("adhoc", document=StringSlice(document))
+  else:
+    parser.grammar.document = StringSlice(document)
+    parser.grammar.cleanUp()
+  result = parser.call(parser, location)
+  discard parser.apply(
+    proc (p: Parser): bool =
+      p.cleanUp()
+      return false
+  )
+
+
+## parser-graph-traversal
+
 method refdParsers*(self: Parser): seq[Parser] =
   ## Returns all directly referred parsers. The result is always a superset
   ## of the self.subParsers. An example for a parser that is referred by
@@ -149,21 +334,30 @@ method refdParsers*(self: Parser): seq[Parser] =
   ## from a parsing error thrown by self.
   return self.subParsers
 
-iterator subParsersIter(parser: Parser): Parser {.closure.} =
+proc getSubParsers*(parser: Parser): seq[Parser] =
+  collect(newSeqOfCap(parser.subParsers.len)):
+    for p in parser.subParsers:  p
+
+iterator subs(parser: Parser): Parser {.closure.} =
   for p in parser.subParsers:
     yield p
 
+iterator refdSubs(parser: Parser): Parser {.closure.} =
+  for p in parser.refdParsers:
+    yield p
 
+iterator anonSubs(parser: Parser): Parser {.closure.} =
+  for p in parser.subParsers:
+    if p.name.len == 0:
+      yield p
 
-iterator descendants(parser: Parser): Parser {.closure.} =
+iterator descendants*(parser: Parser, selectSubs: ParserIterator = refdSubs): Parser {.closure.} =
   if not (traversalTracker in parser.flags):
     parser.flags.incl traversalTracker
     yield parser
-    for p in parser.refdParsers:
+    for p in parser.subParsers:
       let descs = descendants
-      for q in descs(p):  yield q
-
-
+      for q in p.descs(selectSubs):  yield q
 
 proc trackingApply(parser: Parser, visitor: (Parser) -> bool): bool =
   if not (traversalTracker in parser.flags):
@@ -174,7 +368,7 @@ proc trackingApply(parser: Parser, visitor: (Parser) -> bool): bool =
     return false
   return false
 
-proc resetTraversalTracker(parser: Parser) =
+proc resetTraversalTracker*(parser: Parser) =
   if traversalTracker in parser.flags:
     parser.flags.excl traversalTracker
     for p in parser.refdParsers:
@@ -243,214 +437,24 @@ proc returnSeqPlaceholder(parser: Parser, nodes: sink seq[Node]): Node =
   result = EmptyNode
   raise newException(AssertionDefect, "returnItem called on GrammaPlacholder")
 
+## parser serialization
 
-proc cleanUp(grammar: GrammarRef) =
-  grammar.flags.excl memoize
-  grammar.errors = @[]
-  grammar.rollbackStack = newSeqOfCap[RollbackItem](20)
-  grammar.rollbackLocation = -2
-  grammar.farthestFail = -1
-  grammar.farthestParser = nil
-
-
-proc init(grammar: GrammarRef, name: string, 
-          flags: GrammarFlagSet = {memoize},
-          document: StringSlice = EmptyStringSlice,
-          returnItem: ReturnItemProc = returnItemFlatten,
-          returnSequence: ReturnSequenceProc = returnSeqFlatten): GrammarRef =
-  grammar.name = name
-  grammar.flags = flags
-  grammar.returnItem = returnItem
-  grammar.returnSequence = returnSequence
-  grammar.document = document
-  grammar.cleanUp()
-  return grammar
-
-
-template Grammar*(args: varargs[untyped]): GrammarRef =
-  new(GrammarRef).init(args)
-
-
-let GrammarPlaceholder = Grammar("__Placeholder__", 
-  returnItem = returnItemPlaceholder, 
-  returnSequence = returnSeqPlaceholder)
-
-
-## grammar-property of Parser
-
-proc grammar(parser: Parser) : GrammarRef {.inline.} =
-  return parser.grammarVar
-
-
-proc `grammar=`*(parser: Parser, grammar: GrammarRef) =
-  var uniqueID: uint32 = 0
-  proc visitor(parser: Parser): bool =
-    assert parser.grammarVar == GrammarPlaceholder
-    parser.grammarVar = grammar
-    uniqueID += 1
-    parser.uniqueID = uniqueID
-    # parser.equivID = uniqueID  # TODO: Determine "equivalent" parsers, here
-    return false
-  discard parser.apply(visitor)
-
-
-## catching syntax errors and resuming after that
-
-# proc rule(parser: Parser): ReentryRule =
-#   proc skip(rest: StringSlice): tuple[delta: int, skip_node: NodeOrNil]
-
-
-proc handle_parsing_exception(pe: ParsingException): ParsingResult {.raises: [ParsingException].}=
-  if isNil(pe):  return (nil, 0)  else:  return (pe.node, pe.location)
-
-
-proc fatal(parser: Parser, msg: string, location: int32, code: ErrorCode = A_FATALITY): ParsingResult
-  {.raises: [ParsingException].} =
-  let
-    node = newNode(ZombieName, msg).withPos(location)
-    error: ErrorRef = Error(msg, location, code)
-  parser.grammar.errors.add(error)
-  result = (node, location)
-  raise ParsingException(parser: parser, node: node, node_orig_len: node.runeLen,
-                         location: location, error: error)
-
-
-## basic parser-procedures and -methods
-
-method parse*(self: Parser, location: int32): ParsingResult {.base raises: [ParsingException].} =
-  echo "Parser.parse"
-  result = (nil, 0)
- 
-
-proc pushRollback(grammar: GrammarRef, item: RollbackItem) =
-  grammar.rollbackStack.add(item)
-  grammar.rollbackLocation = item.location
-  grammar.flags.excl memoize
-
-
-proc rollback(grammar: GrammarRef, location: int32) {.raises: [].} =
-  var rb: RollbackItem
-  if grammar.rollbackStack.len > 0 and grammar.rollbackStack[^1].location >= location:
-    rb = grammar.rollbackStack.pop()
-    rb.rollback()
-    if grammar.rollbackStack.len > 0:
-      grammar.rollbackLocation = grammar.rollbackStack[^1].location
-    else:
-      grammar.rollbackLocation = -2
-
-
-proc memoizationWrapper(parser: Parser, location: int32): ParsingResult {.raises: [ParsingException].} =
-  try:
-    let grammar: GrammarRef = parser.grammar
-    if location < grammar.rollbackLocation:  grammar.rollback(location)
-    if location in parser.visited:  return parser.visited[location]
-
-    let memoization = memoize in grammar.flags
-    grammar.flags.incl memoize  
-
-    try:
-      result = parser.parse(location)
-    except ParsingException as pe:
-      result = handle_parsing_exception(pe)
-
-    let node = result.node  # isNil(result.node) does not work...
-    if isNil(node):
-      grammar.farthestFail = location
-      grammar.farthestParser = parser
-    elif node != EmptyNode:
-      node.sourcePos = location
-
-    if memoize in grammar.flags:
-      parser.visited[location] = result
-      if not memoization:  grammar.flags.excl memoize
-      
-  except KeyError:
-    return fatal(parser, "Totally unexpected KeyError" &  getCurrentExceptionMsg(), location)
-
-
-method cleanUp(self: Parser) =
-  self.visited.clear()
-
-
-proc init*(parser: Parser, ptype: string = ParserName): Parser =
-  assert ptype != "" and ptype[0] == ':'
-  parser.pname = ""
-  new(parser.nodeName)
-  parser.nodeName[] = ptype
-  parser.ptype = ptype
-  parser.flags = {isDisposable}
-  parser.uniqueID = 0
-  # parser.equivID = 0
-  parser.grammarVar = GrammarPlaceholder
-  parser.symbol = nil
-  #parser.subParsers = @[]
-  # parser.closure.init()
-  parser.call = memoizationWrapper
-  parser.visited = initTable[int, ParsingResult]()
-  parser.cleanUp()
-  return parser
-
-
-proc assignSymbol(parser: Parser, symbol: Parser) =
-  parser.symbol = symbol
-  for p in parser.subParsers:
-    if isNil(p.symbol):  assignSymbol(p, symbol)
-
-proc assignName(name: string, parser: Parser): Parser =
-  assert parser.pname == ""
-  assert name != ""
-  parser.nodeName[] = name
-  if name[0] == ':':
-    parser.pname = name[1 .. ^1]
-  elif name.len >= 5 and name[4] == ':':
-    if name[0..3] == "DROP":
-      parser.flags.incl dropContent
-    else:
-      assert name[0..3] == "HIDE"
-    parser.pname = name[5 .. ^1]
+proc `$`*(r: ParsingResult): string =
+  let tree = $r.node
+  if tree.find('\n') < 0:
+    return fmt"node: {tree}, location: {r.location}"
   else:
-    parser.flags.excl isDisposable
-    parser.pname = name
-  assignSymbol(parser, parser)
-  return parser
-
-proc assign*[T: Parser](name: string, parser: T): T =
-  T(assignName(name, parser))
-
-
-proc `()`*(parser: Parser, location: int32): ParsingResult {.inline raises: [ParsingException].} =
-  parser.call(parser, location)
-
-proc `()`*(parser: Parser, document: string or StringSlice, location: int32 = 0): ParsingResult =
-  let doc = when document is string:  document.toStringSlice  else:  document
-  if parser.grammar == GrammarPlaceholder:
-    parser.grammar = Grammar("adhoc", document=StringSlice(document))
-  else:  
-    parser.grammar.document = StringSlice(document)
-    parser.grammar.cleanUp()
-  result = parser.call(parser, location)
-  discard parser.apply(
-    proc (p: Parser): bool =
-      p.cleanUp()
-      return false
-  )
-
+    return fmt"node:\n{tree}\nlocation: {r.location}"
 
 method `$`*(self: Parser): string {.base.} =
   var args: seq[string] = newSeqOfCap[string](self.subParsers.len)
   for p in self.subParsers:
     if not isNil(p):  args.add($p)
   [self.pname, ":", self.type, "(", args.join(", "), ")"].join("")
-  
 
 proc repr(parser: Parser): string =
   if parser.pname != "":  parser.pname  else:  $parser
 
-
-proc getSubParsers*(parser: Parser): seq[Parser] =
-  collect(newSeqOfCap(parser.subParsers.len)):
-    for p in parser.subParsers:  p
-  
 
 ## Modifiers
 ## ---------
@@ -795,6 +799,7 @@ proc init(errorCatching: ErrorCatchingParser,
   errorCatching.errorList = errorList
   return errorCatching
 
+# for "lent" see see: https://nim-lang.org/docs/destructors.html#lent-type
 method refdParsers*(self: ErrorCatchingParser): lent seq[Parser] =
   if self.referredParsers.len == 0:
     self.referredParsers = self.subParsers

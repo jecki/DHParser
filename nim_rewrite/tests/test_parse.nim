@@ -2,7 +2,7 @@
 
 # To run these tests, simply execute `nimble test`.
 
-import unittest
+import std/[unittest, strutils]
 
 import nimparser/strslice
 import nimparser/nodetree
@@ -40,10 +40,10 @@ test "parser-serialization":
   check $t == "\"A\" s"
   check root.getSubParsers[0].getSubParsers.len == 3
   check $s == "s t t"
-  check t.parserType == ":Series"
+  check t.type == ":Series"
 
 let WS  = "WS".assign                DROP(rxp"\s*")
-let NUMBER = ":NUMBER".assign         (rxp"(?:0|(?:[1-9]\d*))(?:\.\d+)?" & WS)
+let NUMBER = ":NUMBER".assign        rxp"(?:0|(?:[1-9]\d*))(?:\.\d+)?" & WS
 let sign = "sign".assign             ((txt"+" | txt"-") & WS)
 let expression = "expression".assign Forward()
 let group = "group".assign           (txt"(" & WS & expression & txt")" & WS)
@@ -64,7 +64,7 @@ test "arithmetic":
     (factor "1")))"""
 
 let traversalExpected = """
-expression
+expression := expression
 expression := term {("+"|"-") WS term}
 term := factor {("*"|"/") WS factor}
 factor := [sign] (NUMBER|group)
@@ -93,10 +93,10 @@ group := "(" WS expression ")" WS
 
 test "traversal":
   var s: seq[string]
-  for p in descendants(arithmetic):
+  for p in arithmetic.descendants():
     s.add(if p.name.len > 0:  $p.name & " := " & $p  else:  $p)
   arithmetic.resetTraversalTracker()
-  var traversalOutput = s.join('\n')
+  var traversalOutput = s.join("\n")
   check traversalOutput == traversalExpected
 
 
