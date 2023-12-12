@@ -279,10 +279,13 @@ proc resetTraversalTracker*(parser: Parser) =
     for p in parser.refdParsers:
       p.resetTraversalTracker()
 
-template forEach*(parser: Parser, p: untyped, selector: ParserIterator = refdSubs, body: untyped) =
+template forEach*(parser: Parser, p: untyped, selector: ParserIterator, body: untyped) =
   for p in parser.descendants(selector):
     body
   parser.resetTraversalTracker()
+
+template forEachReferred*(parser: Parser, p: untyped, body: untyped) =
+  forEach(parser, p, refdSubs, body)
 
 # proc trackingApply(parser: Parser, visitor: (Parser) -> bool): bool =
 #   if not (traversalTracker in parser.flags):
@@ -388,7 +391,7 @@ proc `()`*(parser: Parser, document: string or StringSlice, location: int32 = 0)
     parser.grammar.document = StringSlice(document)
     parser.grammar.cleanUp()
   result = parser.call(parser, location)
-  parser.forEach(p, subs):
+  parser.forEach(p, refdSubs):
     p.cleanUp()
 
   # discard parser.apply(
