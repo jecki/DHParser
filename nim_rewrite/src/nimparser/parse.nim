@@ -4,7 +4,6 @@
 {.experimental: "strictDefs".}
 {.experimental: "strictCaseObjects".}
 
-
 import std/[enumerate, math, options, sets, strformat, strutils, re, sugar, tables]
 
 import strslice
@@ -160,7 +159,7 @@ let GrammarPlaceholder = Grammar("__Placeholder__",
 
 # forward declarations
 proc memoizationWrapper(parser: Parser, location: int32): ParsingResult {.raises: [ParsingException].}
-proc apply*(parser: Parser, visitor: (Parser) -> bool): bool
+
 
 method cleanUp(self: Parser) =
   self.visited.clear()
@@ -224,20 +223,6 @@ proc assignName(name: string, parser: Parser): Parser =
 proc assign*[T: Parser](name: string, parser: T): T =
   T(assignName(name, parser))
 
-proc grammar(parser: Parser) : GrammarRef {.inline.} =
-  return parser.grammarVar
-
-proc `grammar=`*(parser: Parser, grammar: GrammarRef) =
-  var uniqueID: uint32 = 0
-  proc visitor(parser: Parser): bool =
-    assert parser.grammarVar == GrammarPlaceholder
-    parser.grammarVar = grammar
-    uniqueID += 1
-    parser.uniqueID = uniqueID
-    # parser.equivID = uniqueID  # TODO: Determine "equivalent" parsers, here
-    return false
-  discard parser.apply(visitor)
-
 ## catching syntax errors and resuming after that
 
 proc handle_parsing_exception(pe: ParsingException): ParsingResult {.raises: [ParsingException].}=
@@ -249,11 +234,96 @@ proc fatal(parser: Parser, msg: string, location: int32, code: ErrorCode = A_FAT
   let
     node = newNode(ZombieName, msg).withPos(location)
     error: ErrorRef = Error(msg, location, code)
-  parser.grammar.errors.add(error)
+  parser.grammarVar.errors.add(error)
   result = (node, location)
   raise ParsingException(parser: parser, node: node, node_orig_len: node.runeLen,
                          location: location, error: error)
 
+## parser-graph-traversal
+
+method refdParsers*(self: Parser): seq[Parser] =
+  ## Returns all directly referred parsers. The result is always a superset
+  ## of the self.subParsers. An example for a parser that is referred by
+  ## self but not a sub-parser, would be a parser that is used for resuming
+  ## from a parsing error thrown by self.
+  return self.subParsers
+
+proc getSubParsers*(parser: Parser): seq[Parser] =
+  collect(newSeqOfCap(parser.subParsers.len)):
+    for p in parser.subParsers:  p
+
+iterator subs*(parser: Parser): Parser {.closure.} =
+  for p in parser.subParsers:
+    yield p
+
+iterator refdSubs*(parser: Parser): Parser {.closure.} =
+  for p in parser.refdParsers:
+    yield p
+
+iterator anonSubs*(parser: Parser): Parser {.closure.} =
+  for p in parser.subParsers:
+    if p.name.len == 0:
+      yield p
+
+iterator descendants*(parser: Parser, selector: ParserIterator = refdSubs): Parser {.closure.} =
+  if not (traversalTracker in parser.flags):
+    parser.flags.incl traversalTracker
+    yield parser
+    let subIter = selector
+    for p in subIter(parser):
+      for q in p.descendants(selector):  yield q
+
+proc resetTraversalTracker*(parser: Parser) =
+  if traversalTracker in parser.flags:
+    parser.flags.excl traversalTracker
+    for p in parser.refdParsers:
+      p.resetTraversalTracker()
+
+template forEach*(parser: Parser, p: untyped, selector: ParserIterator = refdSubs, body: untyped) =
+  for p in parser.descendants(selector):
+    body
+  parser.resetTraversalTracker()
+
+# proc trackingApply(parser: Parser, visitor: (Parser) -> bool): bool =
+#   if not (traversalTracker in parser.flags):
+#     parser.flags.incl traversalTracker
+#     if visitor(parser):  return true
+#     for p in parser.refdParsers:
+#       if p.trackingApply(visitor):  return true
+#     return false
+#   return false
+
+# proc apply*(parser: Parser, visitor: (Parser) -> bool): bool =
+#   # result = parser.trackingApply(visitor)
+#   # parser.resetTraversalTracker()
+#   result = false
+#   parser.forEach(p, refdSubs):
+#     if visitor(p):
+#       result = true
+#       break
+#   parser.resetTraversalTracker()
+
+## grammar-property
+
+proc grammar(parser: Parser) : GrammarRef {.inline.} =
+  return parser.grammarVar
+
+proc `grammar=`*(parser: Parser, grammar: GrammarRef) =
+  var uniqueID: uint32 = 0
+  parser.forEach(p, refdSubs):
+    assert p.grammarVar == GrammarPlaceholder
+    p.grammarVar = grammar
+    uniqueID += 1
+    p.uniqueID = uniqueID
+
+  # proc visitor(parser: Parser): bool =
+  #   assert parser.grammarVar == GrammarPlaceholder
+  #   parser.grammarVar = grammar
+  #   uniqueID += 1
+  #   parser.uniqueID = uniqueID
+  #   # parser.equivID = uniqueID  # TODO: Determine "equivalent" parsers, here
+  #   return false
+  # discard parser.apply(visitor)
 
 ## parsering-procedures and -methods
 
@@ -318,66 +388,14 @@ proc `()`*(parser: Parser, document: string or StringSlice, location: int32 = 0)
     parser.grammar.document = StringSlice(document)
     parser.grammar.cleanUp()
   result = parser.call(parser, location)
-  discard parser.apply(
-    proc (p: Parser): bool =
-      p.cleanUp()
-      return false
-  )
+  parser.forEach(p, subs):
+    p.cleanUp()
 
-
-## parser-graph-traversal
-
-method refdParsers*(self: Parser): seq[Parser] =
-  ## Returns all directly referred parsers. The result is always a superset
-  ## of the self.subParsers. An example for a parser that is referred by
-  ## self but not a sub-parser, would be a parser that is used for resuming
-  ## from a parsing error thrown by self.
-  return self.subParsers
-
-proc getSubParsers*(parser: Parser): seq[Parser] =
-  collect(newSeqOfCap(parser.subParsers.len)):
-    for p in parser.subParsers:  p
-
-iterator subs(parser: Parser): Parser {.closure.} =
-  for p in parser.subParsers:
-    yield p
-
-iterator refdSubs(parser: Parser): Parser {.closure.} =
-  for p in parser.refdParsers:
-    yield p
-
-iterator anonSubs(parser: Parser): Parser {.closure.} =
-  for p in parser.subParsers:
-    if p.name.len == 0:
-      yield p
-
-iterator descendants*(parser: Parser, selectSubs: ParserIterator = refdSubs): Parser {.closure.} =
-  if not (traversalTracker in parser.flags):
-    parser.flags.incl traversalTracker
-    yield parser
-    for p in parser.subParsers:
-      let descs = descendants
-      for q in p.descs(selectSubs):  yield q
-
-proc trackingApply(parser: Parser, visitor: (Parser) -> bool): bool =
-  if not (traversalTracker in parser.flags):
-    parser.flags.incl traversalTracker
-    if visitor(parser):  return true
-    for p in parser.refdParsers:
-      if p.trackingApply(visitor):  return true
-    return false
-  return false
-
-proc resetTraversalTracker*(parser: Parser) =
-  if traversalTracker in parser.flags:
-    parser.flags.excl traversalTracker
-    for p in parser.refdParsers:
-      p.resetTraversalTracker()
-
-proc apply*(parser: Parser, visitor: (Parser) -> bool): bool =
-  result = parser.trackingApply(visitor)
-  parser.resetTraversalTracker()
-
+  # discard parser.apply(
+  #   proc (p: Parser): bool =
+  #     p.cleanUp()
+  #     return false
+  # )
 
 ## procedures performing early tree-reduction on return values of parsers
 
@@ -1181,10 +1199,13 @@ when isMainModule:
     echo if p.name.len > 0:  $p.name & " := " & $p  else:  $p
   expression.resetTraversalTracker()
 
-  echo "apply-callback"
-  proc visitor(p: Parser): bool =
-    echo if p.name.len > 0:  $p.name & " := " & $p  else:  $p
-    return false
+  # echo "apply-callback"
+  # proc visitor(p: Parser): bool =
+  #   echo if p.name.len > 0:  $p.name & " := " & $p  else:  $p
+  #   return false
+  #
+  # discard expression.apply(visitor)
 
-  discard expression.apply(visitor)
-
+  echo "---"
+  expression.subParsers[0].forEach(p, anonSubs):
+    echo $p
