@@ -225,8 +225,14 @@ proc assign*[T: Parser](name: string, parser: T): T =
 
 ## catching syntax errors and resuming after that
 
-proc handle_parsing_exception(pe: ParsingException): ParsingResult {.raises: [ParsingException].}=
+proc handle_parsing_exception(pe: ParsingException, location: int32):
+                              ParsingResult {.raises: [ParsingException].}=
   if isNil(pe):  return (nil, 0)  else:  return (pe.node, pe.location)
+  # following: work in progress
+  let gap = pe.location - location
+  # rules = pe.origin.resumeList
+  let nextLoc: int32 = pe.location + pe.node_orig_len
+
 
 
 proc fatal(parser: Parser, msg: string, location: int32, code: ErrorCode = A_FATALITY): ParsingResult
@@ -364,7 +370,7 @@ proc memoizationWrapper(parser: Parser, location: int32): ParsingResult {.raises
     try:
       result = parser.parse(location)
     except ParsingException as pe:
-      result = handle_parsing_exception(pe)
+      result = handle_parsing_exception(pe, location)
 
     let node = result.node  # isNil(result.node) does not work...
     if isNil(node):
