@@ -225,6 +225,18 @@ proc assign*[T: Parser](name: string, parser: T): T =
 
 ## catching syntax errors and resuming after that
 
+proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
+                   commentRe: Regex, searchWindowSize: int32 = -1): ParsingResult =
+  let upper_limit = StringSlice.len - location + 1
+  var
+    closest_match = upper_limit
+    searchWindow = if searchWindowSize < 0:  upper_limit - 1  else: searchWindowSize
+    skipNode: NodeOrNil = nil
+
+  proc next_comment(): tuple[int, int]=4ö-#räf.
+
+
+
 proc handle_parsing_exception(pe: ParsingException, location: int32):
                               ParsingResult {.raises: [ParsingException].}=
   if isNil(pe):  return (nil, 0)  else:  return (pe.node, pe.location)
