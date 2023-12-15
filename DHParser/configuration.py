@@ -542,8 +542,8 @@ CONFIG_PRESET['add_grammar_source_to_parser_docstring'] = False
 # for parsers that yield named nodes. For example, the regular expression
 # r'_' catches names with a leading underscore. The default value is a
 # regular expression that matches no string whatsoever.
-# Default value: r'..(?<=^)'  # never match.
-NEVER_MATCH_PATTERN = r'..(?<=^)'
+# Default value: r'$.'  # never match.
+NEVER_MATCH_PATTERN = r'$.'
 CONFIG_PRESET['default_disposable_regexp'] = NEVER_MATCH_PATTERN
 
 

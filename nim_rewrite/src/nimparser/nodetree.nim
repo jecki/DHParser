@@ -58,19 +58,19 @@ template newNode*(args: varargs[untyped]): Node =
   new(Node).init(args)
 
 
-proc `name=`*(node: Node, name: ref string or string) =
+template `name=`*(node: Node, name: ref string or string) =
   when name is ref string:
     node.nameRef = name
   else:
     node.nameRef[] = name
 
-proc name*(node: Node): string = node.nameRef[]
+template name*(node: Node): string = node.nameRef[]
 
-func isLeaf*(node: Node): bool = node.childrenSeq.len == 0
+template isLeaf*(node: Node): bool = node.childrenSeq.len == 0
 
-proc isEmpty*(node: Node): bool = node.childrenSeq.len == 0 and node.textSlice.len == 0
+template isEmpty*(node: Node): bool = node.childrenSeq.len == 0 and node.textSlice.len == 0
 
-func isAnonymous*(node: Node): bool = node.name.len == 0 or node.name[0] == ':'
+template isAnonymous*(node: Node): bool = node.name.len == 0 or node.name[0] == ':'
 
 func content*(node: Node): string =
   if node.isLeaf:
@@ -96,31 +96,31 @@ proc `text=`(node: Node, text: StringSlice or ref string or string) {.inline.} =
     else:
       node.textSlice.str[] = text    
 
-proc text*(node: Node): StringSlice {.inline.} = node.textSlice
+template text*(node: Node): StringSlice = node.textSlice
 
 # see: https://nim-lang.org/docs/destructors.html
 
-proc `children=`(node: Node, children: sink seq[Node]) = 
+proc `children=`(node: Node, children: sink seq[Node]) =
   node.childrenSeq = children
   node.textSlice = EmptyStringSlice
 
-proc children*(node: Node): seq[Node] {.inline.} = node.childrenSeq
+template children*(node: Node): seq[Node] = node.childrenSeq
 
-proc `result=`*(node: Node, text: StringSlice or ref string or string) {.inline.} =
+template `result=`*(node: Node, text: StringSlice or ref string or string) =
   node.`text=` text
 
-proc `result=`*(node: Node, children: sink seq[Node]) =
+template `result=`*(node: Node, children: sink seq[Node]) =
   node.`children=` children
 
+template `attr=`*(node: Node, attributes: ref Attributes = nil) =
+  node.attributesRef = attributes
 
-proc `attr=`*(node: Node, attributes: ref Attributes or Attributes = nil) =
-  when attributes is ref Attributes:
-    node.attributesRef = attributes
-  else:
+proc `attr=`*(node: Node, attributes: sink Attributes) =
+  if isNil(node.attributesRef):
     new(node.attributesRef)
-    node.attributesRef[] = attributes  
+  node.attributesRef[] = attributes
 
-proc attr*(node: Node): Attributes =
+proc attr*(node: Node): lent Attributes =
   if isNil(node.attributesRef):
     new(node.attributesRef)
   return node.attributesRef[]
@@ -165,13 +165,12 @@ proc assignSourcePos(node: Node, sourcePos: int32) : int32 =
         pos += child.assignSourcePos(pos)
   return pos
 
-proc `pos=`*(node: Node, sourcePos: int32) =
+template `pos=`*(node: Node, sourcePos: int32) =
   discard node.assignSourcePos(sourcePos)
 
-proc withPos*(node: Node, sourcePos: int32): Node =
+template withPos*(node: Node, sourcePos: int32): Node =
   discard node.assignSourcePos(sourcePos)
-  return node
-
+  node
 
 proc copy*(node: Node): Node =
   ## Yields a shallow copy of a node

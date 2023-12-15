@@ -138,7 +138,7 @@ from a grammar, step by step::
         r"""Parser for an Arithmetic source file.
         """
         expression = Forward()
-        disposable__ = re.compile('..(?<=^)')
+        disposable__ = re.compile('$.')
         static_analysis_pending__ = []  # type: List[bool]
         parser_initialization__ = ["upon instantiation"]
         COMMENT__ = r''

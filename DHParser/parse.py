@@ -197,14 +197,14 @@ class ParserError(Exception):
     or :py:class:`Interleave`-parser detects a missing mandatory element.
     """
     def __init__(self,
-                 parser: Parser,
+                 origin: Parser,
                  node: Node,
                  node_orig_len: int,
                  location: int,
                  error: Error, *,
                  first_throw: bool):
         assert node is not None
-        self.parser = parser  # type: Parser
+        self.parser = origin  # type: Parser
         self.node = node      # type: Node
         self.node_orig_len = node_orig_len  # type: int
         self.location = location  # type: int
@@ -238,7 +238,7 @@ class ParserError(Exception):
             >>> pe_derived.first_throw
             False
         """
-        args = {"parser": self.parser,
+        args = {"origin": self.parser,
                 "node": self.node,
                 "node_orig_len": self.node_orig_len,
                 "location": self.location,

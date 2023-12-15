@@ -11,6 +11,10 @@ import nodetree
 import error
 
 
+const  NeverMatchPattern = r"$."
+let    NeverMatchRegex   = re(NeverMatchPattern)
+
+
 ## Parser Base and Grammar
 ## -----------------------
 ##
@@ -26,7 +30,7 @@ type
 
   ParsingResult = tuple[node: NodeOrNil, location: int32]
   ParsingException = ref object of CatchableError
-    parser: Parser
+    origin: Parser
     node: Node
     node_orig_len: int32
     location: int32
@@ -220,42 +224,9 @@ proc assignName(name: string, parser: Parser): Parser =
   assignSymbol(parser, parser)
   return parser
 
-proc assign*[T: Parser](name: string, parser: T): T =
+template assign*[T: Parser](name: string, parser: T): T =
   T(assignName(name, parser))
 
-## catching syntax errors and resuming after that
-
-proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
-                   commentRe: Regex, searchWindowSize: int32 = -1): ParsingResult =
-  let upper_limit = StringSlice.len - location + 1
-  var
-    closest_match = upper_limit
-    searchWindow = if searchWindowSize < 0:  upper_limit - 1  else: searchWindowSize
-    skipNode: NodeOrNil = nil
-
-  proc next_comment(): tuple[int, int]=4ö-#räf.
-
-
-
-proc handle_parsing_exception(pe: ParsingException, location: int32):
-                              ParsingResult {.raises: [ParsingException].}=
-  if isNil(pe):  return (nil, 0)  else:  return (pe.node, pe.location)
-  # following: work in progress
-  let gap = pe.location - location
-  # rules = pe.origin.resumeList
-  let nextLoc: int32 = pe.location + pe.node_orig_len
-
-
-
-proc fatal(parser: Parser, msg: string, location: int32, code: ErrorCode = A_FATALITY): ParsingResult
-  {.raises: [ParsingException].} =
-  let
-    node = newNode(ZombieName, msg).withPos(location)
-    error: ErrorRef = Error(msg, location, code)
-  parser.grammarVar.errors.add(error)
-  result = (node, location)
-  raise ParsingException(parser: parser, node: node, node_orig_len: node.runeLen,
-                         location: location, error: error)
 
 ## parser-graph-traversal
 
@@ -326,8 +297,7 @@ template forEachReferred*(parser: Parser, p: untyped, body: untyped) =
 
 ## grammar-property
 
-proc grammar(parser: Parser) : GrammarRef {.inline.} =
-  return parser.grammarVar
+template grammar*(parser: Parser) : GrammarRef = parser.grammarVar
 
 proc `grammar=`*(parser: Parser, grammar: GrammarRef) =
   var uniqueID: uint32 = 0
@@ -346,6 +316,60 @@ proc `grammar=`*(parser: Parser, grammar: GrammarRef) =
   #   return false
   # discard parser.apply(visitor)
 
+
+## catching syntax errors and resuming after that
+
+proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
+                   commentRe: Regex = NeverMatchRegex, searchWindowSize: int32 = -1): ParsingResult =
+  let upper_limit = document.len - location + 1
+  var
+    closest_match = upper_limit
+    searchWindow = if searchWindowSize < 0:  upper_limit - 1  else: searchWindowSize
+    skipNode: NodeOrNil = nil
+    commentPointer = if commentRe != NeverMatchRegex:  location  else:  upper_limit
+
+  proc nextComment(): tuple[start, firstAfterMatch: int32] =
+    if commentPointer < upper_limit:
+      let (a, b) = findBounds(document.str[], commentRe, commentPointer)
+      if a >= 0:
+        commentPointer = b.int32 + 1
+        return (1, b.int32 + 1)
+      else:
+        commentPointer = upper_limit
+    return (-1, -2)
+
+  proc strSearch(s: string, start: int32): tuple[pos, length: int32] =
+    return (find(document.str[], s, start, start + searchWindow).int32, s.len.int32)
+
+  proc rxSearch(regex: Regex, start: int32): tuple[pos, length: int32] =
+    let (a, b) = findBounds(document.str[], regex, start, start + searchWindow)
+    return (a.int32, b.int32 - a.int32 + 1)
+
+  proc algorithmSearch(match: MatcherProc, start: int32): tuple[pos, length: int32] =
+    result = match(document, start, start + searchWindow)
+
+
+proc handle_parsing_exception(pe: ParsingException, location: int32):
+                              ParsingResult {.raises: [ParsingException].}=
+  if isNil(pe):  return (nil, 0)  else:  return (pe.node, pe.location)
+  # following: work in progress
+  let gap = pe.location - location
+  # rules = pe.origin.resumeList
+  let nextLoc: int32 = pe.location + pe.node_orig_len
+
+
+
+proc fatal(parser: Parser, msg: string, location: int32, code: ErrorCode = A_FATALITY): ParsingResult
+  {.raises: [ParsingException].} =
+  let
+    node = newNode(ZombieName, msg).withPos(location)
+    error: ErrorRef = Error(msg, location, code)
+  parser.grammarVar.errors.add(error)
+  result = (node, location)
+  raise ParsingException(origin: parser, node: node, node_orig_len: node.runeLen,
+                         location: location, error: error)
+
+  
 ## parsering-procedures and -methods
 
 method parse*(self: Parser, location: int32): ParsingResult {.base raises: [ParsingException].} =
@@ -491,7 +515,7 @@ method `$`*(self: Parser): string {.base.} =
     if not isNil(p):  args.add($p)
   [self.pname, ":", self.type, "(", args.join(", "), ")"].join("")
 
-proc repr(parser: Parser): string =
+template repr(parser: Parser): string =
   if parser.pname != "":  parser.pname  else:  $parser
 
 
@@ -500,7 +524,7 @@ proc repr(parser: Parser): string =
 
 proc Drop*(parser: Parser): Parser {.inline.} =
   parser.flags = parser.flags + {dropContent, isDisposable}
-  return parser
+  parser
 
 
 ## Leaf Parsers
@@ -533,10 +557,10 @@ proc init*(textParser: TextRef, text: string): TextRef =
   textParser.empty = (text == "")
   return textParser
 
-proc Text*(text: string): TextRef =
-  return new(TextRef).init(text)
+template Text*(text: string): TextRef =
+  new(TextRef).init(text)
 
-proc txt*(text: string): TextRef {.inline.} = Text(text)
+template txt*(text: string): TextRef = Text(text)
 
 method parse*(self: TextRef, location: int32): ParsingResult =
   runnableExamples:
@@ -580,14 +604,14 @@ proc init*(regexParser: RegExpRef, rxInfo: RegExpInfo): RegExpRef =
   regexParser.flags.incl isLeaf
   return regexParser
 
-proc RegExp*(reInfo: RegExpInfo): RegExpRef =
-  return new(RegExpRef).init(reInfo)
+template RegExp*(reInfo: RegExpInfo): RegExpRef =
+  new(RegExpRef).init(reInfo)
 
 proc RegExp*(reStr: string): RegExpRef =
   let reInfo = if reStr.contains("\n"):  mrx(reStr)  else:  rx(reStr)
-  return new(RegExpRef).init(reInfo)
+  new(RegExpRef).init(reInfo)
 
-proc rxp*(reStr: string): RegExpRef {.inline.} = RegExp(reStr)
+template rxp*(reStr: string): RegExpRef = RegExp(reStr)
 
 method parse*(self: RegExpRef, location: int32): ParsingResult =
   runnableExamples:
@@ -669,17 +693,17 @@ proc init*(repeat: RepeatRef,
   return repeat
 
 
-proc Repeat*(parser: Parser, repRange: Range): RepeatRef =
-  return new(RepeatRef).init(parser, repRange)
+template Repeat*(parser: Parser, repRange: Range): RepeatRef =
+  new(RepeatRef).init(parser, repRange)
 
-proc Option*(parser: Parser): RepeatRef =
-  return new(RepeatRef).init(parser, (0u32, 1u32), OptionName)
+template Option*(parser: Parser): RepeatRef =
+  new(RepeatRef).init(parser, (0u32, 1u32), OptionName)
 
-proc ZeroOrMore*(parser: Parser): RepeatRef =
-  return new(RepeatRef).init(parser, (0u32, inf), ZeroOrMoreName)
+template ZeroOrMore*(parser: Parser): RepeatRef =
+  new(RepeatRef).init(parser, (0u32, inf), ZeroOrMoreName)
 
-proc OneOrMore*(parser: Parser): RepeatRef =
-  return new(RepeatRef).init(parser, (1u32, inf), OneOrMoreName)
+template OneOrMore*(parser: Parser): RepeatRef =
+  new(RepeatRef).init(parser, (1u32, inf), OneOrMoreName)
 
 method parse*(self: RepeatRef, location: int32): ParsingResult {.raises: [ParsingException].} =
   ## Examples:
@@ -756,7 +780,7 @@ proc init*(alternative: AlternativeRef, parsers: openarray[Parser]): Alternative
   alternative.flags.incl isNary
   return alternative
 
-proc Alternative*(parsers: varargs[Parser]): AlternativeRef =
+template Alternative*(parsers: varargs[Parser]): AlternativeRef =
   new(AlternativeRef).init(parsers)
 
 method parse*(self: AlternativeRef, location: int32): ParsingResult = 
@@ -792,7 +816,7 @@ proc `|`*(other: Parser, alternative: AlternativeRef): AlternativeRef =
   alternative.subParsers = @[other] & alternative.subParsers
   return alternative
 
-proc `|`*(parser: Parser, other: Parser): AlternativeRef = Alternative(parser, other)
+template `|`*(parser: Parser, other: Parser): AlternativeRef = Alternative(parser, other)
 
 
 
@@ -904,25 +928,25 @@ proc init*(series: SeriesRef,
   series.subParsers = @parsers
   return series
 
-proc Series*(parsers: varargs[Parser]): SeriesRef =
-  return new(SeriesRef).init(parsers, inf)
+template Series*(parsers: varargs[Parser]): SeriesRef =
+  new(SeriesRef).init(parsers, inf)
 
-proc Series*(parsers: varargs[Parser], mandatory: uint32): SeriesRef =
-  return new(SeriesRef).init(parsers, mandatory)
+template Series*(parsers: varargs[Parser], mandatory: uint32): SeriesRef =
+  new(SeriesRef).init(parsers, mandatory)
 
 # proc Required*(parsers: varargs[Parser]): SeriesRef =
 #   return new(SeriesRef).init(parsers, 0)
 
-proc Required*(series: SeriesRef): SeriesRef =
+proc Required*(series: SeriesRef): SeriesRef {.inline.} =
   series.mandatory = 0
-  return series
+  series
 
 
 method parse*(self: SeriesRef, location: int32): ParsingResult {.raises: [ParsingException].} =
   var
     results = newSeqOfCap[Node](self.subParsers.len)
     loc = location
-    reloc = 0i32
+    reloc = 0'i32
     error: ErrorOrNil = nil
     node, nd: NodeOrNil
     someNode: Node
@@ -949,7 +973,7 @@ method parse*(self: SeriesRef, location: int32): ParsingResult {.raises: [Parsin
       results.add(node)
   someNode = self.grammar.returnSequence(self, results)
   if not isNil(error):
-    raise ParsingException(parser: self, node: someNode.withPos(location),
+    raise ParsingException(origin: self, node: someNode.withPos(location),
                            node_orig_len: loc - location, location: location,
                            error: error, first_throw: true)
   return (someNode, loc)
@@ -1017,7 +1041,7 @@ proc init*(lookahead: LookaheadRef,
   return lookahead
 
 proc Lookahead(parser: Parser, positive: bool = true): LookaheadRef =
-  return new(LookaheadRef).init(parser, positive)
+  new(LookaheadRef).init(parser, positive)
 
 method parse*(self: LookaheadRef, location: int32): ParsingResult {.raises: [ParsingException].} =
   var 
@@ -1139,8 +1163,8 @@ proc init*(forward: ForwardRef): ForwardRef =
   forward.recursionCounter = initTable[int32, int32]()
   return forward
 
-proc Forward*(): ForwardRef =
-  return new(ForwardRef).init()
+template Forward*(): ForwardRef =
+  new(ForwardRef).init()
 
 proc set*(forward: ForwardRef, parser: Parser) =
   forward.subParsers = @[parser]
