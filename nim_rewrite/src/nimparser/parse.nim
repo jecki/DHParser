@@ -338,6 +338,24 @@ proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
         commentPointer = upper_limit
     return (-1, -2)
 
+  proc entry_point(m: Matcher): int32 =
+    proc searchfunc(): tuple[pos, length: int32] =
+      case m.kind:
+      of mkRegex:
+        let (a, b) = findBounds(document.str[], m.regex, start, start + searchWindow)
+        (a.int32, b.int32 - a.int32 + 1)
+      of mkString:
+        (find(document.str[], m.cmpStr, start, start + searchWindow).int32,
+         s.len.int32)
+      of mkProc:
+        m.findProc(document, start, start + searchWindow)
+      else:
+        # should never be reached!
+        return upper_limit
+
+    let (a, b) = nextComment()
+
+
   proc strSearch(s: string, start: int32): tuple[pos, length: int32] =
     return (find(document.str[], s, start, start + searchWindow).int32, s.len.int32)
 
@@ -347,6 +365,8 @@ proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
 
   proc algorithmSearch(match: MatcherProc, start: int32): tuple[pos, length: int32] =
     result = match(document, start, start + searchWindow)
+
+
 
 
 proc handle_parsing_exception(pe: ParsingException, location: int32):
