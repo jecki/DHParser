@@ -351,7 +351,7 @@ proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
         m.findProc(document, start, start + searchWindow)
       else:
         # should never be reached!
-        return upper_limit
+        return (-1, 0)
 
     let (a, b) = nextComment()
 
