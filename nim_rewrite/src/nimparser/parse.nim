@@ -321,33 +321,34 @@ proc `grammar=`*(parser: Parser, grammar: GrammarRef) =
 
 proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
                    commentRe: Regex = NeverMatchRegex, searchWindowSize: int32 = -1): ParsingResult =
-  let upper_limit = document.len - location + 1
+  let upperLimit = document.len - location + 1
   var
-    closest_match = upper_limit
-    searchWindow = if searchWindowSize < 0:  upper_limit - 1  else: searchWindowSize
+    pos: int32
+    closestMatch = upperLimit
+    searchWindow = if searchWindowSize < 0:  upperLimit - 1  else: searchWindowSize
     skipNode: NodeOrNil = nil
-    commentPointer = if commentRe != NeverMatchRegex:  location  else:  upper_limit
+    commentPointer = if commentRe != NeverMatchRegex:  location  else:  upperLimit
 
   proc nextComment(): tuple[start, firstAfterMatch: int32] =
-    if commentPointer < upper_limit:
+    if commentPointer < upperLimit:
       let (a, b) = findBounds(document.str[], commentRe, commentPointer)
       if a >= 0:
         commentPointer = b.int32 + 1
         return (1, b.int32 + 1)
       else:
-        commentPointer = upper_limit
+        commentPointer = upperLimit
     return (-1, -2)
 
   proc entry_point(m: Matcher): int32 =
-    proc searchfunc(): tuple[pos, length: int32] =
+    proc searchFunc(start: int32): tuple[pos, length: int32] =
       case m.kind:
-      of mkRegex:
+      of mkRegex:  # rx_search
         let (a, b) = findBounds(document.str[], m.regex, start, start + searchWindow)
         (a.int32, b.int32 - a.int32 + 1)
-      of mkString:
+      of mkString:  # str_search
         (find(document.str[], m.cmpStr, start, start + searchWindow).int32,
          m.cmpStr.len.int32)
-      of mkProc:
+      of mkProc:  # algorithm_search
         m.findProc(document, start, start + searchWindow)
       else:
         # should never be reached!
@@ -355,24 +356,38 @@ proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
 
     var
       (a, b) = nextComment()
-      (k, length) = searchfunc()
+      (k, length) = searchfunc(location)
 
-    while a < b <= k + length:
+    while a < b and b <= k + length:
       (a, b) = nextComment()
+    while (a < k and k < b) or (a < k + length and k + length < b):
+      (k, length) = searchFunc(b)
+      while a < b and b <= k + length:
+        (a, b) = nextComment()
+    return if k >= 0:  k + length  else:  upperLimit
 
+  for rule in rules:
+    case rule.kind:
+    of mkParser:
+      try:
+        (skipNode, pos) = rule.consumeParser(location):
+      except ParserError:
+        # TODO: Fehlermeldung hinzufügen!
+        skipNode = nil
+        pos = upperLimit
+      if not isNil(skipNode):
+        if pos < closestMatch:
+          closestMatch = pos
+    else:
+      pos = entry_point(rule)
+      if pos < closestMatch:
+        skipNode = nil
+        closestMatch = pos
 
-
-  proc strSearch(s: string, start: int32): tuple[pos, length: int32] =
-    return (find(document.str[], s, start, start + searchWindow).int32, s.len.int32)
-
-  proc rxSearch(regex: Regex, start: int32): tuple[pos, length: int32] =
-    let (a, b) = findBounds(document.str[], regex, start, start + searchWindow)
-    return (a.int32, b.int32 - a.int32 + 1)
-
-  proc algorithmSearch(match: MatcherProc, start: int32): tuple[pos, length: int32] =
-    result = match(document, start, start + searchWindow)
-
-
+  if closestMatch >= upperLimit:  closestMatch = -1
+  if isNil(skipNode):
+    skipNode = newNode(ZombieName, document[location ..< max(closestMatch, 0)])
+  return (skip_node, closestMatch)
 
 
 proc handle_parsing_exception(pe: ParsingException, location: int32):
