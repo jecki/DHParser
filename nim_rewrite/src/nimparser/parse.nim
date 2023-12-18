@@ -346,14 +346,20 @@ proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
         (a.int32, b.int32 - a.int32 + 1)
       of mkString:
         (find(document.str[], m.cmpStr, start, start + searchWindow).int32,
-         s.len.int32)
+         m.cmpStr.len.int32)
       of mkProc:
         m.findProc(document, start, start + searchWindow)
       else:
         # should never be reached!
         return (-1, 0)
 
-    let (a, b) = nextComment()
+    var
+      (a, b) = nextComment()
+      (k, length) = searchfunc()
+
+    while a < b <= k + length:
+      (a, b) = nextComment()
+
 
 
   proc strSearch(s: string, start: int32): tuple[pos, length: int32] =
