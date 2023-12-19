@@ -228,6 +228,25 @@ template assign*[T: Parser](name: string, parser: T): T =
   T(assignName(name, parser))
 
 
+## parser serialization
+
+proc `$`*(r: ParsingResult): string =
+  let tree = $r.node
+  if tree.find('\n') < 0:
+    return fmt"node: {tree}, location: {r.location}"
+  else:
+    return fmt"node:\n{tree}\nlocation: {r.location}"
+
+method `$`*(self: Parser): string {.base.} =
+  var args: seq[string] = newSeqOfCap[string](self.subParsers.len)
+  for p in self.subParsers:
+    if not isNil(p):  args.add($p)
+  [self.pname, ":", self.type, "(", args.join(", "), ")"].join("")
+
+template repr(parser: Parser): string =
+  if parser.pname != "":  parser.pname  else:  $parser
+
+
 ## parser-graph-traversal
 
 method refdParsers*(self: Parser): seq[Parser] =
@@ -297,7 +316,9 @@ template forEachReferred*(parser: Parser, p: untyped, body: untyped) =
 
 ## grammar-property
 
-template grammar*(parser: Parser) : GrammarRef = parser.grammarVar
+template grammar*(parser: Parser) : GrammarRef =
+  assert parser.grammarVar != GrammarPlaceholder
+  parser.grammarVar
 
 proc `grammar=`*(parser: Parser, grammar: GrammarRef) =
   var uniqueID: uint32 = 0
@@ -369,10 +390,14 @@ proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
   for rule in rules:
     case rule.kind:
     of mkParser:
+      let parser = rule.consumeParser
+      skipNode = nil
       try:
-        (skipNode, pos) = rule.consumeParser(location):
-      except ParserError:
-        # TODO: Fehlermeldung hinzufügen!
+        (skipNode, pos) = parser.call(parser, location)
+      except ParsingException as pe:
+        let msg = fmt"Error while searching re-entry point with parser {$parser}: {pe.msg}"
+        let error: ErrorRef = Error(msg, location, ErrorWhileRecovering)
+        parser.grammar.errors.add(error)
         skipNode = nil
         pos = upperLimit
       if not isNil(skipNode):
@@ -405,7 +430,7 @@ proc fatal(parser: Parser, msg: string, location: int32, code: ErrorCode = A_FAT
   let
     node = newNode(ZombieName, msg).withPos(location)
     error: ErrorRef = Error(msg, location, code)
-  parser.grammarVar.errors.add(error)
+  parser.grammar.errors.add(error)
   result = (node, location)
   raise ParsingException(origin: parser, node: node, node_orig_len: node.runeLen,
                          location: location, error: error)
@@ -460,15 +485,15 @@ proc memoizationWrapper(parser: Parser, location: int32): ParsingResult {.raises
       parser.visited[location] = result
       if not memoization:  grammar.flags.excl memoize
 
-  except KeyError:
-    return fatal(parser, "Totally unexpected KeyError" &  getCurrentExceptionMsg(), location)
+  except KeyError as ke:
+    return fatal(parser, "Totally unexpected KeyError" &  ke.msg, location)
 
 proc `()`*(parser: Parser, location: int32): ParsingResult {.inline raises: [ParsingException].} =
   parser.call(parser, location)
 
 proc `()`*(parser: Parser, document: string or StringSlice, location: int32 = 0): ParsingResult =
   let doc = when document is string:  document.toStringSlice  else:  document
-  if parser.grammar == GrammarPlaceholder:
+  if parser.grammarVar == GrammarPlaceholder:
     parser.grammar = Grammar("adhoc", document=StringSlice(document))
   else:
     parser.grammar.document = StringSlice(document)
@@ -540,24 +565,6 @@ proc returnItemPlaceholder(parser: Parser, node: NodeOrNil): Node =
 proc returnSeqPlaceholder(parser: Parser, nodes: sink seq[Node]): Node =
   result = EmptyNode
   raise newException(AssertionDefect, "returnItem called on GrammaPlacholder")
-
-## parser serialization
-
-proc `$`*(r: ParsingResult): string =
-  let tree = $r.node
-  if tree.find('\n') < 0:
-    return fmt"node: {tree}, location: {r.location}"
-  else:
-    return fmt"node:\n{tree}\nlocation: {r.location}"
-
-method `$`*(self: Parser): string {.base.} =
-  var args: seq[string] = newSeqOfCap[string](self.subParsers.len)
-  for p in self.subParsers:
-    if not isNil(p):  args.add($p)
-  [self.pname, ":", self.type, "(", args.join(", "), ")"].join("")
-
-template repr(parser: Parser): string =
-  if parser.pname != "":  parser.pname  else:  $parser
 
 
 ## Modifiers
@@ -1190,8 +1197,8 @@ proc forwardWrapper(parser: Parser, location: int32): ParsingResult {.raises: [P
 
       if not memoization:  grammar.flags.excl memoize
       if memoize in grammar.flags:  parser.visited[location] = result
-  except KeyError:
-    return fatal(parser, "Totally unexpected KeyError: " &  getCurrentExceptionMsg(), location)
+  except KeyError as ke:
+    return fatal(parser, "Totally unexpected KeyError: " &  ke.msg, location)
 
 
 method cleanUp(self: ForwardRef) =

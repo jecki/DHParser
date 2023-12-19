@@ -25,6 +25,7 @@ const
     AN_ERROR* = ErrorCode(1000)
     A_FATALITY* = ErrorCode(10_000)
 
+    ErrorWhileRecovering* = ErrorCode(1301)
     # RecursionLimitReached* = ErrorCode(10_010)
 
 
