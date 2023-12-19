@@ -580,7 +580,7 @@ def end_points(junctions):
     return pipeline.end_points(junctions)
 
 
-@deprecated('full_pipeline() has moved to the pipeline-module! Use "from DHParser.pipeline import full_compile"')
+@deprecated('full_pipeline() has been renamed and moved to the pipeline-module! Use "from DHParser.pipeline import full_pipeline"')
 def full_compile(source: str, preprocessor_factory, parser_factory,
                  junctions, target_stages):
     from DHParser import pipeline

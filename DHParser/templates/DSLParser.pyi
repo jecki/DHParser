@@ -49,7 +49,7 @@ serializations = expand_table(dict([('*', ['sxpr'])]))
 #######################################################################
 
 def compile_src(source: str, target: str = "{NAME}") -> Tuple[Any, List[Error]]:
-    """Compiles the source to a single targte and returns the result of the compilation
+    """Compiles the source to a single target and returns the result of the compilation
     as well as a (possibly empty) list or errors or warnings that have occurred in the
     process.
     """
