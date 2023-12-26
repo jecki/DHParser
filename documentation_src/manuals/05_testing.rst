@@ -1,4 +1,6 @@
-  Testing
+.. _testing:
+
+Testing
 =======
 
 DHParser provides a powerful unit-testing framework that allows testing
@@ -1835,7 +1837,7 @@ This is what the DOM-test look like in the test-input-file (".ini"-file)::
           (text "?")))
 
 The next time, we run the test, the DOM-trees that a generated during the test will
-be matched against the trees specified unter the "[DOM:...]"-headings of the test-file.
+be matched against the trees specified under the "[DOM:...]"-headings of the test-file.
 
 Writing tests for the last stage, the HTML-output, is just the same. Again, we will,
 for the sake of simplicity start with the transformation. The transformation from the
@@ -1892,7 +1894,7 @@ or the (HTML-snippets from tests of document-parts) as strings.
 Therefore we must specify the test-code for the html-stage also
 in form of strings. This means that the formatting of the
 html-test-code must be exactly the same as that returned by the
-DOM->html-transformation with the same linebreaks, indentation
+DOM->html-transformation with the same line-breaks, indentation
 and all::
 
     [html:emphasis]
@@ -1946,7 +1948,7 @@ there are situation where you might want to resort to conventional
 unit-testing:
 
 1. Testing for the occurrence of particular error-codes or error-messages.
-   As of Version 1.6 DHParser's testing framework has no support for
+   As of Version 1.7 DHParser's testing framework has no support for
    testing errors. This may change with future versions.
 
 2. Testing of data-stages in which the data is not compositional, any more
@@ -1955,13 +1957,13 @@ unit-testing:
 
    This assumption which is true for parsing of context-free grammars
    (save for the use of lookahead and lookbehind-parsers for which
-   DHParsers testing-framework offers some workarounds, however),
+   DHParsers testing-framework offers some workarounds, though),
    might not be true for later processing stages, any more.
    The assumption context-independence is baked into DHParser's
    testing-framework and will therefore not change in the future.
 
 Therefore, we will illustrate how conventional unit-testing works.
-Let's assume that we want to test error-localisation (a common
+Let's assume that we want to test error-localization (a common
 pain-point of parser-building) and error-reporting in case
 something goes wrong. The glue code for a conventional unit-test
 looks like this::

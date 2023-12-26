@@ -845,3 +845,22 @@ alternative strategy to extending the grammar would be to use the
 nodes are indicated by a leading ':', thus ins the
 AST-transformation-table you have to write ``:Text`` instead pf
 ``ANONYMOUS_Text__`` which is merely the XML-compatible name.)
+
+From here onward
+----------------
+
+Congratulations, you have finished the step-by-step-guide for creating
+a domain-specific language! To get deeper into the matter and, in 
+particular, to master the art of grammar writing, it is best
+to start your own pet-project. 
+
+If you do not feel confident enough yet or if you run into trouble,
+I recommend that you read the manual on DHParser's :ref:` testing framework<testing>`, 
+first, because it takes you on a tour through another, less trivial, 
+step-by-step example explaining in detail testing-strategies and the
+testing framework along the way. Unit-Testing helps tremendously 
+when writing grammars, especially if you are a beginner. 
+
+You might then want to look into the other :ref:`manuals`, each of covers
+a different stage in the processing of a DSL-file from its source-code to
+the desired destination format. Enjoy the ride!
