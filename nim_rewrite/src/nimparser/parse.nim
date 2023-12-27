@@ -4,7 +4,13 @@
 {.experimental: "strictDefs".}
 {.experimental: "strictCaseObjects".}
 
-import std/[enumerate, math, options, sets, strformat, strutils, re, sugar, tables]
+import std/[enumerate, math, options, sets, strformat, strutils, sugar, tables]
+when not defined(js):
+  import std/re
+else:
+  import std/jsre
+  type Regex = RegExp
+  func re(pattern: cstring): Regex = newRegexp(pattern)
 
 import strslice
 import nodetree
