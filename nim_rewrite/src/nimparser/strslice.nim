@@ -223,7 +223,7 @@ when defined(js):
     return (a, b)
 
   func match(slice: StringSlice, pattern: RegExp, position: int32): int32 =
-    let s = slice.str[slice.start + position ..< slice.start + slice.len]
+    let s = slice.str[slice.start + position ..< ^1]
     if startsWith(s, pattern):
       let m: seq[cstring] = match(s, pattern)
       assert m.len > 0
@@ -293,3 +293,8 @@ when isMainModule:
 
   echo s2 == s1
   echo s2 != s1
+
+  let slice = makeStringSlice("abc 123 def 456 gh 78 ijk")
+  echo slice.match('\w+')
+  echo slice.match('[0-9]'+)
+
