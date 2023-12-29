@@ -370,7 +370,7 @@ proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
     proc searchFunc(start: int32): tuple[pos, length: int32] =
       case m.kind:
       of mkRegex:  # rx_search
-        let (a, b) = findBounds(document.str[], m.regex, start, start + searchWindow)
+        let (a, b) = findBounds(document.str[], m.regex, start, searchWindow)
         (a.int32, b.int32 - a.int32 + 1)
       of mkString:  # str_search
         (find(document.str[], m.cmpStr, start, start + searchWindow).int32,

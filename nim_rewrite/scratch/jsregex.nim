@@ -30,6 +30,8 @@ when isMainModule:
   echo $result
   index = teststr.search(rx)
   echo $index
+  index = "   ".search(rx)
+  echo index
 
   echo "---"
   size = teststr.matchLen(rx, 0)

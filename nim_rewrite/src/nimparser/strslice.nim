@@ -18,6 +18,12 @@
 
 import std/strutils
 
+when defined(js):
+  import std/jsre
+else:
+  import std/re
+
+
 type
   # StringSliceRef* = ref StringSlice not nil
   StringSlice* = object
@@ -196,6 +202,46 @@ iterator items*(a: StringSlice): char =
   ## Iterate over each character in a string slice
   for i in a.start..a.stop:
     yield a.buf[i]
+
+
+when defined(js):
+  type Regex = Regexp
+
+  func re(pattern: string): Regex = newRegexp(pattern)
+
+  func search(pattern: cstring; self: RegEx): int {.importjs: "(#.search(#) || [])".}
+
+  func find(slice: StringSlice, pattern: RegEx,
+            start: int32 = 0, size: int32 = -1): tuple[first, last: int32] =
+    let last = if size < 0:  slice.len - 1  else: size + start
+    let s = slice.str[start + slice.start .. last + slice.start]
+    let a: int32 = search(s, pattern)
+    if a < 0:  return (-1, -2)
+    let m: seq[cstring] = match(s, pattern)
+    assert m.len > 0
+    let b: int32 = a + m[0].len
+    return (a, b)
+
+  func match(slice: StringSlice, pattern: RegExp, position: int32): int32 =
+    let s = slice.str[slice.start + position ..< slice.start + slice.len]
+    if startsWith(s, pattern):
+      let m: seq[cstring] = match(s, pattern)
+      assert m.len > 0
+      return m[0].len
+    return -1
+
+else:
+  func find(slice: StringSlice, pattern: RegEx,
+            start: int32 = 0, size: int32 = -1): tuple[first, last: int32] =
+    let a, b: int
+    if size < 0:
+      (a, b) = findBounds(slice.str[], pattern, slice.start + start)
+    else:
+      (a, b) = findBounds(slice.str[], pattern, slice.start + start, size)
+    return (a.int32, b.int32)
+
+  func match(slice: StringSlice, pattern: RegEx, location: int32): int32 =
+    return matchLen(slice.str[], pattern, slice.start + location).int32
 
 
 when isMainModule:
