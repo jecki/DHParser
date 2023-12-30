@@ -163,10 +163,10 @@ proc find*(s: StringSlice, sub: char,
     result = -1
 
 proc find*(s: StringSlice, sub: string,
-  start: Natural = 0, last: Natural = 0): int =
+  start: Natural = 0, last: Natural = 0): int32 =
   ## Finds a string in a string slice. Calls the similar procedure from
   ## ``strutils`` but with updated start and last references.
-  result = strutils.find(s.buf[], sub, start + s.start, s.start + (if last == 0: s.stop - s.start else: last.int32)) - s.start
+  result = strutils.find(s.buf[], sub, start + s.start, s.start + (if last == 0: s.stop - s.start else: last.int32)).int32 - s.start
   if result < 0 or result > s.stop - sub.high:
     result = -1
 
@@ -205,25 +205,27 @@ iterator items*(a: StringSlice): char =
 
 
 when defined(js):
-  type Regex = Regexp
+  type Regex* = Regexp
 
-  func re(pattern: string): Regex = newRegexp(pattern)
+  func re*(pattern: string): Regex = newRegexp(pattern)
 
   func search(pattern: cstring; self: RegEx): int {.importjs: "(#.search(#) || [])".}
 
-  func find(slice: StringSlice, pattern: RegEx,
+  func find*(slice: StringSlice, pattern: RegEx,
             start: int32 = 0, size: int32 = -1): tuple[first, last: int32] =
+    assert start >= 0 and start <= slice.stop - slice.start
     let last = if size < 0:  slice.len - 1  else: size + start
     let s = slice.str[start + slice.start .. last + slice.start]
     let a: int32 = search(s, pattern)
     if a < 0:  return (-1, -2)
     let m: seq[cstring] = match(s, pattern)
     assert m.len > 0
-    let b: int32 = a + m[0].len
-    return (a, b)
+    let b: int32 = a + m[0].len - 1
+    return (a + start, b + start)
 
-  func match(slice: StringSlice, pattern: RegExp, position: int32): int32 =
-    let s = slice.str[slice.start + position ..< ^1]
+  func match*(slice: StringSlice, pattern: RegExp, location: int32): int32 =
+    assert location >= 0 and location <= slice.stop - slice.start
+    let s = slice.str[slice.start + location ..< ^1]
     if startsWith(s, pattern):
       let m: seq[cstring] = match(s, pattern)
       assert m.len > 0
@@ -231,16 +233,21 @@ when defined(js):
     return -1
 
 else:
-  func find(slice: StringSlice, pattern: RegEx,
+  export Regex, re
+
+  proc find*(slice: StringSlice, pattern: RegEx,
             start: int32 = 0, size: int32 = -1): tuple[first, last: int32] =
+    assert start >= 0 and start <= slice.stop - slice.start
     let a, b: int
     if size < 0:
       (a, b) = findBounds(slice.str[], pattern, slice.start + start)
     else:
       (a, b) = findBounds(slice.str[], pattern, slice.start + start, size)
-    return (a.int32, b.int32)
+    if a < 0:  return (-1, -2)
+    return (a.int32 - slice.start, b.int32 - slice.start)
 
-  func match(slice: StringSlice, pattern: RegEx, location: int32): int32 =
+  func match*(slice: StringSlice, pattern: RegEx, location: int32): int32 =
+    assert location >= 0 and location <= slice.stop - slice.start
     return matchLen(slice.str[], pattern, slice.start + location).int32
 
 
@@ -295,6 +302,13 @@ when isMainModule:
   echo s2 != s1
 
   let slice = makeStringSlice("abc 123 def 456 gh 78 ijk")
-  echo slice.match('\w+')
-  echo slice.match('[0-9]'+)
+  assert slice.match(re"\w+", 0) == 3
+  assert slice.match(re"[0-9]+", 0) == -1
+  assert slice.match(re"[0-9]+", 4) == 3
+  assert slice.match(re"[0-9]+", 19) == 2
+  assert slice[19 .. ^1].match(re"[0-9]+", 0) == 2
 
+  assert slice.find(re"[0-9]+") == (4'i32, 6'i32)
+  assert slice.find(re"[0-9]+", 7) == (12'i32, 14'i32)
+  assert slice.find(re"[0-9]+", 7, 4) == (-1'i32, -2'i32)
+  assert slice[19 .. ^1].find(re"[0-9]+") == (0'i32, 1'i32)
