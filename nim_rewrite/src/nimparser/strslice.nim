@@ -106,15 +106,15 @@ proc `[]`*(str: StringSlice,
   StringSlice(buf: str.buf, start: str.start + slc.a, stop: stop)
 
 proc `[]`*(str: StringSlice,
-           slc: HSlice[int, int]): StringSlice {.inline.} =
+           slc: HSlice[int, int]): StringSlice =
   str[slc.a.int32 .. slc.b.int32]
 
 proc `[]`*(str: StringSlice,
-           slc: HSlice[int32, int]): StringSlice {.inline.} =
+           slc: HSlice[int32, int]): StringSlice =
   str[slc.a .. slc.b.int32]
 
 proc `[]`*(str: StringSlice,
-           slc: HSlice[int, int32 or BackwardsIndex]): StringSlice {.inline.} =
+           slc: HSlice[int, int32 or BackwardsIndex]): StringSlice =
   str[slc.a.int32 .. slc.b]
 
 

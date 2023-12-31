@@ -83,7 +83,7 @@ func content*(node: Node): string =
 # func children*(node: Node): seq[Node] =
 #   return node.children
 
-proc `text=`(node: Node, text: StringSlice or ref string or string) {.inline.} = 
+proc `text=`(node: Node, text: StringSlice or ref string or string) =
   if node.childrenSeq.len > 0:  
     node.childrenSeq = @[]
   if node.textSlice == EmptyStringSlice:
