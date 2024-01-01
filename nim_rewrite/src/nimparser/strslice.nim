@@ -205,30 +205,34 @@ iterator items*(a: StringSlice): char =
 
 
 when defined(js):
-  type Regex* = Regexp
+  type Regex* = tuple[sticky: Regexp, nonSticky: Regexp]
 
-  func re*(pattern: string): Regex = newRegexp(pattern)
+  func re*(pattern: string): Regex = (sticky: newRegexp(pattern, "uy"),
+                                      nonSticky: newRegexp(pattern, "ug"))
 
-  func search(pattern: cstring; self: RegEx): int {.importjs: "(#.search(#) || [])".}
+  # TODO: define func rex
 
-  func find*(slice: StringSlice, pattern: RegEx,
-            start: int32 = 0, size: int32 = -1): tuple[first, last: int32] =
+  func search(pattern: cstring; self: RegExp): int {.importjs: "(#.search(#) || [])".}
+
+  proc find*(slice: StringSlice, pattern: RegEx,
+             start: int32 = 0, size: int32 = -1): tuple[first, last: int32] =
     assert start >= 0 and start <= slice.stop - slice.start + 1
-    let last = if size < 0:  slice.len - 1  else: size + start
-    let s = slice.str[start + slice.start .. last + slice.start]
-    let a: int32 = search(cstring(s), pattern)
-    if a < 0:  return (-1, -2)
-    let m: seq[cstring] = match(s, pattern)
-    assert m.len > 0
-    let b: int32 = a + m[0].len - 1
-    return (a + start, b + start)
+    pattern.nonSticky.lastIndex = start + slice.start
+    let s = cstring(slice.str[])
+    let m: seq[cstring] = pattern.nonSticky.exec(s)
+    if m.len > 0:
+      let l: int32 = m[0].len
+      let a: int32 = pattern.nonSticky.lastIndex - slice.start - l
+      if size < 0 or a <= start + size:
+        return (a, a + l - 1)
+    return (-1, -2)
 
-  func matchLen*(slice: StringSlice, pattern: RegExp, location: int32): int32 =
+  proc matchLen*(slice: StringSlice, pattern: RegEx, location: int32): int32 =
     assert location >= 0 and location <= slice.stop - slice.start + 1
-    let s = slice.str[slice.start + location .. ^1]
-    if startsWith(cstring(s), pattern):
-      let m: seq[cstring] = match(s, pattern)
-      assert m.len > 0
+    pattern.sticky.lastIndex = location + slice.start
+    let m: seq[cstring] = match(cstring(slice.str[]), pattern.sticky)
+    if m.len > 0:
+      assert m.len == 1
       return m[0].len
     return -1
 
