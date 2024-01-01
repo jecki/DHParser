@@ -352,7 +352,7 @@ proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
 
   proc nextComment(): tuple[start, firstAfterMatch: int32] =
     if commentPointer < upperLimit:
-      let (a, b) = findBounds(document.str[], commentRe, commentPointer)
+      let (a, b) = find(document, commentRe, commentPointer)
       if a >= 0:
         commentPointer = b.int32 + 1
         return (1, b.int32 + 1)
@@ -364,7 +364,7 @@ proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
     proc searchFunc(start: int32): tuple[pos, length: int32] =
       case m.kind:
       of mkRegex:  # rx_search
-        let (a, b) = findBounds(document.str[], m.regex, start, searchWindow)
+        let (a, b) = find(document, m.regex, start, searchWindow)
         (a.int32, b.int32 - a.int32 + 1)
       of mkString:  # str_search
         (find(document.str[], m.cmpStr, start, start + searchWindow).int32,
@@ -666,7 +666,7 @@ method parse*(self: RegExpRef, location: int32): ParsingResult =
     import nodetree, regex
     doAssert RegExp(re"\w+")("ABC").node.asSxpr() == "(:RegExp \"ABC\")"
 
-  var l = matchLen(self.grammar.document.str[], self.regex, location).int32
+  var l = matchLen(self.grammar.document, self.regex, location).int32
   if l >= 0:
     let text: StringSlice = self.grammar.document[location..<location+l]
     if dropContent in self.flags:

@@ -213,7 +213,7 @@ when defined(js):
 
   func find*(slice: StringSlice, pattern: RegEx,
             start: int32 = 0, size: int32 = -1): tuple[first, last: int32] =
-    assert start >= 0 and start <= slice.stop - slice.start
+    assert start >= 0 and start <= slice.stop - slice.start + 1
     let last = if size < 0:  slice.len - 1  else: size + start
     let s = slice.str[start + slice.start .. last + slice.start]
     let a: int32 = search(cstring(s), pattern)
@@ -223,9 +223,9 @@ when defined(js):
     let b: int32 = a + m[0].len - 1
     return (a + start, b + start)
 
-  func match*(slice: StringSlice, pattern: RegExp, location: int32): int32 =
-    assert location >= 0 and location <= slice.stop - slice.start
-    let s = slice.str[slice.start + location ..< ^1]
+  func matchLen*(slice: StringSlice, pattern: RegExp, location: int32): int32 =
+    assert location >= 0 and location <= slice.stop - slice.start + 1
+    let s = slice.str[slice.start + location .. ^1]
     if startsWith(cstring(s), pattern):
       let m: seq[cstring] = match(s, pattern)
       assert m.len > 0
@@ -235,9 +235,9 @@ when defined(js):
 else:
   export Regex, re
 
-  proc find*(slice: StringSlice, pattern: RegEx,
+  func find*(slice: StringSlice, pattern: RegEx,
             start: int32 = 0, size: int32 = -1): tuple[first, last: int32] =
-    assert start >= 0 and start <= slice.stop - slice.start
+    assert start >= 0 and start <= slice.stop - slice.start + 1
     let a, b: int
     if size < 0:
       (a, b) = findBounds(slice.str[], pattern, slice.start + start)
@@ -246,8 +246,8 @@ else:
     if a < 0:  return (-1, -2)
     return (a.int32 - slice.start, b.int32 - slice.start)
 
-  func match*(slice: StringSlice, pattern: RegEx, location: int32): int32 =
-    assert location >= 0 and location <= slice.stop - slice.start
+  proc matchLen*(slice: StringSlice, pattern: RegEx, location: int32): int32 =
+    assert location >= 0 and location <= slice.stop - slice.start + 1
     return matchLen(slice.str[], pattern, slice.start + location).int32
 
 
@@ -302,13 +302,27 @@ when isMainModule:
   echo s2 != s1
 
   let slice = makeStringSlice("abc 123 def 456 gh 78 ijk")
-  assert slice.match(re"\w+", 0) == 3
-  assert slice.match(re"[0-9]+", 0) == -1
-  assert slice.match(re"[0-9]+", 4) == 3
-  assert slice.match(re"[0-9]+", 19) == 2
-  assert slice[19 .. ^1].match(re"[0-9]+", 0) == 2
+  assert slice.matchLen(re"\w+", 0) == 3
+  assert slice.matchLen(re"[0-9]+", 0) == -1
+  assert slice.matchLen(re"[0-9]+", 4) == 3
+  assert slice.matchLen(re"[0-9]+", 19) == 2
+  assert slice[19 .. ^1].matchLen(re"[0-9]+", 0) == 2
 
   assert slice.find(re"[0-9]+") == (4'i32, 6'i32)
   assert slice.find(re"[0-9]+", 7) == (12'i32, 14'i32)
   assert slice.find(re"[0-9]+", 7, 4) == (-1'i32, -2'i32)
   assert slice[19 .. ^1].find(re"[0-9]+") == (0'i32, 1'i32)
+
+  let trivial = makeStringSlice("A")
+  assert trivial.matchLen(re"\w+", 0) == 1
+  assert trivial.matchLen(re"\w+", 1) == -1
+  assert trivial.matchLen(re"\w*", 1) == 0
+  assert trivial.matchLen(re"$", 1) == 0
+  # assert trivial.matchLen(re"$", 2) < 0
+  assert trivial.matchLen(re"$", 0) == -1
+  assert trivial.matchLen(re"^", 0) == 0
+  assert trivial.matchLen(re"^", 1) == -1
+  # assert trivial.matchLen(re"^", 2) < 0
+
+  assert trivial.find(re"\w+", 0) == (0'i32, 0'i32)
+  assert trivial.find(re"\w+", 1) == (-1'i32, -2'i32)
