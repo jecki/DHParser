@@ -216,7 +216,7 @@ when defined(js):
     assert start >= 0 and start <= slice.stop - slice.start
     let last = if size < 0:  slice.len - 1  else: size + start
     let s = slice.str[start + slice.start .. last + slice.start]
-    let a: int32 = search(s, pattern)
+    let a: int32 = search(cstring(s), pattern)
     if a < 0:  return (-1, -2)
     let m: seq[cstring] = match(s, pattern)
     assert m.len > 0
@@ -226,7 +226,7 @@ when defined(js):
   func match*(slice: StringSlice, pattern: RegExp, location: int32): int32 =
     assert location >= 0 and location <= slice.stop - slice.start
     let s = slice.str[slice.start + location ..< ^1]
-    if startsWith(s, pattern):
+    if startsWith(cstring(s), pattern):
       let m: seq[cstring] = match(s, pattern)
       assert m.len > 0
       return m[0].len
@@ -242,7 +242,7 @@ else:
     if size < 0:
       (a, b) = findBounds(slice.str[], pattern, slice.start + start)
     else:
-      (a, b) = findBounds(slice.str[], pattern, slice.start + start, size)
+      (a, b) = findBounds(cstring(slice.str[]), pattern, slice.start + start, size)
     if a < 0:  return (-1, -2)
     return (a.int32 - slice.start, b.int32 - slice.start)
 
