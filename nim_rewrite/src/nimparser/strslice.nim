@@ -210,7 +210,14 @@ when defined(js):
   func re*(pattern: string): Regex = (sticky: newRegexp(pattern, "uy"),
                                       nonSticky: newRegexp(pattern, "ug"))
 
-  # TODO: define func rex
+  # TODO: Tests für diese Funktion! Zweiter Ausdruck evtl. zu korrigieren/verbessern!
+  func rex*(pattern: string): Regex =
+    # https://stackoverflow.com/questions/15463257/commenting-regular-expressions
+    let r1 = newRegexp(r"(^|[^\\])#.*", "g")
+    let r2 = newRegexp(r"(^|[^\\])\s+", "g")
+    let flatPattern = pattern.replace(r1, "$1").replace(r2, "$1")
+    return (sticky: newRegexp(flatPattern, "uy"),
+            nonSticky: newRegexp(flatPattern, "ug"))
 
   func search(pattern: cstring; self: RegExp): int {.importjs: "(#.search(#) || [])".}
 
