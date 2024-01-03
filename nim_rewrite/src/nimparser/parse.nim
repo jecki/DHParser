@@ -14,6 +14,11 @@ import error
 const  NeverMatchPattern = r"$."
 let    NeverMatchRegex   = re(NeverMatchPattern)
 
+when defined(js):
+  const maxTextLen = 2^30 - 1 + 2^30  # equals 2^31 - 1 which cannot be computed directly, because 2^31 alread overflows
+else:
+  const maxTextLen = 2^32 - 1
+
 
 ## Parser Base and Grammar
 ## -----------------------
@@ -68,7 +73,6 @@ type
     subParsers: seq[Parser]
     call: ParseProc not nil
     visited: Table[int, ParsingResult]
-  ParserIterator = iterator(parser: Parser): Parser
 
   # the GrammarObj
   ReturnItemProc = proc(parser: Parser, node: NodeOrNil): Node {.nimcall raises: [].} not nil
@@ -90,6 +94,11 @@ type
     rollbackLocation: int32
     farthestFail: int32
     farthestParser: ParserOrNil
+
+when defined(js):
+  type ParserIterator = proc(parser: Parser): seq[Parser]
+else:
+  type ParserIterator = iterator(parser: Parser): Parser
 
 
 const
@@ -260,26 +269,54 @@ proc getSubParsers*(parser: Parser): seq[Parser] =
   collect(newSeqOfCap(parser.subParsers.len)):
     for p in parser.subParsers:  p
 
-iterator subs*(parser: Parser): Parser {.closure.} =
-  for p in parser.subParsers:
-    yield p
+when defined(js):
+  const subs = getSubParsers
 
-iterator refdSubs*(parser: Parser): Parser {.closure.} =
-  for p in parser.refdParsers:
-    yield p
+  proc refdSubs*(parser: Parser): seq[Parser] =
+    collect(newSeqOfCap(parser.refdParsers.len)):
+      for p in parser.subParsers:  p
 
-iterator anonSubs*(parser: Parser): Parser {.closure.} =
-  for p in parser.subParsers:
-    if p.name.len == 0:
+  proc anonSubs*(parser: Parser): seq[Parser] =
+    collect(newSeqOfCap(parser.subParsers.len)):
+      for p in parser.subParsers:
+        if p.name.len == 0:
+          p
+
+  proc collect_descendants(parser: Parser, selector: ParserIterator = refdSubs,
+                           descs: var seq[Parser]) =
+    if traversalTracker notin parser.flags:
+      parser.flags.incl traversalTracker
+      descs.add(parser)
+      let subIter = selector
+      for p in subIter(parser):
+        p.collect_descendants(selector, descs)
+
+  proc descendants(parser: Parser, selector: ParserIterator = refdSubs): seq[Parser] =
+    var descs: seq[Parser] = @[]
+    collect_descendants(parser, selector, descs)
+    return descs
+
+else:
+  iterator subs*(parser: Parser): Parser {.closure.} =
+    for p in parser.subParsers:
       yield p
 
-iterator descendants*(parser: Parser, selector: ParserIterator = refdSubs): Parser {.closure.} =
-  if not (traversalTracker in parser.flags):
-    parser.flags.incl traversalTracker
-    yield parser
-    let subIter = selector
-    for p in subIter(parser):
-      for q in p.descendants(selector):  yield q
+  iterator refdSubs*(parser: Parser): Parser {.closure.} =
+    for p in parser.refdParsers:
+      yield p
+
+  iterator anonSubs*(parser: Parser): Parser {.closure.} =
+    for p in parser.subParsers:
+      if p.name.len == 0:
+        yield p
+
+  iterator descendants(parser: Parser, selector: ParserIterator = refdSubs): Parser {.closure.} =
+    if traversalTracker notin parser.flags:
+      parser.flags.incl traversalTracker
+      yield parser
+      let subIter = selector
+      for p in subIter(parser):
+        for q in p.descendants(selector):  yield q
 
 proc resetTraversalTracker*(parser: Parser) =
   if traversalTracker in parser.flags:
@@ -288,12 +325,14 @@ proc resetTraversalTracker*(parser: Parser) =
       p.resetTraversalTracker()
 
 template forEach*(parser: Parser, p: untyped, selector: ParserIterator, body: untyped) =
+  ## Apply body to each parser p which is reachable from parser, including
+  ## parser itself.
   for p in parser.descendants(selector):
     body
   parser.resetTraversalTracker()
 
-template forEachReferred*(parser: Parser, p: untyped, body: untyped) =
-  forEach(parser, p, refdSubs, body)
+# template forEachReferred*(parser: Parser, p: untyped, body: untyped) =
+#   forEach(parser, p, refdSubs, body)
 
 # proc trackingApply(parser: Parser, visitor: (Parser) -> bool): bool =
 #   if not (traversalTracker in parser.flags):
@@ -492,11 +531,10 @@ proc `()`*(parser: Parser, location: int32): ParsingResult {.inline raises: [Par
   parser.call(parser, location)
 
 proc `()`*(parser: Parser, document: string or StringSlice, location: int32 = 0): ParsingResult =
-  let doc = when document is string:  document.toStringSlice  else:  document
   if parser.grammarVar == GrammarPlaceholder:
-    parser.grammar = Grammar("adhoc", document=StringSlice(document))
+    parser.grammar = Grammar("adhoc", document=toStringSlice(document))
   else:
-    parser.grammar.document = StringSlice(document)
+    parser.grammar.document = toStringSlice(document)
     parser.grammar.cleanUp()
   result = parser.call(parser, location)
   parser.forEach(p, refdSubs):
@@ -597,7 +635,7 @@ type
     empty: bool
 
 proc init*(textParser: TextRef, text: string): TextRef =
-  assert text.len < 2^32
+  assert text.len <= maxTextLen
   discard Parser(textParser).init(TextName)
   textParser.flags.incl isLeaf
   textParser.text = text
@@ -727,7 +765,7 @@ type
   RepeatObj = object of ParserObj
     repRange: Range
 
-const inf = uint32(2^32 - 1)
+const repLimit = uint32(2^30)   # 2^31 and higher does not work with js-target, any more
 
 
 proc init*(repeat: RepeatRef, 
@@ -748,10 +786,10 @@ template Option*(parser: Parser): RepeatRef =
   new(RepeatRef).init(parser, (0u32, 1u32), OptionName)
 
 template ZeroOrMore*(parser: Parser): RepeatRef =
-  new(RepeatRef).init(parser, (0u32, inf), ZeroOrMoreName)
+  new(RepeatRef).init(parser, (0u32, repLimit), ZeroOrMoreName)
 
 template OneOrMore*(parser: Parser): RepeatRef =
-  new(RepeatRef).init(parser, (1u32, inf), OneOrMoreName)
+  new(RepeatRef).init(parser, (1u32, repLimit), OneOrMoreName)
 
 method parse*(self: RepeatRef, location: int32): ParsingResult {.raises: [ParsingException].} =
   ## Examples:
@@ -799,10 +837,10 @@ method `$`*(self: RepeatRef): string =
 
   if self.repRange == (0u32, 1u32):
     if postfix:  subStr & "?"  else:  ["[", subStr, "]"].join()   
-  elif self.repRange == (0u32, inf):
+  elif self.repRange[0] == 0u32 and self.repRange[1] >= repLimit:
     if postfix:  subStr & "*"
     else:  ["{", subStr, "}"].join()    
-  elif self.repRange == (1u32, inf):
+  elif self.repRange[0] == 1u32 and self.repRange[1] >= repLimit:
     if postfix:  subStr & "+"
     else:  ["{", subStr, "}+"].join()
   else:
@@ -977,7 +1015,7 @@ proc init*(series: SeriesRef,
   return series
 
 template Series*(parsers: varargs[Parser]): SeriesRef =
-  new(SeriesRef).init(parsers, inf)
+  new(SeriesRef).init(parsers, repLimit)
 
 template Series*(parsers: varargs[Parser], mandatory: uint32): SeriesRef =
   new(SeriesRef).init(parsers, mandatory)
@@ -1043,8 +1081,8 @@ proc `&`*(series: SeriesRef, other: SeriesRef): SeriesRef =
   if series.pname != "":  return Series(series, other)
   if other.name == "":
     series.subParsers &= other.subParsers
-    if series.mandatory == inf and other.mandatory != inf:
-      series.mandatory = series.subParsers.len.uint32 + other.mandatory
+    if series.mandatory >= repLimit and other.mandatory < repLimit:
+      series.mandatory = min(series.subParsers.len.uint32 + other.mandatory, repLimit)
   else:
     series.subParsers.add(other)
   return series
@@ -1057,7 +1095,7 @@ proc `&`*(series: SeriesRef, other: Parser): SeriesRef =
 proc `&`*(other: Parser, series: SeriesRef): SeriesRef =
   if series.pname != "":  return Series(other, series)
   series.subParsers = @[other] & series.subParsers
-  if series.mandatory != inf:
+  if series.mandatory < repLimit:
     series.mandatory += 1
   return series
 

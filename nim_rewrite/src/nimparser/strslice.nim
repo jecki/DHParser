@@ -206,16 +206,17 @@ iterator items*(a: StringSlice): char =
 
 when defined(js):
   type Regex* = tuple[sticky: Regexp, nonSticky: Regexp]
+  let PCREFlag = newRegexp(r"\(\*\w+\)", "g")
+  let comment = newRegexp(r"#[^\n]*", "g")
+  let whitespace = newRegexp(r"(?: *\n *)|(?:^ *)|(?: *$)", "g")
 
-  func re*(pattern: string): Regex = (sticky: newRegexp(pattern, "uy"),
-                                      nonSticky: newRegexp(pattern, "ug"))
+  proc re*(pattern: string): Regex =
+    let cleanPattern = pattern.replace(PCREFlag, "")
+    return (sticky: newRegexp(cleanPattern, "uy"),
+            nonSticky: newRegexp(cleanPattern, "ug"))
 
-  # TODO: Tests für diese Funktion! Zweiter Ausdruck evtl. zu korrigieren/verbessern!
-  func rex*(pattern: string): Regex =
-    # https://stackoverflow.com/questions/15463257/commenting-regular-expressions
-    let r1 = newRegexp(r"(^|[^\\])#.*", "g")
-    let r2 = newRegexp(r"(^|[^\\])\s+", "g")
-    let flatPattern = pattern.replace(r1, "$1").replace(r2, "$1")
+  proc rex*(pattern: string): Regex =
+    let flatPattern = pattern.replace(comment, "").replace(whitespace, "")
     return (sticky: newRegexp(flatPattern, "uy"),
             nonSticky: newRegexp(flatPattern, "ug"))
 
@@ -337,3 +338,15 @@ when isMainModule:
 
   assert trivial.find(re"\w+", 0) == (0'i32, 0'i32)
   assert trivial.find(re"\w+", 1) == (-1'i32, -2'i32)
+
+  when defined(js):
+    assert $re("(*UTF8)(*UCP) A   ")[0].toCString() == r"/ A   /uy"
+    assert $rex("   A B   ")[0].toCString() == r"/A B/uy"
+    let pattern = """
+      ^       # match the beginning of the line
+      (\w+)   # 1st capture group: match one or more word characters
+      \s      # match a whitespace character
+      (\w+)   # 2nd capture group: match one or more word characters
+      """
+    assert $rex(pattern)[0].toCString() == r"/^(\w+)\s(\w+)/uy"
+
