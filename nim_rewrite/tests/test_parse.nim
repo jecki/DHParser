@@ -93,9 +93,11 @@ group := "(" WS expression ")" WS
 
 test "traversal":
   var s: seq[string]
-  for p in arithmetic.descendants():
+  # for p in arithmetic.descendants():
+  #   s.add(if p.name.len > 0:  $p.name & " := " & $p  else:  $p)
+  # arithmetic.resetTraversalTracker()
+  arithmetic.forEach(p, refdSubs):
     s.add(if p.name.len > 0:  $p.name & " := " & $p  else:  $p)
-  arithmetic.resetTraversalTracker()
   var traversalOutput = s.join("\n")
   check traversalOutput == traversalExpected
 

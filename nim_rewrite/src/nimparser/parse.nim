@@ -14,10 +14,7 @@ import error
 const  NeverMatchPattern = r"$."
 let    NeverMatchRegex   = re(NeverMatchPattern)
 
-when defined(js):
-  const maxTextLen = 2^30 - 1 + 2^30  # equals 2^31 - 1 which cannot be computed directly, because 2^31 alread overflows
-else:
-  const maxTextLen = 2^32 - 1
+const maxTextLen = 2^30 - 1 + 2^30  # yields 2^31 - 1 without overflow
 
 
 ## Parser Base and Grammar
@@ -96,6 +93,7 @@ type
     farthestParser: ParserOrNil
 
 when defined(js):
+  # nim's javascript-target does not allow closure iterators
   type ParserIterator = proc(parser: Parser): seq[Parser]
 else:
   type ParserIterator = iterator(parser: Parser): Parser
@@ -270,6 +268,7 @@ proc getSubParsers*(parser: Parser): seq[Parser] =
     for p in parser.subParsers:  p
 
 when defined(js):
+  # nim's javascript-target does not allow closure iterators
   const subs = getSubParsers
 
   proc refdSubs*(parser: Parser): seq[Parser] =
