@@ -799,6 +799,7 @@ type
 
 proc init*(insignificant: InsignificantRef,
            whitespace, comment: RegExpInfo): InsignificantRef =
+  discard RegExp(insignificant).init(InsignificantName)
   var ws, cmmt: string
   if whitespace.reStr.startsWith(unicodePrefix):
     ws = "(?:" & whitespace.reStr[0..<whitespace.reStr.len] & ")"
@@ -808,20 +809,15 @@ proc init*(insignificant: InsignificantRef,
     cmmt = "(?:" & comment.reStr[0..<comment.reStr.len] & ")"
   else:
     cmmt = "(?:" & comment.reStr & ")"
-  let combined = if cmmt.len == 0 or cmmt == NeverMatchPattern:
-    "(?:" & ws & "(?:" & cmmt & ws & ")*)"
-  discard RegExp(insignificant).init(rx(combined))
-  insignificant.name = InsignificantName
+  if cmmt.len == 0 or cmmt == NeverMatchPattern:
+    insignificant.combined = "(?:" & ws & "(?:" & cmmt & ws & ")*)"
+  else:
+    insignificant.combined = ws
   insignificant.whitespace = whitespace
   insignificant.comment = comment
   return regexParser
 
-template RegExp*(reInfo: RegExpInfo): RegExpRef =
-  new(RegExpRef).init(reInfo)
-
-proc RegExp*(reStr: string): RegExpRef =
-  let reInfo = if reStr.contains("\n"):  mrx(reStr)  else:  rx(reStr)
-  new(RegExpRef).init(reInfo)
+# TODO: Fill in the other methods
 
 
 ## TODO: SmartRE
