@@ -29,10 +29,12 @@ const maxTextLen = 2^30 - 1 + 2^30  # yields 2^31 - 1 without overflow
 type
   Parser* = ref ParserObj not nil
   ParserOrNil = ref ParserObj
+  ErrorCatchingParser* = ref ErrorCatchingParserObj not nil
+  ErrorCatchingParserOrNil = ref ErrorCatchingParserObj
 
   ParsingResult = tuple[node: NodeOrNil, location: int32]
   ParsingException = ref object of CatchableError
-    origin: Parser
+    origin: ErrorCatchingParser
     node: Node
     node_orig_len: int32
     location: int32
@@ -41,7 +43,8 @@ type
 
   # Matchers are needed for error-resumption
   MatcherKind = enum mkRegex, mkString, mkProc, mkParser
-  MatcherProc = proc(text: StringSlice, start: int32, stop: int32): tuple[pos, length: int32]
+  MatcherProc = proc(text: StringSlice, start: int32, stop: int32):
+                    tuple[pos, length: int32]
   Matcher = object
     case kind: MatcherKind
     of mkRegex:
@@ -58,7 +61,7 @@ type
   ParserFlags = enum isLeaf, noMemoization, isNary, isFlowParser, isLookahead,
    isContextSensitive, isDisposable, dropContent, traversalTracker
   ParserFlagSet = set[ParserFlags]
-  ParseProc = proc(parser: Parser, location: int32) : ParsingResult {.nimcall raises: [ParsingException].}
+  ParseProc = proc(parser: Parser, location: int32) : ParsingResult {.nimcall.}
   ParserObj = object of RootObj
     ptype: string
     pname: string
@@ -71,12 +74,19 @@ type
     call: ParseProc not nil
     visited: Table[int, ParsingResult]
 
+  ErrorCatchingParserObj = object of ParserObj
+    mandatory: uint32
+    skipList: seq[Matcher]
+    resumeList: seq[Matcher]
+    errorList: seq[ErrorMatcher]
+    referredParsers: seq[Parser]
+
   # the GrammarObj
-  ReturnItemProc = proc(parser: Parser, node: NodeOrNil): Node {.nimcall raises: [].} not nil
-  ReturnSequenceProc = proc(parser: Parser, nodes: sink seq[Node]): Node {.nimcall raises: [].} not nil
+  ReturnItemProc = proc(parser: Parser, node: NodeOrNil): Node {.nimcall.} not nil
+  ReturnSequenceProc = proc(parser: Parser, nodes: sink seq[Node]): Node {.nimcall.} not nil
   RollbackItem = tuple
     location: int32
-    rollback: proc() {.closure raises: [].} not nil
+    rollback: proc() {.closure.} not nil
   GrammarFlags* = enum postfixNotation, memoize
   GrammarFlagSet = set[GrammarFlags]
   GrammarRef = ref GrammarObj not nil
@@ -86,6 +96,7 @@ type
     returnItem: ReturnItemProc
     returnSequence: ReturnSequenceProc
     document: StringSlice
+    commentRe: Regex
     errors: seq[ErrorRef]
     rollbackStack: seq[RollbackItem]
     rollbackLocation: int32
@@ -132,10 +143,10 @@ let
 ## Grammar class
 
 # Forward declarations
-proc returnItemFlatten(parser: Parser, node: NodeOrNil): Node {.raises: [].}
-proc returnSeqFlatten(parser: Parser, nodes: sink seq[Node]): Node {.raises: [].}
-proc returnItemPlaceholder(parser: Parser, node: NodeOrNil): Node {.raises: [].}
-proc returnSeqPlaceholder(parser: Parser, nodes: sink seq[Node]): Node {.raises: [].}
+proc returnItemFlatten(parser: Parser, node: NodeOrNil): Node
+proc returnSeqFlatten(parser: Parser, nodes: sink seq[Node]): Node
+proc returnItemPlaceholder(parser: Parser, node: NodeOrNil): Node
+proc returnSeqPlaceholder(parser: Parser, nodes: sink seq[Node]): Node
 
 proc cleanUp(grammar: GrammarRef) =
   grammar.flags.excl memoize
@@ -155,6 +166,7 @@ proc init(grammar: GrammarRef, name: string,
   grammar.returnItem = returnItem
   grammar.returnSequence = returnSequence
   grammar.document = document
+  grammar.commentRe = NeverMatchRegex
   grammar.cleanUp()
   return grammar
 
@@ -169,7 +181,7 @@ let GrammarPlaceholder = Grammar("__Placeholder__",
 ## Parser-class
 
 # forward declarations
-proc memoizationWrapper(parser: Parser, location: int32): ParsingResult {.raises: [ParsingException].}
+proc memoizationWrapper(parser: Parser, location: int32): ParsingResult
 
 
 method cleanUp(self: Parser) =
@@ -399,7 +411,7 @@ proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
     return (-1, -2)
 
   proc entry_point(m: Matcher): int32 =
-    proc searchFunc(start: int32): tuple[pos, length: int32] =
+    proc searchFunc(start: int32): tuple[pos, length: int32]  =
       case m.kind:
       of mkRegex:  # rx_search
         let (a, b) = find(document, m.regex, start, searchWindow)
@@ -433,10 +445,16 @@ proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
       try:
         (skipNode, pos) = parser.call(parser, location)
       except ParsingException as pe:
-        let msg = fmt"Error while searching re-entry point with parser {$parser}: {pe.msg}"
+        let msg = "Error while searching re-entry point with parser" & $parser & ": " & pe.msg
         let error: ErrorRef = Error(msg, location, ErrorWhileRecovering)
         parser.grammar.errors.add(error)
-        skipNode = nil
+        # skipNode = nil
+        pos = upperLimit
+      except KeyError as ke:
+        let msg = "Error while searching re-entry point with parser" & $parser & ": " & ke.msg
+        let error: ErrorRef = Error(msg, location, ErrorWhileRecovering)
+        parser.grammar.errors.add(error)
+        # skipNode = nil
         pos = upperLimit
       if not isNil(skipNode):
         if pos < closestMatch:
@@ -453,41 +471,27 @@ proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
   return (skip_node, closestMatch)
 
 
-proc handle_parsing_exception(pe: ParsingException, location: int32):
-                              ParsingResult {.raises: [ParsingException].}=
+proc handle_parsing_exception(pe: ParsingException, location: int32): ParsingResult =
   if isNil(pe):  return (nil, 0)  else:  return (pe.node, pe.location)
-  # following: work in progress
+  let grammar = pe.origin.grammar
   let gap = pe.location - location
-  # rules = pe.origin.resumeList
+  let rules = pe.origin.resumeList
   let nextLoc: int32 = pe.location + pe.node_orig_len
+  let (skip_node, i) = reentry_point(grammar.document, nextLoc, rules, )
 
 
+## parsing-procedures and -methods
 
-proc fatal(parser: Parser, msg: string, location: int32, code: ErrorCode = A_FATALITY): ParsingResult
-  {.raises: [ParsingException].} =
-  let
-    node = newNode(ZombieName, msg).withPos(location)
-    error: ErrorRef = Error(msg, location, code)
-  parser.grammar.errors.add(error)
-  result = (node, location)
-  raise ParsingException(origin: parser, node: node, node_orig_len: node.runeLen,
-                         location: location, error: error)
-
-  
-## parsering-procedures and -methods
-
-method parse*(self: Parser, location: int32): ParsingResult {.base raises: [ParsingException].} =
+method parse*(self: Parser, location: int32): ParsingResult {.base.} =
   echo "Parser.parse"
   result = (nil, 0)
-
 
 proc pushRollback(grammar: GrammarRef, item: RollbackItem) =
   grammar.rollbackStack.add(item)
   grammar.rollbackLocation = item.location
   grammar.flags.excl memoize
 
-
-proc rollback(grammar: GrammarRef, location: int32) {.raises: [].} =
+proc rollback(grammar: GrammarRef, location: int32) =
   var rb: RollbackItem
   if grammar.rollbackStack.len > 0 and grammar.rollbackStack[^1].location >= location:
     rb = grammar.rollbackStack.pop()
@@ -497,36 +501,31 @@ proc rollback(grammar: GrammarRef, location: int32) {.raises: [].} =
     else:
       grammar.rollbackLocation = -2
 
+proc memoizationWrapper(parser: Parser, location: int32): ParsingResult =
+  let grammar: GrammarRef = parser.grammar
+  if location < grammar.rollbackLocation:  grammar.rollback(location)
+  if location in parser.visited:  return parser.visited[location]
 
-proc memoizationWrapper(parser: Parser, location: int32): ParsingResult {.raises: [ParsingException].} =
+  let memoization = memoize in grammar.flags
+  grammar.flags.incl memoize
+
   try:
-    let grammar: GrammarRef = parser.grammar
-    if location < grammar.rollbackLocation:  grammar.rollback(location)
-    if location in parser.visited:  return parser.visited[location]
+    result = parser.parse(location)
+  except ParsingException as pe:
+    result = handle_parsing_exception(pe, location)
 
-    let memoization = memoize in grammar.flags
-    grammar.flags.incl memoize
+  let node = result.node  # isNil(result.node) does not work...
+  if isNil(node):
+    grammar.farthestFail = location
+    grammar.farthestParser = parser
+  elif node != EmptyNode:
+    node.sourcePos = location
 
-    try:
-      result = parser.parse(location)
-    except ParsingException as pe:
-      result = handle_parsing_exception(pe, location)
+  if memoize in grammar.flags:
+    parser.visited[location] = result
+    if not memoization:  grammar.flags.excl memoize
 
-    let node = result.node  # isNil(result.node) does not work...
-    if isNil(node):
-      grammar.farthestFail = location
-      grammar.farthestParser = parser
-    elif node != EmptyNode:
-      node.sourcePos = location
-
-    if memoize in grammar.flags:
-      parser.visited[location] = result
-      if not memoization:  grammar.flags.excl memoize
-
-  except KeyError as ke:
-    return fatal(parser, "Totally unexpected KeyError" &  ke.msg, location)
-
-proc `()`*(parser: Parser, location: int32): ParsingResult {.inline raises: [ParsingException].} =
+proc `()`*(parser: Parser, location: int32): ParsingResult {.inline.} =
   parser.call(parser, location)
 
 proc `()`*(parser: Parser, document: string or StringSlice, location: int32 = 0): ParsingResult =
@@ -539,11 +538,6 @@ proc `()`*(parser: Parser, document: string or StringSlice, location: int32 = 0)
   parser.forEach(p, refdSubs):
     p.cleanUp()
 
-  # discard parser.apply(
-  #   proc (p: Parser): bool =
-  #     p.cleanUp()
-  #     return false
-  # )
 
 ## procedures performing early tree-reduction on return values of parsers
 
@@ -602,6 +596,76 @@ proc returnItemPlaceholder(parser: Parser, node: NodeOrNil): Node =
 proc returnSeqPlaceholder(parser: Parser, nodes: sink seq[Node]): Node =
   result = EmptyNode
   raise newException(AssertionDefect, "returnItem called on GrammaPlacholder")
+
+
+## ErrorCatchingParser
+## ^^^^^^^^^^^^^^^^^^^
+##
+## ErrorCatchingParser is a base class for parsers that can catch syntax errors.
+## Error-catching-parsers are combined parsers (i.e. parsers that contain other
+## which are called during the parsing-process) that can be
+## configured to fail with a parsing error instead of returning a non-match,
+## if all contained parsers from a specific subset of non-mandatory parsers
+## have already matched successfully, so that only "mandatory" parsers are
+## left for matching. The idea is that once all non-mandatory parsers have
+## been consumed it is clear that this parser is a match so that the failure
+## to match any of the following mandatory parsers indicates a syntax
+## error in the processed document at the location were a mandatory parser
+## fails to match.
+##
+## For the sake of simplicity, the division between the set of non-mandatory
+## parsers and mandatory parsers is realized by an index into the list
+## of contained parsers. All parsers from the mandatory-index onward are
+## considered mandatory once all parsers up to the index have been consumed.
+
+proc init(errorCatching: ErrorCatchingParser,
+          ptype: string, mandatory: uint32,
+          skipList: sink seq[Matcher] = @[],
+          resumeList: sink seq[Matcher] = @[],
+          errorList: sink seq[ErrorMatcher] = @[]): ErrorCatchingParser =
+  discard Parser(errorCatching).init(ptype)
+  errorCatching.mandatory = mandatory
+  errorCatching.skipList = skipList
+  errorCatching.resumeList = resumeList
+  errorCatching.errorList = errorList
+  return errorCatching
+
+# for "lent" see see: https://nim-lang.org/docs/destructors.html#lent-type
+method refdParsers*(self: ErrorCatchingParser): lent seq[Parser] =
+  if self.referredParsers.len == 0:
+    self.referredParsers = self.subParsers
+    for matcher in self.skipList:
+      case matcher.kind:
+      of mkParser:
+        self.referredParsers.add(matcher.consumeParser)
+      else:  discard
+    for matcher in self.resumeList:
+      case matcher.kind:
+      of mkParser:
+        self.referredParsers.add(matcher.consumeParser)
+      else:  discard
+    for errMatcher in self.errorList:
+      case errMatcher.matcher.kind:
+      of mkParser:
+        self.referredParsers.add(errMatcher.matcher.consumeParser)
+      else:  discard
+  else:
+    assert self.referredParsers.len >= self.subParsers.len
+  self.referredParsers
+
+proc reentry(catcher: ErrorCatchingParser, location: int32): tuple[nd: Node, reloc: int32] =
+  return (newNode(ZombieName, ""), -1)  # placeholder
+
+proc violation(catcher: ErrorCatchingParser,
+               location: int32,
+               wasLookAhead: bool,
+               whatExpected: string,
+               reloc: int32,
+               error_node: NodeOrNil):
+               tuple[err: ErrorRef, location: int32] =
+  let error = Error("mandatory violation detected", location)
+  catcher.grammar.errors.add(error)
+  return (error, reloc)
 
 
 ## Modifiers
@@ -790,7 +854,7 @@ template ZeroOrMore*(parser: Parser): RepeatRef =
 template OneOrMore*(parser: Parser): RepeatRef =
   new(RepeatRef).init(parser, (1u32, repLimit), OneOrMoreName)
 
-method parse*(self: RepeatRef, location: int32): ParsingResult {.raises: [ParsingException].} =
+method parse*(self: RepeatRef, location: int32): ParsingResult =
   ## Examples:
   runnableExamples:
     doAssert true
@@ -904,87 +968,6 @@ proc `|`*(other: Parser, alternative: AlternativeRef): AlternativeRef =
 template `|`*(parser: Parser, other: Parser): AlternativeRef = Alternative(parser, other)
 
 
-
-## ErrorCatchingParser
-## ^^^^^^^^^^^^^^^^^^^
-##
-## ErrorCatchingParser is a base class for parsers that can catch syntax errors.
-## Error-catching-parsers are combined parsers (i.e. parsers that contain other
-## which are called during the parsing-process) that can be
-## configured to fail with a parsing error instead of returning a non-match,
-## if all contained parsers from a specific subset of non-mandatory parsers
-## have already matched successfully, so that only "mandatory" parsers are
-## left for matching. The idea is that once all non-mandatory parsers have
-## been consumed it is clear that this parser is a match so that the failure
-## to match any of the following mandatory parsers indicates a syntax
-## error in the processed document at the location were a mandatory parser
-## fails to match.
-##
-## For the sake of simplicity, the division between the set of non-mandatory
-## parsers and mandatory parsers is realized by an index into the list
-## of contained parsers. All parsers from the mandatory-index onward are
-## considered mandatory once all parsers up to the index have been consumed.
-
-type
-  ErrorCatchingParser* = ref ErrorCatchingParserObj not nil
-  ErrorCatchingParserOrNil = ref ErrorCatchingParserObj
-  ErrorCatchingParserObj = object of ParserObj
-    mandatory: uint32
-    skipList: seq[Matcher]
-    resumeList: seq[Matcher]
-    errorList: seq[ErrorMatcher]
-    referredParsers: seq[Parser]
-
-proc init(errorCatching: ErrorCatchingParser,
-          ptype: string, mandatory: uint32,
-          skipList: sink seq[Matcher] = @[],
-          resumeList: sink seq[Matcher] = @[],
-          errorList: sink seq[ErrorMatcher] = @[]): ErrorCatchingParser =
-  discard Parser(errorCatching).init(ptype)
-  errorCatching.mandatory = mandatory
-  errorCatching.skipList = skipList
-  errorCatching.resumeList = resumeList
-  errorCatching.errorList = errorList
-  return errorCatching
-
-# for "lent" see see: https://nim-lang.org/docs/destructors.html#lent-type
-method refdParsers*(self: ErrorCatchingParser): lent seq[Parser] =
-  if self.referredParsers.len == 0:
-    self.referredParsers = self.subParsers
-    for matcher in self.skipList:
-      case matcher.kind:
-      of mkParser:
-        self.referredParsers.add(matcher.consumeParser)
-      else:  discard
-    for matcher in self.resumeList:
-      case matcher.kind:
-      of mkParser:
-        self.referredParsers.add(matcher.consumeParser)
-      else:  discard
-    for errMatcher in self.errorList:
-      case errMatcher.matcher.kind:
-      of mkParser:
-        self.referredParsers.add(errMatcher.matcher.consumeParser)
-      else:  discard
-  else:
-    assert self.referredParsers.len >= self.subParsers.len
-  self.referredParsers
-
-proc reentry(catcher: ErrorCatchingParser, location: int32): tuple[nd: Node, reloc: int32] =
-  return (newNode(ZombieName, ""), -1)  # placeholder
-
-proc violation(catcher: ErrorCatchingParser,
-               location: int32,
-               wasLookAhead: bool,
-               whatExpected: string,
-               reloc: int32,
-               error_node: NodeOrNil):
-               tuple[err: ErrorRef, location: int32] =
-  let error = Error("mandatory violation detected", location)
-  catcher.grammar.errors.add(error)
-  return (error, reloc)
-
-
 ## Series-Parser
 ## ^^^^^^^^^^^^^
 ## 
@@ -1027,7 +1010,7 @@ proc Required*(series: SeriesRef): SeriesRef {.inline.} =
   series
 
 
-method parse*(self: SeriesRef, location: int32): ParsingResult {.raises: [ParsingException].} =
+method parse*(self: SeriesRef, location: int32): ParsingResult =
   var
     results = newSeqOfCap[Node](self.subParsers.len)
     loc = location
@@ -1128,7 +1111,7 @@ proc init*(lookahead: LookaheadRef,
 proc Lookahead(parser: Parser, positive: bool = true): LookaheadRef =
   new(LookaheadRef).init(parser, positive)
 
-method parse*(self: LookaheadRef, location: int32): ParsingResult {.raises: [ParsingException].} =
+method parse*(self: LookaheadRef, location: int32): ParsingResult =
   var 
     loc: int32
     node: NodeOrNil
@@ -1186,56 +1169,53 @@ type
     recursionCounter: Table[int32, int32]  # location -> recursion depth
 
 
-proc forwardWrapper(parser: Parser, location: int32): ParsingResult {.raises: [ParsingException].} =
-  try:
-    let grammar: GrammarRef = parser.grammar
-    if location <= grammar.rollbackLocation:  grammar.rollback(location)
-    if location in parser.visited:  return parser.visited[location]
+proc forwardWrapper(parser: Parser, location: int32): ParsingResult =
+  let grammar: GrammarRef = parser.grammar
+  if location <= grammar.rollbackLocation:  grammar.rollback(location)
+  if location in parser.visited:  return parser.visited[location]
 
-    var depth: int32
-    if location in parser.ForwardRef.recursionCounter:
-      depth = parser.ForwardRef.recursionCounter[location]
-      if depth == 0:
-        grammar.flags.excl memoize
-        result = (nil, location)
-      else:
-        parser.ForwardRef.recursionCounter[location] = depth - 1
-        result = parser.subParsers[0](location)
-        parser.ForwardRef.recursionCounter[location] = depth
+  var depth: int32
+  if location in parser.ForwardRef.recursionCounter:
+    depth = parser.ForwardRef.recursionCounter[location]
+    if depth == 0:
+      grammar.flags.excl memoize
+      result = (nil, location)
     else:
-      parser.ForwardRef.recursionCounter[location] = 0
-      let memoization = memoize in grammar.flags
-      grammar.flags.incl memoize
-
+      parser.ForwardRef.recursionCounter[location] = depth - 1
       result = parser.subParsers[0](location)
+      parser.ForwardRef.recursionCounter[location] = depth
+  else:
+    parser.ForwardRef.recursionCounter[location] = 0
+    let memoization = memoize in grammar.flags
+    grammar.flags.incl memoize
 
-      if not isNil(result.node):
-        depth = 1
+    result = parser.subParsers[0](location)
 
-        while true:
-          parser.ForwardRef.recursionCounter[location] = depth
-          grammar.flags.incl memoize
-          var rb = grammar.rollbackStack.len
+    if not isNil(result.node):
+      depth = 1
 
-          var nextResult = parser.subParsers[0](location)
+      while true:
+        parser.ForwardRef.recursionCounter[location] = depth
+        grammar.flags.incl memoize
+        var rb = grammar.rollbackStack.len
 
-          if nextResult.location <= result.location:
-            while grammar.rollbackStack.len > rb:
-              var rbItem = grammar.rollbackStack.pop()
-              rbItem.rollback()
-              if grammar.rollbackStack.len > 0:
-                grammar.rollbackLocation = grammar.rollbackStack[^1].location
-              else:
-                grammar.rollbackLocation = -2
-            break
+        var nextResult = parser.subParsers[0](location)
 
-          result = nextResult
-          depth += 1
+        if nextResult.location <= result.location:
+          while grammar.rollbackStack.len > rb:
+            var rbItem = grammar.rollbackStack.pop()
+            rbItem.rollback()
+            if grammar.rollbackStack.len > 0:
+              grammar.rollbackLocation = grammar.rollbackStack[^1].location
+            else:
+              grammar.rollbackLocation = -2
+          break
 
-      if not memoization:  grammar.flags.excl memoize
-      if memoize in grammar.flags:  parser.visited[location] = result
-  except KeyError as ke:
-    return fatal(parser, "Totally unexpected KeyError: " &  ke.msg, location)
+        result = nextResult
+        depth += 1
+
+    if not memoization:  grammar.flags.excl memoize
+    if memoize in grammar.flags:  parser.visited[location] = result
 
 
 method cleanUp(self: ForwardRef) =
@@ -1266,14 +1246,12 @@ proc set*(forward: ForwardRef, parser: Parser) =
   forward.pname = ""
 
 
-method parse*(self: ForwardRef, location: int32): ParsingResult {.raises: [ParsingException].} =
+method parse*(self: ForwardRef, location: int32): ParsingResult =
   return self.subParsers[0](location)
 
   
 method `$`*(self: ForwardRef): string =
   repr(self.subParsers[0])
-
-
 
 
 ## Test-code
@@ -1320,6 +1298,7 @@ when isMainModule:
   let term = "term".assign             (factor & ZeroOrMore((txt"*" | txt"/") & WS & factor))
   expression.set                       (term & ZeroOrMore((txt"+" | txt"-") & WS & term))
   expression.grammar = Grammar("Arithmetic")
+  echo $expression
 
   let tree = expression("1 + 1").node
   echo tree.asSxpr()

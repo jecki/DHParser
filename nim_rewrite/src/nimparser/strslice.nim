@@ -216,7 +216,9 @@ when defined(js):
             nonSticky: newRegexp(cleanPattern, "ug"))
 
   proc rex*(pattern: string): Regex =
-    let flatPattern = pattern.replace(comment, "").replace(whitespace, "")
+    let flatPattern = pattern.replace(PCREFlag, "")
+                             .replace(comment, "")
+                             .replace(whitespace, "")
     return (sticky: newRegexp(flatPattern, "uy"),
             nonSticky: newRegexp(flatPattern, "ug"))
 
