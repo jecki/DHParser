@@ -117,6 +117,8 @@ const
   ParserName = ":Parser"
   TextName = ":Text"
   RegExpName = ":RegExp"
+  InsignificantName = ":Insignificant"
+  SmartReName = ":SmartReName"
   RepeatName = ":Repeat"
   OptionName = ":Option"
   ZeroOrMoreName = ":ZeroOrMore"
@@ -738,18 +740,18 @@ type
   RegExpInfo = tuple[reStr: string, regex: Regex]
   RegExpRef = ref RegExpObj not nil
   RegExpObj = object of ParserObj
-    reStr: string  # string-representation of re
-    regex: Regex
+    reInfo: RegExpInfo
 
-proc rx*(rx_str: string): RegExpInfo = (rx_str, re("(*UTF8)(*UCP)" & rx_str))
+const unicodePrefix = "(*UTF8)(*UCP)"
+
+proc rx*(rx_str: string): RegExpInfo = (rx_str, re(unicodePrefix & rx_str))
 
 proc mrx*(multiline_rx_str: string): RegExpInfo =
-  (multiline_rx_str, rex("(*UTF8)(*UCP)" & multiline_rx_str))
+  (multiline_rx_str, rex(unicodePrefix & multiline_rx_str))
 
 proc init*(regexParser: RegExpRef, rxInfo: RegExpInfo): RegExpRef =
   discard Parser(regexParser).init(RegExpName)
-  regexParser.reStr = rxInfo.reStr
-  regexParser.regex = rxInfo.regex
+  regexParser.reInfo = rxInfo
   regexParser.flags.incl isLeaf
   return regexParser
 
@@ -767,7 +769,7 @@ method parse*(self: RegExpRef, location: int32): ParsingResult =
     import nodetree, regex
     doAssert RegExp(re"\w+")("ABC").node.asSxpr() == "(:RegExp \"ABC\")"
 
-  var l = matchLen(self.grammar.document, self.regex, location).int32
+  var l = matchLen(self.grammar.document, self.reInfo.regex, location).int32
   if l >= 0:
     let text: StringSlice = self.grammar.document[location..<location+l]
     if dropContent in self.flags:
@@ -778,7 +780,48 @@ method parse*(self: RegExpRef, location: int32): ParsingResult =
   return (nil, location)
 
 method `$`*(self: RegExpRef): string =
-  ["/", self.reStr.replace("/", r"\/"), "/"].join()
+  ["/", self.reInfo.reStr.replace("/", r"\/"), "/"].join()
+
+
+## Insignificant
+## ^^^^^^^^^^^^^
+##
+## A parser for insignificant whitespace and comments.
+
+const RxNeverMatch*: RegExpInfo = (NeverMatchPattern, NeverMatchRegex)
+
+type
+  InsignificantRef = ref InsignificantObj not nil
+  InsignificantObj = object of ParserObj
+    combined: RegExpInfo
+    whitespace: RegExpInfo
+    comment: RegExpInfo
+
+proc init*(insignificant: InsignificantRef,
+           whitespace, comment: RegExpInfo): InsignificantRef =
+  var ws, cmmt: string
+  if whitespace.reStr.startsWith(unicodePrefix):
+    ws = "(?:" & whitespace.reStr[0..<whitespace.reStr.len] & ")"
+  else:
+    ws = "(?:" & whitespace.reStr & ")"
+  if comment.reStr.startsWith(unicodePrefix):
+    cmmt = "(?:" & comment.reStr[0..<comment.reStr.len] & ")"
+  else:
+    cmmt = "(?:" & comment.reStr & ")"
+  let combined = if cmmt.len == 0 or cmmt == NeverMatchPattern:
+    "(?:" & ws & "(?:" & cmmt & ws & ")*)"
+  discard RegExp(insignificant).init(rx(combined))
+  insignificant.name = InsignificantName
+  insignificant.whitespace = whitespace
+  insignificant.comment = comment
+  return regexParser
+
+template RegExp*(reInfo: RegExpInfo): RegExpRef =
+  new(RegExpRef).init(reInfo)
+
+proc RegExp*(reStr: string): RegExpRef =
+  let reInfo = if reStr.contains("\n"):  mrx(reStr)  else:  rx(reStr)
+  new(RegExpRef).init(reInfo)
 
 
 ## TODO: SmartRE
