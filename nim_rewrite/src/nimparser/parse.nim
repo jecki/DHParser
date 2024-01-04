@@ -29,12 +29,12 @@ const maxTextLen = 2^30 - 1 + 2^30  # yields 2^31 - 1 without overflow
 type
   Parser* = ref ParserObj not nil
   ParserOrNil = ref ParserObj
-  ErrorCatchingParser* = ref ErrorCatchingParserObj not nil
+  ErrorCatchingParserRef* = ref ErrorCatchingParserObj not nil
   ErrorCatchingParserOrNil = ref ErrorCatchingParserObj
 
   ParsingResult = tuple[node: NodeOrNil, location: int32]
   ParsingException = ref object of CatchableError
-    origin: ErrorCatchingParser
+    origin: ErrorCatchingParserRef
     node: Node
     node_orig_len: int32
     location: int32
@@ -186,7 +186,7 @@ let GrammarPlaceholder = Grammar("__Placeholder__",
 proc memoizationWrapper(parser: Parser, location: int32): ParsingResult
 
 
-method cleanUp(self: Parser) =
+method cleanUp(self: Parser) {.base.} =
   self.visited.clear()
 
 proc init*(parser: Parser, ptype: string = ParserName): Parser =
@@ -270,7 +270,7 @@ template repr(parser: Parser): string =
 
 ## parser-graph-traversal
 
-method refdParsers*(self: Parser): seq[Parser] =
+method refdParsers*(self: Parser): lent seq[Parser] {.base.} =
   ## Returns all directly referred parsers. The result is always a superset
   ## of the self.subParsers. An example for a parser that is referred by
   ## self but not a sub-parser, would be a parser that is used for resuming
@@ -283,11 +283,9 @@ proc getSubParsers*(parser: Parser): seq[Parser] =
 
 when defined(js):
   # nim's javascript-target does not allow closure iterators
-  const subs = getSubParsers
+  proc subs*(parser: Parser): seq[Parser] = parser.subParsers
 
-  proc refdSubs*(parser: Parser): seq[Parser] =
-    collect(newSeqOfCap(parser.refdParsers.len)):
-      for p in parser.subParsers:  p
+  proc refdSubs*(parser: Parser): seq[Parser] = parser.refdParsers
 
   proc anonSubs*(parser: Parser): seq[Parser] =
     collect(newSeqOfCap(parser.subParsers.len)):
@@ -372,7 +370,7 @@ template grammar*(parser: Parser) : GrammarRef =
   assert parser.grammarVar != GrammarPlaceholder
   parser.grammarVar
 
-proc `grammar=`*(parser: Parser, grammar: GrammarRef) =
+method `grammar=`*(parser: Parser, grammar: GrammarRef) {.base.} =
   var uniqueID: uint32 = 0
   parser.forEach(p, refdSubs):
     assert p.grammarVar == GrammarPlaceholder
@@ -475,11 +473,11 @@ proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
 
 proc handle_parsing_exception(pe: ParsingException, location: int32): ParsingResult =
   if isNil(pe):  return (nil, 0)  else:  return (pe.node, pe.location)
-  let grammar = pe.origin.grammar
-  let gap = pe.location - location
-  let rules = pe.origin.resumeList
-  let nextLoc: int32 = pe.location + pe.node_orig_len
-  let (skip_node, i) = reentry_point(grammar.document, nextLoc, rules, )
+  # let grammar = pe.origin.grammar
+  # let gap = pe.location - location
+  # let rules = pe.origin.resumeList
+  # let nextLoc: int32 = pe.location + pe.node_orig_len
+  # let (skip_node, i) = reentry_point(grammar.document, nextLoc, rules, )
 
 
 ## parsing-procedures and -methods
@@ -620,11 +618,11 @@ proc returnSeqPlaceholder(parser: Parser, nodes: sink seq[Node]): Node =
 ## of contained parsers. All parsers from the mandatory-index onward are
 ## considered mandatory once all parsers up to the index have been consumed.
 
-proc init(errorCatching: ErrorCatchingParser,
+proc init(errorCatching: ErrorCatchingParserRef,
           ptype: string, mandatory: uint32,
           skipList: sink seq[Matcher] = @[],
           resumeList: sink seq[Matcher] = @[],
-          errorList: sink seq[ErrorMatcher] = @[]): ErrorCatchingParser =
+          errorList: sink seq[ErrorMatcher] = @[]): ErrorCatchingParserRef =
   discard Parser(errorCatching).init(ptype)
   errorCatching.mandatory = mandatory
   errorCatching.skipList = skipList
@@ -633,7 +631,7 @@ proc init(errorCatching: ErrorCatchingParser,
   return errorCatching
 
 # for "lent" see see: https://nim-lang.org/docs/destructors.html#lent-type
-method refdParsers*(self: ErrorCatchingParser): lent seq[Parser] =
+method refdParsers*(self: ErrorCatchingParserRef): lent seq[Parser] =
   if self.referredParsers.len == 0:
     self.referredParsers = self.subParsers
     for matcher in self.skipList:
@@ -653,12 +651,12 @@ method refdParsers*(self: ErrorCatchingParser): lent seq[Parser] =
       else:  discard
   else:
     assert self.referredParsers.len >= self.subParsers.len
-  self.referredParsers
+  return self.referredParsers
 
-proc reentry(catcher: ErrorCatchingParser, location: int32): tuple[nd: Node, reloc: int32] =
+proc reentry(catcher: ErrorCatchingParserRef, location: int32): tuple[nd: Node, reloc: int32] =
   return (newNode(ZombieName, ""), -1)  # placeholder
 
-proc violation(catcher: ErrorCatchingParser,
+proc violation(catcher: ErrorCatchingParserRef,
                location: int32,
                wasLookAhead: bool,
                whatExpected: string,
@@ -731,7 +729,7 @@ method `$`*(self: TextRef): string =
 
 
 ## RegExp-Parser
-## ^^^^^^^^^^^^
+## ^^^^^^^^^^^^^
 ##
 ## A parser for regular-expressions
 ##
@@ -767,7 +765,7 @@ template rxp*(reStr: string): RegExpRef = RegExp(reStr)
 method parse*(self: RegExpRef, location: int32): ParsingResult =
   runnableExamples:
     import nodetree, regex
-    doAssert RegExp(re"\w+")("ABC").node.asSxpr() == "(:RegExp \"ABC\")"
+    doAssert RegExp(rx"\w+")("ABC").node.asSxpr() == "(:RegExp \"ABC\")"
 
   var l = matchLen(self.grammar.document, self.reInfo.regex, location)
   if l >= 0:
@@ -781,6 +779,12 @@ method parse*(self: RegExpRef, location: int32): ParsingResult =
 
 method `$`*(self: RegExpRef): string =
   ["/", self.reInfo.reStr.replace("/", r"\/"), "/"].join()
+
+
+
+## TODO: SmartRE
+## ^^^^^^^^^^^^^
+
 
 
 ## Insignificant
@@ -806,7 +810,7 @@ proc init*(insignificant: InsignificantRef,
   insignificant.comment = comment
   assert not whitespace.reStr.startsWith(unicodePrefix)
   assert not comment.reStr.startsWith(unicodePrefix)
-  let ws = "(?:" & whitespace.reStr & ")"
+  let ws = "(?:" & whitespace.reStr & ")?"
   if comment.reStr.len == 0 or comment.reStr == NeverMatchPattern:
     insignificant.combined = rx(ws)
   else:
@@ -823,7 +827,12 @@ proc Insignificant*(whitespace, comment: string): InsignificantRef =
   new(InsignificantRef).init(wsInfo, commentInfo)
 
 method parse*(self: InsignificantRef, location: int32): ParsingResult =
+  runnableExamples:
+    import nodetree, regex
+    doAssert Insignificant(r"\s+", r"#.*")("   # comment").node.asSxpr == "(:Insignificant \"   # comment\")"
+
   var l = matchLen(self.grammar.document, self.combined.regex, location)
+  echo $self.grammar.document & " " & self.combined.reStr & " " & $l
   if l >= 0:
     if l > 0 or isDisposable notin self.flags:
       if dropContent in self.flags:
@@ -833,14 +842,6 @@ method parse*(self: InsignificantRef, location: int32): ParsingResult =
   return (EmptyNode, location)
 
 method `$`*(self: InsignificantRef): string = "~"
-
-
-# TODO: Fill in the other methods
-
-
-## TODO: SmartRE
-## ^^^^^^^
-
 
 
 ## Combined Parsers
@@ -1048,7 +1049,7 @@ proc init*(series: SeriesRef,
            parsers: openarray[Parser],
            mandatory: uint32): SeriesRef =
   assert parsers.len >= 1
-  discard ErrorCatchingParser(series).init(SeriesName, mandatory)
+  discard ErrorCatchingParserRef(series).init(SeriesName, mandatory)
   series.flags.incl isNary
   series.subParsers = @parsers
   return series
@@ -1142,7 +1143,7 @@ proc `&`*(parser: Parser, other: Parser): SeriesRef = Series(parser, other)
 
 
 ## TODO Intereave-Parser
-## ^^^^^^^^^^^^^^^^
+## ^^^^^^^^^^^^^^^^^^^^^
 
 ## Control-Flow-Parsers
 ## --------------------
@@ -1194,28 +1195,28 @@ method `$`*(self: LookaheadRef): string =
 
 
 ## TODO: Lookbehind
-## ^^^^^^^^^
+## ^^^^^^^^^^^^^^^^
 
 ## Context-Sensitive-Parsers 
 ## -------------------------
 
 ## TODO: CAPTURE
-## ^^^^^^^
+## ^^^^^^^^^^^^^
 
 
 ## TODO: Retrieve
-## ^^^^^^^^
+## ^^^^^^^^^^^^^^
 
 
 ## TODO: Pop
-## ^^^
+## ^^^^^^^^^
 
 
 ## Aliasing-Parsers
 ## ----------------
 
 ## TODO: Synonym
-## ^^^^^^^
+## ^^^^^^^^^^^^^
 
 ## Forward
 ## ^^^^^^^
@@ -1321,6 +1322,8 @@ when isMainModule:
   doAssert Text("A")("A").node.asSxpr == "(:Text \"A\")"
   echo RegExp(rx"\w+")("ABC").node.asSxpr
   doAssert RegExp(rx"\w+")("ABC").node.asSxpr == "(:RegExp \"ABC\")"
+  echo Insignificant(r"\s+", r"#.*")("   # comment").node.asSxpr
+  doAssert Insignificant(r"\s+", r"#.*")("   # comment").node.asSxpr == "(:Insignificant \"   # comment\")"
   echo Repeat(Text("A"), (1u32, 3u32))("AAAA").node.asSxpr
   echo ("r".assignName Repeat(Text("A"), (1u32, 3u32)))("AA").node.asSxpr
   echo Series(Text("A"), Text("B"), Text("C"), mandatory=1u32)("ABC").node.asSxpr

@@ -1217,8 +1217,8 @@ def has_non_autocaptured_symbols(ptrail: ParserTrail) -> Optional[bool]:
 #
 ########################################################################
 
-def mixin_comment(whitespace: str, comment: str) -> str:
-    """
+def mixin_comment(whitespace: str, comment: str, always_match: bool = True) -> str:
+    r"""
     Returns a regular expression pattern that merges comment and whitespace
     regexps. Thus comments can occur wherever whitespace is allowed
     and will be skipped just as implicit whitespace.
@@ -1226,9 +1226,26 @@ def mixin_comment(whitespace: str, comment: str) -> str:
     Note, that because this works on the level of regular expressions,
     nesting comments is not possible. It also makes it much harder to
     use directives inside comments (which isn't recommended, anyway).
+
+    Examples:
+
+        >>> import re
+        >>> combined = mixin_comment(r"\s+", r"#.*")
+        >>> print(combined)
+        (?:(?:\s+)?(?:(?:#.*)(?:\s+)?)*)
+        >>> rx = re.compile(combined)
+        >>> rx.match('   # comment').group(0)
+        '   # comment'
+        >>> combined = mixin_comment(r"\s+", r"#.*", always_match=False)
+        >>> print(combined)
+        (?:(?:\s+)(?:(?:#.*)(?:\s+))*)
+        >>> rx = re.compile(combined)
+        >>> rx.match('   # comment').group(0)
+        '   # '
     """
+    whitespace = '(?:' + whitespace + (')?' if always_match else ')')
+
     if comment:
-        whitespace = '(?:' + whitespace + ')'
         comment = '(?:' + comment + ')'
         return '(?:' + whitespace + '(?:' + comment + whitespace + ')*)'
     return whitespace
@@ -2759,9 +2776,16 @@ def DTKN(token, wsL='', wsR=r'\s*'):
 
 
 class Whitespace(RegExp):
-    """A variant of RegExp that it meant to be used for insignificant whitespace.
+    r"""A variant of RegExp that it meant to be used for insignificant whitespace.
     In contrast to RegExp, Whitespace always returns a match. If the defining
-    regular expression did not match, an empty match is returned."""
+    regular expression did not match, an empty match is returned.
+
+    Example::
+
+        >>> ws = Whitespace(mixin_comment(r'\s+', r'#.*'))
+        >>> Grammar(ws)("   # comment").as_sxpr()
+        '(root "   # comment")'
+    """
     assert WHITESPACE_PTYPE == ":Whitespace"
 
     def _parse(self, location: cython.int) -> ParsingResult:

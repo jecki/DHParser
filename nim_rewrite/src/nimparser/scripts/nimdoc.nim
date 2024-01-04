@@ -23,7 +23,7 @@ when declared(paramStr) and declared(paramCount):
     var nimSource = readFile(nimFile)
     nimSource = nimSource.multiReplace([
       ("{.experimental: \"strictNotNil\".}", "# {.experimental: \"strictNotNil\".}"),
-      ("not nil", "# not nil")])
+      ("not nil", "#[not nil]#")])
     writeFile(tmpDir & nimFile, nimSource)
 
   for fileName in fileNames:
