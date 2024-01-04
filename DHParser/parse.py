@@ -2781,7 +2781,6 @@ class Whitespace(RegExp):
                 if self.drop_content:
                     return EMPTY_NODE, end
                 return Node(self.node_name, capture, True), end
-            return EMPTY_NODE, location
         return EMPTY_NODE, location
 
     def is_optional(self) -> Optional[bool]:

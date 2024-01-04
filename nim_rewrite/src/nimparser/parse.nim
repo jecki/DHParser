@@ -769,14 +769,14 @@ method parse*(self: RegExpRef, location: int32): ParsingResult =
     import nodetree, regex
     doAssert RegExp(re"\w+")("ABC").node.asSxpr() == "(:RegExp \"ABC\")"
 
-  var l = matchLen(self.grammar.document, self.reInfo.regex, location).int32
+  var l = matchLen(self.grammar.document, self.reInfo.regex, location)
   if l >= 0:
-    let text: StringSlice = self.grammar.document[location..<location+l]
     if dropContent in self.flags:
-      return (EmptyNode, location + text.len)
-    elif isDisposable in self.flags and text == "":
+      return (EmptyNode, location + l)
+    elif isDisposable in self.flags and l == 0:
       return (EmptyNode, location)
-    return (newNode(self.nodeName, text), location + text.len)
+    let text: StringSlice = self.grammar.document[location..<location+l]
+    return (newNode(self.nodeName, text), location + l)
   return (nil, location)
 
 method `$`*(self: RegExpRef): string =
@@ -786,9 +786,11 @@ method `$`*(self: RegExpRef): string =
 ## Insignificant
 ## ^^^^^^^^^^^^^
 ##
-## A parser for insignificant whitespace and comments.
+## A parser for insignificant whitespace and comments. Insignificant's
+## parse-method always returns a match, if only an empty match in case
+## the defining regular expressions did not match.
 
-const RxNeverMatch*: RegExpInfo = (NeverMatchPattern, NeverMatchRegex)
+let RxNeverMatch*: RegExpInfo = (NeverMatchPattern, NeverMatchRegex)
 
 type
   InsignificantRef = ref InsignificantObj not nil
@@ -799,23 +801,39 @@ type
 
 proc init*(insignificant: InsignificantRef,
            whitespace, comment: RegExpInfo): InsignificantRef =
-  discard RegExp(insignificant).init(InsignificantName)
-  var ws, cmmt: string
-  if whitespace.reStr.startsWith(unicodePrefix):
-    ws = "(?:" & whitespace.reStr[0..<whitespace.reStr.len] & ")"
-  else:
-    ws = "(?:" & whitespace.reStr & ")"
-  if comment.reStr.startsWith(unicodePrefix):
-    cmmt = "(?:" & comment.reStr[0..<comment.reStr.len] & ")"
-  else:
-    cmmt = "(?:" & comment.reStr & ")"
-  if cmmt.len == 0 or cmmt == NeverMatchPattern:
-    insignificant.combined = "(?:" & ws & "(?:" & cmmt & ws & ")*)"
-  else:
-    insignificant.combined = ws
+  discard Parser(insignificant).init(InsignificantName)
   insignificant.whitespace = whitespace
   insignificant.comment = comment
-  return regexParser
+  assert not whitespace.reStr.startsWith(unicodePrefix)
+  assert not comment.reStr.startsWith(unicodePrefix)
+  let ws = "(?:" & whitespace.reStr & ")"
+  if comment.reStr.len == 0 or comment.reStr == NeverMatchPattern:
+    insignificant.combined = rx(ws)
+  else:
+    let cmmt = "(?:" & comment.reStr & ")"
+    insignificant.combined = rx(fmt"(?:{ws}(?:{cmmt}{ws})*)")
+  return insignificant
+
+template Insignificant*(whitespace, comment: RegExpInfo): InsignificantRef =
+  new(InsignificantRef).init(whitespac, comment)
+
+proc Insignificant*(whitespace, comment: string): InsignificantRef =
+  let wsInfo = if whitespace.contains("\n"):  mrx(whitespace)  else:  rx(whitespace)
+  let commentInfo = if comment.contains("\n"):  mrx(comment)  else:  rx(comment)
+  new(InsignificantRef).init(wsInfo, commentInfo)
+
+method parse*(self: InsignificantRef, location: int32): ParsingResult =
+  var l = matchLen(self.grammar.document, self.combined.regex, location)
+  if l >= 0:
+    if l > 0 or isDisposable notin self.flags:
+      if dropContent in self.flags:
+        return (EmptyNode, location + l)
+      let text: StringSlice = self.grammar.document[location..<location+l]
+      return (newNode(self.nodeName, text), location + l)
+  return (EmptyNode, location)
+
+method `$`*(self: InsignificantRef): string = "~"
+
 
 # TODO: Fill in the other methods
 
