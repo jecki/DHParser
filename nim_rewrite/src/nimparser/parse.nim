@@ -266,6 +266,11 @@ proc `$`*(r: ParsingResult): string =
   else:
     return fmt"node:\n{tree}\nlocation: {r.location}"
 
+proc `$`*(pe: ParsingException): string =
+  fmt("ParsingException(origin: {pe.name}, node_orign_len: {pe.node_orig_len}" &
+      " location: {pe.location}, error: \"{pe.error}\", " &
+      "first_throw: {pe.first_throw}")
+
 method `$`*(self: Parser): string {.base.} =
   var args: seq[string] = newSeqOfCap[string](self.subParsers.len)
   for p in self.subParsers:
@@ -400,20 +405,22 @@ method `grammar=`*(self: Parser, grammar: GrammarRef) {.base.} =
 
 proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
                    commentRe: Regex = NeverMatchRegex, searchWindowSize: int32 = -1): ParsingResult =
-  let upperLimit = document.len - location + 1
+  let upperLimit = document.len + 1
   var
-    pos: int32
+    pos = location
     closestMatch = upperLimit
-    searchWindow = if searchWindowSize < 0:  upperLimit - 1  else: searchWindowSize
+    searchWindow = if searchWindowSize < 0:  document.len - location
+                                      else:  searchWindowSize
     skipNode: NodeOrNil = nil
-    commentPointer = if commentRe != NeverMatchRegex:  location  else:  upperLimit
+    commentPointer = if commentRe != NeverMatchRegex:  location
+                                                else:  upperLimit
 
   proc nextComment(): tuple[start, firstAfterMatch: int32] =
     if commentPointer < upperLimit:
       let (a, b) = find(document, commentRe, commentPointer)
       if a >= 0:
-        commentPointer = b.int32 + 1
-        return (1, b.int32 + 1)
+        commentPointer = b + 1
+        return (a, b + 1)
       else:
         commentPointer = upperLimit
     return (-1, -2)
@@ -423,15 +430,14 @@ proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
       case m.kind:
       of mkRegex:  # rx_search
         let (a, b) = find(document, m.regex, start, searchWindow)
-        (a.int32, b.int32 - a.int32 + 1)
+        (a, b - a + 1)
       of mkString:  # str_search
         (find(document.str[], m.cmpStr, start, start + searchWindow).int32,
          m.cmpStr.len.int32)
       of mkProc:  # algorithm_search
         m.findProc(document, start, start + searchWindow)
-      else:
-        # should never be reached!
-        return (-1, 0)
+      else:  # should never be reached!
+        (-1, 0)
 
     var
       (a, b) = nextComment()
@@ -458,12 +464,6 @@ proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
         parser.grammar.errors.add(error)
         # skipNode = nil
         pos = upperLimit
-      except KeyError as ke:
-        let msg = "Error while searching re-entry point with parser" & $parser & ": " & ke.msg
-        let error: ErrorRef = Error(msg, location, ErrorWhileRecovering)
-        parser.grammar.errors.add(error)
-        # skipNode = nil
-        pos = upperLimit
       if not isNil(skipNode):
         if pos < closestMatch:
           closestMatch = pos
@@ -475,12 +475,15 @@ proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
 
   if closestMatch >= upperLimit:  closestMatch = -1
   if isNil(skipNode):
-    skipNode = newNode(ZombieName, document[location ..< max(closestMatch, 0)])
+    let skipSlice = document[location ..< max(closestMatch, location)]
+    skipNode = newNode(ZombieName, skipSlice)
   return (skip_node, closestMatch)
 
 
 proc handle_error(parser: Parser, pe: ParsingException, location: int32): ParsingResult =
-  if isNil(pe):  return (nil, 0)  else:  return (pe.node, pe.location)
+  assert pe.node_orig_len >= 0, $pe
+  assert pe.location >= 0, $pe
+
   let
     grammar = pe.origin.grammar
     gap = pe.location - location
@@ -489,7 +492,7 @@ proc handle_error(parser: Parser, pe: ParsingException, location: int32): Parsin
   var
     node = EmptyNode
     tail = false
-    nextLoc: int32 = pe.location + pe.node_orig_len
+    nextLoc = pe.location + pe.node_orig_len
     (skipNode, i) = reentry_point(grammar.document, nextLoc, rules,
                                    grammar.commentRe, SearchWindowDefault)
 

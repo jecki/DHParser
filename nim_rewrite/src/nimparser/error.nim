@@ -3,8 +3,10 @@
 {.experimental: "strictDefs".}
 {.experimental: "strictCaseObjects".}
 
+import std/strformat
+
 type
-    ErrorCode* = distinct int16
+    ErrorCode* = distinct uint16
     ErrorRef* = ref ErrorObj not nil
     ErrorOrNil* = ref ErrorObj
     ErrorObj = object 
@@ -36,7 +38,8 @@ proc init*(error: ErrorRef, message: string, pos: int32,
            code: ErrorCode=AN_ERROR,
            line: int32 = -1, column: int32 = -1, length: int32 = -1,
            related: seq[ErrorRef] = @[],
-           origPos: int32 = -1, origDoc: string = ""): ErrorRef = 
+           origPos: int32 = -1, origDoc: string = ""): ErrorRef =
+    assert pos >= 0
     error.message = message
     error.pos = pos
     error.line = line
@@ -52,5 +55,11 @@ template Error*(args: varargs[untyped]): ErrorRef =
     new(ErrorRef).init(args)
 
 
-
-
+proc `$`*(error: ErrorRef): string =
+  let code: uint16 = error.code.uint16
+  if error.line >= 0:
+    fmt"{error.line}:{error.column}:{code}:{error.message}"
+  elif error.origPos >= 0:
+    fmt"{error.origPos}:{code}:{error.message}"
+  else:
+    fmt"{error.pos}:{code}:{error.message}"
