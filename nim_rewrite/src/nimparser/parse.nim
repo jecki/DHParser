@@ -11,10 +11,12 @@ import nodetree
 import error
 
 
-const  NeverMatchPattern = r"$."
-let    NeverMatchRegex   = re(NeverMatchPattern)
-
-const maxTextLen = 2^30 - 1 + 2^30  # yields 2^31 - 1 without overflow
+const
+  MaxTextLen = 2^30 - 1 + 2^30  # yields 2^31 - 1 without overflow
+  SearchWindowDefault = 10_000
+  NeverMatchPattern = r"$."
+let
+  NeverMatchRegex   = re(NeverMatchPattern)
 
 
 ## Parser Base and Grammar
@@ -72,7 +74,7 @@ type
     symbol: ParserOrNil
     subParsers: seq[Parser]
     call: ParseProc not nil
-    visited: Table[int, ParsingResult]
+    visited: Table[int, ParsingResult]  # TODO: use btree or something, here...
 
   ErrorCatchingParserObj = object of ParserObj
     mandatory: uint32
@@ -96,6 +98,7 @@ type
     returnItem: ReturnItemProc
     returnSequence: ReturnSequenceProc
     document: StringSlice
+    root: ParserOrNil
     commentRe: Regex
     errors: seq[ErrorRef]
     rollbackStack: seq[RollbackItem]
@@ -117,7 +120,7 @@ const
   ParserName = ":Parser"
   TextName = ":Text"
   RegExpName = ":RegExp"
-  InsignificantName = ":Insignificant"
+  WhitespaceName = ":Whitespace"
   SmartReName = ":SmartReName"
   RepeatName = ":Repeat"
   OptionName = ":Option"
@@ -157,6 +160,7 @@ proc cleanUp(grammar: GrammarRef) =
   grammar.rollbackLocation = -2
   grammar.farthestFail = -1
   grammar.farthestParser = nil
+  grammar.root = nil
 
 proc init(grammar: GrammarRef, name: string,
           flags: GrammarFlagSet = {memoize},
@@ -232,15 +236,19 @@ proc assignName(name: string, parser: Parser): Parser =
   assert name != ""
   parser.nodeName[] = name
   if name[0] == ':':
-    parser.pname = name[1 .. ^1]
+    parser.pname = name[1..^1]
   elif name.len >= 5 and name[4] == ':':
     if name[0..3] == "DROP":
       parser.flags.incl dropContent
     else:
       assert name[0..3] == "HIDE"
-    parser.pname = name[5 .. ^1]
+    parser.pname = name[5..^1]
   else:
-    parser.flags.excl isDisposable
+    # assert parser.ptype != ":Whitespace",
+    #        fmt("Insignificant whitespace requires that assigned names begin " &
+    #            "with a colon, e.g. \":{name}\", to mark them as disposable!")
+    if parser.ptype != ":Whitespace":  # insignificant whitespace is always disposable
+      parser.flags.excl isDisposable
     parser.pname = name
   assignSymbol(parser, parser)
   return parser
@@ -370,9 +378,9 @@ template grammar*(parser: Parser) : GrammarRef =
   assert parser.grammarVar != GrammarPlaceholder
   parser.grammarVar
 
-method `grammar=`*(parser: Parser, grammar: GrammarRef) {.base.} =
+method `grammar=`*(self: Parser, grammar: GrammarRef) {.base.} =
   var uniqueID: uint32 = 0
-  parser.forEach(p, refdSubs):
+  self.forEach(p, refdSubs):
     assert p.grammarVar == GrammarPlaceholder
     p.grammarVar = grammar
     uniqueID += 1
@@ -471,13 +479,58 @@ proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
   return (skip_node, closestMatch)
 
 
-proc handle_parsing_exception(pe: ParsingException, location: int32): ParsingResult =
+proc handle_error(parser: Parser, pe: ParsingException, location: int32): ParsingResult =
   if isNil(pe):  return (nil, 0)  else:  return (pe.node, pe.location)
-  # let grammar = pe.origin.grammar
-  # let gap = pe.location - location
-  # let rules = pe.origin.resumeList
-  # let nextLoc: int32 = pe.location + pe.node_orig_len
-  # let (skip_node, i) = reentry_point(grammar.document, nextLoc, rules, )
+  let
+    grammar = pe.origin.grammar
+    gap = pe.location - location
+    cut = grammar.document[location..<location + gap]
+    rules = pe.origin.resumeList
+  var
+    node = EmptyNode
+    tail = false
+    nextLoc: int32 = pe.location + pe.node_orig_len
+    (skipNode, i) = reentry_point(grammar.document, nextLoc, rules,
+                                   grammar.commentRe, SearchWindowDefault)
+
+  if i >= 0 or parser == grammar.root:
+    var zombie: NodeOrNil = nil
+    if i < 0:  i = 0
+    for child in pe.node.children:
+      if child.name == ZombieName:
+        zombie = child
+        break
+    if not isNil(zombie) and zombie.isEmpty:
+      zombie.result = grammar.document[location..<location + i]
+      tail = false
+    nextLoc += i
+    if pe.first_throw:
+      node = pe.node
+      if tail and not isNil(skipNode):  node.children.add(skipNode)
+    else:
+      if not isNil(skipNode):
+        node = newNode(parser.nodeName,
+                       @[newNode(ZombieName, cut), pe.node, skipNode])
+                       .withPos(location)
+      else:
+        assert false, "Unrechable, theoretically..."
+  elif pe.first_throw:
+    pe.first_throw = false
+    raise pe
+  elif (grammar.errors[^1].code in
+        {MandatoryContinuationAtEOF, MandatoryContinuationAtEOFNonRoot}):
+    node = newNode(parser.nodeName, @[pe.node]).withPos(location)
+  else:
+    if gap == 0:
+      node = newNode(parser.nodeName, @[pe.node]).withPos(location)
+    else:
+      node = newNode(parser.nodeName, @[newNode(ZombieName, cut), pe.node]).withPos(location)
+    pe.node = node
+    pe.node_orig_len = pe.node_orig_len + gap
+    pe.location = location
+    pe.first_throw = false
+    raise pe
+  return (node, nextLoc)
 
 
 ## parsing-procedures and -methods
@@ -512,7 +565,7 @@ proc memoizationWrapper(parser: Parser, location: int32): ParsingResult =
   try:
     result = parser.parse(location)
   except ParsingException as pe:
-    result = handle_parsing_exception(pe, location)
+    result = handle_error(parser, pe, location)
 
   let node = result.node  # isNil(result.node) does not work...
   if isNil(node):
@@ -534,6 +587,7 @@ proc `()`*(parser: Parser, document: string or StringSlice, location: int32 = 0)
   else:
     parser.grammar.document = toStringSlice(document)
     parser.grammar.cleanUp()
+  parser.grammar.root = parser
   result = parser.call(parser, location)
   parser.forEach(p, refdSubs):
     p.cleanUp()
@@ -698,7 +752,7 @@ type
     empty: bool
 
 proc init*(textParser: TextRef, text: string): TextRef =
-  assert text.len <= maxTextLen
+  assert text.len <= MaxTextLen
   discard Parser(textParser).init(TextName)
   textParser.flags.incl isLeaf
   textParser.text = text
@@ -787,25 +841,25 @@ method `$`*(self: RegExpRef): string =
 
 
 
-## Insignificant
+## Whitespace
 ## ^^^^^^^^^^^^^
 ##
-## A parser for insignificant whitespace and comments. Insignificant's
+## A parser for insignificant whitespace and comments. Whitespace's
 ## parse-method always returns a match, if only an empty match in case
 ## the defining regular expressions did not match.
 
 let RxNeverMatch*: RegExpInfo = (NeverMatchPattern, NeverMatchRegex)
 
 type
-  InsignificantRef = ref InsignificantObj not nil
-  InsignificantObj = object of ParserObj
+  WhitespaceRef = ref WhitespaceObj not nil
+  WhitespaceObj = object of ParserObj
     combined: RegExpInfo
     whitespace: RegExpInfo
     comment: RegExpInfo
 
-proc init*(insignificant: InsignificantRef,
-           whitespace, comment: RegExpInfo): InsignificantRef =
-  discard Parser(insignificant).init(InsignificantName)
+proc init*(insignificant: WhitespaceRef,
+           whitespace, comment: RegExpInfo): WhitespaceRef =
+  discard Parser(insignificant).init(WhitespaceName)
   insignificant.whitespace = whitespace
   insignificant.comment = comment
   assert not whitespace.reStr.startsWith(unicodePrefix)
@@ -818,21 +872,20 @@ proc init*(insignificant: InsignificantRef,
     insignificant.combined = rx(fmt"(?:{ws}(?:{cmmt}{ws})*)")
   return insignificant
 
-template Insignificant*(whitespace, comment: RegExpInfo): InsignificantRef =
-  new(InsignificantRef).init(whitespac, comment)
+template Whitespace*(whitespace, comment: RegExpInfo): WhitespaceRef =
+  new(WhitespaceRef).init(whitespac, comment)
 
-proc Insignificant*(whitespace, comment: string): InsignificantRef =
+proc Whitespace*(whitespace, comment: string): WhitespaceRef =
   let wsInfo = if whitespace.contains("\n"):  mrx(whitespace)  else:  rx(whitespace)
   let commentInfo = if comment.contains("\n"):  mrx(comment)  else:  rx(comment)
-  new(InsignificantRef).init(wsInfo, commentInfo)
+  new(WhitespaceRef).init(wsInfo, commentInfo)
 
-method parse*(self: InsignificantRef, location: int32): ParsingResult =
+method parse*(self: WhitespaceRef, location: int32): ParsingResult =
   runnableExamples:
     import nodetree, regex
-    doAssert Insignificant(r"\s+", r"#.*")("   # comment").node.asSxpr == "(:Insignificant \"   # comment\")"
+    doAssert Whitespace(r"\s+", r"#.*")("   # comment").node.asSxpr == "(:Whitespace \"   # comment\")"
 
   var l = matchLen(self.grammar.document, self.combined.regex, location)
-  echo $self.grammar.document & " " & self.combined.reStr & " " & $l
   if l >= 0:
     if l > 0 or isDisposable notin self.flags:
       if dropContent in self.flags:
@@ -841,7 +894,15 @@ method parse*(self: InsignificantRef, location: int32): ParsingResult =
       return (newNode(self.nodeName, text), location + l)
   return (EmptyNode, location)
 
-method `$`*(self: InsignificantRef): string = "~"
+method `grammar=`*(self: WhitespaceRef, grammar: GrammarRef) =
+  assert grammar.commentRe == NeverMatchRegex or grammar.commentRe == self.comment.regex or
+         self.comment.regex == NeverMatchRegex or self.comment.reStr.len == 0,
+         "Multiple definitions of comments or insignificant whitespace not allowed!"
+  procCall `grammar=`(Parser(self), grammar)
+  if self.comment.reStr.len > 0 and self.comment.regex != NeverMatchRegex:
+    grammar.commentRe = self.comment.regex
+
+method `$`*(self: WhitespaceRef): string = "~"
 
 
 ## Combined Parsers
@@ -886,7 +947,7 @@ type
   RepeatObj = object of ParserObj
     repRange: Range
 
-const repLimit = uint32(2^30)   # 2^31 and higher does not work with js-target, any more
+const RepLimit = uint32(2^30)   # 2^31 and higher does not work with js-target, any more
 
 
 proc init*(repeat: RepeatRef, 
@@ -907,10 +968,10 @@ template Option*(parser: Parser): RepeatRef =
   new(RepeatRef).init(parser, (0u32, 1u32), OptionName)
 
 template ZeroOrMore*(parser: Parser): RepeatRef =
-  new(RepeatRef).init(parser, (0u32, repLimit), ZeroOrMoreName)
+  new(RepeatRef).init(parser, (0u32, RepLimit), ZeroOrMoreName)
 
 template OneOrMore*(parser: Parser): RepeatRef =
-  new(RepeatRef).init(parser, (1u32, repLimit), OneOrMoreName)
+  new(RepeatRef).init(parser, (1u32, RepLimit), OneOrMoreName)
 
 method parse*(self: RepeatRef, location: int32): ParsingResult =
   ## Examples:
@@ -958,10 +1019,10 @@ method `$`*(self: RepeatRef): string =
 
   if self.repRange == (0u32, 1u32):
     if postfix:  subStr & "?"  else:  ["[", subStr, "]"].join()   
-  elif self.repRange[0] == 0u32 and self.repRange[1] >= repLimit:
+  elif self.repRange[0] == 0u32 and self.repRange[1] >= RepLimit:
     if postfix:  subStr & "*"
     else:  ["{", subStr, "}"].join()    
-  elif self.repRange[0] == 1u32 and self.repRange[1] >= repLimit:
+  elif self.repRange[0] == 1u32 and self.repRange[1] >= RepLimit:
     if postfix:  subStr & "+"
     else:  ["{", subStr, "}+"].join()
   else:
@@ -1055,7 +1116,7 @@ proc init*(series: SeriesRef,
   return series
 
 template Series*(parsers: varargs[Parser]): SeriesRef =
-  new(SeriesRef).init(parsers, repLimit)
+  new(SeriesRef).init(parsers, RepLimit)
 
 template Series*(parsers: varargs[Parser], mandatory: uint32): SeriesRef =
   new(SeriesRef).init(parsers, mandatory)
@@ -1121,8 +1182,8 @@ proc `&`*(series: SeriesRef, other: SeriesRef): SeriesRef =
   if series.pname != "":  return Series(series, other)
   if other.name == "":
     series.subParsers &= other.subParsers
-    if series.mandatory >= repLimit and other.mandatory < repLimit:
-      series.mandatory = min(series.subParsers.len.uint32 + other.mandatory, repLimit)
+    if series.mandatory >= RepLimit and other.mandatory < RepLimit:
+      series.mandatory = min(series.subParsers.len.uint32 + other.mandatory, RepLimit)
   else:
     series.subParsers.add(other)
   return series
@@ -1135,7 +1196,7 @@ proc `&`*(series: SeriesRef, other: Parser): SeriesRef =
 proc `&`*(other: Parser, series: SeriesRef): SeriesRef =
   if series.pname != "":  return Series(other, series)
   series.subParsers = @[other] & series.subParsers
-  if series.mandatory < repLimit:
+  if series.mandatory < RepLimit:
     series.mandatory += 1
   return series
 
@@ -1322,8 +1383,8 @@ when isMainModule:
   doAssert Text("A")("A").node.asSxpr == "(:Text \"A\")"
   echo RegExp(rx"\w+")("ABC").node.asSxpr
   doAssert RegExp(rx"\w+")("ABC").node.asSxpr == "(:RegExp \"ABC\")"
-  echo Insignificant(r"\s+", r"#.*")("   # comment").node.asSxpr
-  doAssert Insignificant(r"\s+", r"#.*")("   # comment").node.asSxpr == "(:Insignificant \"   # comment\")"
+  echo Whitespace(r"\s+", r"#.*")("   # comment").node.asSxpr
+  doAssert Whitespace(r"\s+", r"#.*")("   # comment").node.asSxpr == "(:Whitespace \"   # comment\")"
   echo Repeat(Text("A"), (1u32, 3u32))("AAAA").node.asSxpr
   echo ("r".assignName Repeat(Text("A"), (1u32, 3u32)))("AA").node.asSxpr
   echo Series(Text("A"), Text("B"), Text("C"), mandatory=1u32)("ABC").node.asSxpr

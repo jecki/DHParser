@@ -8,9 +8,9 @@ type
     ErrorRef* = ref ErrorObj not nil
     ErrorOrNil* = ref ErrorObj
     ErrorObj = object 
-      message: string
+      message*: string
       pos: int32
-      code: ErrorCode
+      code*: ErrorCode
       line: int32
       column: int32
       length: int32
@@ -24,6 +24,9 @@ const
     A_WARNING* = ErrorCode(100)
     AN_ERROR* = ErrorCode(1000)
     A_FATALITY* = ErrorCode(10_000)
+
+    MandatoryContinuationAtEOF* = ErrorCode(1015)
+    MandatoryContinuationAtEOFNonRoot* = ErrorCode(1017)
 
     ErrorWhileRecovering* = ErrorCode(1301)
     # RecursionLimitReached* = ErrorCode(10_010)

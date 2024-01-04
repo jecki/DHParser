@@ -21,6 +21,11 @@ test "RegExp in sequence":
   check number(text, 0).node.asSxpr == "(number \"1\")"
   check ws(text, 1).node.asSxpr == "(ws \"\")"
 
+test "Whitespace":
+  let ws = ":ws".assign Whitespace(r"\s+", r"#.*")
+  echo $ws("   # comment").node.asSxpr
+  doAssert ws("   # comment").node.asSxpr == "(:ws \"   # comment\")"
+
 test "Alternative":
   check Alternative(Text("A"), Text("B"))("B").node.asSxpr == "(:Text \"B\")"
   check $Alternative(Text("A"), Text("B")) == "\"A\"|\"B\""

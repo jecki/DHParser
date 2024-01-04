@@ -633,6 +633,7 @@ class Parser:
     def _handle_parsing_error(self, pe: ParserError, location: cython.int) -> ParsingResult:
         grammar = self._grammar
         gap = pe.location - location
+        cut = grammar.document__[location:location + gap]
         rules = tuple(grammar.resume_rules__.get(self.symbol.pname, []))
         next_location = pe.location + pe.node_orig_len
         rest = grammar.document__[next_location:]
@@ -644,10 +645,7 @@ class Parser:
             assert pe.node._children or (not pe.node.result)
             # apply reentry-rule or catch error at root-parser
             if i < 0:  i = 0
-            try:
-                zombie = pe.node.pick_child(ZOMBIE_TAG)  # type: Optional[Node]
-            except (KeyError, ValueError):
-                zombie = None
+            zombie = pe.node.pick_child(ZOMBIE_TAG)  # type: Optional[Node]
             if zombie and not zombie.result:
                 zombie.result = rest[:i]
                 tail = tuple()  # type: ChildrenType
@@ -659,11 +657,8 @@ class Parser:
                 node = pe.node
                 node.result = node._children + tail
             else:
-                cut = grammar.document__[location:location + gap]
-                node = Node(
-                    self.node_name,
-                    (Node(ZOMBIE_TAG, cut).with_pos(location), pe.node) + tail) \
-                    .with_pos(location)
+                node = (Node(self.node_name, (Node(ZOMBIE_TAG, cut), pe.node) + tail)
+                        .with_pos(location))
         # if no re-entry point was found, do any of the following:
         elif pe.first_throw:
             # just fall through
@@ -675,9 +670,7 @@ class Parser:
             node = Node(self.node_name, pe.node).with_pos(location)
         else:
             # fall through but skip the gap
-            cut = grammar.document__[location:location + gap]
-            result = (Node(ZOMBIE_TAG, cut).with_pos(location), pe.node) if gap \
-                else pe.node  # type: ResultType
+            result = (Node(ZOMBIE_TAG, cut), pe.node) if gap else pe.node  # type: ResultType
             raise pe.new_PE(node=Node(self.node_name, result).with_pos(location),
                             node_orig_len=pe.node_orig_len + gap,
                             location=location, first_throw=False)

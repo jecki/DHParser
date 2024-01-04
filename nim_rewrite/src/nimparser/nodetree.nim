@@ -104,7 +104,7 @@ proc `children=`(node: Node, children: sink seq[Node]) =
   node.childrenSeq = children
   node.textSlice = EmptyStringSlice
 
-template children*(node: Node): seq[Node] = node.childrenSeq
+template children*(node: Node): lent seq[Node] = node.childrenSeq
 
 template `result=`*(node: Node, text: StringSlice or ref string or string) =
   node.`text=` text
