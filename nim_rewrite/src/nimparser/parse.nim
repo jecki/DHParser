@@ -521,8 +521,7 @@ proc handle_error(parser: Parser, pe: ParsingException, location: int32): Parsin
   elif pe.first_throw:
     pe.first_throw = false
     raise pe
-  elif (grammar.errors[^1].code in
-        {MandatoryContinuationAtEOF, MandatoryContinuationAtEOFNonRoot}):
+  elif (grammar.errors[^1].code == MandatoryContinuationAtEOF):
     node = newNode(parser.nodeName, @[pe.node]).withPos(location)
   else:
     if gap == 0:
@@ -713,15 +712,22 @@ method refdParsers*(self: ErrorCatchingParserRef): lent seq[Parser] =
 
 proc reentry(catcher: ErrorCatchingParserRef, location: int32):
      tuple[nd: Node, reloc: int32] =
+  var
+    node: NodeOrNil = EmptyNode
+    reloc: int32 = -1
   if catcher.skipList.len > 0:
-    return reentry_point(catcher.grammar.document, location,
-                         catcher.skipList, catcher.grammar.commentRe)
-  return (newNode(ZombieName, ""), -1)  # placeholder
+    let gr = catcher.grammar
+    (node, reloc) = reentry_point(
+      gr.document, location, catcher.skipList, gr.commentRe)
+    if not isNil(node):
+      let nd: Node = node
+      return (nd, reloc)
+  return (newNode(ZombieName, ""), -1)
 
 proc violation(catcher: ErrorCatchingParserRef,
                location: int32,
                wasLookAhead: bool,
-               whatExpected: string,
+               expected: string,
                reloc: int32,
                errorNode: Node):
                tuple[err: ErrorRef, location: int32] =
@@ -731,32 +737,37 @@ proc violation(catcher: ErrorCatchingParserRef,
     of mkRegex:
       return text.matchLen(rule.regex, location) >= 0
     of mkString:
-      return text[location:location + rule.cmpStr.len - 1] == matche.cmpStr
+      return text[location..<location + rule.cmpStr.len] == rule.cmpStr
     of mkProc:
-      return rule.findProc(text, location, location)
+      return rule.findProc(text, location, location)[0] >= 0
     of mkParser:
       let parser = rule.consumeParser
       try:
-        (node, pos) = parser.call(parser, location)
+        let (node, pos) = parser.call(parser, location)
         return not isNil(node)
       except ParsingException as pe:
         let msg = "Error while picking error message with: " & $parser
         let error = Error(msg, location, ErrorWhileRecovering)
-        parser.grammer.errors.add(error)
+        parser.grammar.errors.add(error)
 
   let
     gr = catcher.grammar
-    found = gr.document[location..location+9].replace(re'\n', r'\n')
+    found = gr.document[location..location + 9].replace(re"\n", r"\n")
     sym = if isNil(catcher.symbol):  "?"  else:  catcher.symbol.pname
-  var error_code = MandatoryCondinuation
-  errorNode.pos = location    # if errorNode.sourcePos < 0:
+  var
+    errCode = MandatoryCondinuation
+    message = fmt"{expected} expected by parser {$sym}, but »{found}« found!"
+  echo $message
+  # errorNode.pos = location  # if errorNode.sourcePos < 0:
   for (rule, msg) in catcher.errorList:
     if match(rule, gr.document, location):
-      i = msg.find(':') + 1
-      let code = if i > 0: ErrorCode(msg[0..<i].parseInt.uint16) else: AnError
-
-
-
+      let i = msg.find(':') + 1
+      if i > 0: errCode = ErrorCode(msg[0..<i].parseInt.uint16)
+      message = msg[i..^1].replace("{0}", expected).replace("{1}", found)
+      break
+  if wasLookAhead and location >= gr.document.len:
+    errCode = MandatoryContinuationAtEOF
+  return (Error(message, location, errCode), max(reloc, 0))
 
 
 ## Modifiers
@@ -1182,7 +1193,7 @@ method parse*(self: SeriesRef, location: int32): ParsingResult =
       else:
         # TODO: Fill the placeholders: reentry and violation in, above!
         (someNode, reloc) = self.reentry(loc)
-        (error, loc) = self.violation(loc, false, parser.pname, reloc, node)
+        (error, loc) = self.violation(loc, false, parser.pname, reloc, someNode)
         if reloc >= 0:
           (nd, loc) = parser(loc)
           if not isNil(nd):

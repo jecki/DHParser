@@ -6,7 +6,7 @@
 import std/strformat
 
 type
-    ErrorCode* = distinct uint16
+    ErrorCode* = uint16
     ErrorRef* = ref ErrorObj not nil
     ErrorOrNil* = ref ErrorObj
     ErrorObj = object 
@@ -29,7 +29,6 @@ const
 
     MandatoryCondinuation* = ErrorCode(1010)
     MandatoryContinuationAtEOF* = ErrorCode(1015)
-    MandatoryContinuationAtEOFNonRoot* = ErrorCode(1017)
 
     ErrorWhileRecovering* = ErrorCode(1301)
     # RecursionLimitReached* = ErrorCode(10_010)

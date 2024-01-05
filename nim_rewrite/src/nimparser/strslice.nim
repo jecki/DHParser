@@ -100,9 +100,10 @@ proc `[]`*(str: StringSlice,
         $(str.len + 1 - slc.b.int))
     stop = str.stop - slc.b.int32 + 1
   else:
-    if slc.b + 1 < slc.a or slc.b > str.high:
+    let b = min(slc.b, str.high)
+    if b + 1 < slc.a:
       raise newException(IndexDefect, "index out of bounds")
-    stop = str.start + slc.b
+    stop = str.start + b
   StringSlice(buf: str.buf, start: str.start + slc.a, stop: stop)
 
 proc `[]`*(str: StringSlice,
