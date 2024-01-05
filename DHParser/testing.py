@@ -723,7 +723,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                         errata.append('Concrete syntax tree test "%s" for parser "%s" failed:\n%s' %
                                       (test_name, parser_name, cst.serialize('CST')))
                     if verbose:
-                        infostr = '      cst-test "' + test_name + '" ... '
+                        infostr = '      CST-test "' + test_name + '" ... '
                         write(infostr + ("OK" if len(errata) == errflag else "FAIL"))
 
             if 'AST' in tests and len(errata) == errflag:
@@ -739,7 +739,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                                       % (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
                                          compare_str, ast_str))
                     if verbose:
-                        infostr = '      ast-test "' + test_name + '" ... '
+                        infostr = '      AST-test "' + test_name + '" ... '
                         write(infostr + ("OK" if len(errata) == errflag else "FAIL"))
 
             if len(errata) == errflag and transformation_stages:
@@ -774,7 +774,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                     except ValueError as e:
                         raise SyntaxError(f'{stage}-test {test_name} of parser {parser_name} '
                                           f'failed with:\n{str(e)}.')
-                    if verbose:
+                    if verbose and compare:
                         infostr = ' ' * (max(0, 9 - len(stage))) \
                                   + f'{stage}-test "' + test_name + '" ... '
                         write(infostr + ("OK" if len(errata) == errflag else "FAIL"))
