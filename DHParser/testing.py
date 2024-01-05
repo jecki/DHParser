@@ -486,14 +486,14 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         except AttributeError:
             return k
 
-    def get(tests, category, key) -> Union[Node, str, None]:
+    def get(tests, category, key) -> Union[Node, str]:
         try:
             try:
                 return tests[category][key]
             except KeyError:
                 return tests[category][clean_key(key)]
         except KeyError:
-            return None
+            return ""
 
     if isinstance(test_unit, str):
         _, unit_name = os.path.split(os.path.splitext(test_unit)[0])
@@ -549,13 +549,13 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 # errata.append('\n\n')  # leads to wrong error count!!!
 
     def flat_string_test(tests, stage, tree, test_name,
-                         parser_name, test_code, errata) -> Union[Node, str, None]:
+                         parser_name, test_code, errata) -> Union[Node, str]:
         compare = get(tests, stage, test_name)
         if compare and isinstance(compare, str):
             content = tree.content
             if content == compare:
                 if verbose:  write(f'      {stage}-test "' + test_name + '" ... OK')
-                return None
+                return ""
             else:
                 try:
                     return deserialize(compare)
@@ -571,8 +571,8 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                                       f'\tExpr.:     {test_code_str}\n'
                                       f'\tExpected:  {compare}\n'
                                       f'\tReceived:  {content}\n')
-                    return None
-        return compare
+                    return ""
+        return compare or ""
 
     saved_config_values = dict()
     for parser_name, tests in test_unit.items():
