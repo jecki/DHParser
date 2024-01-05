@@ -246,6 +246,9 @@ when defined(js):
       return m[0].len
     return -1
 
+  proc replace*(slice: StringSlice, pattern: Regex, replacement: string): cstring =
+    replace(cstring($slice), pattern.nonSticky, cstring(replacement))
+
 else:
   export Regex, re
 
@@ -263,6 +266,9 @@ else:
   proc matchLen*(slice: StringSlice, pattern: RegEx, location: int32): int32 =
     assert location >= 0 and location <= slice.stop - slice.start + 1
     return matchLen(slice.str[], pattern, slice.start + location).int32
+
+  func replace*(slice: StringSlice, pattern: Regex, replacement: string): string =
+    replace($slice, pattern, replacement)
 
 
 when isMainModule:
@@ -327,6 +333,8 @@ when isMainModule:
   assert slice.find(re"[0-9]+", 7, 4) == (-1'i32, -2'i32)
   assert slice[19 .. ^1].find(re"[0-9]+") == (0'i32, 1'i32)
 
+  assert slice[4..10].replace(re"\d", "?") == "??? def"
+
   let trivial = makeStringSlice("A")
   assert trivial.matchLen(re"\w+", 0) == 1
   assert trivial.matchLen(re"\w+", 1) == -1
@@ -352,3 +360,4 @@ when isMainModule:
       """
     assert $rex(pattern)[0].toCString() == r"/^(\w+)\s(\w+)/uy"
 
+  echo $replace(makeStringSlice("abc\ndef"), re"\n", r"\n")

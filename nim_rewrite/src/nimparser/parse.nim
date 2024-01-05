@@ -58,7 +58,7 @@ type
       findProc: MatcherProc
     of mkParser:
       consumeParser: Parser
-  ErrorMatcher = tuple[matcher: Matcher, code: ErrorCode, msg: string]
+  ErrorMatcher = tuple[matcher: Matcher, msg: string]
 
   ParserFlags = enum isLeaf, noMemoization, isNary, isFlowParser, isLookahead,
    isContextSensitive, isDisposable, dropContent, traversalTracker
@@ -404,7 +404,8 @@ method `grammar=`*(self: Parser, grammar: GrammarRef) {.base.} =
 ## catching syntax errors and resuming after that
 
 proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
-                   commentRe: Regex = NeverMatchRegex, searchWindowSize: int32 = -1): ParsingResult =
+                   commentRe: Regex = NeverMatchRegex,
+                   searchWindowSize: int32 = SearchWindowDefault): ParsingResult =
   let upperLimit = document.len + 1
   var
     pos = location
@@ -710,7 +711,11 @@ method refdParsers*(self: ErrorCatchingParserRef): lent seq[Parser] =
     assert self.referredParsers.len >= self.subParsers.len
   return self.referredParsers
 
-proc reentry(catcher: ErrorCatchingParserRef, location: int32): tuple[nd: Node, reloc: int32] =
+proc reentry(catcher: ErrorCatchingParserRef, location: int32):
+     tuple[nd: Node, reloc: int32] =
+  if catcher.skipList.len > 0:
+    return reentry_point(catcher.grammar.document, location,
+                         catcher.skipList, catcher.grammar.commentRe)
   return (newNode(ZombieName, ""), -1)  # placeholder
 
 proc violation(catcher: ErrorCatchingParserRef,
@@ -718,11 +723,40 @@ proc violation(catcher: ErrorCatchingParserRef,
                wasLookAhead: bool,
                whatExpected: string,
                reloc: int32,
-               error_node: NodeOrNil):
+               errorNode: Node):
                tuple[err: ErrorRef, location: int32] =
-  let error = Error("mandatory violation detected", location)
-  catcher.grammar.errors.add(error)
-  return (error, reloc)
+
+  proc match(rule: Matcher, text: StringSlice, location: int32): bool =
+    case rule.kind:
+    of mkRegex:
+      return text.matchLen(rule.regex, location) >= 0
+    of mkString:
+      return text[location:location + rule.cmpStr.len - 1] == matche.cmpStr
+    of mkProc:
+      return rule.findProc(text, location, location)
+    of mkParser:
+      let parser = rule.consumeParser
+      try:
+        (node, pos) = parser.call(parser, location)
+        return not isNil(node)
+      except ParsingException as pe:
+        let msg = "Error while picking error message with: " & $parser
+        let error = Error(msg, location, ErrorWhileRecovering)
+        parser.grammer.errors.add(error)
+
+  let
+    gr = catcher.grammar
+    found = gr.document[location..location+9].replace(re'\n', r'\n')
+    sym = if isNil(catcher.symbol):  "?"  else:  catcher.symbol.pname
+  var error_code = MandatoryCondinuation
+  errorNode.pos = location    # if errorNode.sourcePos < 0:
+  for (rule, msg) in catcher.errorList:
+    if match(rule, gr.document, location):
+      i = msg.find(':') + 1
+      let code = if i > 0: ErrorCode(msg[0..<i].parseInt.uint16) else: AnError
+
+
+
 
 
 ## Modifiers

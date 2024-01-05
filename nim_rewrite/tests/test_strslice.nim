@@ -55,3 +55,5 @@ test "regular expression functions":
   assert slice.find(re"[0-9]+", 7) == (12'i32, 14'i32)
   assert slice.find(re"[0-9]+", 7, 4) == (-1'i32, -2'i32)
   assert slice[19 .. ^1].find(re"[0-9]+") == (0'i32, 1'i32)
+
+  assert slice[4..10].replace(re"\d", "?") == "??? def"
