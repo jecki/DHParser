@@ -550,7 +550,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 # errata.append('\n\n')  # leads to wrong error count!!!
 
     def flat_string_test(tests, stage, tree, test_name,
-                         parser_name, test_code, errata) -> Optional[Node]:
+                         parser_name, test_code, errata) -> str:
         compare = get(tests, stage, test_name)
         if isinstance(compare, str):
             content = tree.content
@@ -577,8 +577,6 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
 
     saved_config_values = dict()
     for parser_name, tests in test_unit.items():
-        # if not get_config_value('test_parallelization'):
-        #     print('  Testing parser: ' + parser_name)
         if parser_name[-2:] == '__':
             assert parser_name == 'config__', f'Unknown metadata-type: "{parser_name}"'
             for key, value in tests.items():
@@ -630,9 +628,6 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         # run match tests
 
         for test_name, test_code in tests.get('match', dict()).items():
-            # if not get_config_value('test_parallelization'):
-            #     print('    Test: ' + str(test_name))
-
             errflag = len(errata)
             err: Optional[Error] = None
             clean_test_name = str(test_name).replace('*', '')
@@ -951,8 +946,6 @@ def grammar_suite(directory, parser_factory, transformer_factory,
             for error in all_errors[filename]:
                 error_report.append('\t' + '\n\t'.join(error.split('\n')))
     if error_report:
-        # if verbose:
-        #     print("\nFAILURE! %i error%s found!\n" % (err_N, 's' if err_N > 1 else ''))
         return ('Test suite "%s" revealed %s error%s:\n'
                 % (directory, err_N, 's' if err_N > 1 else '') + '\n'.join(error_report))
     if verbose:
@@ -1112,7 +1105,6 @@ def run_tests_in_class(cls_name, namespace, methods=()):
             if callable(func):
                 print("Running " + cls_name + "." + name)
                 setup();  func();  teardown()
-                # exec('obj.' + name + '()')
     else:
         obj, setup, teardown = instantiate(cls_name, namespace)
         for name in dir(obj):
@@ -1224,7 +1216,6 @@ def run_file(fname):
     f_lower = fname.lower()
     if f_lower.startswith('test_') and f_lower.endswith('.py'):
         print("RUNNING " + fname)
-        # print('\nRUNNING UNIT TESTS IN: ' + fname)
         exec('import ' + fname[:-3])
         runner('', eval(fname[:-3]).__dict__)
 
@@ -1353,15 +1344,10 @@ class MockStream:
     def closed(self) -> bool:
         countdown = 50
         while self._closed and self.data and countdown > 0:
-            # allow client to read any pending data
-            # print(self.name, 'not yet closed due to pending data')
             self.data_waiting.set()
             time.sleep(0.01)
             countdown -= 1
         return self._closed
-        # with self.lock:
-        #     result = self._closed and not self.data
-        # return result
 
     def data_available(self) -> int:
         """Returns the size of the available data."""
