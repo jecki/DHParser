@@ -486,15 +486,14 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         except AttributeError:
             return k
 
-    def get(tests, category, key) -> str:
+    def get(tests, category, key) -> Union[Node, str, None]:
         try:
-            value = tests[category][key] if key in tests[category] \
-                else tests[category][clean_key(key)]
+            try:
+                return tests[category][key]
+            except KeyError:
+                return tests[category][clean_key(key)]
         except KeyError:
-            return ''
-            # raise AssertionError('%s-test %s for parser %s missing !?'
-            #                      % (category, test_name, parser_name))
-        return value
+            return None
 
     if isinstance(test_unit, str):
         _, unit_name = os.path.split(os.path.splitext(test_unit)[0])
@@ -550,9 +549,9 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 # errata.append('\n\n')  # leads to wrong error count!!!
 
     def flat_string_test(tests, stage, tree, test_name,
-                         parser_name, test_code, errata) -> str:
+                         parser_name, test_code, errata) -> Union[Node, str, None]:
         compare = get(tests, stage, test_name)
-        if isinstance(compare, str):
+        if compare and isinstance(compare, str):
             content = tree.content
             if content == compare:
                 if verbose:  write(f'      {stage}-test "' + test_name + '" ... OK')
@@ -766,9 +765,6 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                                     test_str = normalize_code(test_str, full_normalization=False)
                                 else:
                                     test_str = test_str.strip('\n')
-                                # test_str = normalize_code(
-                                #     test_str, full_normalization=
-                                #     stage not in ('match', 'fail', 'AST', 'CST'))
                                 if not compare == test_str:
                                     test_code_str = "\n\t".join(test_code.split("\n"))
                                     errata.append(f'{stage}-test {test_name} for parser {parser_name} failed:\n'

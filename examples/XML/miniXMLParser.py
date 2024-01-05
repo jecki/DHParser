@@ -113,7 +113,7 @@ class miniXMLGrammar(Grammar):
     """
     element = Forward()
     source_hash__ = "65c1a9d9d9ca27fcc030bb7d5f131f31"
-    disposable__ = re.compile('EOF$')
+    disposable__ = re.compile('(?:$.)|(?:EOF$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''

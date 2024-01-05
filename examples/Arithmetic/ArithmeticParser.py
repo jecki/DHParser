@@ -90,7 +90,7 @@ class ArithmeticGrammar(Grammar):
     """
     expression = Forward()
     source_hash__ = "252ef18fb4cb4afec7ece248688fbccc"
-    disposable__ = re.compile('..(?<=^)')
+    disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'#.*'
