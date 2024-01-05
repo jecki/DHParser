@@ -753,7 +753,7 @@ proc violation(catcher: ErrorCatchingParserRef,
   let
     gr = catcher.grammar
     found = gr.document[location..location + 9].replace(re"\n", r"\n")
-    sym = if isNil(catcher.symbol):  "?"  else:  catcher.symbol.pname
+    sym = if isNil(catcher.symbol):  $catcher  else:  catcher.symbol.pname
   var
     errCode = MandatoryCondinuation
     message = fmt"{expected} expected by parser {$sym}, but »{found}« found!"
@@ -1193,7 +1193,7 @@ method parse*(self: SeriesRef, location: int32): ParsingResult =
       else:
         # TODO: Fill the placeholders: reentry and violation in, above!
         (someNode, reloc) = self.reentry(loc)
-        (error, loc) = self.violation(loc, false, parser.pname, reloc, someNode)
+        (error, loc) = self.violation(loc, false, $parser, reloc, someNode)
         if reloc >= 0:
           (nd, loc) = parser(loc)
           if not isNil(nd):
