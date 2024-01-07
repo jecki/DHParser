@@ -109,7 +109,7 @@ RE_VALUE = '|'.join([RE_MULTILINE_DOUBLE_QUOTE,
 # support local flags, e.g. '(?s: )'
 # RE_VALUE = r'(?:"""((?s:.*?))""")|' + "(?:'''((?s:.*?))''')|" + \
 #            r'(?:"(.*?)")|' + "(?:'(.*?)')|" + '(.*(?:\n(?:\s*\n)*    .*)*)'
-RX_ENTRY = re.compile(r'\s*(\w+\*?)\s*:\s*(?:{value})\s*'.format(value=RE_VALUE))
+RX_ENTRY = re.compile(r'\s*([\w.]+\*?)\s*[:=]\s*(?:{value})\s*'.format(value=RE_VALUE))
 RX_COMMENT = re.compile(r'\s*[#;].*(?:\n|$)')
 
 
@@ -220,7 +220,7 @@ def unit_from_config(config_str: str, filename: str, allowed_stages=UNIT_STAGES)
     metadata_match = RX_METADATA_SECTION.match(cfg, pos)
     while metadata_match:
         mdsection = metadata_match.groupdict()['metadata']
-        if not mdsection[-2:] == '__':
+        if mdsection[-2:] != '__':
             mdsection += '_' if mdsection[-1:] == '_' else '__'
         unit.setdefault(mdsection, OD())
         pos = eat_comments(cfg, metadata_match.span()[1])
@@ -232,7 +232,6 @@ def unit_from_config(config_str: str, filename: str, allowed_stages=UNIT_STAGES)
             pos = eat_comments(cfg, entry_match.span()[1])
             entry_match = RX_ENTRY.match(cfg, pos)
         metadata_match = RX_METADATA_SECTION.match(cfg, pos)
-
 
     # read test-data
     section_match = RX_SECTION.match(cfg, pos)
