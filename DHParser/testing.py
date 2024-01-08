@@ -372,6 +372,7 @@ def get_report(test_unit, serializations: Dict[str, List[str]] = dict()) -> str:
     save = get_config_value('xml_attribute_error_handling')
     set_config_value('xml_attribute_error_handling', 'fix')
     for parser_name, tests in test_unit.items():
+        if parser_name[-2:] == '__':  continue
         heading = 'Test of parser: "%s"' % parser_name
         report.append('\n\n%s\n%s' % (heading, '=' * len(heading)))
         for test_name, test_code in tests.get('match', dict()).items():
