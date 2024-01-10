@@ -1161,6 +1161,13 @@ proc init*(series: SeriesRef,
   discard ErrorCatchingParserRef(series).init(SeriesName, mandatory)
   series.flags.incl isNary
   series.subParsers = @parsers
+  for i, subP in enumerate(series.subParsers):
+    var p = subP
+    while p.subParsers.len == 1 and p.ptype == SeriesName:
+      if SeriesRef(p).mandatory == 0 and i.uint32 < series.mandatory:
+        series.mandatory = i.uint32
+      p = p.subParsers[0]
+      series.subParsers[i] = p
   return series
 
 template Series*(parsers: varargs[Parser]): SeriesRef =
