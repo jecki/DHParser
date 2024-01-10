@@ -1163,11 +1163,11 @@ proc init*(series: SeriesRef,
   series.subParsers = @parsers
   for i, subP in enumerate(series.subParsers):
     var p = subP
-    while p.subParsers.len == 1 and p.ptype == SeriesName:
+    while p.subParsers.len == 1 and p.ptype == SeriesName and p.pname == "":
       if SeriesRef(p).mandatory == 0 and i.uint32 < series.mandatory:
         series.mandatory = i.uint32
       p = p.subParsers[0]
-      series.subParsers[i] = p
+      series.subParsers[i] = p  # TODO: merge error lists
   return series
 
 template Series*(parsers: varargs[Parser]): SeriesRef =
@@ -1177,7 +1177,7 @@ template Series*(parsers: varargs[Parser], mandatory: uint32): SeriesRef =
   new(SeriesRef).init(parsers, mandatory)
 
 proc `§`*(parser: Parser): SeriesRef =
-  if parser.pname.len == 0 and parser.ptype == SeriesName:
+  if parser.pname == "" and parser.ptype == SeriesName:
     var series = SeriesRef(parser)
     series.mandatory = 0
     return series
@@ -1238,7 +1238,7 @@ proc `&`*(series: SeriesRef, other: SeriesRef): SeriesRef =
   if other.name == "":
     if series.mandatory >= RepLimit and other.mandatory < RepLimit:
       series.mandatory = min(series.subParsers.len.uint32 + other.mandatory, RepLimit)
-    series.subParsers &= other.subParsers
+    series.subParsers &= other.subParsers  # TODO: merge error lists
   else:
     series.subParsers.add(other)
   return series
