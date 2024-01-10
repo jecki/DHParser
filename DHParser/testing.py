@@ -738,10 +738,10 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                     if not compare.equals(ast):  # no worry: ast is defined if 'AST' in tests
                         ast_str = flatten_sxpr(ast.as_sxpr())
                         compare_str = flatten_sxpr(compare.as_sxpr())
-                        errata.append('Abstract syntax tree test "%s" for parser "%s" failed:'
-                                      '\n\tExpr.:     %s\n\tExpected:  %s\n\tReceived:  %s'
-                                      % (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
-                                         compare_str, ast_str))
+                        templ = 'Abstract syntax tree test "%s" for parser "%s" failed:' \
+                                '\n\tExpr.:     %s\n\tExpected:  %s\n\tReceived:  %s'
+                        errata.append(templ % (test_name, parser_name, '\n\t'.join(test_code.split('\n')),
+                                               compare_str, ast_str))
                     if verbose:
                         infostr = '      AST-test "' + test_name + '" ... '
                         write(infostr + ("OK" if len(errata) == errflag else "FAIL"))
@@ -771,6 +771,10 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                                     test_str = test_str.strip('\n')
                                 if not compare == test_str:
                                     test_code_str = "\n\t".join(test_code.split("\n"))
+                                    if compare.find('\n') >= 0 and compare.strip() == compare:
+                                        compare = '\n' + compare + '\n'
+                                    if test_str.find('\n') >= 0 and test_str.strip() == test_str:
+                                        test_str = '\n' + test_str + '\n'
                                     errata.append(f'{stage}-test {test_name} for parser {parser_name} failed:\n'
                                                   f'\tExpr.:     {test_code_str}\n'
                                                   f'\tExpected:  {compare}\n'

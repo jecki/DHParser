@@ -1169,12 +1169,12 @@ template Series*(parsers: varargs[Parser]): SeriesRef =
 template Series*(parsers: varargs[Parser], mandatory: uint32): SeriesRef =
   new(SeriesRef).init(parsers, mandatory)
 
-# proc Required*(parsers: varargs[Parser]): SeriesRef =
-#   return new(SeriesRef).init(parsers, 0)
-
-proc Required*(series: SeriesRef): SeriesRef {.inline.} =
-  series.mandatory = 0
-  series
+proc `§`*(parser: Parser): SeriesRef =
+  if parser.pname.len == 0 and parser.ptype == SeriesName:
+    var series = SeriesRef(parser)
+    series.mandatory = 0
+    return series
+  return new(SeriesRef).init([parser], 0)
 
 
 method parse*(self: SeriesRef, location: int32): ParsingResult =
@@ -1229,9 +1229,9 @@ method `$`*(self: SeriesRef): string =
 proc `&`*(series: SeriesRef, other: SeriesRef): SeriesRef =
   if series.pname != "":  return Series(series, other)
   if other.name == "":
-    series.subParsers &= other.subParsers
     if series.mandatory >= RepLimit and other.mandatory < RepLimit:
       series.mandatory = min(series.subParsers.len.uint32 + other.mandatory, RepLimit)
+    series.subParsers &= other.subParsers
   else:
     series.subParsers.add(other)
   return series
@@ -1487,3 +1487,8 @@ when isMainModule:
   echo "---"
   expression.subParsers[0].forEach(p, anonSubs):
     echo $p
+
+  echo "---"
+  let series1 = txt"A" & txt"B" & § txt"C" & txt"D"
+  echo $series1
+  assert series1.mandatory == 2
