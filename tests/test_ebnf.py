@@ -2395,6 +2395,39 @@ class TestMacros:
         tree = parser(doc)
 
 
+class TestIgnoreCase:
+    def test_ignore_case(self):
+        lang = """@ignorecase = True
+           doc = "ABC" | /DEF/
+        """
+        parser = create_parser(lang)
+        assert not parser('Abc').errors
+        assert parser("Abc").content == "Abc"
+        assert not parser('abc').errors
+        assert parser("abc").content == "abc"
+        assert not parser('ABC').errors
+        assert parser("ABC").content == "ABC"
+
+        assert not parser("Def").errors
+        assert parser("Def").content == "Def"
+        assert not parser('def').errors
+        assert parser("def").content == "def"
+        assert not parser('DEF').errors
+        assert parser("DEF").content == "DEF"
+
+        lang2 = lang.replace('True', 'False')
+        parser = create_parser(lang2)
+        assert parser("Abc").errors
+        assert parser("abc").errors
+        assert not parser("ABC").errors
+        assert parser("ABC").content == "ABC"
+
+        assert parser("Def").errors
+        assert parser("def").errors
+        assert not parser("DEF").errors
+        assert parser("DEF").content == "DEF"
+
+
 if __name__ == "__main__":
     from DHParser.testing import runner
     runner("", globals())

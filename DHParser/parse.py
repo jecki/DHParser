@@ -90,6 +90,7 @@ __all__ = ('parser_names',
            'extract_error_code',
            'ERR',
            'Text',
+           'IgnoreCase',
            'DropText',
            'RegExp',
            'update_scanner',
@@ -146,6 +147,7 @@ parser_names = ('Always',
                 'PreprocessorToken',
                 'ERR',
                 'Text',
+                'IgnoreCase',
                 'DropText',
                 'RegExp',
                 'SmartRE',
@@ -2602,6 +2604,39 @@ class Text(NoMemoizationParser):
 
     def _signature(self) -> Hashable:
         return self.__class__.__name__, self.text
+
+
+class IgnoreCase(Text):
+    """
+    Parses plain text strings, ignoring the case,
+    e.g. "head" == "HEAD" == "Head".
+    (Could be done by RegExp as well, but is faster.)
+
+    Example::
+
+        >>> tag = IgnoreCase("head")
+        >>> Grammar(tag)("HEAD").content
+        'HEAD'
+        >>> Grammar(tag)("Head").content
+        'Head'
+    """
+
+    def __init__(self, text: str) -> None:
+        super(IgnoreCase, self).__init__(text.upper())
+        self.len = len(text)
+
+    @cython.locals(location_=cython.int)
+    @cython.returns((object, cython.int))
+    def _parse(self, location: cython.int) -> ParsingResult:
+        location_ = location + self.len
+        comp_text = self._grammar.text__[location:location_]
+        if comp_text.upper() == self.text:
+            if self.drop_content:
+                return EMPTY_NODE, location_
+            elif self.text or not self.disposable:
+                return Node(self.node_name, comp_text, True), location_
+            return EMPTY_NODE, location
+        return None, location
 
 
 class RegExp(LeafParser):

@@ -1285,7 +1285,7 @@ from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode, Pat
 from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, DropFrom, AnyChar, Parser, \\
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, ERR, \\
     Option, NegativeLookbehind, OneOrMore, RegExp, SmartRE, Retrieve, Series, Capture, TreeReduction, \\
-    ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, \\
+    ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, \\
     LateBindingUnary, mixin_comment, last_value, matching_bracket, optional_last_value, \\
     PARSER_PLACEHOLDER, UninitializedError
 from DHParser.pipeline import end_points, full_pipeline, create_parser_junction, \\
@@ -2623,6 +2623,7 @@ class EBNFCompiler(Compiler):
             check_argnum(1)
             if node.children[1].content.lower() not in {"off", "false", "no"}:
                 self.re_flags.add('i')
+                self.P['Text'] = 'IgnoreCase'
 
         elif key == 'literalws':
             values = {child.content.strip().lower() for child in node.children[1:]}
