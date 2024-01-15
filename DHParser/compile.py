@@ -280,11 +280,11 @@ class Compiler:
                 if nd is not None and not isinstance(nd, Node):
                     tn = node.name
                     raise TypeError(
-                        'Fallback compiler for Node `%s` received a value of type '
-                        '`%s` from child `%s` instead of the required return type `Node`. '
-                        'Override `DHParser.compile.Compiler.fallback_compiler()` or add '
-                        'method `on_%s(self, node)` in class `%s` to avoid this error!'
-                        % (tn, str(type(nd)), child.name, tn, self.__class__.__name__))
+                        f'Fallback compiler for Node "{tn}" received a value of type '
+                        f'`{type(nd)}` from child "{child.name}" instead of the required '
+                        f'return type `Node`. Override method `fallback_compiler()` or '
+                        f'add method `{self.visitor_name(tn)}(self, node)` in class '
+                        f'`{self.__class__.__name__}` to avoid this error!')
             if replacements:
                 # replace Nodes the identity of which has been changed during transformation
                 # and drop any returned None-results
