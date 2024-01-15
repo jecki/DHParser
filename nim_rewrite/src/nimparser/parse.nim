@@ -74,7 +74,7 @@ type
     symbol: ParserOrNil
     subParsers: seq[Parser]
     call: ParseProc not nil
-    visited: Table[int, ParsingResult]  # TODO: use btree or something, here...
+    visited: Table[int, ParsingResult]  # TODO: use btree or something, here?
 
   ErrorCatchingParserObj = object of ParserObj
     mandatory: uint32
@@ -770,6 +770,20 @@ proc violation(catcher: ErrorCatchingParserRef,
   return (Error(message, location, errCode), max(reloc, 0))
 
 
+proc `<<`(left, right: ErrorCatchingParserRef) =
+  ## merges right into left
+  for p in right.subParsers:
+    left.subParsers.add(p)
+  for m in right.skipList:  left.skipList.add(m)
+  for m in right.resumeList:  left.resumeList.add(m)
+  for em in right.errorList:  left.errorList.add(em)
+  for p in right.referredParsers:
+    block innerLoop:
+      for q in left.referredParsers:
+        if p == q: break innerLoop
+      left.referredParsers.add(p)
+
+
 ## Modifiers
 ## ---------
 
@@ -890,7 +904,7 @@ method `$`*(self: RegExpRef): string =
 
 
 ## Whitespace
-## ^^^^^^^^^^^^^
+## ^^^^^^^^^^
 ##
 ## A parser for insignificant whitespace and comments. Whitespace's
 ## parse-method always returns a match, if only an empty match in case
