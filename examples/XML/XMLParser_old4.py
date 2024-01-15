@@ -206,20 +206,13 @@ class XMLTransformer(Compiler):
         self.preserve_whitespace = False
         self.non_empty_tags: Set[str] = set()
 
-    def prepare(self, root: RootNode) -> None:
-        assert root.stage == "CST", f"Source stage `CST` expected, `but `{root.stage}` found."
-        root.stage = "AST"
-
-    def finalize(self, result: Any) -> Any:
-        return result
-
     def extract_attributes(self, node_sequence):
         attributes = collections.OrderedDict()
         for node in node_sequence:
             if node.name == "Attribute":
                 assert node[0].name == "Name", node.as_sexpr()
-                # assert node[1].name == "AttValue", node.as_sxpr()
-                attributes[node[0].content] = node[1].content.replace('\n', '')
+                assert node[1].name == "AttValue", node.as_sxpr()
+                attributes[node[0].content] = node[1].content
         return attributes
 
     def value_constraint(self, node, value, allowed):
@@ -284,7 +277,7 @@ class XMLTransformer(Compiler):
             except KeyError:  # in case of a malformed tree...
                 return node[0]
         stag = node['STag']
-        etag = node.get('ETag', stag)  # in case of malformed XML this could be missing
+        etag = node['ETag']
         tag_name = stag['Name'].content
 
         if tag_name != etag['Name'].content:
@@ -336,26 +329,6 @@ class XMLTransformer(Compiler):
 
     def on_Comment(self, node):
         node.name = '!--'
-        return node
-
-    def on_Series__(self, node):
-        """Visitor for ":Series"-nodes to make XML-Transformer
-        more resilient against bad input data.
-
-        Becomes only relevant if
-        there is an error in the input data, in which case files
-        with errors might yield CSTs that still contain
-        ":Series"-nodes (Note: 0x3a == ":") might result in a TypeError
-        if not handled by a dedicated visitor."""
-        node.name = ZOMBIE_TAG
-        result = []
-        for nd in node.children:
-            if nd.name not in self.expendables:
-                if nd.name == 'content':
-                    result.extend(self.compile(nd))
-                else:
-                    result.append(self.compile(nd))
-        node.result = tuple(result)
         return node
 
 
