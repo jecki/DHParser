@@ -173,13 +173,15 @@ class Compiler:
         """
         if re.match(r'\w+$', node_name):
             return 'on_' + node_name
-        else:
-            letters = []
-            for ch in node_name:
-                if not re.match(r'\w', ch):
-                    ch = hex(ord(ch))[2:]
-                letters.append(ch)
-            return 'on_' + ''.join(letters)
+        if node_name[:1] ==  ':':
+            vname = 'on_' + node_name[1:] + '__'
+            if re.match(r'\w+$', vname):  return vname
+        letters = []
+        for ch in node_name:
+            if not re.match(r'\w', ch):
+                ch = hex(ord(ch))[2:]
+            letters.append(ch)
+        return 'on_' + ''.join(letters)
 
     def attr_visitor_name(self, attr_name: str) -> str:
         """
@@ -299,17 +301,26 @@ class Compiler:
         return node
 
     def find_compilation_method(self, node_name: str) -> CompileMethod:
+        def wildcard_or_fallback():
+            if self.wildcard != Compiler.wildcard:
+                return self.wildcard
+            else:
+                return self.fallback_compiler
+
         try:
-            method = self.method_dict[node_name]
+            method = self.method_dict[node_name]  # check cache, first
         except KeyError:
             method_name = self.visitor_name(node_name)
             try:
                 method = self.__getattribute__(method_name)
             except AttributeError:
-                if self.wildcard != Compiler.wildcard:
-                    method = self.wildcard
+                if node_name.startswith(':'):
+                    try:
+                        method = self.__getattribute__('on_3a' + node_name[1:])
+                    except AttributeError:
+                        method = wildcard_or_fallback()
                 else:
-                    method = self.fallback_compiler
+                    method = wildcard_or_fallback()
             self.method_dict[node_name] = method
         return method
 
@@ -330,10 +341,7 @@ class Compiler:
             assert node not in self._debug_already_compiled
             self._debug_already_compiled.add(node)
 
-        elem = node.name
-        if elem[:1] == ':':
-            elem = elem[1:] + '__'
-        compiler = self.find_compilation_method(elem)
+        compiler = self.find_compilation_method(node.name)
         self.path.append(node)
         result = compiler(node)     
         self.path.pop()
@@ -343,10 +351,10 @@ class Compiler:
             raise CompilerError(
                 ('Method on_%s returned `None` instead of a valid compilation '
                  'result! It is recommended to use `nodetree.EMPTY_NODE` as a '
-                 'void value. This Error can be turn off by adding '
+                 'void value. This Error can be turned off by adding '
                  '`self.forbid_returning_None = False` to the reset()-Method of your'
                  'compiler class, in case on_%s actually SHOULD be allowed to '
-                 'return None.') % (elem, elem))
+                 'return None.') % (node.name, self.visitor_name(node.name)))
         return result
 
 
