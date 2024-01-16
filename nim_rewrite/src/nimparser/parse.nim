@@ -752,11 +752,12 @@ proc violation(catcher: ErrorCatchingParserRef,
 
   let
     gr = catcher.grammar
-    found = gr.document[location..location + 9].replace(re"\n", r"\n")
+    snippet = $gr.document[location..location + 9].replace(re"\n", r"\n")
+    found = if location >= gr.document.len: "EOF" else: fmt"»{snippet}«"
     sym = if isNil(catcher.symbol):  $catcher  else:  catcher.symbol.pname
   var
     errCode = MandatoryCondinuation
-    message = fmt"{expected} expected by parser {$sym}, but »{found}« found!"
+    message = fmt"»{expected}« expected by parser {$sym}, but {found} found!"
   # errorNode.pos = location  # if errorNode.sourcePos < 0:
   for (rule, msg) in catcher.errorList:
     if match(rule, gr.document, location):
