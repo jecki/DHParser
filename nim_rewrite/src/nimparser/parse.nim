@@ -757,7 +757,6 @@ proc violation(catcher: ErrorCatchingParserRef,
   var
     errCode = MandatoryCondinuation
     message = fmt"{expected} expected by parser {$sym}, but »{found}« found!"
-  echo $message
   # errorNode.pos = location  # if errorNode.sourcePos < 0:
   for (rule, msg) in catcher.errorList:
     if match(rule, gr.document, location):
@@ -769,11 +768,12 @@ proc violation(catcher: ErrorCatchingParserRef,
     errCode = MandatoryContinuationAtEOF
   return (Error(message, location, errCode), max(reloc, 0))
 
-
-proc `<<`(left, right: ErrorCatchingParserRef) =
-  ## merges right into left
-  for p in right.subParsers:
-    left.subParsers.add(p)
+proc mergeErrorLists(left, right: ErrorCatchingParserRef) =
+  ## Merges error-catching related lists from right into left
+  ## This includes ``skipList``, ``resumeList``, ``errorList``
+  ## and ``referredParsers``, but not ``mandatory`` and
+  ## ``suParsers``, because the their merging algorithm
+  ## differs between different derived classes.
   for m in right.skipList:  left.skipList.add(m)
   for m in right.resumeList:  left.resumeList.add(m)
   for em in right.errorList:  left.errorList.add(em)
@@ -1197,7 +1197,6 @@ proc `§`*(parser: Parser): SeriesRef =
     return series
   return new(SeriesRef).init([parser], 0)
 
-
 method parse*(self: SeriesRef, location: int32): ParsingResult =
   var
     results = newSeqOfCap[Node](self.subParsers.len)
@@ -1212,7 +1211,6 @@ method parse*(self: SeriesRef, location: int32): ParsingResult =
       if pos.uint32 < self.mandatory:
         return (nil, location)
       else:
-        # TODO: Fill the placeholders: reentry and violation in, above!
         (someNode, reloc) = self.reentry(loc)
         (error, loc) = self.violation(loc, false, $parser, reloc, someNode)
         if reloc >= 0:
@@ -1246,13 +1244,17 @@ method `$`*(self: SeriesRef): string =
         if marker != "": marker & subStr else: subStr
   subStrs.join(" ")
 
+proc `<<`(left, right: SeriesRef) =
+  ## Merges the right series into the left series.
+  if left.mandatory >= RepLimit and right.mandatory < RepLimit:
+    left.mandatory = min(left.subParsers.len.uint32 + right.mandatory, RepLimit)
+  left.subParsers &= right.subParsers
+  mergeErrorLists(left, right)
 
 proc `&`*(series: SeriesRef, other: SeriesRef): SeriesRef =
   if series.pname != "":  return Series(series, other)
   if other.name == "":
-    if series.mandatory >= RepLimit and other.mandatory < RepLimit:
-      series.mandatory = min(series.subParsers.len.uint32 + other.mandatory, RepLimit)
-    series.subParsers &= other.subParsers  # TODO: merge error lists
+    series << other
   else:
     series.subParsers.add(other)
   return series
@@ -1483,15 +1485,22 @@ when isMainModule:
   let NUMBER = ":NUMBER".assign         (rxp"(?:0|(?:[1-9]\d*))(?:\.\d+)?" & WS)
   let sign = "sign".assign             ((txt"+" | txt"-") & WS)
   let expression = "expression".assign Forward()
-  let group = "group".assign           (txt"(" & WS & expression & txt")" & WS)
+  let group = "group".assign           (txt"(" & WS & § expression & txt")" & WS)
   let factor = "factor".assign         (Option(sign) & (NUMBER | group))
   let term = "term".assign             (factor & ZeroOrMore((txt"*" | txt"/") & WS & factor))
   expression.set                       (term & ZeroOrMore((txt"+" | txt"-") & WS & term))
   expression.grammar = Grammar("Arithmetic")
   echo $expression
 
-  let tree = expression("1 + 1").node
+  var tree = expression("1 + 1").node
   echo tree.asSxpr()
+  tree = expression("(3 + 4) * 2").node
+  echo tree.asSxpr()
+  try:
+    tree = expression("(3 + 4 * 2").node
+  except ParsingException as pe:
+    echo $pe
+
 
   echo "descendants-iterator"
   for p in descendants(expression):

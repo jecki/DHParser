@@ -146,6 +146,7 @@ proc runeLen*(node: Node): int32 =
     for child in node.childrenSeq:
       result += child.runeLen
 
+proc asSxpr*(node: NodeOrNil): string
 
 func pos*(node: Node): int32 =
   if node.sourcePos < 0:
@@ -153,16 +154,20 @@ func pos*(node: Node): int32 =
   return node.sourcePos
 
 proc assignSourcePos(node: Node, sourcePos: int32) : int32 =
+  assert sourcePos >= 0
   if node.sourcePos >= 0 and node.sourcePos != sourcePos:
     raise newException(SourcePosReAssigmentDefect, "source position must not be reassigned!")
   node.sourcePos = sourcePos
   var pos = sourcePos
   if node.isLeaf:
-    return pos + int32(node.runeLen)
+    return pos + node.runeLen.int32
   else:
     for child in node.childrenSeq:
       if not child.isNil:
-        pos += child.assignSourcePos(pos)
+        if child.sourcePos < 0:
+          pos += child.assignSourcePos(pos)
+        else:
+          pos += child.runeLen.int32
   return pos
 
 template `pos=`*(node: Node, sourcePos: int32) =

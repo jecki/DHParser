@@ -641,11 +641,25 @@ class TestSeries:
         st = parser("ABC_");  assert st.error_flag
         assert st.errors_sorted[0].code == MANDATORY_CONTINUATION
 
-    def test_ebnf_serialization(self):
-        ebnf_grammar = get_ebnf_grammar()
-        # TODO: Add test here
-        ebnf = ebnf_grammar.as_ebnf__()
-        # print(ebnf)
+    def test_mandatory2(self):
+        lang = """
+            expression = term { (`+`|`-`) WS term }
+            term = factor { (`*`|`/`) WS factor }
+            factor = [ sign ] (NUMBER | group)
+            group = `(` WS § expression `)` WS
+            sign = (`+` | `-`) WS
+            HIDE:NUMBER = /(?:0|(?:[1-9]\d*))(?:\.\d+)?/ WS
+            DROP:WS = /\s*/
+        """
+        parser = create_parser(lang)
+        st = parser("(3 + 4 * 2")
+        assert st.errors
+
+    # def test_ebnf_serialization(self):
+    #     ebnf_grammar = get_ebnf_grammar()
+    #     # TODO: Add test here
+    #     ebnf = ebnf_grammar.as_ebnf__()
+    #     # print(ebnf)
 
 
 class TestAllOfSomeOf:
