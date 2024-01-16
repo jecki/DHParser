@@ -3958,7 +3958,7 @@ class ErrorCatchingNary(NaryParser):
         >>> str(num_parser('3.1415'))
         '3.1415'
         >>> str(num_parser('3.'))
-        '3. <<< Error on "" | \'/[0-9]+/\' expected by parser \'fraction\', but »...« found instead! >>> '
+        '3. <<< Error on "" | »/[0-9]+/« expected by parser \'fraction\', but END OF FILE found instead! >>> '
 
     In this example, the first item of the fraction, i.e. the decimal dot,
     is non-mandatory, because only the parser with an index of one or more
@@ -4037,7 +4037,13 @@ class ErrorCatchingNary(NaryParser):
         err_node._pos = -1  # bad hack to avoid error in case position is re-set
         err_node.with_pos(location)  # for testing artifacts
         error_code = MANDATORY_CONTINUATION
-        found = text_[:10].replace('\n', '\\n') + '...'
+        L = len(text_)
+        if L > 10:
+            found = '»' + text_[:10].replace('\n', '\\n') + '...' + '«'
+        elif L > 0:
+            found = '»' + text_[:10].replace('\n', '\\n') + '«'
+        else:
+            found = "END OF FILE"
         sym = self.symbol.pname
         err_msgs = self.grammar.error_messages__.get(sym, [])
         for search, message in err_msgs:
@@ -4057,8 +4063,8 @@ class ErrorCatchingNary(NaryParser):
                                   location, MALFORMED_ERROR_STRING)
                     grammar.tree__.add_error(err_node, error)
         else:
-            msg = '%s expected by parser %s, but »%s« found instead!' \
-                  % (repr(expected), repr(sym), found)
+            msg = '%s expected by parser %s, but %s found instead!' \
+                  % (f"»{repr(expected)[1:-1]}«", repr(sym), found)
         if failed_on_lookahead and not text_:
             if grammar.start_parser__ is grammar.root_parser__:
                 error_code = MANDATORY_CONTINUATION_AT_EOF

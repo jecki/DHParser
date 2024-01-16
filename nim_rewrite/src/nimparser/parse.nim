@@ -766,7 +766,9 @@ proc violation(catcher: ErrorCatchingParserRef,
       break
   if wasLookAhead and location >= gr.document.len:
     errCode = MandatoryContinuationAtEOF
-  return (Error(message, location, errCode), max(reloc, 0))
+  let error = Error(message, location, errCode)
+  gr.errors.add(error)
+  return (error, max(reloc, 0))
 
 proc mergeErrorLists(left, right: ErrorCatchingParserRef) =
   ## Merges error-catching related lists from right into left
