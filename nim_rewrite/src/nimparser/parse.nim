@@ -59,6 +59,7 @@ type
     of mkParser:
       consumeParser: Parser
   ErrorMatcher = tuple[matcher: Matcher, msg: string]
+  AnyMatcher = Matcher | ErrorMatcher
 
   ParserFlags = enum isLeaf, isNary, isFlowParser, isLookahead,
    isContextSensitive, isErrorCatching, isDisposable,
@@ -791,19 +792,25 @@ proc mergeErrorLists(left, right: ErrorCatchingParserRef) =
 
 # TODO: Refactor with macros (low priority)
 
-template setMatcherList(errorCatcher: Parser, list: typed, listName: string) =
+proc setMatcherList[T: AnyMatcher](errorCatcher: Parser, list: sink seq[T], listName: string) =
     assert isErrorCatching in errorCatcher.flags
-    case listName
-    of "errors":
-      ErrorCatchingParserRef(errorCatcher).errorList = list
-    of "skip-matchers":
-      ErrorCatchingParserRef(errorCatcher).skipList = list
-    of "resume-matchers":
-      ErrorCatchingParserRef(errorCatcher).resumeList = list
-    else:
-      raise newException(AssertionDefect, "listName must be one of " &
-        "\"errors\", \"skip-matchers\", \"resume-machters\", but not " &
-        fmt"\"{listName}\"!")
+    when T is Matcher:
+      case listName
+      of "skip-matchers":
+        ErrorCatchingParserRef(errorCatcher).skipList = list
+      of "resume-matchers":
+        ErrorCatchingParserRef(errorCatcher).resumeList = list
+      else:
+        raise newException(AssertionDefect, "For type T = Matcher, " &
+          "listName must be \"skip-matchers\" or \"resume-machters\", " &
+          fmt"but not \"{listName}\"!")
+    elif T is ErrorMatcher:
+      if listName == "errors":
+        ErrorCatchingParserRef(errorCatcher).errorList = list
+      else:
+        raise newException(AssertionDefect, "For type T = Matcher, " &
+          & fmt"but not \"{listName}\"!")
+
 
 template addMatchers(parser: Parser, list: typed, listName: string,
                      failIfAmbiguous: bool = true) =
