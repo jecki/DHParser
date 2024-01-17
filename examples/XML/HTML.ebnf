@@ -1,0 +1,157 @@
+# HTML-grammar
+
+#######################################################################
+#
+#  EBNF-Directives
+#
+#######################################################################
+
+@ whitespace  = /\s*/                # insignificant whitespace, signified by ~
+@ literalws   = none                 # literals have no implicit whitespace
+@ comment     = //                   # no implicit comments
+@ ignorecase  = True                 # literals and regular expressions are case-sensitive
+@ reduction   = merge_treetops       # merge anonymous leaf-nodes
+@ disposable  = BOM, Misc, NameStartChar, NameChars, CommentChars, PubidChars, prolog,
+                PubidCharsSingleQuoted, VersionNum, EncName, Reference, CData, EOF, tagContent
+@ drop        = strings, whitespace, BOM, EOF  # drop anonymous tokens, whitespace, EOF and BOM
+
+
+#######################################################################
+#
+#  Document Frame and Prolog
+#
+#######################################################################
+
+document        = [BOM] prolog §element [Misc] EOF
+BOM             = /[\ufeff]|[\ufffe]|[\u0000feff]|[\ufffe0000]/  # byte-order-mark
+prolog          = [ ~ XMLDecl ] [Misc] [doctypedecl [Misc]]
+XMLDecl         = '<?xml' §VersionInfo [EncodingDecl] [SDDecl] ~ '?>'
+
+VersionInfo     = ~ 'version' ~ '=' ~ ("'" VersionNum "'" | '"' VersionNum '"')
+VersionNum      = /[0-9]+\.[0-9]+/
+
+EncodingDecl    = ~ 'encoding' ~ '=' ~ ("'" EncName "'" | '"' EncName '"')
+EncName         = /[A-Za-z][A-Za-z0-9._\-]*/
+
+SDDecl          = ~ 'standalone' ~ '=' ~ (("'" (`yes` | `no`) "'") | ('"' (`yes` | `no`) '"'))
+
+
+#######################################################################
+#
+#  Document Type Definition (only external DTDs accepted!)
+#
+#######################################################################
+
+doctypedecl	    = '<!DOCTYPE' ~ § Name [~ ExternalID] ~ '>'
+ExternalID      = 'SYSTEM' §~ SystemLiteral
+                | 'PUBLIC' §~ PubidLiteral ~ SystemLiteral
+
+#######################################################################
+#
+#  Logical Structures
+#
+#######################################################################
+
+@tagContent_resume = /(?=>|\/>)/
+@tagContent_error = "syntax error in tag-name of opening or empty tag:  {1}"
+
+@ETag_resume = /(?=>)/
+@ETag_error  = "syntax error in tag-name of closing tag:  {1}"
+
+@Attribute_resume = /(?=>|\/>)/
+@Attribute_error  = "syntax error in attribute definition:  {1}"
+
+
+@element_resume = /(?=.|$)/
+element         = emptyElement | voidElement | STag content §ETag
+emptyElement    = '<' tagContent '/>'
+voidElement     = '<' &( 'area' | 'base' | 'br' | 'col' | 'embed' | 'hr'
+                       | 'img' | 'input' | 'link' | 'meta' | 'param'
+                       | 'source' | 'track' | 'wbr' ) tagContent '>'
+STag            = '<' tagContent '>'
+tagContent      = !/[\/!?]/ §Name { ~ Attribute } ~ &('>'|'/>')
+ETag            = '</' §Name ~ '>'
+
+Attribute       = Name ~ §'=' ~ AttValue
+
+content         = [ CharData ]
+                  { (element | Reference | CDSect | PI | Comment)
+                    [CharData] }
+
+
+#######################################################################
+#
+#  Literals
+#
+#######################################################################
+
+AttValue        = '"' { /[^<&"]+/ | Reference } '"'
+                | "'" { /[^<&']+/ | Reference } "'"
+                | { /[^<&'>\s]+/ | Reference }
+
+SystemLiteral   = '"' /[^"]*/ '"' | "'" /[^']*/ "'"
+PubidLiteral    = '"' [PubidChars] '"'
+                | "'" [PubidCharsSingleQuoted] "'"
+
+
+#######################################################################
+#
+#  References
+#
+#######################################################################
+
+Reference       = EntityRef | CharRef
+EntityRef       = '&' Name ';'
+
+
+#######################################################################
+#
+#  Names
+#
+#######################################################################
+
+Name            = NameStartChar [NameChars]
+NameStartChar   = /_|:|[A-Z]|[a-z]
+                   |[\u00C0-\u00D6]|[\u00D8-\u00F6]|[\u00F8-\u02FF]
+                   |[\u0370-\u037D]|[\u037F-\u1FFF]|[\u200C-\u200D]
+                   |[\u2070-\u218F]|[\u2C00-\u2FEF]|[\u3001-\uD7FF]
+                   |[\uF900-\uFDCF]|[\uFDF0-\uFFFD]
+                   |[\U00010000-\U000EFFFF]/
+NameChars       = /(?:_|:|-|\.|[A-Z]|[a-z]|[0-9]
+                   |\u00B7|[\u0300-\u036F]|[\u203F-\u2040]
+                   |[\u00C0-\u00D6]|[\u00D8-\u00F6]|[\u00F8-\u02FF]
+                   |[\u0370-\u037D]|[\u037F-\u1FFF]|[\u200C-\u200D]
+                   |[\u2070-\u218F]|[\u2C00-\u2FEF]|[\u3001-\uD7FF]
+                   |[\uF900-\uFDCF]|[\uFDF0-\uFFFD]
+                   |[\U00010000-\U000EFFFF])+/
+
+
+#######################################################################
+#
+#  Comments, Processing Instructions and CDATA sections
+#
+#######################################################################
+
+Misc            = { Comment | PI | S }+
+Comment         = '<!--' { CommentChars | /-(?!-)/ } ~ '-->'
+PI              = '<?' PITarget [~ PIChars] '?>'
+PITarget        = !/X|xM|mL|l/ Name
+CDSect          = '<![CDATA[' CData ']]>'
+S               = /\s+/
+
+#######################################################################
+#
+#  Characters, Explicit Whitespace and End of File
+#
+#######################################################################
+
+PubidCharsSingleQuoted = /(?:\x20|\x0D|\x0A|[a-zA-Z0-9]|[-()+,.\/:=?;!*#@$_%])+/
+PubidChars      = /(?:\x20|\x0D|\x0A|[a-zA-Z0-9]|[-'()+,.\/:=?;!*#@$_%])+/
+
+CharData        = /(?:(?!\]\]>)[^<&])+/
+CData           = /(?:(?!\]\]>)(?:\x09|\x0A|\x0D|[\u0020-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF]))+/
+
+PIChars         = /(?:(?!\?>)(?:\x09|\x0A|\x0D|[\u0020-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF]))+/
+CommentChars    = /(?:(?!-)(?:\x09|\x0A|\x0D|[\u0020-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF]))+/
+CharRef         = ('&#' /[0-9]+/ ';') | ('&#x' /[0-9a-fA-F]+/ ';')
+EOF             = !/./          # no more characters ahead, end of file reached
