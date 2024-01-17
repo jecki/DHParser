@@ -60,8 +60,9 @@ type
       consumeParser: Parser
   ErrorMatcher = tuple[matcher: Matcher, msg: string]
 
-  ParserFlags = enum isLeaf, noMemoization, isNary, isFlowParser, isLookahead,
-   isContextSensitive, isDisposable, dropContent, traversalTracker
+  ParserFlags = enum isLeaf, isNary, isFlowParser, isLookahead,
+   isContextSensitive, isErrorCatching, isDisposable,
+   noMemoization, dropContent, traversalTracker
   ParserFlagSet = set[ParserFlags]
   ParseProc = proc(parser: Parser, location: int32) : ParsingResult {.nimcall.}
   ParserObj = object of RootObj
@@ -681,6 +682,7 @@ proc init(errorCatching: ErrorCatchingParserRef,
           resumeList: sink seq[Matcher] = @[],
           errorList: sink seq[ErrorMatcher] = @[]): ErrorCatchingParserRef =
   discard Parser(errorCatching).init(ptype)
+  errorCatching.flags.incl isErrorCatching
   errorCatching.mandatory = mandatory
   errorCatching.skipList = skipList
   errorCatching.resumeList = resumeList
@@ -785,6 +787,129 @@ proc mergeErrorLists(left, right: ErrorCatchingParserRef) =
       for q in left.referredParsers:
         if p == q: break innerLoop
       left.referredParsers.add(p)
+
+
+# TODO: Refactor with macros (low priority)
+
+template setMatcherList(errorCatcher: Parser, list: typed, listName: string) =
+    assert isErrorCatching in errorCatcher.flags
+    case listName
+    of "errors":
+      ErrorCatchingParserRef(errorCatcher).errorList = list
+    of "skip-matchers":
+      ErrorCatchingParserRef(errorCatcher).skipList = list
+    of "resume-matchers":
+      ErrorCatchingParserRef(errorCatcher).resumeList = list
+    else:
+      raise newException(AssertionDefect, "listName must be one of " &
+        "\"errors\", \"skip-matchers\", \"resume-machters\", but not " &
+        fmt"\"{listName}\"!")
+
+template addMatchers(parser: Parser, list: typed, listName: string,
+                     failIfAmbiguous: bool = true) =
+  if isErrorCatching in parser.flags:
+    parser.setMatcherList(list, listName)
+  else:
+    var ambiguityFlag: bool = false
+    parser.forEach(p, anonSubs):
+     if isErrorCatching in p.flags:
+       if ambiguityFlag:
+         raise newException(AssertionDefect,
+           fmt"Parser {parser.name}:{parser.ptype} contains more than one " &
+           "error catching parser (Series or Interleave), so that it remains" &
+           fmt" unclear to which of these the {listName} should be attached!")
+       p.setMatcherList(list, listName)
+       ErrorCatchingParserRef(p).referredParsers.setLen(0)
+       if not failIfAmbiguous:
+         break
+       ambiguityFlag = true
+    if not ambiguityFLag:
+      raise newException(AssertionDefect,
+        fmt"Parser {parser.name}:{parser.ptype} neither " &
+        "contains any nor is itself an error catching parser to which " &
+        fmt"{listname} could be attached!")
+
+proc errors*(parser: Parser, errors: sink seq[ErrorMatcher], strict: bool = true) =
+  addMatchers(parser, errors, "errors", strict)
+
+proc skip*(parser: Parser, skipMatchers: sink seq[Matcher], strict: bool = true) =
+  addMatchers(parser, skipMatchers, "skip-matchers", strict)
+
+proc resume*(parser: Parser, resumeMatchers: sink seq[Matcher], strict: bool = true) =
+  addMatchers(parser, resumeMatchers, "resume-matchers", strict)
+
+
+# proc errors(parser: Parser, errors: sink seq[ErrorMatcher],
+#             failIfAmbiguous: bool = true) =
+#   if isErrorCatching in parser.flags:
+#     ErrorCatchingParserRef(parser).errorList = errors
+#   else:
+#     var ambiguityFlag: bool = false
+#     parser.forEach(p, anonSubs):
+#      if isErrorCatching in p.flags:
+#        if ambiguityFlag:
+#          raise newException(AssertionDefect,
+#            fmt"Parser {parser.name}:{parser.ptype} contains more than " &
+#            "one error catching parser (Series or Interleave), so that it " &
+#            "remains unclear to which of these the errors should be attached!")
+#        ErrorCatchingParserRef(p).errorList = errors
+#        ErrorCatchingParserRef(p).referredParsers.setLen(0)
+#        if not failIfAmbiguous:
+#          break
+#        ambiguityFlag = true
+#     if not ambiguityFLag:
+#       raise newException(AssertionDefect,
+#         fmt"Parser {parser.name}:{parser.ptype} neither " &
+#         "contains any nor is itself an error catching parser to which error " &
+#         "messages could be attached!")
+
+proc skip(parser: Parser, skipMatchers: sink seq[Matcher],
+            failIfAmbiguous: bool = true) =
+  if isErrorCatching in parser.flags:
+    ErrorCatchingParserRef(parser).skipList = skipMatchers
+  else:
+    var ambiguityFlag: bool = false
+    parser.forEach(p, anonSubs):
+     if isErrorCatching in p.flags:
+       if ambiguityFlag:
+         raise AssertionDefect(
+           fmt"Parser {parser.name}:{parser.ptype} contains more than " &
+           "one error catching parser (Series or Interleave), so that it " &
+           "remains unclear to which of these the skip-matchers should be " &
+           "attached!")
+       ErrorCatchingParserRef(p).skipList = skipMatchers
+       ErrorCatchingParserRef(p).referredParses.setLen(0)
+       if not failIfAmbiguous:
+         break
+       ambiguityFlag = true
+    if not ambiguityFLag:
+      raise AssertionDefect(fmt"Parser {parser.name}:{parser.ptype} neither " &
+        "contains any nor is itself an error catching parser to which skip-" &
+        "matchers could be attached!")
+
+proc resume(parser: Parser, resumeMatchers: sink seq[Matcher],
+            failIfAmbiguous: bool = true) =
+  if isErrorCatching in parser.flags:
+    ErrorCatchingParserRef(parser).resumeList = resumeMatchers
+  else:
+    var ambiguityFlag: bool = false
+    parser.forEach(p, anonSubs):
+     if isErrorCatching in p.flags:
+       if ambiguityFlag:
+         raise AssertionDefect(
+           fmt"Parser {parser.name}:{parser.ptype} contains more than " &
+           "one error catching parser (Series or Interleave), so that it " &
+           "remains unclear to which of these the resume-matchers should be " &
+           "attached!")
+       ErrorCatchingParserRef(p).resumeList = resumeMatchers
+       ErrorCatchingParserRef(p).referredParses.setLen(0)
+       if not failIfAmbiguous:
+         break
+       ambiguityFlag = true
+    if not ambiguityFLag:
+      raise AssertionDefect(fmt"Parser {parser.name}:{parser.ptype} neither " &
+        "contains any nor is itself an error catching parser to which resume-" &
+        "matchers could be attached!")
 
 
 ## Modifiers
@@ -1485,7 +1610,7 @@ when isMainModule:
   root.grammar = Grammar("adhoc1")
 
   let WS  = "WS".assign                DROP(rxp"\s*")
-  let NUMBER = ":NUMBER".assign         (rxp"(?:0|(?:[1-9]\d*))(?:\.\d+)?" & WS)
+  let NUMBER = ":NUMBER".assign        (rxp"(?:0|(?:[1-9]\d*))(?:\.\d+)?" & WS)
   let sign = "sign".assign             ((txt"+" | txt"-") & WS)
   let expression = "expression".assign Forward()
   let group = "group".assign           (txt"(" & WS & § expression & txt")" & WS)
