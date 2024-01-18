@@ -593,9 +593,10 @@ proc `()`*(parser: Parser, document: string or StringSlice, location: int32 = 0)
     parser.grammar.document = toStringSlice(document)
     parser.grammar.cleanUp()
   parser.grammar.root = parser
-  result = parser.call(parser, location)
   parser.forEach(p, refdSubs):
     p.cleanUp()
+  result = parser.call(parser, location)
+
 
 
 ## procedures performing early tree-reduction on return values of parsers
@@ -833,6 +834,7 @@ template addMatchers(parser: Parser, list: typed, listName: string,
         fmt"Parser {parser.name}:{parser.ptype} neither " &
         "contains any nor is itself an error catching parser to which " &
         fmt"{listname} could be attached!")
+
 
 template errors*(parser: Parser, errors: seq[ErrorMatcher], unambig: bool = true) =
   addMatchers(parser, errors, "errors", unambig)
@@ -1620,8 +1622,8 @@ when isMainModule:
   let expression = "expression".assign Forward()
   let group = "group".assign           (txt"(" & WS & § expression & txt")" & WS)
   let factor = "factor".assign         (Option(sign) & (NUMBER | group))
-  let term = "term".assign             (factor & ZeroOrMore((txt"*" | txt"/") & WS & factor))
-  expression.set                       (term & ZeroOrMore((txt"+" | txt"-") & WS & term))
+  let term = "term".assign             (factor & ZeroOrMore((txt"*" | txt"/") & WS & § factor))
+  expression.set                       (term & ZeroOrMore((txt"+" | txt"-") & WS & § term))
   expression.grammar = Grammar("Arithmetic")
   echo $expression
 
@@ -1631,6 +1633,12 @@ when isMainModule:
   echo tree.asSxpr()
   try:
     tree = expression("(3 + 4 * 2").node
+  except ParsingException as pe:
+    echo $pe
+  try:
+    tree = expression("3 + ").node
+    echo "hi"
+    echo tree.asSxpr()
   except ParsingException as pe:
     echo $pe
 
