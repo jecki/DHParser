@@ -9,16 +9,16 @@ type
     ErrorCode* = uint16
     ErrorRef* = ref ErrorObj not nil
     ErrorOrNil* = ref ErrorObj
-    ErrorObj = object 
+    ErrorObj* = object
       message*: string
-      pos: int32
+      pos*: int32
       code*: ErrorCode
-      line: int32
-      column: int32
-      length: int32
-      related: seq[ErrorRef]
-      origPos: int32
-      origDoc: string
+      line*: int32
+      column*: int32
+      length*: int32
+      related*: seq[ErrorRef]
+      origPos*: int32
+      origDoc*: string
 
 const
     NO_ERROR* = ErrorCode(0)

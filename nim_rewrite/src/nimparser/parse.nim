@@ -34,20 +34,20 @@ type
   ErrorCatchingParserRef* = ref ErrorCatchingParserObj not nil
   ErrorCatchingParserOrNil = ref ErrorCatchingParserObj
 
-  ParsingResult = tuple[node: NodeOrNil, location: int32]
-  ParsingException = ref object of CatchableError
+  ParsingResult* = tuple[node: NodeOrNil, location: int32]
+  ParsingException* = ref object of CatchableError
     origin: ErrorCatchingParserRef
-    node: Node
+    node*: Node
     node_orig_len: int32
     location: int32
-    error: ErrorRef
+    error*: ErrorRef
     first_throw: bool
 
   # Matchers are needed for error-resumption
-  MatcherKind = enum mkRegex, mkString, mkProc, mkParser
-  MatcherProc = proc(text: StringSlice, start: int32, stop: int32):
-                    tuple[pos, length: int32]
-  Matcher = object
+  MatcherKind* = enum mkRegex, mkString, mkProc, mkParser
+  MatcherProc* = proc(text: StringSlice, start: int32, stop: int32):
+                     tuple[pos, length: int32]
+  Matcher* = object
     case kind: MatcherKind
     of mkRegex:
       reStr: string
@@ -58,8 +58,8 @@ type
       findProc: MatcherProc
     of mkParser:
       consumeParser: Parser
-  ErrorMatcher = tuple[matcher: Matcher, msg: string]
-  AnyMatcher = Matcher | ErrorMatcher
+  ErrorMatcher* = tuple[matcher: Matcher, msg: string]
+  AnyMatcher* = Matcher | ErrorMatcher
 
   ParserFlags = enum isLeaf, isNary, isFlowParser, isLookahead,
    isContextSensitive, isErrorCatching, isDisposable,

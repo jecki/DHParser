@@ -52,10 +52,10 @@ let WS  = "WS".assign                DROP(rxp"\s*")
 let NUMBER = ":NUMBER".assign        rxp"(?:0|(?:[1-9]\d*))(?:\.\d+)?" & WS
 let sign = "sign".assign             ((txt"+" | txt"-") & WS)
 let expression = "expression".assign Forward()
-let group = "group".assign           (txt"(" & WS & expression & txt")" & WS)
+let group = "group".assign           (txt"(" & WS & § expression & txt")" & WS)
 let factor = "factor".assign         (Option(sign) & (NUMBER | group))
-let term = "term".assign             (factor & ZeroOrMore((txt"*" | txt"/") & WS & factor))
-expression.set                       (term & ZeroOrMore((txt"+" | txt"-") & WS & term))
+let term = "term".assign             (factor & ZeroOrMore((txt"*" | txt"/") & WS & § factor))
+expression.set                       (term & ZeroOrMore((txt"+" | txt"-") & WS & § term))
 expression.grammar = Grammar("Arithmetic")
 let arithmetic = expression
 
@@ -69,10 +69,29 @@ test "arithmetic":
   (term
     (factor "1")))"""
 
+test "arithmetic error catching":
+  var tree: NodeOrNil
+  try:
+    tree = expression("(3 + ) * 2").node
+    check false
+  except ParsingException as pe:
+    check pe.error.pos == 5
+  try:
+    tree = expression("(3 + * 2").node
+    check false
+  except ParsingException as pe:
+    check pe.error.pos == 5
+  try:
+    tree = expression("(3 + 4 * 2").node
+    check false
+  except ParsingException as pe:
+    check pe.error.pos == 10
+
+
 let traversalExpected = """
 expression := expression
-expression := term {("+"|"-") WS term}
-term := factor {("*"|"/") WS factor}
+expression := term {("+"|"-") WS §term}
+term := factor {("*"|"/") WS §factor}
 factor := [sign] (NUMBER|group)
 [sign]
 sign := ("+"|"-") WS
@@ -83,16 +102,16 @@ WS := /\s*/
 NUMBER|group
 NUMBER := /(?:0|(?:[1-9]\d*))(?:\.\d+)?/ WS
 /(?:0|(?:[1-9]\d*))(?:\.\d+)?/
-group := "(" WS expression ")" WS
+group := "(" WS §expression ")" WS
 "("
 ")"
-{("*"|"/") WS factor}
-("*"|"/") WS factor
+{("*"|"/") WS §factor}
+("*"|"/") WS §factor
 "*"|"/"
 "*"
 "/"
-{("+"|"-") WS term}
-("+"|"-") WS term
+{("+"|"-") WS §term}
+("+"|"-") WS §term
 "+"|"-"
 "+"
 "-""""
