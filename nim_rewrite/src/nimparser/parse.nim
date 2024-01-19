@@ -773,7 +773,7 @@ proc violation(catcher: ErrorCatchingParserRef,
     errCode = MandatoryContinuationAtEOF
   let error = Error(message, location, errCode)
   gr.errors.add(error)
-  return (error, max(reloc, 0))
+  return (error, location + max(reloc, 0))
 
 proc mergeErrorLists(left, right: ErrorCatchingParserRef) =
   ## Merges error-catching related lists from right into left
@@ -844,79 +844,6 @@ template skip*(parser: Parser, skipMatchers: seq[Matcher], unambig: bool = true)
 
 template resume*(parser: Parser, resumeMatchers: seq[Matcher], unambig: bool = true) =
   addMatchers(parser, resumeMatchers, "resume-matchers", unambig)
-
-
-# proc errors(parser: Parser, errors: sink seq[ErrorMatcher],
-#             failIfAmbiguous: bool = true) =
-#   if isErrorCatching in parser.flags:
-#     ErrorCatchingParserRef(parser).errorList = errors
-#   else:
-#     var ambiguityFlag: bool = false
-#     parser.forEach(p, anonSubs):
-#      if isErrorCatching in p.flags:
-#        if ambiguityFlag:
-#          raise newException(AssertionDefect,
-#            fmt"Parser {parser.name}:{parser.ptype} contains more than " &
-#            "one error catching parser (Series or Interleave), so that it " &
-#            "remains unclear to which of these the errors should be attached!")
-#        ErrorCatchingParserRef(p).errorList = errors
-#        ErrorCatchingParserRef(p).referredParsers.setLen(0)
-#        if not failIfAmbiguous:
-#          break
-#        ambiguityFlag = true
-#     if not ambiguityFLag:
-#       raise newException(AssertionDefect,
-#         fmt"Parser {parser.name}:{parser.ptype} neither " &
-#         "contains any nor is itself an error catching parser to which error " &
-#         "messages could be attached!")
-
-# proc skip(parser: Parser, skipMatchers: sink seq[Matcher],
-#             failIfAmbiguous: bool = true) =
-#   if isErrorCatching in parser.flags:
-#     ErrorCatchingParserRef(parser).skipList = skipMatchers
-#   else:
-#     var ambiguityFlag: bool = false
-#     parser.forEach(p, anonSubs):
-#      if isErrorCatching in p.flags:
-#        if ambiguityFlag:
-#          raise AssertionDefect(
-#            fmt"Parser {parser.name}:{parser.ptype} contains more than " &
-#            "one error catching parser (Series or Interleave), so that it " &
-#            "remains unclear to which of these the skip-matchers should be " &
-#            "attached!")
-#        ErrorCatchingParserRef(p).skipList = skipMatchers
-#        ErrorCatchingParserRef(p).referredParses.setLen(0)
-#        if not failIfAmbiguous:
-#          break
-#        ambiguityFlag = true
-#     if not ambiguityFLag:
-#       raise AssertionDefect(fmt"Parser {parser.name}:{parser.ptype} neither " &
-#         "contains any nor is itself an error catching parser to which skip-" &
-#         "matchers could be attached!")
-#
-# proc resume(parser: Parser, resumeMatchers: sink seq[Matcher],
-#             failIfAmbiguous: bool = true) =
-#   if isErrorCatching in parser.flags:
-#     ErrorCatchingParserRef(parser).resumeList = resumeMatchers
-#   else:
-#     var ambiguityFlag: bool = false
-#     parser.forEach(p, anonSubs):
-#      if isErrorCatching in p.flags:
-#        if ambiguityFlag:
-#          raise AssertionDefect(
-#            fmt"Parser {parser.name}:{parser.ptype} contains more than " &
-#            "one error catching parser (Series or Interleave), so that it " &
-#            "remains unclear to which of these the resume-matchers should be " &
-#            "attached!")
-#        ErrorCatchingParserRef(p).resumeList = resumeMatchers
-#        ErrorCatchingParserRef(p).referredParses.setLen(0)
-#        if not failIfAmbiguous:
-#          break
-#        ambiguityFlag = true
-#     if not ambiguityFLag:
-#       raise AssertionDefect(fmt"Parser {parser.name}:{parser.ptype} neither " &
-#         "contains any nor is itself an error catching parser to which resume-" &
-#         "matchers could be attached!")
 
 
 ## Modifiers
@@ -1347,7 +1274,7 @@ method parse*(self: SeriesRef, location: int32): ParsingResult =
         return (nil, location)
       else:
         (someNode, reloc) = self.reentry(loc)
-        (error, loc) = self.violation(loc, false, $parser, reloc, someNode)
+        (error, loc) = self.violation(loc, false, repr(parser), reloc, someNode)
         if reloc >= 0:
           (nd, loc) = parser(loc)
           if not isNil(nd):
@@ -1632,13 +1559,15 @@ when isMainModule:
   tree = expression("(3 + 4) * 2").node
   echo tree.asSxpr()
   try:
-    tree = expression("(3 + 4 * 2").node
+    tree = expression("(3 + ) * 2").node
   except ParsingException as pe:
     echo $pe
   try:
-    tree = expression("3 + ").node
-    echo "hi"
-    echo tree.asSxpr()
+    tree = expression("(3 + * 2").node
+  except ParsingException as pe:
+    echo $pe
+  try:
+    tree = expression("(3 + 4 * 2").node
   except ParsingException as pe:
     echo $pe
 

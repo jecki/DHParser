@@ -42,6 +42,7 @@ proc init*(error: ErrorRef, message: string, pos: int32,
     assert pos >= 0
     error.message = message
     error.pos = pos
+    error.code = code
     error.line = line
     error.column = column
     error.length = length
@@ -62,4 +63,4 @@ proc `$`*(error: ErrorRef): string =
   elif error.origPos >= 0:
     fmt"{error.origPos}:{code}:{error.message}"
   else:
-    fmt"{error.pos}:{code}:{error.message}"
+    fmt"?:{error.pos}:{code}:{error.message}"

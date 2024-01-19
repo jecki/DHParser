@@ -197,6 +197,24 @@ class ParserError(Exception):
     Currently, the only case when a ``ParserError`` is thrown (and not some
     different kind of error like ``UnknownParserError``) is when a :py:class:`Series`
     or :py:class:`Interleave`-parser detects a missing mandatory element.
+
+    :ivar origin:  The parser within which the error has been raised
+    :ivar node:  The node within which the error is locted
+    :ivar node_orig_len:  The original size of that node. The actual size
+        of that node may change due to later processing steps und thus not
+        be reliable any more for the description of the error.
+    :ivar location:  The location in the document where the parser that caused the
+        error started. This is not to be confused with the location where the error
+        occurred, because by the time the error occurs the parser may already have
+        read some part of the document.
+    :ivar error:  The :py:class:`~error.Error` object containing among other things
+        the exact error location.
+    :ivar first_throw:  A flag that indicates that the error has not yet been re-raised
+    :ivar attributes_locked:  A frozenset of attributes that must not be overwritten
+        once the ParrserError-object has been initialized by its constructor
+    :ivar callstack_snapshot:  A snapshot of the callstack (if history-recording has
+        been turned on) at the point where the error occurred.
+
     """
     def __init__(self,
                  origin: Parser,

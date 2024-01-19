@@ -643,8 +643,8 @@ class TestSeries:
 
     def test_mandatory2(self):
         lang = """
-            expression = term { (`+`|`-`) WS term }
-            term = factor { (`*`|`/`) WS factor }
+            expression = term { (`+`|`-`) WS § term }
+            term = factor { (`*`|`/`) WS § factor }
             factor = [ sign ] (NUMBER | group)
             group = `(` WS § expression `)` WS
             sign = (`+` | `-`) WS
@@ -654,12 +654,9 @@ class TestSeries:
         parser = create_parser(lang)
         st = parser("(3 + 4 * 2")
         assert st.errors
-
-    # def test_ebnf_serialization(self):
-    #     ebnf_grammar = get_ebnf_grammar()
-    #     # TODO: Add test here
-    #     ebnf = ebnf_grammar.as_ebnf__()
-    #     # print(ebnf)
+        st = parser("(3 + ")
+        assert st.errors
+        # for e in st.errors:  print(e)
 
 
 class TestAllOfSomeOf:
