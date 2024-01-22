@@ -19,6 +19,19 @@ let
   NeverMatchRegex   = re(NeverMatchPattern)
 
 
+## Regular Expressions that keep track of their string-represenation
+
+type
+  RegExpInfo = tuple[reStr: string, regex: Regex]
+
+const unicodePrefix = "(*UTF8)(*UCP)"
+
+proc rx*(rx_str: string): RegExpInfo = (rx_str, re(unicodePrefix & rx_str))
+
+proc mrx*(multiline_rx_str: string): RegExpInfo =
+  (multiline_rx_str, rex(unicodePrefix & multiline_rx_str))
+
+
 ## Parser Base and Grammar
 ## -----------------------
 ##
@@ -50,8 +63,7 @@ type
   Matcher* = object
     case kind: MatcherKind
     of mkRegex:
-      reStr: string
-      regex: Regex
+      rxInfo: RegExpInfo
     of mkString:
       cmpStr: string
     of mkProc:
@@ -62,7 +74,7 @@ type
   AnyMatcher* = Matcher | ErrorMatcher
 
   ParserFlags = enum isLeaf, isNary, isFlowParser, isLookahead,
-   isContextSensitive, isErrorCatching, isDisposable,
+   isContextSensitive, isErrorCatching, isForward, isDisposable,
    noMemoization, dropContent, traversalTracker
   ParserFlagSet = set[ParserFlags]
   ParseProc = proc(parser: Parser, location: int32) : ParsingResult {.nimcall.}
@@ -333,7 +345,7 @@ else:
 
   iterator anonSubs*(parser: Parser): Parser {.closure.} =
     for p in parser.subParsers:
-      if p.name.len == 0:
+      if p.name.len == 0 or isForward in parser.flags:
         yield p
 
   iterator descendants(parser: Parser, selector: ParserIterator = refdSubs): Parser {.closure.} =
@@ -432,7 +444,7 @@ proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
     proc searchFunc(start: int32): tuple[pos, length: int32]  =
       case m.kind:
       of mkRegex:  # rx_search
-        let (a, b) = find(document, m.regex, start, searchWindow)
+        let (a, b) = find(document, m.rxInfo.regex, start, searchWindow)
         (a, b - a + 1)
       of mkString:  # str_search
         (find(document.str[], m.cmpStr, start, start + searchWindow).int32,
@@ -678,6 +690,19 @@ proc returnSeqPlaceholder(parser: Parser, nodes: sink seq[Node]): Node =
 ## of contained parsers. All parsers from the mandatory-index onward are
 ## considered mandatory once all parsers up to the index have been consumed.
 
+
+template passage(rxp: RegExpInfo): Matcher = Matcher(kind: mkRegex, rxInfo: rxp)
+template passage(s: string): Matcher = Matcher(kind: mkString, cmpStr: s)
+template passage(fn: MatcherProc): Matcher = Matcher(kind: mkProc, findProc: fn)
+template passage(p: Parser): Matcher = assert False, ("Use consume() or matchesHere() " &
+  "instead, because matchers of kind mkParser do not search the next location where that " &
+  "parser matches, but apply the parser to consume the text before the next viable location.")
+template consume(p: Parser): Matcher = Matcher(kind: mkParser, consumeParser: p)
+template matchesHere(p: Parser): Matcher = Matcher(kind: mkParser, consumeParser: p)
+let anyPassage = Matcher(kind: mkString, cmpStr: "")
+
+const NoMandatoryLimit = uint32(2^30)   # 2^31 and higher does not work with js-target, any more
+
 proc init(errorCatching: ErrorCatchingParserRef,
           ptype: string, mandatory: uint32,
           skipList: sink seq[Matcher] = @[],
@@ -739,7 +764,7 @@ proc violation(catcher: ErrorCatchingParserRef,
   proc match(rule: Matcher, text: StringSlice, location: int32): bool =
     case rule.kind:
     of mkRegex:
-      return text.matchLen(rule.regex, location) >= 0
+      return text.matchLen(rule.rxInfo.regex, location) >= 0
     of mkString:
       return text[location..<location + rule.cmpStr.len] == rule.cmpStr
     of mkProc:
@@ -810,30 +835,40 @@ proc setMatcherList[T: AnyMatcher](errorCatcher: Parser, list: sink seq[T], list
         raise newException(AssertionDefect, "For type T = Matcher, " &
           "listName must be \"errors\", but not \"" & listName & "\"!")
 
+const ErrorCatcherListNames* = ["errors", "skip-matchers", "resume-matchers"]
 
 template addMatchers(parser: Parser, list: typed, listName: string,
                      failIfAmbiguous: bool = true) =
+  assert listName in ErrorCatcherListNames, (listName & "is not one of " &
+                                             ErrorCatcherListNames.join(", "))
   if isErrorCatching in parser.flags:
     parser.setMatcherList(list, listName)
   else:
+    let  # see: https://nim-lang.org/docs/strformat.html#limitations
+      pname {.inject.} = parser.pname
+      ptype {.inject.} = parser.ptype
+      lname {.inject.} = listName
+      ambigErr: string = (fmt"Parser {pname}:{ptype} contains more than " &
+        "one error catching parser (Series or Interleave), so that it remains" &
+        fmt" unclear to which of these the {lname} should be attached!")
+      notAcatcherErr: string = (fmt"Parser {pname}:{ptype} neither " &
+        "contains any nor is itself an error catching parser to which " &
+        fmt"{lname} could be attached!")
+
     var ambiguityFlag: bool = false
     parser.forEach(p, anonSubs):
-     if isErrorCatching in p.flags:
+     if (isErrorCatching in p.flags and
+         ErrorCatchingParserRef(p).mandatory < NoMandatoryLimit):
        if ambiguityFlag:
-         raise newException(AssertionDefect,
-           fmt"Parser {parser.name}:{parser.ptype} contains more than one " &
-           "error catching parser (Series or Interleave), so that it remains" &
-           fmt" unclear to which of these the {listName} should be attached!")
+         raise newException(AssertionDefect, ambigErr)
        p.setMatcherList(list, listName)
        ErrorCatchingParserRef(p).referredParsers.setLen(0)
        if not failIfAmbiguous:
          break
        ambiguityFlag = true
     if not ambiguityFLag:
-      raise newException(AssertionDefect,
-        fmt"Parser {parser.name}:{parser.ptype} neither " &
-        "contains any nor is itself an error catching parser to which " &
-        fmt"{listname} could be attached!")
+      echo $parser.subParsers[0].name
+      raise newException(AssertionDefect, notAcatcherErr)
 
 
 template errors*(parser: Parser, errors: seq[ErrorMatcher], unambig: bool = true) =
@@ -913,17 +948,10 @@ method `$`*(self: TextRef): string =
 ##
 
 type
-  RegExpInfo = tuple[reStr: string, regex: Regex]
   RegExpRef = ref RegExpObj not nil
   RegExpObj = object of ParserObj
     reInfo: RegExpInfo
 
-const unicodePrefix = "(*UTF8)(*UCP)"
-
-proc rx*(rx_str: string): RegExpInfo = (rx_str, re(unicodePrefix & rx_str))
-
-proc mrx*(multiline_rx_str: string): RegExpInfo =
-  (multiline_rx_str, rex(unicodePrefix & multiline_rx_str))
 
 proc init*(regexParser: RegExpRef, rxInfo: RegExpInfo): RegExpRef =
   discard Parser(regexParser).init(RegExpName)
@@ -1247,7 +1275,7 @@ proc init*(series: SeriesRef,
   return series
 
 template Series*(parsers: varargs[Parser]): SeriesRef =
-  new(SeriesRef).init(parsers, RepLimit)
+  new(SeriesRef).init(parsers, NoMandatoryLimit)
 
 template Series*(parsers: varargs[Parser], mandatory: uint32): SeriesRef =
   new(SeriesRef).init(parsers, mandatory)
@@ -1308,8 +1336,8 @@ method `$`*(self: SeriesRef): string =
 
 proc `<<`(left, right: SeriesRef) =
   ## Merges the right series into the left series.
-  if left.mandatory >= RepLimit and right.mandatory < RepLimit:
-    left.mandatory = min(left.subParsers.len.uint32 + right.mandatory, RepLimit)
+  if left.mandatory >= NoMandatoryLimit and right.mandatory < NoMandatoryLimit:
+    left.mandatory = min(left.subParsers.len.uint32 + right.mandatory, NoMandatoryLimit)
   left.subParsers &= right.subParsers
   mergeErrorLists(left, right)
 
@@ -1329,7 +1357,7 @@ proc `&`*(series: SeriesRef, other: Parser): SeriesRef =
 proc `&`*(other: Parser, series: SeriesRef): SeriesRef =
   if series.pname != "":  return Series(other, series)
   series.subParsers = @[other] & series.subParsers
-  if series.mandatory < RepLimit:
+  if series.mandatory < NoMandatoryLimit:
     series.mandatory += 1
   return series
 
@@ -1476,6 +1504,7 @@ method cleanUp(self: ForwardRef) =
 
 proc init*(forward: ForwardRef): ForwardRef =
   discard Parser(forward).init(ForwardName)
+  forward.flags.incl isForward
   forward.call = forwardWrapper
   forward.recursionCounter = initTable[int32, int32]()
   return forward
@@ -1552,6 +1581,11 @@ when isMainModule:
   let term = "term".assign             (factor & ZeroOrMore((txt"*" | txt"/") & WS & § factor))
   expression.set                       (term & ZeroOrMore((txt"+" | txt"-") & WS & § term))
   expression.grammar = Grammar("Arithmetic")
+
+  expression.errors(@[(anyPassage, "Zahl oder Ausdruck erwartet, aber nicht {1}")])
+  term.errors(@[(anyPassage, "Zahl oder Ausdruck (in Klammern) erwartet, aber nicht {1}")])
+  group.errors(@[(anyPassage, "Schließende Klammer erwartet, aber nicht {1}")])
+
   echo $expression
 
   var tree = expression("1 + 1").node
@@ -1570,6 +1604,8 @@ when isMainModule:
     tree = expression("(3 + 4 * 2").node
   except ParsingException as pe:
     echo $pe
+
+
 
 
   echo "descendants-iterator"
