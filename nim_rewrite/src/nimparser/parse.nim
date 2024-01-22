@@ -510,6 +510,8 @@ proc handle_error(parser: Parser, pe: ParsingException, location: int32): Parsin
     nextLoc = pe.location + pe.node_orig_len
     (skipNode, i) = reentry_point(grammar.document, nextLoc, rules,
                                    grammar.commentRe, SearchWindowDefault)
+  if rules.len > 0:
+    echo $rules
 
   if i >= 0 or parser == grammar.root:
     var zombie: NodeOrNil = nil
@@ -700,8 +702,7 @@ template at(p: Parser): Matcher = assert False, ("Use after() or passage() " &
 template after(p: Parser): Matcher = Matcher(kind: mkParser, consumeParser: p)
 template passage(p: Parser): Matcher = Matcher(kind: mkParser, consumeParser: p)
 let anyPassage = Matcher(kind: mkString, cmpStr: "")
-proc atRx(reStr: string): Matcher = at(rx(reStr))
-proc atMrx(multilineReStr: string): Matcher = at(mrx(multilineReStr))
+proc find(reStr: string): Matcher = at(rx(reStr))
 
 const NoMandatoryLimit = uint32(2^30)   # 2^31 and higher does not work with js-target, any more
 
@@ -1591,7 +1592,7 @@ when isMainModule:
   expression.grammar = Grammar("Arithmetic")
 
   expression.errors(@[(anyPassage, "Zahl oder Ausdruck erwartet, aber nicht {1}")])
-  expression.resume(@[atRx"(?=\d)"])
+  expression.resume(@[find"(?=\d)"])
   term.errors(@[(anyPassage, "Zahl oder Ausdruck (in Klammern) erwartet, aber nicht {1}")])
   group.errors(@[(anyPassage, "Schließende Klammer erwartet, aber nicht {1}")])
 
