@@ -691,15 +691,17 @@ proc returnSeqPlaceholder(parser: Parser, nodes: sink seq[Node]): Node =
 ## considered mandatory once all parsers up to the index have been consumed.
 
 
-template passage(rxp: RegExpInfo): Matcher = Matcher(kind: mkRegex, rxInfo: rxp)
-template passage(s: string): Matcher = Matcher(kind: mkString, cmpStr: s)
-template passage(fn: MatcherProc): Matcher = Matcher(kind: mkProc, findProc: fn)
-template passage(p: Parser): Matcher = assert False, ("Use consume() or matchesHere() " &
+template at(rxp: RegExpInfo): Matcher = Matcher(kind: mkRegex, rxInfo: rxp)
+template at(s: string): Matcher = Matcher(kind: mkString, cmpStr: s)
+template at(fn: MatcherProc): Matcher = Matcher(kind: mkProc, findProc: fn)
+template at(p: Parser): Matcher = assert False, ("Use after() or passage() " &
   "instead, because matchers of kind mkParser do not search the next location where that " &
   "parser matches, but apply the parser to consume the text before the next viable location.")
-template consume(p: Parser): Matcher = Matcher(kind: mkParser, consumeParser: p)
-template matchesHere(p: Parser): Matcher = Matcher(kind: mkParser, consumeParser: p)
+template after(p: Parser): Matcher = Matcher(kind: mkParser, consumeParser: p)
+template passage(p: Parser): Matcher = Matcher(kind: mkParser, consumeParser: p)
 let anyPassage = Matcher(kind: mkString, cmpStr: "")
+proc atRx(reStr: string): Matcher = at(rx(reStr))
+proc atMrx(multilineReStr: string): Matcher = at(mrx(multilineReStr))
 
 const NoMandatoryLimit = uint32(2^30)   # 2^31 and higher does not work with js-target, any more
 
@@ -738,6 +740,9 @@ method refdParsers*(self: ErrorCatchingParserRef): lent seq[Parser] =
   else:
     assert self.referredParsers.len >= self.subParsers.len
   return self.referredParsers
+
+func isActive(catcher: ErrorCatchingParserRef): bool =
+  catcher.mandatory < NoMandatoryLimit
 
 proc reentry(catcher: ErrorCatchingParserRef, location: int32):
      tuple[nd: Node, reloc: int32] =
@@ -815,32 +820,37 @@ proc mergeErrorLists(left, right: ErrorCatchingParserRef) =
         if p == q: break innerLoop
       left.referredParsers.add(p)
 
-
 proc setMatcherList[T: AnyMatcher](errorCatcher: Parser, list: sink seq[T], listName: string) =
     assert isErrorCatching in errorCatcher.flags
+    let catcher = ErrorCatchingParserRef(errorCatcher)
     when T is Matcher:
       case listName
       of "skip-matchers":
-        ErrorCatchingParserRef(errorCatcher).skipList = list
+        assert catcher.skipList.len == 0, $catcher & ": skipList cannot be set twice!"
+        catcher.skipList = list
       of "resume-matchers":
-        ErrorCatchingParserRef(errorCatcher).resumeList = list
+        assert catcher.resumeList.len == 0, $catcher & ": skipList cannot be set twice!"
+        catcher.resumeList = list
       else:
         raise newException(AssertionDefect, "For type T = Matcher, " &
           "listName must be \"skip-matchers\" or \"resume-machters\", " &
-          fmt"but not \"{listName}\"!")
+          "but not \"" & listName & "\"!")
     elif T is ErrorMatcher:
       if listName == "errors":
-        ErrorCatchingParserRef(errorCatcher).errorList = list
+        assert catcher.errorList.len == 0, $catcher & ": skipList cannot be set twice!"
+        catcher.errorList = list
       else:
         raise newException(AssertionDefect, "For type T = Matcher, " &
           "listName must be \"errors\", but not \"" & listName & "\"!")
 
 const ErrorCatcherListNames* = ["errors", "skip-matchers", "resume-matchers"]
 
-template addMatchers(parser: Parser, list: typed, listName: string,
+
+template attachMatchers(parser: Parser, list: seq[AnyMatcher], listName: string,
                      failIfAmbiguous: bool = true) =
   assert listName in ErrorCatcherListNames, (listName & "is not one of " &
                                              ErrorCatcherListNames.join(", "))
+  assert list.len > 0, "Empty lists are not allowed"
   if isErrorCatching in parser.flags:
     parser.setMatcherList(list, listName)
   else:
@@ -854,11 +864,9 @@ template addMatchers(parser: Parser, list: typed, listName: string,
       notAcatcherErr: string = (fmt"Parser {pname}:{ptype} neither " &
         "contains any nor is itself an error catching parser to which " &
         fmt"{lname} could be attached!")
-
     var ambiguityFlag: bool = false
     parser.forEach(p, anonSubs):
-     if (isErrorCatching in p.flags and
-         ErrorCatchingParserRef(p).mandatory < NoMandatoryLimit):
+     if isErrorCatching in p.flags and ErrorCatchingParserRef(p).isActive:
        if ambiguityFlag:
          raise newException(AssertionDefect, ambigErr)
        p.setMatcherList(list, listName)
@@ -871,14 +879,14 @@ template addMatchers(parser: Parser, list: typed, listName: string,
       raise newException(AssertionDefect, notAcatcherErr)
 
 
-template errors*(parser: Parser, errors: seq[ErrorMatcher], unambig: bool = true) =
-  addMatchers(parser, errors, "errors", unambig)
+proc errors*(parser: Parser, errors: seq[ErrorMatcher], unambig: bool = true) =
+  attachMatchers(parser, errors, "errors", unambig)
 
-template skip*(parser: Parser, skipMatchers: seq[Matcher], unambig: bool = true) =
-  addMatchers(parser, skipMatchers, "skip-matchers", unambig)
+proc skip*(parser: Parser, skipMatchers: seq[Matcher], unambig: bool = true) =
+  attachMatchers(parser, skipMatchers, "skip-matchers", unambig)
 
-template resume*(parser: Parser, resumeMatchers: seq[Matcher], unambig: bool = true) =
-  addMatchers(parser, resumeMatchers, "resume-matchers", unambig)
+proc resume*(parser: Parser, resumeMatchers: seq[Matcher], unambig: bool = true) =
+  attachMatchers(parser, resumeMatchers, "resume-matchers", unambig)
 
 
 ## Modifiers
@@ -1583,6 +1591,7 @@ when isMainModule:
   expression.grammar = Grammar("Arithmetic")
 
   expression.errors(@[(anyPassage, "Zahl oder Ausdruck erwartet, aber nicht {1}")])
+  expression.resume(@[atRx"(?=\d)"])
   term.errors(@[(anyPassage, "Zahl oder Ausdruck (in Klammern) erwartet, aber nicht {1}")])
   group.errors(@[(anyPassage, "Schließende Klammer erwartet, aber nicht {1}")])
 
