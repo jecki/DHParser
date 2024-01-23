@@ -16,7 +16,7 @@
 {.experimental: "strictDefs".}
 {.experimental: "strictCaseObjects".}
 
-import std/strutils
+import std/[strutils, strformat]
 
 when defined(js):
   import std/jsre
@@ -260,7 +260,8 @@ else:
     if size < 0:
       (a, b) = findBounds(slice.str[], pattern, slice.start + start)
     else:
-      (a, b) = findBounds(cstring(slice.str[]), pattern, slice.start + start, size)
+      let buf = cstring(slice.str[])
+      (a, b) = findBounds(buf, pattern, slice.start + start, min(buf.len, size))
     if a < 0:  return (-1, -2)
     return (a.int32 - slice.start, b.int32 - slice.start)
 

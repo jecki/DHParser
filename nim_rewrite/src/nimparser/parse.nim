@@ -24,12 +24,13 @@ let
 type
   RegExpInfo = tuple[reStr: string, regex: Regex]
 
-const unicodePrefix = "(*UTF8)(*UCP)"
+const
+  unicodePrefix = "(*UTF8)(*UCP)"
 
 proc rx*(rx_str: string): RegExpInfo = (rx_str, re(unicodePrefix & rx_str))
-
 proc mrx*(multiline_rx_str: string): RegExpInfo =
   (multiline_rx_str, rex(unicodePrefix & multiline_rx_str))
+proc `$`*(rxInfo: RegExpInfo): string = rxInfo.reStr
 
 
 ## Parser Base and Grammar
@@ -59,7 +60,7 @@ type
   # Matchers are needed for error-resumption
   MatcherKind* = enum mkRegex, mkString, mkProc, mkParser
   MatcherProc* = proc(text: StringSlice, start: int32, stop: int32):
-                     tuple[pos, length: int32]
+                      tuple[pos, length: int32]
   Matcher* = object
     case kind: MatcherKind
     of mkRegex:
@@ -125,7 +126,6 @@ when defined(js):
   type ParserIterator = proc(parser: Parser): seq[Parser]
 else:
   type ParserIterator = iterator(parser: Parser): Parser
-
 
 const
   # RecursionLimit = 1536
@@ -417,9 +417,22 @@ method `grammar=`*(self: Parser, grammar: GrammarRef) {.base.} =
 
 ## catching syntax errors and resuming after that
 
+proc `$`*(m: Matcher): string =
+  case m.kind:
+  of mkRegex:
+    "/" & m.rxInfo.reStr & "/"
+  of mkString:
+    "\"" & m.cmpStr & "\""
+  of mkProc:
+    "func()"
+  of mkParser:
+    repr(m.consumeParser)
+
+
 proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
                    commentRe: Regex = NeverMatchRegex,
                    searchWindowSize: int32 = SearchWindowDefault): ParsingResult =
+  # TODO: In the Python-code, the returned location is an offset!!!
   let upperLimit = document.len + 1
   var
     pos = location
@@ -510,9 +523,6 @@ proc handle_error(parser: Parser, pe: ParsingException, location: int32): Parsin
     nextLoc = pe.location + pe.node_orig_len
     (skipNode, i) = reentry_point(grammar.document, nextLoc, rules,
                                    grammar.commentRe, SearchWindowDefault)
-  if rules.len > 0:
-    echo $rules
-
   if i >= 0 or parser == grammar.root:
     var zombie: NodeOrNil = nil
     if i < 0:  i = 0
@@ -692,7 +702,6 @@ proc returnSeqPlaceholder(parser: Parser, nodes: sink seq[Node]): Node =
 ## of contained parsers. All parsers from the mandatory-index onward are
 ## considered mandatory once all parsers up to the index have been consumed.
 
-
 template at(rxp: RegExpInfo): Matcher = Matcher(kind: mkRegex, rxInfo: rxp)
 template at(s: string): Matcher = Matcher(kind: mkString, cmpStr: s)
 template at(fn: MatcherProc): Matcher = Matcher(kind: mkProc, findProc: fn)
@@ -702,7 +711,7 @@ template at(p: Parser): Matcher = assert False, ("Use after() or passage() " &
 template after(p: Parser): Matcher = Matcher(kind: mkParser, consumeParser: p)
 template passage(p: Parser): Matcher = Matcher(kind: mkParser, consumeParser: p)
 let anyPassage = Matcher(kind: mkString, cmpStr: "")
-proc find(reStr: string): Matcher = at(rx(reStr))
+func atRe(reStr: string): Matcher = at(rx(reStr))
 
 const NoMandatoryLimit = uint32(2^30)   # 2^31 and higher does not work with js-target, any more
 
@@ -1592,7 +1601,7 @@ when isMainModule:
   expression.grammar = Grammar("Arithmetic")
 
   expression.errors(@[(anyPassage, "Zahl oder Ausdruck erwartet, aber nicht {1}")])
-  expression.resume(@[find"(?=\d)"])
+  expression.resume(@[atRe"(?=\d)"])
   term.errors(@[(anyPassage, "Zahl oder Ausdruck (in Klammern) erwartet, aber nicht {1}")])
   group.errors(@[(anyPassage, "Schließende Klammer erwartet, aber nicht {1}")])
 

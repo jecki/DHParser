@@ -4044,7 +4044,7 @@ class ErrorCatchingNary(NaryParser):
         :param err_node: A zombie-node that captures the text from the
                 position where the error occurred to a suggested
                 reentry-position.
-        :param reloc: A position value that represents the reentry point for
+        :param reloc: A position offset that represents the reentry point for
                 parsing after the error occurred.
 
         :return:   a tuple of an error object and a location for the
