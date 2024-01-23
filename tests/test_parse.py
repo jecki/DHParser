@@ -658,8 +658,7 @@ class TestSeries:
         assert st.errors
 
     def test_mandatory3(selfself):
-        lang = r"""
-            @expression_resume = /(?=\d)/
+        lang = r"""       
             expression = term { (`+`|`-`) WS § term }
             term = factor { (`*`|`/`) WS § factor }
             factor = [ sign ] (NUMBER | group)
@@ -667,10 +666,15 @@ class TestSeries:
             sign = (`+` | `-`) WS
             HIDE:NUMBER = /(?:0|(?:[1-9]\d*))(?:\.\d+)?/ WS
             DROP:WS = /\s*/
+            
+            @expression_resume = /(?=\d|\(|\)|$)/
+            @term_resume = /(?=\d|\(|$)/
+            @group_resume = /(?=\)|$)/
         """
         parser = create_parser(lang)
         st = parser("(3 + ) * 2")
         assert st.errors
+        print(st.errors)
 
 
 class TestAllOfSomeOf:

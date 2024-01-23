@@ -317,7 +317,8 @@ def reentry_point(rest: StringView,
         reentry-point. A value smaller than zero means that the complete remaining
         text will be searched. A value of zero effectively turns of resuming after
         error
-    :return: A tuple of the integer index of the closest reentry point and a Node
+    :return: A tuple of the integer index (counted from the beginning of rest!)
+        of the closest reentry point and a Node
         capturing all text from ``rest`` up to this point or ``(-1, None)`` if no
         reentry-point was found.
     """

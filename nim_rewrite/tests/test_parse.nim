@@ -5,6 +5,7 @@
 import std/[unittest, strutils]
 
 import nimparser/strslice
+import nimparser/error
 import nimparser/nodetree
 import nimparser/parse
 
@@ -23,7 +24,6 @@ test "RegExp in sequence":
 
 test "Whitespace":
   let ws = ":ws".assign Whitespace(r"\s+", r"#.*")
-  echo $ws("   # comment").node.asSxpr
   doAssert ws("   # comment").node.asSxpr == "(:ws \"   # comment\")"
 
 test "Alternative":
@@ -59,6 +59,10 @@ expression.set                       (term & ZeroOrMore((txt"+" | txt"-") & WS &
 expression.grammar = Grammar("Arithmetic")
 let arithmetic = expression
 
+expression.errors(@[(anyPassage, "Zahl oder Ausdruck erwartet, aber nicht {1}")])
+term.errors(@[(anyPassage, "Zahl oder Ausdruck (in Klammern) erwartet, aber nicht {1}")])
+group.errors(@[(anyPassage, "Schließende Klammer erwartet, aber nicht {1}")])
+
 test "arithmetic":
   var result = arithmetic("1 + 1")
   assert $result.node == """
@@ -75,18 +79,54 @@ test "arithmetic error catching":
     tree = expression("(3 + ) * 2").node
     check false
   except ParsingException as pe:
+    check pe.error.message == "Zahl oder Ausdruck erwartet, aber nicht ») * 2«"
     check pe.error.pos == 5
   try:
     tree = expression("(3 + * 2").node
     check false
   except ParsingException as pe:
+    check pe.error.message == "Zahl oder Ausdruck erwartet, aber nicht »* 2«"
     check pe.error.pos == 5
   try:
     tree = expression("(3 + 4 * 2").node
     check false
   except ParsingException as pe:
+    check pe.error.message == "Schließende Klammer erwartet, aber nicht EOF"
     check pe.error.pos == 10
 
+test "arithmetic error resumption":
+  let WS  = "WS".assign                DROP(rxp"\s*")
+  let NUMBER = ":NUMBER".assign        rxp"(?:0|(?:[1-9]\d*))(?:\.\d+)?" & WS
+  let sign = "sign".assign             ((txt"+" | txt"-") & WS)
+  let expression = "expression".assign Forward()
+  let group = "group".assign           (txt"(" & WS & § expression & txt")" & WS)
+  let factor = "factor".assign         (Option(sign) & (NUMBER | group))
+  let term = "term".assign             (factor & ZeroOrMore((txt"*" | txt"/") & WS & § factor))
+  expression.set                       (term & ZeroOrMore((txt"+" | txt"-") & WS & § term))
+  expression.grammar = Grammar("Arithmetic")
+  let arithmetic = expression
+
+  expression.resume(@[atRe"(?=\d|\(|\)|$)"])
+  term.resume(@[atRe"(?=\d|\(|$)"])
+  group.resume(@[atRe"(?=\)|$)"])
+
+  var tree: NodeOrNil
+
+  try:
+    tree = expression("(3 + ) * 2").node
+    check $expression.grammar.errors == "@[?:5:1010:term expected by parser expression, but ») * 2« found!]"
+  except ParsingException as pe:
+    check false
+  try:
+    tree = expression("(3 + * 2").node
+    check $expression.grammar.errors == "@[?:5:1010:term expected by parser expression, but »* 2« found!, ?:7:1010:\")\" expected by parser group, but »2« found!]"
+  except ParsingException as pe:
+    check false
+  try:
+    tree = expression("(3 + 4 * 2").node
+    check $expression.grammar.errors == "@[?:10:1010:\")\" expected by parser group, but EOF found!]"
+  except ParsingException as pe:
+    check false
 
 let traversalExpected = """
 expression := expression

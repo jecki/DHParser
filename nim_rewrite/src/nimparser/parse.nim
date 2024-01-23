@@ -108,14 +108,14 @@ type
   GrammarFlagSet = set[GrammarFlags]
   GrammarRef = ref GrammarObj not nil
   GrammarObj = object of RootObj
-    name: string
+    name*: string
     flags: GrammarFlagSet
     returnItem: ReturnItemProc
     returnSequence: ReturnSequenceProc
     document: StringSlice
     root: ParserOrNil
     commentRe: Regex
-    errors: seq[ErrorRef]
+    errors*: seq[ErrorRef]
     rollbackStack: seq[RollbackItem]
     rollbackLocation: int32
     farthestFail: int32
@@ -431,8 +431,8 @@ proc `$`*(m: Matcher): string =
 
 proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
                    commentRe: Regex = NeverMatchRegex,
-                   searchWindowSize: int32 = SearchWindowDefault): ParsingResult =
-  # TODO: In the Python-code, the returned location is an offset!!!
+                   searchWindowSize: int32 = SearchWindowDefault):
+                     tuple[node: NodeOrNil, offset: int32] =
   let upperLimit = document.len + 1
   var
     pos = location
@@ -505,7 +505,7 @@ proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
   if isNil(skipNode):
     let skipSlice = document[location ..< max(closestMatch, location)]
     skipNode = newNode(ZombieName, skipSlice)
-  return (skip_node, closestMatch)
+  return (skip_node, closestMatch - location)
 
 
 proc handle_error(parser: Parser, pe: ParsingException, location: int32): ParsingResult =
@@ -702,18 +702,18 @@ proc returnSeqPlaceholder(parser: Parser, nodes: sink seq[Node]): Node =
 ## of contained parsers. All parsers from the mandatory-index onward are
 ## considered mandatory once all parsers up to the index have been consumed.
 
-template at(rxp: RegExpInfo): Matcher = Matcher(kind: mkRegex, rxInfo: rxp)
-template at(s: string): Matcher = Matcher(kind: mkString, cmpStr: s)
-template at(fn: MatcherProc): Matcher = Matcher(kind: mkProc, findProc: fn)
-template at(p: Parser): Matcher = assert False, ("Use after() or passage() " &
+template at*(rxp: RegExpInfo): Matcher = Matcher(kind: mkRegex, rxInfo: rxp)
+template at*(s: string): Matcher = Matcher(kind: mkString, cmpStr: s)
+template at*(fn: MatcherProc): Matcher = Matcher(kind: mkProc, findProc: fn)
+template at*(p: Parser): Matcher = assert False, ("Use after() or passage() " &
   "instead, because matchers of kind mkParser do not search the next location where that " &
   "parser matches, but apply the parser to consume the text before the next viable location.")
-template after(p: Parser): Matcher = Matcher(kind: mkParser, consumeParser: p)
-template passage(p: Parser): Matcher = Matcher(kind: mkParser, consumeParser: p)
-let anyPassage = Matcher(kind: mkString, cmpStr: "")
-func atRe(reStr: string): Matcher = at(rx(reStr))
+template after*(p: Parser): Matcher = Matcher(kind: mkParser, consumeParser: p)
+template passage*(p: Parser): Matcher = Matcher(kind: mkParser, consumeParser: p)
+let anyPassage* = Matcher(kind: mkString, cmpStr: "")
+func atRe*(reStr: string): Matcher = at(rx(reStr))
 
-const NoMandatoryLimit = uint32(2^30)   # 2^31 and higher does not work with js-target, any more
+const NoMandatoryLimit* = uint32(2^30)   # 2^31 and higher does not work with js-target, any more
 
 proc init(errorCatching: ErrorCatchingParserRef,
           ptype: string, mandatory: uint32,
@@ -801,7 +801,7 @@ proc violation(catcher: ErrorCatchingParserRef,
     sym = if isNil(catcher.symbol):  $catcher  else:  catcher.symbol.pname
   var
     errCode = MandatoryCondinuation
-    message = fmt"»{expected}« expected by parser {$sym}, but {found} found!"
+    message = fmt"{expected} expected by parser {$sym}, but {found} found!"
   # errorNode.pos = location  # if errorNode.sourcePos < 0:
   for (rule, msg) in catcher.errorList:
     if match(rule, gr.document, location):
@@ -1117,7 +1117,7 @@ type
   RepeatObj = object of ParserObj
     repRange: Range
 
-const RepLimit = uint32(2^30)   # 2^31 and higher does not work with js-target, any more
+const RepLimit* = uint32(2^30)   # 2^31 and higher does not work with js-target, any more
 
 
 proc init*(repeat: RepeatRef, 
@@ -1601,9 +1601,12 @@ when isMainModule:
   expression.grammar = Grammar("Arithmetic")
 
   expression.errors(@[(anyPassage, "Zahl oder Ausdruck erwartet, aber nicht {1}")])
-  expression.resume(@[atRe"(?=\d)"])
   term.errors(@[(anyPassage, "Zahl oder Ausdruck (in Klammern) erwartet, aber nicht {1}")])
   group.errors(@[(anyPassage, "Schließende Klammer erwartet, aber nicht {1}")])
+
+  expression.resume(@[atRe"(?=\d|\(|\)|$)"])
+  term.resume(@[atRe"(?=\d|\(|$)"])
+  group.resume(@[atRe"(?=\)|$)"])
 
   echo $expression
 
