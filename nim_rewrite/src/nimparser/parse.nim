@@ -622,7 +622,6 @@ proc `()`*(parser: Parser, document: string or StringSlice, location: int32 = 0)
   result = parser.call(parser, location)
 
 
-
 ## procedures performing early tree-reduction on return values of parsers
 
 proc returnItemAsIs(parser: Parser, node: NodeOrNil): Node =
@@ -845,6 +844,12 @@ proc setMatcherList[T: AnyMatcher](errorCatcher: Parser, list: sink seq[T], list
         raise newException(AssertionDefect, "For type T = Matcher, " &
           "listName must be \"skip-matchers\" or \"resume-machters\", " &
           "but not \"" & listName & "\"!")
+      if errorCatcher.grammarVar != GrammarPlaceholder:
+        for matcher in list:
+          case matcher.kind:
+          of mkParser:
+            matcher.consumeParser.grammar = errorCatcher.grammar
+          else: discard
     elif T is ErrorMatcher:
       if listName == "errors":
         assert catcher.errorList.len == 0, $catcher & ": skipList cannot be set twice!"
@@ -852,6 +857,13 @@ proc setMatcherList[T: AnyMatcher](errorCatcher: Parser, list: sink seq[T], list
       else:
         raise newException(AssertionDefect, "For type T = Matcher, " &
           "listName must be \"errors\", but not \"" & listName & "\"!")
+      if errorCatcher.grammarVar != GrammarPlaceholder:
+        for em in list:
+          let matcher = em.matcher
+          case matcher.kind:
+          of mkParser:
+            matcher.consumeParser.grammar = errorCatcher.grammar
+          else: discard
 
 const ErrorCatcherListNames* = ["errors", "skip-matchers", "resume-matchers"]
 
@@ -1079,6 +1091,8 @@ method `grammar=`*(self: WhitespaceRef, grammar: GrammarRef) =
          "Multiple definitions of comments or insignificant whitespace not allowed!"
   procCall `grammar=`(Parser(self), grammar)
   if self.comment.reStr.len > 0 and self.comment.regex != NeverMatchRegex:
+    assert grammar.commentRe == NeverMatchRegex,
+           "implicit whitespace must only be defined once per grammar!"
     grammar.commentRe = self.comment.regex
 
 method `$`*(self: WhitespaceRef): string = "~"
@@ -1617,7 +1631,7 @@ when isMainModule:
   term.resume(atRe"(?=\d|\(|$)")
   group.resume(atRe"(?=\)|$)")
 
-  echo $expression
+  echo $expression.ptype
 
   var tree = expression("1 + 1").node
   echo tree.asSxpr()
