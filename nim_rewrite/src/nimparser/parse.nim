@@ -394,7 +394,7 @@ template forEach*(parser: Parser, p: untyped, selector: ParserIterator, body: un
 ## grammar-property
 
 template grammar*(parser: Parser) : GrammarRef =
-  assert parser.grammarVar != GrammarPlaceholder
+  assert parser.grammarVar != GrammarPlaceholder, $parser
   parser.grammarVar
 
 method `grammar=`*(self: Parser, grammar: GrammarRef) {.base.} =
@@ -705,7 +705,7 @@ proc returnSeqPlaceholder(parser: Parser, nodes: sink seq[Node]): Node =
 template at*(rxp: RegExpInfo): Matcher = Matcher(kind: mkRegex, rxInfo: rxp)
 template at*(s: string): Matcher = Matcher(kind: mkString, cmpStr: s)
 template at*(fn: MatcherProc): Matcher = Matcher(kind: mkProc, findProc: fn)
-template at*(p: Parser): Matcher = assert False, ("Use after() or passage() " &
+template at*(p: Parser): Matcher = assert false, ("Use after() or passage() " &
   "instead, because matchers of kind mkParser do not search the next location where that " &
   "parser matches, but apply the parser to consume the text before the next viable location.")
 template after*(p: Parser): Matcher = Matcher(kind: mkParser, consumeParser: p)
@@ -892,11 +892,20 @@ template attachMatchers(parser: Parser, list: seq[AnyMatcher], listName: string,
 proc errors*(parser: Parser, errors: seq[ErrorMatcher], unambig: bool = true) =
   attachMatchers(parser, errors, "errors", unambig)
 
-proc skip*(parser: Parser, skipMatchers: seq[Matcher], unambig: bool = true) =
+proc errors*(parser: Parser, error: ErrorMatcher, unambig: bool = true) =
+  attachMatchers(parser, @[error], "errors", unambig)
+
+proc skipUntil*(parser: Parser, skipMatchers: seq[Matcher], unambig: bool = true) =
   attachMatchers(parser, skipMatchers, "skip-matchers", unambig)
+
+proc skipUntil*(parser: Parser, skipMatcher: Matcher, unambig: bool = true) =
+  attachMatchers(parser, @[skipMatcher], "skip-matchers", unambig)
 
 proc resume*(parser: Parser, resumeMatchers: seq[Matcher], unambig: bool = true) =
   attachMatchers(parser, resumeMatchers, "resume-matchers", unambig)
+
+proc resume*(parser: Parser, resumeMatcher: Matcher, unambig: bool = true) =
+  attachMatchers(parser, @[resumeMatcher], "resume-matchers", unambig)
 
 
 ## Modifiers
@@ -1600,13 +1609,13 @@ when isMainModule:
   expression.set                       (term & ZeroOrMore((txt"+" | txt"-") & WS & § term))
   expression.grammar = Grammar("Arithmetic")
 
-  expression.errors(@[(anyPassage, "Zahl oder Ausdruck erwartet, aber nicht {1}")])
+  expression.errors((anyPassage, "Zahl oder Ausdruck erwartet, aber nicht {1}"))
   term.errors(@[(anyPassage, "Zahl oder Ausdruck (in Klammern) erwartet, aber nicht {1}")])
   group.errors(@[(anyPassage, "Schließende Klammer erwartet, aber nicht {1}")])
 
-  expression.resume(@[atRe"(?=\d|\(|\)|$)"])
-  term.resume(@[atRe"(?=\d|\(|$)"])
-  group.resume(@[atRe"(?=\)|$)"])
+  expression.resume(atRe"(?=\d|\(|\)|$)")
+  term.resume(atRe"(?=\d|\(|$)")
+  group.resume(atRe"(?=\)|$)")
 
   echo $expression
 
@@ -1620,6 +1629,7 @@ when isMainModule:
     echo $pe
   try:
     tree = expression("(3 + * 2").node
+    echo $expression.grammar.errors
   except ParsingException as pe:
     echo $pe
   try:
@@ -1627,7 +1637,14 @@ when isMainModule:
   except ParsingException as pe:
     echo $pe
 
+  let gap = ":gap".assign(rxp"[^\d()](?=[\d(])")
+  expression.skipUntil(after(gap))
 
+  try:
+    tree = expression("(3 + * 2").node
+    echo $expression.grammar.errors
+  except ParsingException as pe:
+    echo $pe
 
 
   echo "descendants-iterator"
