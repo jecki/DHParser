@@ -1160,7 +1160,10 @@ EBNF_AST_transformation_table = {
          remove_tokens('=')],  # remove_tokens('=') is only for backwards-compatibility
     "modifier": [],
     "expression":
-        [replace_by_single_child, flatten, remove_children('OR'),
+        [apply_if(replace_by_single_child, neg(has_parent("directive"))),
+         # the restriction above is required to distinguish regex-find-semantics
+         # from regex-parser semantics in skip and resume-directives
+         flatten, remove_children('OR'),
          remove_tokens('|')],  # remove_tokens('|') is only for backwards-compatibility
     "sequence":
         [replace_by_single_child, flatten, remove_children('AND')],
@@ -2911,6 +2914,10 @@ class EBNFCompiler(Compiler):
                 move_items(children, mv[0], mv[1])
             node.result = tuple(children)
 
+        if len(node.children) == 1:
+            # can only occur inside directives, because here expressions are not
+            # necessarily replaced by their single child. (See AST-Transformation)
+            return self.compile(node.children[0])
         return self.non_terminal(node, 'Alternative')
 
 

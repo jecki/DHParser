@@ -29,6 +29,7 @@ const
 
     MandatoryCondinuation* = ErrorCode(1010)
     MandatoryContinuationAtEOF* = ErrorCode(1015)
+    ParserStoppedBeforeEnd* = ErrorCode(1040)
 
     ErrorWhileRecovering* = ErrorCode(1301)
     # RecursionLimitReached* = ErrorCode(10_010)

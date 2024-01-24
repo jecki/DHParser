@@ -10,24 +10,24 @@ import nimparser/nodetree
 import nimparser/parse
 
 test "Text, simple test":
-  check Text("A")("A").node.asSxpr == "(:Text \"A\")"
+  check Text("A")("A").tree.asSxpr == "(:Text \"A\")"
 
 test "RegExp, simple test":
-  check RegExp(rx"\w+")("ABC").node.asSxpr() == "(:RegExp \"ABC\")"
+  check RegExp(rx"\w+")("ABC").tree.asSxpr() == "(:RegExp \"ABC\")"
 
 test "RegExp in sequence":
   let number = "number".assign RegExp(rx"\d+")
   let ws = "ws".assign RegExp(rx"\s*")
   let text = toStringSlice("1")
-  check number(text, 0).node.asSxpr == "(number \"1\")"
-  check ws(text, 1).node.asSxpr == "(ws \"\")"
+  check number(text, 0).tree.asSxpr == "(number \"1\")"
+  check ws(text, 1).tree.asSxpr == "(ws \"\")"
 
 test "Whitespace":
   let ws = ":ws".assign Whitespace(r"\s+", r"#.*")
-  doAssert ws("   # comment").node.asSxpr == "(:ws \"   # comment\")"
+  doAssert ws("   # comment").tree.asSxpr == "(:ws \"   # comment\")"
 
 test "Alternative":
-  check Alternative(Text("A"), Text("B"))("B").node.asSxpr == "(:Text \"B\")"
+  check Alternative(Text("A"), Text("B"))("B").tree.asSxpr == "(:Text \"B\")"
   check $Alternative(Text("A"), Text("B")) == "\"A\"|\"B\""
   check $((Text("A")|Text("B"))|(Text("C")|Text("D")|Text("E"))) == "\"A\"|\"B\"|\"C\"|\"D\"|\"E\""
 
@@ -65,7 +65,7 @@ group.errors(@[(anyPassage, "Schließende Klammer erwartet, aber nicht {1}")])
 
 test "arithmetic":
   var result = arithmetic("1 + 1")
-  assert $result.node == """
+  assert $result.tree == """
 (expression
   (term
     (factor "1"))
@@ -76,19 +76,19 @@ test "arithmetic":
 test "arithmetic error catching":
   var tree: NodeOrNil
   try:
-    tree = expression("(3 + ) * 2").node
+    tree = expression("(3 + ) * 2").tree
     check false
   except ParsingException as pe:
     check pe.error.message == "Zahl oder Ausdruck erwartet, aber nicht ») * 2«"
     check pe.error.pos == 5
   try:
-    tree = expression("(3 + * 2").node
+    tree = expression("(3 + * 2").tree
     check false
   except ParsingException as pe:
     check pe.error.message == "Zahl oder Ausdruck erwartet, aber nicht »* 2«"
     check pe.error.pos == 5
   try:
-    tree = expression("(3 + 4 * 2").node
+    tree = expression("(3 + 4 * 2").tree
     check false
   except ParsingException as pe:
     check pe.error.message == "Schließende Klammer erwartet, aber nicht EOF"
@@ -106,27 +106,44 @@ test "arithmetic error resumption":
   expression.grammar = Grammar("Arithmetic")
   let arithmetic = expression
 
-  expression.resume(@[atRe"(?=\d|\(|\)|$)"])
-  term.resume(@[atRe"(?=\d|\(|$)"])
-  group.resume(@[atRe"(?=\)|$)"])
+  expression.resume(atRe"(?=\d|\(|\)|$)")
+  term.resume(atRe"(?=\d|\(|$)")
+  group.resume(atRe"(?=\)|$)")
 
   var tree: NodeOrNil
 
   try:
-    tree = expression("(3 + ) * 2").node
+    tree = expression("(3 + ) * 2").tree
     check $expression.grammar.errors == "@[?:5:1010:term expected by parser expression, but ») * 2« found!]"
   except ParsingException as pe:
     check false
   try:
-    tree = expression("(3 + * 2").node
+    tree = expression("(3 + * 2").tree
     check $expression.grammar.errors == "@[?:5:1010:term expected by parser expression, but »* 2« found!, ?:7:1010:\")\" expected by parser group, but »2« found!]"
   except ParsingException as pe:
     check false
   try:
-    tree = expression("(3 + 4 * 2").node
+    tree = expression("(3 + 4 * 2").tree
     check $expression.grammar.errors == "@[?:10:1010:\")\" expected by parser group, but EOF found!]"
   except ParsingException as pe:
     check false
+
+  try:
+    tree = expression("3 + * 2").tree
+    check expression.grammar.errors.len == 2
+    check expression.grammar.errors[1].code == ParserStoppedBeforeEnd
+  except ParsingException as pe:
+    check false
+
+  let gap = ":gap".assign(rxp"[^\d()]*(?=[\d(])")
+  expression.skipUntil(after(gap))
+
+  try:
+    tree = expression("3 + * 2").tree
+    check expression.grammar.errors.len == 1
+  except ParsingException as pe:
+    check false
+
 
 let traversalExpected = """
 expression := expression

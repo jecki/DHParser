@@ -607,10 +607,11 @@ proc memoizationWrapper(parser: Parser, location: int32): ParsingResult =
     parser.visited[location] = result
     if not memoization:  grammar.flags.excl memoize
 
-proc `()`*(parser: Parser, location: int32): ParsingResult {.inline.} =
+proc `()`(parser: Parser, location: int32): ParsingResult {.inline.} =
   parser.call(parser, location)
 
-proc `()`*(parser: Parser, document: string or StringSlice, location: int32 = 0): ParsingResult =
+proc `()`*(parser: Parser, document: string or StringSlice, location: int32 = 0):
+          tuple[tree: NodeOrNil, errors: seq[ErrorRef]] =
   if parser.grammarVar == GrammarPlaceholder:
     parser.grammar = Grammar("adhoc", document=toStringSlice(document))
   else:
@@ -619,7 +620,13 @@ proc `()`*(parser: Parser, document: string or StringSlice, location: int32 = 0)
   parser.grammar.root = parser
   parser.forEach(p, refdSubs):
     p.cleanUp()
-  result = parser.call(parser, location)
+  let (tree, loc) = parser.call(parser, location)
+  if loc < document.len:
+      let snippet = $parser.grammar.document[loc..loc + 9].replace(re"\n", r"\n")
+      let msg = fmt"Parser {parser.name} stopped before end at »{snippet}«"
+      parser.grammar.errors.add(Error(msg, loc, ParserStoppedBeforeEnd))
+  return (tree, parser.grammar.errors)
+
 
 
 ## procedures performing early tree-reduction on return values of parsers
@@ -786,7 +793,7 @@ proc violation(catcher: ErrorCatchingParserRef,
     of mkParser:
       let parser = rule.consumeParser
       try:
-        let (node, pos) = parser.call(parser, location)
+        let (node, pos) = parser(location)
         return not isNil(node)
       except ParsingException as pe:
         let msg = "Error while picking error message with: " & $parser
@@ -1582,21 +1589,21 @@ when isMainModule:
   let doc = "text".assignName Text("X")
   let cst = doc("X")
   echo $cst
-  echo Text("A")("A").node.asSxpr
-  doAssert Text("A")("A").node.asSxpr == "(:Text \"A\")"
-  echo RegExp(rx"\w+")("ABC").node.asSxpr
-  doAssert RegExp(rx"\w+")("ABC").node.asSxpr == "(:RegExp \"ABC\")"
-  echo Whitespace(r"\s+", r"#.*")("   # comment").node.asSxpr
-  doAssert Whitespace(r"\s+", r"#.*")("   # comment").node.asSxpr == "(:Whitespace \"   # comment\")"
-  echo Repeat(Text("A"), (1u32, 3u32))("AAAA").node.asSxpr
-  echo ("r".assignName Repeat(Text("A"), (1u32, 3u32)))("AA").node.asSxpr
-  echo Series(Text("A"), Text("B"), Text("C"), mandatory=1u32)("ABC").node.asSxpr
+  echo Text("A")("A").tree.asSxpr
+  doAssert Text("A")("A").tree.asSxpr == "(:Text \"A\")"
+  echo RegExp(rx"\w+")("ABC").tree.asSxpr
+  doAssert RegExp(rx"\w+")("ABC").tree.asSxpr == "(:RegExp \"ABC\")"
+  echo Whitespace(r"\s+", r"#.*")("   # comment").tree.asSxpr
+  doAssert Whitespace(r"\s+", r"#.*")("   # comment").tree.asSxpr == "(:Whitespace \"   # comment\")"
+  echo Repeat(Text("A"), (1u32, 3u32))("AAAA").tree.asSxpr
+  echo ("r".assignName Repeat(Text("A"), (1u32, 3u32)))("AA").tree.asSxpr
+  echo Series(Text("A"), Text("B"), Text("C"), mandatory=1u32)("ABC").tree.asSxpr
   try:
-    echo Series(Text("A"), Text("B"), Text("C"), mandatory=1u32)("ABX").node.asSxpr
+    echo Series(Text("A"), Text("B"), Text("C"), mandatory=1u32)("ABX").tree.asSxpr
   except ParsingException:
     echo "Expected Exception"
-  echo Alternative(Text("A"), Text("B"))("B").node.asSxpr
-  doAssert Alternative(Text("A"), Text("B"))("B").node.asSxpr == "(:Text \"B\")"
+  echo Alternative(Text("A"), Text("B"))("B").tree.asSxpr
+  doAssert Alternative(Text("A"), Text("B"))("B").tree.asSxpr == "(:Text \"B\")"
   doAssert $Alternative(Text("A"), Text("B")) == "\"A\"|\"B\""
   doAssert $Series(Text("A"), Text("B"), Text("C"), mandatory=1u32) == "\"A\" §\"B\" \"C\""
   echo $((Text("A")|Text("B"))|(Text("C")|Text("D")|Text("E")))
@@ -1633,30 +1640,30 @@ when isMainModule:
 
   echo $expression.ptype
 
-  var tree = expression("1 + 1").node
+  var tree = expression("1 + 1").tree
   echo tree.asSxpr()
-  tree = expression("(3 + 4) * 2").node
+  tree = expression("(3 + 4) * 2").tree
   echo tree.asSxpr()
   try:
-    tree = expression("(3 + ) * 2").node
+    tree = expression("(3 + ) * 2").tree
   except ParsingException as pe:
     echo $pe
   try:
-    tree = expression("(3 + * 2").node
+    tree = expression("(3 + * 2").tree
     echo $expression.grammar.errors
   except ParsingException as pe:
     echo $pe
   try:
-    tree = expression("(3 + 4 * 2").node
+    tree = expression("(3 + 4 * 2").tree
   except ParsingException as pe:
     echo $pe
 
-  let gap = ":gap".assign(rxp"[^\d()](?=[\d(])")
+  let gap = ":gap".assign(rxp"[^\d()]*(?=[\d(])")
   expression.skipUntil(after(gap))
 
   try:
-    tree = expression("(3 + * 2").node
-    echo $expression.grammar.errors
+    tree = expression("3 + * 2").tree
+    echo ">> " & $expression.grammar.errors
   except ParsingException as pe:
     echo $pe
 

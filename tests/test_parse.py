@@ -674,7 +674,30 @@ class TestSeries:
         parser = create_parser(lang)
         st = parser("(3 + ) * 2")
         assert st.errors
-        print(st.errors)
+
+    def test_mandatory4(selfself):
+        lang = r"""       
+            expression = term { (`+`|`-`) WS § term }
+            term = factor { (`*`|`/`) WS § factor }
+            factor = [ sign ] (NUMBER | group)
+            group = `(` WS § expression `)` WS
+            sign = (`+` | `-`) WS
+            HIDE:NUMBER = /(?:0|(?:[1-9]\d*))(?:\.\d+)?/ WS
+            DROP:WS = /\s*/
+
+            gap = /[^\d()]*(?=[\d(])/
+
+            @expression_resume = /(?=\d|\(|\)|$)/
+            @expression_skip = gap
+            @term_resume = /(?=\d|\(|$)/
+            @group_resume = /(?=\)|$)/
+        """
+        parser = create_parser(lang)
+        st = parser("(3 + ) * 2")
+        assert st.errors
+        st = parser("3 + * 2")
+        assert st.errors
+        assert len(st.errors) == 1
 
 
 class TestAllOfSomeOf:
