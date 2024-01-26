@@ -611,7 +611,7 @@ proc `()`(parser: Parser, location: int32): ParsingResult {.inline.} =
   parser.call(parser, location)
 
 proc `()`*(parser: Parser, document: string or StringSlice, location: int32 = 0):
-          tuple[tree: NodeOrNil, errors: seq[ErrorRef]] =
+          tuple[root: NodeOrNil, errors: seq[ErrorRef]] =
   if parser.grammarVar == GrammarPlaceholder:
     parser.grammar = Grammar("adhoc", document=toStringSlice(document))
   else:
@@ -620,12 +620,12 @@ proc `()`*(parser: Parser, document: string or StringSlice, location: int32 = 0)
   parser.grammar.root = parser
   parser.forEach(p, refdSubs):
     p.cleanUp()
-  let (tree, loc) = parser.call(parser, location)
+  let (root, loc) = parser.call(parser, location)
   if loc < document.len:
       let snippet = $parser.grammar.document[loc..loc + 9].replace(re"\n", r"\n")
       let msg = fmt"Parser {parser.name} stopped before end at »{snippet}«"
       parser.grammar.errors.add(Error(msg, loc, ParserStoppedBeforeEnd))
-  return (tree, parser.grammar.errors)
+  return (root, parser.grammar.errors)
 
 
 
@@ -1589,21 +1589,21 @@ when isMainModule:
   let doc = "text".assignName Text("X")
   let cst = doc("X")
   echo $cst
-  echo Text("A")("A").tree.asSxpr
-  doAssert Text("A")("A").tree.asSxpr == "(:Text \"A\")"
-  echo RegExp(rx"\w+")("ABC").tree.asSxpr
-  doAssert RegExp(rx"\w+")("ABC").tree.asSxpr == "(:RegExp \"ABC\")"
-  echo Whitespace(r"\s+", r"#.*")("   # comment").tree.asSxpr
-  doAssert Whitespace(r"\s+", r"#.*")("   # comment").tree.asSxpr == "(:Whitespace \"   # comment\")"
-  echo Repeat(Text("A"), (1u32, 3u32))("AAAA").tree.asSxpr
-  echo ("r".assignName Repeat(Text("A"), (1u32, 3u32)))("AA").tree.asSxpr
-  echo Series(Text("A"), Text("B"), Text("C"), mandatory=1u32)("ABC").tree.asSxpr
+  echo Text("A")("A").root.asSxpr
+  doAssert Text("A")("A").root.asSxpr == "(:Text \"A\")"
+  echo RegExp(rx"\w+")("ABC").root.asSxpr
+  doAssert RegExp(rx"\w+")("ABC").root.asSxpr == "(:RegExp \"ABC\")"
+  echo Whitespace(r"\s+", r"#.*")("   # comment").root.asSxpr
+  doAssert Whitespace(r"\s+", r"#.*")("   # comment").root.asSxpr == "(:Whitespace \"   # comment\")"
+  echo Repeat(Text("A"), (1u32, 3u32))("AAAA").root.asSxpr
+  echo ("r".assignName Repeat(Text("A"), (1u32, 3u32)))("AA").root.asSxpr
+  echo Series(Text("A"), Text("B"), Text("C"), mandatory=1u32)("ABC").root.asSxpr
   try:
-    echo Series(Text("A"), Text("B"), Text("C"), mandatory=1u32)("ABX").tree.asSxpr
+    echo Series(Text("A"), Text("B"), Text("C"), mandatory=1u32)("ABX").root.asSxpr
   except ParsingException:
     echo "Expected Exception"
-  echo Alternative(Text("A"), Text("B"))("B").tree.asSxpr
-  doAssert Alternative(Text("A"), Text("B"))("B").tree.asSxpr == "(:Text \"B\")"
+  echo Alternative(Text("A"), Text("B"))("B").root.asSxpr
+  doAssert Alternative(Text("A"), Text("B"))("B").root.asSxpr == "(:Text \"B\")"
   doAssert $Alternative(Text("A"), Text("B")) == "\"A\"|\"B\""
   doAssert $Series(Text("A"), Text("B"), Text("C"), mandatory=1u32) == "\"A\" §\"B\" \"C\""
   echo $((Text("A")|Text("B"))|(Text("C")|Text("D")|Text("E")))
@@ -1640,21 +1640,21 @@ when isMainModule:
 
   echo $expression.ptype
 
-  var tree = expression("1 + 1").tree
+  var tree = expression("1 + 1").root
   echo tree.asSxpr()
-  tree = expression("(3 + 4) * 2").tree
+  tree = expression("(3 + 4) * 2").root
   echo tree.asSxpr()
   try:
-    tree = expression("(3 + ) * 2").tree
+    tree = expression("(3 + ) * 2").root
   except ParsingException as pe:
     echo $pe
   try:
-    tree = expression("(3 + * 2").tree
+    tree = expression("(3 + * 2").root
     echo $expression.grammar.errors
   except ParsingException as pe:
     echo $pe
   try:
-    tree = expression("(3 + 4 * 2").tree
+    tree = expression("(3 + 4 * 2").root
   except ParsingException as pe:
     echo $pe
 
@@ -1662,7 +1662,7 @@ when isMainModule:
   expression.skipUntil(after(gap))
 
   try:
-    tree = expression("3 + * 2").tree
+    tree = expression("3 + * 2").root
     echo ">> " & $expression.grammar.errors
   except ParsingException as pe:
     echo $pe
