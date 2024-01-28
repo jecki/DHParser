@@ -112,7 +112,7 @@ class HTMLGrammar(Grammar):
     element = Forward()
     source_hash__ = "23e161f9fc8e1ef4bc7006dff6ffd207"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:$.)|(?:EOF$|Reference$|Misc$|EncName$|NameStartChar$|PubidChars$|prolog$|CommentChars$|CData$|PubidCharsSingleQuoted$|tagContent$|BOM$|VersionNum$|NameChars$)')
+    disposable__ = re.compile('(?:$.)|(?:prolog$|PubidChars$|CData$|NameStartChar$|CommentChars$|BOM$|VersionNum$|EOF$|tagContent$|PubidCharsSingleQuoted$|Reference$|EncName$|Misc$|NameChars$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'tagContent': [('', "syntax error in tag-name of opening or empty tag:  {1}")],
@@ -134,12 +134,12 @@ class HTMLGrammar(Grammar):
     PubidCharsSingleQuoted = RegExp('(?i)(?:\\x20|\\x0D|\\x0A|[a-zA-Z0-9]|[-()+,./:=?;!*#@$_%])+')
     S = RegExp('(?i)\\s+')
     CDSect = Series(Drop(IgnoreCase('<![CDATA[')), CData, Drop(IgnoreCase(']]>')))
-    NameStartChar = RegExp('(?ix)_|:|[A-Z]|[a-z]\n                   |[\\u00C0-\\u00D6]|[\\u00D8-\\u00F6]|[\\u00F8-\\u02FF]\n                   |[\\u0370-\\u037D]|[\\u037F-\\u1FFF]|[\\u200C-\\u200D]\n                   |[\\u2070-\\u218F]|[\\u2C00-\\u2FEF]|[\\u3001-\\uD7FF]\n                   |[\\uF900-\\uFDCF]|[\\uFDF0-\\uFFFD]\n                   |[\\U00010000-\\U000EFFFF]')
-    NameChars = RegExp('(?ix)(?:_|:|-|\\.|[A-Z]|[a-z]|[0-9]\n                   |\\u00B7|[\\u0300-\\u036F]|[\\u203F-\\u2040]\n                   |[\\u00C0-\\u00D6]|[\\u00D8-\\u00F6]|[\\u00F8-\\u02FF]\n                   |[\\u0370-\\u037D]|[\\u037F-\\u1FFF]|[\\u200C-\\u200D]\n                   |[\\u2070-\\u218F]|[\\u2C00-\\u2FEF]|[\\u3001-\\uD7FF]\n                   |[\\uF900-\\uFDCF]|[\\uFDF0-\\uFFFD]\n                   |[\\U00010000-\\U000EFFFF])+')
+    NameStartChar = RegExp('(?xi)_|:|[A-Z]|[a-z]\n                   |[\\u00C0-\\u00D6]|[\\u00D8-\\u00F6]|[\\u00F8-\\u02FF]\n                   |[\\u0370-\\u037D]|[\\u037F-\\u1FFF]|[\\u200C-\\u200D]\n                   |[\\u2070-\\u218F]|[\\u2C00-\\u2FEF]|[\\u3001-\\uD7FF]\n                   |[\\uF900-\\uFDCF]|[\\uFDF0-\\uFFFD]\n                   |[\\U00010000-\\U000EFFFF]')
+    NameChars = RegExp('(?xi)(?:_|:|-|\\.|[A-Z]|[a-z]|[0-9]\n                   |\\u00B7|[\\u0300-\\u036F]|[\\u203F-\\u2040]\n                   |[\\u00C0-\\u00D6]|[\\u00D8-\\u00F6]|[\\u00F8-\\u02FF]\n                   |[\\u0370-\\u037D]|[\\u037F-\\u1FFF]|[\\u200C-\\u200D]\n                   |[\\u2070-\\u218F]|[\\u2C00-\\u2FEF]|[\\u3001-\\uD7FF]\n                   |[\\uF900-\\uFDCF]|[\\uFDF0-\\uFFFD]\n                   |[\\U00010000-\\U000EFFFF])+')
     Comment = Series(Drop(IgnoreCase('<!--')), ZeroOrMore(Alternative(CommentChars, RegExp('(?i)-(?!-)'))), dwsp__, Drop(IgnoreCase('-->')))
     Name = Series(NameStartChar, Option(NameChars))
     PITarget = Series(NegativeLookahead(RegExp('(?i)X|xM|mL|l')), Name)
-    PI = Series(Drop(IgnoreCase('<?')), PITarget, RegExp('[~ PIChars]'), Drop(IgnoreCase('?>')))
+    PI = Series(Drop(IgnoreCase('<?')), PITarget, Option(Series(dwsp__, PIChars)), Drop(IgnoreCase('?>')))
     Misc = OneOrMore(Alternative(Comment, PI, S))
     EntityRef = Series(Drop(IgnoreCase('&')), Name, Drop(IgnoreCase(';')))
     Reference = Alternative(EntityRef, CharRef)
@@ -155,7 +155,7 @@ class HTMLGrammar(Grammar):
     emptyElement = Series(Drop(IgnoreCase('<')), tagContent, Drop(IgnoreCase('/>')))
     BOM = Drop(RegExp('(?i)[\\ufeff]|[\\ufffe]|[\\u0000feff]|[\\ufffe0000]'))
     ExternalID = Alternative(Series(Drop(IgnoreCase('SYSTEM')), dwsp__, SystemLiteral, mandatory=1), Series(Drop(IgnoreCase('PUBLIC')), dwsp__, PubidLiteral, dwsp__, SystemLiteral, mandatory=1))
-    doctypedecl = Series(Drop(IgnoreCase('<!DOCTYPE')), dwsp__, Name, RegExp('[~ ExternalID]'), dwsp__, Drop(IgnoreCase('>')), mandatory=2)
+    doctypedecl = Series(Drop(IgnoreCase('<!DOCTYPE')), dwsp__, Name, Option(Series(dwsp__, ExternalID)), dwsp__, Drop(IgnoreCase('>')), mandatory=2)
     SDDecl = Series(dwsp__, Drop(IgnoreCase('standalone')), dwsp__, Drop(IgnoreCase('=')), dwsp__, Alternative(Series(Drop(IgnoreCase("\'")), Alternative(IgnoreCase("yes"), IgnoreCase("no")), Drop(IgnoreCase("\'"))), Series(Drop(IgnoreCase('"')), Alternative(IgnoreCase("yes"), IgnoreCase("no")), Drop(IgnoreCase('"')))))
     EncName = RegExp('(?i)[A-Za-z][A-Za-z0-9._\\-]*')
     EncodingDecl = Series(dwsp__, Drop(IgnoreCase('encoding')), dwsp__, Drop(IgnoreCase('=')), dwsp__, Alternative(Series(Drop(IgnoreCase("\'")), EncName, Drop(IgnoreCase("\'"))), Series(Drop(IgnoreCase('"')), EncName, Drop(IgnoreCase('"')))))

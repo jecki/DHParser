@@ -1,3 +1,15 @@
+DHParser Version 1.7.1
+......................
+
+- case insensitive plain-text-parser added (parse.IgnoreCase)
+- [config]-section in test-files is now repeated in the report
+- Documentation for parse.ParsingError-class
+- compile.py: better error message for missing visitor-methods
+- HTML-Grammar added to examples/XML
+- bugfixes and a few more tests
+- more work on experimental nim-rewrite of the parser-core:
+  enough parser-classes for standard EBNF, plus error-recovery
+
 DHParser Version 1.7
 ....................
 
