@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "DHParser"
-version = "1.7.1"
+version = "1.7.2"
 description = "Parser Generator and DSL-construction-kit"
 
 license = "Apache-2"
@@ -44,11 +44,7 @@ classifiers = [
 ]
 
 packages = [
-    { include = "DHParser" },
-    { include = "tests", format = "sdist" },
-    { include = "documentation_src", format = "sdist" },
-    { include = "examples", format = "sdist" },
-    { include = "nim_rewrite", format = "sdist" }
+    { include = "DHParser" }
 ]
 
 

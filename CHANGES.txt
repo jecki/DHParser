@@ -1,5 +1,13 @@
-DHParser Version 1.7.1
+DHParser Version 1.7.2
 ......................
+
+- removed unnecessary directories from pyproject.tompl, e.g.
+  tests, documentation_src... These are not required for
+  running DHParser and can always be obtained from git
+
+
+DHParser Version 1.7.1 (28.1.2024)
+..................................
 
 - case insensitive plain-text-parser added (parse.IgnoreCase)
 - [config]-section in test-files is now repeated in the report
