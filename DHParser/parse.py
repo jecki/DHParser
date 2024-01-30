@@ -2609,9 +2609,10 @@ class Text(NoMemoizationParser):
         if self._grammar.text__[location:location_] == self_text:
             if self.drop_content:
                 return EMPTY_NODE, location_
-            elif self_text or not self.disposable:
-                return Node(self.node_name, self_text, True), location_
-            return EMPTY_NODE, location
+            return Node(self.node_name, self_text, True), location_
+            # elif self_text or not self.disposable:
+            #     return Node(self.node_name, self_text, True), location_
+            # return EMPTY_NODE, location
         return None, location
 
     def __repr__(self):
@@ -2641,7 +2642,7 @@ class IgnoreCase(Text):
     """
 
     def __init__(self, text: str) -> None:
-        super(IgnoreCase, self).__init__(text.upper())
+        super(IgnoreCase, self).__init__(text.lower())
         self.len = len(text)
 
     @cython.locals(location_=cython.int)
@@ -2649,7 +2650,7 @@ class IgnoreCase(Text):
     def _parse(self, location: cython.int) -> ParsingResult:
         location_ = location + self.len
         comp_text = self._grammar.text__[location:location_]
-        if comp_text.upper() == self.text:
+        if comp_text.lower() == self.text:
             if self.drop_content:
                 return EMPTY_NODE, location_
             elif self.text or not self.disposable:

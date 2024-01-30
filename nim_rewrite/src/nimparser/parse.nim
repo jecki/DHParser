@@ -4,7 +4,7 @@
 {.experimental: "strictDefs".}
 {.experimental: "strictCaseObjects".}
 
-import std/[enumerate, math, options, sets, strformat, strutils, sugar, tables]
+import std/[enumerate, math, options, sets, strformat, strutils, unicode, sugar, tables]
 
 import strslice
 import nodetree
@@ -133,6 +133,7 @@ const
   # Parser-Names
   ParserName = ":Parser"
   TextName = ":Text"
+  IgnoreCaseName = ":IgnoreCase"
   RegExpName = ":RegExp"
   WhitespaceName = ":Whitespace"
   SmartReName = ":SmartReName"
@@ -268,6 +269,9 @@ proc assignName(name: string, parser: Parser): Parser =
   return parser
 
 template assign*[T: Parser](name: string, parser: T): T =
+  T(assignName(name, parser))
+
+template `::=`*[T: Parser](name: string, parser: T): T =
   T(assignName(name, parser))
 
 
@@ -978,13 +982,81 @@ method parse*(self: TextRef, location: int32): ParsingResult =
   if self.grammar.document.str[].continuesWith(self.text, location):
     if dropContent in self.flags:
       return (EmptyNode, location + self.text.len.int32)
-    elif isDisposable in self.flags and self.empty:
-      return (EmptyNode, location)  
+    # elif isDisposable in self.flags and self.empty:
+    #   return (EmptyNode, location)
     return (newNode(self.nodeName, self.slice), location + self.text.len.int32)
   return (nil, location)
 
 method `$`*(self: TextRef): string =
   ["\"", self.text.replace("\"", "\\\""), "\""].join()
+
+
+## IgnoreCase-Parser
+## ^^^^^^^^^^^^^^^^^
+##
+## A case insensitive plain-text-parser
+##
+
+type
+  IgnoreCaseRef = ref IgnoreCaseObj not nil
+  IgnoreCaseObj = object of ParserObj
+    text: string
+    compare:  proc(s: string, pos: int32, cmp: string): bool
+
+proc cmpIgnoreCaseAscii(s: string, pos: int32, cmp: string): bool =
+  for i in 0..<cmp.len:
+    if cmp[i] != s[pos + i]:
+      return false
+  return true
+
+proc cmpIgnoreCaseUnicode(s: string, pos: int32, cmp: string): bool =
+  var
+    i = pos
+    r: Rune
+
+  for c in cmp.runes:
+    s.fastRuneAt(i, r)
+    if not (c == r.toLower):
+      return false
+  return true
+
+proc init*(ignoreCaseParser: IgnoreCaseRef, text: string): IgnoreCaseRef =
+  assert text.len <= MaxTextLen
+  discard Parser(ignoreCaseParser).init(IgnoreCaseName)
+  ignoreCaseParser.flags.incl isLeaf
+  var asciiOnly = true
+  for ch in text:
+    if ch >= char(128):
+      asciiOnly = false
+      break
+  if asciiOnly:
+    ignoreCaseParser.text = text.toLowerAscii
+    ignoreCaseParser.compare = cmpIgnoreCaseAscii
+  else:
+    ignoreCaseParser.text = text.toLower
+    ignoreCaseParser.compare = cmpIgnoreCaseUnicode
+  return ignoreCaseParser
+
+template IgnoreCase*(text: string): IgnoreCaseRef =
+  new(IgnoreCaseRef).init(text)
+
+template ic*(text: string): IgnoreCaseRef = IgnoreCaseRef(text)
+
+method parse*(self: IgnoreCaseRef, location: int32): ParsingResult =
+  runnableExamples:
+    import nodetree
+    doAssert Text("ä")("Ä").node.asSxpr() == "(:Text \"Ä\")"
+
+  if self.compare(self.grammar.document.str[], location, self.text):
+    if dropContent in self.flags:
+      return (EmptyNode, location + self.text.len.int32)
+    let nextLoc = location + self.text.len.int32
+    return (newNode(self.nodeName, self.grammar.document[location..<nextLoc]), nextLoc)
+  return (nil, location)
+
+method `$`*(self: IgnoreCaseRef): string =
+  ["ic\"", self.text.replace("\"", "\\\""), "\""].join()
+
 
 
 ## RegExp-Parser
@@ -1167,11 +1239,21 @@ template Repeat*(parser: Parser, repRange: Range): RepeatRef =
 template Option*(parser: Parser): RepeatRef =
   new(RepeatRef).init(parser, (0u32, 1u32), OptionName)
 
+template `?`*(parser: Parser): RepeatRef =
+  new(RepeatRef).init(parser, (0u32, 1u32), OptionName)
+
 template ZeroOrMore*(parser: Parser): RepeatRef =
+  new(RepeatRef).init(parser, (0u32, RepLimit), ZeroOrMoreName)
+
+template `*`*(parser: Parser): RepeatRef =
   new(RepeatRef).init(parser, (0u32, RepLimit), ZeroOrMoreName)
 
 template OneOrMore*(parser: Parser): RepeatRef =
   new(RepeatRef).init(parser, (1u32, RepLimit), OneOrMoreName)
+
+template `+`*(parser: Parser): RepeatRef =
+  new(RepeatRef).init(parser, (1u32, RepLimit), OneOrMoreName)
+
 
 method parse*(self: RepeatRef, location: int32): ParsingResult =
   ## Examples:
@@ -1436,7 +1518,10 @@ proc init*(lookahead: LookaheadRef,
   lookahead.positive = positive
   return lookahead
 
-proc Lookahead(parser: Parser, positive: bool = true): LookaheadRef =
+proc Lookahead*(parser: Parser, positive: bool = true): LookaheadRef =
+  new(LookaheadRef).init(parser, positive)
+
+proc `>>`*(parser: Parser, positive: bool = true): LookaheadRef =
   new(LookaheadRef).init(parser, positive)
 
 method parse*(self: LookaheadRef, location: int32): ParsingResult =
@@ -1620,14 +1705,14 @@ when isMainModule:
   echo " "
   root.grammar = Grammar("adhoc1")
 
-  let WS  = "WS".assign                DROP(rxp"\s*")
-  let NUMBER = ":NUMBER".assign        (rxp"(?:0|(?:[1-9]\d*))(?:\.\d+)?" & WS)
-  let sign = "sign".assign             ((txt"+" | txt"-") & WS)
-  let expression = "expression".assign Forward()
-  let group = "group".assign           (txt"(" & WS & § expression & txt")" & WS)
-  let factor = "factor".assign         (Option(sign) & (NUMBER | group))
-  let term = "term".assign             (factor & ZeroOrMore((txt"*" | txt"/") & WS & § factor))
-  expression.set                       (term & ZeroOrMore((txt"+" | txt"-") & WS & § term))
+  let WS = "WS" ::=                 DROP(rxp"\s*")
+  let NUMBER = ":NUMBER" ::=        (rxp"(?:0|(?:[1-9]\d*))(?:\.\d+)?" & WS)
+  let sign = "sign" ::=             ((txt"+" | txt"-") & WS)
+  let expression = "expression" ::= Forward()
+  let group = "group" ::=           (txt"(" & WS & § expression & txt")" & WS)
+  let factor = "factor" ::=         (?(sign) & (NUMBER | group))
+  let term = "term" ::=             (factor & *((txt"*" | txt"/") & WS & § factor))
+  expression.set                    (term & *((txt"+" | txt"-") & WS & § term))
   expression.grammar = Grammar("Arithmetic")
 
   expression.errors((anyPassage, "Zahl oder Ausdruck erwartet, aber nicht {1}"))
