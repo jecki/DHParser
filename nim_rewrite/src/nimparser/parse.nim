@@ -977,7 +977,7 @@ template txt*(text: string): TextRef = Text(text)
 method parse*(self: TextRef, location: int32): ParsingResult =
   runnableExamples:
     import nodetree
-    doAssert Text("A")("A").node.asSxpr() == "(:Text \"A\")"
+    doAssert Text("A")("A").root.asSxpr() == "(:Text \"A\")"
  
   if self.grammar.document.str[].continuesWith(self.text, location):
     if dropContent in self.flags:
@@ -1005,7 +1005,7 @@ type
 
 proc cmpIgnoreCaseAscii(s: string, pos: int32, cmp: string): bool =
   for i in 0..<cmp.len:
-    if cmp[i] != s[pos + i]:
+    if cmp[i] != s[pos + i].toLowerAscii:
       return false
   return true
 
@@ -1045,7 +1045,7 @@ template ic*(text: string): IgnoreCaseRef = IgnoreCaseRef(text)
 method parse*(self: IgnoreCaseRef, location: int32): ParsingResult =
   runnableExamples:
     import nodetree
-    doAssert Text("ä")("Ä").node.asSxpr() == "(:Text \"Ä\")"
+    doAssert IgnoreCase("ä")("Ä").root.asSxpr() == "(:Text \"Ä\")"
 
   if self.compare(self.grammar.document.str[], location, self.text):
     if dropContent in self.flags:
@@ -1089,7 +1089,7 @@ template rxp*(reStr: string): RegExpRef = RegExp(reStr)
 method parse*(self: RegExpRef, location: int32): ParsingResult =
   runnableExamples:
     import nodetree, regex
-    doAssert RegExp(rx"\w+")("ABC").node.asSxpr() == "(:RegExp \"ABC\")"
+    doAssert RegExp(rx"\w+")("ABC").root.asSxpr() == "(:RegExp \"ABC\")"
 
   var l = matchLen(self.grammar.document, self.reInfo.regex, location)
   if l >= 0:
@@ -1153,7 +1153,7 @@ proc Whitespace*(whitespace, comment: string): WhitespaceRef =
 method parse*(self: WhitespaceRef, location: int32): ParsingResult =
   runnableExamples:
     import nodetree, regex
-    doAssert Whitespace(r"\s+", r"#.*")("   # comment").node.asSxpr == "(:Whitespace \"   # comment\")"
+    doAssert Whitespace(r"\s+", r"#.*")("   # comment").root.asSxpr == "(:Whitespace \"   # comment\")"
 
   var l = matchLen(self.grammar.document, self.combined.regex, location)
   if l >= 0:
@@ -1521,8 +1521,11 @@ proc init*(lookahead: LookaheadRef,
 proc Lookahead*(parser: Parser, positive: bool = true): LookaheadRef =
   new(LookaheadRef).init(parser, positive)
 
-proc `>>`*(parser: Parser, positive: bool = true): LookaheadRef =
-  new(LookaheadRef).init(parser, positive)
+proc `>>`*(parser: Parser): LookaheadRef =
+  new(LookaheadRef).init(parser, true)
+
+proc `>>!`*(parser: Parser): LookaheadRef =
+  new(LookaheadRef).init(parser, false)
 
 method parse*(self: LookaheadRef, location: int32): ParsingResult =
   var 
@@ -1773,3 +1776,7 @@ when isMainModule:
   let series1 = txt"A" & txt"B" & § txt"C" & txt"D"
   echo $series1
   assert series1.mandatory == 2
+
+  echo IgnoreCase("äö")("Äö").root.asSxpr()
+  echo IgnoreCase("aB")("Ab").root.asSxpr()
+  echo IgnoreCase("ao")("Aö").root.asSxpr()
