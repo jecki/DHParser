@@ -42,3 +42,5 @@ when isMainModule:
   echo $a
   echo $b
 
+  let myregex = re"[abc]"
+

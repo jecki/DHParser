@@ -1,20 +1,21 @@
 import "../src/nimparser/parse"
 
+{.experimental: "codeReordering".}
 
 # document frame and prolog
 
-let document     = "document" ::=     ?(BOM) & prolog & § element ?(Misc) EOF
-let BOM          = "BOM" ::=          rxp"[\ufeff]|[\ufffe]|[\u0000feff]|[\ufffe0000]"
-let prolog       = "prolog" ::=       ?(WS & XMLDecl) & ?(Misc) & ?(doctypedecl ?(Misc))
-let XMLDelc      = "XMLDecl" ::=      txt"<?xml" & § VersionInfo & ?(EncodingDecl) & ?(SDDecl) & WS & txt"?>"
+let document     = "document" ::=     ?(BOM) & prolog & § element & ?(Misc) & EOF
+let BOM          = "BOM" ::=          rxp"[\ufeff]|[\ufffe]|[\u0000][\ufeff]|[\ufffe][\u0000]"
+let prolog       = "prolog" ::=       ?(WS & XMLDecl) & ?(Misc) & ?(doctypedecl & ?(Misc))
+let XMLDecl      = "XMLDecl" ::=      txt"<?xml" & § VersionInfo & ?(EncodingDecl) & ?(SDDecl) & WS & txt"?>"
 
-let VersionInfo  = "VersionInfo" ::=  WS & txt"version" & WS & txt"=" & WS & ((txt"'" & VersionNum & txt"'") | (txt"\"" & VersionNum & txt"\""))
+let VersionInfo  = "VersionInfo" ::=  WS & txt"version" & WS & txt"=" & WS & ((txt"'" & VersionNum & txt"'") | (txt("\"") & VersionNum & txt("\"")))
 let VersionNum   = "VersionNum" ::=   rxp"[0-9]+\.[0-9]+"
 
-let EncodingDecl = "EncodingDecl" ::= WS & txt"encoding" & WS & txt"=" & WS & ((txt"'" & EncName & txt"'") | (txt"\"" & EncName & txt"\""))
+let EncodingDecl = "EncodingDecl" ::= WS & txt"encoding" & WS & txt"=" & WS & ((txt"'" & EncName & txt"'") | (txt("\"") & EncName & txt("\"")))
 let EncName      = "EncName" ::=      rxp"[A-Za-z][A-Za-z0-9._\-]*"
 
-let SDDecl       = "SDDecl" ::=       WS & txt"standalone" & WS & txt"=" & WS & ((txt"'" & (txt"yes" | txt"no") & txt"'") | (txt"\"" & (txt"yes" | txt"no") & txt"\""))
+let SDDecl       = "SDDecl" ::=       WS & txt"standalone" & WS & txt"=" & WS & ((txt"'" & (txt"yes" | txt"no") & txt"'") | (txt("\"") & (txt"yes" | txt"no") & txt("\"")))
 
 
 # document type definition stub
@@ -25,8 +26,8 @@ let ExternalID   = "ExternalID"  ::=  (txt"SYSTEM" & § WS & SystemLiteral) | (t
 
 # logical structures
 
-let element      = "element" ::=      emptyElement | voidElement | (STag & content & § ETag)
-let emptyElement = "emptyElement" ::= txt"<" & tagContent & "/>"
+let element      = "element" ::=      Forward()
+let emptyElement = "emptyElement" ::= txt"<" & tagContent & txt"/>"
 let voidElement  = "voidElement" ::=  txt"<" & >>(ic"area" | ic"base" | ic"br" | ic"col" | ic"embed" | ic"hr" |
                                                   ic"img" | ic"inpu" | ic"link" | ic"meta" | ic"param" |
                                                   ic"source" | ic"track" | ic"wbr") & tagContent & txt">"
@@ -36,17 +37,18 @@ let ETag         = "ETg" ::=          txt"<" & § Name & WS & txt">"
 
 let Attribute    = "Attribute" ::=    Name & WS & § txt"=" & WS & AttValue
 
-let content      = "Content" ::=      ?(CharData) & *((element | Referencer | CDSect | PI | Comment) & ?(CharData))
+let content      = "Content" ::=      ?(CharData) & *((element | Reference | CDSect | PI | Comment) & ?(CharData))
+element.set                           (emptyElement | voidElement | (STag & content & § ETag))
 
 
 # literals
 
-let AttValue     = "AttValue" ::=     ((txt"\"" & *(rxp"[^<&\"]+") | Reference) & txt"\"" |
-                                       (txt"'" & *(rxp"[^<&\"]+") | Reference) & txt"'" |
-                                       *(rxp"[^<&'>\s]+" | Reference)
+let AttValue     = "AttValue" ::=     ((txt("\"") & *(rxp("[^<&\"]+")) | Reference) & txt("\"") |
+                                       (txt"'" & *(rxp("[^<&\"]+"))) | Reference) & txt"'" |
+                                      *(rxp"[^<&'>\s]+" | Reference)
 
-let SystemLiteral = "SystemLiteral" ::= (txt"\"" & rxp"[^\"]*" & txt"\"") | (txt"'" & rxp"[^\']*" & txt"'")
-let PubidLiteral = "PubidLiteral" ::= (txt"\"" & ?(PubidChars) & txt"\"") | (txt"'" & (PubidCharsSingleQuoted) & txt"'")
+let SystemLiteral = "SystemLiteral" ::= (txt("\"") & rxp("[^\"]*") & txt("\"")) | (txt"'" & rxp"[^']*" & txt"'")
+let PubidLiteral = "PubidLiteral" ::= (txt("\"") & ?(PubidChars) & txt("\"")) | (txt"'" & (PubidCharsSingleQuoted) & txt"'")
 
 # refernces
 
@@ -57,12 +59,12 @@ let EntityRef    = "EntityRef" ::=    txt"&" & Name & txt";"
 # names
 
 let Name         = "Name" ::=         NameStartChar & ?(NameChars)
-let NameStartChar = "NameStartChar ::= rxp"""_|:|[A-Z]|[a-z]
-                                             |[\u00C0-\u00D6]|[\u00D8-\u00F6]|[\u00F8-\u02FF]
-                                             |[\u0370-\u037D]|[\u037F-\u1FFF]|[\u200C-\u200D]
-                                             |[\u2070-\u218F]|[\u2C00-\u2FEF]|[\u3001-\uD7FF]
-                                             |[\uF900-\uFDCF]|[\uFDF0-\uFFFD]
-                                             |[\U00010000-\U000EFFFF]"""
+let NameStartChar = "NameStartChar" ::= rxp("""_|:|[A-Z]|[a-z]
+                                               |[\u00C0-\u00D6]|[\u00D8-\u00F6]|[\u00F8-\u02FF]
+                                               |[\u0370-\u037D]|[\u037F-\u1FFF]|[\u200C-\u200D]
+                                               |[\u2070-\u218F]|[\u2C00-\u2FEF]|[\u3001-\uD7FF]
+                                               |[\uF900-\uFDCF]|[\uFDF0-\uFFFD]
+                                               |[\U00010000-\U000EFFFF]""")
 let NameChars    = "NameChars" ::=    rxp"""(?:_|:|-|\.|[A-Z]|[a-z]|[0-9]
                                             |\u00B7|[\u0300-\u036F]|[\u203F-\u2040]
                                             |[\u00C0-\u00D6]|[\u00D8-\u00F6]|[\u00F8-\u02FF]
@@ -70,6 +72,32 @@ let NameChars    = "NameChars" ::=    rxp"""(?:_|:|-|\.|[A-Z]|[a-z]|[0-9]
                                             |[\u2070-\u218F]|[\u2C00-\u2FEF]|[\u3001-\uD7FF]
                                             |[\uF900-\uFDCF]|[\uFDF0-\uFFFD]
                                             |[\U00010000-\U000EFFFF])+"""
+
+# comments, processing instructions and CDATA sections
+
+let Misc        = "Misc" ::=          +(Comment | PI | S)
+let Comment     = "Comment" ::=       txt"<!--" & *(CommentChars | rxp"-(?!-)") & WS & txt"-->"
+let PI          = "PI" ::=            txt"<?" & PITarget & ?(WS & PIChars) & txt"?>"
+let PITarget    = "PITarget" ::=      >>!(rxp"X|xM|mL|l") & Name
+let CDSect      = "CDSect" ::=        txt"<![CDATA[" & CData & txt"]]>"
+
+# characters, explicit whitespace, end of file
+
+let PubidCharsSingleQuoted = "PubidCharsSingleQuoted" ::= rxp"(?:\x20|\x0D|\x0A|[a-zA-Z0-9]|[-()+,.\/:=?;!*#@$_%])+"
+let PubidChars  = "PubidChars" ::=    rxp"(?:\x20|\x0D|\x0A|[a-zA-Z0-9]|[-'()+,.\/:=?;!*#@$_%])+"
+
+let CharData    = "CharData" ::=      rxp"(?:(?!\]\]>)[^<&])+"
+let CData       = "CData" ::=         rxp"(?:(?!\]\]>)(?:\x09|\x0A|\x0D|[\u0020-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF]))+"
+
+let PIChars     = "PIChars" ::=       rxp"(?:(?!\?>)(?:\x09|\x0A|\x0D|[\u0020-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF]))+"
+let CommentChars = "CommentChars" ::= rxp"(?:(?!-)(?:\x09|\x0A|\x0D|[\u0020-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF]))+"
+let CharRef     = "CharRef" ::=       (txt"&#" & rxp"[0-9]+" & txt";") | (txt"&#x" & rxp"[0-9a-fA-F]+" & txt";")
+
+let S           = "S" ::=             rxp"\s+"
+let WS          = ":WS" ::=           rxp"\S*"
+let EOF         = "EOF" ::=           >>! rxp"."
+
+# characters
 
 
 when isMainModule:

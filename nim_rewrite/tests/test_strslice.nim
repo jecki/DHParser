@@ -45,15 +45,15 @@ test "basic tests":
 
 test "regular expression functions":
   let slice = makeStringSlice("abc 123 def 456 gh 78 ijk")
-  assert slice.matchLen(re"\w+", 0) == 3
-  assert slice.matchLen(re"[0-9]+", 0) == -1
-  assert slice.matchLen(re"[0-9]+", 4) == 3
-  assert slice.matchLen(re"[0-9]+", 19) == 2
-  assert slice[19 .. ^1].matchLen(re"[0-9]+", 0) == 2
+  assert slice.matchLen(ure"\w+", 0) == 3
+  assert slice.matchLen(ure"[0-9]+", 0) == -1
+  assert slice.matchLen(ure"[0-9]+", 4) == 3
+  assert slice.matchLen(ure"[0-9]+", 19) == 2
+  assert slice[19 .. ^1].matchLen(ure"[0-9]+", 0) == 2
 
-  assert slice.find(re"[0-9]+") == (4'i32, 6'i32)
-  assert slice.find(re"[0-9]+", 7) == (12'i32, 14'i32)
-  assert slice.find(re"[0-9]+", 7, 4) == (-1'i32, -2'i32)
-  assert slice[19 .. ^1].find(re"[0-9]+") == (0'i32, 1'i32)
+  assert slice.find(ure"[0-9]+") == (4'i32, 6'i32)
+  assert slice.find(ure"[0-9]+", 7) == (12'i32, 14'i32)
+  assert slice.find(ure"[0-9]+", 7, 4) == (-1'i32, -2'i32)
+  assert slice[19 .. ^1].find(ure"[0-9]+") == (0'i32, 1'i32)
 
-  assert slice[4..10].replace(re"\d", "?") == "??? def"
+  assert slice[4..10].replace(ure"\d", "?") == "??? def"

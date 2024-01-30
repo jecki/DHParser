@@ -210,16 +210,18 @@ when defined(js):
   let PCREFlag = newRegexp(r"\(\*\w+\)", "g")
   let comment = newRegexp(r"#[^\n]*", "g")
   let whitespace = newRegexp(r"(?: *\n *)|(?:^ *)|(?: *$)", "g")
+  let slashU = newRegexp(r"\\U([0-9a-fA-F]+)", "g")
 
-  proc re*(pattern: string): Regex =
-    let cleanPattern = pattern.replace(PCREFlag, "")
+  proc ure*(pattern: string or cstring): Regex =
+    let cleanPattern = pattern.replace(PCREFlag, "").replace(slashU, r"\u{$1}")
     return (sticky: newRegexp(cleanPattern, "uy"),
             nonSticky: newRegexp(cleanPattern, "ug"))
 
-  proc rex*(pattern: string): Regex =
+  proc urex*(pattern: string or cstring): Regex =
     let flatPattern = pattern.replace(PCREFlag, "")
                              .replace(comment, "")
                              .replace(whitespace, "")
+                             .replace(slashU, r"\u{$1}")
     return (sticky: newRegexp(flatPattern, "uy"),
             nonSticky: newRegexp(flatPattern, "ug"))
 
@@ -251,7 +253,16 @@ when defined(js):
     replace(cstring($slice), pattern.nonSticky, cstring(replacement))
 
 else:
-  export Regex, re
+  export Regex
+
+  const unicodePrefix = "(*UTF8)(*UCP)"
+  let slashU = re"\\[uU]([0-9a-fA-F]+)"
+
+  proc ure*(pattern: string): Regex =
+    re(unicodePrefix & replacef(pattern, slashU, r"\x{$1}"))
+  proc urex*(pattern: string): Regex =
+    rex(unicodePrefix & replacef(pattern, slashU, r"\x{$1}"))
+
 
   func find*(slice: StringSlice, pattern: RegEx,
             start: int32 = 0, size: int32 = -1): tuple[first, last: int32] =
@@ -362,4 +373,5 @@ when isMainModule:
       """
     assert $rex(pattern)[0].toCString() == r"/^(\w+)\s(\w+)/uy"
 
+  let r=rex("abc")
   echo $replace(makeStringSlice("abc\ndef"), re"\n", r"\n")

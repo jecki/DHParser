@@ -137,7 +137,6 @@ Comment         = '<!--' { CommentChars | /-(?!-)/ } ~ '-->'
 PI              = '<?' PITarget [~ PIChars] '?>'
 PITarget        = !/X|xM|mL|l/ Name
 CDSect          = '<![CDATA[' CData ']]>'
-S               = /\s+/
 
 #######################################################################
 #
@@ -154,4 +153,5 @@ CData           = /(?:(?!\]\]>)(?:\x09|\x0A|\x0D|[\u0020-\uD7FF]|[\uE000-\uFFFD]
 PIChars         = /(?:(?!\?>)(?:\x09|\x0A|\x0D|[\u0020-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF]))+/
 CommentChars    = /(?:(?!-)(?:\x09|\x0A|\x0D|[\u0020-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF]))+/
 CharRef         = ('&#' /[0-9]+/ ';') | ('&#x' /[0-9a-fA-F]+/ ';')
+S               = /\s+/
 EOF             = !/./          # no more characters ahead, end of file reached

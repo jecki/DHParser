@@ -16,7 +16,7 @@ const
   SearchWindowDefault = 10_000
   NeverMatchPattern = r"$."
 let
-  NeverMatchRegex   = re(NeverMatchPattern)
+  NeverMatchRegex   = ure(NeverMatchPattern)
 
 
 ## Regular Expressions that keep track of their string-represenation
@@ -24,12 +24,9 @@ let
 type
   RegExpInfo = tuple[reStr: string, regex: Regex]
 
-const
-  unicodePrefix = "(*UTF8)(*UCP)"
-
-proc rx*(rx_str: string): RegExpInfo = (rx_str, re(unicodePrefix & rx_str))
+proc rx*(rx_str: string): RegExpInfo = (rx_str, ure(rx_str))
 proc mrx*(multiline_rx_str: string): RegExpInfo =
-  (multiline_rx_str, rex(unicodePrefix & multiline_rx_str))
+  (multiline_rx_str, urex(multiline_rx_str))
 proc `$`*(rxInfo: RegExpInfo): string = rxInfo.reStr
 
 
@@ -626,7 +623,7 @@ proc `()`*(parser: Parser, document: string or StringSlice, location: int32 = 0)
     p.cleanUp()
   let (root, loc) = parser.call(parser, location)
   if loc < document.len:
-      let snippet = $parser.grammar.document[loc..loc + 9].replace(re"\n", r"\n")
+      let snippet = $parser.grammar.document[loc..loc + 9].replace(ure"\n", r"\n")
       let msg = fmt"Parser {parser.name} stopped before end at »{snippet}«"
       parser.grammar.errors.add(Error(msg, loc, ParserStoppedBeforeEnd))
   return (root, parser.grammar.errors)
@@ -721,7 +718,7 @@ template at*(p: Parser): Matcher = assert false, ("Use after() or passage() " &
 template after*(p: Parser): Matcher = Matcher(kind: mkParser, consumeParser: p)
 template passage*(p: Parser): Matcher = Matcher(kind: mkParser, consumeParser: p)
 let anyPassage* = Matcher(kind: mkString, cmpStr: "")
-func atRe*(reStr: string): Matcher = at(rx(reStr))
+proc atRe*(reStr: string): Matcher = at(rx(reStr))
 
 const NoMandatoryLimit* = uint32(2^30)   # 2^31 and higher does not work with js-target, any more
 
@@ -806,7 +803,7 @@ proc violation(catcher: ErrorCatchingParserRef,
 
   let
     gr = catcher.grammar
-    snippet = $gr.document[location..location + 9].replace(re"\n", r"\n")
+    snippet = $gr.document[location..location + 9].replace(ure"\n", r"\n")
     found = if location >= gr.document.len: "EOF" else: fmt"»{snippet}«"
     sym = if isNil(catcher.symbol):  $catcher  else:  catcher.symbol.pname
   var
@@ -1040,7 +1037,8 @@ proc init*(ignoreCaseParser: IgnoreCaseRef, text: string): IgnoreCaseRef =
 template IgnoreCase*(text: string): IgnoreCaseRef =
   new(IgnoreCaseRef).init(text)
 
-template ic*(text: string): IgnoreCaseRef = IgnoreCaseRef(text)
+template ic*(text: string): IgnoreCaseRef =
+  new(IgnoreCaseRef).init(text)
 
 method parse*(self: IgnoreCaseRef, location: int32): ParsingResult =
   runnableExamples:
@@ -1132,8 +1130,6 @@ proc init*(insignificant: WhitespaceRef,
   discard Parser(insignificant).init(WhitespaceName)
   insignificant.whitespace = whitespace
   insignificant.comment = comment
-  assert not whitespace.reStr.startsWith(unicodePrefix)
-  assert not comment.reStr.startsWith(unicodePrefix)
   let ws = "(?:" & whitespace.reStr & ")?"
   if comment.reStr.len == 0 or comment.reStr == NeverMatchPattern:
     insignificant.combined = rx(ws)
@@ -1780,3 +1776,8 @@ when isMainModule:
   echo IgnoreCase("äö")("Äö").root.asSxpr()
   echo IgnoreCase("aB")("Ab").root.asSxpr()
   echo IgnoreCase("ao")("Aö").root.asSxpr()
+
+  let R = rxp("[^<&\"]+")
+  echo $R
+
+
