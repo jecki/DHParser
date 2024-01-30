@@ -234,8 +234,8 @@ when defined(js):
     let s = cstring(slice.str[])
     let m: seq[cstring] = pattern.nonSticky.exec(s)
     if m.len > 0:
-      let l: int32 = m[0].len
-      let a: int32 = pattern.nonSticky.lastIndex - slice.start - l
+      let l: int32 = ($m[0]).len
+      let a: int32 = pattern.nonSticky.lastIndex - slice.start - m[0].len
       if size < 0 or a <= start + size:
         return (a, a + l - 1)
     return (-1, -2)
@@ -246,7 +246,7 @@ when defined(js):
     let m: seq[cstring] = match(cstring(slice.str[]), pattern.sticky)
     if m.len > 0:
       assert m.len == 1
-      return m[0].len
+      return ($m[0]).len
     return -1
 
   proc replace*(slice: StringSlice, pattern: Regex, replacement: string): cstring =

@@ -274,6 +274,7 @@ proc asSxpr*(node: NodeOrNil): string =
         k = 0
       while L > 0:
         k = s.runeOffset(i + (if L < 60: L else: 60), i)
+        if k <= i:  break
         lines.add('"' & esc(s[i..<k]) & '"')
         i = k
         L -= 60

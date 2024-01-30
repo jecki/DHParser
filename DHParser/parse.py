@@ -2523,6 +2523,9 @@ def extract_error_code(err_msg: str, err_code: ErrorCode = ERROR) -> Tuple[str, 
         >>> msg = '2010:Big mistake!'
         >>> print(extract_error_code(msg))
         ('Big mistake!', 2010)
+        >>> msg = "Syntax error at: {1}"
+        >>> print(extract_error_code(msg))
+        ('Syntax error at: {1}', 1000)
     """
     i = err_msg.find(':')
     if i >= 0:

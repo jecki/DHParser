@@ -46,6 +46,7 @@ type
   ErrorCatchingParserOrNil = ref ErrorCatchingParserObj
 
   ParsingResult* = tuple[node: NodeOrNil, location: int32]
+  EndResult* = tuple[root: NodeOrNil, errors: seq[ErrorRef]]
   ParsingException* = ref object of CatchableError
     origin: ErrorCatchingParserRef
     node*: Node
@@ -323,6 +324,7 @@ when defined(js):
 
   proc collect_descendants(parser: Parser, selector: ParserIterator = refdSubs,
                            descs: var seq[Parser]) =
+    assert isForward notin parser.flags or parser.subParsers.len > 0
     if traversalTracker notin parser.flags:
       parser.flags.incl traversalTracker
       descs.add(parser)
@@ -350,6 +352,7 @@ else:
         yield p
 
   iterator descendants(parser: Parser, selector: ParserIterator = refdSubs): Parser {.closure.} =
+    assert isForward notin parser.flags or parser.subParsers.len > 0
     if traversalTracker notin parser.flags:
       parser.flags.incl traversalTracker
       yield parser
@@ -612,7 +615,7 @@ proc `()`(parser: Parser, location: int32): ParsingResult {.inline.} =
   parser.call(parser, location)
 
 proc `()`*(parser: Parser, document: string or StringSlice, location: int32 = 0):
-          tuple[root: NodeOrNil, errors: seq[ErrorRef]] =
+          EndResult {.raises: [ParsingException, Exception].} =
   if parser.grammarVar == GrammarPlaceholder:
     parser.grammar = Grammar("adhoc", document=toStringSlice(document))
   else:
@@ -622,7 +625,7 @@ proc `()`*(parser: Parser, document: string or StringSlice, location: int32 = 0)
   parser.forEach(p, refdSubs):
     p.cleanUp()
   let (root, loc) = parser.call(parser, location)
-  if loc < document.len:
+  if isNil(root) or loc < document.len:
       let snippet = $parser.grammar.document[loc..loc + 9].replace(ure"\n", r"\n")
       let msg = fmt"Parser {parser.name} stopped before end at »{snippet}«"
       parser.grammar.errors.add(Error(msg, loc, ParserStoppedBeforeEnd))
@@ -812,8 +815,11 @@ proc violation(catcher: ErrorCatchingParserRef,
   # errorNode.pos = location  # if errorNode.sourcePos < 0:
   for (rule, msg) in catcher.errorList:
     if match(rule, gr.document, location):
-      let i = msg.find(':') + 1
-      if i > 0: errCode = ErrorCode(msg[0..<i].parseInt.uint16)
+      var i = msg.find(':') + 1
+      try:
+        if i > 0: errCode = ErrorCode(msg[0..<i].parseInt.uint16)
+      except ValueError:
+        i = 0
       message = msg[i..^1].replace("{0}", expected).replace("{1}", found)
       break
   if wasLookAhead and location >= gr.document.len:
@@ -912,8 +918,12 @@ template attachMatchers(parser: Parser, list: seq[AnyMatcher], listName: string,
 proc errors*(parser: Parser, errors: seq[ErrorMatcher], unambig: bool = true) =
   attachMatchers(parser, errors, "errors", unambig)
 
-proc errors*(parser: Parser, error: ErrorMatcher, unambig: bool = true) =
+proc error*(parser: Parser, error: ErrorMatcher, unambig: bool = true) =
   attachMatchers(parser, @[error], "errors", unambig)
+
+proc error*(parser: Parser, matcher: Matcher, message: string, unambig: bool = true) =
+  let em: ErrorMatcher = (matcher, message)
+  attachMatchers(parser, @[em], "errors", unambig)
 
 proc skipUntil*(parser: Parser, skipMatchers: seq[Matcher], unambig: bool = true) =
   attachMatchers(parser, skipMatchers, "skip-matchers", unambig)
@@ -934,6 +944,13 @@ proc resume*(parser: Parser, resumeMatcher: Matcher, unambig: bool = true) =
 proc Drop*(parser: Parser): Parser {.inline.} =
   parser.flags = parser.flags + {dropContent, isDisposable}
   parser
+
+# global modifiers
+
+proc DropStrings*(root: Parser) =
+  root.forEach(p, subs):
+    if (p.ptype == TextName) and (isDisposable in p.flags):
+      p.flags.incl dropContent
 
 
 ## Leaf Parsers
@@ -1714,7 +1731,7 @@ when isMainModule:
   expression.set                    (term & *((txt"+" | txt"-") & WS & § term))
   expression.grammar = Grammar("Arithmetic")
 
-  expression.errors((anyPassage, "Zahl oder Ausdruck erwartet, aber nicht {1}"))
+  expression.error((anyPassage, "Zahl oder Ausdruck erwartet, aber nicht {1}"))
   term.errors(@[(anyPassage, "Zahl oder Ausdruck (in Klammern) erwartet, aber nicht {1}")])
   group.errors(@[(anyPassage, "Schließende Klammer erwartet, aber nicht {1}")])
 

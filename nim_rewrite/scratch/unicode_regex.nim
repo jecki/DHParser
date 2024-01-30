@@ -37,5 +37,10 @@ else:
 
 echo $prs
 let rx = urex(prs)
+echo toStringSlice(" ").find(ure"(?:(?!\]\]>)[^<&])+")
+echo toStringSlice(" ").matchLen(ure"(?:(?!\]\]>)[^<&])+", 0)
+echo " ".len
 
-
+echo toStringSlice("ä").find(ure"(?:(?!\]\]>)[^<&])+")
+echo toStringSlice("ä").matchLen(ure"(?:(?!\]\]>)[^<&])+", 0)
+echo "ä".len
