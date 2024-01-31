@@ -30,7 +30,7 @@ from DHParser.pipeline import full_pipeline, Junction, PseudoJunction, create_pr
 from DHParser.configuration import set_config_value, get_config_value, access_thread_locals, \
     access_presets, finalize_presets, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN
 from DHParser import dsl
-from DHParser.dsl import recompile_grammar, never_cancel, PseudoJunction, create_parser_junction
+from DHParser.dsl import recompile_grammar, never_cancel, PseudoJunction
 from DHParser.ebnf import grammar_changed
 from DHParser.error import ErrorCode, Error, canonical_error_strings, has_errors, NOTICE, \
     WARNING, ERROR, FATAL

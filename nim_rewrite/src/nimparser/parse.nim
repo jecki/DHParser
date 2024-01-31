@@ -149,6 +149,7 @@ const
   PopName = ":Pop"
   SynonymName = ":Synonym"
   ForwardName = ":Forward"
+  TraceName = ":Trace"
   NaryParsers = [AlternativeName, SeriesName, InterleaveName]
   ErrorCatchers = [SeriesName, InterleaveName]
   # Node-Names  
@@ -234,7 +235,7 @@ proc type*(parser: Parser): string =
     parser.ptype
 
 proc name*(parser: Parser): string =
-  if parser.ptype == ForwardName and parser.subParsers.len > 0:
+  if isForward in parser.flags and parser.subParsers.len > 0:
     parser.subParsers[0].pname
   else:
     parser.pname
@@ -245,6 +246,9 @@ proc assignSymbol(parser: Parser, symbol: Parser) =
     if isNil(p.symbol):  assignSymbol(p, symbol)
 
 proc assignName(name: string, parser: Parser): Parser =
+  if parser.type == TraceName:
+    discard assignName(name, parser.subParsers[0])
+    return parser
   assert parser.pname == ""
   assert name != ""
   parser.nodeName[] = name
@@ -1627,7 +1631,6 @@ proc forwardWrapper(parser: Parser, location: int32): ParsingResult =
         parser.ForwardRef.recursionCounter[location] = depth
         grammar.flags.incl memoize
         var rb = grammar.rollbackStack.len
-
         var nextResult = parser.subParsers[0](location)
 
         if nextResult.location <= result.location:
@@ -1682,6 +1685,38 @@ method parse*(self: ForwardRef, location: int32): ParsingResult =
   
 method `$`*(self: ForwardRef): string =
   repr(self.subParsers[0])
+
+
+
+## Trace (Experimental!!!)
+## ^^^^^^^^^^^^^^^^^^^^^^^
+##
+## Trace is a pseudo-parser that follows another parser and records its call
+## paramters and return values.
+
+type
+  TraceRef = ref TraceObj not nil
+  TraceObj = object of ParserObj
+    discard
+
+proc traceWrapper(parser: Parser, location: int32): ParsingResult =
+  echo $location & " " & parser.subParsers[0].pname
+  let res = parser.subParsers[0](location)
+  if not isNil(res.node): echo res.node.content  else: echo "nil"
+  return res
+
+method cleanUp(self: TraceRef) =
+  procCall self.Parser.cleanUp()
+
+proc init*(trace: TraceRef, tracedParser: Parser): TraceRef =
+  discard Parser(trace).init(TraceName)
+  trace.subParsers = @[tracedParser]
+  trace.flags.incl isForward
+  trace.call = traceWrapper
+  return trace
+
+template Trace*(parser: Parser): TraceRef =
+  new(TraceRef).init(parser)
 
 
 ## Test-code

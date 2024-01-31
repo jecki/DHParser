@@ -1,3 +1,5 @@
+import std/[paths, dirs, strutils]
+
 import "../src/nimparser/error"
 import "../src/nimparser/nodetree"
 import "../src/nimparser/parse"
@@ -33,7 +35,7 @@ let emptyElement = "emptyElement" ::= txt"<" & tagContent & txt"/>"
 let voidElement  = "voidElement" ::=  txt"<" & >>(ic"area" | ic"base" | ic"br" | ic"col" | ic"embed" | ic"hr" |
                                                   ic"img" | ic"inpu" | ic"link" | ic"meta" | ic"param" |
                                                   ic"source" | ic"track" | ic"wbr") & tagContent & txt">"
-let STag         = "Stag" ::=         txt"<" & tagContent & txt">"
+let STag         = "Stag" ::=         Trace(txt"<" & tagContent & txt">")
 let tagContent   = "tagContent" ::=   >>!(rxp"[\/!?]") & § Name & *(WS & Attribute) & WS & >>(txt">"|txt"/>")
 let ETag         = "ETag" ::=         txt"</" & § Name & WS & txt">"
 
@@ -112,674 +114,779 @@ Attribute.resume(atRe"(?=>|\/>)")
 
 
 when isMainModule:
-  let testdoc0 = """<?xml version="1.0" encoding="UTF-8"?><note></note>"""
-  let testdoc1 = """
-    <?xml version="1.0" encoding="UTF-8"?>
-    <note date="2018-06-14">
-      <to>Tove</to>
-      <from>Jani</from>
-      <heading>Reminder</heading>
-      <body>Don't forget me this weekend!</body>
-      <priority level="high" />
-      <remark></remark>
-      <!-- just a comment -->
-    </note>
-    """
-  let testdoc2 = """
-     <?xml version="1.0" encoding="UTF-8"?>
-      <h1:DocumentSet xmlns:h1="http://www.startext.de/HiDA/DefService/XMLSchema">
-        <h1:ContentInfo>
-          <h1:Format>HIDA-DOC1-XML</h1:Format>
-          <h1:CreationDate>26.04.2022 11:17:45</h1:CreationDate>
-        </h1:ContentInfo>
-        <h1:Document DocKey="Tekt    1a0e552c-b6a9-4419-b275-656720c7c3c3" CreatorID="ACTAPRO" OwnerID="ACTAPRO" CreationDate="04.01.2021 13:14:13:419" ChangeDate="10.10.2021 22:23:43:308" DocTitle="Archiv der Bayerischen Akademie der Wissenschaften">
-          <h1:Block Type="Tekt">
-            <h1:Field Type="Ref_Gp">
-              <h1:Field Type="Ref_DocKey" Value="Arch    dd7238e4-c7a8-4b37-9332-99a58c5ed53b"/>
-              <h1:Field Type="Ref_Doctype" Value="Arch"/>
-              <h1:Field Type="Ref_Type" Value="P"/>
-              <h1:Field Type="Ref_DocOrder" Value="74"/>
-            </h1:Field>
-            <h1:Field Type="ChangeUserID" Value="ACTAPRO"/>
-            <h1:Field Type="CreateUserID" Value="ACTAPRO"/>
-            <h1:Field Type="ChangeDate" Value="04.01.2021 13:14:17"/>
-            <h1:Field Type="CreateDate" Value="04.01.2021 13:14:13"/>
-            <h1:Field Type="Ar_Id" Value="Arch    dd7238e4-c7a8-4b37-9332-99a58c5ed53b"/>
-            <h1:Field Type="Te_Id" Value="1a0e552c-b6a9-4419-b275-656720c7c3c3"/>
-            <h1:Field Type="Te_Bez" Value="Archiv der Bayerischen Akademie der Wissenschaften"/>
-            <h1:Field Type="Export_id" Value="Tekt_7ee4e113-9ce2-438a-a61b-95abc859b42b"/>
-          </h1:Block>
-        </h1:Document>
-      </h1:DocumentSet>"""
-  let testdoc3 = """<html xmlns:v="urn:schemas-microsoft-com:vml"
-    xmlns:o="urn:schemas-microsoft-com:office:office"
-    xmlns:w="urn:schemas-microsoft-com:office:word"
-    xmlns:m="http://schemas.microsoft.com/office/2004/12/omml"
-    xmlns="http://www.w3.org/TR/REC-html40">
+  let testdoc = """<html xmlns:v="urn:schemas-microsoft-com:vml"
+  xmlns:o="urn:schemas-microsoft-com:office:office"
+  xmlns:w="urn:schemas-microsoft-com:office:word"
+  xmlns:m="http://schemas.microsoft.com/office/2004/12/omml"
+  xmlns="http://www.w3.org/TR/REC-html40">
 
-    <head>
-    <meta http-equiv=Content-Type content="text/html; charset=windows-1252">
-    <meta name=ProgId content=Word.Document>
-    <meta name=Generator content="Microsoft Word 15">
-    <meta name=Originator content="Microsoft Word 15">
-    <link rel=File-List href="F_new_files/filelist.xml">
-    <!--[if gte mso 9]><xml>
-     <o:OfficeDocumentSettings>
-      <o:RelyOnVML/>
-      <o:AllowPNG/>
-      <o:RemovePersonalInformation/>
-      <o:RemoveDateAndTime/>
-     </o:OfficeDocumentSettings>
-    </xml><![endif]-->
-    <link rel=themeData href="F_new_files/themedata.thmx">
-    <link rel=colorSchemeMapping href="F_new_files/colorschememapping.xml">
-    <style>
-    <!--
-     /* Font Definitions */
-     @font-face
-      {font-family:Helvetica;
-      panose-1:2 11 6 4 2 2 2 2 2 4;
-      mso-font-charset:0;
-      mso-generic-font-family:swiss;
-      mso-font-pitch:variable;
-      mso-font-signature:3 0 0 0 1 0;}
-    @font-face
-      {font-family:Courier;
-      panose-1:2 7 4 9 2 2 5 2 4 4;
-      mso-font-alt:"Courier New";
-      mso-font-charset:0;
-      mso-generic-font-family:modern;
-      mso-font-pitch:fixed;
-      mso-font-signature:3 0 0 0 1 0;}
-    -->
-    </style>
-    <style>
-     /* Style Definitions */
-     table.MsoNormalTable
-      {mso-style-name:"Table Normal";
-      mso-tstyle-rowband-size:0;
-      mso-tstyle-colband-size:0;
-      mso-style-noshow:yes;
-      mso-style-priority:99;
-      mso-style-parent:"";
-      mso-padding-alt:0cm 5.4pt 0cm 5.4pt;
-      mso-para-margin:0cm;
-      mso-para-margin-bottom:.0001pt;
-      mso-pagination:widow-orphan;
-      font-size:10.0pt;
-      font-family:"Times New Roman",serif;
-      mso-ansi-language:DE;
-      mso-fareast-language:DE;}
-    </style>
-    </head>
+  <head>
+  <meta http-equiv=Content-Type content="text/html; charset=windows-1252">
+  <meta name=ProgId content=Word.Document>
+  <meta name=Generator content="Microsoft Word 15">
+  <meta name=Originator content="Microsoft Word 15">
+  <link rel=File-List href="K-Dateien/filelist.xml">
+  <!--[if gte mso 9]><xml>
+   <o:OfficeDocumentSettings>
+    <o:RelyOnVML/>
+    <o:AllowPNG/>
+    <o:RemovePersonalInformation/>
+    <o:RemoveDateAndTime/>
+   </o:OfficeDocumentSettings>
+  </xml><![endif]-->
+  <link rel=themeData href="K-Dateien/themedata.thmx">
+  <link rel=colorSchemeMapping href="K-Dateien/colorschememapping.xml">
+  <!--[if gte mso 9]><xml>
+   <w:WordDocument>
+    <w:PrintFractionalCharacterWidth/>
+    <w:HideSpellingErrors/>
+    <w:TrackMoves>false</w:TrackMoves>
+    <w:TrackFormatting/>
+    <w:ConsecutiveHyphensLimit>65535</w:ConsecutiveHyphensLimit>
+    <w:HyphenationZone>3</w:HyphenationZone>
+    <w:DoNotHyphenateCaps/>
+    <w:PunctuationKerning/>
+    <w:DrawingGridHorizontalSpacing>6 Pt.</w:DrawingGridHorizontalSpacing>
+    <w:DrawingGridVerticalSpacing>6 Pt.</w:DrawingGridVerticalSpacing>
+    <w:DisplayVerticalDrawingGridEvery>0</w:DisplayVerticalDrawingGridEvery>
+    <w:UseMarginsForDrawingGridOrigin/>
+    <w:ValidateAgainstSchemas/>
+    <w:SaveIfXMLInvalid>false</w:SaveIfXMLInvalid>
+    <w:IgnoreMixedContent>false</w:IgnoreMixedContent>
+    <w:AlwaysShowPlaceholderText>false</w:AlwaysShowPlaceholderText>
+    <w:DoNotPromoteQF/>
+    <w:LidThemeOther>DE</w:LidThemeOther>
+    <w:LidThemeAsian>X-NONE</w:LidThemeAsian>
+    <w:LidThemeComplexScript>X-NONE</w:LidThemeComplexScript>
+    <w:DoNotShadeFormData/>
+    <w:Compatibility>
+     <w:BalanceSingleByteDoubleByteWidth/>
+     <w:DoNotLeaveBackslashAlone/>
+     <w:ULTrailSpace/>
+     <w:DoNotExpandShiftReturn/>
+     <w:BreakWrappedTables/>
+     <w:SnapToGridInCell/>
+     <w:WrapTextWithPunct/>
+     <w:UseAsianBreakRules/>
+     <w:DontGrowAutofit/>
+     <w:SplitPgBreakAndParaMark/>
+     <w:EnableOpenTypeKerning/>
+     <w:DontFlipMirrorIndents/>
+     <w:OverrideTableStyleHps/>
+    </w:Compatibility>
+    <m:mathPr>
+     <m:mathFont m:val="Cambria Math"/>
+     <m:brkBin m:val="before"/>
+     <m:brkBinSub m:val="&#45;-"/>
+     <m:smallFrac m:val="off"/>
+     <m:dispDef/>
+     <m:lMargin m:val="0"/>
+     <m:rMargin m:val="0"/>
+     <m:defJc m:val="centerGroup"/>
+     <m:wrapIndent m:val="1440"/>
+     <m:intLim m:val="subSup"/>
+     <m:naryLim m:val="undOvr"/>
+    </m:mathPr></w:WordDocument>
+  </xml><![endif]--><!--[if gte mso 9]><xml>
+   <w:LatentStyles DefLockedState="false" DefUnhideWhenUsed="false"
+    DefSemiHidden="false" DefQFormat="false" DefPriority="99"
+    LatentStyleCount="371">
+    <w:LsdException Locked="false" Priority="0" QFormat="true" Name="Normal"/>
+    <w:LsdException Locked="false" Priority="9" QFormat="true" Name="heading 1"/>
+    <w:LsdException Locked="false" Priority="9" QFormat="true" Name="heading 2"/>
+    <w:LsdException Locked="false" Priority="9" QFormat="true" Name="heading 3"/>
+    <w:LsdException Locked="false" Priority="9" QFormat="true" Name="heading 4"/>
+    <w:LsdException Locked="false" Priority="9" QFormat="true" Name="heading 5"/>
+    <w:LsdException Locked="false" Priority="9" QFormat="true" Name="heading 6"/>
+    <w:LsdException Locked="false" Priority="9" QFormat="true" Name="heading 7"/>
+    <w:LsdException Locked="false" Priority="9" QFormat="true" Name="heading 8"/>
+    <w:LsdException Locked="false" Priority="9" QFormat="true" Name="heading 9"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="index 1"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="index 2"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="index 3"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="index 4"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="index 5"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="index 6"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="index 7"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="index 8"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="index 9"/>
+    <w:LsdException Locked="false" Priority="39" SemiHidden="true"
+     UnhideWhenUsed="true" Name="toc 1"/>
+    <w:LsdException Locked="false" Priority="39" SemiHidden="true"
+     UnhideWhenUsed="true" Name="toc 2"/>
+    <w:LsdException Locked="false" Priority="39" SemiHidden="true"
+     UnhideWhenUsed="true" Name="toc 3"/>
+    <w:LsdException Locked="false" Priority="39" SemiHidden="true"
+     UnhideWhenUsed="true" Name="toc 4"/>
+    <w:LsdException Locked="false" Priority="39" SemiHidden="true"
+     UnhideWhenUsed="true" Name="toc 5"/>
+    <w:LsdException Locked="false" Priority="39" SemiHidden="true"
+     UnhideWhenUsed="true" Name="toc 6"/>
+    <w:LsdException Locked="false" Priority="39" SemiHidden="true"
+     UnhideWhenUsed="true" Name="toc 7"/>
+    <w:LsdException Locked="false" Priority="39" SemiHidden="true"
+     UnhideWhenUsed="true" Name="toc 8"/>
+    <w:LsdException Locked="false" Priority="39" SemiHidden="true"
+     UnhideWhenUsed="true" Name="toc 9"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Normal Indent"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="footnote text"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="annotation text"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="header"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="footer"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="index heading"/>
+    <w:LsdException Locked="false" Priority="35" SemiHidden="true"
+     UnhideWhenUsed="true" QFormat="true" Name="caption"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="table of figures"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="envelope address"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="envelope return"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="footnote reference"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="annotation reference"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="line number"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="page number"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="endnote reference"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="endnote text"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="table of authorities"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="macro"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="toa heading"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="List"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="List Bullet"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="List Number"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="List 2"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="List 3"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="List 4"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="List 5"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="List Bullet 2"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="List Bullet 3"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="List Bullet 4"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="List Bullet 5"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="List Number 2"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="List Number 3"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="List Number 4"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="List Number 5"/>
+    <w:LsdException Locked="false" Priority="10" QFormat="true" Name="Title"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Closing"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Signature"/>
+    <w:LsdException Locked="false" Priority="1" SemiHidden="true"
+     UnhideWhenUsed="true" Name="Default Paragraph Font"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Body Text"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Body Text Indent"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="List Continue"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="List Continue 2"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="List Continue 3"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="List Continue 4"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="List Continue 5"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Message Header"/>
+    <w:LsdException Locked="false" Priority="11" QFormat="true" Name="Subtitle"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Salutation"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Date"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Body Text First Indent"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Body Text First Indent 2"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Note Heading"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Body Text 2"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Body Text 3"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Body Text Indent 2"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Body Text Indent 3"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Block Text"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Hyperlink"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="FollowedHyperlink"/>
+    <w:LsdException Locked="false" Priority="22" QFormat="true" Name="Strong"/>
+    <w:LsdException Locked="false" Priority="20" QFormat="true" Name="Emphasis"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Document Map"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Plain Text"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="E-mail Signature"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="HTML Top of Form"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="HTML Bottom of Form"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Normal (Web)"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="HTML Acronym"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="HTML Address"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="HTML Cite"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="HTML Code"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="HTML Definition"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="HTML Keyboard"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="HTML Preformatted"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="HTML Sample"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="HTML Typewriter"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="HTML Variable"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Normal Table"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="annotation subject"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="No List"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Outline List 1"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Outline List 2"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Outline List 3"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table Simple 1"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table Simple 2"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table Simple 3"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table Classic 1"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table Classic 2"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table Classic 3"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table Classic 4"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table Colorful 1"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table Colorful 2"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table Colorful 3"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table Columns 1"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table Columns 2"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table Columns 3"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table Columns 4"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table Columns 5"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table Grid 1"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table Grid 2"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table Grid 3"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table Grid 4"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table Grid 5"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table Grid 6"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table Grid 7"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table Grid 8"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table List 1"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table List 2"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table List 3"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table List 4"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table List 5"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table List 6"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table List 7"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table List 8"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table 3D effects 1"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table 3D effects 2"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table 3D effects 3"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table Contemporary"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table Elegant"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table Professional"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table Subtle 1"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table Subtle 2"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table Web 1"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table Web 2"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table Web 3"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Balloon Text"/>
+    <w:LsdException Locked="false" Priority="39" Name="Table Grid"/>
+    <w:LsdException Locked="false" SemiHidden="true" UnhideWhenUsed="true"
+     Name="Table Theme"/>
+    <w:LsdException Locked="false" SemiHidden="true" Name="Placeholder Text"/>
+    <w:LsdException Locked="false" Priority="1" QFormat="true" Name="No Spacing"/>
+    <w:LsdException Locked="false" Priority="60" Name="Light Shading"/>
+    <w:LsdException Locked="false" Priority="61" Name="Light List"/>
+    <w:LsdException Locked="false" Priority="62" Name="Light Grid"/>
+    <w:LsdException Locked="false" Priority="63" Name="Medium Shading 1"/>
+    <w:LsdException Locked="false" Priority="64" Name="Medium Shading 2"/>
+    <w:LsdException Locked="false" Priority="65" Name="Medium List 1"/>
+    <w:LsdException Locked="false" Priority="66" Name="Medium List 2"/>
+    <w:LsdException Locked="false" Priority="67" Name="Medium Grid 1"/>
+    <w:LsdException Locked="false" Priority="68" Name="Medium Grid 2"/>
+    <w:LsdException Locked="false" Priority="69" Name="Medium Grid 3"/>
+    <w:LsdException Locked="false" Priority="70" Name="Dark List"/>
+    <w:LsdException Locked="false" Priority="71" Name="Colorful Shading"/>
+    <w:LsdException Locked="false" Priority="72" Name="Colorful List"/>
+    <w:LsdException Locked="false" Priority="73" Name="Colorful Grid"/>
+    <w:LsdException Locked="false" Priority="60" Name="Light Shading Accent 1"/>
+    <w:LsdException Locked="false" Priority="61" Name="Light List Accent 1"/>
+    <w:LsdException Locked="false" Priority="62" Name="Light Grid Accent 1"/>
+    <w:LsdException Locked="false" Priority="63" Name="Medium Shading 1 Accent 1"/>
+    <w:LsdException Locked="false" Priority="64" Name="Medium Shading 2 Accent 1"/>
+    <w:LsdException Locked="false" Priority="65" Name="Medium List 1 Accent 1"/>
+    <w:LsdException Locked="false" SemiHidden="true" Name="Revision"/>
+    <w:LsdException Locked="false" Priority="34" QFormat="true"
+     Name="List Paragraph"/>
+    <w:LsdException Locked="false" Priority="29" QFormat="true" Name="Quote"/>
+    <w:LsdException Locked="false" Priority="30" QFormat="true"
+     Name="Intense Quote"/>
+    <w:LsdException Locked="false" Priority="66" Name="Medium List 2 Accent 1"/>
+    <w:LsdException Locked="false" Priority="67" Name="Medium Grid 1 Accent 1"/>
+    <w:LsdException Locked="false" Priority="68" Name="Medium Grid 2 Accent 1"/>
+    <w:LsdException Locked="false" Priority="69" Name="Medium Grid 3 Accent 1"/>
+    <w:LsdException Locked="false" Priority="70" Name="Dark List Accent 1"/>
+    <w:LsdException Locked="false" Priority="71" Name="Colorful Shading Accent 1"/>
+    <w:LsdException Locked="false" Priority="72" Name="Colorful List Accent 1"/>
+    <w:LsdException Locked="false" Priority="73" Name="Colorful Grid Accent 1"/>
+    <w:LsdException Locked="false" Priority="60" Name="Light Shading Accent 2"/>
+    <w:LsdException Locked="false" Priority="61" Name="Light List Accent 2"/>
+    <w:LsdException Locked="false" Priority="62" Name="Light Grid Accent 2"/>
+    <w:LsdException Locked="false" Priority="63" Name="Medium Shading 1 Accent 2"/>
+    <w:LsdException Locked="false" Priority="64" Name="Medium Shading 2 Accent 2"/>
+    <w:LsdException Locked="false" Priority="65" Name="Medium List 1 Accent 2"/>
+    <w:LsdException Locked="false" Priority="66" Name="Medium List 2 Accent 2"/>
+    <w:LsdException Locked="false" Priority="67" Name="Medium Grid 1 Accent 2"/>
+    <w:LsdException Locked="false" Priority="68" Name="Medium Grid 2 Accent 2"/>
+    <w:LsdException Locked="false" Priority="69" Name="Medium Grid 3 Accent 2"/>
+    <w:LsdException Locked="false" Priority="70" Name="Dark List Accent 2"/>
+    <w:LsdException Locked="false" Priority="71" Name="Colorful Shading Accent 2"/>
+    <w:LsdException Locked="false" Priority="72" Name="Colorful List Accent 2"/>
+    <w:LsdException Locked="false" Priority="73" Name="Colorful Grid Accent 2"/>
+    <w:LsdException Locked="false" Priority="60" Name="Light Shading Accent 3"/>
+    <w:LsdException Locked="false" Priority="61" Name="Light List Accent 3"/>
+    <w:LsdException Locked="false" Priority="62" Name="Light Grid Accent 3"/>
+    <w:LsdException Locked="false" Priority="63" Name="Medium Shading 1 Accent 3"/>
+    <w:LsdException Locked="false" Priority="64" Name="Medium Shading 2 Accent 3"/>
+    <w:LsdException Locked="false" Priority="65" Name="Medium List 1 Accent 3"/>
+    <w:LsdException Locked="false" Priority="66" Name="Medium List 2 Accent 3"/>
+    <w:LsdException Locked="false" Priority="67" Name="Medium Grid 1 Accent 3"/>
+    <w:LsdException Locked="false" Priority="68" Name="Medium Grid 2 Accent 3"/>
+    <w:LsdException Locked="false" Priority="69" Name="Medium Grid 3 Accent 3"/>
+    <w:LsdException Locked="false" Priority="70" Name="Dark List Accent 3"/>
+    <w:LsdException Locked="false" Priority="71" Name="Colorful Shading Accent 3"/>
+    <w:LsdException Locked="false" Priority="72" Name="Colorful List Accent 3"/>
+    <w:LsdException Locked="false" Priority="73" Name="Colorful Grid Accent 3"/>
+    <w:LsdException Locked="false" Priority="60" Name="Light Shading Accent 4"/>
+    <w:LsdException Locked="false" Priority="61" Name="Light List Accent 4"/>
+    <w:LsdException Locked="false" Priority="62" Name="Light Grid Accent 4"/>
+    <w:LsdException Locked="false" Priority="63" Name="Medium Shading 1 Accent 4"/>
+    <w:LsdException Locked="false" Priority="64" Name="Medium Shading 2 Accent 4"/>
+    <w:LsdException Locked="false" Priority="65" Name="Medium List 1 Accent 4"/>
+    <w:LsdException Locked="false" Priority="66" Name="Medium List 2 Accent 4"/>
+    <w:LsdException Locked="false" Priority="67" Name="Medium Grid 1 Accent 4"/>
+    <w:LsdException Locked="false" Priority="68" Name="Medium Grid 2 Accent 4"/>
+    <w:LsdException Locked="false" Priority="69" Name="Medium Grid 3 Accent 4"/>
+    <w:LsdException Locked="false" Priority="70" Name="Dark List Accent 4"/>
+    <w:LsdException Locked="false" Priority="71" Name="Colorful Shading Accent 4"/>
+    <w:LsdException Locked="false" Priority="72" Name="Colorful List Accent 4"/>
+    <w:LsdException Locked="false" Priority="73" Name="Colorful Grid Accent 4"/>
+    <w:LsdException Locked="false" Priority="60" Name="Light Shading Accent 5"/>
+    <w:LsdException Locked="false" Priority="61" Name="Light List Accent 5"/>
+    <w:LsdException Locked="false" Priority="62" Name="Light Grid Accent 5"/>
+    <w:LsdException Locked="false" Priority="63" Name="Medium Shading 1 Accent 5"/>
+    <w:LsdException Locked="false" Priority="64" Name="Medium Shading 2 Accent 5"/>
+    <w:LsdException Locked="false" Priority="65" Name="Medium List 1 Accent 5"/>
+    <w:LsdException Locked="false" Priority="66" Name="Medium List 2 Accent 5"/>
+    <w:LsdException Locked="false" Priority="67" Name="Medium Grid 1 Accent 5"/>
+    <w:LsdException Locked="false" Priority="68" Name="Medium Grid 2 Accent 5"/>
+    <w:LsdException Locked="false" Priority="69" Name="Medium Grid 3 Accent 5"/>
+    <w:LsdException Locked="false" Priority="70" Name="Dark List Accent 5"/>
+    <w:LsdException Locked="false" Priority="71" Name="Colorful Shading Accent 5"/>
+    <w:LsdException Locked="false" Priority="72" Name="Colorful List Accent 5"/>
+    <w:LsdException Locked="false" Priority="73" Name="Colorful Grid Accent 5"/>
+    <w:LsdException Locked="false" Priority="60" Name="Light Shading Accent 6"/>
+    <w:LsdException Locked="false" Priority="61" Name="Light List Accent 6"/>
+    <w:LsdException Locked="false" Priority="62" Name="Light Grid Accent 6"/>
+    <w:LsdException Locked="false" Priority="63" Name="Medium Shading 1 Accent 6"/>
+    <w:LsdException Locked="false" Priority="64" Name="Medium Shading 2 Accent 6"/>
+    <w:LsdException Locked="false" Priority="65" Name="Medium List 1 Accent 6"/>
+    <w:LsdException Locked="false" Priority="66" Name="Medium List 2 Accent 6"/>
+    <w:LsdException Locked="false" Priority="67" Name="Medium Grid 1 Accent 6"/>
+    <w:LsdException Locked="false" Priority="68" Name="Medium Grid 2 Accent 6"/>
+    <w:LsdException Locked="false" Priority="69" Name="Medium Grid 3 Accent 6"/>
+    <w:LsdException Locked="false" Priority="70" Name="Dark List Accent 6"/>
+    <w:LsdException Locked="false" Priority="71" Name="Colorful Shading Accent 6"/>
+    <w:LsdException Locked="false" Priority="72" Name="Colorful List Accent 6"/>
+    <w:LsdException Locked="false" Priority="73" Name="Colorful Grid Accent 6"/>
+    <w:LsdException Locked="false" Priority="19" QFormat="true"
+     Name="Subtle Emphasis"/>
+    <w:LsdException Locked="false" Priority="21" QFormat="true"
+     Name="Intense Emphasis"/>
+    <w:LsdException Locked="false" Priority="31" QFormat="true"
+     Name="Subtle Reference"/>
+    <w:LsdException Locked="false" Priority="32" QFormat="true"
+     Name="Intense Reference"/>
+    <w:LsdException Locked="false" Priority="33" QFormat="true" Name="Book Title"/>
+    <w:LsdException Locked="false" Priority="37" SemiHidden="true"
+     UnhideWhenUsed="true" Name="Bibliography"/>
+    <w:LsdException Locked="false" Priority="39" SemiHidden="true"
+     UnhideWhenUsed="true" QFormat="true" Name="TOC Heading"/>
+    <w:LsdException Locked="false" Priority="41" Name="Plain Table 1"/>
+    <w:LsdException Locked="false" Priority="42" Name="Plain Table 2"/>
+    <w:LsdException Locked="false" Priority="43" Name="Plain Table 3"/>
+    <w:LsdException Locked="false" Priority="44" Name="Plain Table 4"/>
+    <w:LsdException Locked="false" Priority="45" Name="Plain Table 5"/>
+    <w:LsdException Locked="false" Priority="40" Name="Grid Table Light"/>
+    <w:LsdException Locked="false" Priority="46" Name="Grid Table 1 Light"/>
+    <w:LsdException Locked="false" Priority="47" Name="Grid Table 2"/>
+    <w:LsdException Locked="false" Priority="48" Name="Grid Table 3"/>
+    <w:LsdException Locked="false" Priority="49" Name="Grid Table 4"/>
+    <w:LsdException Locked="false" Priority="50" Name="Grid Table 5 Dark"/>
+    <w:LsdException Locked="false" Priority="51" Name="Grid Table 6 Colorful"/>
+    <w:LsdException Locked="false" Priority="52" Name="Grid Table 7 Colorful"/>
+    <w:LsdException Locked="false" Priority="46"
+     Name="Grid Table 1 Light Accent 1"/>
+    <w:LsdException Locked="false" Priority="47" Name="Grid Table 2 Accent 1"/>
+    <w:LsdException Locked="false" Priority="48" Name="Grid Table 3 Accent 1"/>
+    <w:LsdException Locked="false" Priority="49" Name="Grid Table 4 Accent 1"/>
+    <w:LsdException Locked="false" Priority="50" Name="Grid Table 5 Dark Accent 1"/>
+    <w:LsdException Locked="false" Priority="51"
+     Name="Grid Table 6 Colorful Accent 1"/>
+    <w:LsdException Locked="false" Priority="52"
+     Name="Grid Table 7 Colorful Accent 1"/>
+    <w:LsdException Locked="false" Priority="46"
+     Name="Grid Table 1 Light Accent 2"/>
+    <w:LsdException Locked="false" Priority="47" Name="Grid Table 2 Accent 2"/>
+    <w:LsdException Locked="false" Priority="48" Name="Grid Table 3 Accent 2"/>
+    <w:LsdException Locked="false" Priority="49" Name="Grid Table 4 Accent 2"/>
+    <w:LsdException Locked="false" Priority="50" Name="Grid Table 5 Dark Accent 2"/>
+    <w:LsdException Locked="false" Priority="51"
+     Name="Grid Table 6 Colorful Accent 2"/>
+    <w:LsdException Locked="false" Priority="52"
+     Name="Grid Table 7 Colorful Accent 2"/>
+    <w:LsdException Locked="false" Priority="46"
+     Name="Grid Table 1 Light Accent 3"/>
+    <w:LsdException Locked="false" Priority="47" Name="Grid Table 2 Accent 3"/>
+    <w:LsdException Locked="false" Priority="48" Name="Grid Table 3 Accent 3"/>
+    <w:LsdException Locked="false" Priority="49" Name="Grid Table 4 Accent 3"/>
+    <w:LsdException Locked="false" Priority="50" Name="Grid Table 5 Dark Accent 3"/>
+    <w:LsdException Locked="false" Priority="51"
+     Name="Grid Table 6 Colorful Accent 3"/>
+    <w:LsdException Locked="false" Priority="52"
+     Name="Grid Table 7 Colorful Accent 3"/>
+    <w:LsdException Locked="false" Priority="46"
+     Name="Grid Table 1 Light Accent 4"/>
+    <w:LsdException Locked="false" Priority="47" Name="Grid Table 2 Accent 4"/>
+    <w:LsdException Locked="false" Priority="48" Name="Grid Table 3 Accent 4"/>
+    <w:LsdException Locked="false" Priority="49" Name="Grid Table 4 Accent 4"/>
+    <w:LsdException Locked="false" Priority="50" Name="Grid Table 5 Dark Accent 4"/>
+    <w:LsdException Locked="false" Priority="51"
+     Name="Grid Table 6 Colorful Accent 4"/>
+    <w:LsdException Locked="false" Priority="52"
+     Name="Grid Table 7 Colorful Accent 4"/>
+    <w:LsdException Locked="false" Priority="46"
+     Name="Grid Table 1 Light Accent 5"/>
+    <w:LsdException Locked="false" Priority="47" Name="Grid Table 2 Accent 5"/>
+    <w:LsdException Locked="false" Priority="48" Name="Grid Table 3 Accent 5"/>
+    <w:LsdException Locked="false" Priority="49" Name="Grid Table 4 Accent 5"/>
+    <w:LsdException Locked="false" Priority="50" Name="Grid Table 5 Dark Accent 5"/>
+    <w:LsdException Locked="false" Priority="51"
+     Name="Grid Table 6 Colorful Accent 5"/>
+    <w:LsdException Locked="false" Priority="52"
+     Name="Grid Table 7 Colorful Accent 5"/>
+    <w:LsdException Locked="false" Priority="46"
+     Name="Grid Table 1 Light Accent 6"/>
+    <w:LsdException Locked="false" Priority="47" Name="Grid Table 2 Accent 6"/>
+    <w:LsdException Locked="false" Priority="48" Name="Grid Table 3 Accent 6"/>
+    <w:LsdException Locked="false" Priority="49" Name="Grid Table 4 Accent 6"/>
+    <w:LsdException Locked="false" Priority="50" Name="Grid Table 5 Dark Accent 6"/>
+    <w:LsdException Locked="false" Priority="51"
+     Name="Grid Table 6 Colorful Accent 6"/>
+    <w:LsdException Locked="false" Priority="52"
+     Name="Grid Table 7 Colorful Accent 6"/>
+    <w:LsdException Locked="false" Priority="46" Name="List Table 1 Light"/>
+    <w:LsdException Locked="false" Priority="47" Name="List Table 2"/>
+    <w:LsdException Locked="false" Priority="48" Name="List Table 3"/>
+    <w:LsdException Locked="false" Priority="49" Name="List Table 4"/>
+    <w:LsdException Locked="false" Priority="50" Name="List Table 5 Dark"/>
+    <w:LsdException Locked="false" Priority="51" Name="List Table 6 Colorful"/>
+    <w:LsdException Locked="false" Priority="52" Name="List Table 7 Colorful"/>
+    <w:LsdException Locked="false" Priority="46"
+     Name="List Table 1 Light Accent 1"/>
+    <w:LsdException Locked="false" Priority="47" Name="List Table 2 Accent 1"/>
+    <w:LsdException Locked="false" Priority="48" Name="List Table 3 Accent 1"/>
+    <w:LsdException Locked="false" Priority="49" Name="List Table 4 Accent 1"/>
+    <w:LsdException Locked="false" Priority="50" Name="List Table 5 Dark Accent 1"/>
+    <w:LsdException Locked="false" Priority="51"
+     Name="List Table 6 Colorful Accent 1"/>
+    <w:LsdException Locked="false" Priority="52"
+     Name="List Table 7 Colorful Accent 1"/>
+    <w:LsdException Locked="false" Priority="46"
+     Name="List Table 1 Light Accent 2"/>
+    <w:LsdException Locked="false" Priority="47" Name="List Table 2 Accent 2"/>
+    <w:LsdException Locked="false" Priority="48" Name="List Table 3 Accent 2"/>
+    <w:LsdException Locked="false" Priority="49" Name="List Table 4 Accent 2"/>
+    <w:LsdException Locked="false" Priority="50" Name="List Table 5 Dark Accent 2"/>
+    <w:LsdException Locked="false" Priority="51"
+     Name="List Table 6 Colorful Accent 2"/>
+    <w:LsdException Locked="false" Priority="52"
+     Name="List Table 7 Colorful Accent 2"/>
+    <w:LsdException Locked="false" Priority="46"
+     Name="List Table 1 Light Accent 3"/>
+    <w:LsdException Locked="false" Priority="47" Name="List Table 2 Accent 3"/>
+    <w:LsdException Locked="false" Priority="48" Name="List Table 3 Accent 3"/>
+    <w:LsdException Locked="false" Priority="49" Name="List Table 4 Accent 3"/>
+    <w:LsdException Locked="false" Priority="50" Name="List Table 5 Dark Accent 3"/>
+    <w:LsdException Locked="false" Priority="51"
+     Name="List Table 6 Colorful Accent 3"/>
+    <w:LsdException Locked="false" Priority="52"
+     Name="List Table 7 Colorful Accent 3"/>
+    <w:LsdException Locked="false" Priority="46"
+     Name="List Table 1 Light Accent 4"/>
+    <w:LsdException Locked="false" Priority="47" Name="List Table 2 Accent 4"/>
+    <w:LsdException Locked="false" Priority="48" Name="List Table 3 Accent 4"/>
+    <w:LsdException Locked="false" Priority="49" Name="List Table 4 Accent 4"/>
+    <w:LsdException Locked="false" Priority="50" Name="List Table 5 Dark Accent 4"/>
+    <w:LsdException Locked="false" Priority="51"
+     Name="List Table 6 Colorful Accent 4"/>
+    <w:LsdException Locked="false" Priority="52"
+     Name="List Table 7 Colorful Accent 4"/>
+    <w:LsdException Locked="false" Priority="46"
+     Name="List Table 1 Light Accent 5"/>
+    <w:LsdException Locked="false" Priority="47" Name="List Table 2 Accent 5"/>
+    <w:LsdException Locked="false" Priority="48" Name="List Table 3 Accent 5"/>
+    <w:LsdException Locked="false" Priority="49" Name="List Table 4 Accent 5"/>
+    <w:LsdException Locked="false" Priority="50" Name="List Table 5 Dark Accent 5"/>
+    <w:LsdException Locked="false" Priority="51"
+     Name="List Table 6 Colorful Accent 5"/>
+    <w:LsdException Locked="false" Priority="52"
+     Name="List Table 7 Colorful Accent 5"/>
+    <w:LsdException Locked="false" Priority="46"
+     Name="List Table 1 Light Accent 6"/>
+    <w:LsdException Locked="false" Priority="47" Name="List Table 2 Accent 6"/>
+    <w:LsdException Locked="false" Priority="48" Name="List Table 3 Accent 6"/>
+    <w:LsdException Locked="false" Priority="49" Name="List Table 4 Accent 6"/>
+    <w:LsdException Locked="false" Priority="50" Name="List Table 5 Dark Accent 6"/>
+    <w:LsdException Locked="false" Priority="51"
+     Name="List Table 6 Colorful Accent 6"/>
+    <w:LsdException Locked="false" Priority="52"
+     Name="List Table 7 Colorful Accent 6"/>
+   </w:LatentStyles>
+  </xml><![endif]-->
 
-    <body lang=EN-US link=blue vlink="#954F72" style='tab-interval:35.45pt'>
+  <![endif]--><!--[if gte mso 9]><xml>
+   <o:shapedefaults v:ext="edit" spidmax="2049"/>
+  </xml><![endif]--><!--[if gte mso 9]><xml>
+   <o:shapelayout v:ext="edit">
+    <o:idmap v:ext="edit" data="1"/>
+   </o:shapelayout></xml><![endif]-->
+  </head></html>"""
 
-    <div class=WordSection1>
+  let test = """
+<html>
 
-    <p class=MsoNormal style='text-indent:6.5pt;line-height:normal;mso-pagination:
-    none'><b style='mso-bidi-font-weight:normal'><span style='mso-ansi-language:
-    EN-US'>f</span></b><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><i style='mso-bidi-font-style:normal'><span style='letter-spacing:
-    .25pt;mso-ansi-language:EN-US'>littera</span></i><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><i style='mso-bidi-font-style:
-    normal'><span style='letter-spacing:.25pt;mso-ansi-language:EN-US'>sexta</span></i><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><i
-    style='mso-bidi-font-style:normal'><span style='letter-spacing:.25pt;
-    mso-ansi-language:EN-US'>alphabeti</span></i><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><i style='mso-bidi-font-style:
-    normal'><span style='letter-spacing:.25pt;mso-ansi-language:EN-US'>Latini</span></i><span
-    style='mso-ansi-language:EN-US'>.</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'><span style='mso-spacerun:yes'>  </span></span><span
-    class=jofu2><span style='font-size:8.0pt;mso-bidi-font-size:10.0pt;font-family:
-    "Arial",sans-serif;mso-bidi-font-family:"Times New Roman";color:#0070C0;
-    letter-spacing:0pt;mso-ansi-language:EN-US'>Weber</span></span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'><span
-    style='mso-spacerun:yes'>  </span></span><b style='mso-bidi-font-weight:normal'><span
-    style='mso-ansi-language:EN-US'>1</span></b><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><i style='mso-bidi-font-style:
-    normal'><span style='letter-spacing:.25pt;mso-ansi-language:EN-US'>gener.</span></i><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><i
-    style='mso-bidi-font-style:normal'><span style='letter-spacing:.25pt;
-    mso-ansi-language:EN-US'>(ad</span></i><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><i style='mso-bidi-font-style:
-    normal'><span style='letter-spacing:.25pt;mso-ansi-language:EN-US'>significandum</span></i><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><i
-    style='mso-bidi-font-style:normal'><span style='letter-spacing:.25pt;
-    mso-ansi-language:EN-US'>punctum</span></i><i style='mso-bidi-font-style:normal'><span
-    style='letter-spacing:-1.75pt;mso-ansi-language:EN-US'>:</span></i><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><!--[if supportFields]><i
-    style='mso-bidi-font-style:normal'><span lang=DE style='letter-spacing:.25pt'><span
-    style='mso-element:field-begin'></span></span></i><i style='mso-bidi-font-style:
-    normal'><span style='letter-spacing:.25pt;mso-ansi-language:EN-US'><span
-    style='mso-spacerun:yes'> </span>GOTOBUTTON F15m_1</span></i><![endif]--><!--[if supportFields]><i
-    style='mso-bidi-font-style:normal'><span lang=DE style='letter-spacing:.25pt'><span
-    style='mso-element:field-end'></span></span></i><![endif]--><i
-    style='mso-bidi-font-style:normal'><span style='letter-spacing:.25pt;
-    mso-ansi-language:EN-US'>l</span></i><i style='mso-bidi-font-style:normal'><span
-    style='letter-spacing:-.75pt;mso-ansi-language:EN-US'>.</span></i><i
-    style='mso-bidi-font-style:normal'><span style='mso-fareast-font-family:"Yu Gothic";
-    letter-spacing:-1.75pt;mso-ansi-language:EN-US'> </span></i><i
-    style='mso-bidi-font-style:normal'><span style='letter-spacing:.25pt;
-    mso-ansi-language:EN-US'>5)</span></i><i style='mso-bidi-font-style:normal'><span
-    style='letter-spacing:-1.75pt;mso-ansi-language:EN-US'>:</span></i><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='text-transform:uppercase;letter-spacing:.5pt;mso-ansi-language:EN-US'>Consuet</span><span
-    style='mso-ansi-language:EN-US'>.</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>Trev.</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><span style='mso-ansi-language:EN-US'>32</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>vasa</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>per</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><span style='mso-ansi-language:EN-US'>digamma,</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>id</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>est</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><span style='mso-ansi-language:EN-US'>F,</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>signata.</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='text-transform:uppercase;
-    letter-spacing:.5pt;mso-ansi-language:EN-US'>Herm.</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='text-transform:uppercase;letter-spacing:.5pt;mso-ansi-language:EN-US'>Augiens</span><span
-    style='mso-ansi-language:EN-US'>.</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>mens.</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><span style='mso-ansi-language:EN-US'>astrolab.</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>p.</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>204,36</span><span style='mso-fareast-font-family:"Yu Gothic";
-    mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:EN-US'>ex</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>his</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>quinque</span><span style='mso-fareast-font-family:"Yu Gothic";
-    mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:EN-US'>partibus</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='text-transform:uppercase;mso-ansi-language:EN-US'>iiii</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>utrinque</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>circa</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><span style='mso-ansi-language:EN-US'>C</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>secerne</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>et</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><span style='mso-ansi-language:EN-US'>punctis</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>superius</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>F<a name="F15m_1"></a>,</span><span style='mso-fareast-font-family:"Yu Gothic";
-    mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:EN-US'>inferius</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>G</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>inscribe</span><span style='mso-fareast-font-family:"Yu Gothic";
-    mso-ansi-language:EN-US'> </span><i style='mso-bidi-font-style:normal'><span
-    style='letter-spacing:.25pt;mso-ansi-language:EN-US'>eqs</span></i><span
-    style='mso-ansi-language:EN-US'>.</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='text-transform:uppercase;
-    letter-spacing:.5pt;mso-ansi-language:EN-US'>Chron</span><span
-    style='mso-ansi-language:EN-US'>.</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>reg.</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><span style='mso-ansi-language:EN-US'>a.</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>1162</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>p.</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><span style='mso-ansi-language:EN-US'>109,44</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>(rec.</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>II,</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><span style='mso-ansi-language:EN-US'>codd.</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>B1,</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>B2,</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><span style='mso-ansi-language:EN-US'>C2)</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>duo</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>gamma</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><span style='mso-ansi-language:EN-US'>esse</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>F,</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>primam</span><span style='mso-fareast-font-family:"Yu Gothic";
-    mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:EN-US'>litteram</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>nominis</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>Friderici</span><span style='mso-fareast-font-family:"Yu Gothic";
-    mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:EN-US'>imperatoris.</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='text-transform:uppercase;letter-spacing:.5pt;mso-ansi-language:EN-US'>Conr.</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='text-transform:uppercase;letter-spacing:.5pt;mso-ansi-language:EN-US'>Mur</span><span
-    style='mso-ansi-language:EN-US'>.</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>summ.</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><span style='mso-ansi-language:EN-US'>p.</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>142,23</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>Fridericus</span><span style='mso-fareast-font-family:"Yu Gothic";
-    mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:EN-US'>per</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>capitales</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>F</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><span style='mso-ansi-language:EN-US'>et</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>R</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>cum</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><span style='mso-ansi-language:EN-US'>titella</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><i
-    style='mso-bidi-font-style:normal'><span style='letter-spacing:.25pt;
-    mso-ansi-language:EN-US'>(sc.</span></i><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><i style='mso-bidi-font-style:
-    normal'><span style='letter-spacing:.25pt;mso-ansi-language:EN-US'>breviatur)</span></i><span
-    style='mso-ansi-language:EN-US'>.</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'>[MFSP]</span><b style='mso-bidi-font-weight:
-    normal'><span style='mso-ansi-language:EN-US'>2</span></b><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><i
-    style='mso-bidi-font-style:normal'><span style='letter-spacing:.25pt;
-    mso-ansi-language:EN-US'>mus.</span></i><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><i style='mso-bidi-font-style:
-    normal'><span style='letter-spacing:.25pt;mso-ansi-language:EN-US'>(de</span></i><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><i
-    style='mso-bidi-font-style:normal'><span style='letter-spacing:.25pt;
-    mso-ansi-language:EN-US'>re</span></i><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><i style='mso-bidi-font-style:
-    normal'><span style='letter-spacing:.25pt;mso-ansi-language:EN-US'>v.</span></i><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><i
-    style='mso-bidi-font-style:normal'><span style='letter-spacing:.25pt;
-    mso-ansi-language:EN-US'>LexMusLat.</span></i><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><i style='mso-bidi-font-style:
-    normal'><span style='letter-spacing:.25pt;mso-ansi-language:EN-US'>vol.</span></i><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><i
-    style='mso-bidi-font-style:normal'><span style='letter-spacing:.25pt;
-    mso-ansi-language:EN-US'>II.</span></i><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><i style='mso-bidi-font-style:
-    normal'><span style='letter-spacing:.25pt;mso-ansi-language:EN-US'>s.</span></i><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><i
-    style='mso-bidi-font-style:normal'><span style='letter-spacing:.25pt;
-    mso-ansi-language:EN-US'>v.</span></i><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><i style='mso-bidi-font-style:
-    normal'><span style='letter-spacing:.25pt;mso-ansi-language:EN-US'>‘f’)</span></i><i
-    style='mso-bidi-font-style:normal'><span style='letter-spacing:-1.75pt;
-    mso-ansi-language:EN-US'>:</span></i><span style='mso-fareast-font-family:"Yu Gothic";
-    mso-ansi-language:EN-US'>[MFSP]</span><b style='mso-bidi-font-weight:normal'><span
-    style='mso-ansi-language:EN-US'>a</span></b><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><i style='mso-bidi-font-style:
-    normal'><span style='letter-spacing:.25pt;mso-ansi-language:EN-US'>de</span></i><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><i
-    style='mso-bidi-font-style:normal'><span style='letter-spacing:.25pt;
-    mso-ansi-language:EN-US'>littera</span></i><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><i style='mso-bidi-font-style:
-    normal'><span style='letter-spacing:.25pt;mso-ansi-language:EN-US'>significativa</span></i><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><i
-    style='mso-bidi-font-style:normal'><span style='letter-spacing:.25pt;
-    mso-ansi-language:EN-US'>neumatibus</span></i><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><i style='mso-bidi-font-style:
-    normal'><span style='letter-spacing:.25pt;mso-ansi-language:EN-US'>addita</span></i><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><i
-    style='mso-bidi-font-style:normal'><span style='letter-spacing:.25pt;
-    mso-ansi-language:EN-US'>(‘Romanusbuchstabe’)</span></i><i style='mso-bidi-font-style:
-    normal'><span style='letter-spacing:-1.75pt;mso-ansi-language:EN-US'>:</span></i><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='text-transform:uppercase;letter-spacing:.5pt;mso-ansi-language:EN-US'>Notker.</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='text-transform:uppercase;letter-spacing:.5pt;mso-ansi-language:EN-US'>Balb</span><span
-    style='mso-ansi-language:EN-US'>.</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>ad</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><span style='mso-ansi-language:EN-US'>Lantb.</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>p.</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>35</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><span style='mso-ansi-language:EN-US'>f,</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>ut</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>cum</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><span style='mso-ansi-language:EN-US'>fragore</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>seu</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>frendore</span><span style='mso-fareast-font-family:"Yu Gothic";
-    mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:EN-US'>feriatur,</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>efflagitat</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>(<i style='mso-bidi-font-style:normal'><span style='letter-spacing:.25pt'>item</span></i></span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='text-transform:uppercase;letter-spacing:.5pt;mso-ansi-language:EN-US'>Frutolf.</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>[?]</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>brev.</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><span style='mso-ansi-language:EN-US'>14</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>p.</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>103,2).</span><span style='mso-fareast-font-family:"Yu Gothic";
-    mso-ansi-language:EN-US'>[MFSP]</span><b style='mso-bidi-font-weight:normal'><span
-    style='mso-ansi-language:EN-US'>b</span></b><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><i style='mso-bidi-font-style:
-    normal'><span style='letter-spacing:.25pt;mso-ansi-language:EN-US'>ad</span></i><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><i
-    style='mso-bidi-font-style:normal'><span style='letter-spacing:.25pt;
-    mso-ansi-language:EN-US'>tonos</span></i><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><i style='mso-bidi-font-style:
-    normal'><span style='letter-spacing:.25pt;mso-ansi-language:EN-US'>significandos</span></i><i
-    style='mso-bidi-font-style:normal'><span style='letter-spacing:-1.75pt;
-    mso-ansi-language:EN-US'>:</span></i><span style='mso-fareast-font-family:"Yu Gothic";
-    mso-ansi-language:EN-US'> </span><span style='text-transform:uppercase;
-    letter-spacing:.5pt;mso-ansi-language:EN-US'>Ps.</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='text-transform:uppercase;
-    letter-spacing:.5pt;mso-ansi-language:EN-US'>Odo</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='text-transform:uppercase;
-    letter-spacing:.5pt;mso-ansi-language:EN-US'>Clun</span><span style='mso-ansi-language:
-    EN-US'>.</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><span style='mso-ansi-language:EN-US'>dial.</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>2</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>p.</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><span style='mso-ansi-language:EN-US'>253</span><span
-    style='font-size:7.0pt;mso-bidi-font-size:10.0pt;position:relative;top:-2.0pt;
-    mso-text-raise:2.0pt;mso-ansi-language:EN-US'>b</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'><span style='mso-spacerun:yes'> </span></span><span
-    style='mso-ansi-language:EN-US'>scribe</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='letter-spacing:2.25pt;
-    mso-ansi-language:EN-US'>..</span><span style='mso-ansi-language:EN-US'>.</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>pro</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>F</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><span style='mso-ansi-language:EN-US'>aliam</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>f.</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='text-transform:uppercase;
-    letter-spacing:.5pt;mso-ansi-language:EN-US'>Comm</span><span style='mso-ansi-language:
-    EN-US'>.</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><span style='mso-ansi-language:EN-US'>microl.</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>70</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>p.</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><span style='mso-ansi-language:EN-US'>105</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>a</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>voce</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><span style='mso-ansi-language:EN-US'>D</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>in</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>F</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><span style='mso-ansi-language:EN-US'>est</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>semiditonus.</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>333</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><span style='mso-ansi-language:EN-US'>p.</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>119</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>in</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><span style='mso-ansi-language:EN-US'>diapason</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>F</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>f.</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><i style='mso-bidi-font-style:normal'><span style='letter-spacing:
-    .25pt;mso-ansi-language:EN-US'>saepe.</span></i><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><i style='mso-bidi-font-style:
-    normal'><span style='letter-spacing:.25pt;mso-ansi-language:EN-US'>v.</span></i><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><i
-    style='mso-bidi-font-style:normal'><span style='letter-spacing:.25pt;
-    mso-ansi-language:EN-US'>et</span></i><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><i style='mso-bidi-font-style:
-    normal'><span style='letter-spacing:.25pt;mso-ansi-language:EN-US'>vol.</span></i><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><i
-    style='mso-bidi-font-style:normal'><span style='letter-spacing:.25pt;
-    mso-ansi-language:EN-US'>III.</span></i><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><i style='mso-bidi-font-style:
-    normal'><span style='letter-spacing:.25pt;mso-ansi-language:EN-US'>p.</span></i><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><i
-    style='mso-bidi-font-style:normal'><span style='letter-spacing:.25pt;
-    mso-ansi-language:EN-US'>1,13</span></i><span style='mso-ansi-language:EN-US'>.</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'>[MFSP]</span><i
-    style='mso-bidi-font-style:normal'><span style='letter-spacing:.25pt;
-    mso-ansi-language:EN-US'>in</span></i><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><i style='mso-bidi-font-style:
-    normal'><span style='letter-spacing:.25pt;mso-ansi-language:EN-US'>mensura</span></i><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><i
-    style='mso-bidi-font-style:normal'><span style='letter-spacing:.25pt;
-    mso-ansi-language:EN-US'>cymbalorum</span></i><i style='mso-bidi-font-style:
-    normal'><span style='letter-spacing:-1.75pt;mso-ansi-language:EN-US'>:</span></i><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='text-transform:uppercase;letter-spacing:.5pt;mso-ansi-language:EN-US'>Theoph</span><span
-    style='mso-ansi-language:EN-US'>.</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>sched.</span><span style='mso-fareast-font-family:"Yu Gothic";
-    mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:EN-US'>3,86</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>p.</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>158,23</span><span style='mso-fareast-font-family:"Yu Gothic";
-    mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:EN-US'>dividat</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><i
-    style='mso-bidi-font-style:normal'><span style='letter-spacing:.25pt;
-    mso-ansi-language:EN-US'>(sc.</span></i><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><i style='mso-bidi-font-style:
-    normal'><span style='letter-spacing:.25pt;mso-ansi-language:EN-US'>quicumque</span></i><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><i
-    style='mso-bidi-font-style:normal'><span style='letter-spacing:.25pt;
-    mso-ansi-language:EN-US'>vult</span></i><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><i style='mso-bidi-font-style:
-    normal'><span style='letter-spacing:.25pt;mso-ansi-language:EN-US'>facere</span></i><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><i
-    style='mso-bidi-font-style:normal'><span style='letter-spacing:.25pt;
-    mso-ansi-language:EN-US'>cymbala)</span></i><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>ceram</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><span style='mso-ansi-language:EN-US'>G</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>per</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>octo</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><span style='mso-ansi-language:EN-US'>et</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>tantum</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>det</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><span style='mso-ansi-language:EN-US'>F</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>litterae,</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>quantum</span><span style='mso-fareast-font-family:"Yu Gothic";
-    mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:EN-US'>est</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>in</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>summa</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><span style='mso-ansi-language:EN-US'>eius</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><i
-    style='mso-bidi-font-style:normal'><span style='letter-spacing:.25pt;
-    mso-ansi-language:EN-US'>(sc.</span></i><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><i style='mso-bidi-font-style:
-    normal'><span lang=DE style='letter-spacing:.25pt'>G)</span></i><span lang=DE
-    style='mso-fareast-font-family:"Yu Gothic"'> </span><span lang=DE>et</span><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><span lang=DE>insuper</span><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><span lang=DE>octavam</span><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><span lang=DE>eius</span><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><span lang=DE>partem.</span><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><span
-    style='text-transform:uppercase;letter-spacing:.5pt;mso-ansi-language:EN-US'>Cymbala</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>I</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>4</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><span style='mso-ansi-language:EN-US'>accipe</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>totum</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>E</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><span style='mso-ansi-language:EN-US'>et</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>eius</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='text-transform:uppercase;
-    mso-ansi-language:EN-US'>viii</span><span style='font-size:7.0pt;mso-bidi-font-size:
-    10.0pt;position:relative;top:-2.0pt;mso-text-raise:2.0pt;mso-ansi-language:
-    EN-US'>am</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'><span style='mso-spacerun:yes'> </span></span><span style='mso-ansi-language:
-    EN-US'>partem</span><span style='mso-fareast-font-family:"Yu Gothic";
-    mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:EN-US'>et</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='mso-ansi-language:EN-US'>fac</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>F</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><i style='mso-bidi-font-style:normal'><span style='letter-spacing:
-    .25pt;mso-ansi-language:EN-US'>eqs</span></i><span style='mso-ansi-language:
-    EN-US'>.</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><i style='mso-bidi-font-style:normal'><span style='letter-spacing:
-    .25pt;mso-ansi-language:EN-US'>ibid.</span></i><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><i style='mso-bidi-font-style:
-    normal'><span style='letter-spacing:.25pt;mso-ansi-language:EN-US'>al</span></i><span
-    style='mso-ansi-language:EN-US'>.</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'>[MFSP]</span><b style='mso-bidi-font-weight:
-    normal'><span style='mso-ansi-language:EN-US'>3</span></b><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><i
-    style='mso-bidi-font-style:normal'><span style='letter-spacing:.25pt;
-    mso-ansi-language:EN-US'>math.</span></i><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><i style='mso-bidi-font-style:
-    normal'><span style='letter-spacing:.25pt;mso-ansi-language:EN-US'>numerum</span></i><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><i
-    style='mso-bidi-font-style:normal'><span style='text-transform:uppercase;
-    letter-spacing:.25pt;mso-ansi-language:EN-US'>xl</span></i><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><i
-    style='mso-bidi-font-style:normal'><span style='letter-spacing:.25pt;
-    mso-ansi-language:EN-US'>significans</span></i><i style='mso-bidi-font-style:
-    normal'><span style='letter-spacing:-1.75pt;mso-ansi-language:EN-US'>:</span></i><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    style='text-transform:uppercase;letter-spacing:.5pt;mso-ansi-language:EN-US'>Carm</span><span
-    style='mso-ansi-language:EN-US'>.</span><span style='mso-fareast-font-family:
-    "Yu Gothic";mso-ansi-language:EN-US'> </span><span style='mso-ansi-language:
-    EN-US'>de</span><span style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:
-    EN-US'> </span><span style='mso-ansi-language:EN-US'>litt.</span><span
-    style='mso-fareast-font-family:"Yu Gothic";mso-ansi-language:EN-US'> </span><span
-    lang=DE>7</span><span lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><span
-    lang=DE>sexta</span><span lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><span
-    lang=DE>quater</span><span lang=DE style='mso-fareast-font-family:"Yu Gothic"'>
-    </span><span lang=DE>decem</span><span lang=DE style='mso-fareast-font-family:
-    "Yu Gothic"'> </span><span lang=DE>gerit</span><span lang=DE style='mso-fareast-font-family:
-    "Yu Gothic"'> </span><span lang=DE>F,</span><span lang=DE style='mso-fareast-font-family:
-    "Yu Gothic"'> </span><span lang=DE>que</span><span lang=DE style='mso-fareast-font-family:
-    "Yu Gothic"'> </span><span lang=DE>distat</span><span lang=DE style='mso-fareast-font-family:
-    "Yu Gothic"'> </span><span lang=DE>ab</span><span lang=DE style='mso-fareast-font-family:
-    "Yu Gothic"'> </span><span lang=DE>alpha;</span><span lang=DE style='mso-fareast-font-family:
-    "Yu Gothic"'> </span><span lang=DE style='text-transform:uppercase'>xxxx</span><span
-    lang=DE>.</span><span lang=DE style='mso-fareast-font-family:"Yu Gothic"'>[MFSP]</span><b
-    style='mso-bidi-font-weight:normal'><span lang=DE>4</span></b><span lang=DE
-    style='mso-fareast-font-family:"Yu Gothic"'> </span><i style='mso-bidi-font-style:
-    normal'><span lang=DE style='letter-spacing:.25pt'>comput.</span></i><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><i
-    style='mso-bidi-font-style:normal'><span lang=DE style='letter-spacing:.25pt'>ad</span></i><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><i
-    style='mso-bidi-font-style:normal'><span lang=DE style='letter-spacing:.25pt'>significandam</span></i><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><i
-    style='mso-bidi-font-style:normal'><span lang=DE style='letter-spacing:.25pt'>litteram</span></i><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><i
-    style='mso-bidi-font-style:normal'><span lang=DE style='letter-spacing:.25pt'>dominicalem</span></i><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><i
-    style='mso-bidi-font-style:normal'><span lang=DE style='letter-spacing:.25pt'>(‘Sonntagsbuchstabe’;</span></i><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><i
-    style='mso-bidi-font-style:normal'><span lang=DE style='letter-spacing:.25pt'>de</span></i><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><i
-    style='mso-bidi-font-style:normal'><span lang=DE style='letter-spacing:.25pt'>re</span></i><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><i
-    style='mso-bidi-font-style:normal'><span lang=DE style='letter-spacing:.25pt'>v.</span></i><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><i
-    style='mso-bidi-font-style:normal'><span lang=DE style='letter-spacing:.25pt'>H.</span></i><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><i
-    style='mso-bidi-font-style:normal'><span lang=DE style='letter-spacing:.25pt'>Grotefend,</span></i><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><i
-    style='mso-bidi-font-style:normal'><span lang=DE style='letter-spacing:.25pt'>Taschenbuch</span></i><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><i
-    style='mso-bidi-font-style:normal'><span lang=DE style='letter-spacing:.25pt'>der</span></i><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><i
-    style='mso-bidi-font-style:normal'><span lang=DE style='letter-spacing:.25pt'>Zeitrechnung.</span></i><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><i
-    style='mso-bidi-font-style:normal'><span lang=DE style='font-size:7.0pt;
-    mso-bidi-font-size:10.0pt;position:relative;top:-2.0pt;mso-text-raise:2.0pt;
-    letter-spacing:.25pt'>14</span><span lang=DE style='letter-spacing:.25pt'>2007.</span></i><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><i
-    style='mso-bidi-font-style:normal'><span lang=DE style='letter-spacing:.25pt'>p.</span></i><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><i
-    style='mso-bidi-font-style:normal'><span lang=DE style='letter-spacing:.25pt'>4.</span></i><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><i
-    style='mso-bidi-font-style:normal'><span lang=DE style='letter-spacing:.25pt'>134sq.)</span><span
-    lang=DE style='letter-spacing:-1.75pt'>:</span></i><span lang=DE
-    style='mso-fareast-font-family:"Yu Gothic"'> </span><span lang=DE
-    style='text-transform:uppercase;letter-spacing:.5pt'>Liber</span><span lang=DE
-    style='mso-fareast-font-family:"Yu Gothic"'> </span><span lang=DE>ordin.</span><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><span lang=DE>Rhenaug.</span><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><span lang=DE>p.</span><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><span lang=DE>241,27</span><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><span lang=DE>in</span><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><span lang=DE>eo</span><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><span lang=DE
-    style='letter-spacing:2.25pt'>..</span><span lang=DE>.</span><span lang=DE
-    style='mso-fareast-font-family:"Yu Gothic"'> </span><span lang=DE>anno,</span><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><span lang=DE>cum</span><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><span lang=DE>dies</span><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><span lang=DE>dominica</span><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><span lang=DE>in</span><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><span lang=DE>f</span><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><span lang=DE>evenerit</span><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><span lang=DE>(<i
-    style='mso-bidi-font-style:normal'><span style='letter-spacing:.25pt'>sim</span></i>.</span><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><span lang=DE>p.</span><span
-    lang=DE style='mso-fareast-font-family:"Yu Gothic"'> </span><span lang=DE>241,36).</span></p>
+  <head>
 
-    </div>
-    </body>
-    </html>
-    """
 
-  # let res = prolog("""<?xml version="1.0" encoding="UTF-8"?>""")
-  # let res = element("""<note></note>""")
-  # let res = document("""<?xml version="1.0" encoding="UTF-8"?><note></note>""")
-  # let res = document(testdoc1)
-  # let res = element("""<h1:DocumentSet xmlns:h1="http://www.startext.de/HiDA/DefService/XMLSchema">
-  #                     </h1:DocumentSet>""")
-  # let res = element("""<h1:ContentInfo>
-  #         <h1:Format>HIDA-DOC1-XML</h1:Format>
-  #        <h1:CreationDate>26.04.2022 11:17:45</h1:CreationDate>
-  #       </h1:ContentInfo>""")
-  # let res = element("""<h1:Field Type="Ref_DocKey" Value="Arch    dd7238e4-c7a8-4b37-9332-99a58c5ed53b"/>""")
-  # let res = document(testdoc2)
-  # let res = STag("""<body lang=EN-US link=blue vlink="#954F72" style='tab-interval:35.45pt'>""")
-  var res: EndResult
-  try:
-    res = element("""<span
-      style='mso-spacerun:yes'>  </span>""")
-  except ParsingException as pe:
-    echo $pe
-  # let res = document(testdoc3)
+  <!--[if gte mso 9]><![endif]--><!--[if gte mso 9]><xml>
+
+
+    <w:LsdException Locked="false" Priority="62" Name="Light Grid"/>
+    <w:LsdException Locked="false" Priority="63" Name="Medium Shading 1"/>
+    <w:LsdException Locked="false" Priority="64" Name="Medium Shading 2"/>
+    <w:LsdException Locked="false" Priority="65" Name="Medium List 1"/>
+    <w:LsdException Locked="false" Priority="66" Name="Medium List 2"/>
+    <w:LsdException Locked="false" Priority="67" Name="Medium Grid 1"/>
+    <w:LsdException Locked="false" Priority="68" Name="Medium Grid 2"/>
+    <w:LsdException Locked="false" Priority="69" Name="Medium Grid 3"/>
+    <w:LsdException Locked="false" Priority="70" Name="Dark List"/>
+    <w:LsdException Locked="false" Priority="71" Name="Colorful Shading"/>
+    <w:LsdException Locked="false" Priority="72" Name="Colorful List"/>
+    <w:LsdException Locked="false" Priority="73" Name="Colorful Grid"/>
+    <w:LsdException Locked="false" Priority="60" Name="Light Shading Accent 1"/>
+    <w:LsdException Locked="false" Priority="61" Name="Light List Accent 1"/>
+    <w:LsdException Locked="false" Priority="62" Name="Light Grid Accent 1"/>
+    <w:LsdException Locked="false" Priority="63" Name="Medium Shading 1 Accent 1"/>
+    <w:LsdException Locked="false" Priority="64" Name="Medium Shading 2 Accent 1"/>
+    <w:LsdException Locked="false" Priority="65" Name="Medium List 1 Accent 1"/>
+    <w:LsdException Locked="false" SemiHidden="true" Name="Revision"/>
+    <w:LsdException Locked="false" Priority="34" QFormat="true"
+     Name="List Paragraph"/>
+    <w:LsdException Locked="false" Priority="29" QFormat="true" Name="Quote"/>
+    <w:LsdException Locked="false" Priority="30" QFormat="true"
+     Name="Intense Quote"/>
+    <w:LsdException Locked="false" Priority="66" Name="Medium List 2 Accent 1"/>
+    <w:LsdException Locked="false" Priority="67" Name="Medium Grid 1 Accent 1"/>
+    <w:LsdException Locked="false" Priority="68" Name="Medium Grid 2 Accent 1"/>
+    <w:LsdException Locked="false" Priority="69" Name="Medium Grid 3 Accent 1"/>
+    <w:LsdException Locked="false" Priority="70" Name="Dark List Accent 1"/>
+    <w:LsdException Locked="false" Priority="71" Name="Colorful Shading Accent 1"/>
+    <w:LsdException Locked="false" Priority="72" Name="Colorful List Accent 1"/>
+    <w:LsdException Locked="false" Priority="73" Name="Colorful Grid Accent 1"/>
+    <w:LsdException Locked="false" Priority="60" Name="Light Shading Accent 2"/>
+    <w:LsdException Locked="false" Priority="61" Name="Light List Accent 2"/>
+    <w:LsdException Locked="false" Priority="62" Name="Light Grid Accent 2"/>
+    <w:LsdException Locked="false" Priority="63" Name="Medium Shading 1 Accent 2"/>
+    <w:LsdException Locked="false" Priority="64" Name="Medium Shading 2 Accent 2"/>
+    <w:LsdException Locked="false" Priority="65" Name="Medium List 1 Accent 2"/>
+    <w:LsdException Locked="false" Priority="66" Name="Medium List 2 Accent 2"/>
+    <w:LsdException Locked="false" Priority="67" Name="Medium Grid 1 Accent 2"/>
+    <w:LsdException Locked="false" Priority="68" Name="Medium Grid 2 Accent 2"/>
+    <w:LsdException Locked="false" Priority="69" Name="Medium Grid 3 Accent 2"/>
+    <w:LsdException Locked="false" Priority="70" Name="Dark List Accent 2"/>
+    <w:LsdException Locked="false" Priority="71" Name="Colorful Shading Accent 2"/>
+    <w:LsdException Locked="false" Priority="72" Name="Colorful List Accent 2"/>
+    <w:LsdException Locked="false" Priority="73" Name="Colorful Grid Accent 2"/>
+    <w:LsdException Locked="false" Priority="60" Name="Light Shading Accent 3"/>
+    <w:LsdException Locked="false" Priority="61" Name="Light List Accent 3"/>
+    <w:LsdException Locked="false" Priority="62" Name="Light Grid Accent 3"/>
+    <w:LsdException Locked="false" Priority="63" Name="Medium Shading 1 Accent 3"/>
+    <w:LsdException Locked="false" Priority="64" Name="Medium Shading 2 Accent 3"/>
+    <w:LsdException Locked="false" Priority="65" Name="Medium List 1 Accent 3"/>
+    <w:LsdException Locked="false" Priority="66" Name="Medium List 2 Accent 3"/>
+    <w:LsdException Locked="false" Priority="67" Name="Medium Grid 1 Accent 3"/>
+    <w:LsdException Locked="false" Priority="68" Name="Medium Grid 2 Accent 3"/>
+    <w:LsdException Locked="false" Priority="69" Name="Medium Grid 3 Accent 3"/>
+    <w:LsdException Locked="false" Priority="70" Name="Dark List Accent 3"/>
+    <w:LsdException Locked="false" Priority="71" Name="Colorful Shading Accent 3"/>
+    <w:LsdException Locked="false" Priority="72" Name="Colorful List Accent 3"/>
+    <w:LsdException Locked="false" Priority="73" Name="Colorful Grid Accent 3"/>
+    <w:LsdException Locked="false" Priority="60" Name="Light Shading Accent 4"/>
+    <w:LsdException Locked="false" Priority="61" Name="Light List Accent 4"/>
+    <w:LsdException Locked="false" Priority="62" Name="Light Grid Accent 4"/>
+    <w:LsdException Locked="false" Priority="63" Name="Medium Shading 1 Accent 4"/>
+    <w:LsdException Locked="false" Priority="64" Name="Medium Shading 2 Accent 4"/>
+    <w:LsdException Locked="false" Priority="65" Name="Medium List 1 Accent 4"/>
+    <w:LsdException Locked="false" Priority="66" Name="Medium List 2 Accent 4"/>
+    <w:LsdException Locked="false" Priority="67" Name="Medium Grid 1 Accent 4"/>
+    <w:LsdException Locked="false" Priority="68" Name="Medium Grid 2 Accent 4"/>
+    <w:LsdException Locked="false" Priority="69" Name="Medium Grid 3 Accent 4"/>
+    <w:LsdException Locked="false" Priority="70" Name="Dark List Accent 4"/>
+    <w:LsdException Locked="false" Priority="71" Name="Colorful Shading Accent 4"/>
+    <w:LsdException Locked="false" Priority="72" Name="Colorful List Accent 4"/>
+    <w:LsdException Locked="false" Priority="73" Name="Colorful Grid Accent 4"/>
+    <w:LsdException Locked="false" Priority="60" Name="Light Shading Accent 5"/>
+    <w:LsdException Locked="false" Priority="61" Name="Light List Accent 5"/>
+    <w:LsdException Locked="false" Priority="62" Name="Light Grid Accent 5"/>
+    <w:LsdException Locked="false" Priority="63" Name="Medium Shading 1 Accent 5"/>
+    <w:LsdException Locked="false" Priority="64" Name="Medium Shading 2 Accent 5"/>
+    <w:LsdException Locked="false" Priority="65" Name="Medium List 1 Accent 5"/>
+    <w:LsdException Locked="false" Priority="66" Name="Medium List 2 Accent 5"/>
+    <w:LsdException Locked="false" Priority="67" Name="Medium Grid 1 Accent 5"/>
+    <w:LsdException Locked="false" Priority="68" Name="Medium Grid 2 Accent 5"/>
+    <w:LsdException Locked="false" Priority="69" Name="Medium Grid 3 Accent 5"/>
+    <w:LsdException Locked="false" Priority="70" Name="Dark List Accent 5"/>
+    <w:LsdException Locked="false" Priority="71" Name="Colorful Shading Accent 5"/>
+    <w:LsdException Locked="false" Priority="72" Name="Colorful List Accent 5"/>
+    <w:LsdException Locked="false" Priority="73" Name="Colorful Grid Accent 5"/>
+    <w:LsdException Locked="false" Priority="60" Name="Light Shading Accent 6"/>
+    <w:LsdException Locked="false" Priority="61" Name="Light List Accent 6"/>
+    <w:LsdException Locked="false" Priority="62" Name="Light Grid Accent 6"/>
+    <w:LsdException Locked="false" Priority="63" Name="Medium Shading 1 Accent 6"/>
+
+    <w:LsdException Locked="false" Priority="70" Name="Dark List Accent 6"/>
+    <w:LsdException Locked="false" Priority="71" Name="Colorful Shading Accent 6"/>
+    <w:LsdException Locked="false" Priority="72" Name="Colorful List Accent 6"/>
+    <w:LsdException Locked="false" Priority="73" Name="Colorful Grid Accent 6"/>
+
+   </w:LatentStyles>
+  </xml><![endif]-->
+
+  <![endif]--><!--[if gte mso 9]><xml>
+   <o:shapedefaults v:ext="edit" spidmax="2049"/>
+  </xml><![endif]--><!--[if gte mso 9]><xml>
+   <o:shapelayout v:ext="edit">
+    <o:idmap v:ext="edit" data="1"/>
+   </o:shapelayout></xml><![endif]-->
+  </head></html>"""
+
+  let d = getCurrentDir().string
+  if d.endsWith("/DHParser"):
+    setCurrentDir(Path("nim_rewrite/examples"))
+  let source = readFile("K.htm")
+  echo $source.len
+  let res = document(test)
+  echo "---"
+  echo res.root.asSxpr()
+  echo "---"
   for e in res.errors:
     echo $e
-  echo $res.root.asSxpr()
-  echo "ready."
+    echo ""
+
+
