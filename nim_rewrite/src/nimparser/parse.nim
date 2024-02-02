@@ -512,6 +512,7 @@ proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
   if closestMatch >= upperLimit:  closestMatch = -1
   if isNil(skipNode):
     let skipSlice = document[location ..< max(closestMatch, location)]
+    # let skipSlice = document.`[]`(location ..< max(closestMatch, location))
     skipNode = newNode(ZombieName, skipSlice)
   return (skip_node, closestMatch - location)
 
@@ -1700,9 +1701,9 @@ type
     discard
 
 proc traceWrapper(parser: Parser, location: int32): ParsingResult =
-  echo $location & " " & parser.subParsers[0].pname
+  echo $location & " " & parser.subParsers[0].pname & " " & $parser.grammar.document[location..location+40]
   let res = parser.subParsers[0](location)
-  if not isNil(res.node): echo res.node.content  else: echo "nil"
+  if not isNil(res.node): echo "-> " & res.node.content  else: echo "-> nil"
   return res
 
 method cleanUp(self: TraceRef) =

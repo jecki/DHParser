@@ -26,7 +26,7 @@ else:
 
 type
   # StringSliceRef* = ref StringSlice not nil
-  StringSlice* = object
+  StringSlice* = tuple
     buf: ref string not nil
     start: int32
     stop: int32
@@ -44,21 +44,19 @@ type
 
 # let EmptyStrSlice* = StringSlice(buf: ensureEmptyStrRef(), start: 0, stop: -1)
 
-
 proc makeStringSlice*(str: ref string or string): StringSlice =
   ## Create a new string slice that references the string. This creates a new
   ## reference to the string, so any changes to the underlying string will be
   ## visible in all slices made from this string.
   # new result
+  var strRef: ref string not nil
   when str is ref string:
-    # result = new StringSlice
-    StringSLice(buf: str, start: 0, stop: str.len.int32 - 1)
+    strRef = str
   else:
-    var strRef: ref string not nil
     new(strRef)
     strRef[] = str
-    StringSlice(buf: strRef, start: 0, stop: str.len.int32 - 1)
-
+  # StringSlice(buf: strRef, start: 0, stop: str.len.int32 - 1)
+  (strRef, 0, strRef[].len.int32 - 1)
 
 let EmptyStringSlice* = makeStringSlice("")
 
@@ -87,36 +85,24 @@ proc len*(str: StringSlice): int32 =
   ## Get the length of a string slice
   str.high + 1
 
-proc `[]`*(str: StringSlice,
-           slc: HSlice[int32, int32 or BackwardsIndex]): StringSlice =
-  ## Grab a slice of a string slice. This returns a new string slice that
-  ## references the same underlying string.
-  if slc.a < 0:
-    raise newException(IndexDefect, "index out of bounds")
-  var stop: int32
-  when slc.b is BackwardsIndex:
-    if slc.b.int > str.len + 1:
-      raise newException(RangeDefect, "value out of range: " &
-        $(str.len + 1 - slc.b.int))
-    stop = str.stop - slc.b.int32 + 1
-  else:
-    let b = min(slc.b, str.high)
-    if b + 1 < slc.a:
-      raise newException(IndexDefect, "index out of bounds")
-    stop = str.start + b
-  StringSlice(buf: str.buf, start: str.start + slc.a, stop: stop)
 
-proc `[]`*(str: StringSlice,
-           slc: HSlice[int, int]): StringSlice =
-  str[slc.a.int32 .. slc.b.int32]
+proc forwardIndex(str: StringSlice, i: Backwardsindex): int32 =
+  let idx: int32 = min(i.int32, str.len + 1)
+  str.stop - idx + 1
 
-proc `[]`*(str: StringSlice,
-           slc: HSlice[int32, int]): StringSlice =
-  str[slc.a .. slc.b.int32]
+template index(str: StringSlice, i: int32 or int): int32 = max(min(i.int32, str.high), 0)
 
-proc `[]`*(str: StringSlice,
-           slc: HSlice[int, int32 or BackwardsIndex]): StringSlice =
-  str[slc.a.int32 .. slc.b]
+proc `[]`*(str: StringSlice, slc: HSlice[int32 or int, int32 or int]): StringSlice =
+  (str.buf, str.start + str.index(slc.a), str.start + str.index(slc.b))
+
+proc `[]`*(str: StringSlice, slc: HSlice[int32 or int, BackwardsIndex]): StringSlice =
+  (str.buf, str.start + str.index(slc.a), str.start + str.forwardIndex(slc.b))
+
+proc `[]`*(str: StringSlice, slc: HSlice[BackwardsIndex, int32 or int]): StringSlice =
+  (str.buf, str.start + str.forwardIndex(slc.a), str.start + str.index(slc.b))
+
+proc `[]`*(str: StringSlice, slc: HSlice[BackwardsIndex, BackwardsIndex]): StringSlice =
+  (str.buf, str.start + str.forwardIndex(slc.a), str.start + str.forwardIndex(slc.b))
 
 
 proc `&`*(sl1, sl2: StringSlice): StringSlice =
@@ -189,7 +175,8 @@ proc strip*(s: StringSlice, first = true, last = true): StringSlice {.noInit.} =
   ## Strips whitespace from both sides (controllable with the ``first`` and
   ## ``last`` arguments) of the string slice and returns a new string slice
   ## with the same underlying string.
-  result = StringSlice(buf: s.buf, start: s.start, stop: s.stop)
+  result = (s.buf, s.start, s.stop)
+  # result = StringSlice(buf: s.buf, start: s.start, stop: s.stop)
   if first:
     for i in result.start..result.stop:
       if not (result.buf[i] in Whitespace): break
@@ -278,18 +265,27 @@ else:
 
   proc matchLen*(slice: StringSlice, pattern: RegEx, location: int32): int32 =
     assert location >= 0 and location <= slice.stop - slice.start + 1
-    return matchLen(slice.str[], pattern, slice.start + location).int32
+    echo $slice.start & " " & $location
+    result = matchLen(slice.str[], pattern, slice.start + location).int32
+    echo "<<<"
 
   func replace*(slice: StringSlice, pattern: Regex, replacement: string): string =
     replace($slice, pattern, replacement)
 
 
 when isMainModule:
+  var
+    sz = makeStringSlice("Hello world")
+    i: int32 = 5
+    sz2: StringSlice
+  sz2 = sz[i .. i + 3]
+  echo sz2
+
   let
     s1 = "Hello world"
     s2 = makeStringSlice("Hello world")
-    s3 = s2[6i32 .. ^1]
-    s4 = s2[2i32 .. ^1]
+    s3 = s2[6 .. ^1]
+    s4 = s2[2 .. ^1]
     s5 = toStringSlice("")
     s6 = toStringSlice("a")
 
@@ -313,10 +309,10 @@ when isMainModule:
   var
     s = "0123456789"
     ss = s.toStringSlice
-    upToFour = ss[0i32..4i32]
-    upToFive = ss[0i32..5i32]
-    upToSix = ss[0i32..6i32]
-    threeToFive = ss[3i32..5i32]
+    upToFour = ss[0..4]
+    upToFive = ss[0..5]
+    upToSix = ss[0..6]
+    threeToFive = ss[3..5]
 
   assert s.find("123", last = 5) == ss.find("123", last = 5)
   assert s.find("456", last = 5) == ss.find("456", last = 5)
@@ -339,14 +335,14 @@ when isMainModule:
   assert slice.matchLen(re"[0-9]+", 0) == -1
   assert slice.matchLen(re"[0-9]+", 4) == 3
   assert slice.matchLen(re"[0-9]+", 19) == 2
-  assert slice[19 .. ^1].matchLen(re"[0-9]+", 0) == 2
+  assert slice[19i32 .. ^1i32].matchLen(re"[0-9]+", 0) == 2
 
   assert slice.find(re"[0-9]+") == (4'i32, 6'i32)
   assert slice.find(re"[0-9]+", 7) == (12'i32, 14'i32)
   assert slice.find(re"[0-9]+", 7, 4) == (-1'i32, -2'i32)
-  assert slice[19 .. ^1].find(re"[0-9]+") == (0'i32, 1'i32)
+  assert slice[19i32 .. ^1i32].find(re"[0-9]+") == (0'i32, 1'i32)
 
-  assert slice[4..10].replace(re"\d", "?") == "??? def"
+  assert slice[4i32..10i32].replace(re"\d", "?") == "??? def"
 
   let trivial = makeStringSlice("A")
   assert trivial.matchLen(re"\w+", 0) == 1

@@ -35,7 +35,7 @@ let emptyElement = "emptyElement" ::= txt"<" & tagContent & txt"/>"
 let voidElement  = "voidElement" ::=  txt"<" & >>(ic"area" | ic"base" | ic"br" | ic"col" | ic"embed" | ic"hr" |
                                                   ic"img" | ic"inpu" | ic"link" | ic"meta" | ic"param" |
                                                   ic"source" | ic"track" | ic"wbr") & tagContent & txt">"
-let STag         = "Stag" ::=         Trace(txt"<" & tagContent & txt">")
+let STag         = "STag" ::=         txt"<" & tagContent & txt">"
 let tagContent   = "tagContent" ::=   >>!(rxp"[\/!?]") & § Name & *(WS & Attribute) & WS & >>(txt">"|txt"/>")
 let ETag         = "ETag" ::=         txt"</" & § Name & WS & txt">"
 
@@ -94,7 +94,7 @@ let CharData    = "CharData" ::=      rxp"(?:(?!\]\]>)[^<&])+"
 let CData       = "CData" ::=         rxp"(?:(?!\]\]>)(?:\x09|\x0A|\x0D|[\u0020-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF]))+"
 
 let PIChars     = "PIChars" ::=       rxp"(?:(?!\?>)(?:\x09|\x0A|\x0D|[\u0020-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF]))+"
-let CommentChars = "CommentChars" ::= rxp"(?:(?!-)(?:\x09|\x0A|\x0D|[\u0020-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF]))+"
+let CommentChars = "CommentChars" ::= Trace(rxp"(?:(?!-)(?:\x09|\x0A|\x0D|[\u0020-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF]))+")
 let CharRef     = "CharRef" ::=       (txt"&#" & rxp"[0-9]+" & txt";") | (txt"&#x" & rxp"[0-9a-fA-F]+" & txt";")
 
 let S           = "S" ::=             rxp"\s+"
@@ -875,6 +875,13 @@ when isMainModule:
     <o:idmap v:ext="edit" data="1"/>
    </o:shapelayout></xml><![endif]-->
   </head></html>"""
+
+  when defined amd64:
+    echo "amd64"
+  elif defined x86:
+    echo "x86 !?"
+  else:
+    echo "probably arm"
 
   let d = getCurrentDir().string
   if d.endsWith("/DHParser"):
