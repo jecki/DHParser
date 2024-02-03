@@ -884,11 +884,12 @@ when isMainModule:
     echo "probably arm"
 
   let d = getCurrentDir().string
+  echo $d
   if d.endsWith("/DHParser"):
     setCurrentDir(Path("nim_rewrite/examples"))
   let source = readFile("K.htm")
   echo $source.len
-  let res = document(test)
+  let res = document(testdoc)
   echo "---"
   echo res.root.asSxpr()
   echo "---"

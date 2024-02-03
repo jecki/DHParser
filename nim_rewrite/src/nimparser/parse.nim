@@ -511,7 +511,7 @@ proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
 
   if closestMatch >= upperLimit:  closestMatch = -1
   if isNil(skipNode):
-    let skipSlice = document[location ..< max(closestMatch, location)]
+    let skipSlice = document.cut(location ..< max(closestMatch, location))
     # let skipSlice = document.`[]`(location ..< max(closestMatch, location))
     skipNode = newNode(ZombieName, skipSlice)
   return (skip_node, closestMatch - location)
@@ -524,7 +524,7 @@ proc handle_error(parser: Parser, pe: ParsingException, location: int32): Parsin
   let
     grammar = pe.origin.grammar
     gap = pe.location - location
-    cut = grammar.document[location..<location + gap]
+    cut = grammar.document.cut(location..<location + gap)
     rules = pe.origin.resumeList
   var
     node = EmptyNode
@@ -540,7 +540,7 @@ proc handle_error(parser: Parser, pe: ParsingException, location: int32): Parsin
         zombie = child
         break
     if not isNil(zombie) and zombie.isEmpty:
-      zombie.result = grammar.document[location..<location + i]
+      zombie.result = grammar.document.cut(location..<location + i)
       tail = false
     nextLoc += i
     if pe.first_throw:
@@ -631,7 +631,7 @@ proc `()`*(parser: Parser, document: string or StringSlice, location: int32 = 0)
     p.cleanUp()
   let (root, loc) = parser.call(parser, location)
   if isNil(root) or loc < document.len:
-      let snippet = $parser.grammar.document[loc..loc + 9].replace(ure"\n", r"\n")
+      let snippet = $parser.grammar.document.cut(loc..loc + 9).replace(ure"\n", r"\n")
       let msg = fmt"Parser {parser.name} stopped before end at »{snippet}«"
       parser.grammar.errors.add(Error(msg, loc, ParserStoppedBeforeEnd))
   return (root, parser.grammar.errors)
@@ -796,7 +796,7 @@ proc violation(catcher: ErrorCatchingParserRef,
     of mkRegex:
       return text.matchLen(rule.rxInfo.regex, location) >= 0
     of mkString:
-      return text[location..<location + rule.cmpStr.len] == rule.cmpStr
+      return text.cut(location ..< location + rule.cmpStr.len) == rule.cmpStr
     of mkProc:
       return rule.findProc(text, location, location)[0] >= 0
     of mkParser:
@@ -811,7 +811,7 @@ proc violation(catcher: ErrorCatchingParserRef,
 
   let
     gr = catcher.grammar
-    snippet = $gr.document[location..location + 9].replace(ure"\n", r"\n")
+    snippet = $gr.document.cut(location..location + 9).replace(ure"\n", r"\n")
     found = if location >= gr.document.len: "EOF" else: fmt"»{snippet}«"
     sym = if isNil(catcher.symbol):  $catcher  else:  catcher.symbol.pname
   var
@@ -1071,7 +1071,7 @@ method parse*(self: IgnoreCaseRef, location: int32): ParsingResult =
     if dropContent in self.flags:
       return (EmptyNode, location + self.text.len.int32)
     let nextLoc = location + self.text.len.int32
-    return (newNode(self.nodeName, self.grammar.document[location..<nextLoc]), nextLoc)
+    return (newNode(self.nodeName, self.grammar.document.cut(location..<nextLoc)), nextLoc)
   return (nil, location)
 
 method `$`*(self: IgnoreCaseRef): string =
@@ -1117,7 +1117,7 @@ method parse*(self: RegExpRef, location: int32): ParsingResult =
       return (EmptyNode, location + l)
     elif isDisposable in self.flags and l == 0:
       return (EmptyNode, location)
-    let text: StringSlice = self.grammar.document[location..<location+l]
+    let text: StringSlice = self.grammar.document.cut(location..<location+l)
     return (newNode(self.nodeName, text), location + l)
   return (nil, location)
 
@@ -1178,7 +1178,7 @@ method parse*(self: WhitespaceRef, location: int32): ParsingResult =
     if l > 0 or isDisposable notin self.flags:
       if dropContent in self.flags:
         return (EmptyNode, location + l)
-      let text: StringSlice = self.grammar.document[location..<location+l]
+      let text: StringSlice = self.grammar.document.cut(location..<location+l)
       return (newNode(self.nodeName, text), location + l)
   return (EmptyNode, location)
 
@@ -1701,7 +1701,7 @@ type
     discard
 
 proc traceWrapper(parser: Parser, location: int32): ParsingResult =
-  echo $location & " " & parser.subParsers[0].pname & " " & $parser.grammar.document[location..location+40]
+  echo $location & " " & parser.subParsers[0].pname & " " & $parser.grammar.document.cut(location..location+40)
   let res = parser.subParsers[0](location)
   if not isNil(res.node): echo "-> " & res.node.content  else: echo "-> nil"
   return res
@@ -1833,4 +1833,8 @@ when isMainModule:
   let R = rxp("[^<&\"]+")
   echo $R
 
-
+  let number = "number".assign RegExp(rx"\d+")
+  let ws = "ws".assign RegExp(rx"\s*")
+  let text = toStringSlice("1")
+  assert number(text, 0).root.asSxpr == "(number \"1\")"
+  echo $ws(text, 1).root.asSxpr # == "(ws \"\")"

@@ -85,23 +85,30 @@ proc len*(str: StringSlice): int32 =
   ## Get the length of a string slice
   str.high + 1
 
-proc forwardIndex(str: StringSlice, i: Backwardsindex): int32 =
-  let idx: int32 = min(i.int32, str.len + 1)
-  str.stop - idx + 1
+proc forwardIndex(str: StringSlice, i: Backwardsindex): int32 = str.stop - i.int32 + 1
 
-template index(str: StringSlice, i: int32 or int): int32 = max(min(i.int32, str.high), 0)
+proc index(str: StringSlice, i: int32 or int): int32 = str.start + i.int32
 
-proc slice*(str: StringSlice, slc: HSlice[int32 or int, int32 or int]): StringSlice =
-  (str.buf, str.start + str.index(slc.a), str.start + str.index(slc.b))
+proc cut(str: StringSlice; start, stop: int32): StringSlice =
+  if start > stop or stop < 0 or start > str.stop:
+    (EmptyStringSlice.buf, 0i32, -1i32)
+  else:
+    (str.buf, max(start, 0), min(stop, str.stop))
 
-proc slice*(str: StringSlice, slc: HSlice[int32 or int, BackwardsIndex]): StringSlice =
-  (str.buf, str.start + str.index(slc.a), str.start + str.forwardIndex(slc.b))
+proc cut*(str: StringSlice, slc: HSlice[int32, int32 or int]): StringSlice =
+  str.cut(str.index(slc.a), str.index(slc.b))
 
-proc slice*(str: StringSlice, slc: HSlice[BackwardsIndex, int32 or int]): StringSlice =
-  (str.buf, str.start + str.forwardIndex(slc.a), str.start + str.index(slc.b))
+proc cut*(str: StringSlice, slc: HSlice[int, int32 or int]): StringSlice =
+  str.cut(str.index(slc.a), str.index(slc.b))
 
-proc slice*(str: StringSlice, slc: HSlice[BackwardsIndex, BackwardsIndex]): StringSlice =
-  (str.buf, str.start + str.forwardIndex(slc.a), str.start + str.forwardIndex(slc.b))
+proc cut*(str: StringSlice, slc: HSlice[int32 or int, BackwardsIndex]): StringSlice =
+  str.cut(str.index(slc.a), str.forwardIndex(slc.b))
+
+proc cut*(str: StringSlice, slc: HSlice[BackwardsIndex, int32 or int]): StringSlice =
+  str.cut(str.forwardIndex(slc.a), str.index(slc.b))
+
+proc cut*(str: StringSlice, slc: HSlice[BackwardsIndex, BackwardsIndex]): StringSlice =
+  str.cut(str.forwardIndex(slc.a), str.forwardIndex(slc.b))
 
 
 proc `&`*(sl1, sl2: StringSlice): StringSlice =
@@ -264,7 +271,7 @@ else:
 
   proc matchLen*(slice: StringSlice, pattern: RegEx, location: int32): int32 =
     assert location >= 0 and location <= slice.stop - slice.start + 1
-    echo $slice.start & " " & $location
+    echo $slice.start & " " & $location & " " & slice.cut(location .. location+40)
     result = matchLen(slice.str[], pattern, slice.start + location).int32
     echo "<<<"
 
@@ -273,20 +280,32 @@ else:
 
 
 when isMainModule:
-  var
-    sz = makeStringSlice("Hello world")
-    i: int32 = 5
-    sz2: StringSlice
-  sz2 = sz.slice(i .. i + 3)
-  echo sz2
+  echo $EmptyStringSlice
+
+  let one = makeStringSlice("1")
+  assert $one.cut(0..0) == "1"
+  assert $one.cut(0..1) == "1"
+  assert $one.cut(-1 .. 0) == "1"
+  assert $one.cut(-1 .. 1) == "1"
+  assert $one.cut(^1 .. 0) == "1"
+  assert $one.cut(^1 .. ^1) == "1"
+  assert $one.cut(0 .. ^1) == "1"
+  assert $one.cut(^2 .. ^1) == "1"
+  assert $one.cut(1..1) == ""
+  assert $one.cut(1..0) == ""
+  assert $one.cut(1.. -1) == ""
 
   let
     s1 = "Hello world"
     s2 = makeStringSlice("Hello world")
-    s3 = s2.slice(6 .. ^1)
-    s4 = s2.slice(2 .. ^1)
+    s3 = s2.cut(6 .. ^1)
+    s4 = s2.cut(2 .. ^1)
     s5 = toStringSlice("")
     s6 = toStringSlice("a")
+
+  echo $makeStringSlice("1").cut(1..1)
+  echo $s2.cut(3..3)
+  echo $s2.cut(3..<3)
 
   echo $s2
   echo $s5
@@ -308,10 +327,10 @@ when isMainModule:
   var
     s = "0123456789"
     ss = s.toStringSlice
-    upToFour = ss.slice(0..4)
-    upToFive = ss[0..5]
-    upToSix = ss[0..6]
-    threeToFive = ss[3..5]
+    upToFour = ss.cut(0..4)
+    upToFive = ss.cut(0..5)
+    upToSix = ss.cut(0..6)
+    threeToFive = ss.cut(3..5)
 
   assert s.find("123", last = 5) == ss.find("123", last = 5)
   assert s.find("456", last = 5) == ss.find("456", last = 5)
@@ -334,14 +353,14 @@ when isMainModule:
   assert slice.matchLen(re"[0-9]+", 0) == -1
   assert slice.matchLen(re"[0-9]+", 4) == 3
   assert slice.matchLen(re"[0-9]+", 19) == 2
-  assert slice[19i32 .. ^1i32].matchLen(re"[0-9]+", 0) == 2
+  assert slice.cut(19 .. ^1).matchLen(re"[0-9]+", 0) == 2
 
   assert slice.find(re"[0-9]+") == (4'i32, 6'i32)
   assert slice.find(re"[0-9]+", 7) == (12'i32, 14'i32)
   assert slice.find(re"[0-9]+", 7, 4) == (-1'i32, -2'i32)
-  assert slice[19i32 .. ^1i32].find(re"[0-9]+") == (0'i32, 1'i32)
+  assert slice.cut(19i32 .. ^1i32).find(re"[0-9]+") == (0'i32, 1'i32)
 
-  assert slice[4i32..10i32].replace(re"\d", "?") == "??? def"
+  assert slice.cut(4i32..10i32).replace(re"\d", "?") == "??? def"
 
   let trivial = makeStringSlice("A")
   assert trivial.matchLen(re"\w+", 0) == 1
