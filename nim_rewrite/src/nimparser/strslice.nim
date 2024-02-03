@@ -85,23 +85,22 @@ proc len*(str: StringSlice): int32 =
   ## Get the length of a string slice
   str.high + 1
 
-
 proc forwardIndex(str: StringSlice, i: Backwardsindex): int32 =
   let idx: int32 = min(i.int32, str.len + 1)
   str.stop - idx + 1
 
 template index(str: StringSlice, i: int32 or int): int32 = max(min(i.int32, str.high), 0)
 
-proc `[]`*(str: StringSlice, slc: HSlice[int32 or int, int32 or int]): StringSlice =
+proc slice*(str: StringSlice, slc: HSlice[int32 or int, int32 or int]): StringSlice =
   (str.buf, str.start + str.index(slc.a), str.start + str.index(slc.b))
 
-proc `[]`*(str: StringSlice, slc: HSlice[int32 or int, BackwardsIndex]): StringSlice =
+proc slice*(str: StringSlice, slc: HSlice[int32 or int, BackwardsIndex]): StringSlice =
   (str.buf, str.start + str.index(slc.a), str.start + str.forwardIndex(slc.b))
 
-proc `[]`*(str: StringSlice, slc: HSlice[BackwardsIndex, int32 or int]): StringSlice =
+proc slice*(str: StringSlice, slc: HSlice[BackwardsIndex, int32 or int]): StringSlice =
   (str.buf, str.start + str.forwardIndex(slc.a), str.start + str.index(slc.b))
 
-proc `[]`*(str: StringSlice, slc: HSlice[BackwardsIndex, BackwardsIndex]): StringSlice =
+proc slice*(str: StringSlice, slc: HSlice[BackwardsIndex, BackwardsIndex]): StringSlice =
   (str.buf, str.start + str.forwardIndex(slc.a), str.start + str.forwardIndex(slc.b))
 
 
@@ -278,14 +277,14 @@ when isMainModule:
     sz = makeStringSlice("Hello world")
     i: int32 = 5
     sz2: StringSlice
-  sz2 = sz[i .. i + 3]
+  sz2 = sz.slice(i .. i + 3)
   echo sz2
 
   let
     s1 = "Hello world"
     s2 = makeStringSlice("Hello world")
-    s3 = s2[6 .. ^1]
-    s4 = s2[2 .. ^1]
+    s3 = s2.slice(6 .. ^1)
+    s4 = s2.slice(2 .. ^1)
     s5 = toStringSlice("")
     s6 = toStringSlice("a")
 
@@ -309,7 +308,7 @@ when isMainModule:
   var
     s = "0123456789"
     ss = s.toStringSlice
-    upToFour = ss[0..4]
+    upToFour = ss.slice(0..4)
     upToFive = ss[0..5]
     upToSix = ss[0..6]
     threeToFive = ss[3..5]
