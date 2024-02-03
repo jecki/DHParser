@@ -271,9 +271,9 @@ else:
 
   proc matchLen*(slice: StringSlice, pattern: RegEx, location: int32): int32 =
     assert location >= 0 and location <= slice.stop - slice.start + 1
-    echo $slice.start & " " & $location & " " & slice.cut(location .. location+40)
+    # echo $slice.start & " " & $location & " " & slice.cut(location .. location+40)
     result = matchLen(slice.str[], pattern, slice.start + location).int32
-    echo "<<<"
+    # echo "<<<"
 
   func replace*(slice: StringSlice, pattern: Regex, replacement: string): string =
     replace($slice, pattern, replacement)
