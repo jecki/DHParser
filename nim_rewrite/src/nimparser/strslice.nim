@@ -18,6 +18,8 @@
 
 import std/[strutils, strformat]
 
+# import regex
+
 when defined(js):
   import std/jsre
 else:
@@ -302,16 +304,6 @@ when isMainModule:
     s4 = s2.cut(2 .. ^1)
     s5 = toStringSlice("")
     s6 = toStringSlice("a")
-
-  echo $makeStringSlice("1").cut(1..1)
-  echo $s2.cut(3..3)
-  echo $s2.cut(3..<3)
-
-  echo $s2
-  echo $s5
-  echo s5.len
-  echo $s6
-  echo s6.len
 
   assert s1.find("world") == 6
   assert s2.find("world") == 6
