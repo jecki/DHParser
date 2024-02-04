@@ -18,10 +18,10 @@
 
 import std/[strutils, strformat]
 
-# import regex
-
 when defined(js):
   import std/jsre
+elif (compiles do: import regex):
+  import regex
 else:
   import std/re
 
@@ -246,6 +246,9 @@ when defined(js):
 
   proc replace*(slice: StringSlice, pattern: Regex, replacement: string): cstring =
     replace(cstring($slice), pattern.nonSticky, cstring(replacement))
+
+elif (compiles do: import regex):
+  discard  # TODO: add support for regex
 
 else:
   export Regex
