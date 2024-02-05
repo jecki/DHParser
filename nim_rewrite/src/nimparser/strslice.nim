@@ -88,7 +88,7 @@ proc len*(str: StringSlice): int32 =
 
 proc forwardIndex(str: StringSlice, i: Backwardsindex): int32 = str.stop - i.int32 + 1
 
-proc index(str: StringSlice, i: int32 or int): int32 = str.start + i.int32
+proc index(str: StringSlice, i: int32): int32 = str.start + i
 
 proc cut(str: StringSlice; start, stop: int32): StringSlice =
   if start > stop or stop < 0 or start > str.stop:
@@ -96,17 +96,29 @@ proc cut(str: StringSlice; start, stop: int32): StringSlice =
   else:
     (str.buf, max(start, 0), min(stop, str.stop))
 
-proc cut*(str: StringSlice, slc: HSlice[int32, int32 or int]): StringSlice =
+proc cut*(str: StringSlice, slc: HSlice[int32, int32]): StringSlice =
   str.cut(str.index(slc.a), str.index(slc.b))
 
-proc cut*(str: StringSlice, slc: HSlice[int, int32 or int]): StringSlice =
-  str.cut(str.index(slc.a), str.index(slc.b))
+proc cut*(str: StringSlice, slc: HSlice[int, int32]): StringSlice =
+  str.cut(str.index(slc.a.int32), str.index(slc.b))
 
-proc cut*(str: StringSlice, slc: HSlice[int32 or int, BackwardsIndex]): StringSlice =
+proc cut*(str: StringSlice, slc: HSlice[int32, int]): StringSlice =
+  str.cut(str.index(slc.a), str.index(slc.b.int32))
+
+proc cut*(str: StringSlice, slc: HSlice[int, int]): StringSlice =
+  str.cut(str.index(slc.a.int32), str.index(slc.b.int32))
+
+proc cut*(str: StringSlice, slc: HSlice[int32, BackwardsIndex]): StringSlice =
   str.cut(str.index(slc.a), str.forwardIndex(slc.b))
 
-proc cut*(str: StringSlice, slc: HSlice[BackwardsIndex, int32 or int]): StringSlice =
+proc cut*(str: StringSlice, slc: HSlice[int, BackwardsIndex]): StringSlice =
+  str.cut(str.index(slc.a.int32), str.forwardIndex(slc.b))
+
+proc cut*(str: StringSlice, slc: HSlice[BackwardsIndex, int32]): StringSlice =
   str.cut(str.forwardIndex(slc.a), str.index(slc.b))
+
+proc cut*(str: StringSlice, slc: HSlice[BackwardsIndex, int]): StringSlice =
+  str.cut(str.forwardIndex(slc.a), str.index(slc.b.int32))
 
 proc cut*(str: StringSlice, slc: HSlice[BackwardsIndex, BackwardsIndex]): StringSlice =
   str.cut(str.forwardIndex(slc.a), str.forwardIndex(slc.b))
@@ -262,9 +274,10 @@ elif (compiles do: import std/nre):
     assert start >= 0 and start <= slice.stop - slice.start + 1
     var r: Option[RegexMatch]
     if size < 0:
-      r = find(slice.str[], pattern, slice.start.int)
+      r = find(slice.str[], pattern, slice.start.int + start)
     else:
-      r = find(slice.str[], pattern, slice.start.int, min(slice.len.int, size.int))
+      r = find(slice.str[], pattern, slice.start.int + start,
+               min(slice.len.int - 1, slice.start.int + start + size - 1))
     if r.isSome():
       let bounds = r.get().matchBounds
       return (bounds.a.int32 - slice.start, bounds.b.int32 - slice.start)
@@ -378,37 +391,36 @@ when isMainModule:
   assert slice.matchLen(re"[0-9]+", 19) == 2
   assert slice.cut(19 .. ^1).matchLen(re"[0-9]+", 0) == 2
 
-  assert slice.find(re"[0-9]+") == (4'i32, 6'i32)
-  echo $slice.find(re"[0-9]+", 7)
+  assert slice.find(re"[0-9]+") == (4'i32, 6'i32), $slice.find(re"[0-9]+")
   assert slice.find(re"[0-9]+", 7) == (12'i32, 14'i32)
   assert slice.find(re"[0-9]+", 7, 4) == (-1'i32, -2'i32)
-  # assert slice.cut(19i32 .. ^1i32).find(re"[0-9]+") == (0'i32, 1'i32)
+  assert slice.cut(19i32 .. ^1i32).find(re"[0-9]+") == (0'i32, 1'i32)
 
-  # assert slice.cut(4i32..10i32).replace(re"\d", "?") == "??? def"
-  #
-  # let trivial = makeStringSlice("A")
-  # assert trivial.matchLen(re"\w+", 0) == 1
-  # assert trivial.matchLen(re"\w+", 1) == -1
-  # assert trivial.matchLen(re"\w*", 1) == 0
-  # assert trivial.matchLen(re"$", 1) == 0
-  # # assert trivial.matchLen(re"$", 2) < 0
-  # assert trivial.matchLen(re"$", 0) == -1
-  # assert trivial.matchLen(re"^", 0) == 0
-  # assert trivial.matchLen(re"^", 1) == -1
-  # # assert trivial.matchLen(re"^", 2) < 0
-  #
-  # assert trivial.find(re"\w+", 0) == (0'i32, 0'i32)
-  # assert trivial.find(re"\w+", 1) == (-1'i32, -2'i32)
-  #
-  # when defined(js):
-  #   assert $re("(*UTF8)(*UCP) A   ")[0].toCString() == r"/ A   /uy"
-  #   assert $rex("   A B   ")[0].toCString() == r"/A B/uy"
-  #   let pattern = """
-  #     ^       # match the beginning of the line
-  #     (\w+)   # 1st capture group: match one or more word characters
-  #     \s      # match a whitespace character
-  #     (\w+)   # 2nd capture group: match one or more word characters
-  #     """
-  #   assert $rex(pattern)[0].toCString() == r"/^(\w+)\s(\w+)/uy"
-  #
-  # echo $replace(makeStringSlice("abc\ndef"), re"\n", r"\n")
+  assert slice.cut(4i32..10i32).replace(re"\d", "?") == "??? def"
+
+  let trivial = makeStringSlice("A")
+  assert trivial.matchLen(re"\w+", 0) == 1
+  assert trivial.matchLen(re"\w+", 1) == -1
+  assert trivial.matchLen(re"\w*", 1) == 0
+  assert trivial.matchLen(re"$", 1) == 0
+  # assert trivial.matchLen(re"$", 2) < 0
+  assert trivial.matchLen(re"$", 0) == -1
+  assert trivial.matchLen(re"^", 0) == 0
+  assert trivial.matchLen(re"^", 1) == -1
+  # assert trivial.matchLen(re"^", 2) < 0
+
+  assert trivial.find(re"\w+", 0) == (0'i32, 0'i32)
+  assert trivial.find(re"\w+", 1) == (-1'i32, -2'i32)
+
+  when defined(js):
+    assert $re("(*UTF8)(*UCP) A   ")[0].toCString() == r"/ A   /uy"
+    assert $rex("   A B   ")[0].toCString() == r"/A B/uy"
+    let pattern = """
+      ^       # match the beginning of the line
+      (\w+)   # 1st capture group: match one or more word characters
+      \s      # match a whitespace character
+      (\w+)   # 2nd capture group: match one or more word characters
+      """
+    assert $rex(pattern)[0].toCString() == r"/^(\w+)\s(\w+)/uy"
+
+  echo $replace(makeStringSlice("abc\ndef"), re"\n", r"\n")
