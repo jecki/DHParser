@@ -620,4 +620,4 @@ if __name__ == "__main__":
         elif args.tree:  outfmt = 'tree'
         elif args.json:  outfmt = 'json'
         else:  outfmt = 'default'
-        # print(result.serialize(how=outfmt) if isinstance(result, Node) else result)
+        print(result.serialize(how=outfmt) if isinstance(result, Node) else result)

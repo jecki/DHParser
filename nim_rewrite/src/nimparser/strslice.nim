@@ -20,11 +20,10 @@ import std/[strutils, strformat]
 
 when defined(js):
   import std/jsre
-elif (compiles do: import regex):
-  import regex
+# elif (compiles do: import std/nre):
+#   import std/nre
 else:
   import std/re
-
 
 type
   # StringSliceRef* = ref StringSlice not nil
@@ -247,8 +246,40 @@ when defined(js):
   proc replace*(slice: StringSlice, pattern: Regex, replacement: string): cstring =
     replace(cstring($slice), pattern.nonSticky, cstring(replacement))
 
-elif (compiles do: import regex):
-  discard  # TODO: add support for regex
+# elif (compiles do: import std/nre):
+#   export Regex
+#
+#   const unicodePrefix = "(*UTF8)(*UCP)"
+#   let slashU = re"\\[uU]([0-9a-fA-F]+)"
+#
+#   proc ure*(pattern: string): Regex =
+#     re(unicodePrefix & replace(pattern, slashU, r"\x{$1}"))
+#   proc urex*(pattern: string): Regex =
+#     re(unicodePrefix & "(?x)" & replace(pattern, slashU, r"\x{$1}"))
+#
+#   func find*(slice: StringSlice, pattern: Regex,
+#              start: int32 = 0, size: int32 = -1): tuple[first, last: int32] =
+#     assert start >= 0 and start <= slice.stop - slice.start + 1
+#     var r: Option[RegexMatch]
+#     if size < 0:
+#       r = find(slice.str[], pattern, slice.start.int)
+#     else:
+#       r = find(slice.str[], pattern, slice.start.int, min(slice.len.int, size.int))
+#     if r.isSome():
+#       let bounds = r.get().matchBounds
+#       return (bounds.a.int32 - slice.start, bounds.b.int32 - slice.start)
+#     return (-1, -2)
+#
+#   proc matchLen*(slice: StringSlice, pattern: Regex, location: int32): int32 =
+#     assert location >= 0 and location <= slice.stop - slice.start + 1
+#     let r = match(slice.str[], pattern, slice.start + location)
+#     if r.isSome():
+#       let bounds = r.get().matchBounds
+#       return int32(bounds.b - bounds.a + 1)
+#     return -1
+#
+#   func replace*(slice: StringSlice, pattern: Regex, replacement: string): string =
+#     replace($slice, pattern, replacement)
 
 else:
   export Regex
@@ -260,7 +291,6 @@ else:
     re(unicodePrefix & replacef(pattern, slashU, r"\x{$1}"))
   proc urex*(pattern: string): Regex =
     rex(unicodePrefix & replacef(pattern, slashU, r"\x{$1}"))
-
 
   func find*(slice: StringSlice, pattern: RegEx,
             start: int32 = 0, size: int32 = -1): tuple[first, last: int32] =
@@ -276,9 +306,7 @@ else:
 
   proc matchLen*(slice: StringSlice, pattern: RegEx, location: int32): int32 =
     assert location >= 0 and location <= slice.stop - slice.start + 1
-    # echo $slice.start & " " & $location & " " & slice.cut(location .. location+40)
     result = matchLen(slice.str[], pattern, slice.start + location).int32
-    # echo "<<<"
 
   func replace*(slice: StringSlice, pattern: Regex, replacement: string): string =
     replace($slice, pattern, replacement)
@@ -382,5 +410,4 @@ when isMainModule:
       """
     assert $rex(pattern)[0].toCString() == r"/^(\w+)\s(\w+)/uy"
 
-  let r=rex("abc")
   echo $replace(makeStringSlice("abc\ndef"), re"\n", r"\n")

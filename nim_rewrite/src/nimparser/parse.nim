@@ -616,6 +616,23 @@ proc memoizationWrapper(parser: Parser, location: int32): ParsingResult =
     parser.visited[location] = result
     if not memoization:  grammar.flags.excl memoize
 
+proc noMemoizationWrapper(parser: Parser, location: int32): ParsingResult =
+  let grammar: GrammarRef = parser.grammar
+  if location < grammar.rollbackLocation:  grammar.rollback(location)
+
+  try:
+    result = parser.parse(location)
+  except ParsingException as pe:
+    result = handle_error(parser, pe, location)
+
+  let node = result.node  # isNil(result.node) does not work...
+  if isNil(node):
+    grammar.farthestFail = location
+    grammar.farthestParser = parser
+  elif node != EmptyNode:
+    node.sourcePos = location
+
+
 proc `()`(parser: Parser, location: int32): ParsingResult {.inline.} =
   parser.call(parser, location)
 
@@ -982,6 +999,7 @@ type
 proc init*(textParser: TextRef, text: string): TextRef =
   assert text.len <= MaxTextLen
   discard Parser(textParser).init(TextName)
+  # textParser.call = noMemoizationWrapper
   textParser.flags.incl isLeaf
   textParser.text = text
   textParser.slice = toStringSlice(text)
