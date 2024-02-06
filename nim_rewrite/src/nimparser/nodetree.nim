@@ -134,8 +134,6 @@ proc hasAttr*(node: Node, attr: string = ""): bool =
     return true
   return attr in node.attributesRef[]
 
-
-
 proc runeLen*(node: Node): int32 =
   result = 0
   if node.isLeaf and node.textSlice.len > 0:

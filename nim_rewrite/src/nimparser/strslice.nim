@@ -210,6 +210,7 @@ iterator items*(a: StringSlice): char =
   for i in a.start..a.stop:
     yield a.buf[i]
 
+# TODO: Add function to join string-slices
 
 when defined(js):
   type Regex* = tuple[sticky: Regexp, nonSticky: Regexp]

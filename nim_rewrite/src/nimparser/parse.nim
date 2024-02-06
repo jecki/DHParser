@@ -729,7 +729,7 @@ proc returnSeqMergeTreetops(parser: Parser, nodes: seq[Node]): Node =
         merge = false
     if res.len > 0:
       if merge:
-        let slices = collect(newSeqOfCap(res.len)):  # can this be optimized?
+        let slices = collect(newSeqOfCap(res.len)):  # TODO: can this be optimized?
           for child in res:  child.text.buf[]
         let text = slices.join("")
         if text.len > 0 or isDisposable notin parser.flags:
