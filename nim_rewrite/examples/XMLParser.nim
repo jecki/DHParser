@@ -1,4 +1,7 @@
-import std/[paths, dirs, strutils]
+import std/[paths, strutils]
+when not defined(js):
+  import std/[dirs]
+
 
 import "../src/nimparser/error"
 import "../src/nimparser/nodetree"
@@ -94,7 +97,7 @@ let CharData    = "CharData" ::=      rxp"(?:(?!\]\]>)[^<&])+"
 let CData       = "CData" ::=         rxp"(?:(?!\]\]>)(?:\x09|\x0A|\x0D|[\u0020-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF]))+"
 
 let PIChars     = "PIChars" ::=       rxp"(?:(?!\?>)(?:\x09|\x0A|\x0D|[\u0020-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF]))+"
-# let CommentChars = "CommentChars" ::= Trace(rxp"(?:(?!-)(?:\x09|\x0A|\x0D|[\u0020-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF]))+")
+# let CommentChars = "CommentChars" ::= rxp"(?:(?!-)(?:\x09|\x0A|\x0D|[\u0020-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF]))+"
 let CommentChars = "CommentChars" ::= +(rxp"(?:(?!-)(?:\x09|\x0A|\x0D|[\u0020-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF])){1,500}")
 let CharRef     = "CharRef" ::=       (txt"&#" & rxp"[0-9]+" & txt";") | (txt"&#x" & rxp"[0-9a-fA-F]+" & txt";")
 
@@ -122,11 +125,17 @@ when isMainModule:
   else:
     echo "probably arm"
 
-  let d = getCurrentDir().string
-  echo $d
-  if d.endsWith("/DHParser"):
-    setCurrentDir(Path("nim_rewrite/examples"))
-  let source = readFile("K.html")
+  # when defined(js):
+  import K
+  let source = KSource
+
+  # else:
+  #   let d = getCurrentDir().string
+  #   echo $d
+  #   if d.endsWith("/DHParser"):
+  #     setCurrentDir(Path("nim_rewrite/examples"))
+  #   let source = readFile("K.html")
+
   echo $source.len
   let res = document(source)
   echo "---"

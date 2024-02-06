@@ -68,6 +68,8 @@ template name*(node: Node): string = node.nameRef[]
 
 template isLeaf*(node: Node): bool = node.childrenSeq.len == 0
 
+template hasChildren*(node: Node): bool = node.childrenSeq.len > 0
+
 template isEmpty*(node: Node): bool = node.childrenSeq.len == 0 and node.textSlice.len == 0
 
 template isAnonymous*(node: Node): bool = node.name.len == 0 or node.name[0] == ':'

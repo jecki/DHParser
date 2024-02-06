@@ -98,7 +98,7 @@ type
 
   # the GrammarObj
   ReturnItemProc = proc(parser: Parser, node: NodeOrNil): Node {.nimcall.} not nil
-  ReturnSequenceProc = proc(parser: Parser, nodes: sink seq[Node]): Node {.nimcall.} not nil
+  ReturnSequenceProc = proc(parser: Parser, nodes: seq[Node]): Node {.nimcall.} not nil
   RollbackItem = tuple
     location: int32
     rollback: proc() {.closure.} not nil
@@ -163,9 +163,9 @@ let
 
 # Forward declarations
 proc returnItemFlatten(parser: Parser, node: NodeOrNil): Node
-proc returnSeqFlatten(parser: Parser, nodes: sink seq[Node]): Node
+proc returnSeqFlatten(parser: Parser, nodes: seq[Node]): Node
 proc returnItemPlaceholder(parser: Parser, node: NodeOrNil): Node
-proc returnSeqPlaceholder(parser: Parser, nodes: sink seq[Node]): Node
+proc returnSeqPlaceholder(parser: Parser, nodes: seq[Node]): Node
 
 proc cleanUp(grammar: GrammarRef) =
   grammar.flags.excl memoize
@@ -194,8 +194,8 @@ template Grammar*(args: varargs[untyped]): GrammarRef =
   new(GrammarRef).init(args)
 
 let GrammarPlaceholder = Grammar("__Placeholder__",
-  returnItem = returnItemPlaceholder,
-  returnSequence = returnSeqPlaceholder)
+                                 returnItem = returnItemPlaceholder,
+                                 returnSequence = returnSeqPlaceholder)
 
 
 ## Parser-class
@@ -303,7 +303,7 @@ template repr(parser: Parser): string =
 
 ## parser-graph-traversal
 
-method refdParsers*(self: Parser): lent seq[Parser] {.base.} =
+method refdParsers*(self: Parser): seq[Parser] {.base.} =
   ## Returns all directly referred parsers. The result is always a superset
   ## of the self.subParsers. An example for a parser that is referred by
   ## self but not a sub-parser, would be a parser that is used for resuming
@@ -323,7 +323,7 @@ when defined(js):
   proc anonSubs*(parser: Parser): seq[Parser] =
     collect(newSeqOfCap(parser.subParsers.len)):
       for p in parser.subParsers:
-        if p.name.len == 0:
+        if p.name.len == 0 or isForward in parser.flags:
           p
 
   proc collect_descendants(parser: Parser, selector: ParserIterator = refdSubs,
@@ -401,7 +401,7 @@ template forEach*(parser: Parser, p: untyped, selector: ParserIterator, body: un
 
 ## grammar-property
 
-template grammar*(parser: Parser) : GrammarRef =
+proc grammar*(parser: Parser) : GrammarRef =
   assert parser.grammarVar != GrammarPlaceholder, $parser
   parser.grammarVar
 
@@ -664,7 +664,7 @@ proc returnItemAsIs(parser: Parser, node: NodeOrNil): Node =
     return newNode(parser.nodeName, "")
   return newNode(parser.nodeName, @[Node(node)])
 
-proc returnSeqAsIs(parser: Parser, nodes: sink seq[Node]): Node =
+proc returnSeqAsIs(parser: Parser, nodes: seq[Node]): Node =
   if dropContent in parser.flags:
     return EmptyNode
   return newNode(parser.nodeName, nodes)
@@ -682,7 +682,7 @@ proc returnItemFlatten(parser: Parser, node: NodeOrNil): Node =
     return EmptyNode
   return newNode(parser.nodeName, "")
 
-proc returnSeqFlatten(parser: Parser, nodes: sink seq[Node]): Node =
+proc returnSeqFlatten(parser: Parser, nodes: seq[Node]): Node =
   if dropContent in parser.flags:
     return EmptyNode
   let N = nodes.len
@@ -705,11 +705,52 @@ proc returnSeqFlatten(parser: Parser, nodes: sink seq[Node]): Node =
     return EmptyNode
   return newNode(parser.nodeName, "")
 
+proc returnSeqMergeTreetops(parser: Parser, nodes: seq[Node]): Node =
+  # TODO: test this!
+  if dropContent in parser.flags:
+    return EmptyNode
+  let N = nodes.len
+  if N > 1:
+    var
+      res = newSeqOfCap[Node](N)
+      merge = true
+    for child in nodes:
+      if child.isAnonymous:
+        if child.hasChildren:
+          res.add(child.children)
+          for grandchild in child.children:
+            if grandchild.hasChildren or not grandchild.isAnonymous:
+              merge = false
+              break
+        elif child.text.len > 0:
+          res.add(child)
+      else:
+        res.add(child)
+        merge = false
+    if res.len > 0:
+      if merge:
+        let slices = collect(newSeqOfCap(res.len)):  # can this be optimized?
+          for child in res:  child.text.buf[]
+        let text = slices.join("")
+        if text.len > 0 or isDisposable notin parser.flags:
+          return newNode(parser.nodeName, text)
+        return EmptyNode
+      return newNode(parser.nodeName, res)
+    if isDisposable in parser.flags:
+      return EmptyNode
+    else:
+      return newNode(parser.nodeName, "")
+  elif N == 1:
+    return parser.returnItemFlatten(nodes[0])
+  if isDisposable in parser.flags:
+    return EmptyNode
+  return newNode(parser.nodeName, "")
+
 proc returnItemPlaceholder(parser: Parser, node: NodeOrNil): Node =
   result = EmptyNode
   raise newException(AssertionDefect, "returnItem called on GrammaPlacholder")
 
-proc returnSeqPlaceholder(parser: Parser, nodes: sink seq[Node]): Node =
+proc returnSeqPlaceholder(parser: Parser, nodes: seq[Node]): Node =
   result = EmptyNode
   raise newException(AssertionDefect, "returnItem called on GrammaPlacholder")
 
@@ -749,9 +790,9 @@ const NoMandatoryLimit* = uint32(2^30)   # 2^31 and higher does not work with js
 
 proc init(errorCatching: ErrorCatchingParserRef,
           ptype: string, mandatory: uint32,
-          skipList: sink seq[Matcher] = @[],
-          resumeList: sink seq[Matcher] = @[],
-          errorList: sink seq[ErrorMatcher] = @[]): ErrorCatchingParserRef =
+          skipList: seq[Matcher] = @[],
+          resumeList: seq[Matcher] = @[],
+          errorList: seq[ErrorMatcher] = @[]): ErrorCatchingParserRef =
   discard Parser(errorCatching).init(ptype)
   errorCatching.flags.incl isErrorCatching
   errorCatching.mandatory = mandatory
@@ -761,7 +802,7 @@ proc init(errorCatching: ErrorCatchingParserRef,
   return errorCatching
 
 # for "lent" see see: https://nim-lang.org/docs/destructors.html#lent-type
-method refdParsers*(self: ErrorCatchingParserRef): lent seq[Parser] =
+method refdParsers*(self: ErrorCatchingParserRef): seq[Parser] =
   if self.referredParsers.len == 0:
     self.referredParsers = self.subParsers
     for matcher in self.skipList:
@@ -865,7 +906,7 @@ proc mergeErrorLists(left, right: ErrorCatchingParserRef) =
         if p == q: break innerLoop
       left.referredParsers.add(p)
 
-proc setMatcherList[T: AnyMatcher](errorCatcher: Parser, list: sink seq[T], listName: string) =
+proc setMatcherList[T: AnyMatcher](errorCatcher: Parser, list: seq[T], listName: string) =
     assert isErrorCatching in errorCatcher.flags
     let catcher = ErrorCatchingParserRef(errorCatcher)
     when T is Matcher:
@@ -904,7 +945,7 @@ proc setMatcherList[T: AnyMatcher](errorCatcher: Parser, list: sink seq[T], list
 const ErrorCatcherListNames* = ["errors", "skip-matchers", "resume-matchers"]
 
 
-template attachMatchers(parser: Parser, list: seq[AnyMatcher], listName: string,
+proc attachMatchers(parser: Parser, list: seq[AnyMatcher], listName: string,
                      failIfAmbiguous: bool = true) =
   assert listName in ErrorCatcherListNames, (listName & "is not one of " &
                                              ErrorCatcherListNames.join(", "))
@@ -924,14 +965,14 @@ template attachMatchers(parser: Parser, list: seq[AnyMatcher], listName: string,
         fmt"{lname} could be attached!")
     var ambiguityFlag: bool = false
     parser.forEach(p, anonSubs):
-     if isErrorCatching in p.flags and ErrorCatchingParserRef(p).isActive:
-       if ambiguityFlag:
-         raise newException(AssertionDefect, ambigErr)
-       p.setMatcherList(list, listName)
-       ErrorCatchingParserRef(p).referredParsers.setLen(0)
-       if not failIfAmbiguous:
-         break
-       ambiguityFlag = true
+      if isErrorCatching in p.flags and ErrorCatchingParserRef(p).isActive:
+        if ambiguityFlag:
+          raise newException(AssertionDefect, ambigErr)
+        p.setMatcherList(list, listName)
+        ErrorCatchingParserRef(p).referredParsers.setLen(0)
+        if not failIfAmbiguous:
+          break
+        ambiguityFlag = true
     if not ambiguityFLag:
       echo $parser.subParsers[0].name
       raise newException(AssertionDefect, notAcatcherErr)
@@ -1786,73 +1827,73 @@ when isMainModule:
   expression.grammar = Grammar("Arithmetic")
 
   expression.error((anyPassage, "Zahl oder Ausdruck erwartet, aber nicht {1}"))
-  term.errors(@[(anyPassage, "Zahl oder Ausdruck (in Klammern) erwartet, aber nicht {1}")])
-  group.errors(@[(anyPassage, "Schließende Klammer erwartet, aber nicht {1}")])
-
-  expression.resume(atRe"(?=\d|\(|\)|$)")
-  term.resume(atRe"(?=\d|\(|$)")
-  group.resume(atRe"(?=\)|$)")
-
-  echo $expression.ptype
-
-  var tree = expression("1 + 1").root
-  echo tree.asSxpr()
-  tree = expression("(3 + 4) * 2").root
-  echo tree.asSxpr()
-  try:
-    tree = expression("(3 + ) * 2").root
-  except ParsingException as pe:
-    echo $pe
-  try:
-    tree = expression("(3 + * 2").root
-    echo $expression.grammar.errors
-  except ParsingException as pe:
-    echo $pe
-  try:
-    tree = expression("(3 + 4 * 2").root
-  except ParsingException as pe:
-    echo $pe
-
-  let gap = ":gap".assign(rxp"[^\d()]*(?=[\d(])")
-  expression.skipUntil(after(gap))
-
-  try:
-    tree = expression("3 + * 2").root
-    echo ">> " & $expression.grammar.errors
-  except ParsingException as pe:
-    echo $pe
-
-
-  echo "descendants-iterator"
-  for p in descendants(expression):
-    echo if p.name.len > 0:  $p.name & " := " & $p  else:  $p
-  expression.resetTraversalTracker()
-
-  # echo "apply-callback"
-  # proc visitor(p: Parser): bool =
-  #   echo if p.name.len > 0:  $p.name & " := " & $p  else:  $p
-  #   return false
+  # term.errors(@[(anyPassage, "Zahl oder Ausdruck (in Klammern) erwartet, aber nicht {1}")])
+  # group.errors(@[(anyPassage, "Schließende Klammer erwartet, aber nicht {1}")])
   #
-  # discard expression.apply(visitor)
-
-  echo "---"
-  expression.subParsers[0].forEach(p, anonSubs):
-    echo $p
-
-  echo "---"
-  let series1 = txt"A" & txt"B" & § txt"C" & txt"D"
-  echo $series1
-  assert series1.mandatory == 2
-
-  echo IgnoreCase("äö")("Äö").root.asSxpr()
-  echo IgnoreCase("aB")("Ab").root.asSxpr()
-  echo IgnoreCase("ao")("Aö").root.asSxpr()
-
-  let R = rxp("[^<&\"]+")
-  echo $R
-
-  let number = "number".assign RegExp(rx"\d+")
-  let ws = "ws".assign RegExp(rx"\s*")
-  let text = toStringSlice("1")
-  assert number(text, 0).root.asSxpr == "(number \"1\")"
-  echo $ws(text, 1).root.asSxpr # == "(ws \"\")"
+  # expression.resume(atRe"(?=\d|\(|\)|$)")
+  # term.resume(atRe"(?=\d|\(|$)")
+  # group.resume(atRe"(?=\)|$)")
+  #
+  # echo $expression.ptype
+  #
+  # var tree = expression("1 + 1").root
+  # echo tree.asSxpr()
+  # tree = expression("(3 + 4) * 2").root
+  # echo tree.asSxpr()
+  # try:
+  #   tree = expression("(3 + ) * 2").root
+  # except ParsingException as pe:
+  #   echo $pe
+  # try:
+  #   tree = expression("(3 + * 2").root
+  #   echo $expression.grammar.errors
+  # except ParsingException as pe:
+  #   echo $pe
+  # try:
+  #   tree = expression("(3 + 4 * 2").root
+  # except ParsingException as pe:
+  #   echo $pe
+  #
+  # let gap = ":gap".assign(rxp"[^\d()]*(?=[\d(])")
+  # expression.skipUntil(after(gap))
+  #
+  # try:
+  #   tree = expression("3 + * 2").root
+  #   echo ">> " & $expression.grammar.errors
+  # except ParsingException as pe:
+  #   echo $pe
+  #
+  #
+  # echo "descendants-iterator"
+  # for p in descendants(expression):
+  #   echo if p.name.len > 0:  $p.name & " := " & $p  else:  $p
+  # expression.resetTraversalTracker()
+  #
+  # # echo "apply-callback"
+  # # proc visitor(p: Parser): bool =
+  # #   echo if p.name.len > 0:  $p.name & " := " & $p  else:  $p
+  # #   return false
+  # #
+  # # discard expression.apply(visitor)
+  #
+  # echo "---"
+  # expression.subParsers[0].forEach(p, anonSubs):
+  #   echo $p
+  #
+  # echo "---"
+  # let series1 = txt"A" & txt"B" & § txt"C" & txt"D"
+  # echo $series1
+  # assert series1.mandatory == 2
+  #
+  # echo IgnoreCase("äö")("Äö").root.asSxpr()
+  # echo IgnoreCase("aB")("Ab").root.asSxpr()
+  # echo IgnoreCase("ao")("Aö").root.asSxpr()
+  #
+  # let R = rxp("[^<&\"]+")
+  # echo $R
+  #
+  # let number = "number".assign RegExp(rx"\d+")
+  # let ws = "ws".assign RegExp(rx"\s*")
+  # let text = toStringSlice("1")
+  # assert number(text, 0).root.asSxpr == "(number \"1\")"
+  # echo $ws(text, 1).root.asSxpr # == "(ws \"\")"

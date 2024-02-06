@@ -3045,7 +3045,7 @@ class CombinedParser(Parser):
                         #               for grandchild in grandchildren)
                         # cython compatibility:
                         for grandchild in grandchildren:
-                            if grandchild._children or not grandchild.name[0] == ':':  # grandchild.anonymous:
+                            if grandchild._children or grandchild.name[0] != ':':  # grandchild.anonymous:
                                 merge = False
                                 break
                     elif child._result:

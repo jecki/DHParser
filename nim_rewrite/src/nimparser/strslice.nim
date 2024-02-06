@@ -385,42 +385,42 @@ when isMainModule:
   echo s2 != s1
 
   let slice = makeStringSlice("abc 123 def 456 gh 78 ijk")
-  assert slice.matchLen(re"\w+", 0) == 3
-  assert slice.matchLen(re"[0-9]+", 0) == -1
-  assert slice.matchLen(re"[0-9]+", 4) == 3
-  assert slice.matchLen(re"[0-9]+", 19) == 2
-  assert slice.cut(19 .. ^1).matchLen(re"[0-9]+", 0) == 2
+  assert slice.matchLen(ure"\w+", 0) == 3
+  assert slice.matchLen(ure"[0-9]+", 0) == -1
+  assert slice.matchLen(ure"[0-9]+", 4) == 3
+  assert slice.matchLen(ure"[0-9]+", 19) == 2
+  assert slice.cut(19 .. ^1).matchLen(ure"[0-9]+", 0) == 2
 
-  assert slice.find(re"[0-9]+") == (4'i32, 6'i32), $slice.find(re"[0-9]+")
-  assert slice.find(re"[0-9]+", 7) == (12'i32, 14'i32)
-  assert slice.find(re"[0-9]+", 7, 4) == (-1'i32, -2'i32)
-  assert slice.cut(19i32 .. ^1i32).find(re"[0-9]+") == (0'i32, 1'i32)
+  assert slice.find(ure"[0-9]+") == (4'i32, 6'i32), $slice.find(ure"[0-9]+")
+  assert slice.find(ure"[0-9]+", 7) == (12'i32, 14'i32)
+  assert slice.find(ure"[0-9]+", 7, 4) == (-1'i32, -2'i32)
+  assert slice.cut(19i32 .. ^1i32).find(ure"[0-9]+") == (0'i32, 1'i32)
 
-  assert slice.cut(4i32..10i32).replace(re"\d", "?") == "??? def"
+  assert slice.cut(4i32..10i32).replace(ure"\d", "?") == "??? def"
 
   let trivial = makeStringSlice("A")
-  assert trivial.matchLen(re"\w+", 0) == 1
-  assert trivial.matchLen(re"\w+", 1) == -1
-  assert trivial.matchLen(re"\w*", 1) == 0
-  assert trivial.matchLen(re"$", 1) == 0
+  assert trivial.matchLen(ure"\w+", 0) == 1
+  assert trivial.matchLen(ure"\w+", 1) == -1
+  assert trivial.matchLen(ure"\w*", 1) == 0
+  assert trivial.matchLen(ure"$", 1) == 0
   # assert trivial.matchLen(re"$", 2) < 0
-  assert trivial.matchLen(re"$", 0) == -1
-  assert trivial.matchLen(re"^", 0) == 0
-  assert trivial.matchLen(re"^", 1) == -1
+  assert trivial.matchLen(ure"$", 0) == -1
+  assert trivial.matchLen(ure"^", 0) == 0
+  assert trivial.matchLen(ure"^", 1) == -1
   # assert trivial.matchLen(re"^", 2) < 0
 
-  assert trivial.find(re"\w+", 0) == (0'i32, 0'i32)
-  assert trivial.find(re"\w+", 1) == (-1'i32, -2'i32)
+  assert trivial.find(ure"\w+", 0) == (0'i32, 0'i32)
+  assert trivial.find(ure"\w+", 1) == (-1'i32, -2'i32)
 
   when defined(js):
-    assert $re("(*UTF8)(*UCP) A   ")[0].toCString() == r"/ A   /uy"
-    assert $rex("   A B   ")[0].toCString() == r"/A B/uy"
+    assert $ure("(*UTF8)(*UCP) A   ")[0].toCString() == r"/ A   /uy"
+    assert $urex("   A B   ")[0].toCString() == r"/A B/uy"
     let pattern = """
       ^       # match the beginning of the line
       (\w+)   # 1st capture group: match one or more word characters
       \s      # match a whitespace character
       (\w+)   # 2nd capture group: match one or more word characters
       """
-    assert $rex(pattern)[0].toCString() == r"/^(\w+)\s(\w+)/uy"
+    assert $urex(pattern)[0].toCString() == r"/^(\w+)\s(\w+)/uy"
 
-  echo $replace(makeStringSlice("abc\ndef"), re"\n", r"\n")
+  echo $replace(makeStringSlice("abc\ndef"), ure"\n", r"\n")
