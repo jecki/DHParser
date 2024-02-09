@@ -69,3 +69,4 @@ experimental
 /documentation_src/doc_examples/macros/macrosParser.py
 /documentation_src/doc_examples/macros/macrosServer.py
 /nim_rewrite/examples/data/F.htm
+/nim_rewrite/src/nimparser/external/regex.out

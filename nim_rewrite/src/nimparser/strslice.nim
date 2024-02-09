@@ -20,6 +20,8 @@ import std/[strutils, strformat]
 
 when defined(js):
   import std/jsre
+elif (compiles do: import external/regex):
+  import external/regex
 elif (compiles do: import std/nre):
   import std/nre
 else:
@@ -259,6 +261,27 @@ when defined(js):
   proc replace*(slice: StringSlice, pattern: Regex, replacement: string): cstring =
     replace(cstring($slice), pattern.nonSticky, cstring(replacement))
 
+elif (compiles do: import external/regex):
+  type Regex = Regex2
+
+  const unicodePrefix = "(*UTF8)(*UCP)"
+  let slashU = re2"\\[uU]([0-9a-fA-F]+)"
+
+  proc ure*(pattern: string): Regex =
+    re2(unicodePrefix & replace(pattern, slashU, r"\x{$1}"))
+  proc urex*(pattern: string): Regex =
+    re2(unicodePrefix & "(?x)" & replace(pattern, slashU, r"\x{$1}"))
+
+  func find*(slice: StringSlice, pattern: Regex,
+             start: int32 = 0, size: int32 = -1): tuple[first, last: int32] =
+    assert start >= 0 and start <= slice.stop - slice.start + 1
+
+  func matchLen*(slice: StringSlice, pattern: Regex, location: int32): int32 =
+    assert location >= 0 and location <= slice.stop - slice.start + 1
+
+  func replace*(slice: StringSlice, pattern: Regex, replacement: string): string =
+    replace($slice, pattern, replacement)
+
 elif (compiles do: import std/nre):
   export Regex
 
@@ -284,7 +307,7 @@ elif (compiles do: import std/nre):
       return (bounds.a.int32 - slice.start, bounds.b.int32 - slice.start)
     return (-1, -2)
 
-  proc matchLen*(slice: StringSlice, pattern: Regex, location: int32): int32 =
+  func matchLen*(slice: StringSlice, pattern: Regex, location: int32): int32 =
     assert location >= 0 and location <= slice.stop - slice.start + 1
     let r = match(slice.str[], pattern, slice.start + location)
     if r.isSome():
@@ -318,7 +341,7 @@ else:
     if a < 0:  return (-1, -2)
     return (a.int32 - slice.start, b.int32 - slice.start)
 
-  proc matchLen*(slice: StringSlice, pattern: RegEx, location: int32): int32 =
+  func matchLen*(slice: StringSlice, pattern: RegEx, location: int32): int32 =
     assert location >= 0 and location <= slice.stop - slice.start + 1
     result = matchLen(slice.str[], pattern, slice.start + location).int32
 
