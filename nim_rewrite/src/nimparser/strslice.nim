@@ -262,22 +262,32 @@ when defined(js):
     replace(cstring($slice), pattern.nonSticky, cstring(replacement))
 
 elif (compiles do: import external/regex):
-  type Regex = Regex2
+  type Regex* = Regex2
 
-  const unicodePrefix = "(*UTF8)(*UCP)"
   let slashU = re2"\\[uU]([0-9a-fA-F]+)"
 
   proc ure*(pattern: string): Regex =
-    re2(unicodePrefix & replace(pattern, slashU, r"\x{$1}"))
+    re2(replace(pattern, slashU, r"\x{$1}"))
   proc urex*(pattern: string): Regex =
-    re2(unicodePrefix & "(?x)" & replace(pattern, slashU, r"\x{$1}"))
+    re2("(?x)" & replace(pattern, slashU, r"\x{$1}"))
 
   func find*(slice: StringSlice, pattern: Regex,
              start: int32 = 0, size: int32 = -1): tuple[first, last: int32] =
     assert start >= 0 and start <= slice.stop - slice.start + 1
+    var m: RegexMatch2
+    if find(slice.buf[], pattern, m, slice.start + start):
+      let a = m.boundaries.a.int32 - slice.start
+      if size < 0 or a < start + size:
+        return (a, m.boundaries.b.int32 - slice.start)
+    return (-1, -2)
 
   func matchLen*(slice: StringSlice, pattern: Regex, location: int32): int32 =
     assert location >= 0 and location <= slice.stop - slice.start + 1
+    var m: RegexMatch2
+    if startswith(slice.buf[], pattern, m, slice.start + location):
+      assert m.boundaries.a.int32 == slice.start + location
+      return int32(m.boundaries.b - m.boundaries.a + 1)
+    return -1
 
   func replace*(slice: StringSlice, pattern: Regex, replacement: string): string =
     replace($slice, pattern, replacement)
@@ -411,6 +421,7 @@ when isMainModule:
   let slice = makeStringSlice("abc 123 def 456 gh 78 ijk")
   assert slice.matchLen(ure"\w+", 0) == 3
   assert slice.matchLen(ure"[0-9]+", 0) == -1
+  echo $slice.matchLen(ure"[0-9]+", 4)
   assert slice.matchLen(ure"[0-9]+", 4) == 3
   assert slice.matchLen(ure"[0-9]+", 19) == 2
   assert slice.cut(19 .. ^1).matchLen(ure"[0-9]+", 0) == 2
