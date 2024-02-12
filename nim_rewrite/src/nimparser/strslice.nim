@@ -267,9 +267,11 @@ elif (compiles do: import external/regex):
   let slashU = re2"\\[uU]([0-9a-fA-F]+)"
 
   proc ure*(pattern: string): Regex =
-    re2(replace(pattern, slashU, r"\x{$1}"))
+    # re2(replace(pattern, slashU, r"\x{$1}"))
+    re2(pattern)
   proc urex*(pattern: string): Regex =
-    re2("(?x)" & replace(pattern, slashU, r"\x{$1}"))
+    # re2("(?x)" & replace(pattern, slashU, r"\x{$1}"))
+    re2("(?x)" & pattern)
 
   func find*(slice: StringSlice, pattern: Regex,
              start: int32 = 0, size: int32 = -1): tuple[first, last: int32] =

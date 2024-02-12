@@ -15,9 +15,6 @@ const
   MaxTextLen = 2^30 - 1 + 2^30  # yields 2^31 - 1 without overflow
   SearchWindowDefault = 10_000
   NeverMatchPattern = r"$."
-let
-  NeverMatchRegex   = ure(NeverMatchPattern)
-
 
 ## Regular Expressions that keep track of their string-represenation
 
@@ -28,7 +25,10 @@ proc rx*(rx_str: string): RegExpInfo = (rx_str, ure(rx_str))
 proc mrx*(multiline_rx_str: string): RegExpInfo =
   (multiline_rx_str, urex(multiline_rx_str))
 proc `$`*(rxInfo: RegExpInfo): string = rxInfo.reStr
+proc `==`*(a: RegExpInfo, b: RegExpInfo): bool {.inline.} = a.reStr == b.reStr
 
+let
+  RxNeverMatch: RegExpInfo  = (NeverMatchPattern, ure(NeverMatchPattern))
 
 ## Parser Base and Grammar
 ## -----------------------
@@ -112,7 +112,7 @@ type
     returnSequence: ReturnSequenceProc
     document: StringSlice
     root: ParserOrNil
-    commentRe: Regex
+    commentRe: RegExpInfo
     errors*: seq[ErrorRef]
     rollbackStack: seq[RollbackItem]
     rollbackLocation: int32
@@ -186,7 +186,7 @@ proc init(grammar: GrammarRef, name: string,
   grammar.returnItem = returnItem
   grammar.returnSequence = returnSequence
   grammar.document = document
-  grammar.commentRe = NeverMatchRegex
+  grammar.commentRe = RxNeverMatch
   grammar.cleanUp()
   return grammar
 
@@ -438,7 +438,7 @@ proc `$`*(m: Matcher): string =
 
 
 proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
-                   commentRe: Regex = NeverMatchRegex,
+                   commentRe: RegExpInfo = RxNeverMatch,
                    searchWindowSize: int32 = SearchWindowDefault):
                      tuple[node: NodeOrNil, offset: int32] =
   let upperLimit = document.len + 1
@@ -448,12 +448,11 @@ proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
     searchWindow = if searchWindowSize < 0:  document.len - location
                                       else:  searchWindowSize
     skipNode: NodeOrNil = nil
-    commentPointer = if commentRe != NeverMatchRegex:  location
-                                                else:  upperLimit
+    commentPointer = if commentRe != RxNeverMatch: location else: upperLimit
 
   proc nextComment(): tuple[start, firstAfterMatch: int32] =
     if commentPointer < upperLimit:
-      let (a, b) = find(document, commentRe, commentPointer)
+      let (a, b) = find(document, commentRe.regex, commentPointer)
       if a >= 0:
         commentPointer = b + 1
         return (a, b + 1)
@@ -1197,8 +1196,6 @@ method `$`*(self: RegExpRef): string =
 ## parse-method always returns a match, if only an empty match in case
 ## the defining regular expressions did not match.
 
-let RxNeverMatch*: RegExpInfo = (NeverMatchPattern, NeverMatchRegex)
-
 type
   WhitespaceRef = ref WhitespaceObj not nil
   WhitespaceObj = object of ParserObj
@@ -1242,14 +1239,14 @@ method parse*(self: WhitespaceRef, location: int32): ParsingResult =
   return (EmptyNode, location)
 
 method `grammar=`*(self: WhitespaceRef, grammar: GrammarRef) =
-  assert grammar.commentRe == NeverMatchRegex or grammar.commentRe == self.comment.regex or
-         self.comment.regex == NeverMatchRegex or self.comment.reStr.len == 0,
+  assert grammar.commentRe == RxNeverMatch or grammar.commentRe == self.comment or
+         self.comment == RxNeverMatch or self.comment.reStr.len == 0,
          "Multiple definitions of comments or insignificant whitespace not allowed!"
   procCall `grammar=`(Parser(self), grammar)
-  if self.comment.reStr.len > 0 and self.comment.regex != NeverMatchRegex:
-    assert grammar.commentRe == NeverMatchRegex,
+  if self.comment.reStr.len > 0 and self.comment != RxNeverMatch:
+    assert grammar.commentRe == RxNeverMatch,
            "implicit whitespace must only be defined once per grammar!"
-    grammar.commentRe = self.comment.regex
+    grammar.commentRe = self.comment
 
 method `$`*(self: WhitespaceRef): string = "~"
 
