@@ -20,8 +20,8 @@ import std/[strutils, strformat]
 
 when defined(js):
   import std/jsre
-elif (compiles do: import external/regex):
-  import external/regex
+# elif (compiles do: import external/regex):
+#   import external/regex
 elif (compiles do: import std/nre):
   import std/nre
 else:
@@ -260,39 +260,39 @@ when defined(js):
 
   proc replace*(slice: StringSlice, pattern: Regex, replacement: string): cstring =
     replace(cstring($slice), pattern.nonSticky, cstring(replacement))
-
-elif (compiles do: import external/regex):
-  type Regex* = Regex2
-
-  let slashU = re2"\\[uU]([0-9a-fA-F]+)"
-
-  proc ure*(pattern: string): Regex =
-    # re2(replace(pattern, slashU, r"\x{$1}"))
-    re2(pattern)
-  proc urex*(pattern: string): Regex =
-    # re2("(?x)" & replace(pattern, slashU, r"\x{$1}"))
-    re2("(?x)" & pattern)
-
-  func find*(slice: StringSlice, pattern: Regex,
-             start: int32 = 0, size: int32 = -1): tuple[first, last: int32] =
-    assert start >= 0 and start <= slice.stop - slice.start + 1
-    var m: RegexMatch2
-    if find(slice.buf[], pattern, m, slice.start + start):
-      let a = m.boundaries.a.int32 - slice.start
-      if size < 0 or a < start + size:
-        return (a, m.boundaries.b.int32 - slice.start)
-    return (-1, -2)
-
-  func matchLen*(slice: StringSlice, pattern: Regex, location: int32): int32 =
-    assert location >= 0 and location <= slice.stop - slice.start + 1
-    var m: RegexMatch2
-    if startswith(slice.buf[], pattern, m, slice.start + location):
-      assert m.boundaries.a.int32 == slice.start + location
-      return int32(m.boundaries.b - m.boundaries.a + 1)
-    return -1
-
-  func replace*(slice: StringSlice, pattern: Regex, replacement: string): string =
-    replace($slice, pattern, replacement)
+#
+# elif (compiles do: import external/regex):
+#   type Regex* = Regex2
+#
+#   let slashU = re2"\\[uU]([0-9a-fA-F]+)"
+#
+#   proc ure*(pattern: string): Regex =
+#     # re2(replace(pattern, slashU, r"\x{$1}"))
+#     re2(pattern)
+#   proc urex*(pattern: string): Regex =
+#     # re2("(?x)" & replace(pattern, slashU, r"\x{$1}"))
+#     re2("(?x)" & pattern)
+#
+#   func find*(slice: StringSlice, pattern: Regex,
+#              start: int32 = 0, size: int32 = -1): tuple[first, last: int32] =
+#     assert start >= 0 and start <= slice.stop - slice.start + 1
+#     var m: RegexMatch2
+#     if find(slice.buf[], pattern, m, slice.start + start):
+#       let a = m.boundaries.a.int32 - slice.start
+#       if size < 0 or a < start + size:
+#         return (a, m.boundaries.b.int32 - slice.start)
+#     return (-1, -2)
+#
+#   func matchLen*(slice: StringSlice, pattern: Regex, location: int32): int32 =
+#     assert location >= 0 and location <= slice.stop - slice.start + 1
+#     var m: RegexMatch2
+#     if startswith(slice.buf[], pattern, m, slice.start + location):
+#       assert m.boundaries.a.int32 == slice.start + location
+#       return int32(m.boundaries.b - m.boundaries.a + 1)
+#     return -1
+#
+#   func replace*(slice: StringSlice, pattern: Regex, replacement: string): string =
+#     replace($slice, pattern, replacement)
 
 elif (compiles do: import std/nre):
   export Regex

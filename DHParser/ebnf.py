@@ -1415,7 +1415,7 @@ VALID_DIRECTIVES = {
 
 
 class EBNFDirectives:
-    """
+    r"""
     A Record that keeps information about compiler directives
     during the compilation process.
 

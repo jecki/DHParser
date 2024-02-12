@@ -15,6 +15,9 @@ const
   MaxTextLen = 2^30 - 1 + 2^30  # yields 2^31 - 1 without overflow
   SearchWindowDefault = 10_000
   NeverMatchPattern = r"$."
+let
+  NeverMatchRegex   = ure(NeverMatchPattern)
+
 
 ## Regular Expressions that keep track of their string-represenation
 
@@ -98,7 +101,7 @@ type
 
   # the GrammarObj
   ReturnItemProc = proc(parser: Parser, node: NodeOrNil): Node {.nimcall.} not nil
-  ReturnSequenceProc = proc(parser: Parser, nodes: seq[Node]): Node {.nimcall.} not nil
+  ReturnSequenceProc = proc(parser: Parser, nodes: sink seq[Node]): Node {.nimcall.} not nil
   RollbackItem = tuple
     location: int32
     rollback: proc() {.closure.} not nil
@@ -163,9 +166,9 @@ let
 
 # Forward declarations
 proc returnItemFlatten(parser: Parser, node: NodeOrNil): Node
-proc returnSeqFlatten(parser: Parser, nodes: seq[Node]): Node
+proc returnSeqFlatten(parser: Parser, nodes: sink seq[Node]): Node
 proc returnItemPlaceholder(parser: Parser, node: NodeOrNil): Node
-proc returnSeqPlaceholder(parser: Parser, nodes: seq[Node]): Node
+proc returnSeqPlaceholder(parser: Parser, nodes: sink seq[Node]): Node
 
 proc cleanUp(grammar: GrammarRef) =
   grammar.flags.excl memoize
@@ -303,7 +306,7 @@ template repr(parser: Parser): string =
 
 ## parser-graph-traversal
 
-method refdParsers*(self: Parser): seq[Parser] {.base.} =
+method refdParsers*(self: Parser): lent seq[Parser] {.base.} =
   ## Returns all directly referred parsers. The result is always a superset
   ## of the self.subParsers. An example for a parser that is referred by
   ## self but not a sub-parser, would be a parser that is used for resuming
@@ -663,7 +666,7 @@ proc returnItemAsIs(parser: Parser, node: NodeOrNil): Node =
     return newNode(parser.nodeName, "")
   return newNode(parser.nodeName, @[Node(node)])
 
-proc returnSeqAsIs(parser: Parser, nodes: seq[Node]): Node =
+proc returnSeqAsIs(parser: Parser, nodes: sink seq[Node]): Node =
   if dropContent in parser.flags:
     return EmptyNode
   return newNode(parser.nodeName, nodes)
@@ -681,7 +684,7 @@ proc returnItemFlatten(parser: Parser, node: NodeOrNil): Node =
     return EmptyNode
   return newNode(parser.nodeName, "")
 
-proc returnSeqFlatten(parser: Parser, nodes: seq[Node]): Node =
+proc returnSeqFlatten(parser: Parser, nodes: sink seq[Node]): Node =
   if dropContent in parser.flags:
     return EmptyNode
   let N = nodes.len
@@ -704,7 +707,7 @@ proc returnSeqFlatten(parser: Parser, nodes: seq[Node]): Node =
     return EmptyNode
   return newNode(parser.nodeName, "")
 
-proc returnSeqMergeTreetops(parser: Parser, nodes: seq[Node]): Node =
+proc returnSeqMergeTreetops(parser: Parser, nodes: sink seq[Node]): Node =
   # TODO: test this!
   if dropContent in parser.flags:
     return EmptyNode
@@ -749,7 +752,7 @@ proc returnItemPlaceholder(parser: Parser, node: NodeOrNil): Node =
   result = EmptyNode
   raise newException(AssertionDefect, "returnItem called on GrammaPlacholder")
 
-proc returnSeqPlaceholder(parser: Parser, nodes: seq[Node]): Node =
+proc returnSeqPlaceholder(parser: Parser, nodes: sink seq[Node]): Node =
   result = EmptyNode
   raise newException(AssertionDefect, "returnItem called on GrammaPlacholder")
 
@@ -789,9 +792,9 @@ const NoMandatoryLimit* = uint32(2^30)   # 2^31 and higher does not work with js
 
 proc init(errorCatching: ErrorCatchingParserRef,
           ptype: string, mandatory: uint32,
-          skipList: seq[Matcher] = @[],
-          resumeList: seq[Matcher] = @[],
-          errorList: seq[ErrorMatcher] = @[]): ErrorCatchingParserRef =
+          skipList: sink seq[Matcher] = @[],
+          resumeList: sink seq[Matcher] = @[],
+          errorList: sink seq[ErrorMatcher] = @[]): ErrorCatchingParserRef =
   discard Parser(errorCatching).init(ptype)
   errorCatching.flags.incl isErrorCatching
   errorCatching.mandatory = mandatory
@@ -801,7 +804,7 @@ proc init(errorCatching: ErrorCatchingParserRef,
   return errorCatching
 
 # for "lent" see see: https://nim-lang.org/docs/destructors.html#lent-type
-method refdParsers*(self: ErrorCatchingParserRef): seq[Parser] =
+method refdParsers*(self: ErrorCatchingParserRef): lent seq[Parser] =
   if self.referredParsers.len == 0:
     self.referredParsers = self.subParsers
     for matcher in self.skipList:
@@ -905,7 +908,7 @@ proc mergeErrorLists(left, right: ErrorCatchingParserRef) =
         if p == q: break innerLoop
       left.referredParsers.add(p)
 
-proc setMatcherList[T: AnyMatcher](errorCatcher: Parser, list: seq[T], listName: string) =
+proc setMatcherList[T: AnyMatcher](errorCatcher: Parser, list: sink seq[T], listName: string) =
     assert isErrorCatching in errorCatcher.flags
     let catcher = ErrorCatchingParserRef(errorCatcher)
     when T is Matcher:
