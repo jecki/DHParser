@@ -2832,6 +2832,13 @@ class Whitespace(RegExp):
     In contrast to RegExp, Whitespace always returns a match. If the defining
     regular expression did not match, an empty match is returned.
 
+    :ivar keep_comments: A boolean indicating whether or not whitespace
+        containing comments should be kept, even if the self.drop_content
+        flag is True. If keep_comments and drop_flag are both True
+        a stretch of whitespace containing a comment will be renamed
+        to "comment__" and whitspace that does not contain any comments
+        will be dropped.
+
     Example::
 
         >>> ws = Whitespace(mixin_comment(r'\s+', r'#.*'))
@@ -2842,9 +2849,13 @@ class Whitespace(RegExp):
         '(:EMPTY)'
         >>> dws = Drop(Whitespace(mixin_comment(r'\s+', r'#.*'), keep_comments=True))
         >>> Grammar(Synonym(dws))("   # comment").as_sxpr()
-        '(root (comment__ "# comment"))'
+        '(root (comment__ "   # comment"))'
+        >>> Grammar(Synonym(dws))("   ").as_sxpr()
+        '(root)'
         >>> Grammar(dws)("   # comment").as_sxpr()
-        '(root "# comment")'
+        '(root "   # comment")'
+        >>> Grammar(dws)("   ").as_sxpr()
+        '(:EMPTY)'
     """
     assert WHITESPACE_PTYPE == ":Whitespace"
 
@@ -2878,8 +2889,7 @@ class Whitespace(RegExp):
                 end = match.end()
                 if self.drop_content:
                     if self.keep_comments:
-                        capture = capture.strip()
-                        if capture:
+                        if capture.lstrip():
                             name = "comment__" if self.node_name[0:1] == ":" else self.node_name
                             return Node(name, capture, True), end
                     return EMPTY_NODE, end
