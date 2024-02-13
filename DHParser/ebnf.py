@@ -1192,7 +1192,9 @@ EBNF_AST_transformation_table = {
         [],
     "regexp":
         [remove_children('RE_LEADIN', 'RE_LEADOUT'), reduce_single_child],
-    "char_range":
+    "char_ranges, range_desc":
+        [],
+    "char_range, range_chain":
         [flatten, remove_tokens('[', ']')],
     "character":
         [remove_children('CH_LEADIN'), reduce_single_child],
@@ -1389,8 +1391,9 @@ WHITESPACE_TYPES = {'linefeed': r'[ \t]*(?:\n[ \t]*(?![ \t]*\n))?',  # default
 DROP_STRINGS     = 'strings'
 DROP_BACKTICKED  = 'backticked'
 DROP_WSPC        = 'whitespace'
+DROP_NO_COMMENTS = 'no_comments'
 DROP_REGEXP      = 'regexps'
-DROP_VALUES      = {DROP_STRINGS, DROP_BACKTICKED, DROP_WSPC, DROP_REGEXP}
+DROP_VALUES      = {DROP_STRINGS, DROP_BACKTICKED, DROP_WSPC, DROP_NO_COMMENTS, DROP_REGEXP}
 
 # Representation of Python code or, rather, something that will be output as Python code
 ReprType: TypeAlias = Union[str, unrepr]
@@ -2104,9 +2107,14 @@ class EBNFCompiler(Compiler):
 
         # add special fields for Grammar class
 
-        if DROP_WSPC in self.directives.drop or DROP_STRINGS in self.directives.drop:
+        if (DROP_WSPC in self.directives.drop or DROP_NO_COMMENTS in self.directives.drop
+                or DROP_STRINGS in self.directives.drop):
+            if DROP_NO_COMMENTS in self.directives.drop:
+                drop_wspc_tmpl = 'Drop(Whitespace(%s, keep_comments=True))'
+            else:
+                drop_espc_tmpl = 'Drop(Whitespace(%s))'
             definitions.append((EBNFCompiler.DROP_WHITESPACE_PARSER_KEYWORD,
-                                'Drop(Whitespace(%s))' % EBNFCompiler.WHITESPACE_KEYWORD))
+                                drop_espc_tmpl % EBNFCompiler.WHITESPACE_KEYWORD))
         definitions.append((EBNFCompiler.WHITESPACE_PARSER_KEYWORD,
                             'Whitespace(%s)' % EBNFCompiler.WHITESPACE_KEYWORD))
         definitions.append((EBNFCompiler.WHITESPACE_KEYWORD,
@@ -3286,17 +3294,33 @@ class EBNFCompiler(Compiler):
             return '"' + errmsg + '"'
         return self.REGEXP_PARSER(arg, self.drop_on(DROP_REGEXP))
 
+    def on_char_ranges(self, node) -> str:
+        # TODO: Add alternative char_ranges handling here
+        node.result = "|".join('[' + child.content + ']'
+                for child in node.children if child.name == "range_chain")
+        return self.on_regexp(node)
 
     def on_char_range(self, node) -> str:
+        # TODO: Add alternative char_ranges handling here
+        if 'range_desc' in node:
+            node = self.fallback_compiler(node)
+        else:
+            # old grammar, can be removed soon
+            node = self.on_range_desc(node)
+        re_str = re.sub(r"(?<!\\)'", r'\'', node.content)
+        re_str = re.sub(r"(?<!\\)]", r'\]', re_str)
+        return f"{self.P['RegExp']}('[{re_str}]')"
+
+    def on_range_chain(self, node) -> Node:
+        raise NotImplementedError
+
+    def on_range_desc(self, node) -> Node:
         for child in node.children:
             if child.name == 'character':
                 child.result = self.extract_character(child)
             elif child.name == 'free_char':
                 child.result = self.extract_free_char(child)
-        re_str = re.sub(r"(?<!\\)'", r'\'', node.content)
-        re_str = re.sub(r"(?<!\\)]", r'\]', re_str)
-        return f"{self.P['RegExp']}('[{re_str}]')"
-
+        return node
 
     def extract_character(self, node: Node) -> str:
         hexcode = node.content

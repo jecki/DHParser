@@ -2837,8 +2837,30 @@ class Whitespace(RegExp):
         >>> ws = Whitespace(mixin_comment(r'\s+', r'#.*'))
         >>> Grammar(ws)("   # comment").as_sxpr()
         '(root "   # comment")'
+        >>> dws = Drop(Whitespace(mixin_comment(r'\s+', r'#.*')))
+        >>> Grammar(dws)("   # comment").as_sxpr()
+        '(:EMPTY)'
+        >>> dws = Drop(Whitespace(mixin_comment(r'\s+', r'#.*'), keep_comments=True))
+        >>> Grammar(Synonym(dws))("   # comment").as_sxpr()
+        '(root (comment__ "# comment"))'
+        >>> Grammar(dws)("   # comment").as_sxpr()
+        '(root "# comment")'
     """
     assert WHITESPACE_PTYPE == ":Whitespace"
+
+    def __init__(self, regexp, keep_comments: bool = False) -> None:
+        super(Whitespace, self).__init__(regexp)
+        self.keep_comments = keep_comments
+
+    def __deepcopy__(self, memo):
+        # `regex` supports deep copies, but not `re`
+        try:
+            regexp = copy.deepcopy(self.regexp, memo)
+        except TypeError:
+            regexp = self.regexp.pattern
+        duplicate = self.__class__(regexp, self.keep_comments)
+        copy_parser_base_attrs(self, duplicate)
+        return duplicate
 
     def _parse(self, location: cython.int) -> ParsingResult:
         """For the sake of performance, the _parse-method of class RegExp has
@@ -2855,6 +2877,11 @@ class Whitespace(RegExp):
             if capture or not self.disposable:
                 end = match.end()
                 if self.drop_content:
+                    if self.keep_comments:
+                        capture = capture.strip()
+                        if capture:
+                            name = "comment__" if self.node_name[0:1] == ":" else self.node_name
+                            return Node(name, capture, True), end
                     return EMPTY_NODE, end
                 return Node(self.node_name, capture, True), end
         return EMPTY_NODE, location
@@ -2869,7 +2896,7 @@ class Whitespace(RegExp):
 def update_scanner(grammar: Grammar, leaf_parsers: Dict[str, str]):
     """Updates the "scanner" of a grammar by overwriting the ``text`` or
     ``regex``-fields of some of or all of its leaf parsers with new values.
-    This works, of course, only for those parsers that are assigned
+    This works only for those parsers that are assigned
     to a symbol in the Grammar class.
 
     :param grammar: The grammar-object for which the leaf parsers

@@ -107,8 +107,8 @@ class FlexibleEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "25631c8a102f71a777ab18f7b1ee11f5"
-    disposable__ = re.compile('(?:$.)|(?:ANY_SUFFIX$|is_mdef$|pure_elem$|component$|FOLLOW_UP$|MOD_SYM$|EOF$|no_range$|countable$|MOD_SEP$)')
+    source_hash__ = "6670db55e93fb020acca75363ed5634b"
+    disposable__ = re.compile('(?:$.)|(?:MOD_SYM$|countable$|pure_elem$|MOD_SEP$|FOLLOW_UP$|EOF$|ANY_SUFFIX$|no_range$|component$|is_mdef$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
@@ -129,8 +129,8 @@ class FlexibleEBNFGrammar(Grammar):
     char_range_heuristics = NegativeLookahead(Alternative(RegExp('[\\n]'), more_than_one_blank, Series(dwsp__, literal_heuristics), Series(dwsp__, Option(Alternative(Text("::"), Text(":?"), Text(":"))), STRICT_SYM_REGEX, RegExp('\\s*\\]'))))
     MOD_SYM = Drop(Text("->"))
     CH_LEADIN = Capture(Alternative(Text("0x"), Text("#x")), zero_length_warning=False)
-    RE_LEADOUT = Capture(Text("/"), zero_length_warning=False)
-    RE_LEADIN = Capture(Alternative(Series(Text("/"), Lookahead(regex_heuristics)), Text("^/")), zero_length_warning=False)
+    RE_LEADOUT = Capture(Text("/"), zero_length_warning=True)
+    RE_LEADIN = Capture(Alternative(Series(Text("/"), Lookahead(regex_heuristics)), Text("^/")), zero_length_warning=True)
     TIMES = Capture(Text("*"), zero_length_warning=False)
     RNG_DELIM = Capture(Text(","), zero_length_warning=False)
     BRACE_SIGN = Capture(Alternative(Text("{"), Text("(")), zero_length_warning=False)
@@ -148,7 +148,10 @@ class FlexibleEBNFGrammar(Grammar):
     any_char = Series(Text("."), dwsp__)
     free_char = Alternative(RegExp('[^\\n\\[\\]\\\\]'), RegExp('\\\\[nrtfv`´\'"(){}\\[\\]/\\\\]'))
     character = Series(Retrieve(CH_LEADIN), HEXCODE)
-    char_range = Series(Text("["), Lookahead(char_range_heuristics), Option(Text("^")), Alternative(character, free_char), ZeroOrMore(Alternative(Series(Option(Text("-")), character), free_char)), Series(Text("]"), dwsp__))
+    range_desc = Series(Alternative(character, free_char), ZeroOrMore(Alternative(Series(Option(Text("-")), character), free_char)))
+    char_range = Series(Text("["), Lookahead(char_range_heuristics), Option(Text("^")), OneOrMore(range_desc), Series(Text("]"), dwsp__))
+    range_chain = Series(Text("["), Option(Text("^")), OneOrMore(range_desc), Text("]"))
+    char_ranges = Series(RE_LEADIN, range_chain, ZeroOrMore(Series(Text("|"), range_chain)), RE_LEADOUT, dwsp__)
     regexp = Series(Retrieve(RE_LEADIN), RE_CORE, Retrieve(RE_LEADOUT), dwsp__)
     plaintext = Alternative(Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), dwsp__), Series(RegExp('´(?:(?<!\\\\)\\\\´|[^´])*?´'), dwsp__))
     literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), dwsp__), Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__), Series(RegExp('’(?:(?<!\\\\)\\\\’|[^’])*?’'), dwsp__))
@@ -188,7 +191,7 @@ class FlexibleEBNFGrammar(Grammar):
     _is_def = Alternative(Series(Option(Series(MOD_SEP, symbol)), _DEF), Series(MOD_SEP, is_mdef))
     component = Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(_DEF), NegativeLookahead(_is_def)), Series(Lookahead(Text("$")), NegativeLookahead(is_mdef), placeholder, NegativeLookahead(is_def), mandatory=2), Series(Series(Text("("), dwsp__), expression, Series(Text(")"), dwsp__)), Series(RAISE_EXPR_WO_BRACKETS, expression))
     directive = Series(Series(Text("@"), dwsp__), symbol, Series(Text("="), dwsp__), component, ZeroOrMore(Series(Series(Text(","), dwsp__), component)), Lookahead(FOLLOW_UP), mandatory=1)
-    element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(is_def)), literal, plaintext, regexp, char_range, Series(character, dwsp__), any_char, whitespace, group, Series(macro, NegativeLookahead(is_def)), Series(placeholder, NegativeLookahead(is_def)), parser))
+    element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(is_def)), literal, plaintext, char_ranges, regexp, char_range, Series(character, dwsp__), any_char, whitespace, group, Series(macro, NegativeLookahead(is_def)), Series(placeholder, NegativeLookahead(is_def)), parser))
     countable.set(Alternative(option, oneormore, element))
     expression.set(Series(sequence, ZeroOrMore(Series(Retrieve(OR), dwsp__, sequence))))
     syntax = Series(dwsp__, ZeroOrMore(Alternative(definition, directive, macrodef)), EOF)

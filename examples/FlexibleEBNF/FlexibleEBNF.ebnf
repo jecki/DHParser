@@ -94,6 +94,7 @@ pure_elem  = element § !ANY_SUFFIX              # element strictly without a su
 element    = [retrieveop] symbol !is_def        # negative lookahead to be sure it's not a definition
            | literal
            | plaintext
+           | char_ranges
            | regexp
            | char_range
            | character ~
@@ -141,8 +142,10 @@ plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat 
            | /´(?:(?<!\\)\\´|[^´])*?´/~
 regexp     = :RE_LEADIN RE_CORE :RE_LEADOUT ~   # e.g. /\w+/, ~/#.*(?:\n|$)/~
 # regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
-char_range = `[` &char_range_heuristics
-                 [`^`] (character | free_char) { [`-`] character | free_char } "]"
+char_ranges = RE_LEADIN range_chain { `|` range_chain } RE_LEADOUT ~
+  range_chain = `[` [`^`] { range_desc }+ `]`
+char_range = `[` &char_range_heuristics [`^`] { range_desc }+ "]"
+  range_desc = (character | free_char) { [`-`] character | free_char }
 character  = :CH_LEADIN HEXCODE
 free_char  = /[^\n\[\]\\]/ | /\\[nrtfv`´'"(){}\[\]\/\\]/
 any_char   = "."
