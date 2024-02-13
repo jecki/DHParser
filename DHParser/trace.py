@@ -35,6 +35,8 @@ This functionality can be used for several purposes:
    a threading.Event or multiprocessing.Event once in a while
 """
 
+# TODO: Add Trace-Parser-class
+
 from __future__ import annotations
 
 from typing import Tuple, Optional, List, Iterable, Union, cast

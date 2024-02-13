@@ -2893,6 +2893,9 @@ class Whitespace(RegExp):
         return '~'
 
 
+# TODO: Add character-range-parser
+
+
 def update_scanner(grammar: Grammar, leaf_parsers: Dict[str, str]):
     """Updates the "scanner" of a grammar by overwriting the ``text`` or
     ``regex``-fields of some of or all of its leaf parsers with new values.
