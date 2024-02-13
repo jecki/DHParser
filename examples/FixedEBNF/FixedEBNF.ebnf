@@ -83,6 +83,7 @@ element    = [retrieveop] symbol !is_def
            | char_ranges
            | character ~
            | regexp
+           | char_range
            | any_char
            | whitespace
            | group
@@ -104,7 +105,7 @@ retrieveop = "::" | ":?" | ":"                  # '::' pop, ':?' optional pop, '
 group      = "(" no_range §expression ")"
 oneormore  = "{" no_range expression "}+" | element "+"
 repetition = "{" no_range §expression "}" | element "*" no_range
-option     = "[" §expression "]" | element "?"
+option     = !char_range "[" §expression "]" | element "?"
 counted    = countable range | countable TIMES~ multiplier | multiplier TIMES~ §countable
 
 range      = RNG_OPEN~ multiplier [ RNG_DELIM~ multiplier ] RNG_CLOSE~
@@ -124,9 +125,13 @@ literal    = /"(?:(?<!\\)\\"|[^"])*?"/~         # e.g. "(", '+', 'while'
 plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat whitespace
            | /´(?:(?<!\\)\\´|[^´])*?´/~
 regexp     = RE_LEADIN RE_CORE RE_LEADOUT ~   # e.g. /\w+/, ~/#.*(?:\n|$)/~
+
+char_range = `[` [`^`] { restricted_range_desc }+ "]"
+  restricted_range_desc = character [ `-` character ]
 char_ranges = RE_LEADIN range_chain { `|` range_chain } RE_LEADOUT ~
   range_chain = `[` [`^`] { range_desc }+ `]`
-  range_desc = (character | free_char) { [`-`] character | free_char }
+  range_desc = (character | free_char) [ `-` (character | free_char) ]
+
 character  = CH_LEADIN HEXCODE
 free_char  = /[^\n\[\]\\]/ | /\\[nrtfv`´'"(){}\[\]\/\\]/
 any_char   = "."
@@ -158,7 +163,7 @@ TIMES      = `*`
 RE_LEADIN  = `/`
 RE_LEADOUT = `/`
 
-CH_LEADIN  = `0x`
+CH_LEADIN  = `0x` | `\x` | `\u` | `\U`
 
 MOD_SYM    = `->`  # symbol for postfix modifier
 
@@ -166,7 +171,7 @@ MOD_SYM    = `->`  # symbol for postfix modifier
 
 RE_CORE    = /(?:(?<!\\)\\(?:\/)|[^\/])*/       # core of a regular expression, i.e. the dots in /.../
 SYM_REGEX  = /(?!\d)\w+/                        # regular expression for symbols
-HEXCODE    = /[A-Fa-f0-9]{1,8}/
+HEXCODE    = /(?:[A-Fa-f1-9]|0(?!x)){1,8}/
 
 
 #: error-markers

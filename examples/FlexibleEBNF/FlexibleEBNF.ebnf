@@ -142,10 +142,12 @@ plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/~         # like literal but does not eat 
            | /´(?:(?<!\\)\\´|[^´])*?´/~
 regexp     = :RE_LEADIN RE_CORE :RE_LEADOUT ~   # e.g. /\w+/, ~/#.*(?:\n|$)/~
 # regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
+
+char_range = `[` &char_range_heuristics [`^`] { range_desc }+ "]"
 char_ranges = RE_LEADIN range_chain { `|` range_chain } RE_LEADOUT ~
   range_chain = `[` [`^`] { range_desc }+ `]`
-char_range = `[` &char_range_heuristics [`^`] { range_desc }+ "]"
-  range_desc = (character | free_char) { [`-`] character | free_char }
+  range_desc = (character | free_char) [ [`-`] (character | free_char) ]
+
 character  = :CH_LEADIN HEXCODE
 free_char  = /[^\n\[\]\\]/ | /\\[nrtfv`´'"(){}\[\]\/\\]/
 any_char   = "."
@@ -179,7 +181,7 @@ TIMES      = `*`
 RE_LEADIN  = `/` &regex_heuristics | `^/`
 RE_LEADOUT = `/`
 
-CH_LEADIN  = `0x` | `#x`
+CH_LEADIN  = `0x` | `#x` | `\x` | `\u` | `\U`
 
 MOD_SYM   = `->`
 
@@ -188,6 +190,7 @@ MOD_SYM   = `->`
 char_range_heuristics  = ! ( /[\n]/ | more_than_one_blank
                            | ~ literal_heuristics
                            | ~ [`::`|`:?`|`:`] STRICT_SYM_REGEX /\s*\]/ )
+                         & ({ range_desc }+ `]`)
   STRICT_SYM_REGEX     = /(?!\d)\w+/
 more_than_one_blank    = /[^ \]]*[ ][^ \]]*[ ]/
 literal_heuristics     = /~?\s*"(?:[\\]\]|[^\]]|[^\\]\[[^"]*)*"/
@@ -208,7 +211,7 @@ regex_heuristics       = ! ( / +`[^`]*` +\//
 
 RE_CORE    = /(?:(?<!\\)\\(?:\/)|[^\/])*/       # core of a regular expression, i.e. the dots in /.../
 SYM_REGEX  = /(?!\d)\w(?:-?\w)*/                # regular expression for symbols
-HEXCODE    = /[A-Fa-f0-9]{1,8}/
+HEXCODE    = /(?:[A-Fa-f1-9]|0(?!x)){1,8}/
 
 
 #: error-markers

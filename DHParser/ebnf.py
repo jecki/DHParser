@@ -259,7 +259,7 @@ from DHParser.nodetree import Node, RootNode, Path, WHITESPACE_PTYPE, TOKEN_PTYP
 from DHParser.toolkit import load_if_file, escape_ctrl_chars, md5, \
     sane_parser_name, re, expand_table, unrepr, compile_python_object, \
     ThreadLocalSingletonFactory, TypeAlias
-from DHParser.transform import TransformerFunc, transformer, remove_brackets, \
+from DHParser.transform import TransformerFunc, transformer, remove_brackets, change_name, \
     reduce_single_child, replace_by_single_child, is_empty, remove_children, add_error, \
     remove_tokens, remove_anonymous_tokens, flatten, forbid, assert_content, remove_children_if, \
     all_of, not_one_of, apply_if, neg, has_parent, BLOCK_LEAVES
@@ -1194,6 +1194,8 @@ EBNF_AST_transformation_table = {
         [remove_children('RE_LEADIN', 'RE_LEADOUT'), reduce_single_child],
     "char_ranges, range_desc":
         [],
+    "restricted_range_desc":
+        [change_name("range_desc")],
     "char_range, range_chain":
         [flatten, remove_tokens('[', ']')],
     "character":
