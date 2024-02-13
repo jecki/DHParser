@@ -101,10 +101,25 @@ class TestDirectives:
         assert syntax_tree.errors_sorted
         syntax_tree = parser("3 + 4 \n  %comment \n * 12")
         assert not syntax_tree.errors_sorted
+        assert not syntax_tree.pick('comment__')
+        assert syntax_tree.pick(':Whitespace')
         syntax_tree = parser("3 + 4 \n  %comment\n\n * 12")
         assert syntax_tree.errors_sorted
         syntax_tree = parser("3 + 4 \n\n%comment\n * 12")
         assert syntax_tree.errors_sorted
+
+    def test_whitespace_keep_comments(self):
+        lang = """@whitespace = linefeed
+                  @comment = /%.*/
+                  @drop = no_comments
+               """ + self.mini_language
+        MinilangParser = grammar_provider(lang)
+        parser = MinilangParser()
+        assert parser
+        syntax_tree = parser("3 + 4 \n  %comment \n * 12")
+        print(syntax_tree.as_sxpr())
+        assert syntax_tree.pick('comment__')
+        assert not syntax_tree.pick(':Whitespace')
 
     def test_whitespace_vertical(self):
         lang = "@ whitespace = vertical\n" + self.mini_language

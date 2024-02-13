@@ -2114,9 +2114,9 @@ class EBNFCompiler(Compiler):
             if DROP_NO_COMMENTS in self.directives.drop:
                 drop_wspc_tmpl = 'Drop(Whitespace(%s, keep_comments=True))'
             else:
-                drop_espc_tmpl = 'Drop(Whitespace(%s))'
+                drop_wspc_tmpl = 'Drop(Whitespace(%s))'
             definitions.append((EBNFCompiler.DROP_WHITESPACE_PARSER_KEYWORD,
-                                drop_espc_tmpl % EBNFCompiler.WHITESPACE_KEYWORD))
+                                drop_wspc_tmpl % EBNFCompiler.WHITESPACE_KEYWORD))
         definitions.append((EBNFCompiler.WHITESPACE_PARSER_KEYWORD,
                             'Whitespace(%s)' % EBNFCompiler.WHITESPACE_KEYWORD))
         definitions.append((EBNFCompiler.WHITESPACE_KEYWORD,
@@ -3246,7 +3246,8 @@ class EBNFCompiler(Compiler):
 
 
     def WSPC_PARSER(self, force_drop=False):
-        if ((force_drop or DROP_WSPC in self.directives.drop)
+        if ((force_drop or DROP_WSPC in self.directives.drop
+             or DROP_NO_COMMENTS in self.directives.drop)
                 and (self.path[-2].name != "definition"
                      or self.path[-1].name == 'literal')):
             return 'dwsp__'
