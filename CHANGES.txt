@@ -1,4 +1,4 @@
-DHParser Version 1.8.0
+DHParser Version 1.7.2
 ......................
 
 - removed unnecessary directories from pyproject.tompl, e.g.

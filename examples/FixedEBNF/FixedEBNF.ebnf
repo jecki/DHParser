@@ -132,7 +132,7 @@ char_ranges = RE_LEADIN range_chain { `|` range_chain } RE_LEADOUT ~
   range_chain = `[` [`^`] { range_desc }+ `]`
   range_desc = (character | free_char) [ `-` (character | free_char) ]
 
-character  = CH_LEADIN HEXCODE
+character  = (CH_LEADIN | `\x` | `\u` | `\U`) HEXCODE
 free_char  = /[^\n\[\]\\]/ | /\\[nrtfv`´'"(){}\[\]\/\\]/
 any_char   = "."
 whitespace = /~/~                               # insignificant whitespace
@@ -163,7 +163,7 @@ TIMES      = `*`
 RE_LEADIN  = `/`
 RE_LEADOUT = `/`
 
-CH_LEADIN  = `0x` | `\x` | `\u` | `\U`
+CH_LEADIN  = `0x`
 
 MOD_SYM    = `->`  # symbol for postfix modifier
 
