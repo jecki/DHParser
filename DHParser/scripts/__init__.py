@@ -1,4 +1,4 @@
-"""__init__.py - package definition module for DHParser/scrips
+"""__init__.py - package definition module for DHParser/scripts
 
 Copyright 2019  by Eckhart Arnold (arnold@badw.de)
                 Bavarian Academy of Sciences an Humanities (badw.de)

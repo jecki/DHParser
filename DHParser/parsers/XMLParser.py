@@ -20,8 +20,6 @@ except NameError:
 if scriptpath and scriptpath not in sys.path:
     sys.path.append(scriptpath)
 
-sys.path.append('../../')
-
 try:
     import regex as re
 except ImportError:
@@ -42,7 +40,7 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, ERR, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, mixin_comment, \
-    last_value, matching_bracket, optional_last_value, IgnoreCase
+    last_value, matching_bracket, optional_last_value
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.toolkit import is_filename, load_if_file, cpu_count, RX_NEVER_MATCH, \
@@ -75,24 +73,24 @@ RE_INCLUDE = NEVER_MATCH_PATTERN
 # by a pattern with group "name" here, e.g. r'\input{(?P<name>.*)}'
 
 
-def HTMLTokenizer(original_text) -> Tuple[str, List[Error]]:
+def XMLTokenizer(original_text) -> Tuple[str, List[Error]]:
     # Here, a function body can be filled in that adds preprocessor tokens
     # to the source code and returns the modified source.
     return original_text, []
 
 
 def preprocessor_factory() -> PreprocessorFunc:
-    # below, the second parameter must always be the same as HTMLGrammar.COMMENT__!
+    # below, the second parameter must always be the same as XMLGrammar.COMMENT__!
     find_next_include = gen_find_include_func(RE_INCLUDE, '#.*')
     include_prep = partial(preprocess_includes, find_next_include=find_next_include)
-    tokenizing_prep = make_preprocessor(HTMLTokenizer)
+    tokenizing_prep = make_preprocessor(XMLTokenizer)
     return chain_preprocessors(include_prep, tokenizing_prep)
 
 
 get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory)
 
 
-def preprocess_HTML(source):
+def preprocess_XML(source):
     return get_preprocessor()(source)
 
 
@@ -102,14 +100,13 @@ def preprocess_HTML(source):
 #
 #######################################################################
 
-class HTMLGrammar(Grammar):
-    r"""Parser for a HTML source file.
+class XMLGrammar(Grammar):
+    r"""Parser for a XML source file.
     """
     element = Forward()
-    source_hash__ = "9b70f0daaa3f3dcf69ea1280e36546a2"
+    source_hash__ = "1f039ac002d7c7aac4805b0a7da06efc"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile(
-        '(?:$.)|(?:BOM$|PubidChars$|tagContent$|VersionNum$|CommentChars$|Misc$|PubidCharsSingleQuoted$|EncName$|CData$|NameStartChar$|EOF$|prolog$|Reference$|NameChars$)')
+    disposable__ = re.compile('(?:$.)|(?:EncName$|PubidChars$|PubidCharsSingleQuoted$|EOF$|NameStartChar$|VersionNum$|tagContent$|CData$|Reference$|prolog$|NameChars$|CommentChars$|Misc$|BOM$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'tagContent': [('', "syntax error in tag-name of opening or empty tag:  {1}")],
@@ -121,83 +118,52 @@ class HTMLGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    EOF = Drop(NegativeLookahead(RegExp('(?i).')))
-    S = RegExp('(?i)\\s+')
-    CharRef = Alternative(Series(Drop(IgnoreCase('&#')), RegExp('(?i)[0-9]+'), Drop(IgnoreCase(';'))),
-                          Series(Drop(IgnoreCase('&#x')), RegExp('(?i)[0-9a-fA-F]+'), Drop(IgnoreCase(';'))))
-    CommentChars = RegExp(
-        '(?i)(?:(?!-)(?:\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-\\U0010FFFF]))+')
-    PIChars = RegExp(
-        '(?i)(?:(?!\\?>)(?:\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-\\U0010FFFF]))+')
-    CData = RegExp(
-        '(?i)(?:(?!\\]\\]>)(?:\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-\\U0010FFFF]))+')
-    CharData = RegExp('(?i)(?:(?!\\]\\]>)[^<&])+')
-    PubidChars = RegExp("(?i)(?:\\x20|\\x0D|\\x0A|[a-zA-Z0-9]|[-'()+,./:=?;!*#@$_%])+")
-    PubidCharsSingleQuoted = RegExp('(?i)(?:\\x20|\\x0D|\\x0A|[a-zA-Z0-9]|[-()+,./:=?;!*#@$_%])+')
-    CDSect = Series(Drop(IgnoreCase('<![CDATA[')), CData, Drop(IgnoreCase(']]>')))
-    NameStartChar = RegExp(
-        '(?ix)_|:|[A-Z]|[a-z]\n                   |[\\u00C0-\\u00D6]|[\\u00D8-\\u00F6]|[\\u00F8-\\u02FF]\n                   |[\\u0370-\\u037D]|[\\u037F-\\u1FFF]|[\\u200C-\\u200D]\n                   |[\\u2070-\\u218F]|[\\u2C00-\\u2FEF]|[\\u3001-\\uD7FF]\n                   |[\\uF900-\\uFDCF]|[\\uFDF0-\\uFFFD]\n                   |[\\U00010000-\\U000EFFFF]')
-    NameChars = RegExp(
-        '(?ix)(?:_|:|-|\\.|[A-Z]|[a-z]|[0-9]\n                   |\\u00B7|[\\u0300-\\u036F]|[\\u203F-\\u2040]\n                   |[\\u00C0-\\u00D6]|[\\u00D8-\\u00F6]|[\\u00F8-\\u02FF]\n                   |[\\u0370-\\u037D]|[\\u037F-\\u1FFF]|[\\u200C-\\u200D]\n                   |[\\u2070-\\u218F]|[\\u2C00-\\u2FEF]|[\\u3001-\\uD7FF]\n                   |[\\uF900-\\uFDCF]|[\\uFDF0-\\uFFFD]\n                   |[\\U00010000-\\U000EFFFF])+')
-    Comment = Series(Drop(IgnoreCase('<!--')), ZeroOrMore(Alternative(CommentChars, RegExp('(?i)-(?!-)'))), dwsp__,
-                     Drop(IgnoreCase('-->')))
+    EOF = Drop(NegativeLookahead(RegExp('.')))
+    CharRef = Alternative(Series(Drop(Text('&#')), RegExp('[0-9]+'), Drop(Text(';'))), Series(Drop(Text('&#x')), RegExp('[0-9a-fA-F]+'), Drop(Text(';'))))
+    CommentChars = RegExp('(?:(?!-)(?:\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-\\U0010FFFF]))+')
+    PIChars = RegExp('(?:(?!\\?>)(?:\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-\\U0010FFFF]))+')
+    CData = RegExp('(?:(?!\\]\\]>)(?:\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-\\U0010FFFF]))+')
+    CharData = RegExp('(?:(?!\\]\\]>)[^<&])+')
+    PubidChars = RegExp("(?:\\x20|\\x0D|\\x0A|[a-zA-Z0-9]|[-'()+,./:=?;!*#@$_%])+")
+    PubidCharsSingleQuoted = RegExp('(?:\\x20|\\x0D|\\x0A|[a-zA-Z0-9]|[-()+,./:=?;!*#@$_%])+')
+    S = RegExp('\\s+')
+    CDSect = Series(Drop(Text('<![CDATA[')), CData, Drop(Text(']]>')))
+    NameStartChar = RegExp('(?x)_|:|[A-Z]|[a-z]\n                   |[\\u00C0-\\u00D6]|[\\u00D8-\\u00F6]|[\\u00F8-\\u02FF]\n                   |[\\u0370-\\u037D]|[\\u037F-\\u1FFF]|[\\u200C-\\u200D]\n                   |[\\u2070-\\u218F]|[\\u2C00-\\u2FEF]|[\\u3001-\\uD7FF]\n                   |[\\uF900-\\uFDCF]|[\\uFDF0-\\uFFFD]\n                   |[\\U00010000-\\U000EFFFF]')
+    NameChars = RegExp('(?x)(?:_|:|-|\\.|[A-Z]|[a-z]|[0-9]\n                   |\\u00B7|[\\u0300-\\u036F]|[\\u203F-\\u2040]\n                   |[\\u00C0-\\u00D6]|[\\u00D8-\\u00F6]|[\\u00F8-\\u02FF]\n                   |[\\u0370-\\u037D]|[\\u037F-\\u1FFF]|[\\u200C-\\u200D]\n                   |[\\u2070-\\u218F]|[\\u2C00-\\u2FEF]|[\\u3001-\\uD7FF]\n                   |[\\uF900-\\uFDCF]|[\\uFDF0-\\uFFFD]\n                   |[\\U00010000-\\U000EFFFF])+')
+    Comment = Series(Drop(Text('<!--')), ZeroOrMore(Alternative(CommentChars, RegExp('-(?!-)'))), dwsp__, Drop(Text('-->')))
     Name = Series(NameStartChar, Option(NameChars))
-    PITarget = Series(NegativeLookahead(RegExp('(?i)X|xM|mL|l')), Name)
-    PI = Series(Drop(IgnoreCase('<?')), PITarget, Option(Series(dwsp__, PIChars)), Drop(IgnoreCase('?>')))
+    PITarget = Series(NegativeLookahead(RegExp('X|xM|mL|l')), Name)
+    PI = Series(Drop(Text('<?')), PITarget, Option(Series(dwsp__, PIChars)), Drop(Text('?>')))
     Misc = OneOrMore(Alternative(Comment, PI, S))
-    EntityRef = Series(Drop(IgnoreCase('&')), Name, Drop(IgnoreCase(';')))
+    EntityRef = Series(Drop(Text('&')), Name, Drop(Text(';')))
     Reference = Alternative(EntityRef, CharRef)
-    PubidLiteral = Alternative(Series(Drop(IgnoreCase('"')), Option(PubidChars), Drop(IgnoreCase('"'))),
-                               Series(Drop(IgnoreCase("\'")), Option(PubidCharsSingleQuoted), Drop(IgnoreCase("\'"))))
-    SystemLiteral = Alternative(Series(Drop(IgnoreCase('"')), RegExp('(?i)[^"]*'), Drop(IgnoreCase('"'))),
-                                Series(Drop(IgnoreCase("\'")), RegExp("(?i)[^']*"), Drop(IgnoreCase("\'"))))
-    AttValue = Alternative(
-        Series(Drop(IgnoreCase('"')), ZeroOrMore(Alternative(RegExp('(?i)[^<&"]+'), Reference)), Drop(IgnoreCase('"'))),
-        Series(Drop(IgnoreCase("\'")), ZeroOrMore(Alternative(RegExp("(?i)[^<&']+"), Reference)),
-               Drop(IgnoreCase("\'"))), ZeroOrMore(Alternative(RegExp("(?i)[^<&'>\\s]+"), Reference)))
-    content = Series(Option(CharData),
-                     ZeroOrMore(Series(Alternative(element, Reference, CDSect, PI, Comment), Option(CharData))))
-    Attribute = Series(Name, dwsp__, Drop(IgnoreCase('=')), dwsp__, AttValue, mandatory=2)
-    ETag = Series(Drop(IgnoreCase('</')), Name, dwsp__, Drop(IgnoreCase('>')), mandatory=1)
-    tagContent = Series(NegativeLookahead(RegExp('(?i)[/!?]')), Name, ZeroOrMore(Series(dwsp__, Attribute)), dwsp__,
-                        Lookahead(Alternative(Drop(IgnoreCase('>')), Drop(IgnoreCase('/>')))), mandatory=1)
-    STag = Series(Drop(IgnoreCase('<')), tagContent, Drop(IgnoreCase('>')))
-    voidElement = Series(Drop(IgnoreCase('<')), Lookahead(
-        Alternative(Drop(IgnoreCase('area')), Drop(IgnoreCase('base')), Drop(IgnoreCase('br')), Drop(IgnoreCase('col')),
-                    Drop(IgnoreCase('embed')), Drop(IgnoreCase('hr')), Drop(IgnoreCase('img')),
-                    Drop(IgnoreCase('input')), Drop(IgnoreCase('link')), Drop(IgnoreCase('meta')),
-                    Drop(IgnoreCase('param')), Drop(IgnoreCase('source')), Drop(IgnoreCase('track')),
-                    Drop(IgnoreCase('wbr')))), tagContent, Drop(IgnoreCase('>')))
-    emptyElement = Series(Drop(IgnoreCase('<')), tagContent, Drop(IgnoreCase('/>')))
-    BOM = Drop(RegExp('(?i)[\\ufeff]|[\\ufffe]|[\\u0000feff]|[\\ufffe0000]'))
-    ExternalID = Alternative(Series(Drop(IgnoreCase('SYSTEM')), dwsp__, SystemLiteral, mandatory=1),
-                             Series(Drop(IgnoreCase('PUBLIC')), dwsp__, PubidLiteral, dwsp__, SystemLiteral,
-                                    mandatory=1))
-    doctypedecl = Series(Drop(IgnoreCase('<!DOCTYPE')), dwsp__, Name, Option(Series(dwsp__, ExternalID)), dwsp__,
-                         Drop(IgnoreCase('>')), mandatory=2)
-    SDDecl = Series(dwsp__, Drop(IgnoreCase('standalone')), dwsp__, Drop(IgnoreCase('=')), dwsp__, Alternative(
-        Series(Drop(IgnoreCase("\'")), Alternative(IgnoreCase("yes"), IgnoreCase("no")), Drop(IgnoreCase("\'"))),
-        Series(Drop(IgnoreCase('"')), Alternative(IgnoreCase("yes"), IgnoreCase("no")), Drop(IgnoreCase('"')))))
-    EncName = RegExp('(?i)[A-Za-z][A-Za-z0-9._\\-]*')
-    EncodingDecl = Series(dwsp__, Drop(IgnoreCase('encoding')), dwsp__, Drop(IgnoreCase('=')), dwsp__,
-                          Alternative(Series(Drop(IgnoreCase("\'")), EncName, Drop(IgnoreCase("\'"))),
-                                      Series(Drop(IgnoreCase('"')), EncName, Drop(IgnoreCase('"')))))
-    VersionNum = RegExp('(?i)[0-9]+\\.[0-9]+')
-    VersionInfo = Series(dwsp__, Drop(IgnoreCase('version')), dwsp__, Drop(IgnoreCase('=')), dwsp__,
-                         Alternative(Series(Drop(IgnoreCase("\'")), VersionNum, Drop(IgnoreCase("\'"))),
-                                     Series(Drop(IgnoreCase('"')), VersionNum, Drop(IgnoreCase('"')))))
-    XMLDecl = Series(Drop(IgnoreCase('<?xml')), VersionInfo, Option(EncodingDecl), Option(SDDecl), dwsp__,
-                     Drop(IgnoreCase('?>')), mandatory=1)
+    PubidLiteral = Alternative(Series(Drop(Text('"')), Option(PubidChars), Drop(Text('"'))), Series(Drop(Text("\'")), Option(PubidCharsSingleQuoted), Drop(Text("\'"))))
+    SystemLiteral = Alternative(Series(Drop(Text('"')), RegExp('[^"]*'), Drop(Text('"'))), Series(Drop(Text("\'")), RegExp("[^']*"), Drop(Text("\'"))))
+    AttValue = Alternative(Series(Drop(Text('"')), ZeroOrMore(Alternative(RegExp('[^<&"]+'), Reference)), Drop(Text('"'))), Series(Drop(Text("\'")), ZeroOrMore(Alternative(RegExp("[^<&']+"), Reference)), Drop(Text("\'"))))
+    content = Series(Option(CharData), ZeroOrMore(Series(Alternative(element, Reference, CDSect, PI, Comment), Option(CharData))))
+    Attribute = Series(Name, dwsp__, Drop(Text('=')), dwsp__, AttValue, mandatory=2)
+    ETag = Series(Drop(Text('</')), Name, dwsp__, Drop(Text('>')), mandatory=1)
+    tagContent = Series(NegativeLookahead(RegExp('[/!?]')), Name, ZeroOrMore(Series(dwsp__, Attribute)), dwsp__, Lookahead(Alternative(Drop(Text('>')), Drop(Text('/>')))), mandatory=1)
+    STag = Series(Drop(Text('<')), tagContent, Drop(Text('>')))
+    emptyElement = Series(Drop(Text('<')), tagContent, Drop(Text('/>')))
+    BOM = Drop(RegExp('[\\ufeff]|[\\ufffe]|[\\u0000feff]|[\\ufffe0000]'))
+    ExternalID = Alternative(Series(Drop(Text('SYSTEM')), dwsp__, SystemLiteral, mandatory=1), Series(Drop(Text('PUBLIC')), dwsp__, PubidLiteral, dwsp__, SystemLiteral, mandatory=1))
+    doctypedecl = Series(Drop(Text('<!DOCTYPE')), dwsp__, Name, Option(Series(dwsp__, ExternalID)), dwsp__, Drop(Text('>')), mandatory=2)
+    SDDecl = Series(dwsp__, Drop(Text('standalone')), dwsp__, Drop(Text('=')), dwsp__, Alternative(Series(Drop(Text("\'")), Alternative(Text("yes"), Text("no")), Drop(Text("\'"))), Series(Drop(Text('"')), Alternative(Text("yes"), Text("no")), Drop(Text('"')))))
+    EncName = RegExp('[A-Za-z][A-Za-z0-9._\\-]*')
+    EncodingDecl = Series(dwsp__, Drop(Text('encoding')), dwsp__, Drop(Text('=')), dwsp__, Alternative(Series(Drop(Text("\'")), EncName, Drop(Text("\'"))), Series(Drop(Text('"')), EncName, Drop(Text('"')))))
+    VersionNum = RegExp('[0-9]+\\.[0-9]+')
+    VersionInfo = Series(dwsp__, Drop(Text('version')), dwsp__, Drop(Text('=')), dwsp__, Alternative(Series(Drop(Text("\'")), VersionNum, Drop(Text("\'"))), Series(Drop(Text('"')), VersionNum, Drop(Text('"')))))
+    XMLDecl = Series(Drop(Text('<?xml')), VersionInfo, Option(EncodingDecl), Option(SDDecl), dwsp__, Drop(Text('?>')), mandatory=1)
     prolog = Series(Option(Series(dwsp__, XMLDecl)), Option(Misc), Option(Series(doctypedecl, Option(Misc))))
-    element.set(Alternative(emptyElement, voidElement, Series(STag, content, ETag, mandatory=2)))
+    element.set(Alternative(emptyElement, Series(STag, content, ETag, mandatory=1)))
     document = Series(Option(BOM), prolog, element, Option(Misc), EOF, mandatory=2)
-    resume_rules__ = {'tagContent': [re.compile(r'(?i)(?=>|\/>)')],
-                      'ETag': [re.compile(r'(?i)(?=>)')],
-                      'Attribute': [re.compile(r'(?i)(?=>|\/>)')],
-                      'element': [re.compile(r'(?i)(?=.|$)')]}
+    resume_rules__ = {'tagContent': [re.compile(r'(?=>|\/>)')],
+                      'ETag': [re.compile(r'(?=>)')],
+                      'Attribute': [re.compile(r'(?=>|\/>)')]}
     root__ = document
         
-parsing: PseudoJunction = create_parser_junction(HTMLGrammar)
+parsing: PseudoJunction = create_parser_junction(XMLGrammar)
 get_grammar = parsing.factory # for backwards compatibility, only
 
 
@@ -208,7 +174,7 @@ get_grammar = parsing.factory # for backwards compatibility, only
 #######################################################################
 
 
-HTML_PTYPE = ":HTML"
+XML_PTYPE = ":XML"
 
 WARNING_AMBIGUOUS_EMPTY_ELEMENT = ErrorCode(205)
 
@@ -217,8 +183,8 @@ ERROR_VALUE_CONSTRAINT_VIOLATION = ErrorCode(2010)
 ERROR_VALIDITY_CONSTRAINT_VIOLATION = ErrorCode(2020)
 
 
-class HTMLTransformer(Compiler):
-    """Compiler for the abstract-syntax-tree of a HTML source file.
+class XMLTransformer(Compiler):
+    """Compiler for the abstract-syntax-tree of a XML source file.
 
     As of now, processing instructions, cdata-sections an document-type definition
     declarations are simply dropped.
@@ -257,8 +223,8 @@ class HTMLTransformer(Compiler):
                                 % (value, str(allowed)), ERROR_VALUE_CONSTRAINT_VIOLATION)
 
     def on_document(self, node):
-        node.name = HTML_PTYPE
-        self.tree.string_tags.update({TOKEN_PTYPE, HTML_PTYPE, 'CharRef', 'EntityRef'})
+        node.name = XML_PTYPE
+        self.tree.string_tags.update({TOKEN_PTYPE, XML_PTYPE, 'CharRef', 'EntityRef'})
         self.tree.empty_tags.update({'?xml'})
         node.result = tuple(self.compile(nd) for nd in node.children
                             if nd.name not in self.expendables)
@@ -313,7 +279,7 @@ class HTMLTransformer(Compiler):
             except KeyError:  # in case of a malformed tree...
                 return node[0]
         stag = node['STag']
-        etag = node.get('ETag', stag)  # in case of malformed HTML this could be missing
+        etag = node.get('ETag', stag)  # in case of malformed XML this could be missing
         tag_name = stag['Name'].content
 
         if tag_name != etag['Name'].content:
@@ -327,7 +293,7 @@ class HTMLTransformer(Compiler):
                 and tag_name not in self.non_empty_tags:  # warn only once!
             self.tree.new_error(node,
                                 f'Tag-name "{tag_name}" has already been used for an empty-tag '
-                                f'<{tag_name}/> earlier. This is considered bad HTML-practice!',
+                                f'<{tag_name}/> earlier. This is considered bad XML-practice!',
                                 WARNING_AMBIGUOUS_EMPTY_ELEMENT)
 
         self.non_empty_tags.add(tag_name)
@@ -368,7 +334,7 @@ class HTMLTransformer(Compiler):
         return node
 
     def on_Series__(self, node):
-        """Visitor for ":Series"-nodes to make HTML-Transformer
+        """Visitor for ":Series"-nodes to make XML-Transformer
         more resilient against bad input data.
 
         Becomes only relevant if
@@ -388,10 +354,10 @@ class HTMLTransformer(Compiler):
         return node
 
 
-get_transformer = ThreadLocalSingletonFactory(HTMLTransformer)
+get_transformer = ThreadLocalSingletonFactory(XMLTransformer)
 
 
-def transform_HTML(cst):
+def transform_XML(cst):
     return get_transformer()(cst)
 
 
@@ -402,14 +368,14 @@ def transform_HTML(cst):
 #
 #######################################################################
 
-# get_compiler = ThreadLocalSingletonFactory(HTMLCompiler)
+# get_compiler = ThreadLocalSingletonFactory(XMLCompiler)
 
 def get_compiler() -> Callable:
     def nop(ast: Node) -> Node:
         return ast
     return nop
 
-def compile_HTML(ast):
+def compile_XML(ast):
     return get_compiler()(ast)
 
 
@@ -424,8 +390,8 @@ RESULT_FILE_EXTENSION = ".sxpr"  # Change this according to your needs!
 
 def compile_src(source: str) -> Tuple[Any, List[Error]]:
     """Compiles ``source`` and returns (result, errors)."""
-    result_tuple = compile_source(source, get_preprocessor(), get_grammar(),
-                                  get_transformer(), get_compiler())
+    result_tuple = compile_source(source, get_preprocessor(), get_grammar(), get_transformer(),
+                                  get_compiler())
     return result_tuple[:2]  # drop the AST at the end of the result tuple
 
 
@@ -434,7 +400,7 @@ def serialize_result(result: Any) -> Union[str, bytes]:
     IS NOT A TREE OF NODES.
     """
     if isinstance(result, Node):
-        return result.serialize(how='default' if RESULT_FILE_EXTENSION != '.html' else 'html')
+        return result.serialize(how='default' if RESULT_FILE_EXTENSION != '.xml' else 'xml')
     elif isinstance(result, str):
         return result
     else:
@@ -533,7 +499,7 @@ if __name__ == "__main__":
               'because grammar was not found at: ' + grammar_path)
 
     from argparse import ArgumentParser
-    parser = ArgumentParser(description="Parses a HTML-file and shows its syntax-tree.")
+    parser = ArgumentParser(description="Parses a XML-file and shows its syntax-tree.")
     parser.add_argument('files', nargs='+')
     parser.add_argument('-d', '--debug', action='store_const', const='debug',
                         help='Store debug information in LOGS subdirectory')

@@ -20,8 +20,6 @@ except NameError:
 if scriptpath and scriptpath not in sys.path:
     sys.path.append(scriptpath)
 
-sys.path.append('../../')
-
 try:
     import regex as re
 except ImportError:
