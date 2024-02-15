@@ -1809,7 +1809,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             """Returns the opening string for the representation of `node`."""
             nonlocal attr_filter, empty_tags
             if node.name in string_tags and not node.has_attr():
-                if node.name == "CharRef" and node.content.isdecimal(): return "&#x"
+                if node.name == "CharRef" and node.content.isalnum(): return "&#x"
                 elif node.name == "EntityRef": return "&"
                 else: return ''
             txt = ['<', xml_tag_name(node.name)]
@@ -1845,7 +1845,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             """Returns the closing string for the representation of `node`."""
             if (node.name in empty_tags and not node.result) \
                     or (node.name in string_tags and not node.has_attr()):
-                if node.name == "CharRef" and node.content.isdecimal(): return ";"
+                if node.name == "CharRef" and node.content.isalnum(): return ";"
                 elif node.name == "EntityRef": return ";"
                 else: return ''
             elif node.name == '!--':
