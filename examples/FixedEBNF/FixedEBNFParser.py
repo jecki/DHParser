@@ -85,8 +85,8 @@ class FixedEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "9d05106727d910a10e6080177de4ea28"
-    disposable__ = re.compile('(?:$.)|(?:is_mdef$|no_range$|EOF$|MOD_SYM$|ANY_SUFFIX$|MOD_SEP$|countable$|pure_elem$|FOLLOW_UP$|component$)')
+    source_hash__ = "dcc1a4c37c097b00a142af4be0b9a49f"
+    disposable__ = re.compile('(?:$.)|(?:MOD_SEP$|ANY_SUFFIX$|EOF$|countable$|component$|FOLLOW_UP$|pure_elem$|is_mdef$|MOD_SYM$|no_range$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
@@ -101,7 +101,7 @@ class FixedEBNFGrammar(Grammar):
     SYM_REGEX = RegExp('(?!\\d)\\w+')
     RE_CORE = RegExp('(?:(?<!\\\\)\\\\(?:/)|[^/])*')
     MOD_SYM = Drop(Text("->"))
-    CH_LEADIN = Alternative(Text("0x"), Text("\\x"), Text("\\u"), Text("\\U"))
+    CH_LEADIN = Text("0x")
     RE_LEADOUT = Text("/")
     RE_LEADIN = Text("/")
     TIMES = Text("*")
@@ -119,7 +119,7 @@ class FixedEBNFGrammar(Grammar):
     whitespace = Series(RegExp('~'), dwsp__)
     any_char = Series(Text("."), dwsp__)
     free_char = Alternative(RegExp('[^\\n\\[\\]\\\\]'), RegExp('\\\\[nrtfv`´\'"(){}\\[\\]/\\\\]'))
-    character = Series(CH_LEADIN, HEXCODE)
+    character = Series(Alternative(CH_LEADIN, Text("\\x"), Text("\\u"), Text("\\U")), HEXCODE)
     range_desc = Series(Alternative(character, free_char), Option(Series(Text("-"), Alternative(character, free_char))))
     range_chain = Series(Text("["), Option(Text("^")), OneOrMore(range_desc), Text("]"))
     char_ranges = Series(RE_LEADIN, range_chain, ZeroOrMore(Series(Text("|"), range_chain)), RE_LEADOUT, dwsp__)

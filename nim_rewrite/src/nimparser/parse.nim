@@ -1138,7 +1138,11 @@ method parse*(self: IgnoreCaseRef, location: int32): ParsingResult =
 method `$`*(self: IgnoreCaseRef): string =
   ["ic\"", self.text.replace("\"", "\\\""), "\""].join()
 
-
+## CharRange-Parser
+## ^^^^^^^^^^^^^
+##
+## A parser for character-ranges
+##
 
 ## RegExp-Parser
 ## ^^^^^^^^^^^^^
@@ -1205,9 +1209,17 @@ type
     combined: RegExpInfo
     whitespace: RegExpInfo
     comment: RegExpInfo
+    keep_comments: bool
+
+proc newStringRef(s: string): ref string not nil =
+  new(result)
+  result[] = s
+
+let commentName: ref string not nil = newStringRef("comment__")
 
 proc init*(insignificant: WhitespaceRef,
-           whitespace, comment: RegExpInfo): WhitespaceRef =
+           whitespace, comment: RegExpInfo,
+           keep_comments: bool=false): WhitespaceRef =
   discard Parser(insignificant).init(WhitespaceName)
   insignificant.whitespace = whitespace
   insignificant.comment = comment
@@ -1219,13 +1231,15 @@ proc init*(insignificant: WhitespaceRef,
     insignificant.combined = rx(fmt"(?:{ws}(?:{cmmt}{ws})*)")
   return insignificant
 
-template Whitespace*(whitespace, comment: RegExpInfo): WhitespaceRef =
+template Whitespace*(whitespace, comment: RegExpInfo,
+                     keep_comments: bool=false): WhitespaceRef =
   new(WhitespaceRef).init(whitespac, comment)
 
-proc Whitespace*(whitespace, comment: string): WhitespaceRef =
+proc Whitespace*(whitespace, comment: string,
+                 keep_comments: bool=false): WhitespaceRef =
   let wsInfo = if whitespace.contains("\n"):  mrx(whitespace)  else:  rx(whitespace)
   let commentInfo = if comment.contains("\n"):  mrx(comment)  else:  rx(comment)
-  new(WhitespaceRef).init(wsInfo, commentInfo)
+  new(WhitespaceRef).init(wsInfo, commentInfo, keep_comments)
 
 method parse*(self: WhitespaceRef, location: int32): ParsingResult =
   runnableExamples:
@@ -1233,12 +1247,18 @@ method parse*(self: WhitespaceRef, location: int32): ParsingResult =
     doAssert Whitespace(r"\s+", r"#.*")("   # comment").root.asSxpr == "(:Whitespace \"   # comment\")"
 
   var l = matchLen(self.grammar.document, self.combined.regex, location)
+  var capture: StringSlice
   if l >= 0:
     if l > 0 or isDisposable notin self.flags:
       if dropContent in self.flags:
+        if self.keep_comments:
+          capture = self.grammar.document.cut(location..<location+l)
+          if capture.strip.len > 0:
+            let name = if self.name.len == 0: commentName else: self.nodeName
+            return (newNode(name, capture), location + l)
         return (EmptyNode, location + l)
-      let text: StringSlice = self.grammar.document.cut(location..<location+l)
-      return (newNode(self.nodeName, text), location + l)
+      capture = self.grammar.document.cut(location..<location+l)
+      return (newNode(self.nodeName, capture), location + l)
   return (EmptyNode, location)
 
 method `grammar=`*(self: WhitespaceRef, grammar: GrammarRef) =

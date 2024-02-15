@@ -392,7 +392,7 @@ CONFIG_PRESET['max_parser_dropouts'] = 1
 # means that the complete remaining text will be searched. A value of zero
 # effectively turns of resuming after error.
 # Default value: 10000
-CONFIG_PRESET['reentry_search_window'] = 10000
+CONFIG_PRESET['reentry_search_window'] = 50000
 
 # Turns on tracking of the parsing history. As this slows down parsing,
 # it should only be turned on for debugging.

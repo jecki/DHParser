@@ -79,7 +79,8 @@ if __name__ == '__main__':
         i = argv.index('--profile')
         del argv[i]
         access_presets()
-        set_preset_value('test_parallelization', False)
+        set_preset_value('test_parallelization', True)
+        set_preset_value('add_grammar_source_to_parser_docstring', True)
         finalize_presets()
         print("Profiling test run...")
         profile = True
