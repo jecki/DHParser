@@ -1648,7 +1648,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             res = res.strip()  # WARNING: This changes the data in subtle ways
         if density & 1 and res.find('\n') < 0:
             # except for XML, add a gap between opening statement and content
-            if not inline and head and (head[-1:] != '>' and head != '<!--'):
+            if not inline and head and head not in ("&", "&#x") \
+                    and (head[-1:] != '>' and head != '<!--'):
                 gap = ' '
             else:  gap = ''
             return [''.join((head, gap, data_fn(res), tail))]
@@ -1808,7 +1809,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             """Returns the opening string for the representation of `node`."""
             nonlocal attr_filter, empty_tags
             if node.name in string_tags and not node.has_attr():
-                return ''
+                if node.name == "CharRef": return "&#x"
+                elif node.name == "EntityRef": return "g"
+                else: return ''
             txt = ['<', xml_tag_name(node.name)]
             if node.has_attr():
                 txt.extend(' %s=%s' % (k, attr_filter(str(v))) for k, v in node.attr.items())
@@ -1842,7 +1845,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             """Returns the closing string for the representation of `node`."""
             if (node.name in empty_tags and not node.result) \
                     or (node.name in string_tags and not node.has_attr()):
-                return ''
+                if node.name in ("CharRef", "EntityRef"): return ";"
+                else: return ''
             elif node.name == '!--':
                 return '-->'
             return '</' + xml_tag_name(node.name) + '>'
