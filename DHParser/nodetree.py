@@ -3252,7 +3252,7 @@ remove_class = functools.partial(remove_token_from_attr, attribute='class')
 ### EXPERIMENTAL
 
 def path_str(path: Path) -> str:
-    """Returns the path a pseudo filepath of tag-names."""
+    """Returns the path as pseudo filepath of tag-names."""
     tag_list = ['']
     for node in path:
         assert not node.name.find('/'), 'path_str() not allowed for tag-names containing "/"!'
