@@ -135,6 +135,7 @@ const
   ParserName = ":Parser"
   TextName = ":Text"
   IgnoreCaseName = ":IgnoreCase"
+  CharRangeName = ":CharRange"
   RegExpName = ":RegExp"
   WhitespaceName = ":Whitespace"
   SmartReName = ":SmartReName"
@@ -1138,11 +1139,35 @@ method parse*(self: IgnoreCaseRef, location: int32): ParsingResult =
 method `$`*(self: IgnoreCaseRef): string =
   ["ic\"", self.text.replace("\"", "\\\""), "\""].join()
 
+
 ## CharRange-Parser
 ## ^^^^^^^^^^^^^
 ##
 ## A parser for character-ranges
 ##
+
+type
+  CharRange = tuple[low: Rune, high: Rune]
+  CharRangeRef = ref CharRangeObj not nil
+  CharRangeObj = object of ParserObj
+    ranges: seq[CharRange]
+
+proc init*(charRangeParser: CharRangeRef, ranges: seq[CharRange]): CharRangeRef =
+  discard Parser(charRangeParser).init(CharRangeName)
+  charRangeParser.ranges = ranges
+  return charRangeParser
+
+template CharRange*(ranges: seq[CharRange]): CharRangeRef =
+  new(CharRangeRef).init(ranges)
+
+method parse*(self: CharRangeRef, location: int32): ParsingResult =
+  assert false  # TODO: add implementation
+  return (nil, location)
+
+method `$`*(self: CharRangeRef): string =
+  assert false  # TODO: add implementation
+  return ""
+
 
 ## RegExp-Parser
 ## ^^^^^^^^^^^^^
