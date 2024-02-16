@@ -1141,7 +1141,7 @@ method `$`*(self: IgnoreCaseRef): string =
 
 
 ## CharRange-Parser
-## ^^^^^^^^^^^^^
+## ^^^^^^^^^^^^^^^^
 ##
 ## A parser for character-ranges
 ##
@@ -1154,7 +1154,18 @@ type
 
 proc init*(charRangeParser: CharRangeRef, ranges: seq[CharRange]): CharRangeRef =
   discard Parser(charRangeParser).init(CharRangeName)
-  charRangeParser.ranges = ranges
+  charRangeParser.ranges = newSeqOfCap(ranges.len)
+  var i = 0
+  for cr in ranges:
+    if i == 0:
+      charRangeParser.ranges[0] = cr
+    else:
+      var k = i - 1
+      while k >= 0 and cr.low < charRangeParser.ranges[k].low:
+        charRangeParser.ranges[k + 1] = charRangeParser.ranges[k + 1]
+        k -= 1
+
+
   return charRangeParser
 
 template CharRange*(ranges: seq[CharRange]): CharRangeRef =
@@ -1165,8 +1176,22 @@ method parse*(self: CharRangeRef, location: int32): ParsingResult =
   return (nil, location)
 
 method `$`*(self: CharRangeRef): string =
-  assert false  # TODO: add implementation
-  return ""
+  proc hexlen(r: Rune): int8 =
+    let i = r.int32
+    if i < 1 shl 8: return 2
+    elif i < 1 shl 16:  return 4
+    else: return 8
+
+  var s: seq[string] = newSeqOfCap(len(self.ranges) + 2)
+  s.add("[")
+  for cr in self.ranges:
+    let l = hexlen(cr.high)
+    if cr.low == cr.high:
+      s.add(r"\x" & toHex(cr.low.int32, l))
+    else:
+      s.add(r"\x" & toHex(cr.low.int32, l) & "-" & toHex(cr.high.int32, l))
+  s.add("]")
+  return s.join("")
 
 
 ## RegExp-Parser
