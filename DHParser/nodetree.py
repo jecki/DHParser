@@ -153,6 +153,10 @@ __all__ = ('WHITESPACE_PTYPE',
            'has_class',
            'add_class',
            'remove_class',
+           'path_str',
+           'match_path_str',
+           'pred_siblings',
+           'succ_siblings',
            'prev_path',
            'next_path',
            'zoom_into_path',
@@ -1758,6 +1762,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 compact: bool = True,
                 flatten_threshold: int = 92,
                 normal_form: int = 1) -> str:
+        """Serializes the tree as `SXML <https://okmij.org/ftp/Scheme/SXML.html>`_"""
         assert 1 <= normal_form <= 2, "Presently, only sxml normal forms 1 and 2 are supported"
         return self.as_sxpr(src, indentation, compact, flatten_threshold, sxml=normal_form)
 
@@ -3269,6 +3274,54 @@ def match_path_str(path_str: str, glob_pattern: str) -> bool:
         glob_pattern = "*/" + glob_pattern
     return fnmatchcase(path_str, glob_pattern)
 
+
+# access siblings #####################################################
+
+
+def pred_siblings(path: Path, criteria: NodeSelector = ANY_NODE, reverse: bool = False) \
+    -> Iterator[Node]:
+    """Returns an iterator over the siblings preceeding the end-node in the path.
+    Siblings are iterated left to right, so if the end-node of path is the 5th
+    child of its parent (path[-2]) the siblings will be iterated starting with
+    the 1st child (not with the 4th!). This can be reversed with reverse=True.
+    """
+    if len(path) <= 1:
+        raise ValueError(f"End node of path {path} has no parent and thus no siblings.")
+    children = path[-2].children
+    if reverse:
+        i = children.index(path[-1])
+        for k in range(i - 1, -1, -1):
+            sibling = children[k]
+            if criteria(sibling):
+                yield sibling
+    else:
+        node = path[-1]
+        for sibling in children:
+            if sibling == node:
+                break
+            if criteria(sibling):
+                yield sibling
+
+
+def succ_siblings(path: Path, criteria: NodeSelector = ANY_NODE, reverse: bool = False) \
+    -> Iterator[Node]:
+    """Returns an iterator over the siblings succeeding the end-node in the path.
+    Siblings are iterated left to right. This can be reversed with reverse=True.
+    """
+    if len(path) <= 1:
+        raise ValueError(f"End node of path {path} has no parent and thus no siblings.")
+    children = path[-2].children
+    if reverse:
+        i = children.index(path[-1])
+        for k in range(len(children) - 1, i, -1):
+            sibling = children[k]
+            if criteria(sibling):
+                yield sibling
+    else:
+        i = children.index(path[-1])
+        for sibling in children[i + 1:]:
+            if criteria(sibling):
+                yield sibling
 
 
 # Navigate paths #####################################################
