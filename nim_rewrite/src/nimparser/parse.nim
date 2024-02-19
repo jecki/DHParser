@@ -1207,19 +1207,17 @@ method parse*(self: CharRangeRef, location: int32): ParsingResult =
     document = self.grammar.document
   var
     r: Rune
-    nextLoc: int32
+    pos = location
 
   for i in 0 ..< self.repetitions.min:
-    r = document.buf[].runeAt(location + i)
+    document.buf[].fastRuneAt(pos, r)
     if not inCharRange(r, self.ranges):
       return (nil, location)
   for i in self.repetitions.min ..< self.repetitions.max:
-    r = document.buf[].runeAt(location + i)
+    document.buf[].runeAt(pos, r)
     if not inCharRange(r, self.ranges):
-      nextLoc = location + i
-      return (newNode(self.nodeNme, document[location ..< nextLoc]), nextLoc)
-  nextLoc = location + self.repetitions.max
-  return (newNode(self.nodeName, document[location ..< nextLoc]), nextLoc)
+      break
+  return (newNode(self.nodeName, document[location ..< pos]), pos)
 
 method `$`*(self: CharRangeRef): string =
   proc hexlen(r: Rune): int8 =
