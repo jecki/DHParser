@@ -1159,24 +1159,25 @@ type
 func cr*(range: string): CharRange =
 
   proc toRune(s: string, i: var int): Rune =
-    for t in (r"\x", r"0x", r"\u", r"\U"):
+
+    for t in [r"\x", r"0x", r"\u", r"\U"]:
       if s.startsWith(t):
         i = 2
         while i < s.len and s[i] != '-':
           i += 1
         assert s[i + 1 ..< s.len].startsWith(t)
-        return Rune(fromHex(s[2..<i]))
-    i = RuneLenAt(s, 0)
-    return RuneAt(s, 0)
+        return Rune(fromHex[int32](s[2..<i]))
+    i = runeLenAt(s, 0)
+    return runeAt(s, 0)
 
   var
-    i: int
+    i = 0
     low, high: Rune
 
   low = toRune(range, i)
   if i < range.len:
     i += 1
-    high = toRune(range[i ..< range.len])
+    high = toRune(range[i ..< range.len], i)
   else:
     high = low
   return (low, high)
@@ -1188,10 +1189,11 @@ proc sortAndMerge(ranges: var seq[CharRange]) =
   ## non-overlapping and non-adjacent. The sequence can be shortened
   ## in the process.
   assert ranges.len > 0
-  ranges.sort()
+  ranges.sort(proc (a, b: CharRange): int =
+                if a.low <% b.low: 1 else: -1)
   var a = 0
   for b in 1 ..< ranges.len:
-    if ranges[b].low <=% ranges[a].high + 1:
+    if ranges[b].low <=% ranges[a].high:
       ranges[a].high = max(ranges[a].high, ranges[b].high)  # if ranges[b].high <% ranges[a].high: ranges[a].high else: ranges[b].high
     else:
       a += 1
