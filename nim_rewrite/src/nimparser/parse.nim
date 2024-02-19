@@ -1149,14 +1149,17 @@ method `$`*(self: IgnoreCaseRef): string =
 
 type
   Range* = tuple[min: uint32, max: uint32]
-  CharRange* = tuple[low: Rune, high: Rune]
+  RuneRange* = tuple[low: Rune, high: Rune]
   CharRangeRef* = ref CharRangeObj not nil
   CharRangeObj = object of ParserObj
-    ranges: seq[CharRange]
+    ranges: seq[RuneRange]
     repetitions: Range
 
 
-func cr*(range: string): CharRange =
+func toRange*(r: RuneRange): Range = (r.low.uint32, r.high.uint32)
+func toRunRange*(r: Range): RuneRange = (Rune(r.min), Rune(r.max))
+
+func cr*(range: string): RuneRange =
 
   proc toRune(s: string, i: var int): Rune =
 
@@ -1183,52 +1186,53 @@ func cr*(range: string): CharRange =
   return (low, high)
 
 
-proc sortAndMerge(ranges: var seq[CharRange]) =
+proc sortAndMerge(ranges: var seq[RuneRange]) =
   ## Sorts the sequence of ranges and merges overlapping regions
   ## in place so that the ranges are in ascending order,
   ## non-overlapping and non-adjacent. The sequence can be shortened
   ## in the process.
   assert ranges.len > 0
-  ranges.sort(proc (a, b: CharRange): int =
+  ranges.sort(proc (a, b: RuneRange): int =
                 if a.low <% b.low: 1 else: -1)
   var a = 0
   for b in 1 ..< ranges.len:
     if ranges[b].low <=% ranges[a].high:
-      ranges[a].high = max(ranges[a].high, ranges[b].high)  # if ranges[b].high <% ranges[a].high: ranges[a].high else: ranges[b].high
+      ranges[a].high = if ranges[b].high <% ranges[a].high: ranges[a].high
+                                                      else: ranges[b].high
     else:
       a += 1
   ranges.setLen(a + 1)
 
-func inCharRange(r: Rune, ranges: seq[CharRange]): bool =
+func inCharRange(r: Rune, ranges: seq[RuneRange]): bool =
   ## Binary search to find out if rune r falls within one of the sorted ranges
   var
     a = 0
     b = ranges.len - 1
     last_i = -1
-    i = (b - a) / 2
+    i  = (b - a) div 2
 
   while i != last_i:
     if ranges[i].low <=% r:
-      if r <=% ranges.high[i]:
+      if r <=% ranges[i].high:
         return true
       else:
         a = i
     else:
       b = i
     last_i = i
-    i = (b - a) / 2
+    i = (b - a) div 2
   return false
 
 proc init*(charRangeParser: CharRangeRef,
-           ranges: seq[CharRange],
+           ranges: seq[RuneRange],
            repetitions: Range): CharRangeRef =
   discard Parser(charRangeParser).init(CharRangeName)
   charRangeParser.ranges = ranges
   charRangeParser.ranges.sortAndMerge()
   charRangeParser.repetitions = repetitions
-  rturn charRangeParser
+  return charRangeParser
 
-template CharRange*(ranges: seq[CharRange], repetitions: Range = (1, 1)): CharRangeRef =
+template CharRange*(ranges: seq[RuneRange], repetitions: Range = (1, 1)): CharRangeRef =
   new(CharRangeRef).init(ranges, repetitions)
 
 method parse*(self: CharRangeRef, location: int32): ParsingResult =
@@ -1243,10 +1247,10 @@ method parse*(self: CharRangeRef, location: int32): ParsingResult =
     if not inCharRange(r, self.ranges):
       return (nil, location)
   for i in self.repetitions.min ..< self.repetitions.max:
-    document.buf[].runeAt(pos, r)
+    document.buf[].fastRuneAt(pos, r)
     if not inCharRange(r, self.ranges):
       break
-  return (newNode(self.nodeName, document[location ..< pos]), pos)
+  return (newNode(self.nodeName, document.cut(location ..< pos)), pos)
 
 method `$`*(self: CharRangeRef): string =
   proc hexlen(r: Rune): int8 =
@@ -1255,7 +1259,7 @@ method `$`*(self: CharRangeRef): string =
     elif i < 1 shl 16:  return 4
     else: return 8
 
-  var s: seq[string] = newSeqOfCap(len(self.ranges) + 2)
+  var s: seq[string] = newSeqOfCap[string](len(self.ranges) + 2)
   s.add("[")
   for cr in self.ranges:
     let l = hexlen(cr.high)

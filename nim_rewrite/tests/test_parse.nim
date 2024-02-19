@@ -11,6 +11,9 @@ import nimparser/parse
 test "Text, simple test":
   check Text("A")("A").root.asSxpr == "(:Text \"A\")"
 
+test "CharRange":
+  assert (cr"Ä-Ö").toRange() == (196'u32, 214'u32)
+
 test "RegExp, simple test":
   check RegExp(rx"\w+")("ABC").root.asSxpr() == "(:RegExp \"ABC\")"
 
