@@ -1148,12 +1148,39 @@ method `$`*(self: IgnoreCaseRef): string =
 ##
 
 type
-  Range = tuple[min: uint32, max: uint32]
-  CharRange = tuple[low: Rune, high: Rune]
-  CharRangeRef = ref CharRangeObj not nil
+  Range* = tuple[min: uint32, max: uint32]
+  CharRange* = tuple[low: Rune, high: Rune]
+  CharRangeRef* = ref CharRangeObj not nil
   CharRangeObj = object of ParserObj
     ranges: seq[CharRange]
     repetitions: Range
+
+
+func cr*(range: string): CharRange =
+
+  proc toRune(s: string, i: var int): Rune =
+    for t in (r"\x", r"0x", r"\u", r"\U"):
+      if s.startsWith(t):
+        i = 2
+        while i < s.len and s[i] != '-':
+          i += 1
+        assert s[i + 1 ..< s.len].startsWith(t)
+        return Rune(fromHex(s[2..<i]))
+    i = RuneLenAt(s, 0)
+    return RuneAt(s, 0)
+
+  var
+    i: int
+    low, high: Rune
+
+  low = toRune(range, i)
+  if i < range.len:
+    i += 1
+    high = toRune(range[i ..< range.len])
+  else:
+    high = low
+  return (low, high)
+
 
 proc sortAndMerge(ranges: var seq[CharRange]) =
   ## Sorts the sequence of ranges and merges overlapping regions
