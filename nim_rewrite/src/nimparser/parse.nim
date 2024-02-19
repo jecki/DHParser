@@ -4,7 +4,8 @@
 {.experimental: "strictDefs".}
 {.experimental: "strictCaseObjects".}
 
-import std/[enumerate, math, options, sets, strformat, strutils, unicode, sugar, tables]
+import std/[enumerate, math, options, sets, strformat, strutils, unicode,
+            sugar, algorithm, tables]
 
 import strslice
 import nodetree
@@ -1147,33 +1148,78 @@ method `$`*(self: IgnoreCaseRef): string =
 ##
 
 type
+  Range = tuple[min: uint32, max: uint32]
   CharRange = tuple[low: Rune, high: Rune]
   CharRangeRef = ref CharRangeObj not nil
   CharRangeObj = object of ParserObj
     ranges: seq[CharRange]
+    repetitions: Range
 
-proc init*(charRangeParser: CharRangeRef, ranges: seq[CharRange]): CharRangeRef =
-  discard Parser(charRangeParser).init(CharRangeName)
-  charRangeParser.ranges = newSeqOfCap(ranges.len)
-  var i = 0
-  for cr in ranges:
-    if i == 0:
-      charRangeParser.ranges[0] = cr
+proc sortAndMerge(ranges: var seq[CharRange]) =
+  ## Sorts the sequence of ranges and merges overlapping regions
+  ## in place so that the ranges are in ascending order,
+  ## non-overlapping and non-adjacent. The sequence can be shortened
+  ## in the process.
+  assert ranges.len > 0
+  ranges.sort()
+  var a = 0
+  for b in 1 ..< ranges.len:
+    if ranges[b].low <=% ranges[a].high + 1:
+      ranges[a].high = max(ranges[a].high, ranges[b].high)  # if ranges[b].high <% ranges[a].high: ranges[a].high else: ranges[b].high
     else:
-      var k = i - 1
-      while k >= 0 and cr.low < charRangeParser.ranges[k].low:
-        charRangeParser.ranges[k + 1] = charRangeParser.ranges[k + 1]
-        k -= 1
+      a += 1
+  ranges.setLen(a + 1)
 
+func inCharRange(r: Rune, ranges: seq[CharRange]): bool =
+  ## Binary search to find out if rune r falls within one of the sorted ranges
+  var
+    a = 0
+    b = ranges.len - 1
+    last_i = -1
+    i = (b - a) / 2
 
-  return charRangeParser
+  while i != last_i:
+    if ranges[i].low <=% r:
+      if r <=% ranges.high[i]:
+        return true
+      else:
+        a = i
+    else:
+      b = i
+    last_i = i
+    i = (b - a) / 2
+  return false
 
-template CharRange*(ranges: seq[CharRange]): CharRangeRef =
-  new(CharRangeRef).init(ranges)
+proc init*(charRangeParser: CharRangeRef,
+           ranges: seq[CharRange],
+           repetitions: Range): CharRangeRef =
+  discard Parser(charRangeParser).init(CharRangeName)
+  charRangeParser.ranges = ranges
+  charRangeParser.ranges.sortAndMerge()
+  charRangeParser.repetitions = repetitions
+  rturn charRangeParser
+
+template CharRange*(ranges: seq[CharRange], repetitions: Range = (1, 1)): CharRangeRef =
+  new(CharRangeRef).init(ranges, repetitions)
 
 method parse*(self: CharRangeRef, location: int32): ParsingResult =
-  assert false  # TODO: add implementation
-  return (nil, location)
+  let
+    document = self.grammar.document
+  var
+    r: Rune
+    nextLoc: int32
+
+  for i in 0 ..< self.repetitions.min:
+    r = document.buf[].runeAt(location + i)
+    if not inCharRange(r, self.ranges):
+      return (nil, location)
+  for i in self.repetitions.min ..< self.repetitions.max:
+    r = document.buf[].runeAt(location + i)
+    if not inCharRange(r, self.ranges):
+      nextLoc = location + i
+      return (newNode(self.nodeNme, document[location ..< nextLoc]), nextLoc)
+  nextLoc = location + self.repetitions.max
+  return (newNode(self.nodeName, document[location ..< nextLoc]), nextLoc)
 
 method `$`*(self: CharRangeRef): string =
   proc hexlen(r: Rune): int8 =
@@ -1361,7 +1407,7 @@ proc infiniteLoopWarning(parser: Parser, node: NodeOrNil, location: int32) =
 
 
 type
-  Range = tuple[min: uint32, max: uint32]
+   # Range = tuple[min: uint32, max: uint32]  # already defined above
   RepeatRef = ref RepeatObj not nil
   RepeatObj = object of ParserObj
     repRange: Range
