@@ -1154,7 +1154,7 @@ type
   CharRangeRef* = ref CharRangeObj not nil
   CharRangeObj = object of ParserObj
     ranges: seq[RuneRange]
-    positive: bool
+    negate: bool
     repetitions: Range
 
 
@@ -1207,43 +1207,54 @@ proc sortAndMerge(ranges: var seq[RuneRange]) =
       a += 1
   ranges.setLen(a + 1)
 
-func inRuneRange*(r: Rune, ranges: seq[RuneRange]): bool =
+func inRuneRange*(r: Rune, ranges: seq[RuneRange]): int32 =
   ## Binary search to find out if rune r falls within one of the sorted ranges
+  ## Returns the index of the range of -1, if r does not fall into any range
   let
-    highest = ranges.len - 1
+    highest: int32 = ranges.len.int32 - 1'i32
   var
-    a = 0
+    a = 0'i32
     b = highest
-    last_i = -1
+    last_i = -1'i32
     i  = b div 2
 
   while i != last_i:
     if ranges[i].low <=% r:
       if r <=% ranges[i].high:
-        return true
+        return i
       else:
         a = min(i + 1, highest)
     else:
       b = max(i - 1, 0)
     last_i = i
     i = a + (b - a) div 2
-  return false
+  return -1
+
+proc `&`(A, B: seq[RuneRange]): seq[RuneRange] =
+  result = newSeqOfCap[RuneRange](A.len + B.len)
+  for r in A:  result.add(r)
+  for r in B:  result.add(r)
+  sortAndMerge(result)
+
+proc `-`(A, B: seq[RuneRange]): seq[RuneRange] =
+  result = newSeqOfCap[RuneRange](A.len * 2)
+  # TODO: to be continued
 
 proc init*(charRangeParser: CharRangeRef,
            ranges: seq[RuneRange],
            repetitions: Range,
-           positive: bool): CharRangeRef =
+           negate: bool): CharRangeRef =
   discard Parser(charRangeParser).init(CharRangeName)
   charRangeParser.ranges = ranges
   charRangeParser.ranges.sortAndMerge()
   charRangeParser.repetitions = repetitions
-  charRangeParser.positive = positive
+  charRangeParser.negate = negate
   return charRangeParser
 
 template CharRange*(ranges: seq[RuneRange],
                     repetitions: Range = (1, 1),
-                    positive: bool=true): CharRangeRef =
-  new(CharRangeRef).init(ranges, repetitions, positive)
+                    negate: bool=false): CharRangeRef =
+  new(CharRangeRef).init(ranges, repetitions, negate)
 
 method parse*(self: CharRangeRef, location: int32): ParsingResult =
   let
@@ -1254,11 +1265,11 @@ method parse*(self: CharRangeRef, location: int32): ParsingResult =
 
   for i in 0 ..< self.repetitions.min:
     document.buf[].fastRuneAt(pos, r)
-    if self.positive xor inRuneRange(r, self.ranges):
+    if self.negate xor (inRuneRange(r, self.ranges) < 0):
       return (nil, location)
   for i in self.repetitions.min ..< self.repetitions.max:
     document.buf[].fastRuneAt(pos, r)
-    if self.positive xor inRuneRange(r, self.ranges):
+    if self.negate xor (inRuneRange(r, self.ranges) < 0):
       break
   return (newNode(self.nodeName, document.cut(location ..< pos)), pos)
 

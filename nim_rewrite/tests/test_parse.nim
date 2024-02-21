@@ -16,52 +16,53 @@ test "cr":
 
 test "inRuneRange":
   var rr: seq[RuneRange] = @[cr"2-4", cr"B-D", cr"b-d"]
-  assert not inRuneRange("1".runeAt(0), rr)
-  assert inRuneRange("2".runeAt(0), rr)
-  assert inRuneRange("3".runeAt(0), rr)
-  assert inRuneRange("4".runeAt(0), rr)
-  assert not inRuneRange("5".runeAt(0), rr)
+  assert inRuneRange("1".runeAt(0), rr) < 0
+  assert inRuneRange("2".runeAt(0), rr) >= 0
+  assert inRuneRange("3".runeAt(0), rr) >= 0
+  assert inRuneRange("4".runeAt(0), rr) >= 0
+  assert inRuneRange("5".runeAt(0), rr) < 0
 
-  assert not inRuneRange("A".runeAt(0), rr)
-  assert inRuneRange("B".runeAt(0), rr)
-  assert inRuneRange("C".runeAt(0), rr)
-  assert inRuneRange("D".runeAt(0), rr)
-  assert not inRuneRange("E".runeAt(0), rr)
+  assert inRuneRange("A".runeAt(0), rr) < 0
+  assert inRuneRange("B".runeAt(0), rr) >= 0
+  assert inRuneRange("C".runeAt(0), rr) >= 0
+  assert inRuneRange("D".runeAt(0), rr) >= 0
+  assert inRuneRange("E".runeAt(0), rr) < 0
 
-  assert not inRuneRange("a".runeAt(0), rr)
-  assert inRuneRange("b".runeAt(0), rr)
-  assert inRuneRange("c".runeAt(0), rr)
-  assert inRuneRange("d".runeAt(0), rr)
-  assert not inRuneRange("e".runeAt(0), rr)
+  assert inRuneRange("a".runeAt(0), rr) < 0
+  assert inRuneRange("b".runeAt(0), rr) >= 0
+  assert inRuneRange("c".runeAt(0), rr) >= 0
+  assert inRuneRange("d".runeAt(0), rr) >= 0
+  assert inRuneRange("e".runeAt(0), rr) < 0
 
   rr = @[cr"2-4", cr"B-D", cr"U-W", cr"b-d"]
-  assert not inRuneRange("1".runeAt(0), rr)
-  assert inRuneRange("2".runeAt(0), rr)
-  assert inRuneRange("3".runeAt(0), rr)
-  assert inRuneRange("4".runeAt(0), rr)
-  assert not inRuneRange("5".runeAt(0), rr)
+  assert inRuneRange("1".runeAt(0), rr) < 0
+  assert inRuneRange("2".runeAt(0), rr) >= 0
+  assert inRuneRange("3".runeAt(0), rr) >= 0
+  assert inRuneRange("4".runeAt(0), rr) >= 0
+  assert inRuneRange("5".runeAt(0), rr) < 0
 
-  assert not inRuneRange("A".runeAt(0), rr)
-  assert inRuneRange("B".runeAt(0), rr)
-  assert inRuneRange("C".runeAt(0), rr)
-  assert inRuneRange("D".runeAt(0), rr)
-  assert not inRuneRange("E".runeAt(0), rr)
+  assert inRuneRange("A".runeAt(0), rr) < 0
+  assert inRuneRange("B".runeAt(0), rr) >= 0
+  assert inRuneRange("C".runeAt(0), rr) >= 0
+  assert inRuneRange("D".runeAt(0), rr) >= 0
+  assert inRuneRange("E".runeAt(0), rr) < 0
 
-  assert not inRuneRange("T".runeAt(0), rr)
-  assert inRuneRange("U".runeAt(0), rr)
-  assert inRuneRange("V".runeAt(0), rr)
-  assert inRuneRange("W".runeAt(0), rr)
-  assert not inRuneRange("X".runeAt(0), rr)
+  assert inRuneRange("T".runeAt(0), rr) < 0
+  assert inRuneRange("U".runeAt(0), rr) >= 0
+  assert inRuneRange("V".runeAt(0), rr) >= 0
+  assert inRuneRange("W".runeAt(0), rr) >= 0
+  assert inRuneRange("X".runeAt(0), rr) < 0
 
-  assert not inRuneRange("a".runeAt(0), rr)
-  assert inRuneRange("b".runeAt(0), rr)
-  assert inRuneRange("c".runeAt(0), rr)
-  assert inRuneRange("d".runeAt(0), rr)
-  assert not inRuneRange("e".runeAt(0), rr)
+  assert inRuneRange("a".runeAt(0), rr) < 0
+  assert inRuneRange("b".runeAt(0), rr) >= 0
+  assert inRuneRange("c".runeAt(0), rr) >= 0
+  assert inRuneRange("d".runeAt(0), rr) >= 0
+  assert inRuneRange("e".runeAt(0), rr) < 0
 
 test "CharRange":
   let rr: seq[RuneRange] = @[cr"2-4", cr"ä-ü", cr"b-d"]
   check CharRange(rr)("ö").root.asSxpr == "(:CharRange \"ö\")"
+
 test "RegExp, simple test":
   check RegExp(rx"\w+")("ABC").root.asSxpr() == "(:RegExp \"ABC\")"
 
