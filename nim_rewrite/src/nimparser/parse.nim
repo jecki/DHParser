@@ -643,7 +643,8 @@ proc `()`(parser: Parser, location: int32): ParsingResult {.inline.} =
 proc `()`*(parser: Parser, document: string or StringSlice, location: int32 = 0):
           EndResult {.raises: [ParsingException, Exception].} =
   if parser.grammarVar == GrammarPlaceholder:
-    parser.grammar = Grammar("adhoc", document=toStringSlice(document))
+    let gname: string = if parser.name.len > 0: parser.name else: "adhoc"
+    parser.grammar = Grammar(gname, document=toStringSlice(document))
   else:
     parser.grammar.document = toStringSlice(document)
     parser.grammar.cleanUp()
@@ -1153,7 +1154,7 @@ type
   CharRangeRef* = ref CharRangeObj not nil
   CharRangeObj = object of ParserObj
     ranges: seq[RuneRange]
-    negative: bool
+    positive: bool
     repetitions: Range
 
 
@@ -1231,18 +1232,18 @@ func inRuneRange*(r: Rune, ranges: seq[RuneRange]): bool =
 proc init*(charRangeParser: CharRangeRef,
            ranges: seq[RuneRange],
            repetitions: Range,
-           negative: bool): CharRangeRef =
+           positive: bool): CharRangeRef =
   discard Parser(charRangeParser).init(CharRangeName)
   charRangeParser.ranges = ranges
   charRangeParser.ranges.sortAndMerge()
   charRangeParser.repetitions = repetitions
-  charRangeParser.negative = negative
+  charRangeParser.positive = positive
   return charRangeParser
 
 template CharRange*(ranges: seq[RuneRange],
                     repetitions: Range = (1, 1),
-                    negative: bool=false): CharRangeRef =
-  new(CharRangeRef).init(ranges, repetitions, negative)
+                    positive: bool=true): CharRangeRef =
+  new(CharRangeRef).init(ranges, repetitions, positive)
 
 method parse*(self: CharRangeRef, location: int32): ParsingResult =
   let
@@ -1253,11 +1254,11 @@ method parse*(self: CharRangeRef, location: int32): ParsingResult =
 
   for i in 0 ..< self.repetitions.min:
     document.buf[].fastRuneAt(pos, r)
-    if self.negative xor inRuneRange(r, self.ranges):
+    if self.positive xor inRuneRange(r, self.ranges):
       return (nil, location)
   for i in self.repetitions.min ..< self.repetitions.max:
     document.buf[].fastRuneAt(pos, r)
-    if self.negative xor inRuneRange(r, self.ranges):
+    if self.positive xor inRuneRange(r, self.ranges):
       break
   return (newNode(self.nodeName, document.cut(location ..< pos)), pos)
 

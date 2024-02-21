@@ -61,8 +61,7 @@ test "inRuneRange":
 
 test "CharRange":
   let rr: seq[RuneRange] = @[cr"2-4", cr"ä-ü", cr"b-d"]
-  check CharRange(rr)("ö").root.asSxpr == "(:Text \"A\")"
-
+  check CharRange(rr)("ö").root.asSxpr == "(:CharRange \"ö\")"
 test "RegExp, simple test":
   check RegExp(rx"\w+")("ABC").root.asSxpr() == "(:RegExp \"ABC\")"
 
