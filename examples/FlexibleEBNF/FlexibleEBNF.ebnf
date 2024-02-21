@@ -181,7 +181,7 @@ TIMES      = `*`
 RE_LEADIN  = `/` &regex_heuristics | `^/`
 RE_LEADOUT = `/`
 
-CH_LEADIN  = `0x` | `#x` | `\x` | `\u` | `\U`
+CH_LEADIN  = `0x` | `%x` | `U+` | `u+` | `#x` | `\x` | `\u` | `\U`
 
 MOD_SYM   = `->`
 

@@ -1153,6 +1153,7 @@ type
   CharRangeRef* = ref CharRangeObj not nil
   CharRangeObj = object of ParserObj
     ranges: seq[RuneRange]
+    negative: bool
     repetitions: Range
 
 
@@ -1192,6 +1193,8 @@ proc sortAndMerge(ranges: var seq[RuneRange]) =
   ## non-overlapping and non-adjacent. The sequence can be shortened
   ## in the process.
   assert ranges.len > 0
+  for r in ranges:  assert r.low <=% r.high
+
   ranges.sort(proc (a, b: RuneRange): int =
                 if a.low <% b.low: 1 else: -1)
   var a = 0
@@ -1203,37 +1206,43 @@ proc sortAndMerge(ranges: var seq[RuneRange]) =
       a += 1
   ranges.setLen(a + 1)
 
-func inCharRange(r: Rune, ranges: seq[RuneRange]): bool =
+func inRuneRange*(r: Rune, ranges: seq[RuneRange]): bool =
   ## Binary search to find out if rune r falls within one of the sorted ranges
+  let
+    highest = ranges.len - 1
   var
     a = 0
-    b = ranges.len - 1
+    b = highest
     last_i = -1
-    i  = (b - a) div 2
+    i  = b div 2
 
   while i != last_i:
     if ranges[i].low <=% r:
       if r <=% ranges[i].high:
         return true
       else:
-        a = i
+        a = min(i + 1, highest)
     else:
-      b = i
+      b = max(i - 1, 0)
     last_i = i
-    i = (b - a) div 2
+    i = a + (b - a) div 2
   return false
 
 proc init*(charRangeParser: CharRangeRef,
            ranges: seq[RuneRange],
-           repetitions: Range): CharRangeRef =
+           repetitions: Range,
+           negative: bool): CharRangeRef =
   discard Parser(charRangeParser).init(CharRangeName)
   charRangeParser.ranges = ranges
   charRangeParser.ranges.sortAndMerge()
   charRangeParser.repetitions = repetitions
+  charRangeParser.negative = negative
   return charRangeParser
 
-template CharRange*(ranges: seq[RuneRange], repetitions: Range = (1, 1)): CharRangeRef =
-  new(CharRangeRef).init(ranges, repetitions)
+template CharRange*(ranges: seq[RuneRange],
+                    repetitions: Range = (1, 1),
+                    negative: bool=false): CharRangeRef =
+  new(CharRangeRef).init(ranges, repetitions, negative)
 
 method parse*(self: CharRangeRef, location: int32): ParsingResult =
   let
@@ -1244,11 +1253,11 @@ method parse*(self: CharRangeRef, location: int32): ParsingResult =
 
   for i in 0 ..< self.repetitions.min:
     document.buf[].fastRuneAt(pos, r)
-    if not inCharRange(r, self.ranges):
+    if self.negative xor inRuneRange(r, self.ranges):
       return (nil, location)
   for i in self.repetitions.min ..< self.repetitions.max:
     document.buf[].fastRuneAt(pos, r)
-    if not inCharRange(r, self.ranges):
+    if self.negative xor inRuneRange(r, self.ranges):
       break
   return (newNode(self.nodeName, document.cut(location ..< pos)), pos)
 

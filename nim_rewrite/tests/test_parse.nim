@@ -1,7 +1,7 @@
 # unit-tests for the parse.nim module
 # To run these tests, simply execute `nimble test`.
 
-import std/[unittest, strutils]
+import std/[unittest, strutils, unicode]
 
 import nimparser/strslice
 import nimparser/error
@@ -11,8 +11,57 @@ import nimparser/parse
 test "Text, simple test":
   check Text("A")("A").root.asSxpr == "(:Text \"A\")"
 
-test "CharRange":
+test "cr":
   assert (cr"Ä-Ö").toRange() == (196'u32, 214'u32)
+
+test "inRuneRange":
+  var rr: seq[RuneRange] = @[cr"2-4", cr"B-D", cr"b-d"]
+  assert not inRuneRange("1".runeAt(0), rr)
+  assert inRuneRange("2".runeAt(0), rr)
+  assert inRuneRange("3".runeAt(0), rr)
+  assert inRuneRange("4".runeAt(0), rr)
+  assert not inRuneRange("5".runeAt(0), rr)
+
+  assert not inRuneRange("A".runeAt(0), rr)
+  assert inRuneRange("B".runeAt(0), rr)
+  assert inRuneRange("C".runeAt(0), rr)
+  assert inRuneRange("D".runeAt(0), rr)
+  assert not inRuneRange("E".runeAt(0), rr)
+
+  assert not inRuneRange("a".runeAt(0), rr)
+  assert inRuneRange("b".runeAt(0), rr)
+  assert inRuneRange("c".runeAt(0), rr)
+  assert inRuneRange("d".runeAt(0), rr)
+  assert not inRuneRange("e".runeAt(0), rr)
+
+  rr = @[cr"2-4", cr"B-D", cr"U-W", cr"b-d"]
+  assert not inRuneRange("1".runeAt(0), rr)
+  assert inRuneRange("2".runeAt(0), rr)
+  assert inRuneRange("3".runeAt(0), rr)
+  assert inRuneRange("4".runeAt(0), rr)
+  assert not inRuneRange("5".runeAt(0), rr)
+
+  assert not inRuneRange("A".runeAt(0), rr)
+  assert inRuneRange("B".runeAt(0), rr)
+  assert inRuneRange("C".runeAt(0), rr)
+  assert inRuneRange("D".runeAt(0), rr)
+  assert not inRuneRange("E".runeAt(0), rr)
+
+  assert not inRuneRange("T".runeAt(0), rr)
+  assert inRuneRange("U".runeAt(0), rr)
+  assert inRuneRange("V".runeAt(0), rr)
+  assert inRuneRange("W".runeAt(0), rr)
+  assert not inRuneRange("X".runeAt(0), rr)
+
+  assert not inRuneRange("a".runeAt(0), rr)
+  assert inRuneRange("b".runeAt(0), rr)
+  assert inRuneRange("c".runeAt(0), rr)
+  assert inRuneRange("d".runeAt(0), rr)
+  assert not inRuneRange("e".runeAt(0), rr)
+
+test "CharRange":
+  let rr: seq[RuneRange] = @[cr"2-4", cr"ä-ü", cr"b-d"]
+  check CharRange(rr)("ö").root.asSxpr == "(:Text \"A\")"
 
 test "RegExp, simple test":
   check RegExp(rx"\w+")("ABC").root.asSxpr() == "(:RegExp \"ABC\")"

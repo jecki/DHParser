@@ -132,7 +132,7 @@ char_ranges = RE_LEADIN range_chain { `|` range_chain } RE_LEADOUT ~
   range_chain = `[` [`^`] { range_desc }+ `]`
   range_desc = (character | free_char) [ `-` (character | free_char) ]
 
-character  = (CH_LEADIN | `\x` | `\u` | `\U`) HEXCODE
+character  = (CH_LEADIN | `%x` | `U+` | `u+` | `\x` | `\u` | `\U`) HEXCODE
 free_char  = /[^\n\[\]\\]/ | /\\[nrtfv`´'"(){}\[\]\/\\]/
 any_char   = "."
 whitespace = /~/~                               # insignificant whitespace

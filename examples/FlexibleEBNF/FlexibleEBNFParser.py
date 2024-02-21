@@ -107,8 +107,8 @@ class FlexibleEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "ec18718eb3b0857b7831545a28098fe0"
-    disposable__ = re.compile('(?:$.)|(?:FOLLOW_UP$|is_mdef$|MOD_SYM$|countable$|EOF$|pure_elem$|MOD_SEP$|component$|ANY_SUFFIX$|no_range$)')
+    source_hash__ = "69f07bb22a1e62059fec5144f2cd02de"
+    disposable__ = re.compile('(?:$.)|(?:EOF$|FOLLOW_UP$|is_mdef$|MOD_SYM$|ANY_SUFFIX$|pure_elem$|MOD_SEP$|no_range$|component$|countable$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
@@ -126,7 +126,7 @@ class FlexibleEBNFGrammar(Grammar):
     literal_heuristics = Alternative(RegExp('~?\\s*"(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^"]*)*"'), RegExp("~?\\s*'(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^']*)*'"), RegExp('~?\\s*`(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^`]*)*`'), RegExp('~?\\s*´(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^´]*)*´'), RegExp('~?\\s*/(?:[\\\\]\\]|[^\\]]|[^\\\\]\\[[^/]*)*/'))
     more_than_one_blank = RegExp('[^ \\]]*[ ][^ \\]]*[ ]')
     STRICT_SYM_REGEX = RegExp('(?!\\d)\\w+')
-    CH_LEADIN = Capture(Alternative(Text("0x"), Text("#x"), Text("\\x"), Text("\\u"), Text("\\U")), zero_length_warning=False)
+    CH_LEADIN = Capture(Alternative(Text("0x"), Text("%x"), Text("U+"), Text("u+"), Text("#x"), Text("\\x"), Text("\\u"), Text("\\U")), zero_length_warning=False)
     MOD_SYM = Drop(Text("->"))
     character = Series(Retrieve(CH_LEADIN), HEXCODE)
     RE_LEADOUT = Capture(Text("/"), zero_length_warning=True)
