@@ -1087,21 +1087,23 @@ type
     compare:  proc(s: string, pos: int32, cmp: string): bool
 
 proc cmpIgnoreCaseAscii(s: string, pos: int32, cmp: string): bool =
-  for i in 0..<cmp.len:
-    if cmp[i] != s[pos + i].toLowerAscii:
-      return false
-  return true
+  cmpIgnoreCase(s[pos ..< cmp.len], cmp) == 0
+  # for i in 0..<cmp.len:
+  #   if cmp[i] != s[pos + i].toLowerAscii:
+  #     return false
+  # return true
 
 proc cmpIgnoreCaseUnicode(s: string, pos: int32, cmp: string): bool =
-  var
-    i = pos
-    r: Rune
-
-  for c in cmp.runes:
-    s.fastRuneAt(i, r)
-    if not (c == r.toLower):
-      return false
-  return true
+  cmpRunesIgnoreCase(s[pos ..< cmp.len], cmp) == 0
+  # var
+  #   i = pos
+  #   r: Rune
+  #
+  # for c in cmp.runes:
+  #   s.fastRuneAt(i, r)
+  #   if not (c == r.toLower):
+  #     return false
+  # return true
 
 proc init*(ignoreCaseParser: IgnoreCaseRef, text: string): IgnoreCaseRef =
   assert text.len <= MaxTextLen
@@ -1187,25 +1189,37 @@ func cr*(range: string): RuneRange =
     high = low
   return (low, high)
 
+func isProper(R: seq[RuneRange]): bool =
+  ## Confirms that sequence of ranges is not be empty and that
+  ## for each range low <= high.
+  if R.len <= 0: return false
+  for r in R:
+    if r.high <% r.low: return false
+  return true
 
-proc sortAndMerge(ranges: var seq[RuneRange]) =
+func isSortedAndMerged(R: seq[RuneRange]): bool =
+  ## Confirms that the ranges in the sequences are in ascending order
+  ## and that there are no overlapping or adjacent ranges.
+  for i in 1 ..< len(R):
+    if R[i].low <=% R[i - 1].high: return false
+  return true
+
+proc sortAndMerge(R: var seq[RuneRange]) =
   ## Sorts the sequence of ranges and merges overlapping regions
   ## in place so that the ranges are in ascending order,
   ## non-overlapping and non-adjacent. The sequence can be shortened
   ## in the process.
-  assert ranges.len > 0
-  for r in ranges:  assert r.low <=% r.high
-
-  ranges.sort(proc (a, b: RuneRange): int =
-                if a.low <% b.low: 1 else: -1)
+  assert isProper(R)
+  R.sort(proc (a, b: RuneRange): int =
+           if a.low <% b.low: 1 else: -1)
   var a = 0
-  for b in 1 ..< ranges.len:
-    if ranges[b].low <=% ranges[a].high:
-      ranges[a].high = if ranges[b].high <% ranges[a].high: ranges[a].high
-                                                      else: ranges[b].high
+  for b in 1 ..< R.len:
+    if R[b].low <=% R[a].high:
+      R[a].high = if R[b].high <% R[a].high: R[a].high  else: R[b].high
     else:
       a += 1
-  ranges.setLen(a + 1)
+  R.setLen(a + 1)
+  # assert isSortedAndMerged(R)
 
 func inRuneRange*(r: Rune, ranges: seq[RuneRange]): int32 =
   ## Binary search to find out if rune r falls within one of the sorted ranges
@@ -1237,8 +1251,56 @@ proc `&`(A, B: seq[RuneRange]): seq[RuneRange] =
   sortAndMerge(result)
 
 proc `-`(A, B: seq[RuneRange]): seq[RuneRange] =
+  assert isProper(A)
+  assert isProper(B)
+  assert isSortedAndMerged(A)
+  assert isSortedAndMerged(B)
+
   result = newSeqOfCap[RuneRange](A.len * 2)
-  # TODO: to be continued
+  var
+    i = 1
+    k = 1
+    M = A[0]
+    S = B[0]
+
+  while k < B.len:
+    if S.low <=% M.high and M.low <=% S.high:
+      if M.low <% S.low:
+        result.add((M.low, Rune(S.low.int32 - 1)))
+        if S.high <% M.high:
+          M.low = Rune(S.high.int32 + 1)
+          S = B[k]
+          k += 1
+        elif i < A.len:
+          M = A[i]
+          i += 1
+        else:
+          return result
+      elif S.high <% M.high:
+        M.low = Rune(S.high.int32 + 1)
+        S = B[k]
+        k += 1
+      elif i < A.len:
+        M = A[i]
+        i += 1
+      else:
+        return result
+    elif M.high <% S.low:
+      result.add(M)
+      if i < A.len:
+        M = A[i]
+        i += 1
+      else:
+        return
+    else:
+      assert S.high <% M.low
+      S = B[k]
+      k += 1
+  result.add(M)
+  while i < A.len:
+    result.add(A[i])
+    i += 1
+
 
 proc init*(charRangeParser: CharRangeRef,
            ranges: seq[RuneRange],
