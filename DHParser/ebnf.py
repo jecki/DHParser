@@ -3138,9 +3138,9 @@ class EBNFCompiler(Compiler):
                             nd = symlist[0].children[1]
                         break
                 # content = nd.content
-                if nd.name != "regexp":   # outdated: or content[:1] != '/' or content[-1:] != '/'):
+                if nd.name not in ("regexp", "char_ranges"):
                     self.tree.new_error(node, "Lookbehind-parser can only be used with RegExp"
-                                              "-parsers, not: " + nd.name)
+                                              " or PlainText-parsers, not: " + nd.name)
 
             if not result.startswith(self.P['RegExp'] + '('):
                 self.deferred_tasks.append(lambda: verify(node))

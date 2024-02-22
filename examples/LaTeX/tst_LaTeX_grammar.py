@@ -43,7 +43,7 @@ def recompile_grammar(grammar_src, force):
                                  notify=lambda :print('grammar changed: recompling')):
         print('\nErrors while recompiling "%s":' % grammar_src +
               '\n--------------------------------------\n\n')
-        with open('LaTeX_ebnf_ERRORS.txt') as f:
+        with open('LaTeX_ebnf_MESSAGES.txt') as f:
             print(f.read())
         sys.exit(1)
 

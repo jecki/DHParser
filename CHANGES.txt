@@ -6,13 +6,13 @@ DHParser Version 1.7.2
   running DHParser and can always be obtained from git
 - comments inside insignificant whitespace can now be retained
   by adding "no_comments"[sic!] to the @drop-directive
-- ebnf-grammar now allows to specify character ranges with
-  (e.g.) "[\x00CD-\x0CFD]"
 - DHParser now comes with a few predefined parsing-functions
   in DHParser.parsers. For now, there is parse_HTML and parse_XML
   (in contrast to nodetree.parse_xml, the latter is slower, but
    strictly adheres to the XML-grammar of the W3C with the exception
    of DTDs inside an XML-document, which is not supported)
+- ebnf-grammar now allows to specify character ranges with
+  (e.g.) "[\x00CD-\x0CFD]" (EXPERIMENTAL)
 
 
 DHParser Version 1.7.1 (28.1.2024)
