@@ -1150,6 +1150,8 @@ method `$`*(self: IgnoreCaseRef): string =
 ## A parser for character-ranges
 ##
 
+const RepLimit* = uint32(2^30)   # 2^31 and higher does not work with js-target, any more
+
 type
   Range* = tuple[min: uint32, max: uint32]
   RuneRange* = tuple[low: Rune, high: Rune]
@@ -1163,31 +1165,6 @@ type
 func toRange*(r: RuneRange): Range = (r.low.uint32, r.high.uint32)
 func toRunRange*(r: Range): RuneRange = (Rune(r.min), Rune(r.max))
 
-func rr*(range: string): RuneRange =
-
-  proc toRune(s: string, i: var int): Rune =
-
-    for t in [r"\x", r"0x", r"\u", r"\U"]:
-      if s.startsWith(t):
-        i = 2
-        while i < s.len and s[i] != '-':
-          i += 1
-        assert s[i + 1 ..< s.len].startsWith(t)
-        return Rune(fromHex[int32](s[2..<i]))
-    i = runeLenAt(s, 0)
-    return runeAt(s, 0)
-
-  var
-    i = 0
-    low, high: Rune
-
-  low = toRune(range, i)
-  if i < range.len:
-    i += 1
-    high = toRune(range[i ..< range.len], i)
-  else:
-    high = low
-  return (low, high)
 
 func isProper(R: seq[RuneRange]): bool =
   ## Confirms that sequence of ranges is not be empty and that
@@ -1212,12 +1189,11 @@ proc sortAndMerge*(R: var seq[RuneRange]) =
   assert isProper(R)
   R.sort(proc (a, b: RuneRange): int =
            if a.low <% b.low: -1 else: 1)
-
   var
     a = 0
     b = 1
   while b < R.len:
-    if R[b].low.int32 <=% R[a].high.int32 + 1:
+    if R[b].low.int32 <= R[a].high.int32 + 1:
       if R[a].high <=% R[b].high:
         R[a].high = R[b].high
     else:
@@ -1228,30 +1204,61 @@ proc sortAndMerge*(R: var seq[RuneRange]) =
   R.setLen(a + 1)
   # assert isSortedAndMerged(R)
 
-func inRuneRange*(r: Rune, ranges: seq[RuneRange]): int32 =
-  ## Binary search to find out if rune r falls within one of the sorted ranges
-  ## Returns the index of the range of -1, if r does not fall into any range
-  let
-    highest: int32 = ranges.len.int32 - 1'i32
+
+func rr*(rangesStr: string): seq[RuneRange] =
+  func parseRune(s: string, i: var int): Rune =
+    var
+      r: Rune
+      i0, i1: int
+    for t in [r"\x", r"0x", r"\u", r"\U"]:
+      if i+1 < s.len and s[i..i+1] == t:
+        i += 2
+        i0 = i
+        while i < s.len:
+          i1 = i
+          s.fastRuneAt(i, r)
+          if r.toUtf8 notin "0123456789ABCDEFabcdef":
+            i = i1
+            break
+        return Rune(fromHex[int32](s[i0..<i]))
+    s.fastRuneAt(i, r)
+    return r
+
   var
-    a = 0'i32
-    b = highest
-    last_i = -1'i32
-    i  = b div 2
+    i = 0
+    i0: int
+    low, high, delimiter: Rune
+    runeRanges: seq[RuneRange] = @[]
 
-  while i != last_i:
-    if ranges[i].low <=% r:
-      if r <=% ranges[i].high:
-        return i
+  while i < rangesStr.len:
+    low = parseRune(rangesStr, i)
+    if i < rangesStr.len:
+      i0 = i
+      rangesStr.fastRuneAt(i, delimiter)
+      if delimiter.toUtf8 == "-":
+        high = parseRune(rangesStr, i)
+        if high <% low:
+          delimiter = low
+          low = high
+          high = delimiter
       else:
-        a = min(i + 1, highest)
+        i = i0
+        high = low
     else:
-      b = max(i - 1, 0)
-    last_i = i
-    i = a + (b - a) div 2
-  return -1
+      high = low
+    runeRanges.add((low, high))
 
-proc `&`*(A, B: seq[RuneRange]): seq[RuneRange] =
+  assert runeRanges.len >= 1
+  sortAndMerge(runeRanges)
+  return runeRanges
+
+func sr*(rangeStr: string): RuneRange =
+  let ranges = rr(rangeStr)
+  assert ranges.len == 1
+  return ranges[0]
+
+
+proc `+`*(A, B: seq[RuneRange]): seq[RuneRange] =
   result = newSeqOfCap[RuneRange](A.len + B.len)
   for r in A:  result.add(r)
   for r in B:  result.add(r)
@@ -1306,6 +1313,29 @@ proc `-`*(A, B: seq[RuneRange]): seq[RuneRange] =
     i += 1
   # assert isSortedAndMerged(result)
 
+func inRuneRange*(r: Rune, ranges: seq[RuneRange]): int32 =
+  ## Binary search to find out if rune r falls within one of the sorted ranges
+  ## Returns the index of the range of -1, if r does not fall into any range
+  let
+    highest: int32 = ranges.len.int32 - 1'i32
+  var
+    a = 0'i32
+    b = highest
+    last_i = -1'i32
+    i  = b div 2
+
+  while i != last_i:
+    if ranges[i].low <=% r:
+      if r <=% ranges[i].high:
+        return i
+      else:
+        a = min(i + 1, highest)
+    else:
+      b = max(i - 1, 0)
+    last_i = i
+    i = a + (b - a) div 2
+  return -1
+
 
 proc init*(charRangeParser: CharRangeRef,
            ranges: seq[RuneRange],
@@ -1358,6 +1388,11 @@ method `$`*(self: CharRangeRef): string =
   s.add("]")
   return s.join("")
 
+proc `+`(A, B: CharRangeRef): CharRangeRef =
+  assert false
+
+proc `-`(A, B: CharRangeRef): CharRangeRef =
+  assert false
 
 ## RegExp-Parser
 ## ^^^^^^^^^^^^^
@@ -1530,9 +1565,6 @@ type
   RepeatRef = ref RepeatObj not nil
   RepeatObj = object of ParserObj
     repRange: Range
-
-const RepLimit* = uint32(2^30)   # 2^31 and higher does not work with js-target, any more
-
 
 proc init*(repeat: RepeatRef, 
            parser: Parser, 
