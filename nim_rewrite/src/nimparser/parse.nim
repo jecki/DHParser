@@ -1163,7 +1163,7 @@ type
 func toRange*(r: RuneRange): Range = (r.low.uint32, r.high.uint32)
 func toRunRange*(r: Range): RuneRange = (Rune(r.min), Rune(r.max))
 
-func cr*(range: string): RuneRange =
+func rr*(range: string): RuneRange =
 
   proc toRune(s: string, i: var int): Rune =
 
@@ -1197,27 +1197,34 @@ func isProper(R: seq[RuneRange]): bool =
     if r.high <% r.low: return false
   return true
 
-func isSortedAndMerged(R: seq[RuneRange]): bool =
+func isSortedAndMerged*(R: seq[RuneRange]): bool =
   ## Confirms that the ranges in the sequences are in ascending order
   ## and that there are no overlapping or adjacent ranges.
   for i in 1 ..< len(R):
     if R[i].low <=% R[i - 1].high: return false
   return true
 
-proc sortAndMerge(R: var seq[RuneRange]) =
+proc sortAndMerge*(R: var seq[RuneRange]) =
   ## Sorts the sequence of ranges and merges overlapping regions
   ## in place so that the ranges are in ascending order,
   ## non-overlapping and non-adjacent. The sequence can be shortened
   ## in the process.
   assert isProper(R)
   R.sort(proc (a, b: RuneRange): int =
-           if a.low <% b.low: 1 else: -1)
-  var a = 0
-  for b in 1 ..< R.len:
-    if R[b].low <=% R[a].high:
-      R[a].high = if R[b].high <% R[a].high: R[a].high  else: R[b].high
+           if a.low <% b.low: -1 else: 1)
+
+  var
+    a = 0
+    b = 1
+  while b < R.len:
+    if R[b].low.int32 <=% R[a].high.int32 + 1:
+      if R[a].high <=% R[b].high:
+        R[a].high = R[b].high
     else:
       a += 1
+      if a != b:  R[a] = R[b]
+    b += 1
+
   R.setLen(a + 1)
   # assert isSortedAndMerged(R)
 
@@ -1244,13 +1251,13 @@ func inRuneRange*(r: Rune, ranges: seq[RuneRange]): int32 =
     i = a + (b - a) div 2
   return -1
 
-proc `&`(A, B: seq[RuneRange]): seq[RuneRange] =
+proc `&`*(A, B: seq[RuneRange]): seq[RuneRange] =
   result = newSeqOfCap[RuneRange](A.len + B.len)
   for r in A:  result.add(r)
   for r in B:  result.add(r)
   sortAndMerge(result)
 
-proc `-`(A, B: seq[RuneRange]): seq[RuneRange] =
+proc `-`*(A, B: seq[RuneRange]): seq[RuneRange] =
   assert isProper(A)
   assert isProper(B)
   assert isSortedAndMerged(A)
@@ -1259,9 +1266,21 @@ proc `-`(A, B: seq[RuneRange]): seq[RuneRange] =
   result = newSeqOfCap[RuneRange](A.len * 2)
   var
     i = 1
-    k = 1
+    k = 0
     M = A[0]
     S = B[0]
+
+  proc nextA(M: var RuneRange): bool =
+    ## returns true, if last A has been passed
+    if i < A.len:
+      M = A[i]
+      i += 1
+      return false
+    return true
+
+  proc nextB(S: var RuneRange) =
+    k += 1
+    if k < B.len: S = B[k]
 
   while k < B.len:
     if S.low <=% M.high and M.low <=% S.high:
@@ -1269,37 +1288,23 @@ proc `-`(A, B: seq[RuneRange]): seq[RuneRange] =
         result.add((M.low, Rune(S.low.int32 - 1)))
         if S.high <% M.high:
           M.low = Rune(S.high.int32 + 1)
-          S = B[k]
-          k += 1
-        elif i < A.len:
-          M = A[i]
-          i += 1
-        else:
-          return result
+          nextB(S)
+        elif nextA(M): return
       elif S.high <% M.high:
         M.low = Rune(S.high.int32 + 1)
-        S = B[k]
-        k += 1
-      elif i < A.len:
-        M = A[i]
-        i += 1
-      else:
-        return result
+        nextB(S)
+      elif nextA(M): return
     elif M.high <% S.low:
       result.add(M)
-      if i < A.len:
-        M = A[i]
-        i += 1
-      else:
-        return
+      if nextA(M): return
     else:
       assert S.high <% M.low
-      S = B[k]
-      k += 1
+      nextB(S)
   result.add(M)
   while i < A.len:
     result.add(A[i])
     i += 1
+  # assert isSortedAndMerged(result)
 
 
 proc init*(charRangeParser: CharRangeRef,
@@ -1344,12 +1349,12 @@ method `$`*(self: CharRangeRef): string =
 
   var s: seq[string] = newSeqOfCap[string](len(self.ranges) + 2)
   s.add("[")
-  for cr in self.ranges:
-    let l = hexlen(cr.high)
-    if cr.low == cr.high:
-      s.add(r"\x" & toHex(cr.low.int32, l))
+  for rr in self.ranges:
+    let l = hexlen(rr.high)
+    if rr.low == rr.high:
+      s.add(r"\x" & toHex(rr.low.int32, l))
     else:
-      s.add(r"\x" & toHex(cr.low.int32, l) & "-" & toHex(cr.high.int32, l))
+      s.add(r"\x" & toHex(rr.low.int32, l) & "-" & toHex(rr.high.int32, l))
   s.add("]")
   return s.join("")
 

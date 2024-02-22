@@ -1,7 +1,7 @@
 # unit-tests for the parse.nim module
 # To run these tests, simply execute `nimble test`.
 
-import std/[unittest, strutils, unicode]
+import std/[unittest, strutils, unicode, algorithm]
 
 import nimparser/strslice
 import nimparser/error
@@ -11,11 +11,11 @@ import nimparser/parse
 test "Text, simple test":
   check Text("A")("A").root.asSxpr == "(:Text \"A\")"
 
-test "cr":
-  assert (cr"Ä-Ö").toRange() == (196'u32, 214'u32)
+test "String code for Rune-Ranges (cr)":
+  assert (rr"Ä-Ö").toRange() == (196'u32, 214'u32)
 
 test "inRuneRange":
-  var rr: seq[RuneRange] = @[cr"2-4", cr"B-D", cr"b-d"]
+  var rr: seq[RuneRange] = @[rr"2-4", rr"B-D", rr"b-d"]
   assert inRuneRange("1".runeAt(0), rr) < 0
   assert inRuneRange("2".runeAt(0), rr) >= 0
   assert inRuneRange("3".runeAt(0), rr) >= 0
@@ -34,7 +34,7 @@ test "inRuneRange":
   assert inRuneRange("d".runeAt(0), rr) >= 0
   assert inRuneRange("e".runeAt(0), rr) < 0
 
-  rr = @[cr"2-4", cr"B-D", cr"U-W", cr"b-d"]
+  rr = @[rr"2-4", rr"B-D", rr"U-W", rr"b-d"]
   assert inRuneRange("1".runeAt(0), rr) < 0
   assert inRuneRange("2".runeAt(0), rr) >= 0
   assert inRuneRange("3".runeAt(0), rr) >= 0
@@ -59,8 +59,25 @@ test "inRuneRange":
   assert inRuneRange("d".runeAt(0), rr) >= 0
   assert inRuneRange("e".runeAt(0), rr) < 0
 
+test "sortAndMerge":
+  var rr: seq[RuneRange] = @[rr"2-5", rr"B-E", rr"H-K", rr"b-e", rr"h-p"]
+  sortAndMerge(rr)
+  assert rr == @[rr"2-5", rr"B-E", rr"H-K", rr"b-e", rr"h-p"]
+  rr = @[rr"b-e", rr"2-5", rr"B-E", rr"C-K", rr"f-p"]
+  sortAndMerge(rr)
+  assert rr == @[rr"2-5", rr"B-K", rr"b-p", ]
+
+test "Joining and Subtracting or Rune-Ranges":
+  var m: seq[RuneRange] = @[rr"2-5", rr"B-E", rr"H-K", rr"b-e", rr"h-p"]
+  assert ((m & @[rr"6-8", rr"A-C", rr"I-K", rr"c-d", rr"h-i", rr"j", rr"l-n"]) ==
+          @[rr"2-8", rr"A-E", rr"H-K", rr"b-e", rr"h-p"])
+  assert ((m - @[rr"6-8", rr"A-C", rr"I-K", rr"c-d", rr"h-i", rr"j", rr"l-n"]) ==
+          @[rr"2-5", rr"D-E", rr"H", rr"b", rr"e", rr"k", rr"o-p"])
+ #         "@[(low: 2, high: 5), (low: D, high: E), (low: H, high: H), (low: b, high: b), (low: e, high: e), (low: k, high: k), (low: o, high: p)]")
+
+
 test "CharRange":
-  let rr: seq[RuneRange] = @[cr"2-4", cr"ä-ü", cr"b-d"]
+  let rr: seq[RuneRange] = @[rr"2-4", rr"ä-ü", rr"b-d"]
   check CharRange(rr)("ö").root.asSxpr == "(:CharRange \"ö\")"
 
 test "RegExp, simple test":
