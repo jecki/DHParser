@@ -1155,11 +1155,27 @@ const RepLimit* = uint32(2^30)   # 2^31 and higher does not work with js-target,
 type
   Range* = tuple[min: uint32, max: uint32]
   RuneRange* = tuple[low: Rune, high: Rune]
+  RuneSet* = tuple[negate: bool, ranges: seq[RuneRange]]
   CharRangeRef* = ref CharRangeObj not nil
   CharRangeObj = object of ParserObj
-    ranges: seq[RuneRange]
-    negate: bool
+    runes: RuneSet
     repetitions: Range
+
+
+func rep(s: string | char): Range =
+  when s is string:
+    if len(s) == 0:
+      return (1'u32, 1'u32)
+    assert len(s) == 1
+    let c: char = s[0]
+  else:
+    let c: char = s
+  case c:
+  of '?': return (0'u32, 1'u32)
+  of '*': return (0'u32, RepLimit)
+  of '+': return (1'u32, RepLimit)
+  else:
+    assert false
 
 
 func toRange*(r: RuneRange): Range = (r.low.uint32, r.high.uint32)
@@ -1205,7 +1221,7 @@ proc sortAndMerge*(R: var seq[RuneRange]) =
   # assert isSortedAndMerged(R)
 
 
-func rr*(rangesStr: string): seq[RuneRange] =
+func rs*(rangesStr: string): RuneSet =
   func parseRune(s: string, i: var int): Rune =
     var
       r: Rune
@@ -1228,8 +1244,12 @@ func rr*(rangesStr: string): seq[RuneRange] =
     i = 0
     i0: int
     low, high, delimiter: Rune
+    negate = false
     runeRanges: seq[RuneRange] = @[]
 
+  if rangesStr.len > 0 and rangesStr[0] == '^':
+    negate = true
+    i += 1
   while i < rangesStr.len:
     low = parseRune(rangesStr, i)
     if i < rangesStr.len:
@@ -1250,12 +1270,12 @@ func rr*(rangesStr: string): seq[RuneRange] =
 
   assert runeRanges.len >= 1
   sortAndMerge(runeRanges)
-  return runeRanges
+  return (negate, runeRanges)
 
-func sr*(rangeStr: string): RuneRange =
-  let ranges = rr(rangeStr)
-  assert ranges.len == 1
-  return ranges[0]
+func rr*(rangeStr: string): RuneRange =
+  let runes = rs(rangeStr)
+  assert runes.ranges.len == 1
+  return runes.ranges[0]
 
 
 proc `+`*(A, B: seq[RuneRange]): seq[RuneRange] =
@@ -1338,35 +1358,36 @@ func inRuneRange*(r: Rune, ranges: seq[RuneRange]): int32 =
 
 
 proc init*(charRangeParser: CharRangeRef,
-           ranges: seq[RuneRange],
-           repetitions: Range,
-           negate: bool): CharRangeRef =
+           runes: RuneSet,
+           repetitions: Range): CharRangeRef =
   discard Parser(charRangeParser).init(CharRangeName)
-  charRangeParser.ranges = ranges
-  charRangeParser.ranges.sortAndMerge()
+  charRangeParser.runes = runes
+  charRangeParser.runes.ranges.sortAndMerge()
   charRangeParser.repetitions = repetitions
-  charRangeParser.negate = negate
   return charRangeParser
 
-template CharRange*(ranges: seq[RuneRange],
-                    repetitions: Range = (1, 1),
-                    negate: bool=false): CharRangeRef =
-  new(CharRangeRef).init(ranges, repetitions, negate)
+template CharRange*(runes: RuneSet, repetitions: Range = (1, 1)): CharRangeRef =
+  new(CharRangeRef).init(runes, repetitions)
+
+template CharRange*(runes: RuneSet, repetition: string | char): CharRangeRef =
+    new(CharRangeRef).init(runes, rep(repetitions))
 
 method parse*(self: CharRangeRef, location: int32): ParsingResult =
   let
     document = self.grammar.document
+    ranges = self.runes.ranges
+    negate = self.runes.negate
   var
     r: Rune
     pos = location
 
   for i in 0 ..< self.repetitions.min:
     document.buf[].fastRuneAt(pos, r)
-    if self.negate xor (inRuneRange(r, self.ranges) < 0):
+    if negate xor (inRuneRange(r, ranges) < 0):
       return (nil, location)
   for i in self.repetitions.min ..< self.repetitions.max:
     document.buf[].fastRuneAt(pos, r)
-    if self.negate xor (inRuneRange(r, self.ranges) < 0):
+    if negate xor (inRuneRange(r, ranges) < 0):
       break
   return (newNode(self.nodeName, document.cut(location ..< pos)), pos)
 
@@ -1377,9 +1398,11 @@ method `$`*(self: CharRangeRef): string =
     elif i < 1 shl 16:  return 4
     else: return 8
 
-  var s: seq[string] = newSeqOfCap[string](len(self.ranges) + 2)
+  var s: seq[string] = newSeqOfCap[string](len(self.runes.ranges) + 2)
   s.add("[")
-  for rr in self.ranges:
+  if self.runes.negate:
+    s.add("^")
+  for rr in self.runes.ranges:
     let l = hexlen(rr.high)
     if rr.low == rr.high:
       s.add(r"\x" & toHex(rr.low.int32, l))
@@ -1581,22 +1604,22 @@ template Repeat*(parser: Parser, repRange: Range): RepeatRef =
   new(RepeatRef).init(parser, repRange)
 
 template Option*(parser: Parser): RepeatRef =
-  new(RepeatRef).init(parser, (0u32, 1u32), OptionName)
+  new(RepeatRef).init(parser, (0'u32, 1'u32), OptionName)
 
 template `?`*(parser: Parser): RepeatRef =
-  new(RepeatRef).init(parser, (0u32, 1u32), OptionName)
+  new(RepeatRef).init(parser, (0'u32, 1'u32), OptionName)
 
 template ZeroOrMore*(parser: Parser): RepeatRef =
-  new(RepeatRef).init(parser, (0u32, RepLimit), ZeroOrMoreName)
+  new(RepeatRef).init(parser, (0'u32, RepLimit), ZeroOrMoreName)
 
 template `*`*(parser: Parser): RepeatRef =
-  new(RepeatRef).init(parser, (0u32, RepLimit), ZeroOrMoreName)
+  new(RepeatRef).init(parser, (0'u32, RepLimit), ZeroOrMoreName)
 
 template OneOrMore*(parser: Parser): RepeatRef =
-  new(RepeatRef).init(parser, (1u32, RepLimit), OneOrMoreName)
+  new(RepeatRef).init(parser, (1'u32, RepLimit), OneOrMoreName)
 
 template `+`*(parser: Parser): RepeatRef =
-  new(RepeatRef).init(parser, (1u32, RepLimit), OneOrMoreName)
+  new(RepeatRef).init(parser, (1'u32, RepLimit), OneOrMoreName)
 
 
 method parse*(self: RepeatRef, location: int32): ParsingResult =

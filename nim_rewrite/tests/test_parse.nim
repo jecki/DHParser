@@ -12,13 +12,13 @@ test "Text, simple test":
   check Text("A")("A").root.asSxpr == "(:Text \"A\")"
 
 test "String code for Rune-Ranges (rr and sr)":
-  assert (sr"Ä-Ö").toRange() == (196'u32, 214'u32)
-  assert (sr"\xC4-\xD6").toRange() == (196'u32, 214'u32)
-  assert rr"a-z0-9\xc4-\xd6" == @[sr"0-9", sr"a-z", sr"Ä-Ö"]
-  assert rr"abc0-9äöü" == @[sr"0-9", sr"a-c", sr"ä", sr"ö", sr"ü"]
+  assert (rr"Ä-Ö").toRange() == (196'u32, 214'u32)
+  assert (rr"\xC4-\xD6").toRange() == (196'u32, 214'u32)
+  assert rs"a-z0-9\xc4-\xd6".ranges == @[rr"0-9", rr"a-z", rr"Ä-Ö"]
+  assert rs"abc0-9äöü".ranges == @[rr"0-9", rr"a-c", rr"ä", rr"ö", rr"ü"]
 
 test "inRuneRange":
-  var rr: seq[RuneRange] = @[sr"2-4", sr"B-D", sr"b-d"]
+  var rr: seq[RuneRange] = @[rr"2-4", rr"B-D", rr"b-d"]
   assert inRuneRange("1".runeAt(0), rr) < 0
   assert inRuneRange("2".runeAt(0), rr) >= 0
   assert inRuneRange("3".runeAt(0), rr) >= 0
@@ -37,7 +37,7 @@ test "inRuneRange":
   assert inRuneRange("d".runeAt(0), rr) >= 0
   assert inRuneRange("e".runeAt(0), rr) < 0
 
-  rr = @[sr"2-4", sr"B-D", sr"U-W", sr"b-d"]
+  rr = @[rr"2-4", rr"B-D", rr"U-W", rr"b-d"]
   assert inRuneRange("1".runeAt(0), rr) < 0
   assert inRuneRange("2".runeAt(0), rr) >= 0
   assert inRuneRange("3".runeAt(0), rr) >= 0
@@ -63,24 +63,24 @@ test "inRuneRange":
   assert inRuneRange("e".runeAt(0), rr) < 0
 
 test "sortAndMerge":
-  var rr: seq[RuneRange] = @[sr"2-5", sr"B-E", sr"H-K", sr"b-e", sr"h-p"]
+  var rr: seq[RuneRange] = @[rr"2-5", rr"B-E", rr"H-K", rr"b-e", rr"h-p"]
   sortAndMerge(rr)
-  assert rr == @[sr"2-5", sr"B-E", sr"H-K", sr"b-e", sr"h-p"]
-  rr = @[sr"b-e", sr"2-5", sr"B-E", sr"C-K", sr"f-p"]
+  assert rr == @[rr"2-5", rr"B-E", rr"H-K", rr"b-e", rr"h-p"]
+  rr = @[rr"b-e", rr"2-5", rr"B-E", rr"C-K", rr"f-p"]
   sortAndMerge(rr)
-  assert rr == @[sr"2-5", sr"B-K", sr"b-p", ]
+  assert rr == @[rr"2-5", rr"B-K", rr"b-p", ]
 
 test "Joining and Subtracting or Rune-Ranges":
-  var m: seq[RuneRange] = @[sr"2-5", sr"B-E", sr"H-K", sr"b-e", sr"h-p"]
-  assert ((m + @[sr"6-8", sr"A-C", sr"I-K", sr"c-d", sr"h-i", sr"j", sr"l-n"]) ==
-          @[sr"2-8", sr"A-E", sr"H-K", sr"b-e", sr"h-p"])
-  assert ((m - @[sr"6-8", sr"A-C", sr"I-K", sr"c-d", sr"h-i", sr"j", sr"l-n"]) ==
-          @[sr"2-5", sr"D-E", sr"H", sr"b", sr"e", sr"k", sr"o-p"])
+  var m: seq[RuneRange] = @[rr"2-5", rr"B-E", rr"H-K", rr"b-e", rr"h-p"]
+  assert ((m + @[rr"6-8", rr"A-C", rr"I-K", rr"c-d", rr"h-i", rr"j", rr"l-n"]) ==
+          @[rr"2-8", rr"A-E", rr"H-K", rr"b-e", rr"h-p"])
+  assert ((m - @[rr"6-8", rr"A-C", rr"I-K", rr"c-d", rr"h-i", rr"j", rr"l-n"]) ==
+          @[rr"2-5", rr"D-E", rr"H", rr"b", rr"e", rr"k", rr"o-p"])
  #         "@[(low: 2, high: 5), (low: D, high: E), (low: H, high: H), (low: b, high: b), (low: e, high: e), (low: k, high: k), (low: o, high: p)]")
 
 test "CharRange":
-  let rr: seq[RuneRange] = @[sr"2-4", sr"ä-ü", sr"b-d"]
-  check CharRange(rr)("ö").root.asSxpr == "(:CharRange \"ö\")"
+  let rr: seq[RuneRange] = @[rr"2-4", rr"ä-ü", rr"b-d"]
+  check CharRange((false, rr))("ö").root.asSxpr == "(:CharRange \"ö\")"
 
 test "RegExp, simple test":
   check RegExp(rx"\w+")("ABC").root.asSxpr() == "(:RegExp \"ABC\")"
