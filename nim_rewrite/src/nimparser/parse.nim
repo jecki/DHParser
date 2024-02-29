@@ -1182,7 +1182,7 @@ func toRange*(r: RuneRange): Range = (r.low.uint32, r.high.uint32)
 func toRunRange*(r: Range): RuneRange = (Rune(r.min), Rune(r.max))
 
 
-func isProper(R: seq[RuneRange]): bool =
+func notEmpty(R: seq[RuneRange]): bool =
   ## Confirms that sequence of ranges is not be empty and that
   ## for each range low <= high.
   if R.len <= 0: return false
@@ -1202,7 +1202,7 @@ proc sortAndMerge*(R: var seq[RuneRange]) =
   ## in place so that the ranges are in ascending order,
   ## non-overlapping and non-adjacent. The sequence can be shortened
   ## in the process.
-  assert isProper(R)
+  assert notEmpty(R)
   R.sort(proc (a, b: RuneRange): int =
            if a.low <% b.low: -1 else: 1)
   var
@@ -1285,8 +1285,8 @@ proc `+`*(A, B: seq[RuneRange]): seq[RuneRange] =
   sortAndMerge(result)
 
 proc `-`*(A, B: seq[RuneRange]): seq[RuneRange] =
-  assert isProper(A)
-  assert isProper(B)
+  assert notEmpty(A)
+  assert notEmpty(B)
   assert isSortedAndMerged(A)
   assert isSortedAndMerged(B)
 
@@ -1357,7 +1357,7 @@ proc `-`*(A, B: RuneSet): RuneSet =
   of 0b00:  # (false, false)
     return (false, A.ranges - B.ranges)
   of 0b01:  # (false, true)
-    return (true, A.ranges * B.ranges)
+    return (false, A.ranges * B.ranges)
   of 0b10:  # (true, false)
     return (true, A.ranges + B.ranges)
   of 0b11:  # (true, true)
