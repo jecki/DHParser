@@ -1404,6 +1404,9 @@ template CharRange*(runes: RuneSet, repetitions: Range = (1, 1)): CharRangeRef =
 template CharRange*(runes: RuneSet, repetition: string | char): CharRangeRef =
     new(CharRangeRef).init(runes, rep(repetitions))
 
+# proc cr*(s: string); CharRangeRef =
+
+
 method parse*(self: CharRangeRef, location: int32): ParsingResult =
   let
     document = self.grammar.document
@@ -1443,11 +1446,6 @@ method `$`*(self: CharRangeRef): string =
   s.add("]")
   return s.join("")
 
-proc `+`(A, B: CharRangeRef): CharRangeRef =
-  assert false
-
-proc `-`(A, B: CharRangeRef): CharRangeRef =
-  assert false
 
 ## RegExp-Parser
 ## ^^^^^^^^^^^^^
