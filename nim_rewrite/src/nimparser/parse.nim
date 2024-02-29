@@ -1402,10 +1402,49 @@ template CharRange*(runes: RuneSet, repetitions: Range = (1, 1)): CharRangeRef =
   new(CharRangeRef).init(runes, repetitions)
 
 template CharRange*(runes: RuneSet, repetition: string | char): CharRangeRef =
-    new(CharRangeRef).init(runes, rep(repetitions))
+  new(CharRangeRef).init(runes, rep(repetition))
 
-# proc cr*(s: string); CharRangeRef =
+proc cr*(s: string): CharRangeRef =
+  assert s.len > 0
+  var
+    i = 0
+    runes: RuneSet = (false, @[])
+    repetition = ""
 
+  proc parseRuneSet(): RuneSet =
+    assert i < s.len
+    assert s[i] == '['
+    let k = i + 1
+    while i < s.len and s[i] != ']':  i += 1
+    assert i < s.len
+    result = rs(s[k ..< i])
+    i += 1
+
+  if s[0] == '[':
+    runes = parseRuneSet()
+  elif s[0] != '(':
+    runes = parseRuneSet()
+  else:
+    assert s[0] == '('
+    assert s.len > 2
+    if s[1] != '[':
+      while i < s.len and s[i] != ')':  i += 1
+      assert i < s.len
+      runes = rs(s[1 ..< i])
+      i += 1
+    else:
+      i = 1
+      while i < s.len and s[i] != ')':
+        if s[i] == '-':
+          i += 1
+          runes = runes - parseRuneSet()
+        else:
+          if s[i] == '|':  i += 1
+          runes = runes + parseRuneSet()
+      assert i < s.len
+      i += 1
+  if i < s.len: repetition = s[i .. ^1]
+  CharRange(runes, repetition)
 
 method parse*(self: CharRangeRef, location: int32): ParsingResult =
   let
