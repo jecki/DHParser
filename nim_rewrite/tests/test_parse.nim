@@ -79,6 +79,10 @@ test "Joining and Subtracting or Rune-Ranges":
  #         "@[(low: 2, high: 5), (low: D, high: E), (low: H, high: H), (low: b, high: b), (low: e, high: e), (low: k, high: k), (low: o, high: p)]")
   assert (rs"0-4F-Ha-c".ranges * rs"2-7B-Gb".ranges) == rs"2-4F-Gb".ranges
 
+test "RuneSet":
+  assert (rs"^A-Z" + rs"B-E") == rs"^AF-Z"
+    # (negate: true, ranges: @[(low: A, high: A), (low: F, high: Z)])
+
 test "CharRange":
   let rr: seq[RuneRange] = @[rr"2-4", rr"ä-ü", rr"b-d"]
   check CharRange((false, rr))("ö").root.asSxpr == "(:CharRange \"ö\")"

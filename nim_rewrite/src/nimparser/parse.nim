@@ -5,7 +5,7 @@
 {.experimental: "strictCaseObjects".}
 
 import std/[enumerate, math, options, sets, strformat, strutils, unicode,
-            sugar, algorithm, tables]
+            sugar, algorithm, tables, sequtils]
 
 import strslice
 import nodetree
@@ -1334,7 +1334,6 @@ proc `-`*(A, B: seq[RuneRange]): seq[RuneRange] =
   # assert isSortedAndMerged(result)
 
 proc `*`*(A, B: seq[RuneRange]): seq[RuneRange] = A - (A - B) - (B - A)
-
 
 
 proc `^`*(runes: RuneSet): RuneSet = (not runes.negate, runes.ranges)
