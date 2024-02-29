@@ -1333,6 +1333,39 @@ proc `-`*(A, B: seq[RuneRange]): seq[RuneRange] =
     i += 1
   # assert isSortedAndMerged(result)
 
+proc `*`*(A, B: seq[RuneRange]): seq[RuneRange] = A - (A - B) - (B - A)
+
+
+
+proc `^`*(runes: RuneSet): RuneSet = (not runes.negate, runes.ranges)
+
+proc `+`*(A, B: RuneSet): RuneSet =
+  let selector = (if A.negate: 2 else: 0) + (if B.negate: 1 else: 0)
+  case selector:  # (A.negate, B.negate)
+  of 0b00:  # (false, false)
+    return (false, A.ranges + B.ranges)
+  of 0b01:  # (false, true)
+    return (true, B.ranges - A.ranges)
+  of 0b10:  # (true, false)
+    return (true, A.ranges - B.ranges)
+  of 0b11:  # (true, true)
+    return (true, A.ranges * B.ranges)
+  else:  assert false
+
+proc `-`*(A, B: RuneSet): RuneSet =
+  let selector = (if A.negate: 2 else: 0) + (if B.negate: 1 else: 0)
+  case selector:  # (A.negate, B.negate)
+  of 0b00:  # (false, false)
+    return (false, A.ranges - B.ranges)
+  of 0b01:  # (false, true)
+    return (true, A.ranges * B.ranges)
+  of 0b10:  # (true, false)
+    return (true, A.ranges + B.ranges)
+  of 0b11:  # (true, true)
+    return (false, B.ranges - A.ranges)
+  else: assert false
+
+
 func inRuneRange*(r: Rune, ranges: seq[RuneRange]): int32 =
   ## Binary search to find out if rune r falls within one of the sorted ranges
   ## Returns the index of the range of -1, if r does not fall into any range
