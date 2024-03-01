@@ -256,14 +256,16 @@ proc assignName(name: string, parser: Parser): Parser =
     return parser
   assert parser.pname == ""
   assert name != ""
-  parser.nodeName[] = name
   if name[0] == ':':
+    parser.nodeName[] = name
     parser.pname = name[1..^1]
   elif name.len >= 5 and name[4] == ':':
     if name[0..3] == "DROP":
       parser.flags.incl dropContent
     else:
       assert name[0..3] == "HIDE"
+      parser.flags.incl isDisposable
+    parser.nodeName[] = name[4..^1]
     parser.pname = name[5..^1]
   else:
     # assert parser.ptype != ":Whitespace",
@@ -271,6 +273,7 @@ proc assignName(name: string, parser: Parser): Parser =
     #            "with a colon, e.g. \":{name}\", to mark them as disposable!")
     if parser.ptype != ":Whitespace":  # insignificant whitespace is always disposable
       parser.flags.excl isDisposable
+    parser.nodeName[] = name
     parser.pname = name
   assignSymbol(parser, parser)
   return parser
@@ -407,7 +410,7 @@ template forEach*(parser: Parser, p: untyped, selector: ParserIterator, body: un
 ## grammar-property
 
 proc grammar*(parser: Parser) : GrammarRef =
-  assert parser.grammarVar != GrammarPlaceholder, $parser
+  assert parser.grammarVar != GrammarPlaceholder
   parser.grammarVar
 
 method `grammar=`*(self: Parser, grammar: GrammarRef) {.base.} =
@@ -657,7 +660,6 @@ proc `()`*(parser: Parser, document: string or StringSlice, location: int32 = 0)
       let msg = fmt"Parser {parser.name} stopped before end at »{snippet}«"
       parser.grammar.errors.add(Error(msg, loc, ParserStoppedBeforeEnd))
   return (root, parser.grammar.errors)
-
 
 
 ## procedures performing early tree-reduction on return values of parsers
@@ -1423,7 +1425,8 @@ proc cr*(s: string): CharRangeRef =
   if s[0] == '[':
     runes = parseRuneSet()
   elif s[0] != '(':
-    runes = parseRuneSet()
+    runes = rs(s)
+    i = s.len
   else:
     assert s[0] == '('
     assert s.len > 2
@@ -1433,33 +1436,60 @@ proc cr*(s: string): CharRangeRef =
       runes = rs(s[1 ..< i])
       i += 1
     else:
+      var sign = ' '
       i = 1
       while i < s.len and s[i] != ')':
         if s[i] == '-':
+          assert sign != '-'
+          sign = '-'
           i += 1
+        elif s[i] == '|':
+          i += 1
+        if sign == '-':
           runes = runes - parseRuneSet()
         else:
-          if s[i] == '|':  i += 1
           runes = runes + parseRuneSet()
       assert i < s.len
       i += 1
   if i < s.len: repetition = s[i .. ^1]
   CharRange(runes, repetition)
 
+
+proc RepeatCR*(parser: CharRangeRef, repetitions: Range): CharRangeRef =
+  result = parser
+  assert result.name.len == 0
+  assert result.repetitions == (1'u32, 1'u32)
+  result.repetitions = repetitions
+
+template Option*(parser: CharRangeRef): CharRangeRef = RepeatCR(parser, (0'u32, 1'u32))
+template `?`*(parser: CharRangeRef): CharRangeRef = Option(parser)
+
+proc ZeroOrMore*(parser: CharRangeRef): CharRangeRef = RepeatCR(parser, (0'u32, RepLimit))
+template `*`*(parser: CharRangeRef): CharRangeRef = ZeroOrMore(parser)
+
+template OneOrMore*(parser: CharRangeRef): CharRangeRef = RepeatCR(parser, (1'u32, RepLimit))
+template `+`*(parser: CharRangeRef): CharRangeRef = OneOrMore(parser)
+
+
 method parse*(self: CharRangeRef, location: int32): ParsingResult =
   let
     document = self.grammar.document
     ranges = self.runes.ranges
     negate = self.runes.negate
+    L: int32 = document.len.int32
   var
     r: Rune
     pos = location
 
   for i in 0 ..< self.repetitions.min:
+    if pos >= L:
+      return (nil, location)
     document.buf[].fastRuneAt(pos, r)
     if negate xor (inRuneRange(r, ranges) < 0):
       return (nil, location)
   for i in self.repetitions.min ..< self.repetitions.max:
+    if pos >= L:
+      break
     document.buf[].fastRuneAt(pos, r)
     if negate xor (inRuneRange(r, ranges) < 0):
       break
@@ -1477,13 +1507,40 @@ method `$`*(self: CharRangeRef): string =
   if self.runes.negate:
     s.add("^")
   for rr in self.runes.ranges:
-    let l = hexlen(rr.high)
-    if rr.low == rr.high:
-      s.add(r"\x" & toHex(rr.low.int32, l))
+    if rr.low.int32 >= 32 and rr.low.int32 < 127 and
+        rr.high.int32 >= 32 and rr.high.int32 < 127:
+      let low = chr(rr.low.int8)
+      if rr.low == rr.high:
+        s.add(fmt"{low}")
+      else:
+        let high = chr(rr.high.int8)
+        s.add(fmt"{low}-{high}")
     else:
-      s.add(r"\x" & toHex(rr.low.int32, l) & "-" & toHex(rr.high.int32, l))
+      let l = hexlen(rr.high)
+      if rr.low == rr.high:
+        s.add(r"\x" & toHex(rr.low.int32, l))
+      else:
+        s.add(r"\x" & toHex(rr.low.int32, l) & "-" & toHex(rr.high.int32, l))
   s.add("]")
+  let rp = self.repetitions
+  s.add(if rp == (0'u32, 1'u32): "?"
+        elif rp == (0'u32, RepLimit): "*"
+        elif rp == (1'u32, RepLimit): "+"
+        elif rp == (1'u32, 1'u32): ""
+        else: fmt("({rp.min},{rp.max})"))
   return s.join("")
+
+
+proc `+`* (A, B: CharRangeRef): CharRangeRef =
+  assert A.repetitions == B.repetitions
+  CharRange(A.runes + B.runes, A.repetitions)
+
+
+proc `-`* (A, B: CharRangeRef): CharRangeRef =
+  assert A.repetitions == B.repetitions
+  CharRange(A.runes - B.runes, A.repetitions)
+
+
 
 
 ## RegExp-Parser
@@ -1668,27 +1725,30 @@ proc init*(repeat: RepeatRef,
   repeat.repRange = repRange
   return repeat
 
+# proc newRepeat(parser: Parser,
+#                repRange: Range,
+#                name: string = RepeatName): RepeatRef | CharRangeRef =
+#   if parser.name or parser.ptype != CharRangeName:
+#     return new(RepeatRef).init(parser, repRange, name)
+#   else:
+#     assert CharRangeRef(parser).repetitions == (1'u32, 1'u32)
+#     CharRangeRef(parser).repetitions = repRange
+#     return parser
 
 template Repeat*(parser: Parser, repRange: Range): RepeatRef =
   new(RepeatRef).init(parser, repRange)
 
 template Option*(parser: Parser): RepeatRef =
-  new(RepeatRef).init(parser, (0'u32, 1'u32), OptionName)
-
-template `?`*(parser: Parser): RepeatRef =
-  new(RepeatRef).init(parser, (0'u32, 1'u32), OptionName)
+    new(RepeatRef).init(parser, (0'u32, 1'u32), OptionName)
+template `?`*(parser: Parser): Parser = Option(parser)
 
 template ZeroOrMore*(parser: Parser): RepeatRef =
   new(RepeatRef).init(parser, (0'u32, RepLimit), ZeroOrMoreName)
-
-template `*`*(parser: Parser): RepeatRef =
-  new(RepeatRef).init(parser, (0'u32, RepLimit), ZeroOrMoreName)
+template `*`*(parser: Parser): RepeatRef | CharRangeRef = ZeroOrMore(parser)
 
 template OneOrMore*(parser: Parser): RepeatRef =
   new(RepeatRef).init(parser, (1'u32, RepLimit), OneOrMoreName)
-
-template `+`*(parser: Parser): RepeatRef =
-  new(RepeatRef).init(parser, (1'u32, RepLimit), OneOrMoreName)
+template `+`*(parser: Parser): RepeatRef = OneOrMore(parser)
 
 
 method parse*(self: RepeatRef, location: int32): ParsingResult =
@@ -1723,8 +1783,9 @@ method parse*(self: RepeatRef, location: int32): ParsingResult =
   return (self.grammar.returnSequence(self, nodes), loc)
 
 method `$`*(self: RepeatRef): string =
-  let 
-    postfix = postfixNotation in self.grammar.flags
+  let
+    postfix = if self.grammarVar == GrammarPlaceholder: false
+              else: postfixNotation in self.grammar.flags
     subP = self.subParsers[0]
   var
     subStr: string

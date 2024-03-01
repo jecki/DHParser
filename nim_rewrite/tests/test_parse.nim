@@ -1,7 +1,7 @@
 # unit-tests for the parse.nim module
 # To run these tests, simply execute `nimble test`.
 
-import std/[unittest, strutils, unicode, algorithm]
+import std/[unittest, strutils, unicode, algorithm, strformat]
 
 import nimparser/strslice
 import nimparser/error
@@ -93,10 +93,21 @@ test "RuneSet":
   assert (rs"^A-G" - rs"^F-K") == rs"H-K"
   assert (rs"A-G" - rs"^F-K") == rs"F-G"
 
-
 test "CharRange":
   let rr: seq[RuneRange] = @[rr"2-4", rr"ä-ü", rr"b-d"]
   check CharRange((false, rr))("ö").root.asSxpr == "(:CharRange \"ö\")"
+  let GermanAlphabet = "GermanAlphabet" ::= cr"([A-Z]|[a-z]|[ÄÖÜäöüß])+"
+  assert $GermanAlphabet == r"[A-Za-z\xC4\xD6\xDC\xDF\xE4\xF6\xFC]+"
+  assert GermanAlphabet("abeäßüÜXYZ").root.asSxpr == "(GermanAlphabet \"abeäßüÜXYZ\")"
+
+  let GermanAlphabet2 = "GermanAlphabet" ::= +(cr"[A-Z]" + cr"[ßüöäÜÖÄ]" + cr"[a-z]")
+  assert $GermanAlphabet2 == r"[A-Za-z\xC4\xD6\xDC\xDF\xE4\xF6\xFC]+"
+  assert $(cr"A-Z" - cr"X") == "[A-WY-Z]"
+  assert $(*(cr"[A-Z]" - cr"X")) == "[A-WY-Z]*"
+  let char = "Char" ::= cr"[A-Z]"
+  let special = *(char - cr"X")
+  assert $special == "[A-WY-Z]*"
+
 
 test "RegExp, simple test":
   check RegExp(rx"\w+")("ABC").root.asSxpr() == "(:RegExp \"ABC\")"
@@ -133,6 +144,18 @@ test "parser-serialization":
   check root.getSubParsers[0].getSubParsers.len == 3
   check $s == "s t t"
   check t.type == ":Series"
+
+# test "name-assignment":
+#   let open = "HIDE:open" ::= DROP(txt"(")
+#   let close = "close" ::= DROP(txt")")
+#   let content = ":content" ::= cr"[a-z]+"
+#   let document = txt"A" & open & content & close
+#   echo $document
+#   echo open.name & " " &  open.pname & " " & open.ptype & " " & open.nodeName[]
+#   echo close.name & " " &  close.pname & " " & close.ptype & " " & close.nodeName[]
+#   echo content.name & " " &  content.pname & " " & content.ptype & " " & content.nodeName[]
+#   let text = document.subParsers[0]
+#   echo text.name & "-" &  text.pname & "-" & text.ptype & "-" & text.nodeName[]
 
 let WS  = "WS".assign                DROP(rxp"\s*")
 let NUMBER = ":NUMBER".assign        rxp"(?:0|(?:[1-9]\d*))(?:\.\d+)?" & WS
