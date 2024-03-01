@@ -65,14 +65,14 @@ type
                       tuple[pos, length: int32]
   Matcher* = object
     case kind: MatcherKind
-    of mkRegex:
-      rxInfo: RegExpInfo
-    of mkString:
-      cmpStr: string
-    of mkProc:
-      findProc: MatcherProc
-    of mkParser:
-      consumeParser: Parser
+      of mkRegex:
+        rxInfo: RegExpInfo
+      of mkString:
+        cmpStr: string
+      of mkProc:
+        findProc: MatcherProc
+      of mkParser:
+        consumeParser: Parser
   ErrorMatcher* = tuple[matcher: Matcher, msg: string]
   AnyMatcher* = Matcher | ErrorMatcher
 
@@ -435,14 +435,14 @@ method `grammar=`*(self: Parser, grammar: GrammarRef) {.base.} =
 
 proc `$`*(m: Matcher): string =
   case m.kind:
-  of mkRegex:
-    "/" & m.rxInfo.reStr & "/"
-  of mkString:
-    "\"" & m.cmpStr & "\""
-  of mkProc:
-    "func()"
-  of mkParser:
-    repr(m.consumeParser)
+    of mkRegex:
+      "/" & m.rxInfo.reStr & "/"
+    of mkString:
+      "\"" & m.cmpStr & "\""
+    of mkProc:
+      "func()"
+    of mkParser:
+      repr(m.consumeParser)
 
 
 proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
@@ -471,16 +471,16 @@ proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
   proc entry_point(m: Matcher): int32 =
     proc searchFunc(start: int32): tuple[pos, length: int32]  =
       case m.kind:
-      of mkRegex:  # rx_search
-        let (a, b) = find(document, m.rxInfo.regex, start, searchWindow)
-        (a, b - a + 1)
-      of mkString:  # str_search
-        (find(document.str[], m.cmpStr, start, start + searchWindow).int32,
-         m.cmpStr.len.int32)
-      of mkProc:  # algorithm_search
-        m.findProc(document, start, start + searchWindow)
-      else:  # should never be reached!
-        (-1, 0)
+        of mkRegex:  # rx_search
+          let (a, b) = find(document, m.rxInfo.regex, start, searchWindow)
+          (a, b - a + 1)
+        of mkString:  # str_search
+          (find(document.str[], m.cmpStr, start, start + searchWindow).int32,
+           m.cmpStr.len.int32)
+        of mkProc:  # algorithm_search
+          m.findProc(document, start, start + searchWindow)
+        else:  # should never be reached!
+          (-1, 0)
 
     var
       (a, b) = nextComment()
@@ -496,25 +496,25 @@ proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
 
   for rule in rules:
     case rule.kind:
-    of mkParser:
-      let parser = rule.consumeParser
-      skipNode = nil
-      try:
-        (skipNode, pos) = parser.call(parser, location)
-      except ParsingException as pe:
-        let msg = "Error while searching re-entry point with parser" & $parser & ": " & pe.msg
-        let error: ErrorRef = Error(msg, location, ErrorWhileRecovering)
-        parser.grammar.errors.add(error)
-        # skipNode = nil
-        pos = upperLimit
-      if not isNil(skipNode):
-        if pos < closestMatch:
-          closestMatch = pos
-    else:
-      pos = entry_point(rule)
-      if pos < closestMatch:
+      of mkParser:
+        let parser = rule.consumeParser
         skipNode = nil
-        closestMatch = pos
+        try:
+          (skipNode, pos) = parser.call(parser, location)
+        except ParsingException as pe:
+          let msg = "Error while searching re-entry point with parser" & $parser & ": " & pe.msg
+          let error: ErrorRef = Error(msg, location, ErrorWhileRecovering)
+          parser.grammar.errors.add(error)
+          # skipNode = nil
+          pos = upperLimit
+        if not isNil(skipNode):
+          if pos < closestMatch:
+            closestMatch = pos
+      else:
+        pos = entry_point(rule)
+        if pos < closestMatch:
+          skipNode = nil
+          closestMatch = pos
 
   if closestMatch >= upperLimit:  closestMatch = -1
   if isNil(skipNode):
@@ -814,19 +814,19 @@ method refdParsers*(self: ErrorCatchingParserRef): lent seq[Parser] =
     self.referredParsers = self.subParsers
     for matcher in self.skipList:
       case matcher.kind:
-      of mkParser:
-        self.referredParsers.add(matcher.consumeParser)
-      else:  discard
+        of mkParser:
+          self.referredParsers.add(matcher.consumeParser)
+        else:  discard
     for matcher in self.resumeList:
       case matcher.kind:
-      of mkParser:
-        self.referredParsers.add(matcher.consumeParser)
-      else:  discard
+        of mkParser:
+          self.referredParsers.add(matcher.consumeParser)
+        else:  discard
     for errMatcher in self.errorList:
       case errMatcher.matcher.kind:
-      of mkParser:
-        self.referredParsers.add(errMatcher.matcher.consumeParser)
-      else:  discard
+        of mkParser:
+          self.referredParsers.add(errMatcher.matcher.consumeParser)
+        else:  discard
   else:
     assert self.referredParsers.len >= self.subParsers.len
   return self.referredParsers
@@ -858,21 +858,21 @@ proc violation(catcher: ErrorCatchingParserRef,
 
   proc match(rule: Matcher, text: StringSlice, location: int32): bool =
     case rule.kind:
-    of mkRegex:
-      return text.matchLen(rule.rxInfo.regex, location) >= 0
-    of mkString:
-      return text.cut(location ..< location + rule.cmpStr.len) == rule.cmpStr
-    of mkProc:
-      return rule.findProc(text, location, location)[0] >= 0
-    of mkParser:
-      let parser = rule.consumeParser
-      try:
-        let (node, pos) = parser(location)
-        return not isNil(node)
-      except ParsingException as pe:
-        let msg = "Error while picking error message with: " & $parser
-        let error = Error(msg, location, ErrorWhileRecovering)
-        parser.grammar.errors.add(error)
+      of mkRegex:
+        return text.matchLen(rule.rxInfo.regex, location) >= 0
+      of mkString:
+        return text.cut(location ..< location + rule.cmpStr.len) == rule.cmpStr
+      of mkProc:
+        return rule.findProc(text, location, location)[0] >= 0
+      of mkParser:
+        let parser = rule.consumeParser
+        try:
+          let (node, pos) = parser(location)
+          return not isNil(node)
+        except ParsingException as pe:
+          let msg = "Error while picking error message with: " & $parser
+          let error = Error(msg, location, ErrorWhileRecovering)
+          parser.grammar.errors.add(error)
 
   let
     gr = catcher.grammar
@@ -918,22 +918,22 @@ proc setMatcherList[T: AnyMatcher](errorCatcher: Parser, list: sink seq[T], list
     let catcher = ErrorCatchingParserRef(errorCatcher)
     when T is Matcher:
       case listName
-      of "skip-matchers":
-        assert catcher.skipList.len == 0, $catcher & ": skipList cannot be set twice!"
-        catcher.skipList = list
-      of "resume-matchers":
-        assert catcher.resumeList.len == 0, $catcher & ": skipList cannot be set twice!"
-        catcher.resumeList = list
-      else:
-        raise newException(AssertionDefect, "For type T = Matcher, " &
-          "listName must be \"skip-matchers\" or \"resume-machters\", " &
-          "but not \"" & listName & "\"!")
+        of "skip-matchers":
+          assert catcher.skipList.len == 0, $catcher & ": skipList cannot be set twice!"
+          catcher.skipList = list
+        of "resume-matchers":
+          assert catcher.resumeList.len == 0, $catcher & ": skipList cannot be set twice!"
+          catcher.resumeList = list
+        else:
+          raise newException(AssertionDefect, "For type T = Matcher, " &
+            "listName must be \"skip-matchers\" or \"resume-machters\", " &
+            "but not \"" & listName & "\"!")
       if errorCatcher.grammarVar != GrammarPlaceholder:
         for matcher in list:
           case matcher.kind:
-          of mkParser:
-            matcher.consumeParser.grammar = errorCatcher.grammar
-          else: discard
+            of mkParser:
+              matcher.consumeParser.grammar = errorCatcher.grammar
+            else: discard
     elif T is ErrorMatcher:
       if listName == "errors":
         assert catcher.errorList.len == 0, $catcher & ": skipList cannot be set twice!"
@@ -945,9 +945,9 @@ proc setMatcherList[T: AnyMatcher](errorCatcher: Parser, list: sink seq[T], list
         for em in list:
           let matcher = em.matcher
           case matcher.kind:
-          of mkParser:
-            matcher.consumeParser.grammar = errorCatcher.grammar
-          else: discard
+            of mkParser:
+              matcher.consumeParser.grammar = errorCatcher.grammar
+            else: discard
 
 const ErrorCatcherListNames* = ["errors", "skip-matchers", "resume-matchers"]
 
@@ -1171,11 +1171,11 @@ func rep(s: string | char): Range =
   else:
     let c: char = s
   case c:
-  of '?': return (0'u32, 1'u32)
-  of '*': return (0'u32, RepLimit)
-  of '+': return (1'u32, RepLimit)
-  else:
-    assert false
+    of '?': return (0'u32, 1'u32)
+    of '*': return (0'u32, RepLimit)
+    of '+': return (1'u32, RepLimit)
+    else:
+      assert false
 
 
 func toRange*(r: RuneRange): Range = (r.low.uint32, r.high.uint32)
@@ -1221,11 +1221,18 @@ proc sortAndMerge*(R: var seq[RuneRange]) =
   # assert isSortedAndMerged(R)
 
 
-func rs*(rangesStr: string): RuneSet =
-  func parseRune(s: string, i: var int): Rune =
+proc rs*(rangesStr: string): RuneSet =
+  var
+    buf: string = ""
+    bi: int32 = 1
+
+  proc parseRune(s: string, i: var int): Rune =
     var
       r: Rune
       i0, i1: int
+    if bi < buf.len:
+      buf.fastRuneAt(bi, r)
+      return r
     for t in [r"\x", r"0x", r"\u", r"\U"]:
       if i+1 < s.len and s[i..i+1] == t:
         i += 2
@@ -1238,6 +1245,16 @@ func rs*(rangesStr: string): RuneSet =
             break
         return Rune(fromHex[int32](s[i0..<i]))
     s.fastRuneAt(i, r)
+    if r.toUTF8 == r"\":
+      s.fastRuneAt(i, r)
+      case r.toUTF8:
+        of "s":
+          buf = " \t\r\n\f"
+          bi = 0
+          buf.fastRuneAt(bi, r)
+        of "n":  r = "\n".runeAt(0)
+        else:
+          discard
     return r
 
   var
@@ -1250,12 +1267,12 @@ func rs*(rangesStr: string): RuneSet =
   if rangesStr.len > 0 and rangesStr[0] == '^':
     negate = true
     i += 1
-  while i < rangesStr.len:
+  while i < rangesStr.len or bi < buf.len:
     low = parseRune(rangesStr, i)
     if i < rangesStr.len:
       i0 = i
-      rangesStr.fastRuneAt(i, delimiter)
-      if i < rangesStr.len and delimiter.toUtf8 == "-":
+      delimiter = parseRune(rangesStr, i)
+      if (i < rangesStr.len or bi < buf.len) and delimiter.toUtf8 == "-":
         high = parseRune(rangesStr, i)
         if high <% low:
           delimiter = low
@@ -1267,12 +1284,11 @@ func rs*(rangesStr: string): RuneSet =
     else:
       high = low
     runeRanges.add((low, high))
-
   assert runeRanges.len >= 1
   sortAndMerge(runeRanges)
   return (negate, runeRanges)
 
-func rr*(rangeStr: string): RuneRange =
+proc rr*(rangeStr: string): RuneRange =
   let runes = rs(rangeStr)
   assert runes.ranges.len == 1
   return runes.ranges[0]
@@ -1341,28 +1357,28 @@ proc `^`*(runes: RuneSet): RuneSet = (not runes.negate, runes.ranges)
 proc `+`*(A, B: RuneSet): RuneSet =
   let selector = (if A.negate: 2 else: 0) + (if B.negate: 1 else: 0)
   case selector:  # (A.negate, B.negate)
-  of 0b00:  # (false, false)
-    return (false, A.ranges + B.ranges)
-  of 0b01:  # (false, true)
-    return (true, B.ranges - A.ranges)
-  of 0b10:  # (true, false)
-    return (true, A.ranges - B.ranges)
-  of 0b11:  # (true, true)
-    return (true, A.ranges * B.ranges)
-  else:  assert false
+    of 0b00:  # (false, false)
+      return (false, A.ranges + B.ranges)
+    of 0b01:  # (false, true)
+      return (true, B.ranges - A.ranges)
+    of 0b10:  # (true, false)
+      return (true, A.ranges - B.ranges)
+    of 0b11:  # (true, true)
+      return (true, A.ranges * B.ranges)
+    else:  assert false
 
 proc `-`*(A, B: RuneSet): RuneSet =
   let selector = (if A.negate: 2 else: 0) + (if B.negate: 1 else: 0)
   case selector:  # (A.negate, B.negate)
-  of 0b00:  # (false, false)
-    return (false, A.ranges - B.ranges)
-  of 0b01:  # (false, true)
-    return (false, A.ranges * B.ranges)
-  of 0b10:  # (true, false)
-    return (true, A.ranges + B.ranges)
-  of 0b11:  # (true, true)
-    return (false, B.ranges - A.ranges)
-  else: assert false
+    of 0b00:  # (false, false)
+      return (false, A.ranges - B.ranges)
+    of 0b01:  # (false, true)
+      return (false, A.ranges * B.ranges)
+    of 0b10:  # (true, false)
+      return (true, A.ranges + B.ranges)
+    of 0b11:  # (true, true)
+      return (false, B.ranges - A.ranges)
+    else: assert false
 
 
 func inRuneRange*(r: Rune, ranges: seq[RuneRange]): int32 =
@@ -1413,7 +1429,7 @@ proc cr*(s: string): CharRangeRef =
 
   proc parseRuneSet(): RuneSet =
     assert i < s.len
-    assert s[i] == '['
+    assert s[i] == '[', $i
     let k = i + 1
     while i < s.len and s[i] != ']':  i += 1
     assert i < s.len
@@ -1442,33 +1458,19 @@ proc cr*(s: string): CharRangeRef =
           i += 1
         elif s[i] == '|':
           i += 1
+        elif s[i] != '[':
+          break
         while i < s.len and s[i] in " \n":  i += 1
         if sign == '-':
           runes = runes - parseRuneSet()
         else:
-          runes = runes + parseRuneSet()
-      if i < s.len:
-        assert s[i] == ')'
-        i += 1
+          if runes.ranges.len == 0:
+            runes = parseRuneSet()
+          else:
+            runes = runes + parseRuneSet()
+      if i < s.len and s[i] == ')': i += 1
   if i < s.len: repetition = s[i .. ^1]
   CharRange(runes, repetition)
-
-
-proc RepeatCR*(parser: CharRangeRef, repetitions: Range): CharRangeRef =
-  result = parser
-  assert result.name.len == 0, $result.name
-  assert result.repetitions == (1'u32, 1'u32)
-  result.repetitions = repetitions
-
-template Option*(parser: CharRangeRef): CharRangeRef = RepeatCR(parser, (0'u32, 1'u32))
-template `?`*(parser: CharRangeRef): CharRangeRef = Option(parser)
-
-proc ZeroOrMore*(parser: CharRangeRef): CharRangeRef = RepeatCR(parser, (0'u32, RepLimit))
-template `*`*(parser: CharRangeRef): CharRangeRef = ZeroOrMore(parser)
-
-template OneOrMore*(parser: CharRangeRef): CharRangeRef = RepeatCR(parser, (1'u32, RepLimit))
-template `+`*(parser: CharRangeRef): CharRangeRef = OneOrMore(parser)
-
 
 method parse*(self: CharRangeRef, location: int32): ParsingResult =
   let
@@ -1548,6 +1550,8 @@ proc `-`* (A, B: CharRangeRef): CharRangeRef =
   assert A.repetitions == B.repetitions
   CharRange(A.runes - B.runes, A.repetitions)
 
+
+# let cr_s = cr"[ \t\r\n\f]"
 
 
 
@@ -1757,6 +1761,25 @@ template `*`*(parser: Parser): RepeatRef | CharRangeRef = ZeroOrMore(parser)
 template OneOrMore*(parser: Parser): RepeatRef =
   new(RepeatRef).init(parser, (1'u32, RepLimit), OneOrMoreName)
 template `+`*(parser: Parser): RepeatRef = OneOrMore(parser)
+
+
+## Optimization: Treat CharRange as special case
+
+proc RepeatCR*(parser: CharRangeRef, repetitions: Range): Parser =
+  if parser.repetitions != (1'u32, 1'u32) or
+     (parser.name.len > 0 and parser.ptype[0] != ':'):
+    return Repeat(parser, repetitions)
+  return CharRange(parser.runes, repetitions)
+
+
+template Option*(parser: CharRangeRef): Parser = RepeatCR(parser, (0'u32, 1'u32))
+template `?`*(parser: CharRangeRef): Parser = Option(parser)
+
+proc ZeroOrMore*(parser: CharRangeRef): Parser = RepeatCR(parser, (0'u32, RepLimit))
+template `*`*(parser: CharRangeRef): Parser = ZeroOrMore(parser)
+
+template OneOrMore*(parser: CharRangeRef): Parser = RepeatCR(parser, (1'u32, RepLimit))
+template `+`*(parser: CharRangeRef): Parser = OneOrMore(parser)
 
 
 method parse*(self: RepeatRef, location: int32): ParsingResult =

@@ -93,6 +93,12 @@ test "RuneSet":
   assert (rs"^A-G" - rs"^F-K") == rs"H-K"
   assert (rs"A-G" - rs"^F-K") == rs"F-G"
 
+  var r = rs(r"\s")
+  assert r.ranges.len == 3  # 9-10, 12-13, 20
+  r = rs(r"\n")
+  assert r.ranges.len == 1
+
+
 test "CharRange":
   let rr: seq[RuneRange] = @[rr"2-4", rr"ä-ü", rr"b-d"]
   check CharRange((false, rr))("ö").root.asSxpr == "(:CharRange \"ö\")"
@@ -124,7 +130,14 @@ test "CharRange":
                                              |[\uF900-\uFDCF]|[\uFDF0-\uFFFD]
                                              |[\U00010000-\U000EFFFF])+"""
   assert NameChars("-.:_").root.asSxpr == "(NameChars \"-.:_\")"
-
+  let numbers = cr"[0-9]+"
+  assert $numbers == "[0-9]+"
+  let check = cr("[^<&\"]+")
+  assert $check == r"[^\x22\x26\x3C]+"
+  var s = cr"\s"
+  assert $s == r"[\x09-\x0A\x0C-\x0D\x20]"
+  s = cr"\n"
+  assert $s == r"[\x0A]"
 
 
 test "RegExp, simple test":
