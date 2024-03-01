@@ -1255,7 +1255,7 @@ func rs*(rangesStr: string): RuneSet =
     if i < rangesStr.len:
       i0 = i
       rangesStr.fastRuneAt(i, delimiter)
-      if delimiter.toUtf8 == "-":
+      if i < rangesStr.len and delimiter.toUtf8 == "-":
         high = parseRune(rangesStr, i)
         if high <% low:
           delimiter = low
@@ -1456,7 +1456,7 @@ proc cr*(s: string): CharRangeRef =
 
 proc RepeatCR*(parser: CharRangeRef, repetitions: Range): CharRangeRef =
   result = parser
-  assert result.name.len == 0
+  assert result.name.len == 0, $result.name
   assert result.repetitions == (1'u32, 1'u32)
   result.repetitions = repetitions
 
