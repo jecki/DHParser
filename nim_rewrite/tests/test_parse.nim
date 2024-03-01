@@ -99,6 +99,7 @@ test "CharRange":
   let GermanAlphabet = "GermanAlphabet" ::= cr"([A-Z]|[a-z]|[ÄÖÜäöüß])+"
   assert $GermanAlphabet == r"[A-Za-z\xC4\xD6\xDC\xDF\xE4\xF6\xFC]+"
   assert GermanAlphabet("abeäßüÜXYZ").root.asSxpr == "(GermanAlphabet \"abeäßüÜXYZ\")"
+  assert GermanAlphabet("Hunde-Hütte").root.asSxpr == "(GermanAlphabet \"Hunde\")"
 
   let GermanAlphabet2 = "GermanAlphabet" ::= +(cr"[A-Z]" + cr"[ßüöäÜÖÄ]" + cr"[a-z]")
   assert $GermanAlphabet2 == r"[A-Za-z\xC4\xD6\xDC\xDF\xE4\xF6\xFC]+"
@@ -107,6 +108,15 @@ test "CharRange":
   let char = "Char" ::= cr"[A-Z]"
   let special = *(char - cr"X")
   assert $special == "[A-WY-Z]*"
+
+  let NameStartChar = "NameStartChar" ::= cr("""[_]|[:]|[A-Z]|[a-z]
+                                             |[\u00C0-\u00D6]|[\u00D8-\u00F6]|[\u00F8-\u02FF]
+                                             |[\u0370-\u037D]|[\u037F-\u1FFF]|[\u200C-\u200D]
+                                             |[\u2070-\u218F]|[\u2C00-\u2FEF]|[\u3001-\uD7FF]
+                                             |[\uF900-\uFDCF]|[\uFDF0-\uFFFD]
+                                             |[\U00010000-\U000EFFFF]""")
+  assert $NameStartChar == r"[\x3AA-Z\x5Fa-z\xC0-\xD6\xD8-\xF6\u00F8-\u02FF\u0370-\u037D\u037F-\u1FFF\u200C-\u200D\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD\U00010000-\U000EFFFF]"
+
 
 
 test "RegExp, simple test":

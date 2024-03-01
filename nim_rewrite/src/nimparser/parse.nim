@@ -1089,23 +1089,21 @@ type
     compare:  proc(s: string, pos: int32, cmp: string): bool
 
 proc cmpIgnoreCaseAscii(s: string, pos: int32, cmp: string): bool =
-  cmpIgnoreCase(s[pos ..< cmp.len], cmp) == 0
-  # for i in 0..<cmp.len:
-  #   if cmp[i] != s[pos + i].toLowerAscii:
-  #     return false
-  # return true
+  for i in 0..<cmp.len:
+    if cmp[i] != s[pos + i].toLowerAscii:
+      return false
+  return true
 
 proc cmpIgnoreCaseUnicode(s: string, pos: int32, cmp: string): bool =
-  cmpRunesIgnoreCase(s[pos ..< cmp.len], cmp) == 0
-  # var
-  #   i = pos
-  #   r: Rune
-  #
-  # for c in cmp.runes:
-  #   s.fastRuneAt(i, r)
-  #   if not (c == r.toLower):
-  #     return false
-  # return true
+  var
+    i = pos
+    r: Rune
+
+  for c in cmp.runes:
+    s.fastRuneAt(i, r)
+    if not (c == r.toLower):
+      return false
+  return true
 
 proc init*(ignoreCaseParser: IgnoreCaseRef, text: string): IgnoreCaseRef =
   assert text.len <= MaxTextLen
@@ -1422,35 +1420,36 @@ proc cr*(s: string): CharRangeRef =
     result = rs(s[k ..< i])
     i += 1
 
-  if s[0] == '[':
-    runes = parseRuneSet()
-  elif s[0] != '(':
+  if s[0] notin "([":
     runes = rs(s)
     i = s.len
   else:
-    assert s[0] == '('
-    assert s.len > 2
-    if s[1] != '[':
+    if s[0] == '(':
+      assert s.len > 2
+      i += 1
+    if s[i] != '[':
       while i < s.len and s[i] != ')':  i += 1
       assert i < s.len
       runes = rs(s[1 ..< i])
       i += 1
     else:
       var sign = ' '
-      i = 1
       while i < s.len and s[i] != ')':
+        while i < s.len and s[i] in " \n":  i += 1
         if s[i] == '-':
           assert sign != '-'
           sign = '-'
           i += 1
         elif s[i] == '|':
           i += 1
+        while i < s.len and s[i] in " \n":  i += 1
         if sign == '-':
           runes = runes - parseRuneSet()
         else:
           runes = runes + parseRuneSet()
-      assert i < s.len
-      i += 1
+      if i < s.len:
+        assert s[i] == ')'
+        i += 1
   if i < s.len: repetition = s[i .. ^1]
   CharRange(runes, repetition)
 
@@ -1487,28 +1486,37 @@ method parse*(self: CharRangeRef, location: int32): ParsingResult =
     document.buf[].fastRuneAt(pos, r)
     if negate xor (inRuneRange(r, ranges) < 0):
       return (nil, location)
+  var lastPos = pos
   for i in self.repetitions.min ..< self.repetitions.max:
     if pos >= L:
       break
     document.buf[].fastRuneAt(pos, r)
     if negate xor (inRuneRange(r, ranges) < 0):
       break
-  return (newNode(self.nodeName, document.cut(location ..< pos)), pos)
+    lastPos = pos
+  return (newNode(self.nodeName, document.cut(location ..< lastPos)), lastPos)
 
 method `$`*(self: CharRangeRef): string =
-  proc hexlen(r: Rune): int8 =
+  proc hexlen(r: Rune): (int8, string) =
     let i = r.int32
-    if i < 1 shl 8: return 2
-    elif i < 1 shl 16:  return 4
-    else: return 8
+    if i < 1 shl 8: return (2, r"\x")
+    elif i < 1 shl 16:  return (4, r"\u")
+    else: return (8, r"\U")
+
+  proc isAlphaNum(rr: RuneRange): bool =
+    proc isIn(a, b, x, y: int32): bool =
+      a >= x and a <= y and b >= x and b <= y
+    let
+      a = rr.low.int32
+      b = rr.high.int32
+    isIn(a, b, 48, 57) or isIn(a, b, 65, 90) or isIn(a, b, 97, 122)
 
   var s: seq[string] = newSeqOfCap[string](len(self.runes.ranges) + 2)
   s.add("[")
   if self.runes.negate:
     s.add("^")
   for rr in self.runes.ranges:
-    if rr.low.int32 >= 32 and rr.low.int32 < 127 and
-        rr.high.int32 >= 32 and rr.high.int32 < 127:
+    if isAlphaNum(rr):
       let low = chr(rr.low.int8)
       if rr.low == rr.high:
         s.add(fmt"{low}")
@@ -1516,11 +1524,11 @@ method `$`*(self: CharRangeRef): string =
         let high = chr(rr.high.int8)
         s.add(fmt"{low}-{high}")
     else:
-      let l = hexlen(rr.high)
+      let (l, marker) = hexlen(rr.high)
       if rr.low == rr.high:
-        s.add(r"\x" & toHex(rr.low.int32, l))
+        s.add(marker & toHex(rr.low.int32, l))
       else:
-        s.add(r"\x" & toHex(rr.low.int32, l) & "-" & toHex(rr.high.int32, l))
+        s.add(marker & toHex(rr.low.int32, l) & "-" & marker & toHex(rr.high.int32, l))
   s.add("]")
   let rp = self.repetitions
   s.add(if rp == (0'u32, 1'u32): "?"

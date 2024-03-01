@@ -96,9 +96,11 @@ let PubidChars  = "PubidChars" ::=    rxp"(?:\x20|\x0D|\x0A|[a-zA-Z0-9]|[-'()+,.
 let CharData    = "CharData" ::=      rxp"(?:(?!\]\]>)[^<&])+"
 let CData       = "CData" ::=         rxp"(?:(?!\]\]>)(?:\x09|\x0A|\x0D|[\u0020-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF]))+"
 
-let PIChars     = "PIChars" ::=       rxp"(?:(?!\?>)(?:\x09|\x0A|\x0D|[\u0020-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF]))+"
-let CommentChars = "CommentChars" ::= rxp"(?:(?!-)(?:\x09|\x0A|\x0D|[\u0020-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF]))+"
-# let CommentChars = "CommentChars" ::= +(rxp"(?:(?!-)(?:\x09|\x0A|\x0D|[\u0020-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF])){1,100}")
+# let PIChars     = "PIChars" ::=       rxp"(?:(?!\?>)(?:\x09|\x0A|\x0D|[\u0020-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF]))+"
+let PIChars     = "PIChars" ::=       *(cr"(\x09|\x0A|\x0D|[\u0020-\u003E]|[\u0040-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF])+" | rxp"\?(?!>)")
+# let CommentChars = "CommentChars" ::= rxp"(?:(?!-)(?:\x09|\x0A|\x0D|[\u0020-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF]))+"
+# let CommentChars = "CommentChars" ::= rxp"(?:\x09|\x0A|\x0D|[\u0020-\u002C]|[\u002E-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF])+"
+let CommentChars = "CommentChars" ::= cr"(\x09|\x0A|\x0D|[\u0020-\u002C]|[\u002E-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF])+"
 let CharRef     = "CharRef" ::=       (txt"&#" & rxp"[0-9]+" & txt";") | (txt"&#x" & rxp"[0-9a-fA-F]+" & txt";")
 
 let S           = "S" ::=             rxp"\s+"
@@ -135,6 +137,13 @@ when isMainModule:
   #   if d.endsWith("/DHParser"):
   #     setCurrentDir(Path("nim_rewrite/examples"))
   #   let source = readFile("K.html")
+
+  # echo "+++"
+  # let tst = Comment("""<!-- abc -->""")
+  # echo tst.root.asSxpr
+  # echo $tst.errors
+  # echo $Comment
+  # echo "+++"
 
   echo $source.len
   let res = document(source)
