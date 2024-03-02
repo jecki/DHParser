@@ -2,6 +2,7 @@ import std/[paths, strutils]
 when not defined(js):
   import std/[dirs]
 
+# import nimprof
 
 import "../src/nimparser/error"
 import "../src/nimparser/nodetree"
@@ -90,10 +91,10 @@ let CDSect      = "CDSect" ::=        txt"<![CDATA[" & CData & txt"]]>"
 
 # characters, explicit whitespace, end of file
 
-let PubidCharsSingleQuoted = "PubidCharsSingleQuoted" ::= rxp"(?:\x20|\x0D|\x0A|[a-zA-Z0-9]|[-()+,.\/:=?;!*#@$_%])+"
-let PubidChars  = "PubidChars" ::=    rxp"(?:\x20|\x0D|\x0A|[a-zA-Z0-9]|[-'()+,.\/:=?;!*#@$_%])+"
+let PubidCharsSingleQuoted = "PubidCharsSingleQuoted" ::= cr"([\x20\x0D\x0A]|[a-zA-Z0-9]|[-()+,.\/:=?;!*#@$_%])+"
+let PubidChars  = "PubidChars" ::=    cr"([\x20\x0D\x0A]|[a-zA-Z0-9]|[-'()+,.\/:=?;!*#@$_%])+"
 
-let CharData    = "CharData" ::=      rxp"(?:(?!\]\]>)[^<&])+"
+let CharData    = "CharData" ::=      +(cr"[^<&\]]" | +(>>!(txt"]]>") & txt"]"))   # rxp"(?:(?!\]\]>)[^<&])+"
 let CData       = "CData" ::=         rxp"(?:(?!\]\]>)(?:\x09|\x0A|\x0D|[\u0020-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF]))+"
 
 # let PIChars     = "PIChars" ::=       rxp"(?:(?!\?>)(?:\x09|\x0A|\x0D|[\u0020-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF]))+"

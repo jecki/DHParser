@@ -1431,7 +1431,7 @@ proc cr*(s: string): CharRangeRef =
     assert i < s.len
     assert s[i] == '[', $i
     let k = i + 1
-    while i < s.len and s[i] != ']':  i += 1
+    while i < s.len and (s[i] != ']' or (i > 0 and s[i-1] == '\\')):  i += 1
     assert i < s.len
     result = rs(s[k ..< i])
     i += 1
