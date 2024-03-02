@@ -94,17 +94,15 @@ let CDSect      = "CDSect" ::=        txt"<![CDATA[" & CData & txt"]]>"
 let PubidCharsSingleQuoted = "PubidCharsSingleQuoted" ::= cr"([\x20\x0D\x0A]|[a-zA-Z0-9]|[-()+,.\/:=?;!*#@$_%])+"
 let PubidChars  = "PubidChars" ::=    cr"([\x20\x0D\x0A]|[a-zA-Z0-9]|[-'()+,.\/:=?;!*#@$_%])+"
 
-let CharData    = "CharData" ::=      +(cr"[^<&\]]" | +(>>!(txt"]]>") & txt"]"))   # rxp"(?:(?!\]\]>)[^<&])+"
-let CData       = "CData" ::=         rxp"(?:(?!\]\]>)(?:\x09|\x0A|\x0D|[\u0020-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF]))+"
+let CharData    = "CharData" ::=      +(cr"[^<&\]]+" | +(>>!(txt"]]>") & txt"]"))
+let CData       = "CData" ::=         +(cr"([\x09\x0A\x0D]|[\u0020-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF])+" | +(>>!(txt"]]>") & txt"]"))
 
-# let PIChars     = "PIChars" ::=       rxp"(?:(?!\?>)(?:\x09|\x0A|\x0D|[\u0020-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF]))+"
-let PIChars     = "PIChars" ::=       *(cr"(\x09|\x0A|\x0D|[\u0020-\u003E]|[\u0040-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF])+" | rxp"\?(?!>)")
-# let CommentChars = "CommentChars" ::= rxp"(?:(?!-)(?:\x09|\x0A|\x0D|[\u0020-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF]))+"
-# let CommentChars = "CommentChars" ::= rxp"(?:\x09|\x0A|\x0D|[\u0020-\u002C]|[\u002E-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF])+"
-let CommentChars = "CommentChars" ::= cr"(\x09|\x0A|\x0D|[\u0020-\u002C]|[\u002E-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF])+"
-let CharRef     = "CharRef" ::=       (txt"&#" & rxp"[0-9]+" & txt";") | (txt"&#x" & rxp"[0-9a-fA-F]+" & txt";")
 
-let S           = "S" ::=             rxp"\s+"
+let PIChars     = "PIChars" ::=       *(cr"([\x09\x0A\x0D]|[\u0020-\u003E]|[\u0040-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF])+" | rxp"\?(?!>)")
+let CommentChars = "CommentChars" ::= cr"([\x09\x0A\x0D]|[\u0020-\u002C]|[\u002E-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF])+"
+let CharRef     = "CharRef" ::=       (txt"&#" & cr"[0-9]+" & txt";") | (txt"&#x" & cr"[0-9a-fA-F]+" & txt";")
+
+let S           = "S" ::=             cr"[\s]+"
 let WS          = ":WS" ::=           Drop(Whitespace(r"\s*", ""))  # Drop
 let EOF         = "EOF" ::=           >>! rxp"."
 
@@ -149,7 +147,7 @@ when isMainModule:
   echo $source.len
   let res = document(source)
   echo "---"
-  echo res.root.asSxpr()
+  # echo res.root.asSxpr()
   echo "---"
   for e in res.errors:
     echo $e

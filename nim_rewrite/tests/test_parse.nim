@@ -139,7 +139,8 @@ test "CharRange":
   s = cr"\n"
   assert $s == r"[\x0A]"
   s = cr"[^<&\]]"
-  assert s == r"[^\x26\x3C\x5D]"
+  assert $s == r"[^\x26\x3C\x5D]"
+  # s = cr"[^]"
 
 test "RegExp, simple test":
   check RegExp(rx"\w+")("ABC").root.asSxpr() == "(:RegExp \"ABC\")"
