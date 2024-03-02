@@ -1657,6 +1657,7 @@ method parse*(self: WhitespaceRef, location: int32): ParsingResult =
     import nodetree, regex
     doAssert Whitespace(r"\s+", r"#.*")("   # comment").root.asSxpr == "(:Whitespace \"   # comment\")"
 
+  # TODO: avoid using regular expressions, here!!!
   var l = matchLen(self.grammar.document, self.combined.regex, location)
   var capture: StringSlice
   if l >= 0:
