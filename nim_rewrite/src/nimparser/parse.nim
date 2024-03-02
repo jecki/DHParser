@@ -265,7 +265,7 @@ proc assignName(name: string, parser: Parser): Parser =
     else:
       assert name[0..3] == "HIDE"
       parser.flags.incl isDisposable
-    parser.nodeName[] = name[4..^1]
+    parser.nodeName[] = name[5..^1]  # TODO: [4..^1]?
     parser.pname = name[5..^1]
   else:
     # assert parser.ptype != ":Whitespace",
