@@ -11,7 +11,7 @@ import collections
 from functools import partial
 import os
 import sys
-from typing import Tuple, List, Union, Any, Optional, Callable, Set
+from typing import Tuple, List, Union, Any, Optional, Callable, Set, Dict
 
 try:
     scriptpath = os.path.dirname(__file__)
@@ -19,6 +19,8 @@ except NameError:
     scriptpath = ''
 if scriptpath and scriptpath not in sys.path:
     sys.path.append(scriptpath)
+
+sys.path.append('../../')
 
 try:
     import regex as re
@@ -28,7 +30,8 @@ from DHParser.compile import Compiler, compile_source
 from DHParser.pipeline import full_pipeline, Junction, PseudoJunction, create_preprocess_junction, \
     create_parser_junction, create_junction
 from DHParser.configuration import set_config_value, get_config_value, access_thread_locals, \
-    access_presets, finalize_presets, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN
+    access_presets, finalize_presets, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN, \
+    add_config_values
 from DHParser import dsl
 from DHParser.dsl import recompile_grammar, never_cancel, PseudoJunction
 from DHParser.ebnf import grammar_changed
@@ -106,8 +109,7 @@ class HTMLGrammar(Grammar):
     element = Forward()
     source_hash__ = "9b70f0daaa3f3dcf69ea1280e36546a2"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile(
-        '(?:$.)|(?:BOM$|PubidChars$|tagContent$|VersionNum$|CommentChars$|Misc$|PubidCharsSingleQuoted$|EncName$|CData$|NameStartChar$|EOF$|prolog$|Reference$|NameChars$)')
+    disposable__ = re.compile('(?:$.)|(?:PubidChars$|CData$|Reference$|EOF$|prolog$|EncName$|PubidCharsSingleQuoted$|Misc$|NameStartChar$|VersionNum$|BOM$|tagContent$|CommentChars$|NameChars$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'tagContent': [('', "syntax error in tag-name of opening or empty tag:  {1}")],
@@ -121,71 +123,42 @@ class HTMLGrammar(Grammar):
     dwsp__ = Drop(Whitespace(WSP_RE__))
     EOF = Drop(NegativeLookahead(RegExp('(?i).')))
     S = RegExp('(?i)\\s+')
-    CharRef = Alternative(Series(Drop(IgnoreCase('&#')), RegExp('(?i)[0-9]+'), Drop(IgnoreCase(';'))),
-                          Series(Drop(IgnoreCase('&#x')), RegExp('(?i)[0-9a-fA-F]+'), Drop(IgnoreCase(';'))))
-    CommentChars = RegExp(
-        '(?i)(?:(?!-)(?:\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-\\U0010FFFF]))+')
-    PIChars = RegExp(
-        '(?i)(?:(?!\\?>)(?:\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-\\U0010FFFF]))+')
-    CData = RegExp(
-        '(?i)(?:(?!\\]\\]>)(?:\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-\\U0010FFFF]))+')
+    CharRef = Alternative(Series(Drop(IgnoreCase('&#')), RegExp('(?i)[0-9]+'), Drop(IgnoreCase(';'))), Series(Drop(IgnoreCase('&#x')), RegExp('(?i)[0-9a-fA-F]+'), Drop(IgnoreCase(';'))))
+    CommentChars = RegExp('(?i)(?:(?!-)(?:\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-\\U0010FFFF]))+')
+    PIChars = RegExp('(?i)(?:(?!\\?>)(?:\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-\\U0010FFFF]))+')
+    CData = RegExp('(?i)(?:(?!\\]\\]>)(?:\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-\\U0010FFFF]))+')
     CharData = RegExp('(?i)(?:(?!\\]\\]>)[^<&])+')
     PubidChars = RegExp("(?i)(?:\\x20|\\x0D|\\x0A|[a-zA-Z0-9]|[-'()+,./:=?;!*#@$_%])+")
     PubidCharsSingleQuoted = RegExp('(?i)(?:\\x20|\\x0D|\\x0A|[a-zA-Z0-9]|[-()+,./:=?;!*#@$_%])+')
     CDSect = Series(Drop(IgnoreCase('<![CDATA[')), CData, Drop(IgnoreCase(']]>')))
-    NameStartChar = RegExp(
-        '(?ix)_|:|[A-Z]|[a-z]\n                   |[\\u00C0-\\u00D6]|[\\u00D8-\\u00F6]|[\\u00F8-\\u02FF]\n                   |[\\u0370-\\u037D]|[\\u037F-\\u1FFF]|[\\u200C-\\u200D]\n                   |[\\u2070-\\u218F]|[\\u2C00-\\u2FEF]|[\\u3001-\\uD7FF]\n                   |[\\uF900-\\uFDCF]|[\\uFDF0-\\uFFFD]\n                   |[\\U00010000-\\U000EFFFF]')
-    NameChars = RegExp(
-        '(?ix)(?:_|:|-|\\.|[A-Z]|[a-z]|[0-9]\n                   |\\u00B7|[\\u0300-\\u036F]|[\\u203F-\\u2040]\n                   |[\\u00C0-\\u00D6]|[\\u00D8-\\u00F6]|[\\u00F8-\\u02FF]\n                   |[\\u0370-\\u037D]|[\\u037F-\\u1FFF]|[\\u200C-\\u200D]\n                   |[\\u2070-\\u218F]|[\\u2C00-\\u2FEF]|[\\u3001-\\uD7FF]\n                   |[\\uF900-\\uFDCF]|[\\uFDF0-\\uFFFD]\n                   |[\\U00010000-\\U000EFFFF])+')
-    Comment = Series(Drop(IgnoreCase('<!--')), ZeroOrMore(Alternative(CommentChars, RegExp('(?i)-(?!-)'))), dwsp__,
-                     Drop(IgnoreCase('-->')))
+    NameStartChar = RegExp('(?xi)_|:|[A-Z]|[a-z]\n                   |[\\u00C0-\\u00D6]|[\\u00D8-\\u00F6]|[\\u00F8-\\u02FF]\n                   |[\\u0370-\\u037D]|[\\u037F-\\u1FFF]|[\\u200C-\\u200D]\n                   |[\\u2070-\\u218F]|[\\u2C00-\\u2FEF]|[\\u3001-\\uD7FF]\n                   |[\\uF900-\\uFDCF]|[\\uFDF0-\\uFFFD]\n                   |[\\U00010000-\\U000EFFFF]')
+    NameChars = RegExp('(?xi)(?:_|:|-|\\.|[A-Z]|[a-z]|[0-9]\n                   |\\u00B7|[\\u0300-\\u036F]|[\\u203F-\\u2040]\n                   |[\\u00C0-\\u00D6]|[\\u00D8-\\u00F6]|[\\u00F8-\\u02FF]\n                   |[\\u0370-\\u037D]|[\\u037F-\\u1FFF]|[\\u200C-\\u200D]\n                   |[\\u2070-\\u218F]|[\\u2C00-\\u2FEF]|[\\u3001-\\uD7FF]\n                   |[\\uF900-\\uFDCF]|[\\uFDF0-\\uFFFD]\n                   |[\\U00010000-\\U000EFFFF])+')
+    Comment = Series(Drop(IgnoreCase('<!--')), ZeroOrMore(Alternative(CommentChars, RegExp('(?i)-(?!-)'))), dwsp__, Drop(IgnoreCase('-->')))
     Name = Series(NameStartChar, Option(NameChars))
     PITarget = Series(NegativeLookahead(RegExp('(?i)X|xM|mL|l')), Name)
     PI = Series(Drop(IgnoreCase('<?')), PITarget, Option(Series(dwsp__, PIChars)), Drop(IgnoreCase('?>')))
     Misc = OneOrMore(Alternative(Comment, PI, S))
     EntityRef = Series(Drop(IgnoreCase('&')), Name, Drop(IgnoreCase(';')))
     Reference = Alternative(EntityRef, CharRef)
-    PubidLiteral = Alternative(Series(Drop(IgnoreCase('"')), Option(PubidChars), Drop(IgnoreCase('"'))),
-                               Series(Drop(IgnoreCase("\'")), Option(PubidCharsSingleQuoted), Drop(IgnoreCase("\'"))))
-    SystemLiteral = Alternative(Series(Drop(IgnoreCase('"')), RegExp('(?i)[^"]*'), Drop(IgnoreCase('"'))),
-                                Series(Drop(IgnoreCase("\'")), RegExp("(?i)[^']*"), Drop(IgnoreCase("\'"))))
-    AttValue = Alternative(
-        Series(Drop(IgnoreCase('"')), ZeroOrMore(Alternative(RegExp('(?i)[^<&"]+'), Reference)), Drop(IgnoreCase('"'))),
-        Series(Drop(IgnoreCase("\'")), ZeroOrMore(Alternative(RegExp("(?i)[^<&']+"), Reference)),
-               Drop(IgnoreCase("\'"))), ZeroOrMore(Alternative(RegExp("(?i)[^<&'>\\s]+"), Reference)))
-    content = Series(Option(CharData),
-                     ZeroOrMore(Series(Alternative(element, Reference, CDSect, PI, Comment), Option(CharData))))
+    PubidLiteral = Alternative(Series(Drop(IgnoreCase('"')), Option(PubidChars), Drop(IgnoreCase('"'))), Series(Drop(IgnoreCase("\'")), Option(PubidCharsSingleQuoted), Drop(IgnoreCase("\'"))))
+    SystemLiteral = Alternative(Series(Drop(IgnoreCase('"')), RegExp('(?i)[^"]*'), Drop(IgnoreCase('"'))), Series(Drop(IgnoreCase("\'")), RegExp("(?i)[^']*"), Drop(IgnoreCase("\'"))))
+    AttValue = Alternative(Series(Drop(IgnoreCase('"')), ZeroOrMore(Alternative(RegExp('(?i)[^<&"]+'), Reference)), Drop(IgnoreCase('"'))), Series(Drop(IgnoreCase("\'")), ZeroOrMore(Alternative(RegExp("(?i)[^<&']+"), Reference)), Drop(IgnoreCase("\'"))), ZeroOrMore(Alternative(RegExp("(?i)[^<&'>\\s]+"), Reference)))
+    content = Series(Option(CharData), ZeroOrMore(Series(Alternative(element, Reference, CDSect, PI, Comment), Option(CharData))))
     Attribute = Series(Name, dwsp__, Drop(IgnoreCase('=')), dwsp__, AttValue, mandatory=2)
     ETag = Series(Drop(IgnoreCase('</')), Name, dwsp__, Drop(IgnoreCase('>')), mandatory=1)
-    tagContent = Series(NegativeLookahead(RegExp('(?i)[/!?]')), Name, ZeroOrMore(Series(dwsp__, Attribute)), dwsp__,
-                        Lookahead(Alternative(Drop(IgnoreCase('>')), Drop(IgnoreCase('/>')))), mandatory=1)
+    tagContent = Series(NegativeLookahead(RegExp('(?i)[/!?]')), Name, ZeroOrMore(Series(dwsp__, Attribute)), dwsp__, Lookahead(Alternative(Drop(IgnoreCase('>')), Drop(IgnoreCase('/>')))), mandatory=1)
     STag = Series(Drop(IgnoreCase('<')), tagContent, Drop(IgnoreCase('>')))
-    voidElement = Series(Drop(IgnoreCase('<')), Lookahead(
-        Alternative(Drop(IgnoreCase('area')), Drop(IgnoreCase('base')), Drop(IgnoreCase('br')), Drop(IgnoreCase('col')),
-                    Drop(IgnoreCase('embed')), Drop(IgnoreCase('hr')), Drop(IgnoreCase('img')),
-                    Drop(IgnoreCase('input')), Drop(IgnoreCase('link')), Drop(IgnoreCase('meta')),
-                    Drop(IgnoreCase('param')), Drop(IgnoreCase('source')), Drop(IgnoreCase('track')),
-                    Drop(IgnoreCase('wbr')))), tagContent, Drop(IgnoreCase('>')))
+    voidElement = Series(Drop(IgnoreCase('<')), Lookahead(Alternative(Drop(IgnoreCase('area')), Drop(IgnoreCase('base')), Drop(IgnoreCase('br')), Drop(IgnoreCase('col')), Drop(IgnoreCase('embed')), Drop(IgnoreCase('hr')), Drop(IgnoreCase('img')), Drop(IgnoreCase('input')), Drop(IgnoreCase('link')), Drop(IgnoreCase('meta')), Drop(IgnoreCase('param')), Drop(IgnoreCase('source')), Drop(IgnoreCase('track')), Drop(IgnoreCase('wbr')))), tagContent, Drop(IgnoreCase('>')))
     emptyElement = Series(Drop(IgnoreCase('<')), tagContent, Drop(IgnoreCase('/>')))
     BOM = Drop(RegExp('(?i)[\\ufeff]|[\\ufffe]|[\\u0000feff]|[\\ufffe0000]'))
-    ExternalID = Alternative(Series(Drop(IgnoreCase('SYSTEM')), dwsp__, SystemLiteral, mandatory=1),
-                             Series(Drop(IgnoreCase('PUBLIC')), dwsp__, PubidLiteral, dwsp__, SystemLiteral,
-                                    mandatory=1))
-    doctypedecl = Series(Drop(IgnoreCase('<!DOCTYPE')), dwsp__, Name, Option(Series(dwsp__, ExternalID)), dwsp__,
-                         Drop(IgnoreCase('>')), mandatory=2)
-    SDDecl = Series(dwsp__, Drop(IgnoreCase('standalone')), dwsp__, Drop(IgnoreCase('=')), dwsp__, Alternative(
-        Series(Drop(IgnoreCase("\'")), Alternative(IgnoreCase("yes"), IgnoreCase("no")), Drop(IgnoreCase("\'"))),
-        Series(Drop(IgnoreCase('"')), Alternative(IgnoreCase("yes"), IgnoreCase("no")), Drop(IgnoreCase('"')))))
+    ExternalID = Alternative(Series(Drop(IgnoreCase('SYSTEM')), dwsp__, SystemLiteral, mandatory=1), Series(Drop(IgnoreCase('PUBLIC')), dwsp__, PubidLiteral, dwsp__, SystemLiteral, mandatory=1))
+    doctypedecl = Series(Drop(IgnoreCase('<!DOCTYPE')), dwsp__, Name, Option(Series(dwsp__, ExternalID)), dwsp__, Drop(IgnoreCase('>')), mandatory=2)
+    SDDecl = Series(dwsp__, Drop(IgnoreCase('standalone')), dwsp__, Drop(IgnoreCase('=')), dwsp__, Alternative(Series(Drop(IgnoreCase("\'")), Alternative(IgnoreCase("yes"), IgnoreCase("no")), Drop(IgnoreCase("\'"))), Series(Drop(IgnoreCase('"')), Alternative(IgnoreCase("yes"), IgnoreCase("no")), Drop(IgnoreCase('"')))))
     EncName = RegExp('(?i)[A-Za-z][A-Za-z0-9._\\-]*')
-    EncodingDecl = Series(dwsp__, Drop(IgnoreCase('encoding')), dwsp__, Drop(IgnoreCase('=')), dwsp__,
-                          Alternative(Series(Drop(IgnoreCase("\'")), EncName, Drop(IgnoreCase("\'"))),
-                                      Series(Drop(IgnoreCase('"')), EncName, Drop(IgnoreCase('"')))))
+    EncodingDecl = Series(dwsp__, Drop(IgnoreCase('encoding')), dwsp__, Drop(IgnoreCase('=')), dwsp__, Alternative(Series(Drop(IgnoreCase("\'")), EncName, Drop(IgnoreCase("\'"))), Series(Drop(IgnoreCase('"')), EncName, Drop(IgnoreCase('"')))))
     VersionNum = RegExp('(?i)[0-9]+\\.[0-9]+')
-    VersionInfo = Series(dwsp__, Drop(IgnoreCase('version')), dwsp__, Drop(IgnoreCase('=')), dwsp__,
-                         Alternative(Series(Drop(IgnoreCase("\'")), VersionNum, Drop(IgnoreCase("\'"))),
-                                     Series(Drop(IgnoreCase('"')), VersionNum, Drop(IgnoreCase('"')))))
-    XMLDecl = Series(Drop(IgnoreCase('<?xml')), VersionInfo, Option(EncodingDecl), Option(SDDecl), dwsp__,
-                     Drop(IgnoreCase('?>')), mandatory=1)
+    VersionInfo = Series(dwsp__, Drop(IgnoreCase('version')), dwsp__, Drop(IgnoreCase('=')), dwsp__, Alternative(Series(Drop(IgnoreCase("\'")), VersionNum, Drop(IgnoreCase("\'"))), Series(Drop(IgnoreCase('"')), VersionNum, Drop(IgnoreCase('"')))))
+    XMLDecl = Series(Drop(IgnoreCase('<?xml')), VersionInfo, Option(EncodingDecl), Option(SDDecl), dwsp__, Drop(IgnoreCase('?>')), mandatory=1)
     prolog = Series(Option(Series(dwsp__, XMLDecl)), Option(Misc), Option(Series(doctypedecl, Option(Misc))))
     element.set(Alternative(emptyElement, voidElement, Series(STag, content, ETag, mandatory=2)))
     document = Series(Option(BOM), prolog, element, Option(Misc), EOF, mandatory=2)
@@ -223,7 +196,7 @@ class HTMLTransformer(Compiler):
     """
     def __init__(self):
         super().__init__()
-        self.cleanup_whitespace = True  # remove empty CharData from mixed elements
+        self.cleanup_whitespace = not get_config_value("HTML.preserve_whitespace", False)  # remove empty CharData from mixed elements
         self.expendables = {'PI', 'CDSect', 'doctypedecl'}
 
     def reset(self):
@@ -420,8 +393,9 @@ def compile_HTML(ast):
 RESULT_FILE_EXTENSION = ".sxpr"  # Change this according to your needs!
 
 
-def compile_src(source: str) -> Tuple[Any, List[Error]]:
+def compile_src(source: str, cfg: Dict={}) -> Tuple[Any, List[Error]]:
     """Compiles ``source`` and returns (result, errors)."""
+    add_config_values(cfg)
     result_tuple = compile_source(source, get_preprocessor(), get_grammar(),
                                   get_transformer(), get_compiler())
     return result_tuple[:2]  # drop the AST at the end of the result tuple
@@ -439,7 +413,7 @@ def serialize_result(result: Any) -> Union[str, bytes]:
         return repr(result)
 
 
-def process_file(source: str, result_filename: str = '') -> str:
+def process_file(source: str, result_filename: str = '', cfg: Dict={}) -> str:
     """Compiles the source and writes the serialized results back to disk,
     unless any fatal errors have occurred. Error and Warning messages are
     written to a file with the same name as `result_filename` with an
@@ -448,7 +422,7 @@ def process_file(source: str, result_filename: str = '') -> str:
     string, if no errors of warnings occurred.
     """
     source_filename = source if is_filename(source) else ''
-    result, errors = compile_src(source)
+    result, errors = compile_src(source, cfg)
     if not has_errors(errors, FATAL):
         if os.path.abspath(source_filename) != os.path.abspath(result_filename):
             with open(result_filename, 'w', encoding='utf-8') as f:
@@ -465,7 +439,7 @@ def process_file(source: str, result_filename: str = '') -> str:
     return ''
 
 
-def batch_process(file_names: List[str], out_dir: str,
+def batch_process(file_names: List[str], out_dir: str, cfg: Dict={},
                   *, submit_func: Callable = None,
                   log_func: Callable = None) -> List[str]:
     """Compiles all files listed in filenames and writes the results and/or
@@ -483,7 +457,7 @@ def batch_process(file_names: List[str], out_dir: str,
         err_futures = []
         for name in file_names:
             dest_name = gen_dest_name(name)
-            err_futures.append(submit_func(process_file, name, dest_name))
+            err_futures.append(submit_func(process_file, name, dest_name, cfg))
         for file_name, err_future in zip(file_names, err_futures):
             error_filename = err_future.result()
             if log_func:
@@ -550,6 +524,8 @@ if __name__ == "__main__":
                            help='Format result as indented tree')
     outformat.add_argument('-j', '--json', action='store_const', const='json',
                            help='Format result as JSON')
+    outformat.add_argument('-w', '--whitespace', action='store_const', const='whitespace',
+                           help='Preserve all whitespaces and linefeeds')
 
     args = parser.parse_args()
     file_names, out, log_dir = args.files, args.out[0], ''
@@ -567,6 +543,7 @@ if __name__ == "__main__":
         set_preset_value('history_tracking', True)
         set_preset_value('resume_notices', True)
         set_preset_value('log_syntax_trees', frozenset(['cst', 'ast']))  # don't use a set literal, here!
+        set_preset_value('HTML.preserve_whitespace', bool(args.whitespace))
         finalize_presets()
     start_logging(log_dir)
 
@@ -618,4 +595,7 @@ if __name__ == "__main__":
         elif args.tree:  outfmt = 'tree'
         elif args.json:  outfmt = 'json'
         else:  outfmt = 'default'
-        print(result.serialize(how=outfmt) if isinstance(result, Node) else result)
+        if outfmt == 'xml' and get_config_value('HTML.preserve_whitespace', False):
+            print(result.as_xml(inline_tags={result.name}))
+        else:
+            print(result.serialize(how=outfmt) if isinstance(result, Node) else result)
