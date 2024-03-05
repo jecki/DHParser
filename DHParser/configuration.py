@@ -49,6 +49,7 @@ __all__ = ('ALLOWED_PRESET_VALUES',
            'get_config_value',
            'get_config_values',
            'set_config_value',
+           'add_config_values',
            'NEVER_MATCH_PATTERN')
 
 
@@ -325,7 +326,7 @@ def get_config_value(key: str, default: Any = NO_DEFAULT) -> Any:
             return value
 
 
-def get_config_values(key_pattern: str) -> Dict:
+def get_config_values(key_pattern: str = "*") -> Dict:
     """Returns a dictionary of all configuration entries that match
     `key_pattern`."""
     access_presets()
@@ -334,8 +335,11 @@ def get_config_values(key_pattern: str) -> Dict:
     import fnmatch
     with access_lock:
         cfg = _config_dict()
-        cfg_values = {key: value for key, value in cfg.items()
-                      if fnmatch.fnmatchcase(key, key_pattern)}
+        if key_pattern == "*":
+            cfg_values = cfg
+        else:
+            cfg_values = {key: value for key, value in cfg.items()
+                          if fnmatch.fnmatchcase(key, key_pattern)}
         presets.update(cfg_values)
         cfg.update(presets)
     return presets
@@ -363,6 +367,17 @@ def set_config_value(key: str, value: Any, allow_new_key: bool = False):
                 print(f'Deprecation Warning: Key {oldkey} has been renamed to {key}!')
         validate_value(key, value)
         cfg[key] = value
+
+
+def add_config_values(configuration: dict):
+    """
+    Adds (or overwrites) new configuration values.
+    :param configuration: additional configuration values
+    """
+    with access_lock:
+        cfg = _config_dict()
+        cfg.update(configuration)
+
 
 
 ########################################################################

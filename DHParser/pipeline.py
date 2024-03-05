@@ -224,7 +224,7 @@ def full_pipeline(source: str,
     to "run_pipeline()" which starts from any tree-stage, typically, from
     the concrete syntax-tree (CST).
 
-    "full_pipeline()" preprocesses and compiles ther source-document,
+    "full_pipeline()" preprocesses and compiles the source-document,
     first. And then it post-processes the source into the given target stages.
     Mind that if there are fatal errors earlier in the pipeline some or all
     target stages might not be reached and thus not be included in the result.

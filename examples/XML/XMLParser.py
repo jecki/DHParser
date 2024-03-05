@@ -11,7 +11,7 @@ import collections
 from functools import partial
 import os
 import sys
-from typing import Tuple, List, Union, Any, Optional, Callable, Set
+from typing import Tuple, List, Union, Any, Optional, Callable, Set, Dict
 
 try:
     scriptpath = os.path.dirname(__file__)
@@ -28,7 +28,8 @@ from DHParser.compile import Compiler, compile_source
 from DHParser.pipeline import full_pipeline, Junction, PseudoJunction, create_preprocess_junction, \
     create_parser_junction, create_junction
 from DHParser.configuration import set_config_value, get_config_value, access_thread_locals, \
-    access_presets, finalize_presets, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN
+    access_presets, finalize_presets, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN, \
+    add_config_values
 from DHParser import dsl
 from DHParser.dsl import recompile_grammar, never_cancel, PseudoJunction
 from DHParser.ebnf import grammar_changed
@@ -191,7 +192,7 @@ class XMLTransformer(Compiler):
     """
     def __init__(self):
         super().__init__()
-        self.cleanup_whitespace = True  # remove empty CharData from mixed elements
+        self.cleanup_whitespace = not get_config_value("XML.preserve_whitespace", False)  # remove empty CharData from mixed elements
         self.expendables = {'PI', 'CDSect', 'doctypedecl'}
 
     def reset(self):
@@ -388,8 +389,9 @@ def compile_XML(ast):
 RESULT_FILE_EXTENSION = ".sxpr"  # Change this according to your needs!
 
 
-def compile_src(source: str) -> Tuple[Any, List[Error]]:
+def compile_src(source: str, cfg: Dict={}) -> Tuple[Any, List[Error]]:
     """Compiles ``source`` and returns (result, errors)."""
+    add_config_values(cfg)
     result_tuple = compile_source(source, get_preprocessor(), get_grammar(), get_transformer(),
                                   get_compiler())
     return result_tuple[:2]  # drop the AST at the end of the result tuple
@@ -407,7 +409,7 @@ def serialize_result(result: Any) -> Union[str, bytes]:
         return repr(result)
 
 
-def process_file(source: str, result_filename: str = '') -> str:
+def process_file(source: str, result_filename: str = '', cfg: Dict={}) -> str:
     """Compiles the source and writes the serialized results back to disk,
     unless any fatal errors have occurred. Error and Warning messages are
     written to a file with the same name as `result_filename` with an
@@ -416,7 +418,7 @@ def process_file(source: str, result_filename: str = '') -> str:
     string, if no errors of warnings occurred.
     """
     source_filename = source if is_filename(source) else ''
-    result, errors = compile_src(source)
+    result, errors = compile_src(source, cfg)
     if not has_errors(errors, FATAL):
         if os.path.abspath(source_filename) != os.path.abspath(result_filename):
             with open(result_filename, 'w', encoding='utf-8') as f:
@@ -433,7 +435,7 @@ def process_file(source: str, result_filename: str = '') -> str:
     return ''
 
 
-def batch_process(file_names: List[str], out_dir: str,
+def batch_process(file_names: List[str], out_dir: str, cfg: Dict={},
                   *, submit_func: Callable = None,
                   log_func: Callable = None) -> List[str]:
     """Compiles all files listed in filenames and writes the results and/or
@@ -451,7 +453,7 @@ def batch_process(file_names: List[str], out_dir: str,
         err_futures = []
         for name in file_names:
             dest_name = gen_dest_name(name)
-            err_futures.append(submit_func(process_file, name, dest_name))
+            err_futures.append(submit_func(process_file, name, dest_name, cfg))
         for file_name, err_future in zip(file_names, err_futures):
             error_filename = err_future.result()
             if log_func:
@@ -518,6 +520,8 @@ if __name__ == "__main__":
                            help='Format result as indented tree')
     outformat.add_argument('-j', '--json', action='store_const', const='json',
                            help='Format result as JSON')
+    outformat.add_argument('-w', '--whitespace', action='store_const', const='whitespace',
+                           help='Preserve all whitespaces and linefeeds')
 
     args = parser.parse_args()
     file_names, out, log_dir = args.files, args.out[0], ''
@@ -535,6 +539,7 @@ if __name__ == "__main__":
         set_preset_value('history_tracking', True)
         set_preset_value('resume_notices', True)
         set_preset_value('log_syntax_trees', frozenset(['cst', 'ast']))  # don't use a set literal, here!
+        set_preset_value('XTML.preserve_whitespace', bool(args.whitespace))
         finalize_presets()
     start_logging(log_dir)
 
@@ -586,4 +591,7 @@ if __name__ == "__main__":
         elif args.tree:  outfmt = 'tree'
         elif args.json:  outfmt = 'json'
         else:  outfmt = 'default'
-        print(result.serialize(how=outfmt) if isinstance(result, Node) else result)
+        if outfmt == 'xml' and get_config_value('XML.preserve_whitespace', False):
+            print(result.as_xml(inline_tags={result.name}))
+        else:
+            print(result.serialize(how=outfmt) if isinstance(result, Node) else result)

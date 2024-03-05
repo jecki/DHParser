@@ -1347,8 +1347,9 @@ except (ImportError, ModuleNotFoundError):
         if dhparserdir not in sys.path:  sys.path.insert(0, dhparserdir)
 
 from DHParser.compile import Compiler, compile_source, Junction, full_compile
-from DHParser.configuration import set_config_value, get_config_value, access_thread_locals, \\
-    access_presets, finalize_presets, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN
+from DHParser.configuration import set_config_value, add_config_values, get_config_value, \\
+    access_thread_locals, access_presets, finalize_presets, set_preset_value, \\
+    get_preset_value, NEVER_MATCH_PATTERN
 from DHParser import dsl
 from DHParser.dsl import recompile_grammar, never_cancel
 from DHParser.ebnf import grammar_changed
