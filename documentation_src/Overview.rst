@@ -115,6 +115,23 @@ of the JSON-document. To derive the actual JSON-data from the
 syntax-tree of a JSON-document a few more processing steps are necessary
 (see further below).
 
+The generated JSON-parser can, of course, also be imported and called
+form a python-srcipt. The function in the generated parser module that
+the this work is named ``compile_src`` (see
+also :ref:`json_compiler` below.). It called with the source string
+and returns a tuple of the result (possibly None) and a list of
+error-objects (:py:class:`~error.Error`) which is empty if no
+error occurred::
+
+    import JSONParser
+
+    source = '{"JSON": ["A", "JSON", "Text"]}'
+    result, errors = JSONParser.compile_src(source)
+    if errors:
+        for e in errors:  print(e)
+    else:
+        print(result)
+
 
 Creating parsers within a Python-script
 ---------------------------------------

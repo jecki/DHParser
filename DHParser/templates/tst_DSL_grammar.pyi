@@ -107,7 +107,7 @@ if __name__ == '__main__':
         arg = args.files[0]
     else:
         # otherwise run all tests in the test directory
-        arg = '*_test_*.ini'
+        arg = '*test*.ini'
     if arg.endswith('.ebnf'):
         recompile_grammar(arg, force=True)
     else:

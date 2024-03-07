@@ -881,7 +881,7 @@ comments work as expected::
     word S word S word
     >>> syntax_tree = extended_parser('What{check this again!}is work?')
     >>> print(syntax_tree.errors[0])
-    1:24: Error (1040): Parser "pure_S = /(?=[ \\n\\t])[ \\t]*(?:\\n[ \\t]*)?(?!\\n)/" did not match: »is work?«
+    1:24: Error (1040): Parser pure_S = /(?=[ \\n\\t])[ \\t]*(?:\\n[ \\t]*)?(?!\\n)/ did not match: »is work?«
 
 
 The last error was to be expected, because we did not allow comments
@@ -1158,7 +1158,7 @@ Parsing our example with the generated parser yields an error, however::
 
     >>> syntax_tree = def_parser(definitions)
     >>> for e in syntax_tree.errors_sorted:  print(e)
-    3:11: Error (1040): Parser "word->/[a-z]+|[A-Z][a-z]*/" did not match: »:= featherless biped«
+    3:11: Error (1040): Parser word->/[a-z]+|[A-Z][a-z]*/ did not match: »:= featherless biped«
 
 The reason for this error is that the parser ``definiens`` captures as many
 words as occur in a sequence, including the definiendum of the next definition
@@ -1226,7 +1226,7 @@ grammar of a definitions-DSL so as to exclude certain bad words::
     nice := nice word
     >>> syntax_tree = def_parser('sxxx := bad word')
     >>> print(str(syntax_tree).strip())
-    <<< Error on "sxxx := bad word" | Parser "word->!forbidden" did not match: »sxxx := bad word« >>>
+    <<< Error on "sxxx := bad word" | Parser word->!forbidden did not match: »sxxx := bad word« >>>
 
 The same effect can be achieved by using the subtraction operator "-". This
 is just syntactic sugar make the use of the negative lookahead operator
@@ -1240,7 +1240,7 @@ in the sense of "without" more intuitive::
     >>> def_parser = create_parser(def_DSL, "defDSL")
     >>> syntax_tree = def_parser('sxxx := bad word')
     >>> print(str(syntax_tree).strip())
-    <<< Error on "sxxx := bad word" | Parser "word->!forbidden" did not match: »sxxx := bad word« >>>
+    <<< Error on "sxxx := bad word" | Parser word->!forbidden did not match: »sxxx := bad word« >>>
 
 Next to the lookahead operators, there also exist look-back operators. Be
 warned, though, that look back operators are an **experimental** feature
@@ -1329,10 +1329,10 @@ expressions::
     >>> arithmetic = create_parser(arithmetic_grammar, "arithmetic")
     >>> terms = arithmetic('(2 - 3 * (4 + 5)')
     >>> print(terms.errors[0])
-    1:17: Error (1040): Parser "term->`*`" did not match: »«
+    1:17: Error (1040): Parser term->`*` did not match: »«
     >>> terms = arithmetic('(2 - 3) * ( )')
     >>> print(terms.errors[0])
-    1:13: Error (1040): Parser "number->/\\d+/" did not match: »)«
+    1:13: Error (1040): Parser number->/\\d+/ did not match: »)«
 
 As can be seen the location of the error is captured well enough,
 at least when we keep in mind that the computer cannot guess where

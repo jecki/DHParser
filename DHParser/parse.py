@@ -2029,12 +2029,12 @@ class Grammar:
                 result = Node(ZOMBIE_TAG, '').with_pos(0)
                 if lookahead_failure_only(parser):
                     self.tree__.new_error(
-                        result, 'Parser "%s" only did not match empty document '
+                        result, 'Parser %s only did not match empty document '
                                 'because of lookahead' % str(parser),
                         PARSER_LOOKAHEAD_FAILURE_ONLY)
                 else:
                     self.tree__.new_error(
-                        result, 'Parser "%s" did not match empty document.' % str(parser),
+                        result, 'Parser %s did not match empty document.' % str(parser),
                         PARSER_STOPPED_BEFORE_END)
 
         # copy to local variable, so break condition can be triggered manually
@@ -2074,12 +2074,12 @@ class Grammar:
                     # in a test case this is not necessarily an error.
                     if lookahead_failure_only(parser):
                         # error_msg = # f'Parser "{parser.name}" stopped before end, because ' \
-                        error_msg = f'Parser "{err_pname}" did not match: »{err_text}« ' \
+                        error_msg = f'Parser {err_pname} did not match: »{err_text}« ' \
                                     f'- but only because of lookahead.'
                         error_code = PARSER_LOOKAHEAD_FAILURE_ONLY
                     else:
                         # error_msg = f'Parser "{parser.name}" stopped before end, because' \
-                        error_msg = f'Parser "{err_pname}" did not match: »{err_text}«'
+                        error_msg = f'Parser {err_pname} did not match: »{err_text}«'
                         error_code = PARSER_STOPPED_BEFORE_END
                     if self.history_tracking__:
                         error_msg += '\n    Most advanced fail: %s\n    Last match:    %s;' % \
@@ -3587,7 +3587,7 @@ class OneOrMore(UnaryParser):
         >>> Grammar(sentence)('Wo viel der Weisheit, da auch viel des Grämens.').content
         'Wo viel der Weisheit, da auch viel des Grämens.'
         >>> str(Grammar(sentence)('.'))  # an empty sentence also matches
-        ' <<< Error on "." | Parser "root->/\\\\w+,?/" did not match: ».« >>> '
+        ' <<< Error on "." | Parser root->/\\\\w+,?/ did not match: ».« >>> '
         >>> forever = OneOrMore(RegExp('(?=.)|$'))
         >>> Grammar(forever)('')  # infinite loops will automatically be broken
         Node('root', '')
@@ -4179,7 +4179,7 @@ class Series(ErrorCatchingNary):
         >>> Grammar(variable_name)('variable_1').content
         'variable_1'
         >>> str(Grammar(variable_name)('1_variable'))
-        ' <<< Error on "1_variable" | Parser "root->/(?!\\\\d)\\\\w/" did not match: »1_variable« >>> '
+        ' <<< Error on "1_variable" | Parser root->/(?!\\\\d)\\\\w/ did not match: »1_variable« >>> '
 
     EBNF-Notation: ``... ...``    (sequence of parsers separated by a blank or new line)
 
