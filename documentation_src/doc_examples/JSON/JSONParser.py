@@ -213,7 +213,7 @@ class JSONCompiler(Compiler):
         assert len(node.children) == 2
         return (self.compile(node[0]), self.compile(node[1]))
 
-    def on_array(self, node) -> List[JSONType]:
+    def on_array(self, node: Node) -> List[JSONType]:
         return [self.compile(child) for child in node]
 
     def on_string(self, node) -> str:

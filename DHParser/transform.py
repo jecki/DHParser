@@ -927,7 +927,12 @@ def _replace_by(node: Node, child: Node, root: RootNode):
 
 def _reduce_child(node: Node, child: Node, root: RootNode):
     """
-    Sets node's results to the child's result, keeping node's name.
+    Sets node's results to the child's result, keeping node's name.Example::
+
+    >>> nested = RootNode(parse_sxpr('(i (span `(style "letter-spacing:.25pt") "m."))'))
+    >>> _reduce_child(nested, nested[0], nested)
+    >>> nested.as_sxpr()
+    '(i `(style "letter-spacing:.25pt") "m.")'
     """
     node._set_result(child._result)
     update_attr(node, (child,), root)
