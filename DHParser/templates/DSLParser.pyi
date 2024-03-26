@@ -39,7 +39,7 @@ test_targets = set(j.dst for j in junctions)
 # alternative: test_targets = targets
 
 # add one or more serializations for those targets that are node-trees
-serializations = expand_table(dict([('*', ['sxpr'])]))
+serializations = expand_table(dict([('*', [get_config_value('default_serialization')])]))
 
 
 #######################################################################
@@ -66,6 +66,8 @@ def process_file(source: str, out_dir: str = '') -> str:
     extension. Returns the name of the error-messages file or an empty
     string, if no errors or warnings occurred.
     """
+    global serializations
+    serializations = get_config_value('{NAME}_serializations', serializations)
     return dsl.process_file(source, out_dir, preprocessing.factory, parsing.factory,
                             junctions, targets, serializations)
 
@@ -137,27 +139,16 @@ def main(called_from_app=False) -> bool:
                         help='Run batch jobs in a single thread (recommended only for debugging)')
     parser.add_argument('--dontrerun', action='store_const', const='dontrerun',
                         help='Do not automatically run again if the grammar has been recompiled.')
-    outformat = parser.add_mutually_exclusive_group()
-    outformat.add_argument('-x', '--xml', action='store_const', const='xml', 
-                           help='Format result as XML')
-    outformat.add_argument('-s', '--sxpr', action='store_const', const='sxpr',
-                           help='Format result as S-expression')
-    outformat.add_argument('-m', '--sxml', action='store_const', const='sxml',
-                           help='Format result as S-expression')
-    outformat.add_argument('-t', '--tree', action='store_const', const='tree',
-                           help='Format result as indented tree')
-    outformat.add_argument('-j', '--json', action='store_const', const='json',
-                           help='Format result as JSON')
+    parser.add_argument('-s', '--serialize', nargs='+', default=[])
 
     args = parser.parse_args()
     file_names, out, log_dir = args.files, args.out[0], ''
 
-    # if not os.path.exists(file_name):
-    #     print('File "%s" not found!' % file_name)
-    #     sys.exit(1)
-    # if not os.path.isfile(file_name):
-    #     print('"%s" is not a file!' % file_name)
-    #     sys.exit(1)
+    if args.serialize:
+        serializations['*'] = args.serialize
+        access_presets()
+        set_preset_value('{NAME}_serializations', serializations, allow_new_key=True)
+        finalize_presets()
 
     if args.debug is not None:
         log_dir = 'LOGS'
@@ -170,14 +161,6 @@ def main(called_from_app=False) -> bool:
 
     if args.singlethread:
         set_config_value('batch_processing_parallelization', False)
-
-    if args.xml:  outfmt = 'xml'
-    elif args.sxpr:  outfmt = 'sxpr'
-    elif args.sxml:  outfmt = 'sxml'
-    elif args.tree:  outfmt = 'tree'
-    elif args.json:  outfmt = 'json'
-    else:  outfmt = get_config_value('default_serialization')
-    serializations['*'] = [outfmt]
 
     def echo(message: str):
         if args.verbose:
@@ -214,7 +197,8 @@ def main(called_from_app=False) -> bool:
 
         if not errors or (not has_errors(errors, ERROR)) \
                 or (not has_errors(errors, FATAL) and args.force):
-            print(result.serialize(how=outfmt) if isinstance(result, Node) else result)
+            print(result.serialize(serializations['*'][0])
+                  if isinstance(result, Node) else result)
             if errors:  print('\n---')
 
         for err_str in canonical_error_strings(errors):
