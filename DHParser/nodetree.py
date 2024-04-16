@@ -3715,7 +3715,7 @@ def split_node(node: Node, parent: Node, i: cython.int, left_biased: bool = True
     that with ``node.insert(index, nd)`` nd will be inserted (exactly at
     the split location.)
 
-    Non-anonymous node that have been split will be marked by updateing
+    Non-anonymous nodes that have been split will be marked by updateing
     their attribute-dictionary with the chain_attr-dictionary if given.
 
     :param node: the node to be split
@@ -3822,8 +3822,10 @@ def deep_split(path: Path, i: cython.int, left_biased: bool=True,
                match_func: PathMatchFunction = ANY_PATH,
                skip_func: PathMatchFunction = NO_PATH,
                chain_attr_name: str = '') -> int:
-    """Split all nodes from the end of the path up to the i-th element,
-    but excluding the first node in the path. Returns the index of the
+    """Splits a tree along the path where i the is offset (or relative
+    index) of the split in the last node of the past, i.e. splits
+    all nodes from the end of the path up to but excluding the
+    first node in the path. Returns the index of the
     split-location in the first node of the path.
 
     Exapmles::
@@ -4284,7 +4286,7 @@ class ContentMapping:
     :ivar greedy: If True, the algorithm for adding markup minimizes the number
         of required cuts by switching child and parent nodes if the markup fills
         up a node completely as well as including empty nodes in the markup.
-        In any the case string content of the added markup remains the same, but
+        In any the case. the string content of the added markup remains the same, but
         it might cover more tags than strictly necessary.
     :ivar chain_attr: An attribute that will receive one and the same identifier as
         value for all nodes belonging to the chain of on split-up node.
