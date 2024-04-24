@@ -1,5 +1,11 @@
-DHParser Version 1.7.2
+DHParser Version 1.7.3
 ......................
+
+
+
+
+DHParser Version 1.7.2 (22.2.2024)
+..................................
 
 - removed unnecessary directories from pyproject.tompl, e.g.
   tests, documentation_src... These are not required for

@@ -119,6 +119,7 @@ __all__ = ('WHITESPACE_PTYPE',
            'REGEXP_PTYPE',
            'EMPTY_PTYPE',
            'LEAF_PTYPES',
+           'HTML_EMPTY_TAGS',
            'ZOMBIE_TAG',
            'PLACEHOLDER',
            'Path',
@@ -217,6 +218,12 @@ REGEXP_PTYPE = ':RegExp'
 EMPTY_PTYPE = ':EMPTY'
 LEAF_PTYPES = frozenset({WHITESPACE_PTYPE, TOKEN_PTYPE, MIXED_CONTENT_TEXT_PTYPE,
                          REGEXP_PTYPE, EMPTY_PTYPE})
+
+HTML_EMPTY_TAGS = frozenset(
+    {'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
+     'link', 'meta', 'param', 'source', 'track', 'wbr',
+     'AREA', 'BASE', 'BR', 'COL', 'EMBED', 'HR', 'IMG', 'INPUT',
+     'LINK', 'META', 'PARAM', 'SOURCE', 'TRACK', 'WBR'})
 
 ZOMBIE_TAG = "ZOMBIE__"
 
