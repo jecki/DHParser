@@ -39,7 +39,7 @@ from DHParser.error import ErrorCode, Error, canonical_error_strings, has_errors
     WARNING, ERROR, FATAL
 from DHParser.log import start_logging, suspend_logging, resume_logging
 from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode, ZOMBIE_TAG, \
-    CHAR_REF_PTYPE, ENTITY_REF_PTYPE, LEAF_PTYPES
+    CHAR_REF_PTYPE, ENTITY_REF_PTYPE, LEAF_PTYPES, HTML_EMPTY_TAGS
 from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar, Parser, \
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, ERR, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \
@@ -232,6 +232,7 @@ class HTMLTransformer(Compiler):
         node.name = HTML_PTYPE
         self.tree.string_tags.update(LEAF_PTYPES)
         self.tree.empty_tags.update({'?xml'})
+        self.tree.empty_tags.update(HTML_EMPTY_TAGS)
         node.result = tuple(self.compile(nd) for nd in node.children
                             if nd.name not in self.expendables)
         strip(self.path, lambda p: is_one_of(p, self.expendables | {'S'}))

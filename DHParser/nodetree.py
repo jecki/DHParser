@@ -1893,6 +1893,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def as_html(self, css: str='', head: str='', lang: str='en', **kwargs) -> str:
         """Serialize as HTML-page. See :py:meth:`Node.as_xml` for the further
         keyword-arguments."""
+        kwargs['empty_tags'] = kwargs.get('empty_tags', set()).update(HTML_EMPTY_TAGS)
         xhtml = self.as_xml(**kwargs)
         css_snippet = '\n'.join(['<style type="text/css">', css, '</style>'])
         if head:
