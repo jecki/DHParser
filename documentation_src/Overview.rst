@@ -87,9 +87,9 @@ text-file or string to produce a syntax-tree::
       <object>
         <member>
           <string>
-            <ANONYMOUS_Text__>"</ANONYMOUS_Text__>
+            <Text__>"</Text__>
             <PLAIN>one</PLAIN>
-            <ANONYMOUS_Text__>"</ANONYMOUS_Text__>
+            <Text__>"</Text__>
           </string>
           <number>
             <INT>1</INT>
@@ -97,9 +97,9 @@ text-file or string to produce a syntax-tree::
         </member>
         <member>
           <string>
-            <ANONYMOUS_Text__>"</ANONYMOUS_Text__>
+            <Text__>"</Text__>
             <PLAIN>two</PLAIN>
-            <ANONYMOUS_Text__>"</ANONYMOUS_Text__>
+            <Text__>"</Text__>
           </string>
           <number>
             <INT>2</INT>

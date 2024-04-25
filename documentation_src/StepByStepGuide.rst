@@ -154,12 +154,12 @@ The output is a block of pseudo-XML, looking like this::
 
     <document>
       <WORD>
-        <ANONYMOUS_RegExp__>Life</ANONYMOUS_RegExp__>
-        <ANONYMOUS_Whitespace__> </ANONYMOUS_Whitespace__>
+        <RegExp__>Life</RegExp__>
+        <Whitespace__> </Whitespace__>
       </WORD>
       <WORD>
-        <ANONYMOUS_RegExp__>is</ANONYMOUS_RegExp__>
-        <ANONYMOUS_Whitespace__> </ANONYMOUS_Whitespace__>
+        <RegExp__>is</RegExp__>
+        <Whitespace__> </Whitespace__>
       </WORD>
     ...
 
@@ -669,12 +669,12 @@ output, we find::
       <sentence>
         <part>
           <WORD>
-            <ANONYMOUS_RegExp__>Life's</ANONYMOUS_RegExp__>
-            <ANONYMOUS_Whitespace__> </ANONYMOUS_Whitespace__>
+            <RegExp__>Life's</RegExp__>
+            <Whitespace__> </Whitespace__>
           </WORD>
           <WORD>
-            <ANONYMOUS_RegExp__>but</ANONYMOUS_RegExp__>
-            <ANONYMOUS_Whitespace__> </ANONYMOUS_Whitespace__>
+            <RegExp__>but</RegExp__>
+            <Whitespace__> </Whitespace__>
           </WORD>
     ...
 
@@ -799,12 +799,12 @@ Running the "poetryParser.py"-script on "macbeth.dsl" again, yields::
       <sentence>
         <part>
           <WORD>
-            <ANONYMOUS_RegExp__>Life's</ANONYMOUS_RegExp__>
-            <ANONYMOUS_Whitespace__> </ANONYMOUS_Whitespace__>
+            <RegExp__>Life's</RegExp__>
+            <Whitespace__> </Whitespace__>
           </WORD>
           <WORD>
-            <ANONYMOUS_RegExp__>but</ANONYMOUS_RegExp__>
-            <ANONYMOUS_Whitespace__> </ANONYMOUS_Whitespace__>
+            <RegExp__>but</RegExp__>
+            <Whitespace__> </Whitespace__>
           </WORD>
     ...
 
@@ -827,7 +827,7 @@ Now that everything is set, let's have a look at the result::
           <WORD>walking</WORD>
           <WORD>shadow</WORD>
         </part>
-        <ANONYMOUS_Text__>,</ANONYMOUS_Text__>
+        <Text__>,</Text__>
         <part>
           <WORD>a</WORD>
           <WORD>poor</WORD>
@@ -836,15 +836,17 @@ Now that everything is set, let's have a look at the result::
 
 That is much better. There is but one slight blemish in the output:
 While all nodes left a named nodes, i.e. nodes associated with a named
-parser, there are a few anonymous ``<ANONYMOUS_Text__>``-nodes. Here is
-a little exercise: Do away with those ``<ANONYMOUS_Text__>``-nodes by
+parser, there are a few anonymous ``<Text__>``-nodes. Here is
+a little exercise: Do away with those ``<Text__>``-nodes by
 replacing them by something semantically more meaningful. Hint: Add a
 new symbol "delimiter" in the grammar definition "poetry.ebnf". (An
 alternative strategy to extending the grammar would be to use the
 ``replace_parser`` operator. In the AST-transformation-table ANONYMOUS
 nodes are indicated by a leading ':', thus ins the
 AST-transformation-table you have to write ``:Text`` instead pf
-``ANONYMOUS_Text__`` which is merely the XML-compatible name.)
+``Text__`` which is merely the lxml-compatible name. While XML-Specification
+does allow tag-names starting with a colon, many XML-libraries, like lxml,
+cannot handle them.)
 
 From here onward
 ----------------

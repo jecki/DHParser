@@ -343,7 +343,7 @@ class Compiler:
 
         compiler = self.find_compilation_method(node.name)
         self.path.append(node)
-        result = compiler(node)     
+        result = compiler(node)
         self.path.pop()
         if self.has_attribute_visitors:
             self.visit_attributes(node)          
@@ -354,7 +354,7 @@ class Compiler:
                  'void value. This Error can be turned off by adding '
                  '`self.forbid_returning_None = False` to the reset()-Method of your'
                  'compiler class, in case on_%s actually SHOULD be allowed to '
-                 'return None.') % (node.name, self.visitor_name(node.name)))
+                 'return None.') % (node.name.replace(':', '3a'), self.visitor_name(node.name)))
         return result
 
 

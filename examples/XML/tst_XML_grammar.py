@@ -58,7 +58,7 @@ if __name__ == '__main__':
         del argv[1]
 
     access_presets()
-    # set_preset_value('test_parallelization', True)
+    set_preset_value('test_parallelization', True)
     if DEBUG:  set_preset_value('history_tracking', True)
     finalize_presets()
 

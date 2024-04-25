@@ -118,6 +118,8 @@ __all__ = ('WHITESPACE_PTYPE',
            'MIXED_CONTENT_TEXT_PTYPE',
            'REGEXP_PTYPE',
            'EMPTY_PTYPE',
+           'CHAR_REF_PTYPE',
+           'ENTITY_REF_PTYPE',
            'LEAF_PTYPES',
            'HTML_EMPTY_TAGS',
            'ZOMBIE_TAG',
@@ -216,8 +218,10 @@ TOKEN_PTYPE = ':Text'
 MIXED_CONTENT_TEXT_PTYPE = ':Text'
 REGEXP_PTYPE = ':RegExp'
 EMPTY_PTYPE = ':EMPTY'
+CHAR_REF_PTYPE = ':CharRef'
+ENTITY_REF_PTYPE = ':EntityRef'
 LEAF_PTYPES = frozenset({WHITESPACE_PTYPE, TOKEN_PTYPE, MIXED_CONTENT_TEXT_PTYPE,
-                         REGEXP_PTYPE, EMPTY_PTYPE})
+                         REGEXP_PTYPE, EMPTY_PTYPE, CHAR_REF_PTYPE, ENTITY_REF_PTYPE})
 
 HTML_EMPTY_TAGS = frozenset(
     {'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
@@ -440,13 +444,13 @@ def xml_tag_name(tag_name: str) -> str:
     lead to invalid XML::
 
         >>> xml_tag_name(':Series')
-        'ANONYMOUS_Series__'
+        'Series__'
 
     :param tag_name: the original tag name
     :returns: the XML-conform name
     """
     if tag_name[:1] == ':':
-        return 'ANONYMOUS_%s__' % tag_name[1:]
+        return f'{tag_name[1:]}__'
     return tag_name
 
 
@@ -455,9 +459,14 @@ def restore_tag_name(tag_name: str) -> str:
 
     >>> restore_tag_name('ANONYMOUS_Series__')
     ':Series'
+    >>> restore_tag_name('Series__')
+    ':Series'
     """
-    if tag_name[-2:] == "__" and tag_name[:10] == "ANONYMOUS_":
-        return ':' + tag_name[10:-2]
+    if tag_name[-2:] == "__":
+        if tag_name[:10] == "ANONYMOUS_":
+            return ':' + tag_name[10:-2]
+        else:
+            return ':' + tag_name[:-2]
     return tag_name
 
 
@@ -1776,7 +1785,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def as_xml(self, src: Optional[str] = None,
                indentation: int = 2,
                inline_tags: AbstractSet[str] = frozenset(),
-               string_tags: AbstractSet[str] = frozenset({MIXED_CONTENT_TEXT_PTYPE}),
+               string_tags: AbstractSet[str] = frozenset(
+                   {MIXED_CONTENT_TEXT_PTYPE, CHAR_REF_PTYPE, ENTITY_REF_PTYPE}),
                empty_tags: AbstractSet[str] = frozenset(),
                strict_mode: bool = True) -> str:
         """Serializes the tree of nodes as XML.
@@ -1821,8 +1831,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             """Returns the opening string for the representation of `node`."""
             nonlocal attr_filter, empty_tags
             if node.name in string_tags and not node.has_attr():
-                if node.name == "CharRef" and node.content.isalnum(): return "&#x"
-                elif node.name == "EntityRef": return "&"
+                if node.name == CHAR_REF_PTYPE and node.content.isalnum(): return "&#x"
+                elif node.name == ENTITY_REF_PTYPE: return "&"
                 else: return ''
             txt = ['<', xml_tag_name(node.name)]
             if node.has_attr():
@@ -1832,9 +1842,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             if src == '' and not (node.has_attr() and '_pos' in node.attr) and node._pos >= 0:
                 txt.append(' _pos="%i"' % node._pos)
             if root and id(node) in root.error_nodes and not node.has_attr('err'):
-                # txt.append(' err="%s"' % (
-                #     ''.join(str(err).replace('"', "'").replace('&', '&amp;').replace('<', '&lt;')
-                #             for err in root.node_errors(node))))
                 txt.append(' err=' + attr_filter(''.join(str(err).replace('&', '')
                                                          for err in root.node_errors(node))))
             if node.name in empty_tags:
@@ -1857,8 +1864,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             """Returns the closing string for the representation of `node`."""
             if (node.name in empty_tags and not node.result) \
                     or (node.name in string_tags and not node.has_attr()):
-                if node.name == "CharRef" and node.content.isalnum(): return ";"
-                elif node.name == "EntityRef": return ";"
+                if node.name == CHAR_REF_PTYPE and node.content.isalnum(): return ";"
+                elif node.name == ENTITY_REF_PTYPE: return ";"
                 else: return ''
             elif node.name == '!--':
                 return '-->'

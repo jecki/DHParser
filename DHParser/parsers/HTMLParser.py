@@ -38,7 +38,8 @@ from DHParser.ebnf import grammar_changed
 from DHParser.error import ErrorCode, Error, canonical_error_strings, has_errors, NOTICE, \
     WARNING, ERROR, FATAL
 from DHParser.log import start_logging, suspend_logging, resume_logging
-from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode, ZOMBIE_TAG
+from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode, ZOMBIE_TAG, \
+    CHAR_REF_PTYPE, ENTITY_REF_PTYPE, LEAF_PTYPES
 from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar, Parser, \
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, ERR, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \
@@ -229,7 +230,7 @@ class HTMLTransformer(Compiler):
 
     def on_document(self, node):
         node.name = HTML_PTYPE
-        self.tree.string_tags.update({TOKEN_PTYPE, HTML_PTYPE, 'CharRef', 'EntityRef'})
+        self.tree.string_tags.update({TOKEN_PTYPE, HTML_PTYPE, CHAR_REF_PTYPE, ENTITY_REF_PTYPE})
         self.tree.empty_tags.update({'?xml'})
         node.result = tuple(self.compile(nd) for nd in node.children
                             if nd.name not in self.expendables)
@@ -265,17 +266,21 @@ class HTMLTransformer(Compiler):
         return node
 
     def on_content(self, node) -> Union[Tuple[Node], str]:
-        xml_content = tuple(self.compile(nd) for nd in node.children
-                            if nd.name not in self.expendables)
-        if len(xml_content) == 1:
-            if xml_content[0].name == TOKEN_PTYPE:
-                # reduce single CharData children
-                xml_content = xml_content[0].content
-        elif self.cleanup_whitespace and not self.preserve_whitespace:
-            # remove CharData that consists only of whitespace from mixed elements
-            xml_content = tuple(child for child in xml_content
-                                if child.name != TOKEN_PTYPE or child.content.strip() != '')
-        return xml_content
+        xml_content = []
+        preserve_ws = self.preserve_whitespace or not self.preserve_whitespace
+        for nd in node.children:
+            if nd.name in self.expendables:  continue
+            child = self.compile(nd)
+            if child.name != TOKEN_PTYPE:
+                xml_content.append(child)
+            elif preserve_ws or child.content.strip() != '':
+                if xml_content and xml_content[-1].name == TOKEN_PTYPE:
+                    xml_content[-1].result = xml_content[-1].content + child.content
+                else:
+                    xml_content.append(child)
+        if len(xml_content) == 1 and xml_content[0].name == TOKEN_PTYPE:
+            return xml_content[0].content
+        return tuple(xml_content)
 
     def on_element(self, node):
         if len(node.children) == 1:
@@ -330,9 +335,20 @@ class HTMLTransformer(Compiler):
         self.tree.empty_tags.add(node.name)
         return node
 
-    def on_Reference(self, node):
-        replace_by_single_child(self.path)
+    def on_CharRef(self, node) -> Node:
+        # node.result = f"&#{node.content};"
+        node.name = ":CharRef"
         return node
+
+    def on_EntityRef(self, node) -> Node:
+        # node.result = f"&{node.content};"
+        node.result = node.content
+        node.name = ":EntityRef"
+        return node
+
+    def on_Reference(self, node) -> Node:
+        assert len(node.children) == 1
+        return self.compile(node.children[0])
 
     def on_Comment(self, node):
         node.name = '!--'
