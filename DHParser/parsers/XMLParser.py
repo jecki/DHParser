@@ -226,7 +226,7 @@ class XMLTransformer(Compiler):
 
     def on_document(self, node):
         node.name = XML_PTYPE
-        self.tree.string_tags.update({TOKEN_PTYPE, XML_PTYPE, CHAR_REF_PTYPE, ENTITY_REF_PTYPE})
+        self.tree.string_tags.update(LEAF_PTYPES)
         self.tree.empty_tags.update({'?xml'})
         node.result = tuple(self.compile(nd) for nd in node.children
                             if nd.name not in self.expendables)

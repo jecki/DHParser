@@ -1785,8 +1785,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def as_xml(self, src: Optional[str] = None,
                indentation: int = 2,
                inline_tags: AbstractSet[str] = frozenset(),
-               string_tags: AbstractSet[str] = frozenset(
-                   {MIXED_CONTENT_TEXT_PTYPE, CHAR_REF_PTYPE, ENTITY_REF_PTYPE}),
+               string_tags: AbstractSet[str] = LEAF_PTYPES,
                empty_tags: AbstractSet[str] = frozenset(),
                strict_mode: bool = True) -> str:
         """Serializes the tree of nodes as XML.
@@ -2150,7 +2149,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # Export and import as Element-Tree ###
 
-    def as_etree(self, ET=None, string_tags: AbstractSet[str] = frozenset({MIXED_CONTENT_TEXT_PTYPE}),
+    def as_etree(self, ET=None, string_tags: AbstractSet[str] = LEAF_PTYPES,
                  empty_tags: AbstractSet[str] = frozenset()):
         """Returns the tree as standard-library- or lxml-ElementTree.
 
@@ -2454,7 +2453,7 @@ class RootNode(Node):
 
         # customization for XML-Representation
         self.inline_tags: Set[str] = set()
-        self.string_tags: Set[str] = {MIXED_CONTENT_TEXT_PTYPE}
+        self.string_tags: Set[str] = set(LEAF_PTYPES)
         self.empty_tags: Set[str] = set()
 
         # meta-data
