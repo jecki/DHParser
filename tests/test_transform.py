@@ -28,13 +28,13 @@ scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.nodetree import Node, RootNode, parse_sxpr, parse_xml, PLACEHOLDER, \
-    tree_sanity_check, flatten_sxpr, WHITESPACE_PTYPE
+    tree_sanity_check, flatten_sxpr, WHITESPACE_PTYPE, Path, BRANCH_NODE, TOKEN_PTYPE
 from DHParser.transform import traverse, reduce_single_child, remove_whitespace, move_fringes, \
     traverse_locally, collapse, collapse_children_if, lstrip, rstrip, remove_content, \
     remove_tokens, transformation_factory, has_ancestor, has_parent, contains_only_whitespace, \
     merge_adjacent, is_one_of, not_one_of, swap_attributes, delimit_children, merge_treetops, \
     positions_of, insert, node_maker, apply_if, change_name, add_attributes, add_error, \
-    merge_leaves, BLOCK_ANONYMOUS_LEAVES, pick_longest_content, fix_content
+    merge_leaves, BLOCK_ANONYMOUS_LEAVES, pick_longest_content, fix_content, merge_connected
 from typing import AbstractSet, List, Sequence, Tuple
 
 
@@ -333,12 +333,35 @@ class TestWhitespaceTransformations:
     #     expr = traverse(expr, transformations)
     #     print(expr.as_sxpr())
 
-
     def test_merge_adjacent_with_attributes(self):
         tree = parse_sxpr('(A (L " ") (L `(spatium "3+1") " "))')
         merge_adjacent([tree], is_one_of('L'), 'L')
         assert len(tree.children) == 1
         assert tree.children[0].get_attr('spatium', 'FEHLER') == "3+1"
+
+    def test_merge_connected(self):
+        def is_author(path: Path) -> bool:
+            return path[-1].name == 'Author'
+
+        def is_delimiter(path: Path) -> bool:
+            node = path[-1]
+            content = node.content
+            stripped = node.content.strip()
+            if not stripped:
+                return True
+            elif stripped == "." and content[0:1] == ".":
+                parent = path[-2]
+                ancestry = path[:-1]
+                i = parent.index(node)
+                if i > 0 and is_author(ancestry + [parent[i - 1]]):
+                    return True
+            return False
+
+        dom = parse_sxpr('(p (Author "Mus") (:Text ". ") (Author "Enchir."))')
+        for path in dom.select_path(BRANCH_NODE, include_root=True):
+            merge_connected(path, is_author, is_delimiter, 'span', TOKEN_PTYPE)
+        assert dom.as_sxpr() == '(p (Author "Mus. Enchir."))'
+
 
 class TestAttributeHandling:
     def test_swap_attributes(self):

@@ -1186,11 +1186,11 @@ def collapse_children_if(path: Path,
             package = []
 
     for child in node._children:
-        if condition([child]):
+        if condition(path + [child]):
             if child._children:
-                collapse_children_if([child], condition, target_name)
+                collapse_children_if(path + [child], condition, target_name)
                 for c in child._children:
-                    if condition([c]):
+                    if condition(path + [child, c]):
                         package.append(c)
                     else:
                         close_package()
@@ -1243,11 +1243,11 @@ def merge_adjacent(path: Path, condition: Callable, preferred_name: str = ''):
         i = 0
         L = len(children)
         while i < L:
-            if condition([children[i]]):
+            if condition(path + [children[i]]):
                 initial = () if children[i]._children else ''
                 k = i
                 i += 1
-                while i < L and condition([children[i]]):
+                while i < L and condition(path + [children[i]]):
                     i += 1
                 if i > k:
                     adjacent = children[k:i]
@@ -1294,13 +1294,13 @@ def merge_connected(path: Path, content: Callable, delimiter: Callable,
         i = 0
         L = len(children)
         while i < L:
-            if content([children[i]]):
+            if content(path + [children[i]]):
                 initial = () if children[i]._children else ''
                 k = i
                 i += 1
-                while i < L and (content([children[i]]) or delimiter([children[i]])):
+                while i < L and (content(path + [children[i]]) or delimiter(path + [children[i]])):
                     i += 1
-                if delimiter([children[i - 1]]):
+                if delimiter(path + [children[i - 1]]):
                     i -= 1
                 if i > k:
                     adjacent = children[k:i]
@@ -1398,9 +1398,9 @@ def move_fringes(path: Path, condition: Callable, merge: bool = True):
 
     a, b = 0, len(children)
     while a < b:
-        if condition([children[a]]):
+        if condition(path + [children[a]]):
             a += 1
-        elif condition([children[b - 1]]):
+        elif condition(path + [children[b - 1]]):
             b -= 1
         else:
             break
