@@ -4630,14 +4630,14 @@ class ContentMapping:
             up. Note that this is the position in the string-content of the tree
             over which the content mapping has been generated and not the position
             in the XML or any other serialization of the tree!
-        :param end_pos:  The string-position of the last character to be included
-            in the markup. Be aware that other than in slicing of Python lists
-            or strings where the beginning and ending define an half-open intervall,
-            the character indexed by end_pos is included in the markup, i.e.
-            [start_pos, end_pos] define a closed intervall for markup.
-            Also note that ``end_pos`` is the position in the string-content of the tree
-            over which the content mapping has been generated and not the position
-            in the XML or any other serialization of the tree!
+        :param end_pos:  The string-position after the last character to be included
+            in the markup. Similar to the slicing of Python lists
+            or strings the beginning and ending define an half-open intervall,
+            [start_pos, ent_pos[ . The character indexed by end_pos is not included
+            in the markup. Also, keep in mind that ``end_pos`` is the position in
+            the string-content of the tree over which the content mapping has been
+            generated and not the positionvin the XML or any other serialization
+            of the tree!
         :param name:  The name, or "tag-name" in XML-terminology, of the element
             (or tag) to be added.
         :param attr_dict: A dictionary of attributes that will
