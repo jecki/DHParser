@@ -1893,7 +1893,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def as_html(self, css: str='', head: str='', lang: str='en', **kwargs) -> str:
         """Serialize as HTML-page. See :py:meth:`Node.as_xml` for the further
         keyword-arguments."""
-        kwargs['empty_tags'] = kwargs.get('empty_tags', set()).update(HTML_EMPTY_TAGS)
+        kwargs['empty_tags'] = kwargs.get('empty_tags', set())
+        kwargs['empty_tags'].update(HTML_EMPTY_TAGS)
         xhtml = self.as_xml(**kwargs)
         css_snippet = '\n'.join(['<style type="text/css">', css, '</style>'])
         if head:
@@ -3836,10 +3837,8 @@ def deep_split(path: Path, i: cython.int, left_biased: bool=True,
                skip_func: PathMatchFunction = NO_PATH,
                chain_attr_name: str = '') -> int:
     """Splits a tree along the path where i the is offset (or relative
-    index) of the split in the last node of the past, i.e. splits
-    all nodes from the end of the path up to but excluding the
-    first node in the path. Returns the index of the
-    split-location in the first node of the path.
+    index) of the split in the last node of the path.
+    Returns the index of the split-location in the first node of the path.
 
     Exapmles::
 
@@ -4555,7 +4554,7 @@ class ContentMapping:
 
     def select_if(self, match_func: NodeMatchFunction,
                   start_from: int = -1,
-                  reverse: bool = False) -> Tuple[Node, int]:
+                  reverse: bool = False) -> Iterator[Tuple[Node, int]]:
         """Yields the node and its path-index for all nodes that are matched
         by the match function. Searching starts from the path with the index
         ``start_from``. Searching within a path starts from the end
@@ -4599,9 +4598,14 @@ class ContentMapping:
             else:
                 node = None
 
+    def pick_if(self, match_func: NodeMatchFunction,
+                start_from: int = -1,
+                reverse: bool = False) -> Tuple[Node, int]:
+        return next(self.select_if(match_func, start_from, reverse), (None, -1))
+
     def select(self, criterion: NodeSelector,
                start_from: int = -1,
-               reverse: bool = False) -> Tuple[Node, int]:
+               reverse: bool = False) -> Iterator[Tuple[Node, int]]:
         """See :py:meth:`ContentMapping.select_if`
 
         Example:.
@@ -4612,6 +4616,11 @@ class ContentMapping:
             [(1, '(y "2")')]
         """
         yield from self.select_if(create_match_function(criterion), start_from, reverse)
+
+    def pick(self, criterion: NodeSelector,
+             start_from: int = -1,
+             reverse: bool = False) -> Tuple[Node, int]:
+        return next(self.select(criterion, start_from, reverse), (None, -1))
 
     @cython.locals(i=cython.int, start_pos=cython.int, end_pos=cython.int, offset=cython.int)
     def rebuild_mapping_slice(self, first_index: cython.int, last_index: cython.int):
@@ -4800,6 +4809,12 @@ class ContentMapping:
             >>> printw(X.as_sxpr(flatten_threshold=-1))
             (X (l ",.") (A (em (O "123") (P "456"))) (m "!?") (B (Q "789") (R "abc"))
              (n "+-"))
+            >>> Y = copy.deepcopy(X)
+            >>> t = ContentMapping(Y, divisibility={'bf': {':Text', 'em', 'A', 'P'}})
+            >>> _ = t.markup(0, 7, 'bf')
+            >>> printw(Y.as_sxpr(flatten_threshold=-1))
+            (X (bf (l ",.") (A (em (O "123") (P "45")))) (A (em (P "6"))) (m "!?")
+             (B (Q "789") (R "abc")) (n "+-"))
             >>> X = copy.deepcopy(tree)
             >>> t = ContentMapping(X)
             >>> _ = t.markup(2, 10, 'em')
@@ -4876,6 +4891,14 @@ class ContentMapping:
             attr_dict.pop(self.chain_attr_name, None)
             markup_leaf(common_ancestor, pos_A, pos_B, name, attr_dict)
             if i != 0 and (common_ancestor.name in divisible or common_ancestor.anonymous):
+                for child in common_ancestor.children:
+                    if child.name == TOKEN_PTYPE:
+                        child.name = common_ancestor.name
+                        child.with_attr(common_ancestor.attr)
+                    else:
+                        assert child.name == name
+                        assert not child._children
+                        child.result = Node(common_ancestor.name, child.result).with_attr(common_ancestor.attr)
                 ur_ancestor = path_A[i - 1]
                 t = ur_ancestor.index(common_ancestor)
                 ur_ancestor.result = ur_ancestor[:t] + common_ancestor.children + ur_ancestor[t + 1:]

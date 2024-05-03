@@ -33,7 +33,7 @@ from DHParser.nodetree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxp
     prev_path, pick_from_path, pp_path, ContentMapping, leaf_paths, NO_PATH, \
     select_path_if, select_path, create_path_match_function, pick_path, \
     LEAF_PATH, TOKEN_PTYPE, insert_node, content_of, strlen_of, gen_chain_ID, \
-    parse_sxml
+    parse_sxml, LEAF_PTYPES
 from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.transform import traverse, reduce_single_child, \
     replace_by_single_child, flatten, remove_empty, remove_whitespace
@@ -1363,7 +1363,7 @@ class TestMarkupInsertion:
             'Im Titel heißt es: Étude. </note> sur le jus Italicum (Nouvelle revue historique '\
             'V, 1881, p. 145ff.). </item>'
 
-    def test_maskup_borderline_cases(self):
+    def test_markup_borderline_cases(self):
         ### borderline cases
         tree = parse_xml('<doc>Hello, <em>World</em>!</doc>')
         X = copy.deepcopy(tree)
@@ -1377,6 +1377,22 @@ class TestMarkupInsertion:
         _ = t.markup(3, 3, 'b')
         assert X.as_xml(inline_tags={'doc'}, empty_tags={'b'}) \
                == '<doc>Hel<b/>lo, <em>World</em>!</doc>'
+
+    def test_markup_new_9(self):
+        tree = parse_sxpr('''(p (b "I") (:Text " ") (i "gener.:") (:Text "[MFSP]") (b "A"))''')
+        t = copy.deepcopy(tree)
+        cm = cm = ContentMapping(t, divisibility=LEAF_PTYPES | {'i', 'span'})
+        cm.markup(2, 8, "Klassifikation")
+        assert t.as_sxpr() == \
+               '(p (b "I") (:Text " ") (Klassifikation (i "gener.")) ' \
+               '(i ":") (:Text "[MFSP]") (b "A"))'
+        t = copy.deepcopy(tree)
+        cm = cm = ContentMapping(t, divisibility=LEAF_PTYPES)
+        cm.markup(2, 8, "Klassifikation")
+        assert t.as_sxpr() == \
+               '(p (b "I") (:Text " ") (i (Klassifikation "gener.") ' \
+               '(:Text ":")) (:Text "[MFSP]") (b "A"))'
+
 
 
 if __name__ == "__main__":
