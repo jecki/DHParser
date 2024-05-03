@@ -3291,7 +3291,6 @@ def match_path_str(path_str: str, glob_pattern: str) -> bool:
 
 # access siblings #####################################################
 
-
 def pred_siblings(path: Path, criteria: NodeSelector = ANY_NODE, reverse: bool = False) \
     -> Iterator[Node]:
     """Returns an iterator over the siblings preceeding the end-node in the path.
@@ -4554,10 +4553,13 @@ class ContentMapping:
             for i in range(index_a, index_b - 1, -1):
                 yield self._path_list[i]
 
-    def select_if(self, match_func: NodeMatchFunction, reverse: bool=False) -> Tuple[Node, int]:
+    def select_if(self, match_func: NodeMatchFunction,
+                  start_from: int = -1,
+                  reverse: bool = False) -> Tuple[Node, int]:
         """Yields the node and its path-index for all nodes that are matched
-        by the match function. Searching starts from the end of the path and
-        only the last matching node in every path is returned.
+        by the match function. Searching starts from the path with the index
+        ``start_from``. Searching within a path starts from the end
+        of the path and only the last matching node in every path is returned.
         Only the path-index from the first path that contains a matching node
         is returned. Subseuqent pathes that contain the same node are skipped.
 
@@ -4570,10 +4572,18 @@ class ContentMapping:
             [(0, '(B (x "1") (y "2"))'), (2, '(B "!")')]
             >>> print([(i, nd.as_sxpr()) for nd, i in cm.select_if(mf, reverse=True)])
             [(2, '(B "!")'), (1, '(B (x "1") (y "2"))')]
+            >>> i = cm.get_node_index(tree.pick("B", reverse=True))
+            >>> print([(i, nd.as_sxpr()) for nd, i in cm.select_if(mf, start_from=i)])
+            [(2, '(B "!")')]
+            >>> i = cm.get_node_index(tree.pick("y"))
+            >>> print([(i, nd.as_sxpr()) for nd, i in cm.select_if(mf, start_from=i, reverse=True)])
+            [(1, '(B (x "1") (y "2"))')]
         """
         node = None
         L = len(self._path_list)
-        path_indices = range(L - 1, -1, -1) if reverse else range(L)
+        if start_from < 0:
+            start_from = L - 1 if reverse else 0
+        path_indices = range(start_from, -1, -1) if reverse else range(start_from, L)
         for i in path_indices:
             path = self._path_list[i]
             try:
@@ -4589,8 +4599,10 @@ class ContentMapping:
             else:
                 node = None
 
-    def select(self, criterion: NodeSelector, reverse: bool = False) -> Tuple[Node, int]:
-        """"See :py:meth:`ContentMapping.select_if`
+    def select(self, criterion: NodeSelector,
+               start_from: int = -1,
+               reverse: bool = False) -> Tuple[Node, int]:
+        """See :py:meth:`ContentMapping.select_if`
 
         Example:.
 
@@ -4599,7 +4611,7 @@ class ContentMapping:
             >>> print([(i, nd.as_sxpr()) for nd, i in cm.select("y")])
             [(1, '(y "2")')]
         """
-        yield from self.select_if(create_match_function(criterion), reverse)
+        yield from self.select_if(create_match_function(criterion), start_from, reverse)
 
     @cython.locals(i=cython.int, start_pos=cython.int, end_pos=cython.int, offset=cython.int)
     def rebuild_mapping_slice(self, first_index: cython.int, last_index: cython.int):

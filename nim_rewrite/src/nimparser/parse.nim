@@ -1349,6 +1349,7 @@ proc `-`*(A, B: seq[RuneRange]): seq[RuneRange] =
     i += 1
   # assert isSortedAndMerged(result)
 
+# intersection
 proc `*`*(A, B: seq[RuneRange]): seq[RuneRange] = A - (A - B) - (B - A)
 
 
