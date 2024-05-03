@@ -4204,7 +4204,7 @@ def markup_left(path: Path, i: cython.int, name: str, attr_dict: Dict[str, Any],
 
 
 def _breed_leaf_selector(select: PathSelector,
-                                ignore: PathSelector) -> Tuple[Callable, Callable]:
+                         ignore: PathSelector) -> Tuple[Callable, Callable]:
     select_func = create_path_match_function(select)
     ignore_func = create_path_match_function(ignore)
 
@@ -4289,7 +4289,7 @@ class ContentMapping:
     :ivar select_func: Only leaf-paths for which this is true will be considered when
         generating the content-mapping. This function integrates both the select-
         and ignore-criteria passed to the constructor of the class. Note that the
-        select-criterion must only accept leaf-paths. Otherwise a ValueError will
+        select-criterion must only accept leaf-paths. Otherwise, a ValueError will
         be raised.
     :ivar ignore_func: The ignore function derives from the ignore-parameter of
         the ``__init__()``-construcotr of class ContentMapping.
@@ -4445,7 +4445,7 @@ class ContentMapping:
         return path_index
 
     def get_path_and_offset(self, pos: int, left_biased: bool = False) -> Tuple[Path, int]:
-        """Yields the path and relative position for the absolute
+        """Returns the path and relative position for the absolute
         position ``pos``. See :py:meth:`ContentMappin.get_path_index` for the description
         of the parameters.
 
@@ -4455,6 +4455,84 @@ class ContentMapping:
         """
         path_index = self.get_path_index(pos, left_biased)
         return self._path_list[path_index], pos - self._pos_list[path_index]
+
+    def get_node_index(self, node: Node, reverse: bool=False) -> int:
+        """Returns the index in the path_list of the first or last
+        (if reverse is True) path that contains node or -1, if the
+        node cannot be found. Note: If node is a leaf node,
+        the first and last index are the same. Otherwise, it
+        occurs (if at all) more often than once if it or any of its
+        children has more than one child.
+
+        Examples::
+
+            >>> tree = parse_sxpr('(A (B (x "1") (y "2")) (C (z "3")))')
+            >>> cm = ContentMapping(tree)
+            >>> B = tree.pick('B')
+            >>> cm.get_node_index(B)
+            0
+            >>> cm.get_node_index(B, reverse=True)
+            1
+            >>> cm.get_node_index(tree.pick('y'))
+            1
+            >>> cm.get_node_index(tree.pick('z'))
+            2
+            >>> cm.get_node_index(tree.pick('A', include_root=True), reverse=True)
+            2
+        """
+        if reverse:
+            while node.children:
+                node = node.children[-1]
+            for i in range(len(self._path_list) - 1, -1, -1):
+                if self._path_list[i][-1] == node:
+                    return i
+        else:
+            while node.children:
+                node = node.children[0]
+            for i in range(len(self._path_list)):
+                if self._path_list[i][-1] == node:
+                    return i
+        return -1
+
+    def get_node_position(self, node: Node, reverse: bool=False) -> int:
+        """Returns the string-position of first or last + 1 (if reverse
+        is True) character of the first or last occurrence of node
+        within the mapping. If node is not contained  in any path of
+        the mapping, -1 will be returned. If node is a leaf node it
+        occurs only once (if at all) in the mapping. Otherwise, it
+        occurs (if at all) more often than once if it or any of its
+        children has more than one child.
+
+        Independent of whether the node is a leaf-node, the position
+        of the first and last + 1 character is the same if and
+        only if the string content of node is empty.
+
+        Examples::
+
+            >>> tree = parse_sxpr('(A (B (x "1") (y "2")) (C (z "3")))')
+            >>> cm = ContentMapping(tree)
+            >>> B = tree.pick('B')
+            >>> cm.get_node_position(B)
+            0
+            >>> cm.get_node_position(B, reverse=True)
+            2
+            >>> cm.get_node_position(tree.pick('y'))
+            1
+            >>> z = tree.pick('z')
+            >>> cm.get_node_position(z)
+            2
+            >>> cm.get_node_position(z, reverse=True)
+            3
+            >>> cm.get_node_position(tree.pick('A', include_root=True), reverse=True)
+            3
+        """
+        i = self.get_node_index(node, reverse)
+        if i >= 0:
+            if reverse:
+                return self._pos_list[i] + self._path_list[i][-1].strlen()
+            else:
+                return self._pos_list[i]
+        return -1
 
     @cython.locals(a=cython.int, b=cython.int, index_a=cython.int, index_b=cython.int)
     def iterate_paths(self, start_pos: cython.int, end_pos: cython.int, left_biased: bool = False) \
@@ -4469,8 +4547,59 @@ class ContentMapping:
         """
         index_a = self.get_path_index(start_pos, left_biased)
         index_b = self.get_path_index(end_pos, left_biased)
-        for i in range(index_a, index_b + 1):
-            yield self._path_list[i]
+        if index_b >= index_a:
+            for i in range(index_a, index_b + 1):
+                yield self._path_list[i]
+        else:
+            for i in range(index_a, index_b - 1, -1):
+                yield self._path_list[i]
+
+    def select_if(self, match_func: NodeMatchFunction, reverse: bool=False) -> Tuple[Node, int]:
+        """Yields the node and its path-index for all nodes that are matched
+        by the match function. Searching starts from the end of the path and
+        only the last matching node in every path is returned.
+        Only the path-index from the first path that contains a matching node
+        is returned. Subseuqent pathes that contain the same node are skipped.
+
+        Examples::
+
+            >>> tree = parse_sxpr('(A (B (x "1") (y "2")) (B "!") (C (z "3")))')
+            >>> cm = ContentMapping(tree)
+            >>> mf = create_match_function("B")
+            >>> print([(i, nd.as_sxpr()) for nd, i in cm.select_if(mf)])
+            [(0, '(B (x "1") (y "2"))'), (2, '(B "!")')]
+            >>> print([(i, nd.as_sxpr()) for nd, i in cm.select_if(mf, reverse=True)])
+            [(2, '(B "!")'), (1, '(B (x "1") (y "2"))')]
+        """
+        node = None
+        L = len(self._path_list)
+        path_indices = range(L - 1, -1, -1) if reverse else range(L)
+        for i in path_indices:
+            path = self._path_list[i]
+            try:
+                if node and self._path_list[i][k] == node:
+                    continue
+            except IndexError:
+                pass  # cause: k >= len(self._path_list[i])
+            for k in range(len(path) - 1, -1, -1):
+                node = path[k]
+                if match_func(node):
+                    yield node, i
+                    break
+            else:
+                node = None
+
+    def select(self, criterion: NodeSelector, reverse: bool = False) -> Tuple[Node, int]:
+        """"See :py:meth:`ContentMapping.select_if`
+
+        Example:.
+
+            >>> tree = parse_sxpr('(A (B (x "1") (y "2")) (B "!") (C (z "3")))')
+            >>> cm = ContentMapping(tree)
+            >>> print([(i, nd.as_sxpr()) for nd, i in cm.select("y")])
+            [(1, '(y "2")')]
+        """
+        yield from self.select_if(create_match_function(criterion), reverse)
 
     @cython.locals(i=cython.int, start_pos=cython.int, end_pos=cython.int, offset=cython.int)
     def rebuild_mapping_slice(self, first_index: cython.int, last_index: cython.int):
