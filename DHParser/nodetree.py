@@ -189,6 +189,7 @@ __all__ = ('WHITESPACE_PTYPE',
            'can_split',
            'leaf_paths',
            'reset_chain_ID',
+           'DEFAULT_START_INDEX_SENTINEL',
            'ContentMapping',
            'FrozenNode',
            'EMPTY_NODE',
@@ -4257,6 +4258,8 @@ def leaf_paths(criterion: PathSelector) -> PathMatchFunction:
     return leaf_match_func
 
 
+DEFAULT_START_INDEX_SENTINEL = -2 ** 30
+
 class ContentMapping:
     """
     ContentMapping represents a path-mapping of the string-content of all or a
@@ -4553,7 +4556,7 @@ class ContentMapping:
                 yield self._path_list[i]
 
     def select_if(self, match_func: NodeMatchFunction,
-                  start_from: int = -1,
+                  start_from: int = DEFAULT_START_INDEX_SENTINEL,
                   reverse: bool = False) -> Iterator[Tuple[Node, int]]:
         """Yields the node and its path-index for all nodes that are matched
         by the match function. Searching starts from the path with the index
@@ -4580,8 +4583,10 @@ class ContentMapping:
         """
         node = None
         L = len(self._path_list)
-        if start_from < 0:
+        if start_from <= DEFAULT_START_INDEX_SENTINEL:
             start_from = L - 1 if reverse else 0
+        assert start_from >= 0, "Cannot select from empty ContentMapping" if L == 0 \
+            else f"start_from value {start_from} is below zero!"
         path_indices = range(start_from, -1, -1) if reverse else range(start_from, L)
         for i in path_indices:
             path = self._path_list[i]
@@ -4599,12 +4604,12 @@ class ContentMapping:
                 node = None
 
     def pick_if(self, match_func: NodeMatchFunction,
-                start_from: int = -1,
+                start_from: int = DEFAULT_START_INDEX_SENTINEL,
                 reverse: bool = False) -> Tuple[Node, int]:
         return next(self.select_if(match_func, start_from, reverse), (None, -1))
 
     def select(self, criterion: NodeSelector,
-               start_from: int = -1,
+               start_from: int = DEFAULT_START_INDEX_SENTINEL,
                reverse: bool = False) -> Iterator[Tuple[Node, int]]:
         """See :py:meth:`ContentMapping.select_if`
 
@@ -4618,7 +4623,7 @@ class ContentMapping:
         yield from self.select_if(create_match_function(criterion), start_from, reverse)
 
     def pick(self, criterion: NodeSelector,
-             start_from: int = -1,
+             start_from: int = DEFAULT_START_INDEX_SENTINEL,
              reverse: bool = False) -> Tuple[Node, int]:
         return next(self.select(criterion, start_from, reverse), (None, -1))
 
