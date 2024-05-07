@@ -4895,7 +4895,8 @@ class ContentMapping:
         if not common_ancestor._children:
             attr_dict.pop(self.chain_attr_name, None)
             markup_leaf(common_ancestor, pos_A, pos_B, name, attr_dict)
-            if i != 0 and (common_ancestor.name in divisible or common_ancestor.anonymous):
+            if (not self.greedy or common_ancestor.name[0:1] == ":") and i != 0 \
+                    and (common_ancestor.name in divisible or common_ancestor.anonymous):
                 for child in common_ancestor.children:
                     if child.name == TOKEN_PTYPE:
                         child.name = common_ancestor.name
