@@ -1380,8 +1380,24 @@ class TestMarkupInsertion:
 
     def test_markup_new_9(self):
         tree = parse_sxpr('''(p (b "I") (:Text " ") (i "gener.:") (:Text "[MFSP]") (b "A"))''')
+
         t = copy.deepcopy(tree)
-        cm = cm = ContentMapping(t, divisibility=LEAF_PTYPES | {'i', 'span'})
+        cm = ContentMapping(t, divisibility=LEAF_PTYPES | {'i', 'span'})
+        cm.greedy = True
+        cm.markup(2, 8, "Klassifikation")
+        assert t.as_sxpr() == \
+            '(p (b "I") (:Text " ") (i (Klassifikation "gener.") (:Text ":")) ' \
+            '(:Text "[MFSP]") (b "A"))'
+        t = copy.deepcopy(tree)
+        cm = cm = ContentMapping(t, divisibility=LEAF_PTYPES)
+        cm.markup(2, 8, "Klassifikation")
+        assert t.as_sxpr() == \
+            '(p (b "I") (:Text " ") (i (Klassifikation "gener.") (:Text ":")) ' \
+            '(:Text "[MFSP]") (b "A"))'
+
+        t = copy.deepcopy(tree)
+        cm = ContentMapping(t, divisibility=LEAF_PTYPES | {'i', 'span'})
+        cm.greedy = False
         cm.markup(2, 8, "Klassifikation")
         assert t.as_sxpr() == \
                '(p (b "I") (:Text " ") (Klassifikation (i "gener.")) ' \
