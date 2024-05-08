@@ -226,7 +226,7 @@ proc init*(parser: Parser, ptype: string = ParserName): Parser =
   #parser.subParsers = @[]
   # parser.closure.init()
   parser.call = memoizationWrapper
-  parser.visited = initTable[int, ParsingResult]()
+  parser.visited = initTable[int, ParsingResult](0)
   parser.cleanUp()
   return parser
 

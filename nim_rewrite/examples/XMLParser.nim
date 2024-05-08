@@ -103,7 +103,8 @@ let CommentChars = "CommentChars" ::= cr"([\x09\x0A\x0D]|[\u0020-\u002C]|[\u002E
 let CharRef     = "CharRef" ::=       (txt"&#" & cr"[0-9]+" & txt";") | (txt"&#x" & cr"[0-9a-fA-F]+" & txt";")
 
 let S           = "S" ::=             cr"[\s]+"
-let WS          = ":WS" ::=           Drop(Whitespace(r"\s*", ""))  # Drop
+# let WS          = ":WS" ::=           Drop(Whitespace(r"\s*", ""))  # Drop
+let WS          = ":WS" ::=           Drop(cr"[\s]*")
 let EOF         = "EOF" ::=           >>! rxp"."
 
 DropStrings(document)
