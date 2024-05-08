@@ -1,8 +1,8 @@
+# import nimprof
+
 import std/[paths, strutils]
 when not defined(js):
   import std/[dirs]
-
-# import nimprof
 
 import "../src/nimparser/error"
 import "../src/nimparser/nodetree"
