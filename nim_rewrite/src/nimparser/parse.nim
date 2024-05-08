@@ -91,7 +91,7 @@ type
     symbol: ParserOrNil
     subParsers: seq[Parser]
     call: ParseProc not nil
-    visited: Table[int, ParsingResult]  # TODO: use btree or something, here?
+    visited: Table[int, ParsingResult]  # TODO: use lptabz https://github.com/c-blake/adix/tree/master here?
 
   ErrorCatchingParserObj = object of ParserObj
     mandatory: uint32
