@@ -496,9 +496,13 @@ class TestEBNFParser:
     def test_SmartRE(self):
         ebnf = r"name = /(?P<first_name>\w+)\s+(?P<last_name>\w+)/"
         gr = create_parser(ebnf, 'SmartRETest')
-        src = 'Arthur Schopenhauer'
-        result = gr(src)
+        result = gr('Arthur Schopenhauer')
         assert result.as_sxpr() == '(name (first_name "Arthur") (last_name "Schopenhauer"))'
+
+        ebnf = r"name = /(?P<first_name>\w+)(\s+)(?P<last_name>\w+)/"
+        gr = create_parser(ebnf, 'SmartRETest')
+        result = gr('Arthur Schopenhauer')
+        assert result.as_sxpr() == '(name (first_name "Arthur") (:RegExp " ") (last_name "Schopenhauer"))'
 
         ebnf = (r"""@disposable = name
                 name = /(?P<first_name>\w*)\s*(?P<last_name>\w*)/""")

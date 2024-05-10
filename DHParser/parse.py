@@ -2766,6 +2766,8 @@ class SmartRE(RegExp):
         if self.remap:
             regexp = pattern
         super(SmartRE, self).__init__(regexp)
+        groups = {index: name for name, index in self.regexp.groupindex.items()}
+        self.group_names = [groups.get(i, ":RegExp") for i in range(1, self.regexp.groups + 1)]
 
     def _parse(self, location: cython.int) -> ParsingResult:
         try:
@@ -2775,21 +2777,21 @@ class SmartRE(RegExp):
                 f'  at pos {location}:  {self._grammar.text__[location:location + 40]}  ...') \
                 from e
         if match:
-            captures = match.groupdict()
-            if sum(len(content) for content in captures.values()) or not self.disposable:
+            values = match.groups()
+            if sum(len(content) for content in values) or not self.disposable:
                 end = match.end()
                 if self.drop_content:
                     return EMPTY_NODE, end
                 if self.remap:
                     result = tuple(Node(self.remap.get(name, name), content)
-                                   for name, content in captures.items()
+                                   for name, content in zip(self.group_names, values)
                                    if content or not self.disposable)
                     # TODO: :Whitespace + disposable treatment!
                 else:
                     result = tuple(Node(name, content)
-                                   for name, content in captures.items()
+                                   for name, content in zip(self.group_names, values)
                                    if content or not self.disposable)
-                for nd in result:  nd._pos = match.start(nd.name)
+                for i, nd in enumerate(result, start=1):  nd._pos = match.start(i)
                 L = len(result)
                 if L > 1 or self.node_name[0:1] != ':':
                     return Node(self.node_name, result), end
