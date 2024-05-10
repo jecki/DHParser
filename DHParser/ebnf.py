@@ -2917,7 +2917,7 @@ class EBNFCompiler(Compiler):
 
     def on_expression(self, node) -> str:
         # The following algorithm reorders literal alternatives, so that earlier alternatives
-        # does not pre-empt later alternatives, e.g. 'ID' | 'IDREF' will be reordered as
+        # do not pre-empt later alternatives, e.g. 'ID' | 'IDREF' will be reordered as
         # 'IDREF' | 'ID'
 
         def move_items(l: List, a: int, b: int):

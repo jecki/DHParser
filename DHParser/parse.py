@@ -2755,7 +2755,16 @@ class SmartRE(RegExp):
     """
     def __init__(self, regexp) -> None:
         pattern = regexp if isinstance(regexp, str) else regexp.pattern
-        assert pattern.find('(?P<') >= 0, f"Named group(s) missing in SmartRE: {pattern}"
+        group_names = re.findall(r'\(\?P<(\w+)>', pattern)
+        assert group_names, f"Named group(s) missing in SmartRE: {pattern}"
+        self.remap = dict()
+        for name in group_names:
+            if name[0:1] == ":":
+                mapped = name[1:] + '__'
+                self.remap[mapped] = name
+                pattern = pattern.replace(name, mapped)
+        if self.remap:
+            regexp = pattern
         super(SmartRE, self).__init__(regexp)
 
     def _parse(self, location: cython.int) -> ParsingResult:
@@ -2771,8 +2780,15 @@ class SmartRE(RegExp):
                 end = match.end()
                 if self.drop_content:
                     return EMPTY_NODE, end
-                result = tuple(Node(name, content) for name, content in captures.items()
-                               if content or not self.disposable)
+                if self.remap:
+                    result = tuple(Node(self.remap.get(name, name), content)
+                                   for name, content in captures.items()
+                                   if content or not self.disposable)
+                    # TODO: :Whitespace + disposable treatment!
+                else:
+                    result = tuple(Node(name, content)
+                                   for name, content in captures.items()
+                                   if content or not self.disposable)
                 for nd in result:  nd._pos = match.start(nd.name)
                 L = len(result)
                 if L > 1 or self.node_name[0:1] != ':':

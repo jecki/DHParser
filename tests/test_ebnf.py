@@ -117,7 +117,7 @@ class TestDirectives:
         parser = MinilangParser()
         assert parser
         syntax_tree = parser("3 + 4 \n  %comment \n * 12")
-        # print(syntax_tree.as_sxpr())
+        print(syntax_tree.as_sxpr())
         assert syntax_tree.pick('comment__')
         assert not syntax_tree.pick(':Whitespace')
 
@@ -509,6 +509,10 @@ class TestEBNFParser:
         assert result.as_sxpr() == '(:EMPTY)'
         result = gr('$$$')
         assert result.errors
+
+        ebnf = r"keyword = /(?P<Text__>hide)(?P<Whitespace__>\s*)/"
+        gr = create_parser(ebnf, "SmartRETest")
+        assert gr("hide").as_sxpr() == '(keyword (Text__ "hide") (Whitespace__))'
 
     def test_literal(self):
         snippet = '"text" '
