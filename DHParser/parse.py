@@ -2739,7 +2739,7 @@ class RegExp(LeafParser):
 KEEP_COMMENTS_NAME = KEEP_COMMENTS_PTYPE[1:] + '__'
 
 
-class SmartRE(RegExp):
+class SmartRE(RegExp):  # TODO: turn this into a CombinedParser
     r"""
     Regular expression parser that returns a tree with a node for every
     captured group (named as the group or as the number of the group,
