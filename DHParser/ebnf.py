@@ -3361,6 +3361,7 @@ class EBNFCompiler(Compiler):
         whitespace by defining a :py:class:`~parse:SmartRe`-parser with
         with regular expression."""
         # TODO: doctests required
+
         left_rx = self.whitespace_rx(left)
         right_rx = self.whitespace_rx(right)
         return ''.join([left_rx, f'(?P<{TOKEN_PTYPE}>{re.escape(content)})', right_rx])
@@ -3370,14 +3371,17 @@ class EBNFCompiler(Compiler):
         # TODO: Test with self.optimization_level > 1
         content, left, right = self.prepare_literal(node)
         if self.optimization_level >= 1 and (left or right):
+            q = content[0]
+            content = content[1:-1]
             rxp = self.literal_rx(content, left, right)
-            return f"{self.P['SmartRE']}('{rxp}')"
+            return f"{self.P['SmartRE']}({q}{rxp}{q})"
         center = self.TEXT_PARSER(content, self.drop_on(DROP_STRINGS))
         if left or right:
             args = ", ".join(item for item in (left, center, right) if item)
             return f'{self.P["Series"]}({args})'
             # return 'Series(' + ", ".join(item for item in (left, center, right) if item) + ')'
         return center
+
 
     def on_plaintext(self, node: Node) -> str:
         tk = escape_ctrl_chars(node.content)

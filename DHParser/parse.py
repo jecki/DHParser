@@ -2757,24 +2757,42 @@ class SmartRE(RegExp):
 
     EBNF-Example:   ``name = /(?P<first_name>\w+)\s+(?P<last_name>\w+)/``
     """
-    def __init__(self, regexp) -> None:
-        pattern = regexp if isinstance(regexp, str) else regexp.pattern
-        group_names = re.findall(r'\(\?P<(:?\w+)>', pattern)
-        assert group_names, f"Named group(s) missing in SmartRE: {pattern}"
-        self.remap = dict()
-        for name in group_names:
-            if name[0:1] == ":":
-                mapped = name[1:] + '__'
-                if name == KEEP_COMMENTS_PTYPE:
-                    self.remmap[mapped] = WHITESPACE_PTYPE
-                else:
-                    self.remap[mapped] = name
-                pattern = pattern.replace(name, mapped)
-        if self.remap:
-            regexp = pattern
-        super(SmartRE, self).__init__(regexp)
-        groups = {index: name for name, index in self.regexp.groupindex.items()}
-        self.group_names = [groups.get(i, ":RegExp") for i in range(1, self.regexp.groups + 1)]
+    def __init__(self, regexp,
+                 remap: Dict[str, str] = None,
+                 group_names: List[str] = None) -> None:
+        if remap is not None and group_names is not None:  # copy constructor
+            super(SmartRE, self).__init__(regexp)
+            self.remap = remap
+            self.group_names = group_names
+        else:
+            assert remap is None and group_names is None
+            pattern = regexp if isinstance(regexp, str) else regexp.pattern
+            group_names = re.findall(r'\(\?P<(:?\w+)>', pattern)
+            assert group_names, f"Named group(s) missing in SmartRE: {pattern}"
+            self.remap = dict()
+            for name in group_names:
+                if name[0:1] == ":":
+                    mapped = name[1:] + '__'
+                    if name == KEEP_COMMENTS_PTYPE:
+                        self.remap[mapped] = WHITESPACE_PTYPE
+                    else:
+                        self.remap[mapped] = name
+                    pattern = pattern.replace('(?P<' + name, '(?P<' + mapped)
+            if self.remap:
+                regexp = pattern
+            super(SmartRE, self).__init__(regexp)
+            groups = {index: name for name, index in self.regexp.groupindex.items()}
+            self.group_names = [groups.get(i, ":RegExp") for i in range(1, self.regexp.groups + 1)]
+
+    def __deepcopy__(self, memo):
+        # `regex` supports deep copies, but not `re`
+        try:
+            regexp = copy.deepcopy(self.regexp, memo)
+        except TypeError:
+            regexp = self.regexp.pattern
+        duplicate = self.__class__(regexp, self.remap, self.group_names)
+        copy_parser_base_attrs(self, duplicate)
+        return duplicate
 
     def _parse(self, location: cython.int) -> ParsingResult:
         try:
