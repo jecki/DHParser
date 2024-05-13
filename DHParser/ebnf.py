@@ -3327,33 +3327,6 @@ class EBNFCompiler(Compiler):
         return self.on_literal(node)
 
 
-    def whitespace_rx(self, ws: str) -> str:
-        # TODO: doctests required
-        """Returns a ragular expression for whitespace, possibly including comments"""
-        if ws or self.directives.comment:
-            ws_rx = mixin_comment(self.directives.whitespace, self.directives.comment)
-            if ws == "dwsp__":
-                if DROP_NO_COMMENTS in self.directives.drop:
-                    return f'(?P<{KEEP_COMMENTS_PTYPE}>{ws_rx})'
-                else:
-                    return f'(?:{ws_rx})'
-            else:
-                assert ws == "wsp__"
-                return f'(?P<{WHITESPACE_PTYPE_PTYPE}>{ws_rx})'
-        return ""
-
-
-    def literal_rx(self, content: str, left: str, right: str) -> str:
-        """Returns a regular expression string to parse a literal. This
-        can be used to optimize the parsing of literals with adjacent
-        whitespace by defining a :py:class:`~parse:SmartRe`-parser with
-        with regular expression."""
-        # TODO: doctests required
-        left_rx = self.whitespace_rx(left)
-        right_rx = self.whitespace_rx(right)
-        return ''.join(left_rx, f'(?P<{TOKEN_PTYPE}>{re.escape(content)})', right_rx)
-
-
     def prepare_literal(self, node: Node) -> Tuple[str, str, str]:
         """Returns content, left_Whitespace, right_whitspace for a literal-node."""
         assert node.name == "literal"
@@ -3366,12 +3339,39 @@ class EBNFCompiler(Compiler):
         return content, left, right
 
 
+    def whitespace_rx(self, ws: str) -> str:
+        # TODO: doctests required
+        """Returns a ragular expression for whitespace, possibly including comments"""
+        if ws or self.directives.comment:
+            ws_rx = mixin_comment(self.directives.whitespace, self.directives.comment)
+            if ws == "dwsp__":
+                if DROP_NO_COMMENTS in self.directives.drop:
+                    return f'(?P<{KEEP_COMMENTS_PTYPE}>{ws_rx})'
+                else:
+                    return f'(?:{ws_rx})'
+            else:
+                assert ws == "wsp__"
+                return f'(?P<{WHITESPACE_PTYPE}>{ws_rx})'
+        return ""
+
+
+    def literal_rx(self, content: str, left: str, right: str) -> str:
+        """Returns a regular expression string to parse a literal. This
+        can be used to optimize the parsing of literals with adjacent
+        whitespace by defining a :py:class:`~parse:SmartRe`-parser with
+        with regular expression."""
+        # TODO: doctests required
+        left_rx = self.whitespace_rx(left)
+        right_rx = self.whitespace_rx(right)
+        return ''.join([left_rx, f'(?P<{TOKEN_PTYPE}>{re.escape(content)})', right_rx])
+
+
     def on_literal(self, node: Node) -> str:
         # TODO: Test with self.optimization_level > 1
         content, left, right = self.prepare_literal(node)
         if self.optimization_level >= 1 and (left or right):
-            rx = self.literal_rx(content, lef, right)
-            return f'{self.P["SMartRE"]}({rxp})'
+            rxp = self.literal_rx(content, left, right)
+            return f"{self.P['SmartRE']}('{rxp}')"
         center = self.TEXT_PARSER(content, self.drop_on(DROP_STRINGS))
         if left or right:
             args = ", ".join(item for item in (left, center, right) if item)

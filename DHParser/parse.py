@@ -2759,7 +2759,7 @@ class SmartRE(RegExp):
     """
     def __init__(self, regexp) -> None:
         pattern = regexp if isinstance(regexp, str) else regexp.pattern
-        group_names = re.findall(r'\(\?P<(\w+)>', pattern)
+        group_names = re.findall(r'\(\?P<(:?\w+)>', pattern)
         assert group_names, f"Named group(s) missing in SmartRE: {pattern}"
         self.remap = dict()
         for name in group_names:
