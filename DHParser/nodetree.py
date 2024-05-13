@@ -114,6 +114,7 @@ except ImportError:
 
 
 __all__ = ('WHITESPACE_PTYPE',
+           'KEEP_COMMENTS_PTYPE',
            'TOKEN_PTYPE',
            'MIXED_CONTENT_TEXT_PTYPE',
            'REGEXP_PTYPE',
@@ -214,6 +215,7 @@ __all__ = ('WHITESPACE_PTYPE',
 ## parser-related-definitions #########################################
 
 WHITESPACE_PTYPE = ':Whitespace'
+KEEP_COMMENTS_PTYPE = ":Comment"  # Whitespace keep comments, works only with class SmartRE
 TOKEN_PTYPE = ':Text'
 # Node name for plain text in XML-elements that contain both children and plain text
 MIXED_CONTENT_TEXT_PTYPE = ':Text'

@@ -55,8 +55,9 @@ from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
 from DHParser.log import CallItem, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
-from DHParser.nodetree import ChildrenType, Node, RootNode, WHITESPACE_PTYPE, TOKEN_PTYPE, \
-     MIXED_CONTENT_TEXT_PTYPE, ZOMBIE_TAG, EMPTY_NODE, EMPTY_PTYPE, ResultType, LEAF_NODE
+from DHParser.nodetree import ChildrenType, Node, RootNode, WHITESPACE_PTYPE, \
+    KEEP_COMMENTS_PTYPE, TOKEN_PTYPE, MIXED_CONTENT_TEXT_PTYPE, ZOMBIE_TAG, EMPTY_NODE, \
+    EMPTY_PTYPE, ResultType, LEAF_NODE
 from DHParser.toolkit import sane_parser_name, escape_ctrl_chars, re, \
     abbreviate_middle, RX_NEVER_MATCH, RxPatternType, linebreaks, line_col, TypeAlias
 
@@ -2735,6 +2736,9 @@ class RegExp(LeafParser):
         return self.__class__.__name__, self.regexp.pattern
 
 
+KEEP_COMMENTS_NAME = KEEP_COMMENTS_PTYPE[1:] + '__'
+
+
 class SmartRE(RegExp):
     r"""
     Regular expression parser that returns a tree with a node for every
@@ -2761,7 +2765,10 @@ class SmartRE(RegExp):
         for name in group_names:
             if name[0:1] == ":":
                 mapped = name[1:] + '__'
-                self.remap[mapped] = name
+                if name == KEEP_COMMENTS_PTYPE:
+                    self.remmap[mapped] = WHITESPACE_PTYPE
+                else:
+                    self.remap[mapped] = name
                 pattern = pattern.replace(name, mapped)
         if self.remap:
             regexp = pattern
@@ -2785,8 +2792,9 @@ class SmartRE(RegExp):
                 if self.remap:
                     result = tuple(Node(self.remap.get(name, name), content)
                                    for name, content in zip(self.group_names, values)
-                                   if content or not self.disposable)
-                    # TODO: :Whitespace + disposable treatment!
+                                   if content or (not self.disposable
+                                                  and name != KEEP_COMMENTS_NAME))
+                    # TODO: :Whitespace, :Comment testing!!!!
                 else:
                     result = tuple(Node(name, content)
                                    for name, content in zip(self.group_names, values)
