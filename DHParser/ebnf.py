@@ -2187,7 +2187,7 @@ class EBNFCompiler(Compiler):
         if (DROP_WSPC in self.directives.drop or DROP_NO_COMMENTS in self.directives.drop
                 or DROP_STRINGS in self.directives.drop):
             if DROP_NO_COMMENTS in self.directives.drop:
-                drop_wspc_tmpl = 'Drop(Whitespace(%s, keep_comments=True))'
+                drop_wspc_tmpl = 'Drop(Whitespace(%s, keep_comments=True))'  # TODO: turn keep-comments into a global option
             else:
                 drop_wspc_tmpl = 'Drop(Whitespace(%s))'
             definitions.append((EBNFCompiler.DROP_WHITESPACE_PARSER_KEYWORD,

@@ -2453,10 +2453,13 @@ class TestIgnoreCase:
 
 class TestOptimizations:
     def test_literal_optimization(self):
+        save = get_config_value('optimization_level')
+
         from DHParser.dsl import grammar_provider
         lang = '''
                @literalws = right
                doc = "AAA" '''
+
         set_config_value('optimization_level', 0)
         parser = create_parser(lang)
         assert parser.python_src__.find('SmartRE') < 0
@@ -2470,6 +2473,7 @@ class TestOptimizations:
         tree = parser("AAA  ")
         assert tree.as_sxpr() == '(doc (:Text "AAA") (:Whitespace "  "))'
 
+        set_config_value('optimization_level', save)
 
 if __name__ == "__main__":
     from DHParser.testing import runner
