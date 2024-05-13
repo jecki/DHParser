@@ -2845,7 +2845,6 @@ def DTKN(token, wsL='', wsR=r'\s*'):
 
 
 class Whitespace(RegExp):
-    # TODO: Keep comments, if they exist
     r"""A variant of RegExp that it meant to be used for insignificant whitespace.
     In contrast to RegExp, Whitespace always returns a match. If the defining
     regular expression did not match, an empty match is returned.

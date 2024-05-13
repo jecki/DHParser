@@ -1721,6 +1721,12 @@ class EBNFCompiler(Compiler):
     :ivar grammar_name:  The name of the grammar to be compiled
 
     :ivar grammar_source:  The source code of the grammar to be compiled.
+
+    :ivar optimization_level:  Turns on optimizng parser by substituting
+            SmartRE-parsers for compound parsers when possible.
+            Any number higher than zero turns optimization on (the higher,
+            the more; see "optimization_level" in  DHParser.config.py).
+            A value of zero turns optimization off.
     """
     COMMENT_KEYWORD = "COMMENT__"
     COMMENT_PARSER_KEYWORD = "comment__"
@@ -1786,6 +1792,7 @@ class EBNFCompiler(Compiler):
         self.consumed_custom_errors = set()    # type: Set[str]
         self.consumed_skip_rules = set()       # type: Set[str]
         self.P = {p: p for p in parser_names}  # type: Dict[str, str]
+        self.optimization_level = get_config_value('optimization_level')  # type: int
 
 
     @property
@@ -2915,6 +2922,7 @@ class EBNFCompiler(Compiler):
     def on_placeholder(self, node) -> str:
         return self.on_macro(node)
 
+
     def on_expression(self, node) -> str:
         # The following algorithm reorders literal alternatives, so that earlier alternatives
         # do not pre-empt later alternatives, e.g. 'ID' | 'IDREF' will be reordered as
@@ -3291,14 +3299,6 @@ class EBNFCompiler(Compiler):
 
     def drop_on(self, category):
         return category in self.directives.drop and self.path[-2].name != "definition"
-        # # exclude the cases like:
-        # # number = "1"
-        # # number = "1" | "2" | "3"
-        # return category in self.directives.drop and \
-        #     (self.path[-2].name != "definition"
-        #      and (self.path[-2].name != "expression" or self.path[-3].name != "definition"
-        #           or
-        #           (any(child.name != 'literal' for child in self.path[-2].children))))
 
 
     def TEXT_PARSER(self, text, drop):
@@ -3327,6 +3327,13 @@ class EBNFCompiler(Compiler):
         return self.on_literal(node)
 
 
+    def literal_rx(self, Node) -> str:
+        """Returns a regular expression string to parse a literal. This
+        can be used to optimize the parsing of literals with adjacent
+        whitespace by defining a :py:class:`~parse:SmartRe`-parser with
+        with regular expression."""
+        pass
+
     def on_literal(self, node: Node) -> str:
         content = escape_ctrl_chars(node.content)
         if (content[:1] + content[-1:]) == '’’':
@@ -3340,7 +3347,6 @@ class EBNFCompiler(Compiler):
             return f'{self.P["Series"]}({args})'
             # return 'Series(' + ", ".join(item for item in (left, center, right) if item) + ')'
         return center
-
 
     def on_plaintext(self, node: Node) -> str:
         tk = escape_ctrl_chars(node.content)

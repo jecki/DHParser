@@ -379,7 +379,6 @@ def add_config_values(configuration: dict):
         cfg.update(configuration)
 
 
-
 ########################################################################
 #
 # parser configuration
@@ -628,6 +627,24 @@ CONFIG_PRESET['delimiter_set'] = {
     'CH_LEADIN':  '0x'
 }
 
+# Sets the level of optimization of the ebnf-compiler. Optimaztion
+# is done by substituting compound parsers by SmartRE-parsers
+# when this is possible. Theoretically, this is everywhere where
+# no recursion occurs. In practice this is done only in (some of the)
+# cases where no (non-disposable) symbols are referred.
+# The following levels are availaible:
+# 0 = no optimization
+# 1 = only compound literals (i.e. literals with whitespace) will be
+#     optimized-
+# 2 = compound literals and sequences made up of literals, insignificant
+#     whitespace and regular expressions.
+# 3 = all of the former plus expressions (if possible, i.e. if entirely
+#     made up of literals, insignificant whitespace and regexes)
+# 4 = all of the former plus options and repetitions.
+# 5 = all of the former plus lookaheads
+# Any number higher than the last number in the previous list will
+# be considered an alias for the highest supported optimization level.
+CONFIG_PRESET['optimization_level'] = 0
 
 ########################################################################
 #
@@ -697,6 +714,7 @@ CONFIG_PRESET['compiled_EBNF_log'] = ''
 #         line with two leading minus-signs, e.g. '--singlethread'
 #
 CONFIG_PRESET['debug_parallel_execution'] = 'commandline'
+
 
 ########################################################################
 #

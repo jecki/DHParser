@@ -479,7 +479,6 @@ def re_find(s, r, pos=0, endpos=9223372036854775807):
 def escape_re(strg: str) -> str:
     """
     Returns the string with all regular expression special characters escaped.
-    TODO: Remove this function in favor of re.escape()
     """
 
     # assert isinstance(strg, str)
