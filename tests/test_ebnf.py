@@ -117,7 +117,7 @@ class TestDirectives:
         parser = MinilangParser()
         assert parser
         syntax_tree = parser("3 + 4 \n  %comment \n * 12")
-        print(syntax_tree.as_sxpr())
+        # print(syntax_tree.as_sxpr())
         assert syntax_tree.pick('comment__')
         assert not syntax_tree.pick(':Whitespace')
 

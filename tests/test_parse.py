@@ -1647,7 +1647,10 @@ class TestMemoization:
         wordB = `"` /[Bb]\w+/ '"'
         wordC = `"` /[Cc]\w+/ '"'
         EOF = /$/'''
+        save = get_config_value('optimization_level')
+        set_config_value('optimization_level', 0)
         grammar = create_parser(words, 'words')
+        set_config_value('optimization_level', save)
 
         p1 = grammar.wordC.parsers[0]
         p2 = grammar.wordB.parsers[0]
@@ -1879,7 +1882,7 @@ class TestAlternativeParserDefinitions:
             """
         json_parser = create_parser(json_grammar, 'JSON')
         st1 = json_parser(self.json_text)
-        assert st1.equals(self.goal)
+        assert st1.equals(self.goal), st1.as_sxpr()
 
     def test_python_top_level(self):
         _element = Forward().name('_element', disposable=True)

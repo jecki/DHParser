@@ -1302,6 +1302,20 @@ Techniques for resuming the parsing process after an error occurred
 or for passing by erroneous passages in the source code will be
 explained below, under the heading "Fail-tolerant Parsing".
 
+Since uncustomized error messages report (among other things)
+the parser-objects which caught an error, we need to turn any
+speed optimizations off in order to get consistent error-messages
+in the following. DHParser's speed-optizations work by "compressing"
+nested parsers into "smart" regular expressions if possible.
+However, the respective parser objects look different and often
+more contrived when serialized. Speed optmizations can be turned
+off by settting the configuration value "optimization_level" to
+zero::
+
+    >>> from DHParser.configuration import get_config_value, set_config_value
+    >>> save_optimization_level = get_config_value('optimization_level')
+    >>> set_config_value('optimization_level', 0)
+
 Farthest-Fail-Heuristics
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2953,6 +2967,10 @@ node's attributes will be accessible without any restrictions only in
 the processing stages following the parsing-stage (see
 :any:`processing_pipelines`).
 
+
+Now, let's not forget to restore the turned off optimizations (see above)::
+
+    >>> set_config_value('optimization_level', save_optimization_level)
 
 
 *Classes and Functions-Reference*

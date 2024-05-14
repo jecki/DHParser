@@ -2472,7 +2472,7 @@ class PreprocessorToken(LeafParser):
     def __init__(self, token: str) -> None:
         assert token and token.isupper()
         assert RX_TOKEN_NAME.match(token)
-        super(PreprocessorToken, self).__init__()
+        super().__init__()
         self.pname = token
         if token:
             self.disposable = False
@@ -2556,7 +2556,7 @@ class ERR(LeafParser):
     message at the current location."""
 
     def __init__(self, err_msg: str, err_code: ErrorCode = ERROR) -> None:
-        super(ERR, self).__init__()
+        super().__init__()
         self.err_msg, self.err_code = extract_error_code(err_msg, err_code)
 
     def __deepcopy__(self, memo):
@@ -2596,7 +2596,7 @@ class Text(NoMemoizationParser):
     assert TOKEN_PTYPE == ":Text"
 
     def __init__(self, text: str) -> None:
-        super(Text, self).__init__()
+        super().__init__()
         self.text = text
         self.len = len(text)
 
@@ -2646,7 +2646,7 @@ class IgnoreCase(Text):
     """
 
     def __init__(self, text: str) -> None:
-        super(IgnoreCase, self).__init__(text.lower())
+        super().__init__(text.lower())
         self.len = len(text)
 
     @cython.locals(location_=cython.int)
@@ -2684,7 +2684,7 @@ class RegExp(LeafParser):
     """
 
     def __init__(self, regexp) -> None:
-        super(RegExp, self).__init__()
+        super().__init__()
         self.regexp = re.compile(regexp) if isinstance(regexp, str) else regexp
 
     def __deepcopy__(self, memo):
@@ -2734,98 +2734,6 @@ class RegExp(LeafParser):
 
     def _signature(self) -> Hashable:
         return self.__class__.__name__, self.regexp.pattern
-
-
-KEEP_COMMENTS_NAME = KEEP_COMMENTS_PTYPE[1:] + '__'
-
-
-class SmartRE(RegExp):  # TODO: turn this into a CombinedParser
-    r"""
-    Regular expression parser that returns a tree with a node for every
-    captured group (named as the group or as the number of the group,
-    in case it  is not a named group). The space between groups is dropped.
-
-    EXPERIMENTAL
-
-    Example::
-
-        >>> name = SmartRE(r'(?P<christian_name>\w+)\s+(?P<family_name>\w+)').name("name")
-        >>> Grammar(name)("Arthur Schopenhauer").as_sxpr()
-        '(name (christian_name "Arthur") (family_name "Schopenhauer"))'
-
-    EBNF-Notation:  ``/ ... /``
-
-    EBNF-Example:   ``name = /(?P<first_name>\w+)\s+(?P<last_name>\w+)/``
-    """
-    def __init__(self, regexp,
-                 remap: Dict[str, str] = None,
-                 group_names: List[str] = None) -> None:
-        if remap is not None and group_names is not None:  # copy constructor
-            super(SmartRE, self).__init__(regexp)
-            self.remap = remap
-            self.group_names = group_names
-        else:
-            assert remap is None and group_names is None
-            pattern = regexp if isinstance(regexp, str) else regexp.pattern
-            group_names = re.findall(r'\(\?P<(:?\w+)>', pattern)
-            assert group_names, f"Named group(s) missing in SmartRE: {pattern}"
-            self.remap = dict()
-            for name in group_names:
-                if name[0:1] == ":":
-                    mapped = name[1:] + '__'
-                    if name == KEEP_COMMENTS_PTYPE:
-                        self.remap[mapped] = WHITESPACE_PTYPE
-                    else:
-                        self.remap[mapped] = name
-                    pattern = pattern.replace('(?P<' + name, '(?P<' + mapped)
-            if self.remap:
-                regexp = pattern
-            super(SmartRE, self).__init__(regexp)
-            groups = {index: name for name, index in self.regexp.groupindex.items()}
-            self.group_names = [groups.get(i, ":RegExp") for i in range(1, self.regexp.groups + 1)]
-
-    def __deepcopy__(self, memo):
-        # `regex` supports deep copies, but not `re`
-        try:
-            regexp = copy.deepcopy(self.regexp, memo)
-        except TypeError:
-            regexp = self.regexp.pattern
-        duplicate = self.__class__(regexp, self.remap, self.group_names)
-        copy_parser_base_attrs(self, duplicate)
-        return duplicate
-
-    def _parse(self, location: cython.int) -> ParsingResult:
-        try:
-            match = self.regexp.match(self._grammar.text__, location)
-        except KeyboardInterrupt as e:
-            raise KeyboardInterrupt(f'Stopped while processing regular expression:  {self.regexp}'
-                f'  at pos {location}:  {self._grammar.text__[location:location + 40]}  ...') \
-                from e
-        if match:
-            values = match.groups()
-            if sum(len(content) for content in values) or not self.disposable:
-                end = match.end()
-                if self.drop_content:
-                    return EMPTY_NODE, end
-                if self.remap:
-                    result = tuple(Node(self.remap.get(name, name), content)
-                                   for name, content in zip(self.group_names, values)
-                                   if content or (not self.disposable
-                                                  and name != KEEP_COMMENTS_NAME))
-                    # TODO: :Whitespace, :Comment testing!!!!
-                else:
-                    result = tuple(Node(name, content)
-                                   for name, content in zip(self.group_names, values)
-                                   if content or not self.disposable)
-                for i, nd in enumerate(result, start=1):  nd._pos = match.start(i)
-                L = len(result)
-                if L > 1 or self.node_name[0:1] != ':':
-                    return Node(self.node_name, result), end
-                elif L == 1:
-                    return result[0], end
-                return EMPTY_NODE, end
-            return EMPTY_NODE, location
-        return None, location
 
 
 def DropText(text: str) -> Text:
@@ -2903,7 +2811,7 @@ class Whitespace(RegExp):
     assert WHITESPACE_PTYPE == ":Whitespace"
 
     def __init__(self, regexp, keep_comments: bool = False) -> None:
-        super(Whitespace, self).__init__(regexp)
+        super().__init__(regexp)
         self.keep_comments = keep_comments
 
     def __deepcopy__(self, memo):
@@ -3024,7 +2932,7 @@ class CombinedParser(Parser):
     """
 
     def __init__(self):
-        super(CombinedParser, self).__init__()
+        super().__init__()
         self._return_value = self._return_value_flatten
         self._return_values = self._return_values_flatten
 
@@ -3347,6 +3255,114 @@ def TreeReduction(root_or_parserlist: Union[Parser, Collection[Parser]],
         return get_parser_placeholder()
 
 
+KEEP_COMMENTS_NAME = KEEP_COMMENTS_PTYPE[1:] + '__'
+
+
+class SmartRE(RegExp, CombinedParser):  # TODO: turn this into a CombinedParser
+    r"""
+    Regular expression parser that returns a tree with a node for every
+    captured group (named as the group or as the number of the group,
+    in case it  is not a named group). The space between groups is dropped.
+
+    Example::
+
+        >>> name = SmartRE(r'(?P<christian_name>\w+)\s+(?P<family_name>\w+)').name("name")
+        >>> Grammar(name)("Arthur Schopenhauer").as_sxpr()
+        '(name (christian_name "Arthur") (family_name "Schopenhauer"))'
+        >>> name = SmartRE(r'(?P<christian_name>\w+)(\s+)(?P<family_name>\w+)').name("name")
+        >>> Grammar(name)("Arthur Schopenhauer").as_sxpr()
+        '(name (christian_name "Arthur") (:RegExp " ") (family_name "Schopenhauer"))'
+
+    EBNF-Notation:  ``/ ... /``
+
+    EBNF-Example:   ``name = /(?P<first_name>\w+)\s+(?P<last_name>\w+)/``
+    """
+    def __init__(self, regexp,
+                 remap: Dict[str, str] = None,
+                 group_names: List[str] = None) -> None:
+        if remap is not None and group_names is not None:  # copy constructor
+            super().__init__(regexp)
+            self.remap = remap
+            self.group_names = group_names
+        else:
+            assert remap is None and group_names is None
+            pattern = regexp if isinstance(regexp, str) else regexp.pattern
+            group_names = re.findall(r'\(\?P<(:?\w+)>', pattern)
+            # assert group_names, f"Named group(s) missing in SmartRE: {pattern}"
+            self.remap = dict()
+            for name in group_names:
+                if name[0:1] == ":":
+                    mapped = name[1:] + '__'
+                    if name == KEEP_COMMENTS_PTYPE:
+                        self.remap[mapped] = WHITESPACE_PTYPE
+                    else:
+                        self.remap[mapped] = name
+                    pattern = pattern.replace('(?P<' + name, '(?P<' + mapped)
+            if self.remap:
+                regexp = pattern
+            super().__init__(regexp)
+            groups = {index: name for name, index in self.regexp.groupindex.items()}
+            self.group_names = [groups.get(i, ":RegExp") for i in range(1, self.regexp.groups + 1)]
+
+    def __deepcopy__(self, memo):
+        # `regex` supports deep copies, but not `re`
+        try:
+            regexp = copy.deepcopy(self.regexp, memo)
+        except TypeError:
+            regexp = self.regexp.pattern
+        duplicate = self.__class__(regexp, self.remap, self.group_names)
+        copy_combined_parser_attrs(self, duplicate)
+        return duplicate
+
+    def _parse(self, location: cython.int) -> ParsingResult:
+        try:
+            match = self.regexp.match(self._grammar.text__, location)
+        except KeyboardInterrupt as e:
+            raise KeyboardInterrupt(f'Stopped while processing regular expression:  {self.regexp}'
+                f'  at pos {location}:  {self._grammar.text__[location:location + 40]}  ...') \
+                from e
+        if match:
+            values = match.groups()
+            end = match.end()
+            if not self.disposable or any(len(content) for content in values):
+                if self.drop_content:
+                    return EMPTY_NODE, end
+                if self.remap:
+                    results = tuple(Node(self.remap.get(name, name), content)
+                                    for name, content in zip(self.group_names, values)
+                                    if ((not self.disposable or content)
+                                        and name != KEEP_COMMENTS_NAME)
+                                       or content.strip())
+                                   # if content or (not self.disposable
+                                   #               and name != KEEP_COMMENTS_NAME))
+                else:
+                    results = tuple(Node(name, content)
+                                   for name, content in zip(self.group_names, values)
+                                   if content or not self.disposable)
+                for i, nd in enumerate(results, start=1):  nd._pos = match.start(i)
+                return self._return_values(results), end
+            return EMPTY_NODE, end
+        return None, location
+
+    def __repr__(self):
+        pattern = repr(self.regexp.pattern)[1:-1]
+        try:
+            pattern = pattern.replace(self._grammar.WSP_RE__, '~')
+            if self._grammar.COMMENT__:
+                pattern = pattern.replace(self._grammar.COMMENT__, 'comment__')
+            if self._grammar.WHITESPACE__:
+                pattern = pattern.replace(self._grammar.WHITESPACE__, 'whitespace__')
+            pattern = pattern.replace('(?:', '(') # .replace('(?P', '(')
+            i = len(pattern)
+            l = i - 1
+            while l < i:
+                i = len(pattern)
+                pattern = pattern.replace('\\\\', '\\')
+                l = len(pattern)
+        except (AttributeError, NameError):
+            pass
+        return '/' + abbreviate_middle(pattern, 118) + '/'
+
 CustomParseFunc: TypeAlias = Callable[[StringView], Optional[Node]]
 
 
@@ -3366,7 +3382,7 @@ class CustomParser(CombinedParser):
     """
 
     def __init__(self, parse_func: CustomParseFunc) -> None:
-        super(CustomParser, self).__init__()
+        super().__init__()
         assert callable(parse_func), f"Not a CustomParseFunc: {parse_func}"
         self.parse_func: CustomParseFunc = parse_func
 
@@ -3438,7 +3454,7 @@ class UnaryParser(CombinedParser):
     """
 
     def __init__(self, parser: Parser) -> None:
-        super(UnaryParser, self).__init__()
+        super().__init__()
         # assert isinstance(parser, Parser), str(parser)
         self.parser = parser  # type: Parser
         self.sub_parsers = frozenset({parser})
@@ -3468,7 +3484,7 @@ class LateBindingUnary(UnaryParser):
     not be abused for recursive parser calls either!"""
 
     def __init__(self, parser_name: str) -> None:
-        super(LateBindingUnary, self).__init__(get_parser_placeholder())
+        super().__init__(get_parser_placeholder())
         self.parser_name: str = parser_name
 
     def  __deepcopy__(self, memo):
@@ -3530,7 +3546,7 @@ class Option(UnaryParser):
     """
 
     def __init__(self, parser: Parser) -> None:
-        super(Option, self).__init__(parser)
+        super().__init__(parser)
 
     def _parse(self, location: cython.int) -> ParsingResult:
         node, location = self.parser(location)
@@ -3719,7 +3735,7 @@ class Counted(UnaryParser):
     defining a dedicated class makes the purpose clearer and runs slightly faster.
     """
     def __init__(self, parser: Parser, repetitions: Tuple[int, int]) -> None:
-        super(Counted, self).__init__(parser)
+        super().__init__(parser)
         assert repetitions[0] <= repetitions[1]
         self.repetitions = repetitions  # type: Tuple[int, int]
 
@@ -3807,7 +3823,7 @@ class NaryParser(CombinedParser):
     """
 
     def __init__(self, *parsers: Parser) -> None:
-        super(NaryParser, self).__init__()
+        super().__init__()
         # assert all([isinstance(parser, Parser) for parser in parsers]), str(parsers)
         if len(parsers) == 0:
             raise ValueError('Cannot initialize NaryParser with zero parsers.')
@@ -3995,7 +4011,7 @@ def longest_match(strings: List[str], text: Union[StringView, str], n: int = 1) 
 #     """
 #
 #     def __init__(self, *parsers: Parser) -> None:
-#         super(TextAlternative, self).__init__(*parsers)
+#         super().__init__(*parsers)
 #         heads: List[str] = []
 #         for p in parsers:
 #             while isinstance(p, Synonym):
@@ -4084,7 +4100,7 @@ class ErrorCatchingNary(NaryParser):
     """
     def __init__(self, *parsers: Parser,
                  mandatory: int = NO_MANDATORY) -> None:
-        super(ErrorCatchingNary, self).__init__(*parsers)
+        super().__init__(*parsers)
         length = len(self.parsers)
         if mandatory < 0:
             mandatory += length
@@ -4323,7 +4339,7 @@ class Interleave(ErrorCatchingNary):
     def __init__(self, *parsers: Parser,
                  mandatory: int = NO_MANDATORY,
                  repetitions: Sequence[Tuple[int, int]] = ()) -> None:
-        super(Interleave, self).__init__(*parsers, mandatory=mandatory)
+        super().__init__(*parsers, mandatory=mandatory)
         assert all(0 <= r[0] <= r[1] for r in repetitions)
         if len(repetitions) == 0:
             repetitions = [(1, 1)] * len(parsers)
@@ -4516,7 +4532,7 @@ class Lookbehind(FlowParser):
             self.regexp = cast(RegExp, p).regexp
         else:  # p is of type Text
             self.text = cast(Text, p).text
-        super(Lookbehind, self).__init__(parser)
+        super().__init__(parser)
 
     @cython.locals(start=cython.int)
     def _parse(self, location: cython.int) -> ParsingResult:
@@ -4628,7 +4644,7 @@ class Capture(ContextSensitive):
     contained parser's name. This requires the contained parser to be named.
     """
     def __init__(self, parser: Parser, zero_length_warning: bool = True) -> None:
-        super(Capture, self).__init__(parser)
+        super().__init__(parser)
         self.zero_length_warning: bool = zero_length_warning
         self._can_capture_zero_length: Optional[bool] = None
 
@@ -4756,7 +4772,7 @@ class Retrieve(ContextSensitive):
 
     def __init__(self, symbol: Parser, match_func: MatchVariableFunc = None) -> None:
         assert isinstance(symbol, Capture)
-        super(Retrieve, self).__init__(symbol)
+        super().__init__(symbol)
         self.match = match_func if match_func else last_value
 
     def __deepcopy__(self, memo):
@@ -4843,10 +4859,10 @@ class Pop(Retrieve):
     used.
     """
     def __init__(self, symbol: Parser, match_func: MatchVariableFunc = None) -> None:
-        super(Pop, self).__init__(symbol, match_func)
+        super().__init__(symbol, match_func)
 
     def reset(self):
-        super(Pop, self).reset()
+        super().reset()
         self.values = []
 
     # def __deepcopy__(self, memo):
@@ -4899,7 +4915,7 @@ class Synonym(UnaryParser):
     RegExp('\d\d\d\d') carries the name 'JAHRESZAHL' or 'jahr'.
     """
     def __init__(self, parser: Parser) -> None:
-        super(Synonym, self).__init__(parser)
+        super().__init__(parser)
 
     def _parse(self, location: cython.int) -> ParsingResult:
         node, location = self.parser(location)
@@ -4950,13 +4966,13 @@ class Forward(UnaryParser):
     """
 
     def __init__(self):
-        super(Forward, self).__init__(get_parser_placeholder())
+        super().__init__(get_parser_placeholder())
         # self.parser = get_parser_placeholder  # type: Parser
         self.cycle_reached: bool = False
         self.sub_parsers = frozenset()
 
     def reset(self):
-        super(Forward, self).reset()
+        super().reset()
         self.recursion_counter: Dict[int, int] = dict()
         assert not self.pname, "Forward-Parsers mustn't have a name!"
 

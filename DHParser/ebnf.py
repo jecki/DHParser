@@ -131,7 +131,11 @@ from a grammar, step by step::
     >>> CST = ebnf_parser(arithmetic_ebnf)
     >>> AST = ebnf_transformer(CST)   # CST should be considered invalid after that
     >>> ebnf_compiler.set_grammar_name("Arithmetic")
+    >>> from DHParser.configuration import get_config_value, set_config_value
+    >>> save = get_config_value('optimization_level')
+    >>> set_config_value('optimization_level', 0)
     >>> python_src = ebnf_compiler(AST)
+    >>> set_config_value('optimization_level', save)
     >>> assert not AST.errors
     >>> print(python_src)
     class ArithmeticGrammar(Grammar):
@@ -2392,6 +2396,8 @@ class EBNFCompiler(Compiler):
 
 
     def on_syntax(self, node: Node) -> str:
+        self.optimization_level = get_config_value('optimization_level')
+
         # drop the wrapping sequence node
         if len(node.children) == 1 and node.children[0].anonymous:
             node = node.children[0]
@@ -3344,13 +3350,13 @@ class EBNFCompiler(Compiler):
         """Returns a ragular expression for whitespace, possibly including comments"""
         if ws or self.directives.comment:
             ws_rx = mixin_comment(self.directives.whitespace, self.directives.comment)
-            if ws == "dwsp__":
+            if ws in (self.DROP_WHITESPACE_PARSER_KEYWORD, ""):
                 if DROP_NO_COMMENTS in self.directives.drop:
                     return f'(?P<{KEEP_COMMENTS_PTYPE}>{ws_rx})'
                 else:
                     return f'(?:{ws_rx})'
             else:
-                assert ws == "wsp__"
+                assert ws == self.WHITESPACE_PARSER_KEYWORD, str(ws)
                 return f'(?P<{WHITESPACE_PTYPE}>{ws_rx})'
         return ""
 
@@ -3364,7 +3370,11 @@ class EBNFCompiler(Compiler):
 
         left_rx = self.whitespace_rx(left)
         right_rx = self.whitespace_rx(right)
-        return ''.join([left_rx, f'(?P<{TOKEN_PTYPE}>{re.escape(content)})', right_rx])
+        if self.drop_on(DROP_STRINGS):
+            center_rx = f'(?:{re.escape(content)})'
+        else:
+            center_rx = f'(?P<{TOKEN_PTYPE}>{re.escape(content)})'
+        return ''.join([left_rx, center_rx, right_rx])
 
 
     def on_literal(self, node: Node) -> str:
@@ -3534,3 +3544,4 @@ def compile_ebnf(ebnf_source: str, branding: str = 'DSL', *, preserve_AST: bool 
                             get_ebnf_compiler(branding, ebnf_source),
                             preserve_AST=preserve_AST)
     return result
+
