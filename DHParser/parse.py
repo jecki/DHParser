@@ -3280,32 +3280,28 @@ class SmartRE(RegExp, CombinedParser):  # TODO: turn this into a CombinedParser
     """
     def __init__(self, regexp,
                  repr_str: str = '',
-                 remap: Dict[str, str] = None,
                  group_names: List[str] = None) -> None:
         self.repr_str = repr_str
-        if remap is not None and group_names is not None:  # copy constructor
+        if group_names is not None:  # copy constructor
             super().__init__(regexp)
-            self.remap = remap
             self.group_names = group_names
         else:
-            assert remap is None and group_names is None
             pattern = regexp if isinstance(regexp, str) else regexp.pattern
             group_names = re.findall(r'\(\?P<(:?\w+)>', pattern)
             # assert group_names, f"Named group(s) missing in SmartRE: {pattern}"
-            self.remap = dict()
-            for name in group_names:
+            names = dict()
+            for i, name in enumerate(group_names):
                 if name[0:1] == ":":
-                    mapped = name[1:] + '__'
-                    if name == KEEP_COMMENTS_PTYPE:
-                        self.remap[mapped] = WHITESPACE_PTYPE
-                    else:
-                        self.remap[mapped] = name
-                    pattern = pattern.replace('(?P<' + name, '(?P<' + mapped)
-            if self.remap:
-                regexp = pattern
-            super().__init__(regexp)
-            groups = {index: name for name, index in self.regexp.groupindex.items()}
-            self.group_names = [groups.get(i, ":RegExp") for i in range(1, self.regexp.groups + 1)]
+                    alias = name[1:] + '_' * (i + len(group_names) + 4)
+                else:
+                    alias = name + '_' * (i + 2)
+                names[alias] = name
+                pattern = pattern.replace(f'(?P<{name}>', f'(?P<{alias}>', 1)
+            regexp = re.compile(pattern)
+            groups = {index: names[alias] for alias, index in regexp.groupindex.items()}
+            self.group_names = [groups.get(i, ":RegExp") for i in range(1, regexp.groups + 1)]
+            pattern = re.sub(r'\(\?P<(\w+)>', '(', pattern)
+            super().__init__(pattern)
 
     def __deepcopy__(self, memo):
         # `regex` supports deep copies, but not `re`
@@ -3313,7 +3309,7 @@ class SmartRE(RegExp, CombinedParser):  # TODO: turn this into a CombinedParser
             regexp = copy.deepcopy(self.regexp, memo)
         except TypeError:
             regexp = self.regexp.pattern
-        duplicate = self.__class__(regexp, self.repr_str, self.remap, self.group_names)
+        duplicate = self.__class__(regexp, self.repr_str, self.group_names)
         copy_combined_parser_attrs(self, duplicate)
         return duplicate
 
@@ -3330,25 +3326,19 @@ class SmartRE(RegExp, CombinedParser):  # TODO: turn this into a CombinedParser
             if not self.disposable or any(len(content) for content in values):
                 if self.drop_content:
                     return EMPTY_NODE, end
-                if self.remap:
-                    results = tuple(Node(self.remap.get(name, name), content)
-                                    for name, content in zip(self.group_names, values)
-                                    if ((not self.disposable or content)
-                                        and name != KEEP_COMMENTS_NAME)
-                                       or content.strip())
-                                   # if content or (not self.disposable
-                                   #               and name != KEEP_COMMENTS_NAME))
-                else:
-                    results = tuple(Node(name, content)
-                                   for name, content in zip(self.group_names, values)
-                                   if content or not self.disposable)
+                results = tuple(Node(name, content)
+                                for name, content in zip(self.group_names, values)
+                                if ((not self.disposable or content)
+                                    and name != KEEP_COMMENTS_PTYPE)
+                                   or content.strip())
                 for i, nd in enumerate(results, start=1):  nd._pos = match.start(i)
                 return self._return_values(results), end
             return EMPTY_NODE, end
         return None, location
 
     def __repr__(self):
-        if self.repr_str:  return self.repr_str
+        if self.repr_str:
+            return self.repr_str
         pattern = repr(self.regexp.pattern)[1:-1]
         try:
             pattern = pattern.replace(self._grammar.WSP_RE__, '~')

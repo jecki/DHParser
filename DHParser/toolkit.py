@@ -556,6 +556,10 @@ def wrap_str_literal(s: Union[str, List[str]], column: int = 80, offset: int = 0
     >>> print("Call(" + wrap_str_literal(s, 40, 5) + ")")
     Call(r"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLM"
          r"NOPQRSTUVWXYZ0123456789")
+    >>> s = 'fr"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"'
+    >>> print("Call(" + wrap_str_literal(s, 40, 5) + ")")
+    Call(fr"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLM"
+         fr"NOPQRSTUVWXYZ0123456789")
     >>> s = ['r"abcde', 'ABCDE"']
     >>> print(wrap_str_literal(s))
     r"abcde"
@@ -568,10 +572,11 @@ def wrap_str_literal(s: Union[str, List[str]], column: int = 80, offset: int = 0
     else:
         parts = None
     if s[0:1].isalpha():
-        r = s[0:1]
-        s = s[1:]
+        i = 2 if s[1:2].isalpha() else 1
+        r = s[0:i]
+        s = s[i:]
         if parts is not None:
-            parts[0] = parts[0][1:]
+            parts[0] = parts[0][i:]
     else:
         r = ''
     q = s[0:1]
@@ -579,6 +584,15 @@ def wrap_str_literal(s: Union[str, List[str]], column: int = 80, offset: int = 0
         "string literal must be enclosed by quotation marks"
     if parts is None:
         parts = [s[i: i + column] for i in range(0, len(s), column)]
+        for i in range(len(parts) - 1):
+            p = parts[i]
+            k = 1
+            while k <= len(p) and p[-k] == '\\':
+                k += 1
+            k -= 1
+            if k > 0:
+                parts[i] = p[:-k]
+                parts[i + 1] = p[-k:] + parts[i + 1]
     if r:  parts[0] = r + parts[0]
     wrapped = (''.join([q, '\n', ' ' * offset, r, q])).join(parts)
     return wrapped

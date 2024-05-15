@@ -1933,6 +1933,7 @@ class EBNFCompiler(Compiler):
         """
         # TODO: Support atomic grouping: https://stackoverflow.com/questions/13577372/
         #       do-python-regular-expressions-have-an-equivalent-to-rubys-atomic-grouping
+        rx = rx.replace(r'\/', '/')
         flags = self.re_flags | {'x'} if rx.find('\n') >= 0 else self.re_flags
         if flags:
             rx = "(?%s)%s" % ("".join(flags), rx)
@@ -3317,10 +3318,8 @@ class EBNFCompiler(Compiler):
         if pattern.find('(?x)') >= 0:
             m = next(re.finditer(r'\\n[ \t]*', pattern))
             indent = len(m.group(0)) - 2
-            # pattern = re.sub(r'(?:[ \t]*#[^\n]*?)?\\n[ \t]*', '\n', pattern)
             pattern = re.sub(r'\\n[ \t]*', '\\\\n\n', pattern)
             parts = pattern.split('\n')
-            # parts[-1] = re.sub(r'[ \t]*#[^\n"`´\']*', '', parts[-1])
             pattern = wrap_str_literal(parts, offset = len(REClass) + 1 + indent)
         else:
             pattern = wrap_str_literal(pattern, 80, len(REClass) + 1)
@@ -3348,7 +3347,7 @@ class EBNFCompiler(Compiler):
         force = DROP_STRINGS in self.directives.drop
         left = self.WSPC_PARSER(force) if 'left' in self.directives.literalws else ''
         right = self.WSPC_PARSER(force) if 'right' in self.directives.literalws else ''
-        content = escape_ctrl_chars(node.content)
+        content = node.content  # escape_ctrl_chars(node.content)
         if (content[:1] + content[-1:]) == '’’':
             content = "'" + re.sub(r"(?<!\\)'", r"\'", content[1:-1]) + "'"
         return content, left, right
@@ -3358,7 +3357,8 @@ class EBNFCompiler(Compiler):
         # TODO: doctests required
         """Returns a ragular expression for whitespace, possibly including comments"""
         if ws:
-            ws_rx = mixin_comment(self.directives.whitespace, self.directives.comment)
+            ws_rx = self.directives.super_ws
+            # ws_rx = "f'{WSP_RE__}'"
             if ws in (self.DROP_WHITESPACE_PARSER_KEYWORD, ""):
                 if DROP_NO_COMMENTS in self.directives.drop:
                     return f'(?P<{KEEP_COMMENTS_PTYPE}>{ws_rx})'
@@ -3391,11 +3391,13 @@ class EBNFCompiler(Compiler):
         content, left, right = self.prepare_literal(node)
         if self.optimization_level >= 1 and (left or right):
             q = content[0]
-            rxp = ''.join([q, self.literal_rx(content[1:-1], left, right), q])
-            # rxp = wrap_str_literal(rxp, 80, 12 if self.drop_on(DROP_STRINGS) else 7)
+            # rxp = repr(self.literal_rx(content[1:-1], left, right))
+            rxp = ''.join(['r', q, self.literal_rx(content[1:-1], left, right), q])
+            rxp = wrap_str_literal(rxp, 80, 12 if self.drop_on(DROP_STRINGS) else 7)
+            content = escape_ctrl_chars(content)
             content = ''.join([q, '\\', content[:-1], '\\', content[-1], q])
             return f"{self.P['SmartRE']}({rxp}, {content})"
-        center = self.TEXT_PARSER(content, self.drop_on(DROP_STRINGS))
+        center = self.TEXT_PARSER(escape_ctrl_chars(content), self.drop_on(DROP_STRINGS))
         if left or right:
             args = ", ".join(item for item in (left, center, right) if item)
             return f'{self.P["Series"]}({args})'
@@ -3416,7 +3418,7 @@ class EBNFCompiler(Compiler):
     def on_regexp(self, node: Node) -> str:
         rx = node.content
         try:
-            arg = repr(self.check_rx(node, rx.replace(r'\/', '/')))
+            arg = repr(self.check_rx(node, rx))
         except AttributeError as error:
             from traceback import extract_tb, format_list
             trace = ''.join(format_list(extract_tb(error.__traceback__)))
@@ -3426,11 +3428,13 @@ class EBNFCompiler(Compiler):
             return '"' + errmsg + '"'
         return self.REGEXP_PARSER(arg, self.drop_on(DROP_REGEXP))
 
+
     def on_char_ranges(self, node) -> str:
         # TODO: Add alternative char_ranges handling here
         node.result = "|".join('[' + child.content + ']'
                 for child in node.children if child.name == "range_chain")
         return self.on_regexp(node)
+
 
     def on_char_range(self, node) -> str:
         # TODO: Add alternative char_ranges handling here
@@ -3443,8 +3447,10 @@ class EBNFCompiler(Compiler):
         re_str = re.sub(r"(?<!\\)]", r'\]', re_str)
         return f"{self.P['RegExp']}('[{re_str}]')"
 
+
     def on_range_chain(self, node) -> Node:
         raise NotImplementedError
+
 
     def on_range_desc(self, node) -> Node:
         for child in node.children:
@@ -3453,6 +3459,7 @@ class EBNFCompiler(Compiler):
             elif child.name == 'free_char':
                 child.result = self.extract_free_char(child)
         return node
+
 
     def extract_character(self, node: Node) -> str:
         hexcode = node.content

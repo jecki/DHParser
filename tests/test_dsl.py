@@ -103,7 +103,7 @@ class TestCompilerGeneration:
                 os.remove(os.path.join(pycachedir, fname))
             os.rmdir(pycachedir)
         if os.path.exists(self.tmp):
-            print('>>>', os.listdir(self.tmp))
+            #print('>>>', os.listdir(self.tmp))
             os.rmdir(self.tmp)
 
     def test_load_compiler_suite(self):
