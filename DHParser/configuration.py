@@ -644,7 +644,7 @@ CONFIG_PRESET['delimiter_set'] = {
 # 5 = all of the former plus lookaheads
 # Any number higher than the last number in the previous list will
 # be considered an alias for the highest supported optimization level.
-CONFIG_PRESET['optimization_level'] = 0
+CONFIG_PRESET['optimization_level'] = 1
 
 
 ########################################################################
