@@ -3357,8 +3357,8 @@ class EBNFCompiler(Compiler):
         # TODO: doctests required
         """Returns a ragular expression for whitespace, possibly including comments"""
         if ws:
-            ws_rx = self.directives.super_ws
-            # ws_rx = "f'{WSP_RE__}'"
+            # ws_rx = self.directives.super_ws
+            ws_rx = '{WSP_RE__}'
             if ws in (self.DROP_WHITESPACE_PARSER_KEYWORD, ""):
                 if DROP_NO_COMMENTS in self.directives.drop:
                     return f'(?P<{KEEP_COMMENTS_PTYPE}>{ws_rx})'
@@ -3383,7 +3383,7 @@ class EBNFCompiler(Compiler):
             center_rx = f'(?:{re.escape(content)})'
         else:
             center_rx = f'(?P<{TOKEN_PTYPE}>{re.escape(content)})'
-        return ''.join([left_rx, center_rx, right_rx])
+        return ''.join([left_rx, center_rx.replace('{', '{{').replace('}', '}}'), right_rx])
 
 
     def on_literal(self, node: Node) -> str:
@@ -3392,7 +3392,7 @@ class EBNFCompiler(Compiler):
         if self.optimization_level >= 1 and (left or right):
             q = content[0]
             # rxp = repr(self.literal_rx(content[1:-1], left, right))
-            rxp = ''.join(['r', q, self.literal_rx(content[1:-1], left, right), q])
+            rxp = ''.join(['fr', q, self.literal_rx(content[1:-1], left, right), q])
             rxp = wrap_str_literal(rxp, 80, 12 if self.drop_on(DROP_STRINGS) else 7)
             content = escape_ctrl_chars(content)
             content = ''.join([q, '\\', content[:-1], '\\', content[-1], q])
