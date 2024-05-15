@@ -4193,6 +4193,7 @@ class ErrorCatchingNary(NaryParser):
             if len(repr_expected) > 2 and (repr_expected[0] + repr_expected[-1]) in ('""', "''"):
                 repr_expected = repr_expected[1:-1]
             msg = f'{repr_expected} expected by parser {repr(sym)}, but {found} found instead!'
+        # TODO: If failed_on_lookahead: skip whitespace and update location!!!
         if failed_on_lookahead and not text_:
             if grammar.start_parser__ is grammar.root_parser__:
                 error_code = MANDATORY_CONTINUATION_AT_EOF
