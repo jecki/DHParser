@@ -2462,7 +2462,6 @@ class EBNFCompiler(Compiler):
             try:
                 grammar_class = compile_python_object(
                     probe_src, (self.grammar_name or "DSL") + "Grammar")
-                # print(probe_src)
                 errors = grammar_class().static_analysis_errors__
                 python_src = python_src.replace(
                     'static_analysis_pending__ = [True]',
@@ -3358,7 +3357,7 @@ class EBNFCompiler(Compiler):
     def whitespace_rx(self, ws: str) -> str:
         # TODO: doctests required
         """Returns a ragular expression for whitespace, possibly including comments"""
-        if ws or self.directives.comment:
+        if ws:
             ws_rx = mixin_comment(self.directives.whitespace, self.directives.comment)
             if ws in (self.DROP_WHITESPACE_PARSER_KEYWORD, ""):
                 if DROP_NO_COMMENTS in self.directives.drop:

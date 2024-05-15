@@ -2514,6 +2514,20 @@ class TestOptimizations:
 
         set_config_value('optimization_level', save)
 
+    def test_repeated_groups(self):
+        save = get_config_value('optimization_level')
+        set_config_value('optimization_level', 1)
+
+        from DHParser.dsl import grammar_provider
+        lang = '''
+               @literalws = both
+               doc = "AAA" '''
+
+        parser = create_parser(lang)
+        # print(parser.python_src__)
+
+        set_config_value('optimization_level', save)
+
 if __name__ == "__main__":
     from DHParser.testing import runner
     runner("", globals())
