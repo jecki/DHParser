@@ -977,7 +977,7 @@ to at most a single linefeed::
     >>> testdata = '{"array": [1, 2.0, "a string"], \n\n\n "number": -1.3e+25, "bool": false}'
     >>> syntax_tree = json_parser(testdata)
     >>> print(syntax_tree.errors[0])
-    1:33: Error (1010): »member« expected by parser 'object', but »\n\n\n "numbe...« found instead!
+    1:33: Error (1010): member expected by parser 'object', but »\n\n\n "numbe...« found instead!
     >>> json_gr = '@whitespace = /\\s*/ \n' + json_gr
     >>> json_parser = create_parser(json_gr, "JSON")
     >>> syntax_tree = json_parser(testdata)
@@ -1307,10 +1307,10 @@ the parser-objects which caught an error, we need to turn any
 speed optimizations off in order to get consistent error-messages
 in the following. DHParser's speed-optizations work by "compressing"
 nested parsers into "smart" regular expressions if possible.
-However, the respective parser objects look different and often
-more contrived when serialized. Speed optmizations can be turned
-off by settting the configuration value "optimization_level" to
-zero::
+However, the serialization of the respective parser objects
+might look different although functionally it is the same.
+Speed optmizations can be turned off by settting the configuration
+value "optimization_level" to zero::
 
     >>> from DHParser.configuration import get_config_value, set_config_value
     >>> save_optimization_level = get_config_value('optimization_level')
@@ -1389,10 +1389,10 @@ of failure::
     >>> arithmetic = create_parser(arithmetic_grammar, "arithmetic")
     >>> terms = arithmetic('(2 - 3 * (4 + 5)')
     >>> print(terms.errors[0])
-    1:17: Error (1010): »")"« expected by parser 'group', but END OF FILE found instead!
+    1:17: Error (1010): »)« expected by parser 'group', but END OF FILE found instead!
     >>> terms = arithmetic('(2 - 3) * ( )')
     >>> print(terms.errors[0])
-    1:13: Error (1010): »expression« expected by parser 'group', but »)« found instead!
+    1:13: Error (1010): expression expected by parser 'group', but »)« found instead!
 
 The error messages give a much better indication of the cause of the
 error. What is reported as cause is either the name of the parser that
@@ -1884,7 +1884,7 @@ at the first error. Further errors are neither detected nor reported::
     ... grey: "black and white" '''
     >>> result = config_parser(cfg_data_with_errors)
     >>> for error in result.errors_sorted:  print(error)
-    4:8: Error (1010): »value« expected by parser 'entry', but »rose"\nBuil...« found instead!
+    4:8: Error (1010): value expected by parser 'entry', but »rose"\nBuil...« found instead!
 
 After adding suitable `resume`-clauses for those symbols the definition
 of which contain the mandatory marker `§`, all errors are reported in
@@ -1897,9 +1897,9 @@ a single pass::
     >>> config_parser = create_parser(config_grammar)
     >>> result = config_parser(cfg_data_with_errors)
     >>> for error in result.errors_sorted:  print(error)
-    4:8: Error (1010): »value« expected by parser 'entry', but »rose"\nBuil...« found instead!
-    7:1: Error (1010): »"]"« expected by parser 'heading', but »red: "warm...« found instead!
-    8:6: Error (1010): »":"« expected by parser 'entry', but »1: "cold"\n...« found instead!
+    4:8: Error (1010): value expected by parser 'entry', but »rose"\nBuil...« found instead!
+    7:1: Error (1010): »]« expected by parser 'heading', but »red: "warm...« found instead!
+    8:6: Error (1010): »:« expected by parser 'entry', but »1: "cold"\n...« found instead!
 
 It can become difficult to find a reentry point with regular expressions
 that is on the same level of the parser call chain (or one level higher
@@ -1943,7 +1943,7 @@ document could be parsed::
     >>> example_with_errors = '[1, 2, A, [5, 6; 7], 8, ]'
     >>> result = list_parser(example_with_errors)
     >>> for e in result.errors: print(e)
-    1:8: Error (1010): »_item« expected by parser '_items', but »A, [5, 6; ...« found instead!
+    1:8: Error (1010): _item expected by parser '_items', but »A, [5, 6; ...« found instead!
 
 Now, let's define some regular expression based rules to resume parsing after
 an error::
@@ -1968,9 +1968,9 @@ particular example::
     >>> list_parser = create_parser(resumption_rules + number_list_grammar)
     >>> result = list_parser(example_with_errors)
     >>> for e in result.errors: print(e)
-    1:8: Error (1010): »_item« expected by parser '_items', but »A, [5, 6; ...« found instead!
-    1:16: Error (1010): »"]"« expected by parser 'list', but »; 7], 8, ]« found instead!
-    1:25: Error (1010): »_item« expected by parser '_items', but »]« found instead!
+    1:8: Error (1010): _item expected by parser '_items', but »A, [5, 6; ...« found instead!
+    1:16: Error (1010): »]« expected by parser 'list', but »; 7], 8, ]« found instead!
+    1:25: Error (1010): _item expected by parser '_items', but »]« found instead!
 
 All errors are located and reported properly in a single run and the
 parser continues right through until the end of the document as we'd
@@ -1981,9 +1981,9 @@ are involved::
     >>> example_with_errors_2 = '[1, 2, A, [5, 6; [7, 8], 9], 10, ]'
     >>> result = list_parser(example_with_errors_2)
     >>> for e in result.errors: print(e)
-    1:8: Error (1010): »_item« expected by parser '_items', but »A, [5, 6; ...« found instead!
-    1:16: Error (1010): »"]"« expected by parser 'list', but »; [7, 8], ...« found instead!
-    1:28: Error (1010): »_EOF« expected by parser '_document', but », 10, ]« found instead!
+    1:8: Error (1010): _item expected by parser '_items', but »A, [5, 6; ...« found instead!
+    1:16: Error (1010): »]« expected by parser 'list', but »; [7, 8], ...« found instead!
+    1:28: Error (1010): _EOF expected by parser '_document', but », 10, ]« found instead!
 
 Here, the parser stopped before the end of the document, which shows
 that our resumption rules have been either incomplete or inadequate.
@@ -1994,11 +1994,11 @@ what went wrong::
     >>> resume_notices_on(list_parser)
     >>> result = list_parser(example_with_errors_2)
     >>> for e in result.errors: print(e)
-    1:8: Error (1010): »_item« expected by parser '_items', but »A, [5, 6; ...« found instead!
+    1:8: Error (1010): _item expected by parser '_items', but »A, [5, 6; ...« found instead!
     1:9: Notice (50): Skipping from 1:8 'A, [5, ...' within _item->:_item to 1:9 ', [5, 6...'
-    1:16: Error (1010): »"]"« expected by parser 'list', but »; [7, 8], ...« found instead!
+    1:16: Error (1010): »]« expected by parser 'list', but »; [7, 8], ...« found instead!
     1:24: Notice (50): Resuming from list at 1:16 '; [7, 8...' with _items->:Series at 1:24 ', 9], 1...'
-    1:28: Error (1010): »_EOF« expected by parser '_document', but », 10, ]« found instead!
+    1:28: Error (1010): _EOF expected by parser '_document', but », 10, ]« found instead!
 
 
 What is of interest here, is the second notice: It seems that the error
@@ -2024,9 +2024,9 @@ rackets!)::
     >>> from DHParser.error import RESUME_NOTICE
     >>> for e in result.errors:
     ...     if e.code != RESUME_NOTICE: print(e)
-    1:8: Error (1010): »_item« expected by parser '_items', but »A, [5, 6; ...« found instead!
-    1:16: Error (1010): »"]"« expected by parser 'list', but »; [7, 8], ...« found instead!
-    1:34: Error (1010): »_item« expected by parser '_items', but »]« found instead!
+    1:8: Error (1010): _item expected by parser '_items', but »A, [5, 6; ...« found instead!
+    1:16: Error (1010): »]« expected by parser 'list', but »; [7, 8], ...« found instead!
+    1:34: Error (1010): _item expected by parser '_items', but »]« found instead!
 
 This time, the parser does not terminate before the end. The
 resume-notices show that resumption does not get caught on the nested
@@ -2229,7 +2229,7 @@ tag-name so that it can compared with the tag-name of the ending-tag::
           (TagName "line"))))
     >>> result = parseXML('<line>O Rose thou art sick.</enil>')
     >>> print(result.errors[0])
-    1:28: Error (1010): »ETag = `</` ::TagName "line" § `>`« expected by parser 'element', but »</enil>« found instead!
+    1:28: Error (1010): ETag = `</` ::TagName "line" § `>` expected by parser 'element', but »</enil>« found instead!
 
 Here, the TagName-parser in the definition has been prefixed with a
 double colon ``::``. This double colon is the "Pop"-operator and can be
@@ -2532,7 +2532,7 @@ XML-Parser with a little mistake::
     ... </doc>'''
     >>> result = parseXML(xmldoc)
     >>> for e in result.errors_sorted: print(e)
-    3:21: Error (1010): »`>`« expected by parser 'ETag', but »litle>\n   ...« found instead!
+    3:21: Error (1010): »>« expected by parser 'ETag', but »litle>\n   ...« found instead!
     5:7: Error (1050): Capture-stack not empty after end of parsing: TagName 1 item
 
 
@@ -2557,8 +2557,8 @@ tag-names::
     >>> parseXML = create_parser(miniXML)
     >>> result = parseXML(xmldoc)
     >>> for e in result.errors_sorted: print(e)
-    3:19: Error (1010): »ETag = `</` ::TagName "title" § `>`« expected by parser 'element', but »</litle>\n ...« found instead!
-    5:1: Error (1010): »ETag = `</` ::TagName "title" § `>`« expected by parser 'element', but »</doc>« found instead!
+    3:19: Error (1010): ETag = `</` ::TagName "title" § `>` expected by parser 'element', but »</litle>\n ...« found instead!
+    5:1: Error (1010): ETag = `</` ::TagName "title" § `>` expected by parser 'element', but »</doc>« found instead!
 
 The second error is merely a consequential error. One can imagine that,
 had the mistake of misspelling the ending tag occurred deeper in the XML
@@ -2587,7 +2587,7 @@ parser forward to the next angular bracket.::
     >>> parseXML = create_parser(miniXML)
     >>> result = parseXML(xmldoc)
     >>> for e in result.errors_sorted: print(e)
-    3:19: Error (1010): »ETag = `</` ::TagName "title" § `>`« expected by parser 'element', but »</litle>\n ...« found instead!
+    3:19: Error (1010): ETag = `</` ::TagName "title" § `>` expected by parser 'element', but »</litle>\n ...« found instead!
 
 If it only was so simple! Let's see what happens if we treat our
 parser with another, rather obvious or common mistake: Forgetting
@@ -2600,9 +2600,9 @@ omitting the closing slash ``/`` in an empty tag)::
     ... </doc>'''
     >>> result = parseXML(xmldoc)
     >>> for e in result.errors_sorted: print(e)
-    3:26: Error (1010): »ETag = `</` ::TagName "wrong" § `>`« expected by parser 'element', but »</title>\n<...« found instead!
-    4:1: Error (1010): »ETag = `</` ::TagName "title" § `>`« expected by parser 'element', but »</doc>« found instead!
-    4:7: Error (1010): »ETag = `</` ::TagName "doc" § `>`« expected by parser 'element', but END OF FILE found instead!
+    3:26: Error (1010): ETag = `</` ::TagName "wrong" § `>` expected by parser 'element', but »</title>\n<...« found instead!
+    4:1: Error (1010): ETag = `</` ::TagName "title" § `>` expected by parser 'element', but »</doc>« found instead!
+    4:7: Error (1010): ETag = `</` ::TagName "doc" § `>` expected by parser 'element', but END OF FILE found instead!
 
 In this case the removal of the last value from the stack in the
 ``@element_resume``-rule results in a cascade of consecutive errors
@@ -2638,7 +2638,7 @@ A more robust rule-set for our mini-XML-grammar might be::
     >>> parseXML = create_parser(miniXML)
     >>> result = parseXML(xmldoc)
     >>> for e in result.errors_sorted: print(e)
-    3:26: Error (1010): »ETag = `</` ::TagName "wrong" § `>`« expected by parser 'element', but »</title>\n<...« found instead!
+    3:26: Error (1010): ETag = `</` ::TagName "wrong" § `>` expected by parser 'element', but »</title>\n<...« found instead!
 
 This rule has been designed to cover both of the previous cases. However,
 if we combine both errors, its limitations begin to show::
@@ -2650,8 +2650,8 @@ if we combine both errors, its limitations begin to show::
     ... </doc>'''
     >>> result = parseXML(xmldoc)
     >>> for e in result.errors_sorted: print(e)
-    3:26: Error (1010): »ETag = `</` ::TagName "wrong" § `>`« expected by parser 'element', but »</litle>\n ...« found instead!
-    5:1: Error (1010): »ETag = `</` ::TagName "title" § `>`« expected by parser 'element', but »</doc>« found instead!
+    3:26: Error (1010): ETag = `</` ::TagName "wrong" § `>` expected by parser 'element', but »</litle>\n ...« found instead!
+    5:1: Error (1010): ETag = `</` ::TagName "title" § `>` expected by parser 'element', but »</doc>« found instead!
 
 Here, it seems almost impossible to avoid an error-cascade in
 combination with context-sensitive parsers if met with a combination of

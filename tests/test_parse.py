@@ -1147,7 +1147,7 @@ class TestPopRetrieve:
         assert st.equals(st1)
         st = parser('')
         # for e in st.errors: print(e)
-        assert "»EOF = !/./ :?defsign« expected" in str(st.errors), st.as_sxpr()
+        assert "EOF = !/./ :?defsign expected" in str(st.errors), st.as_sxpr()
 
 
 class TestWhitespaceHandling:

@@ -3382,9 +3382,9 @@ class EBNFCompiler(Compiler):
         content, left, right = self.prepare_literal(node)
         if self.optimization_level >= 1 and (left or right):
             q = content[0]
-            content = content[1:-1]
-            rxp = self.literal_rx(content, left, right)
-            return f"{self.P['SmartRE']}({q}{rxp}{q})"
+            rxp = self.literal_rx(content[1:-1], left, right)
+            content = ''.join([q, '\\', content[:-1], '\\', content[-1], q])
+            return f"{self.P['SmartRE']}({q}{rxp}{q}, {content})"
         center = self.TEXT_PARSER(content, self.drop_on(DROP_STRINGS))
         if left or right:
             args = ", ".join(item for item in (left, center, right) if item)

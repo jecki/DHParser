@@ -3278,8 +3278,10 @@ class SmartRE(RegExp, CombinedParser):  # TODO: turn this into a CombinedParser
     EBNF-Example:   ``name = /(?P<first_name>\w+)\s+(?P<last_name>\w+)/``
     """
     def __init__(self, regexp,
+                 repr_str: str = '',
                  remap: Dict[str, str] = None,
                  group_names: List[str] = None) -> None:
+        self.repr_str = repr_str
         if remap is not None and group_names is not None:  # copy constructor
             super().__init__(regexp)
             self.remap = remap
@@ -3310,7 +3312,7 @@ class SmartRE(RegExp, CombinedParser):  # TODO: turn this into a CombinedParser
             regexp = copy.deepcopy(self.regexp, memo)
         except TypeError:
             regexp = self.regexp.pattern
-        duplicate = self.__class__(regexp, self.remap, self.group_names)
+        duplicate = self.__class__(regexp, self.repr_str, self.remap, self.group_names)
         copy_combined_parser_attrs(self, duplicate)
         return duplicate
 
@@ -3345,6 +3347,7 @@ class SmartRE(RegExp, CombinedParser):  # TODO: turn this into a CombinedParser
         return None, location
 
     def __repr__(self):
+        if self.repr_str:  return self.repr_str
         pattern = repr(self.regexp.pattern)[1:-1]
         try:
             pattern = pattern.replace(self._grammar.WSP_RE__, '~')
@@ -4081,7 +4084,7 @@ class ErrorCatchingNary(NaryParser):
         >>> str(num_parser('3.1415'))
         '3.1415'
         >>> str(num_parser('3.'))
-        '3. <<< Error on "" | »/[0-9]+/« expected by parser \'fraction\', but END OF FILE found instead! >>> '
+        '3. <<< Error on "" | /[0-9]+/ expected by parser \'fraction\', but END OF FILE found instead! >>> '
 
     In this example, the first item of the fraction, i.e. the decimal dot,
     is non-mandatory, because only the parser with an index of one or more
@@ -4186,8 +4189,10 @@ class ErrorCatchingNary(NaryParser):
                                   location, MALFORMED_ERROR_STRING)
                     grammar.tree__.add_error(err_node, error)
         else:
-            msg = '%s expected by parser %s, but %s found instead!' \
-                  % (f"»{repr(expected)[1:-1]}«", repr(sym), found)
+            repr_expected = repr(expected)[1:-1]
+            if len(repr_expected) > 2 and (repr_expected[0] + repr_expected[-1]) in ('""', "''"):
+                repr_expected = repr_expected[1:-1]
+            msg = f'{repr_expected} expected by parser {repr(sym)}, but {found} found instead!'
         if failed_on_lookahead and not text_:
             if grammar.start_parser__ is grammar.root_parser__:
                 error_code = MANDATORY_CONTINUATION_AT_EOF
@@ -4259,6 +4264,9 @@ class Series(ErrorCatchingNary):
                     return None, location
                 else:
                     parser_str = str(parser) if is_context_sensitive(parser) else parser.repr
+                    qq = parser_str[0] + parser_str[-1]
+                    if parser.node_name[0] == ":" and qq in ('""', "''", "``"):
+                        parser_str = f'»{parser_str[1:-1]}«'
                     reloc, node = self.get_reentry_point(location_)
                     error, location_ = self.mandatory_violation(
                         location_, isinstance(parser, Lookahead), parser_str, reloc, node)
