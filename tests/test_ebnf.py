@@ -2451,6 +2451,45 @@ class TestIgnoreCase:
         assert parser("DEF").content == "DEF"
 
 
+class TestRegexRendering:
+    def test_multiline_regex(self):
+        lang = r"""LATIN = /[\x41-\x5A]|[\x61-\x7A]|[\xC0-\xD6]|[\xD8-\xF6]|[\u00F8-\u02AF]|[\u0363-\u036F]
+            |[\u1D00-\u1D25]|[\u1D62-\u1D65]|[\u1D6B-\u1D77]|[\u1D79-\u1D9A]|\u1DCA
+            |[\u1DD3-\u1DF4]|[\u1E00-\u1EFF]|\u2071|\u207F|[\u2090-\u209C]|\u2184|[\u249C-\u24E9]
+            |[\u271D-\u271F]|\u2C2E|\u2C5E|[\u2C60-\u2C7C]|[\u2C7E-\u2C7F]|[\uA722-\uA76F]
+            |[\uA771-\uA787]|[\uA78B-\uA7BF]|[\uA7C2-\uA7C6]|\uA7F7|[\uA7FA-\uA7FF]
+            |[\uAB30-\uAB5A]|[\uAB60-\uAB64]|[\uAB66-\uAB67]|[\uFB00-\uFB06]|[\uFF21-\uFF3A]
+            |[\uFF41-\uFF5A]|[\U0001F110-\U0001F12C]|[\U0001F130-\U0001F149]
+            |[\U0001F150-\U0001F169]|[\U0001F170-\U0001F18A]|\U0001F1A5|[\U0001F520-\U0001F521]
+            |\U0001F524|[\U0001F546-\U0001F547]|[\U000E0041-\U000E005A]|[\U000E0061-\U000E007A]/ 
+        """
+        parser = create_parser(lang)
+        expected = r"""LATIN = RegExp('(?x)[\\x41-\\x5A]|[\\x61-\\x7A]|[\\xC0-\\xD6]|[\\xD8-\\xF6]|[\\u00F8-\\u02AF]|[\\u0363-\\u036F]\n'
+                   '|[\\u1D00-\\u1D25]|[\\u1D62-\\u1D65]|[\\u1D6B-\\u1D77]|[\\u1D79-\\u1D9A]|\\u1DCA\n'
+                   '|[\\u1DD3-\\u1DF4]|[\\u1E00-\\u1EFF]|\\u2071|\\u207F|[\\u2090-\\u209C]|\\u2184|[\\u249C-\\u24E9]\n'
+                   '|[\\u271D-\\u271F]|\\u2C2E|\\u2C5E|[\\u2C60-\\u2C7C]|[\\u2C7E-\\u2C7F]|[\\uA722-\\uA76F]\n'
+                   '|[\\uA771-\\uA787]|[\\uA78B-\\uA7BF]|[\\uA7C2-\\uA7C6]|\\uA7F7|[\\uA7FA-\\uA7FF]\n'
+                   '|[\\uAB30-\\uAB5A]|[\\uAB60-\\uAB64]|[\\uAB66-\\uAB67]|[\\uFB00-\\uFB06]|[\\uFF21-\\uFF3A]\n'
+                   '|[\\uFF41-\\uFF5A]|[\\U0001F110-\\U0001F12C]|[\\U0001F130-\\U0001F149]\n'
+                   '|[\\U0001F150-\\U0001F169]|[\\U0001F170-\\U0001F18A]|\\U0001F1A5|[\\U0001F520-\\U0001F521]\n'
+                   '|\\U0001F524|[\\U0001F546-\\U0001F547]|[\\U000E0041-\\U000E005A]|[\\U000E0061-\\U000E007A]')"""
+        assert parser.python_src__.find(expected) >= 0
+        lang = r"""
+        literal = /(?:(?:(?:[\t ]*)?(?:(?:(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/))(?:[\t ]*)?)*))(?:,)(?:(?:(?:[\t ]*)?(?:(?:(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/))(?:[\t ]*)?)*))/
+        """
+        parser = create_parser(lang)
+        expected = r"""    literal = RegExp('(?:(?:(?:[\\t ]*)?(?:(?:(?://.*)|(?:/\\*(?:.|\\n)*?\\*/))(?:[\\t ]*)?)*))(?:,)('
+       '?:(?:(?:[\\t ]*)?(?:(?:(?://.*)|(?:/\\*(?:.|\\n)*?\\*/))(?:[\\t ]*)?)*))')"""
+        assert parser.python_src__.find(expected) >= 0
+        lang = r"""
+        literal = /(?:(?:(?:[\t ]*)?(?:(?:(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/))(?:[\t ]*)?)*))(?P<TEXT>,)(?:(?:(?:[\t ]*)?(?:(?:(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/))(?:[\t ]*)?)*))/
+        """
+        parser = create_parser(lang)
+        expected = r"""    literal = SmartRE('(?:(?:(?:[\\t ]*)?(?:(?:(?://.*)|(?:/\\*(?:.|\\n)*?\\*/))(?:[\\t ]*)?)*))(?P<TE'
+        'XT>,)(?:(?:(?:[\\t ]*)?(?:(?:(?://.*)|(?:/\\*(?:.|\\n)*?\\*/))(?:[\\t ]*)?)*))')"""
+        assert parser.python_src__.find(expected) >= 0
+
+
 class TestOptimizations:
     def test_literal_optimization(self):
         save = get_config_value('optimization_level')

@@ -106,6 +106,7 @@ __all__ = ('typing',
            'concurrent_ident',
            'unrepr',
            'abbreviate_middle',
+           'wrap_str_literal',
            'wrap_str_nicely',
            'printw',
            'escape_formatstr',
@@ -540,6 +541,47 @@ def abbreviate_middle(s: str, max_length: int) -> str:
         b = max_length // 2 - 3  # type: int
         s = s[:a] + ' ... ' + s[-b:] if length > 40 else s
     return s
+
+
+def wrap_str_literal(s: Union[str, List[str]], column: int = 80, offset: int = 0) -> str:
+    r"""Wraps an excessively long string literal over several lines.
+    Example::
+
+    >>> s = '"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"'
+    >>> print(wrap_str_literal(s, 25))
+    "abcdefghijklmnopqrstuvwx"
+    "yzABCDEFGHIJKLMNOPQRSTUVW"
+    "XYZ0123456789"
+    >>> s = 'r"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"'
+    >>> print("Call(" + wrap_str_literal(s, 40, 5) + ")")
+    Call(r"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLM"
+         r"NOPQRSTUVWXYZ0123456789")
+    >>> s = ['r"abcde', 'ABCDE"']
+    >>> print(wrap_str_literal(s))
+    r"abcde"
+    r"ABCDE"
+    """
+    if isinstance(s, list):
+        assert len(s) > 0
+        parts = s
+        s = '\n'.join(s)
+    else:
+        parts = None
+    if s[0:1].isalpha():
+        r = s[0:1]
+        s = s[1:]
+        if parts is not None:
+            parts[0] = parts[0][1:]
+    else:
+        r = ''
+    q = s[0:1]
+    assert len(s) >= 2 and q == s[-1] and q in ('"', "'", "`", "´"), \
+        "string literal must be enclosed by quotation marks"
+    if parts is None:
+        parts = [s[i: i + column] for i in range(0, len(s), column)]
+    if r:  parts[0] = r + parts[0]
+    wrapped = (''.join([q, '\n', ' ' * offset, r, q])).join(parts)
+    return wrapped
 
 
 @cython.locals(wrap_column=cython.int, tolerance=cython.int, a=cython.int, i=cython.int, k=cython.int, m=cython.int)

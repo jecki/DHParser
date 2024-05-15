@@ -260,7 +260,7 @@ from DHParser.preprocess import PreprocessorFunc, PreprocessorResult, gen_find_i
     preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.nodetree import Node, RootNode, Path, WHITESPACE_PTYPE, KEEP_COMMENTS_PTYPE, \
     TOKEN_PTYPE, ZOMBIE_TAG, flatten_sxpr
-from DHParser.toolkit import load_if_file, escape_ctrl_chars, md5, \
+from DHParser.toolkit import load_if_file, wrap_str_literal, escape_ctrl_chars, md5, \
     sane_parser_name, re, expand_table, unrepr, compile_python_object, \
     ThreadLocalSingletonFactory, TypeAlias
 from DHParser.transform import TransformerFunc, transformer, remove_brackets, change_name, \
@@ -3315,6 +3315,16 @@ class EBNFCompiler(Compiler):
 
     def REGEXP_PARSER(self, pattern, drop):
         REClass = "SmartRE" if pattern.find('(?P<') >= 0 else "RegExp"
+        if pattern.find('(?x)') >= 0:
+            m = next(re.finditer(r'\\n[ \t]*', pattern))
+            indent = len(m.group(0)) - 2
+            # pattern = re.sub(r'(?:[ \t]*#[^\n]*?)?\\n[ \t]*', '\n', pattern)
+            pattern = re.sub(r'\\n[ \t]*', '\\\\n\n', pattern)
+            parts = pattern.split('\n')
+            # parts[-1] = re.sub(r'[ \t]*#[^\n"`´\']*', '', parts[-1])
+            pattern = wrap_str_literal(parts, offset = len(REClass) + 1 + indent)
+        else:
+            pattern = wrap_str_literal(pattern, 80, len(REClass) + 1)
         return f'{self.P["Drop"]}({self.P[REClass]}({pattern}))' if drop \
             else f'{self.P[REClass]}({pattern})'
 
@@ -3382,9 +3392,10 @@ class EBNFCompiler(Compiler):
         content, left, right = self.prepare_literal(node)
         if self.optimization_level >= 1 and (left or right):
             q = content[0]
-            rxp = self.literal_rx(content[1:-1], left, right)
+            rxp = ''.join([q, self.literal_rx(content[1:-1], left, right), q])
+            # rxp = wrap_str_literal(rxp, 80, 12 if self.drop_on(DROP_STRINGS) else 7)
             content = ''.join([q, '\\', content[:-1], '\\', content[-1], q])
-            return f"{self.P['SmartRE']}({q}{rxp}{q}, {content})"
+            return f"{self.P['SmartRE']}({rxp}, {content})"
         center = self.TEXT_PARSER(content, self.drop_on(DROP_STRINGS))
         if left or right:
             args = ", ".join(item for item in (left, center, right) if item)

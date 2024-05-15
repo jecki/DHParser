@@ -436,6 +436,7 @@ class TestRegex:
         """
         result, messages, _ = compile_source(mlregex, None, get_ebnf_grammar(),
                         get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
+        # print(result)
         assert result
         assert not messages, str(messages)
         parser = compile_python_object(DHPARSER_IMPORTS + result, r'\w+Grammar$')()
