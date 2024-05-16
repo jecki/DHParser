@@ -4151,6 +4151,14 @@ class ErrorCatchingNary(NaryParser):
         """
         grammar = self._grammar
         text_ = self.grammar.document__[location:]
+
+        # EXPERIMENTAL:
+        # TODO: need a dedicated skip_wsp__ parser, probably also a directive here!!!
+        # m = text_.match(re.compile(grammar.WSP_RE__))
+        # if m:
+        #     location = location + len(m.group(0))
+        #     text_ = self.grammar.document__[location:]
+
         err_node._pos = -1  # bad hack to avoid error in case position is re-set
         err_node.with_pos(location)  # for testing artifacts
         error_code = MANDATORY_CONTINUATION
@@ -4184,7 +4192,6 @@ class ErrorCatchingNary(NaryParser):
             if len(repr_expected) > 2 and (repr_expected[0] + repr_expected[-1]) in ('""', "''"):
                 repr_expected = repr_expected[1:-1]
             msg = f'{repr_expected} expected by parser {repr(sym)}, but {found} found instead!'
-        # TODO: If failed_on_lookahead: skip whitespace and update location!!!
         if failed_on_lookahead and not text_:
             if grammar.start_parser__ is grammar.root_parser__:
                 error_code = MANDATORY_CONTINUATION_AT_EOF
