@@ -4154,10 +4154,14 @@ class ErrorCatchingNary(NaryParser):
 
         # EXPERIMENTAL:
         # TODO: need a dedicated skip_wsp__ parser, probably also a directive here!!!
-        # m = text_.match(re.compile(grammar.WSP_RE__))
-        # if m:
-        #     location = location + len(m.group(0))
-        #     text_ = self.grammar.document__[location:]
+
+        if hasattr(grammar, "skip_wsp__"):  # skip-whitsspace to adjust error-locations
+            m = text_.match(grammar.skip_wsp__)
+            if m:
+                l = len(m.group(0))
+                if l > 0:
+                    location += l
+                    text_ = self.grammar.document__[location:]
 
         err_node._pos = -1  # bad hack to avoid error in case position is re-set
         err_node.with_pos(location)  # for testing artifacts
