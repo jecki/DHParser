@@ -10,7 +10,7 @@ from DHParser import grammar_provider, access_presets, finalize_presets, set_con
 
 
 access_presets()
-set_config_preset('ast_serialization', "S-expression")
+set_config_preset('AST_serialization', "S-expression")
 set_config_preset('test_parallelization', False)
 set_config_preset('left_recursion_depth', 2)
 finalize_presets()

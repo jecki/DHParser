@@ -52,7 +52,7 @@ def run_grammar_tests(glob_pattern):
 
 if __name__ == '__main__':
     access_presets()
-    set_preset_value('ast_serialization', "S-expression")
+    set_preset_value('AST_serialization', "S-expression")
     set_preset_value('test_parallelization', True)
     finalize_presets()
 
