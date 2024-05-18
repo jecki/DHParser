@@ -24,29 +24,43 @@ try:
     import regex as re
 except ImportError:
     import re
-from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \
-    Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, AnyChar, \
-    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, \
-    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \
-    ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, mixin_comment, \
-    compile_source, grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, \
-    remove_if, Node, TransformationDict, TransformerFunc, transformation_factory, traverse, \
-    remove_children_if, move_fringes, normalize_whitespace, is_anonymous, name_matches, \
-    reduce_single_child, replace_by_single_child, replace_or_reduce, remove_whitespace, \
-    replace_by_children, remove_empty, remove_tokens, flatten, all_of, any_of, \
-    merge_adjacent, collapse, collapse_children_if, transform_result, WHITESPACE_PTYPE, \
-    TOKEN_PTYPE, remove_children, remove_content, remove_brackets, change_name, \
-    remove_anonymous_tokens, keep_children, is_one_of, not_one_of, content_matches, apply_if, peek, \
-    remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
-    replace_content_with, forbid, assert_content, remove_infix_operator, \
-    add_error, error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
-    get_config_value, node_maker, access_thread_locals, access_presets, PreprocessorResult, \
-    finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \
-    trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \
-    positions_of, replace_child_names, add_attributes, delimit_children, merge_connected, \
-    has_attr, has_parent, ThreadLocalSingletonFactory, Error, canonical_error_strings, \
-    has_errors, ERROR, FATAL, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN, \
+from DHParser.compile import Compiler, compile_source, Junction, full_compile
+from DHParser.configuration import set_config_value, add_config_values, get_config_value, \
+    access_thread_locals, access_presets, finalize_presets, set_preset_value, \
+    get_preset_value, NEVER_MATCH_PATTERN
+from DHParser import dsl
+from DHParser.dsl import recompile_grammar, never_cancel
+from DHParser.ebnf import grammar_changed
+from DHParser.error import ErrorCode, Error, canonical_error_strings, has_errors, NOTICE, \
+    WARNING, ERROR, FATAL
+from DHParser.log import start_logging, suspend_logging, resume_logging
+from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode, Path, ZOMBIE_TAG
+from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, DropFrom, AnyChar, Parser, \
+    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, ERR, \
+    Option, NegativeLookbehind, OneOrMore, RegExp, SmartRE, Retrieve, Series, Capture, TreeReduction, \
+    ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, \
+    LateBindingUnary, mixin_comment, last_value, matching_bracket, optional_last_value, \
+    PARSER_PLACEHOLDER, UninitializedError
+from DHParser.pipeline import end_points, full_pipeline, create_parser_junction, \
+    create_preprocess_junction, create_junction, PseudoJunction
+from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
+from DHParser.stringview import StringView
+from DHParser.toolkit import is_filename, load_if_file, cpu_count, RX_NEVER_MATCH, \
+    ThreadLocalSingletonFactory, expand_table
+from DHParser.trace import set_tracer, resume_notices_on, trace_history
+from DHParser.transform import is_empty, remove_if, TransformationDict, TransformerFunc, \
+    transformation_factory, remove_children_if, move_fringes, normalize_whitespace, \
+    is_anonymous, name_matches, reduce_single_child, replace_by_single_child, replace_or_reduce, \
+    remove_whitespace, replace_by_children, remove_empty, remove_tokens, flatten, all_of, \
+    any_of, transformer, merge_adjacent, collapse, collapse_children_if, transform_result, \
+    remove_children, remove_content, remove_brackets, change_name, remove_anonymous_tokens, \
+    keep_children, is_one_of, not_one_of, content_matches, apply_if, peek, \
+    remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
+    replace_content_with, forbid, assert_content, remove_infix_operator, add_error, error_on, \
+    left_associative, lean_left, node_maker, has_descendant, neg, has_ancestor, insert, \
+    positions_of, replace_child_names, add_attributes, delimit_children, merge_connected, \
+    has_attr, has_parent, has_children, has_child, apply_unless, apply_ifelse, traverse
 
 from DHParser.pipeline import PseudoJunction, create_parser_junction
 

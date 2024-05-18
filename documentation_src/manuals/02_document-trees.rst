@@ -352,7 +352,7 @@ Navigating "downtree"
 There are a number of useful functions to help navigating a tree spanned by a
 node and finding particular nodes within in a tree::
 
-    >>> from DHParser import printw
+    >>> from DHParser.toolkit import printw
     >>> printw(list(sentence.select('word')))
     [Node('word', 'This'), Node('word', 'is'), Node('word', 'Buckingham'),
      Node('word', 'Palace')]

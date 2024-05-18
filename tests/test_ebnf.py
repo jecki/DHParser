@@ -31,7 +31,7 @@ scriptpath = os.path.abspath(scriptpath)
 from DHParser.toolkit import compile_python_object, re, \
     normalize_circular_path
 from DHParser.preprocess import nil_preprocessor
-from DHParser import compile_source, INFINITE, Interleave
+from DHParser.compile import compile_source
 from DHParser.configuration import get_config_value, set_config_value
 from DHParser.error import has_errors, MANDATORY_CONTINUATION, PARSER_STOPPED_BEFORE_END, \
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, AMBIGUOUS_ERROR_HANDLING, \
@@ -40,7 +40,7 @@ from DHParser.error import has_errors, MANDATORY_CONTINUATION, PARSER_STOPPED_BE
     UNKNOWN_MACRO_ARGUMENT, UNUSED_MACRO_ARGUMENTS_WARNING, \
     ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING, SYMBOL_NAME_IS_PYTHON_KEYWORD, canonical_error_strings
 from DHParser.nodetree import WHITESPACE_PTYPE, flatten_sxpr, parse_sxpr
-from DHParser.parse import PARSER_PLACEHOLDER
+from DHParser.parse import PARSER_PLACEHOLDER, INFINITE, Interleave
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
     EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS, parse_ebnf, \
     transform_ebnf, HeuristicEBNFGrammar, ConfigurableEBNFGrammar, \

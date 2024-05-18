@@ -144,7 +144,7 @@ key_value_store.py:
 
     #!/usr/bin/env python 
     # A mini-DSL for a key value store
-    from DHParser import *
+    from DHParser.dsl import create_parser
 
     # specify the grammar of your DSL in EBNF-notation
     grammar = '''@ drop = whitespace, strings

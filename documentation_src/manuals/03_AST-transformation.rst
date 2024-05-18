@@ -581,7 +581,8 @@ regular functions, if the first parameter is given. In this case the
 ``transformation_factory``-decorator simply passes the the call through
 to the original function. The ``transformation_factory``-decorator::
 
-    >>> from DHParser import parse_sxpr, content_matches
+    >>> from DHParser.nodetree import parse_sxpr
+    >>> from DHParser.transform import content_matches
     >>> tree = parse_sxpr('(WORT "hallo")')
     >>> content_matches([tree], r'\w+')
     True

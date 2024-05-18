@@ -185,8 +185,8 @@ class ThreadLocalSingletonFactory:
     the same instance of `class_or_factory` for one and the
     same thread, but different instances for different threads.
 
-    Note: Parameter uniqueID should be provided if class_or_factory is not
-    unique but generic. See source code of
+    Note: Parameter uniqueID should be provided if class_or_factory is
+    not unique but generic. See source code of
     :py:func:`DHParser.dsl.create_transtable_junction`
     """
 

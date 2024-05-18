@@ -40,7 +40,7 @@ from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMor
     Interleave, CombinedParser, Text, EMPTY_NODE, Capture, Drop, Whitespace, \
     GrammarError, Counted, Always, INFINITE, longest_match, extract_error_code, \
     Option, DTKN, RegExp, ensure_drop_propagation
-from DHParser import compile_source
+from DHParser.compile import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
     parse_ebnf, DHPARSER_IMPORTS, compile_ebnf
 from DHParser.dsl import grammar_provider, create_parser

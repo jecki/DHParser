@@ -2664,6 +2664,22 @@ class IgnoreCase(Text):
         return None, location
 
 
+class LazyPattern:
+    def __init__(self, obj, pattern: str):
+        self.pattern = pattern
+        self.obj = obj
+        self.expired = False
+
+    def match(self, *args, **kwargs):
+        assert not self.expired, str(self.obj)
+        self.obj.regexp = re.compile(self.pattern)
+        self.expired = True
+        return self.obj.regexp.match(*args, **kwargs)
+
+    def __deepcopy__(self, memo):
+        raise TypeError
+
+
 class RegExp(LeafParser):
     r"""
     Regular expression parser.
@@ -2686,7 +2702,7 @@ class RegExp(LeafParser):
 
     def __init__(self, regexp) -> None:
         super().__init__()
-        self.regexp = re.compile(regexp) if isinstance(regexp, str) else regexp
+        self.regexp = LazyPattern(self, regexp) if isinstance(regexp, str) else regexp
 
     def __deepcopy__(self, memo):
         # `regex` supports deep copies, but not `re`
@@ -3280,12 +3296,13 @@ class SmartRE(RegExp, CombinedParser):  # TODO: turn this into a CombinedParser
     """
     def __init__(self, regexp,
                  repr_str: str = '',
-                 group_names: List[str] = None) -> None:
+                 group_names: Optional[List[str]] = None) -> None:
         self.repr_str = repr_str
         if group_names is not None:  # copy constructor
             super().__init__(regexp)
             self.group_names = group_names
         else:
+            #  evaluate lazily
             pattern = regexp if isinstance(regexp, str) else regexp.pattern
             group_names = re.findall(r'\(\?P<(:?\w+)>', pattern)
             # assert group_names, f"Named group(s) missing in SmartRE: {pattern}"
@@ -3326,6 +3343,7 @@ class SmartRE(RegExp, CombinedParser):  # TODO: turn this into a CombinedParser
             if not self.disposable or any(len(content) for content in values):
                 if self.drop_content:
                     return EMPTY_NODE, end
+                assert self.group_names is not None
                 results = tuple(Node(name, content)
                                 for name, content in zip(self.group_names, values)
                                 if ((not self.disposable or content)
@@ -4536,12 +4554,12 @@ class Lookbehind(FlowParser):
         p = parser
         while isinstance(p, Synonym):
             p = p.parser
-        assert isinstance(p, RegExp) or isinstance(p, Text)
         self.regexp = None
         self.text = ''  # type: str
         if isinstance(p, RegExp):
-            self.regexp = cast(RegExp, p).regexp
+            self.regexp = LazyPattern(self, cast(RegExp, p).regexp.pattern)
         else:  # p is of type Text
+            assert isinstance(p, Text)
             self.text = cast(Text, p).text
         super().__init__(parser)
 

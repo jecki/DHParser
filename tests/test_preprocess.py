@@ -33,7 +33,7 @@ from functools import partial
 
 from DHParser.configuration import set_config_value
 from DHParser.dsl import grammar_provider
-from DHParser import compile_source
+from DHParser.compile import compile_source
 from DHParser.preprocess import make_token, tokenized_to_original_mapping, source_map, \
     BEGIN_TOKEN, END_TOKEN, TOKEN_DELIMITER, PreprocessorResult, chain_preprocessors, \
     strip_tokens, gen_find_include_func, preprocess_includes, IncludeInfo, make_preprocessor, \

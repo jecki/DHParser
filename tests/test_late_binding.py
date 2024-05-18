@@ -1,4 +1,4 @@
-from DHParser import grammar_provider
+from DHParser.dsl import grammar_provider
 
 class TestLateBinding:
     def test_late_binding(self):

@@ -30,10 +30,11 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 REVEAL = False
 
 
-from DHParser import grammar_provider, \
-    set_tracer, trace_history, log_parsing_history, start_logging, log_dir, \
-    set_config_value, get_config_value, resume_notices_on, Error
-from DHParser.error import MANDATORY_CONTINUATION, PARSER_STOPPED_BEFORE_END, \
+from DHParser.configuration import set_config_value, get_config_value
+from DHParser.dsl import grammar_provider
+from DHParser.log import log_parsing_history, start_logging, log_dir
+from DHParser.trace import set_tracer, trace_history, resume_notices_on
+from DHParser.error import Error, MANDATORY_CONTINUATION, PARSER_STOPPED_BEFORE_END, \
     MANDATORY_CONTINUATION_AT_EOF, WARNING, RESUME_NOTICE, ERROR_WHILE_RECOVERING_FROM_ERROR
 from DHParser.testing import unique_name
 
