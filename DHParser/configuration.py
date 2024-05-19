@@ -33,7 +33,7 @@ from __future__ import annotations
 
 import sys
 import threading
-from typing import Dict, Any
+from typing import Dict, Any, Container
 
 __all__ = ('ALLOWED_PRESET_VALUES',
            'validate_value',
@@ -86,7 +86,12 @@ def validate_value(key: str, value: Any):
                 raise ValueError('Value %s lies not within the range from %s to %s (included)!'
                                  % (str(value), str(allowed[0]), str(allowed[1])))
         else:
-            if value not in allowed:
+            if not isinstance(value, str) and isinstance(value, Container):
+                for item in value:
+                    if item not in allowed:
+                        raise ValueError('Item %s is not one of the allowed values: %s'
+                                         % (str(item), str(allowed)))
+            elif value not in allowed:
                 raise ValueError('Value %s is not one of the allowed values: %s'
                                  % (str(value), str(allowed)))
 
@@ -627,24 +632,17 @@ CONFIG_PRESET['delimiter_set'] = {
     'CH_LEADIN':  '0x'
 }
 
-# Sets the level of optimization of the ebnf-compiler. Optimaztion
-# is done by substituting compound parsers by SmartRE-parsers
+# Switches different kinds of optimization of the EBNF-compiler on.
+# Optimaztion is done by substituting compound parsers by SmartRE-parsers
 # when this is possible. Theoretically, this is everywhere where
 # no recursion occurs. In practice this is done only in (some of the)
 # cases where no (non-disposable) symbols are referred.
-# The following levels are availaible:
-# 0 = no optimization
-# 1 = only compound literals (i.e. literals with whitespace) will be
-#     optimized-
-# 2 = compound literals and sequences made up of literals, insignificant
-#     whitespace and regular expressions.
-# 3 = all of the former plus expressions (if possible, i.e. if entirely
-#     made up of literals, insignificant whitespace and regexes)
-# 4 = all of the former plus options and repetitions.
-# 5 = all of the former plus lookaheads
-# Any number higher than the last number in the previous list will
-# be considered an alias for the highest supported optimization level.
-CONFIG_PRESET['optimization_level'] = 0
+# Default value: empty frozen set
+ALLOWED_PRESET_VALUES['optimizations'] = frozenset({
+    'literal',
+    'alternative',
+    'sequence'})
+CONFIG_PRESET['optimizations'] = frozenset({})
 
 
 ########################################################################

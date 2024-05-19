@@ -132,10 +132,10 @@ from a grammar, step by step::
     >>> AST = ebnf_transformer(CST)   # CST should be considered invalid after that
     >>> ebnf_compiler.set_grammar_name("Arithmetic")
     >>> from DHParser.configuration import get_config_value, set_config_value
-    >>> save = get_config_value('optimization_level')
-    >>> set_config_value('optimization_level', 0)
+    >>> save = get_config_value('optimizations')
+    >>> set_config_value('optimizations', frozenset())
     >>> python_src = ebnf_compiler(AST)
-    >>> set_config_value('optimization_level', save)
+    >>> set_config_value('optimizations', save)
     >>> assert not AST.errors
     >>> print(python_src)
     class ArithmeticGrammar(Grammar):
@@ -1726,11 +1726,10 @@ class EBNFCompiler(Compiler):
 
     :ivar grammar_source:  The source code of the grammar to be compiled.
 
-    :ivar optimization_level:  Turns on optimizng parser by substituting
+    :ivar optimizations:  Turns on optimizng parser by substituting
             SmartRE-parsers for compound parsers when possible.
-            Any number higher than zero turns optimization on (the higher,
-            the more; see "optimization_level" in  DHParser.config.py).
-            A value of zero turns optimization off.
+            (see "optimizations" in  DHParser.config.py).
+            An empty set means all optimizations are turned off.
     """
     COMMENT_KEYWORD = "COMMENT__"
     COMMENT_PARSER_KEYWORD = "comment__"
@@ -1796,7 +1795,7 @@ class EBNFCompiler(Compiler):
         self.consumed_custom_errors = set()    # type: Set[str]
         self.consumed_skip_rules = set()       # type: Set[str]
         self.P = {p: p for p in parser_names}  # type: Dict[str, str]
-        self.optimization_level = get_config_value('optimization_level')  # type: int
+        self.optimizations = get_config_value('optimizations')  # type: FrozenSet[str]
 
 
     @property
@@ -2397,7 +2396,8 @@ class EBNFCompiler(Compiler):
 
 
     def on_syntax(self, node: Node) -> str:
-        self.optimization_level = get_config_value('optimization_level')
+        # update optimzations:
+        self.optimizations = get_config_value('optimizations')
 
         # drop the wrapping sequence node
         if len(node.children) == 1 and node.children[0].anonymous:
@@ -3387,9 +3387,9 @@ class EBNFCompiler(Compiler):
 
 
     def on_literal(self, node: Node) -> str:
-        # TODO: Test with self.optimization_level > 1
+        # TODO: Tests
         content, left, right = self.prepare_literal(node)
-        if self.optimization_level >= 1 and (left or right):
+        if 'literal' in self.optimizations and (left or right):
             q = content[0]
             # rxp = repr(self.literal_rx(content[1:-1], left, right))
             rxp = ''.join(['fr', q, self.literal_rx(content[1:-1], left, right), q])

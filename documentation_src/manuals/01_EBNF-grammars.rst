@@ -1309,12 +1309,12 @@ in the following. DHParser's speed-optizations work by "compressing"
 nested parsers into "smart" regular expressions if possible.
 However, the serialization of the respective parser objects
 might look different although functionally it is the same.
-Speed optmizations can be turned off by settting the configuration
-value "optimization_level" to zero::
+Speed optmizations can be turned off by setting the configuration
+value "optimizations" to an empty frozen set::
 
     >>> from DHParser.configuration import get_config_value, set_config_value
-    >>> save_optimization_level = get_config_value('optimization_level')
-    >>> set_config_value('optimization_level', 0)
+    >>> save_optimizations = get_config_value('optimizations')
+    >>> set_config_value('optimizations', frozenset({}))
 
 Farthest-Fail-Heuristics
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2970,7 +2970,7 @@ the processing stages following the parsing-stage (see
 
 Now, let's not forget to restore the turned off optimizations (see above)::
 
-    >>> set_config_value('optimization_level', save_optimization_level)
+    >>> set_config_value('optimizations', save_optimizations)
 
 
 *Classes and Functions-Reference*

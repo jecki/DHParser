@@ -1648,10 +1648,10 @@ class TestMemoization:
         wordB = `"` /[Bb]\w+/ '"'
         wordC = `"` /[Cc]\w+/ '"'
         EOF = /$/'''
-        save = get_config_value('optimization_level')
-        set_config_value('optimization_level', 0)
+        save = get_config_value('optimizations')
+        set_config_value('optimizations', frozenset({}))
         grammar = create_parser(words, 'words')
-        set_config_value('optimization_level', save)
+        set_config_value('optimizations', save)
 
         p1 = grammar.wordC.parsers[0]
         p2 = grammar.wordB.parsers[0]
