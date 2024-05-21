@@ -53,8 +53,13 @@ try:
 except ImportError:
     from DHParser.externallibs import dataclasses36 as dataclasses
 
-from typing import Any, Iterable, Sequence, Set, AbstractSet, Union, Dict, List, Tuple, \
-    Optional, Type, Callable
+if sys.version_info >= (3, 12, 0):
+    from collections.abc import Iterable, Sequence, Set, Callable
+    from typing import Any, AbstractSet, FrozenSet, Type, Union, Dict, List, Tuple, Optional
+else:
+    from typing import Any, Iterable, Sequence, Set, AbstractSet, Union, Dict, List, Tuple, \
+        FrozenSet, Optional, Type, Callable
+
 try:
     from typing import Protocol
 except ImportError:
@@ -314,7 +319,8 @@ class unrepr:
 def as_list(item_or_sequence) -> List[Any]:
     """Turns an arbitrary sequence or a single item into a list. In case of
     a single item, the list contains this element as its sole item."""
-    if isinstance(item_or_sequence, Iterable):
+    if isinstance(item_or_sequence, Iterable) \
+            and not isinstance(item_or_sequence, (str, bytes, bytearray)):
         return list(item_or_sequence)
     return [item_or_sequence]
 
@@ -322,14 +328,34 @@ def as_list(item_or_sequence) -> List[Any]:
 def as_tuple(item_or_sequence) -> Tuple[Any]:
     """Turns an arbitrary sequence or a single item into a tuple. In case of
     a single item, the tuple contains this element as its sole item."""
-    if isinstance(item_or_sequence, Iterable):
+    if isinstance(item_or_sequence, Iterable) \
+            and not isinstance(item_or_sequence, (str, bytes, bytearray)):
         return tuple(item_or_sequence)
     return (item_or_sequence,)
 
 
+def as_set(item_or_sequence) -> Set[Any]:
+    """Turns an arbitrary sequence or a single item into a set. In case of
+    a single item, the set contains this element as its sole item."""
+    if isinstance(item_or_sequence, Iterable) \
+            and not isinstance(item_or_sequence, (str, bytes, bytearray)):
+        return set(item_or_sequence)
+    return {item_or_sequence}
+
+
+def as_frozenset(item_or_sequence) -> FrozenSet[Any]:
+    """Turns an arbitrary sequence or a single item into a set. In case of
+    a single item, the set contains this element as its sole item."""
+    if isinstance(item_or_sequence, Iterable) \
+            and not isinstance(item_or_sequence, (str, bytes, bytearray)):
+        return frozenset(item_or_sequence)
+    return frozenset({item_or_sequence})
+
+
 def first(item_or_sequence: Union[Sequence, Any]) -> Any:
     """Returns an item or the first item of a sequence of items."""
-    if isinstance(item_or_sequence, Sequence):
+    if isinstance(item_or_sequence, Sequence) \
+            and not isinstance(item_or_sequence, (str, bytes, bytearray)):
         return item_or_sequence[0]
     else:
         return item_or_sequence
@@ -337,7 +363,8 @@ def first(item_or_sequence: Union[Sequence, Any]) -> Any:
 
 def last(item_or_sequence: Union[Sequence, Any]) -> Any:
     """Returns an item or the first item of a sequence of items."""
-    if isinstance(item_or_sequence, Sequence):
+    if isinstance(item_or_sequence, Sequence) \
+            and not isinstance(item_or_sequence, (str, bytes, bytearray)):
         return item_or_sequence[-1]
     else:
         return item_or_sequence
