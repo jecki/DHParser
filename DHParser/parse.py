@@ -2672,9 +2672,13 @@ class LazyPattern:
 
     def match(self, *args, **kwargs):
         assert not self.expired, str(self.obj)
-        self.obj.regexp = re.compile(self.pattern)
+        obj = self.obj
+        if hasattr(obj, "lazy_initialization"):
+            obj.lazy_initialization(self.pattern)
+        else:
+            obj.regexp = re.compile(self.pattern)
         self.expired = True
-        return self.obj.regexp.match(*args, **kwargs)
+        return obj.regexp.match(*args, **kwargs)
 
     def __deepcopy__(self, memo):
         raise TypeError
@@ -3298,35 +3302,39 @@ class SmartRE(RegExp, CombinedParser):  # TODO: turn this into a CombinedParser
                  repr_str: str = '',
                  group_names: Optional[List[str]] = None) -> None:
         self.repr_str = repr_str
+        self.group_names = group_names
         if group_names is not None:  # copy constructor
             super().__init__(regexp)
-            self.group_names = group_names
         else:
-            #  evaluate lazily
-            pattern = regexp if isinstance(regexp, str) else regexp.pattern
-            group_names = re.findall(r'\(\?P<(:?\w+)>', pattern)
-            # assert group_names, f"Named group(s) missing in SmartRE: {pattern}"
-            names = dict()
-            for i, name in enumerate(group_names):
-                if name[0:1] == ":":
-                    alias = name[1:] + '_' * (i + len(group_names) + 4)
-                else:
-                    alias = name + '_' * (i + 2)
-                names[alias] = name
-                pattern = pattern.replace(f'(?P<{name}>', f'(?P<{alias}>', 1)
-            regexp = re.compile(pattern)
-            groups = {index: names[alias] for alias, index in regexp.groupindex.items()}
-            self.group_names = [groups.get(i, ":RegExp") for i in range(1, regexp.groups + 1)]
-            pattern = re.sub(r'\(\?P<(\w+)>', '(', pattern)
-            super().__init__(pattern)
+            #  initialize lazily
+            self.pattern = regexp if isinstance(regexp, str) else regexp.pattern
+            super().__init__(self.pattern)
+
+    def lazy_initialization(self, pattern: str):
+        group_names = re.findall(r'\(\?P<(:?\w+)>', pattern)
+        # assert group_names, f"Named group(s) missing in SmartRE: {pattern}"
+        names = dict()
+        for i, name in enumerate(group_names):
+            if name[0:1] == ":":
+                alias = name[1:] + '_' * (i + len(group_names) + 4)
+            else:
+                alias = name + '_' * (i + 2)
+            names[alias] = name
+            pattern = pattern.replace(f'(?P<{name}>', f'(?P<{alias}>', 1)
+        regexp = re.compile(pattern)
+        groups = {index: names[alias] for alias, index in regexp.groupindex.items()}
+        self.group_names = [groups.get(i, ":RegExp") for i in range(1, regexp.groups + 1)]
+        pattern = re.sub(r'\(\?P<(\w+)>', '(', pattern)
+        self.regexp = re.compile(pattern)
 
     def __deepcopy__(self, memo):
         # `regex` supports deep copies, but not `re`
         try:
             regexp = copy.deepcopy(self.regexp, memo)
         except TypeError:
-            regexp = self.regexp.pattern
+            regexp = self.pattern
         duplicate = self.__class__(regexp, self.repr_str, self.group_names)
+        duplicate.pattern = self.pattern
         copy_combined_parser_attrs(self, duplicate)
         return duplicate
 
@@ -4158,7 +4166,6 @@ class ErrorCatchingNary(NaryParser):
         :param failed_on_lookahead: True if the violating parser was a
                 Lookahead-Parser.
         :param expected:  the expected (but not found) text at this point.
-        :param err_node: A zombie-node that captures the text from the
                 position where the error occurred to a suggested
                 reentry-position.
         :param reloc: A position offset that represents the reentry point for
@@ -4169,17 +4176,6 @@ class ErrorCatchingNary(NaryParser):
         """
         grammar = self._grammar
         text_ = self.grammar.document__[location:]
-
-        # EXPERIMENTAL:
-        # TODO: need a dedicated skip_wsp__ parser, probably also a directive here!!!
-
-        if hasattr(grammar, "skip_wsp__"):  # skip-whitsspace to adjust error-locations
-            m = text_.match(grammar.skip_wsp__)
-            if m:
-                l = len(m.group(0))
-                if l > 0:
-                    location += l
-                    text_ = self.grammar.document__[location:]
 
         err_node._pos = -1  # bad hack to avoid error in case position is re-set
         err_node.with_pos(location)  # for testing artifacts
