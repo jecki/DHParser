@@ -3298,17 +3298,12 @@ class SmartRE(RegExp, CombinedParser):  # TODO: turn this into a CombinedParser
 
     EBNF-Example:   ``name = /(?P<first_name>\w+)\s+(?P<last_name>\w+)/``
     """
-    def __init__(self, regexp,
-                 repr_str: str = '',
-                 group_names: Optional[List[str]] = None) -> None:
+    def __init__(self, pattern,
+                 repr_str: str = '') -> None:
         self.repr_str = repr_str
-        self.group_names = group_names
-        if group_names is not None:  # copy constructor
-            super().__init__(regexp)
-        else:
-            #  initialize lazily
-            self.pattern = regexp if isinstance(regexp, str) else regexp.pattern
-            super().__init__(self.pattern)
+        self.group_names = None
+        self.pattern = pattern if isinstance(pattern, str) else pattern.pattern
+        super().__init__(pattern)
 
     def lazy_initialization(self, pattern: str):
         group_names = re.findall(r'\(\?P<(:?\w+)>', pattern)
@@ -3333,7 +3328,7 @@ class SmartRE(RegExp, CombinedParser):  # TODO: turn this into a CombinedParser
             regexp = copy.deepcopy(self.regexp, memo)
         except TypeError:
             regexp = self.pattern
-        duplicate = self.__class__(regexp, self.repr_str, self.group_names)
+        duplicate = self.__class__(regexp, self.repr_str)
         duplicate.pattern = self.pattern
         duplicate.group_names = self.group_names
         copy_combined_parser_attrs(self, duplicate)
