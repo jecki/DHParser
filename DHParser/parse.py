@@ -3335,6 +3335,7 @@ class SmartRE(RegExp, CombinedParser):  # TODO: turn this into a CombinedParser
             regexp = self.pattern
         duplicate = self.__class__(regexp, self.repr_str, self.group_names)
         duplicate.pattern = self.pattern
+        duplicate.group_names = self.group_names
         copy_combined_parser_attrs(self, duplicate)
         return duplicate
 
