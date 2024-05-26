@@ -3348,8 +3348,8 @@ class EBNFCompiler(Compiler):
         left = self.WSPC_PARSER(force) if 'left' in self.directives.literalws else ''
         right = self.WSPC_PARSER(force) if 'right' in self.directives.literalws else ''
         content = node.content  # escape_ctrl_chars(node.content)
-        if (content[:1] + content[-1:]) == '’’':
-            content = "'" + re.sub(r"(?<!\\)'", r"\'", content[1:-1]) + "'"
+        if (content[:1] + content[-1:]) == "’’":
+            content = '"' + re.sub(r'(?<!\\)"', r'\"', content[1:-1]) + '"'
         return content, left, right
 
 
@@ -3370,6 +3370,14 @@ class EBNFCompiler(Compiler):
         return ""
 
 
+    def text_rx(self, content: str, drop_category):
+        if self.drop_on(drop_category):
+            center_rx = f'(?:{re.escape(content)})'
+        else:
+            center_rx = f'(?P<{TOKEN_PTYPE}>{re.escape(content)})'
+        return center_rx.replace('{', '{{').replace('}', '}}')
+
+
     def literal_rx(self, content: str, left: str, right: str) -> str:
         """Returns a regular expression string to parse a literal. This
         can be used to optimize the parsing of literals with adjacent
@@ -3379,11 +3387,7 @@ class EBNFCompiler(Compiler):
 
         left_rx = self.whitespace_rx(left)
         right_rx = self.whitespace_rx(right)
-        if self.drop_on(DROP_STRINGS):
-            center_rx = f'(?:{re.escape(content)})'
-        else:
-            center_rx = f'(?P<{TOKEN_PTYPE}>{re.escape(content)})'
-        return ''.join([left_rx, center_rx.replace('{', '{{').replace('}', '}}'), right_rx])
+        return ''.join([left_rx, self.text_rx(content, DROP_STRINGS), right_rx])
 
 
     def on_literal(self, node: Node) -> str:
@@ -3405,6 +3409,14 @@ class EBNFCompiler(Compiler):
         return center
 
 
+    def smartRE_literal(self, node: Node) -> Tuple[str, str]:
+        content, left, right = self.prepare_literal(node)
+        if content[:1] != '"':
+            content = '"' + re.sub(r'(?<!\\)"', r'\"', content[1:-1]) + '"'
+        pattern = self.literal_rx(content[1:-1], left, right)
+        return pattern, content  # effectively returns pattern and repr_str
+
+
     def on_plaintext(self, node: Node) -> str:
         tk = escape_ctrl_chars(node.content)
         rpl = '"' if tk.find('"') < 0 else "'" if tk.find("'") < 0 else ''
@@ -3413,6 +3425,11 @@ class EBNFCompiler(Compiler):
         else:
             tk = rpl + tk.replace('"', '\\"')[1:-1] + rpl
         return self.TEXT_PARSER(tk, self.drop_on(DROP_BACKTICKED))
+
+
+    def smartRE_plaintext(self, node: Node) -> Tuple[str, str]:
+        pattern = self.text_rx(node.content, DROP_BACKTICKED)
+        return pattern, node.content
 
 
     def on_regexp(self, node: Node) -> str:

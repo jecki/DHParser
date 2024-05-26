@@ -3361,7 +3361,7 @@ class SmartRE(RegExp, CombinedParser):  # TODO: turn this into a CombinedParser
     def __repr__(self):
         if self.repr_str:
             return self.repr_str
-        pattern = repr(self.regexp.pattern)[1:-1]
+        pattern = self.pattern
         try:
             pattern = pattern.replace(self._grammar.WSP_RE__, '~')
             if self._grammar.COMMENT__:
