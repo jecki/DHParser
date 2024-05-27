@@ -54,21 +54,25 @@ except ImportError:
     from DHParser.externallibs import dataclasses36 as dataclasses
 
 if sys.version_info >= (3, 12, 0):
-    from collections.abc import Iterable, Sequence, Set, Callable
-    from typing import Any, AbstractSet, FrozenSet, Type, Union, Dict, List, Tuple, Optional
+    from collections.abc import Iterable, Sequence, Set, MutableSet, Callable, Container
+    from typing import Any, AbstractSet, FrozenSet, Type, Union, Optional, TypeAlias, Protocol
+    AbstractSet: TypeAlias = Set
+    FrozenSet: TypeAlias = frozenset
+    Dict: TypeAlias = dict
+    List: TypeAlias = list
+    Tuple: TypeAlias = tuple
 else:
     from typing import Any, Iterable, Sequence, Set, AbstractSet, Union, Dict, List, Tuple, \
-        FrozenSet, Optional, Type, Callable
-
-try:
-    from typing import Protocol
-except ImportError:
-    class Protocol:
-        pass
-try:
-    from typing import TypeAlias
-except ImportError:
-    from DHParser.externallibs.typing_extensions import TypeAlias
+        FrozenSet, MutableSet, Optional, Type, Callable, Container
+    try:
+        from typing import Protocol
+    except ImportError:
+        class Protocol:
+            pass
+    try:
+        from typing import TypeAlias
+    except ImportError:
+        from DHParser.externallibs.typing_extensions import TypeAlias
 
 try:
     import cython
@@ -84,11 +88,8 @@ from DHParser.configuration import access_thread_locals, get_config_value, set_c
 from DHParser.stringview import StringView
 
 
-__all__ = ('typing',
-           're',
+__all__ = ('re',
            'dataclasses',
-           'Protocol',
-           'TypeAlias',
            'cython_optimized',
            'identify_python',
            'identity',
@@ -151,7 +152,25 @@ __all__ = ('typing',
            'SingleThreadExecutor',
            'multiprocessing_broken',
            'instantiate_executor',
-           'cpu_count')
+           'cpu_count',
+           # Type Aliases
+           'Iterable',
+           'Sequence',
+           'Set',
+           'AbstractSet',
+           'MutableSet',
+           'FrozenSet',
+           'Callable',
+           'Container',
+           'Any',
+           'Type',
+           'Union',
+           'Optional',
+           'TypeAlias',
+           'Protocol',
+           'Dict',
+           'List',
+           'Tuple')
 
 
 #######################################################################

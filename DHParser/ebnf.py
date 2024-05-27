@@ -229,7 +229,6 @@ from functools import partial
 import keyword
 import os
 import sys
-from typing import Callable, Dict, List, Set, FrozenSet, Tuple, Union, Optional
 
 if sys.version_info >= (3, 6, 0):
     OrderedDict = dict
@@ -262,7 +261,8 @@ from DHParser.nodetree import Node, RootNode, Path, WHITESPACE_PTYPE, KEEP_COMME
     TOKEN_PTYPE, ZOMBIE_TAG, flatten_sxpr
 from DHParser.toolkit import load_if_file, wrap_str_literal, escape_ctrl_chars, md5, \
     sane_parser_name, re, expand_table, unrepr, compile_python_object, \
-    ThreadLocalSingletonFactory, TypeAlias
+    ThreadLocalSingletonFactory, Any, Iterable, Sequence, Set, AbstractSet, Union, Dict, List, \
+    Tuple, FrozenSet, MutableSet, Optional, Type, Callable, Container, TypeAlias
 from DHParser.transform import TransformerFunc, transformer, remove_brackets, change_name, \
     reduce_single_child, replace_by_single_child, is_empty, remove_children, add_error, \
     remove_tokens, remove_anonymous_tokens, flatten, forbid, assert_content, remove_children_if, \
