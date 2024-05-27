@@ -3355,7 +3355,7 @@ class EBNFCompiler(Compiler):
 
     def whitespace_rx(self, ws: str) -> str:
         # TODO: doctests required
-        """Returns a ragular expression for whitespace, possibly including comments"""
+        """Returns a regular expression for whitespace, possibly including comments"""
         if ws:
             # ws_rx = self.directives.super_ws
             ws_rx = '{WSP_RE__}'
