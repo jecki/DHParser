@@ -41,7 +41,7 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, ERR, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, mixin_comment, \
-    last_value, matching_bracket, optional_last_value
+    last_value, matching_bracket, optional_last_value, SmartRE
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.toolkit import is_filename, load_if_file, cpu_count, RX_NEVER_MATCH, \
@@ -88,7 +88,7 @@ def get_preprocessor() -> PreprocessorFunc:
 class readme_exampleGrammar(Grammar):
     r"""Parser for a readme_example source file.
     """
-    source_hash__ = "a6f4c831a99c0b040761d0519c4249e7"
+    source_hash__ = "2b0fac83798dfbb97c057861a0dc6870"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -100,7 +100,7 @@ class readme_exampleGrammar(Grammar):
     dwsp__ = Drop(Whitespace(WSP_RE__))
     value = Series(RegExp('\\"[^"\\n]*\\"'), dwsp__)
     key = Series(RegExp('\\w+'), dwsp__)
-    entry = Series(key, Series(Drop(Text("=")), dwsp__), value)
+    entry = Series(key, SmartRE(fr"(?:=)(?:{WSP_RE__})", "\"=\""), value)
     key_store = Series(dwsp__, ZeroOrMore(entry))
     root__ = key_store
         

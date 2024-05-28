@@ -2490,6 +2490,25 @@ class TestRegexRendering:
         assert parser.python_src__.find(expected) >= 0
 
 
+class TestStringLiterals:
+    def test_string_literals(self):
+        lang = r'''secret = "\'"
+        '''
+        p = create_parser(lang)
+        root = p(r"\'")
+        assert not root.errors
+        assert root.strlen() == 2
+
+    def test_plaintext_literals(self):
+        lang = r'''secret = `\'`
+        '''
+        p = create_parser(lang)
+        root = p(r"\'")
+        assert not root.errors
+        assert root.strlen() == 2
+        print(root.as_sxpr())
+
+
 class TestOptimizations:
     def test_literal_optimization(self):
         save = get_config_value('optimizations')
@@ -2527,6 +2546,7 @@ class TestOptimizations:
         # print(parser.python_src__)
 
         set_config_value('optimizations', save)
+
 
 if __name__ == "__main__":
     from DHParser.testing import runner

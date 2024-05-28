@@ -39,7 +39,7 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, ERR, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, mixin_comment, \
-    last_value, matching_bracket, optional_last_value
+    last_value, matching_bracket, optional_last_value, SmartRE
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.toolkit import is_filename, load_if_file, cpu_count, RX_NEVER_MATCH, \
@@ -110,11 +110,11 @@ class jsonGrammar(Grammar):
     r"""Parser for a json source file.
     """
     _element = Forward()
-    source_hash__ = "8b81be660485d670733a1a191f8e45cb"
+    source_hash__ = "ecf346ab5d5f38f29190b599ec78fd77"
     disposable__ = re.compile('_[A-Za-z]+')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
-    COMMENT__ = r'(?:\/\/|#).*'
+    COMMENT__ = r'(?://|#).*'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
@@ -127,21 +127,21 @@ class jsonGrammar(Grammar):
     NEG = Text("-")
     INT = Series(Option(NEG), Alternative(RegExp('[1-9][0-9]+'), RegExp('[0-9]')))
     HEX = RegExp('[0-9a-fA-F][0-9a-fA-F]')
-    UNICODE = Series(Series(Drop(Text("\\u")), dwsp__), HEX, HEX)
+    UNICODE = Series(SmartRE(fr"(?:\\u)(?:{WSP_RE__})", "\"\\u\""), HEX, HEX)
     ESCAPE = RegExp('\\\\[/bnrt\\\\"]')
     PLAIN = RegExp('[^"\\\\]+')
     _CHARACTERS = OneOrMore(Alternative(PLAIN, ESCAPE, UNICODE))
-    null = Series(Text("null"), dwsp__)
+    null = SmartRE(fr"(?P<:Text>null)(?:{WSP_RE__})", "\"null\"")
     false = Series(Text("false"), dwsp__)
     true = Series(Text("true"), dwsp__)
     _bool = Alternative(true, false)
     number = Series(INT, Option(FRAC), Option(EXP), dwsp__)
     string = Series(Text('"'), Option(_CHARACTERS), Text('"'), dwsp__, mandatory=2)
-    _elements = Series(_element, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), _element, mandatory=1)))
-    array = Series(Series(Drop(Text("[")), dwsp__), Option(_elements), Series(Drop(Text("]")), dwsp__), mandatory=2)
-    member = Series(string, Series(Drop(Text(":")), dwsp__), _element, mandatory=1)
-    _members = Series(member, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), member, mandatory=1)))
-    object = Series(Series(Drop(Text("{")), dwsp__), Option(_members), Series(Drop(Text("}")), dwsp__), mandatory=2)
+    _elements = Series(_element, ZeroOrMore(Series(SmartRE(fr"(?:,)(?:{WSP_RE__})", "\",\""), _element, mandatory=1)))
+    array = Series(SmartRE(fr"(?:\[)(?:{WSP_RE__})", "\"[\""), Option(_elements), SmartRE(fr"(?:\])(?:{WSP_RE__})", "\"]\""), mandatory=2)
+    member = Series(string, SmartRE(fr"(?::)(?:{WSP_RE__})", "\":\""), _element, mandatory=1)
+    _members = Series(member, ZeroOrMore(Series(SmartRE(fr"(?:,)(?:{WSP_RE__})", "\",\""), member, mandatory=1)))
+    object = Series(SmartRE(fr"(?:\{{)(?:{WSP_RE__})", "\"{\""), Option(_members), SmartRE(fr"(?:\}})(?:{WSP_RE__})", "\"}\""), mandatory=2)
     _element.set(Alternative(object, array, string, number, _bool, null))
     json = Series(dwsp__, _element, _EOF)
     root__ = json

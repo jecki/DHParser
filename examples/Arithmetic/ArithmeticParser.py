@@ -41,7 +41,7 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, ERR, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, mixin_comment, \
-    last_value, matching_bracket, optional_last_value
+    last_value, matching_bracket, optional_last_value, SmartRE
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.toolkit import is_filename, load_if_file, cpu_count, RX_NEVER_MATCH, \
@@ -89,7 +89,7 @@ class ArithmeticGrammar(Grammar):
     r"""Parser for an Arithmetic source file.
     """
     expression = Forward()
-    source_hash__ = "0b2ed03481ec962fe0cab0c36f8777f1"
+    source_hash__ = "fc042e3bec447864e1a9752b41666f77"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -103,11 +103,11 @@ class ArithmeticGrammar(Grammar):
     NUMBER = Series(RegExp('(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?'), dwsp__)
     NEGATIVE = RegExp('[-]')
     POSITIVE = RegExp('[+]')
-    DIV = Series(Text("/"), dwsp__)
-    MUL = Series(Text("*"), dwsp__)
-    MINUS = Series(Text("-"), dwsp__)
-    PLUS = Series(Text("+"), dwsp__)
-    group = Series(Series(Drop(Text("(")), dwsp__), expression, Series(Drop(Text(")")), dwsp__))
+    DIV = SmartRE(fr"(?P<:Text>/)(?:{WSP_RE__})", "\"/\"")
+    MUL = SmartRE(fr"(?P<:Text>\*)(?:{WSP_RE__})", "\"*\"")
+    MINUS = SmartRE(fr"(?P<:Text>\-)(?:{WSP_RE__})", "\"-\"")
+    PLUS = SmartRE(fr"(?P<:Text>\+)(?:{WSP_RE__})", "\"+\"")
+    group = Series(SmartRE(fr"(?:\()(?:{WSP_RE__})", "\"(\""), expression, SmartRE(fr"(?:\))(?:{WSP_RE__})", "\")\""))
     sign = Alternative(POSITIVE, NEGATIVE)
     factor = Series(Option(sign), Alternative(NUMBER, VARIABLE, group), ZeroOrMore(Alternative(VARIABLE, group)))
     term = Series(factor, ZeroOrMore(Series(Alternative(DIV, MUL), factor)))

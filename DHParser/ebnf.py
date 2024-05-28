@@ -3347,9 +3347,10 @@ class EBNFCompiler(Compiler):
         force = DROP_STRINGS in self.directives.drop
         left = self.WSPC_PARSER(force) if 'left' in self.directives.literalws else ''
         right = self.WSPC_PARSER(force) if 'right' in self.directives.literalws else ''
-        content = node.content  # escape_ctrl_chars(node.content)
+        # content = escape_ctrl_chars(node.content)
+        content = node.content
         if (content[:1] + content[-1:]) == "’’":
-            content = '"' + re.sub(r'(?<!\\)"', r'\"', content[1:-1]) + '"'
+            content = '"' + content[1:-1].replace('"', r'\"') + '"'
         return content, left, right
 
 
@@ -3395,13 +3396,14 @@ class EBNFCompiler(Compiler):
         content, left, right = self.prepare_literal(node)
         if 'literal' in self.optimizations and (left or right):
             q = content[0]
-            # rxp = repr(self.literal_rx(content[1:-1], left, right))
+            rxp = repr(self.literal_rx(content[1:-1], left, right))
             rxp = ''.join(['fr', q, self.literal_rx(content[1:-1], left, right), q])
             rxp = wrap_str_literal(rxp, 80, 12 if self.drop_on(DROP_STRINGS) else 7)
             content = escape_ctrl_chars(content)
             content = ''.join([q, '\\', content[:-1], '\\', content[-1], q])
             return f"{self.P['SmartRE']}({rxp}, {content})"
-        center = self.TEXT_PARSER(escape_ctrl_chars(content), self.drop_on(DROP_STRINGS))
+        content = escape_ctrl_chars(content)
+        center = self.TEXT_PARSER(content, self.drop_on(DROP_STRINGS))
         if left or right:
             args = ", ".join(item for item in (left, center, right) if item)
             return f'{self.P["Series"]}({args})'
@@ -3411,8 +3413,9 @@ class EBNFCompiler(Compiler):
 
     def smartRE_literal(self, node: Node) -> Tuple[str, str]:
         content, left, right = self.prepare_literal(node)
-        if content[:1] != '"':
-            content = '"' + re.sub(r'(?<!\\)"', r'\"', content[1:-1]) + '"'
+        if content[:1] == "'":
+            content = '"' + content[1:-1].replace('"', r'\"').replace(r"\'", r"'") + '"'
+        assert content[:1] == '"' and content[:-1] == '"'
         pattern = self.literal_rx(content[1:-1], left, right)
         return pattern, content  # effectively returns pattern and repr_str
 
@@ -3423,7 +3426,7 @@ class EBNFCompiler(Compiler):
         if rpl:
             tk = rpl + tk[1:-1] + rpl
         else:
-            tk = rpl + tk.replace('"', '\\"')[1:-1] + rpl
+            tk = rpl + tk.replace('"', r'\"')[1:-1] + rpl
         return self.TEXT_PARSER(tk, self.drop_on(DROP_BACKTICKED))
 
 
@@ -3435,6 +3438,7 @@ class EBNFCompiler(Compiler):
         rx = node.content
         try:
             arg = repr(self.check_rx(node, rx))
+            # arg = 'r"' + self.check_rx(node, rx) + '"'
             return arg
         except AttributeError as error:
             from traceback import extract_tb, format_list
