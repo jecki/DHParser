@@ -3353,7 +3353,6 @@ class EBNFCompiler(Compiler):
             content = '"' + content[1:-1].replace('"', r'\"') + '"'
         return content, left, right
 
-
     def whitespace_rx(self, ws: str) -> str:
         # TODO: doctests required
         """Returns a regular expression for whitespace, possibly including comments"""
@@ -3370,14 +3369,12 @@ class EBNFCompiler(Compiler):
                 return f'(?P<{WHITESPACE_PTYPE}>{ws_rx})'
         return ""
 
-
     def text_rx(self, content: str, drop_category):
         if self.drop_on(drop_category):
             center_rx = f'(?:{re.escape(content)})'
         else:
             center_rx = f'(?P<{TOKEN_PTYPE}>{re.escape(content)})'
         return center_rx.replace('{', '{{').replace('}', '}}')
-
 
     def literal_rx(self, content: str, left: str, right: str) -> str:
         """Returns a regular expression string to parse a literal. This
@@ -3389,7 +3386,6 @@ class EBNFCompiler(Compiler):
         left_rx = self.whitespace_rx(left)
         right_rx = self.whitespace_rx(right)
         return ''.join([left_rx, self.text_rx(content, DROP_STRINGS), right_rx])
-
 
     def on_literal(self, node: Node) -> str:
         # TODO: Tests
@@ -3410,8 +3406,10 @@ class EBNFCompiler(Compiler):
             # return 'Series(' + ", ".join(item for item in (left, center, right) if item) + ')'
         return center
 
-
     def smartRE_literal(self, node: Node) -> Tuple[str, str]:
+        """Returns unescaped regex-pattern and readable repr_str-represenation for a literal,
+        possibly combined with adjacent whitespace containing comments.
+        """
         content, left, right = self.prepare_literal(node)
         if content[:1] == "'":
             content = '"' + content[1:-1].replace('"', r'\"').replace(r"\'", r"'") + '"'
@@ -3429,10 +3427,10 @@ class EBNFCompiler(Compiler):
             tk = rpl + tk.replace('"', r'\"')[1:-1] + rpl
         return self.TEXT_PARSER(tk, self.drop_on(DROP_BACKTICKED))
 
-
     def smartRE_plaintext(self, node: Node) -> Tuple[str, str]:
         pattern = self.text_rx(node.content, DROP_BACKTICKED)
-        return pattern, node.content
+        return pattern, repr(node.content)
+
 
     def regexp_arg(self, node: Node) -> str:
         rx = node.content
@@ -3452,21 +3450,25 @@ class EBNFCompiler(Compiler):
         arg = self.regexp_arg(node)
         return self.REGEXP_PARSER(arg, self.drop_on(DROP_REGEXP))
 
-
     def smartRE_regexp(self, node: Node) -> str:
         arg = self.regexp_arg(node)
-        return arg[1:-1]
+        return f'/{arg[1:-1]}/'
 
+
+    def char_ranges_rx(self, node) -> str:
+        return "|".join('[' + child.content + ']'
+                        for child in node.children if child.name == "range_chain")
 
     def on_char_ranges(self, node) -> str:
-        # TODO: Add alternative char_ranges handling here
-        node.result = "|".join('[' + child.content + ']'
-                for child in node.children if child.name == "range_chain")
+        node.result = self.char_ranges_rx(node)
         return self.on_regexp(node)
 
+    def smartRE_char_ranges(self, node) -> Tuple[str, str]:
+        pattern = self.char_ranges_rx(node)
+        return pattern, f'/{pattern}/'
 
-    def on_char_range(self, node) -> str:
-        # TODO: Add alternative char_ranges handling here
+
+    def char_range_rx(self, node) -> str:
         if 'range_desc' in node:
             node = self.fallback_compiler(node)
         else:
@@ -3474,12 +3476,18 @@ class EBNFCompiler(Compiler):
             node = self.on_range_desc(node)
         re_str = re.sub(r"(?<!\\)'", r'\'', node.content)
         re_str = re.sub(r"(?<!\\)]", r'\]', re_str)
+        return re_str
+
+    def on_char_range(self, node) -> str:
+        re_str = self.char_range_rx(node)
         return f"{self.P['RegExp']}('[{re_str}]')"
 
+    def smartRE_char_range(self, node) -> Tuple[str, str]:
+        pattern = self.char_range_rx(node)
+        return pattern, f'/{pattern}/'
 
     def on_range_chain(self, node) -> Node:
         raise NotImplementedError
-
 
     def on_range_desc(self, node) -> Node:
         for child in node.children:
@@ -3488,7 +3496,6 @@ class EBNFCompiler(Compiler):
             elif child.name == 'free_char':
                 child.result = self.extract_free_char(child)
         return node
-
 
     def extract_character(self, node: Node) -> str:
         hexcode = node.content
@@ -3506,6 +3513,10 @@ class EBNFCompiler(Compiler):
         return f"{self.P['RegExp']}('[{self.extract_character(node)}]')"
         # return "RegExp('%s')" % self.extract_character(node)
 
+    def smartRE_character(self, node: Node) -> Tuple[str, str]:
+        pattern = f'[{self.extract_character(node)}]'
+        return pattern, f'/{pattern}/'
+
 
     def extract_free_char(self, node: Node) -> str:
         assert len(node.content) == 1 or (node.content[0:1] == '\\' and len(node.content) == 2), node.content
@@ -3516,9 +3527,16 @@ class EBNFCompiler(Compiler):
     def on_any_char(self, node: Node) -> str:
         return f'{self.P["AnyChar"]}()'
 
+    def smartRE_any_char(self, node: Node) -> Tuple[str, str]:
+        return r'.|\n', '/./'
+
 
     def on_whitespace(self, node: Node) -> str:
         return self.WSPC_PARSER()
+
+    def smartRE_whitespace(self, node: Node) -> str:
+        return self.whitespace_rx(self.WSPC_PARSER()), '~'
+
 
     def on_parser(self, node: Node) -> str:
         assert 1 <= len(node.children) <= 2, node.as_sxpr()
