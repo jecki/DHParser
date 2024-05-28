@@ -3431,11 +3431,11 @@ class EBNFCompiler(Compiler):
         pattern = self.text_rx(node.content, DROP_BACKTICKED)
         return pattern, node.content
 
-
-    def on_regexp(self, node: Node) -> str:
+    def regexp_arg(self, node: Node) -> str:
         rx = node.content
         try:
             arg = repr(self.check_rx(node, rx))
+            return arg
         except AttributeError as error:
             from traceback import extract_tb, format_list
             trace = ''.join(format_list(extract_tb(error.__traceback__)))
@@ -3443,7 +3443,15 @@ class EBNFCompiler(Compiler):
                      % (EBNFCompiler.AST_ERROR, str(error), trace, node.as_sxpr())
             self.tree.new_error(node, errmsg)
             return '"' + errmsg + '"'
+
+    def on_regexp(self, node: Node) -> str:
+        arg = self.regexp_arg(node)
         return self.REGEXP_PARSER(arg, self.drop_on(DROP_REGEXP))
+
+
+    def smartRE_regexp(self, node: Node) -> str:
+        arg = self.regexp_arg(node)
+        return arg[1:-1]
 
 
     def on_char_ranges(self, node) -> str:
