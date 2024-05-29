@@ -33,6 +33,7 @@ from DHParser.toolkit import compile_python_object, re, \
 from DHParser.preprocess import nil_preprocessor
 from DHParser.compile import compile_source
 from DHParser.configuration import get_config_value, set_config_value
+from DHParser.ebnf_flavors.heuristic import HeuristicEBNFGrammar
 from DHParser.error import has_errors, MANDATORY_CONTINUATION, PARSER_STOPPED_BEFORE_END, \
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, AMBIGUOUS_ERROR_HANDLING, \
     REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES, UNCONNECTED_SYMBOL_WARNING, \
@@ -43,8 +44,7 @@ from DHParser.nodetree import WHITESPACE_PTYPE, flatten_sxpr, parse_sxpr
 from DHParser.parse import PARSER_PLACEHOLDER, INFINITE, Interleave
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
     EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS, parse_ebnf, \
-    transform_ebnf, HeuristicEBNFGrammar, ConfigurableEBNFGrammar, \
-    WHITESPACE_TYPES
+    transform_ebnf, ConfigurableEBNFGrammar, WHITESPACE_TYPES
 from DHParser.dsl import CompilationError, compileDSL, create_parser, grammar_provider, raw_compileEBNF
 from DHParser.testing import grammar_unit, clean_report, unique_name
 from DHParser.trace import set_tracer, trace_history

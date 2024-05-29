@@ -17,8 +17,11 @@ try:
     scriptpath = os.path.dirname(__file__)
 except NameError:
     scriptpath = ''
+dhparser_parentdir = os.path.abspath(os.path.join(scriptpath, os.path.pardir, os.path.pardir))
 if scriptpath and scriptpath not in sys.path:
     sys.path.append(scriptpath)
+if dhparser_parentdir not in sys.path:
+    sys.path.append(dhparser_parentdir)
 
 try:
     import regex as re

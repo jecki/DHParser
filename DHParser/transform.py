@@ -644,7 +644,7 @@ def three_valued(path: Path, cond_true: Callable, cond_false: Callable) -> Optio
     cond_false evaluates to True. Returns None, otherwise.
     
     Note that this means that the first parameter has precedence.
-    Expresses as truth-table, this looks like::
+    Expressed as truth-table, this looks like::
 
         T T -> T
         T F -> T
