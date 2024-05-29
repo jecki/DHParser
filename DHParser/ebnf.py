@@ -259,7 +259,7 @@ from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forwa
 from DHParser.preprocess import PreprocessorFunc, PreprocessorResult, gen_find_include_func, \
     preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.nodetree import Node, RootNode, Path, WHITESPACE_PTYPE, KEEP_COMMENTS_PTYPE, \
-    TOKEN_PTYPE, ZOMBIE_TAG, flatten_sxpr
+    TOKEN_PTYPE, ZOMBIE_TAG, flatten_sxpr, parse_sxpr
 from DHParser.toolkit import load_if_file, wrap_str_literal, escape_ctrl_chars, md5, \
     sane_parser_name, re, expand_table, unrepr, compile_python_object, \
     ThreadLocalSingletonFactory, Any, Iterable, Sequence, Set, AbstractSet, Union, Dict, List, \
@@ -753,7 +753,13 @@ def get_globals(path: Path) -> Dict[str, Any]:
     return globals
 
 
-def optimize_expression(path: Path):
+def rearrange_expression(path: Path):
+    r"""Example::
+    TODO: @literalws = right required!
+    >>> ast = parse_sxpr('(expression (literal '"a"') (sequence (regexp "\d+") (whitespace "~")))')
+    >>> rearrange_expression([ast])
+    >>> print(ast.as_sxpr())
+    """
     globals = get_globals(path)
     if 'alternative' not in globals['optimizations']:
         return
@@ -765,18 +771,30 @@ def optimize_expression(path: Path):
     node = path[-1]
     assert node.name == "expression"
 
-    def fits(nd: Node) -> bool:
+    children = []
+    for nd in node.children:
         if nd.name == "literal":
-            return True
-        if nd.name != "sequence":
-            return False
-        if left and nd[0].name != "whitespace":
-            return False
-        if right and nd[-1].name != "whitespace":
-            return False
-        return True
+            children.append(Node("plaintext", nd.content))
+        elif nd.name == "sequence":
+            a = 1 if left and nd[0].name == "whitespace" else 0
+            b = -1 if right and nd[-1].name == "whitespace" else None
+            if a or b:
+                clipped = nd[a:b]
+                children.append(clipped[0] if len(clipped.children) == 1
+                                else Node("sequence", clipped))
+            else:
+                break
+        else:
+            break
+    else:
+        expression = Node("expression", tuple(children))
+        children = [Node("whitespace", "~"), expression] if left else [expression]
+        if right:  children.append(Node("whitespace", "~"))
+        node.name = "sequence"
+        node.result = tuple(children)
 
-    # TODO: to be continued
+    # TODO: to be tested!!!
+
 
 def pythonize_identifier(path: Path):
     r"""A mekshift solution to allow identifiers with dashes:

@@ -642,7 +642,7 @@ ALLOWED_PRESET_VALUES['optimizations'] = frozenset({
     'literal',
     'alternative',
     'sequence'})
-CONFIG_PRESET['optimizations'] = frozenset({'literal'})
+CONFIG_PRESET['optimizations'] = frozenset({'alternative'})
 
 
 ########################################################################
