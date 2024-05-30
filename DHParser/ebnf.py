@@ -754,14 +754,23 @@ def get_globals(path: Path) -> Dict[str, Any]:
 
 
 def rearrange_expression(path: Path):
-    r"""Example::
+    r"""Rearrenges expressions with alternatives of literals or
+    regexps with adjacent whitespace so as to append the whitespace
+    to the epxression rather than the individual alternatives. This
+    reduces the number of parsers and in particular parser calls
+    for each alternative.
+
+    It also serves as a staring point for
+    further SmartRE-based optimizations in the compilation stage
+
+    Example::
 
     >>> ast_txt = '''(syntax
     ...   (directive (symbol "literalws") (symbol "right"))
     ...   (definition (symbol "Test")
     ...     (expression
     ...       (literal '"a"')
-    ...       (sequence (regexp "\d+") (whitespace "~"))
+    ...       (sequence (regexp "\\d+") (whitespace "~"))
     ...       (sequence
     ...         (char_ranges
     ...           (RE_LEADIN "/")
@@ -773,9 +782,25 @@ def rearrange_expression(path: Path):
     ...           (RE_LEADOUT "/"))
     ...         (whitespace "~")))))'''
     >>> ast = parse_sxpr(ast_txt)
-    >>> expression = ast.pick('expression')
-    >>> rearrange_expression([expression])
-    >>> print(expression.as_sxpr())
+    >>> expression_path = ast.pick_path('expression')
+    >>> rearrange_expression(expression_path)
+    >>> print(expression_path[-1].as_sxpr())
+    (sequence
+      (expression
+        (plaintext '"a"')
+        (regexp "\d+")
+        (char_ranges
+          (RE_LEADIN "/")
+          (range_chain
+            (:Text "^")
+            (range_desc
+              (free_char "a"))
+            (range_desc
+              (free_char "b"))
+            (range_desc
+              (free_char "c")))
+          (RE_LEADOUT "/")))
+      (whitespace "~"))
     """
     globals = get_globals(path)
     if 'alternative' not in globals['optimizations']:
@@ -797,7 +822,7 @@ def rearrange_expression(path: Path):
             b = -1 if right and nd[-1].name == "whitespace" else None
             if a or b:
                 clipped = nd[a:b]
-                children.append(clipped[0] if len(clipped.children) == 1
+                children.append(clipped[0] if len(clipped) == 1
                                 else Node("sequence", clipped))
             else:
                 break
