@@ -755,10 +755,27 @@ def get_globals(path: Path) -> Dict[str, Any]:
 
 def rearrange_expression(path: Path):
     r"""Example::
-    TODO: @literalws = right required!
-    >>> ast = parse_sxpr('(expression (literal '"a"') (sequence (regexp "\d+") (whitespace "~")))')
-    >>> rearrange_expression([ast])
-    >>> print(ast.as_sxpr())
+
+    >>> ast_txt = '''(syntax
+    ...   (directive (symbol "literalws") (symbol "right"))
+    ...   (definition (symbol "Test")
+    ...     (expression
+    ...       (literal '"a"')
+    ...       (sequence (regexp "\d+") (whitespace "~"))
+    ...       (sequence
+    ...         (char_ranges
+    ...           (RE_LEADIN "/")
+    ...           (range_chain
+    ...             (:Text "^")
+    ...             (range_desc (free_char "a"))
+    ...             (range_desc (free_char "b"))
+    ...             (range_desc (free_char "c")))
+    ...           (RE_LEADOUT "/"))
+    ...         (whitespace "~")))))'''
+    >>> ast = parse_sxpr(ast_txt)
+    >>> expression = ast.pick('expression')
+    >>> rearrange_expression([expression])
+    >>> print(expression.as_sxpr())
     """
     globals = get_globals(path)
     if 'alternative' not in globals['optimizations']:
