@@ -312,11 +312,11 @@ class Compiler:
         except KeyError:
             method_name = self.visitor_name(node_name)
             try:
-                method = self.__getattribute__(method_name)
+                method = getattr(self, method_name)
             except AttributeError:
                 if node_name.startswith(':'):
                     try:
-                        method = self.__getattribute__('on_3a' + node_name[1:])
+                        method = getattr(self, 'on_3a' + node_name[1:])
                     except AttributeError:
                         method = wildcard_or_fallback()
                 else:
@@ -355,6 +355,14 @@ class Compiler:
                  '`self.forbid_returning_None = False` to the reset()-Method of your'
                  'compiler class, in case on_%s actually SHOULD be allowed to '
                  'return None.') % (node.name.replace(':', '3a'), self.visitor_name(node.name)))
+        return result
+
+    def custom_compile(self, node: Node,
+                       find_compilation_method: Callable[[str], CompileMethod]) -> Any:
+        compiler = find_compilation_method(node.name)
+        self.path.append(node)
+        result = compiler(node)
+        self.path.pop()
         return result
 
 
