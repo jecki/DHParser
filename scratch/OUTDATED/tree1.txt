@@ -1,0 +1,62 @@
+  (term
+    (factor
+      (number "2"))
+    (:Text "*")
+    (factor
+      (expression
+        (term
+          (factor
+            (number "3")))
+        (:Text "+")
+        (term
+          (factor
+            (number "4"))
+          (:Text "*")
+          (factor
+            (expression
+              (term
+                (factor
+                  (number "5")))
+              (:Text "+")
+              (term
+                (factor
+                  (number "6"))
+                (:Text "*")
+                (factor
+                  (expression
+                    (term
+                      (factor
+                        (number "7")))
+                    (:Text "+")
+                    (term
+                      (factor
+                        (number "8")))
+                    (:Text "+")
+                    (term
+                      (factor
+                        (number "9"))
+                      (:Text "*")
+                      (factor
+                        (number "2")))
+                    (:Text "-")
+                    (term
+                      (factor
+                        (number "1"))
+                      (:Text "/")
+                      (factor
+                        (number "5"))
+                      (:Text "*")
+                      (factor
+                        (number "1000"))))))
+              (:Text "+")
+              (term
+                (factor
+                  (number "2"))))))
+        (:Text "+")
+        (term
+          (factor
+            (number "5000")))
+        (:Text "+")
+        (term
+          (factor
+            (number "4000")))))))

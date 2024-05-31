@@ -31,7 +31,7 @@ REVEAL = False
 
 
 from DHParser.configuration import set_config_value, get_config_value
-from DHParser.dsl import grammar_provider
+from DHParser.dsl import grammar_provider, create_parser
 from DHParser.log import log_parsing_history, start_logging, log_dir
 from DHParser.trace import set_tracer, trace_history, resume_notices_on
 from DHParser.error import Error, MANDATORY_CONTINUATION, PARSER_STOPPED_BEFORE_END, \
@@ -123,12 +123,15 @@ class TestTrace:
             fixed      = "X"
             """
         set_config_value('compiled_EBNF_log', 'test_trace_parser.py')
+        p = create_parser(lang)
+        print(p.python_src__)
         gr = grammar_provider(lang)()
         all_desc = gr.root_parser__.descendants()
         set_tracer(all_desc, trace_history)
         # st = gr('2*(3+4)')
         st = gr('2*(3 + 4*(5 + 6*(7 + 8 + 9*2 - 1/5*1000) + 2) + 5000 + 4000)')
         serialization = st.serialize()
+        print(serialization)
         assert '*' not in serialization   # same for '/', '+', '-'
         log_parsing_history(gr, 'trace_drop')
         history_file = get_history('trace_drop')

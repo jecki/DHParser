@@ -1,0 +1,22 @@
+class DSLGrammar(Grammar):
+    r"""Parser for a DSL source file.
+    """
+    expression = Forward()
+    source_hash__ = "922f9b75971e645cb735ef38133c6052"
+    disposable__ = re.compile('$.')
+    static_analysis_pending__ = []  # type: List[bool]
+    parser_initialization__ = ["upon instantiation"]
+    COMMENT__ = r''
+    comment_rx__ = RX_NEVER_MATCH
+    WHITESPACE__ = r'[ \t]*(?:\n[ \t]*(?![ \t]*\n))?'
+    WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
+    wsp__ = Whitespace(WSP_RE__)
+    dwsp__ = Drop(Whitespace(WSP_RE__))
+    fixed = Series(Text("X"), dwsp__)
+    constant = Alternative(Series(Drop(Text("A")), dwsp__), Series(Drop(Text("B")), dwsp__))
+    number = Series(RegExp('\\d+'), dwsp__)
+    variable = Series(RegExp('[a-z]'), dwsp__)
+    factor = Alternative(number, variable, Series(Series(Drop(Text("(")), dwsp__), expression, Series(Drop(Text(")")), dwsp__)), constant, fixed)
+    term = Series(factor, ZeroOrMore(Series(Alternative(Series(Drop(Text("*")), dwsp__), Series(Drop(Text("/")), dwsp__)), factor)))
+    expression.set(Series(term, ZeroOrMore(Series(Alternative(Series(Drop(Text("+")), dwsp__), Series(Drop(Text("-")), dwsp__)), term))))
+    root__ = expression

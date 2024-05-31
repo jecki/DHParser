@@ -641,6 +641,7 @@ CONFIG_PRESET['delimiter_set'] = {
 ALLOWED_PRESET_VALUES['optimizations'] = frozenset({
     'literal',
     'alternative',
+    'rearrange_alternative',  # this is also implied by 'alternative'
     'sequence'})
 CONFIG_PRESET['optimizations'] = frozenset({'alternative'})
 

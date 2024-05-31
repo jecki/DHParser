@@ -94,7 +94,8 @@ if __name__ == '__main__':
         arg = argv[1]
     else:
         # otherwise run all tests in the test directory
-        arg = '*_test_*.ini'
+        # arg = '*_test_*.ini'
+        arg = 'SPIELWIESE.ini'
     if arg.endswith('.ebnf'):
         recompile_grammar(arg, force=True)
     else:

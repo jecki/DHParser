@@ -1,0 +1,49 @@
+(expression
+  (term
+    (factor
+      (number "2"))
+    (factor
+      (expression
+        (term
+          (factor
+            (number "3")))
+        (term
+          (factor
+            (number "4"))
+          (factor
+            (expression
+              (term
+                (factor
+                  (number "5")))
+              (term
+                (factor
+                  (number "6"))
+                (factor
+                  (expression
+                    (term
+                      (factor
+                        (number "7")))
+                    (term
+                      (factor
+                        (number "8")))
+                    (term
+                      (factor
+                        (number "9"))
+                      (factor
+                        (number "2")))
+                    (term
+                      (factor
+                        (number "1"))
+                      (factor
+                        (number "5"))
+                      (factor
+                        (number "1000"))))))
+              (term
+                (factor
+                  (number "2"))))))
+        (term
+          (factor
+            (number "5000")))
+        (term
+          (factor
+            (number "4000")))))))

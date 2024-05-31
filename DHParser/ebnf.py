@@ -753,6 +753,11 @@ def get_globals(path: Path) -> Dict[str, Any]:
     return globals
 
 
+def cleanup_globals(path: Path):
+    if path[0].has_attr('globals'):
+        del path[0].attr['globals']
+
+
 def rearrange_expression(path: Path):
     r"""Rearrenges expressions with alternatives of literals or
     regexps with adjacent whitespace so as to append the whitespace
@@ -765,6 +770,9 @@ def rearrange_expression(path: Path):
 
     Example::
 
+    >>> from DHParser.configuration import get_config_value, set_config_value
+    >>> save = get_config_value('optimizations')
+    >>> set_config_value('optimizations', 'rearrange_alternative')
     >>> ast_txt = '''(syntax
     ...   (directive (symbol "literalws") (symbol "right"))
     ...   (definition (symbol "Test")
@@ -787,7 +795,7 @@ def rearrange_expression(path: Path):
     >>> print(expression_path[-1].as_sxpr())
     (sequence
       (expression
-        (plaintext '"a"')
+        (literal `(literalws "none") '"a"')
         (regexp "\d+")
         (char_ranges
           (RE_LEADIN "/")
@@ -801,22 +809,26 @@ def rearrange_expression(path: Path):
               (free_char "c")))
           (RE_LEADOUT "/")))
       (whitespace "~"))
+    >>> set_config_value('optimizations', save)
+
     """
+    node = path[-1]
+    if node.name != "expression":
+        return   # expression node has already been replaced...
     globals = get_globals(path)
-    if 'alternative' not in globals['optimizations']:
+    optimizations = globals['optimizations']
+    if not any(opt in optimizations for opt in ('rearrange_anternative', 'alternative')):
         return
     lws = globals['literalws']
     if lws not in ('left', 'right', 'both'):
         return
     left = lws in ('left', 'both')
     right = lws in ('both', 'right')
-    node = path[-1]
-    assert node.name == "expression"
 
     children = []
     for nd in node.children:
         if nd.name == "literal":
-            children.append(Node("plaintext", nd.content))
+            children.append(Node("literal", nd.content).with_attr(literalws = 'none'))
         elif nd.name == "sequence":
             a = 1 if left and nd[0].name == "whitespace" else 0
             b = -1 if right and nd[-1].name == "whitespace" else None
@@ -835,8 +847,6 @@ def rearrange_expression(path: Path):
         node.name = "sequence"
         node.result = tuple(children)
 
-    # TODO: to be tested!!!
-
 
 def pythonize_identifier(path: Path):
     r"""A mekshift solution to allow identifiers with dashes:
@@ -850,7 +860,8 @@ EBNF_AST_transformation_table = {
     "<":
         [remove_children_if(all_of(not_one_of('regexp', "RAISE_EXPR_WO_BRACKETS"), is_empty))],
     "syntax":
-        [],
+        [cleanup_globals
+         ],
     "directive":
         [flatten, remove_tokens('@', '=', ',', '(', ')'),
          remove_children("RAISE_EXPR_WO_BRACKETS")],
@@ -869,9 +880,11 @@ EBNF_AST_transformation_table = {
     "expression":
         [apply_if(replace_by_single_child, neg(has_parent("directive"))),
          # the restriction above is required to distinguish regex-find-semantics
-         # from regex-parser semantics in skip and resume-directives
+         # from regex-parser semantics in @skip and @resume-directives
          flatten, remove_children('OR'),
-         remove_tokens('|')],  # remove_tokens('|') is only for backwards-compatibility
+         remove_tokens('|'),  # remove_tokens('|') is only for backwards-compatibility
+         rearrange_expression
+         ],
     "sequence":
         [replace_by_single_child, flatten, remove_children('AND')],
     "interleave":
@@ -1127,6 +1140,12 @@ VALID_DIRECTIVES = {
 }
 
 
+def literalws_set_from_value(lws: str) -> Set[str]:
+    if set(lws.split(' ')) == {'left', 'right'}:
+        return {'left', 'right'}
+    return {'left', 'right'} if lws == 'both' else (set() if lws == 'none' else {lws})
+
+
 class EBNFDirectives:
     r"""
     A Record that keeps information about compiler directives
@@ -1185,7 +1204,7 @@ class EBNFDirectives:
     def __init__(self):
         self.whitespace = WHITESPACE_TYPES['linefeed']  # type: str
         self.comment = ''         # type: str
-        self.literalws = {get_config_value('default_literalws')}  # type: Set[str]
+        self.literalws: Set[str] = literalws_set_from_value(get_config_value('default_literalws'))
         self.tokens = set()       # type: Set[str]
         self.filter = dict()      # type: Dict[str, str]
         self.error = dict()       # type: Dict[str, List[Tuple[ReprType, ReprType]]]
@@ -2361,8 +2380,7 @@ class EBNFCompiler(Compiler):
                     or ('none' in values and len(values) > 1)):
                 self.tree.new_error(node, 'Directive "literalws" allows only `left`, `right`, '
                                     '`both` or `none`, not `%s`' % ", ".join(values))
-            wsp = {'left', 'right'} if 'both' in values \
-                else set() if 'none' in values else values
+            wsp = {'left', 'right'} if 'both' in values else set() if 'none' in values else values
             self.directives.literalws = wsp
 
         elif key in ('tokens', 'preprocessor_tokens'):
@@ -2981,8 +2999,10 @@ class EBNFCompiler(Compiler):
         """Returns content, left_Whitespace, right_whitspace for a literal-node."""
         assert node.name == "literal"
         force = DROP_STRINGS in self.directives.drop
-        left = self.WSPC_PARSER(force) if 'left' in self.directives.literalws else ''
-        right = self.WSPC_PARSER(force) if 'right' in self.directives.literalws else ''
+        lws = literalws_set_from_value(node.attr['literalws']) if node.has_attr('literalws') \
+            else self.directives.literalws
+        left = self.WSPC_PARSER(force) if 'left' in lws else ''
+        right = self.WSPC_PARSER(force) if 'right' in lws else ''
         # content = escape_ctrl_chars(node.content)
         content = node.content
         if (content[:1] + content[-1:]) == "’’":
