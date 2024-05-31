@@ -2677,7 +2677,7 @@ class EBNFCompiler(Compiler):
         rxps, rep_strs = [], []
         fail_on_named_groups = fail_on_named_groups \
                                and (len(self.path) >= 2
-                                    and not re.match(self.directives.disposable, self.path[-2]))
+                                    and not re.match(self.directives.disposable, self.path[-2].name))
         for nd in node.children:
             rxp, repr_str = self.custom_compile(nd, lambda name: getattr(self, 'smartRE_' + name))
             if fail_on_named_groups and rxp.find('?P<') >= 0:
