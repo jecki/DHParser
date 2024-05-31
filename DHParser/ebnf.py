@@ -2583,10 +2583,11 @@ class EBNFCompiler(Compiler):
         return self.on_macro(node)
 
 
-    def on_expression(self, node) -> str:
-        # The following algorithm reorders literal alternatives, so that earlier alternatives
-        # do not pre-empt later alternatives, e.g. 'ID' | 'IDREF' will be reordered as
-        # 'IDREF' | 'ID'
+    def reorder_alternatives(self, node):
+        """The following algorithm reorders literal alternatives, so that earlier alternatives
+        do not pre-empt later alternatives, e.g. 'ID' | 'IDREF' will be reordered as
+        'IDREF' | 'ID'"""
+        assert node.name == "expression"
 
         def move_items(l: List, a: int, b: int):
             """Moves all items in the interval [a:b[ one position forward and moves the
@@ -2595,7 +2596,7 @@ class EBNFCompiler(Compiler):
                 a, b = b, a
             last = l[b]
             for i in range(b, a, -1):
-                l[i] = l[i-1]
+                l[i] = l[i - 1]
             l[a] = last
 
         def literal_content(nd: Node) -> Optional[str]:
@@ -2619,7 +2620,7 @@ class EBNFCompiler(Compiler):
             if content is not None:
                 literals.append([i, content])
 
-        move = []          # type: List[Tuple[int, int]]
+        move = []  # type: List[Tuple[int, int]]
         snapshots = set()  # type: Set[Tuple[int, ...]]
         start_over = True  # type: bool
         while start_over:
@@ -2636,7 +2637,7 @@ class EBNFCompiler(Compiler):
                             literals[n][0] += 1
                         self.tree.new_error(
                             node, 'Alternative "%s" should not precede "%s" where it occurs '
-                            'at the beginning! Reorder to avoid warning.' % (earlier, later),
+                                  'at the beginning! Reorder to avoid warning.' % (earlier, later),
                             REORDERING_OF_ALTERNATIVES_REQUIRED)
                         start_over = True
                         break
@@ -2660,6 +2661,13 @@ class EBNFCompiler(Compiler):
                 move_items(children, mv[0], mv[1])
             node.result = tuple(children)
 
+
+    def smartRE_expression(self, node: Node) -> Tuple[str, str]:
+        self.reorder_alternatives(node)
+        # TODO: to be continued
+
+    def on_expression(self, node) -> str:
+        self.reorder_alternatives(node)
         if len(node.children) == 1:
             # can only occur inside directives, because here expressions are not
             # necessarily replaced by their single child. (See AST-Transformation)
