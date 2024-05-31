@@ -2662,9 +2662,32 @@ class EBNFCompiler(Compiler):
             node.result = tuple(children)
 
 
-    def smartRE_expression(self, node: Node) -> Tuple[str, str]:
+    def is_practically_plaintext(self, node) -> bool:
+        return node.name == 'plaintext' \
+            or (node.name == 'literal'
+                and (node.get_attr('literalws', '') == 'none'
+                     or (not node.has_attr('literalws')
+                         and not self.directives.literalws)))
+
+
+    def smartRE_expression(self, node: Node, fail_on_named_groups = True) -> Tuple[str, str]:
+        """:raises: AttributeError, ValueError"""
+        # TODO: Not yet tested! smartRE_symbol() not yet implemented!
         self.reorder_alternatives(node)
-        # TODO: to be continued
+        rxps, rep_strs = [], []
+        fail_on_named_groups = fail_on_named_groups \
+                               and (len(self.path) >= 2
+                                    and not re.match(self.directives.disposable, self.path[-2]))
+        for nd in node.children:
+            rxp, repr_str = self.custom_compile(nd, lambda name: getattr(self, 'smartRE_' + name))
+            if fail_on_named_groups and rxp.find('?P<') >= 0:
+                raise ValueError(f"Cannot nest named groups in SmartREs: {nd.name}: {rxp}")
+            if not self.is_practically_plaintext(node):
+                rxp = fr'(?:{rxp})'
+            rxps.append(rxp)
+            rep_strs.append(repr_str)
+        return '|'.join(rxps), '|'.join(rep_strs)
+
 
     def on_expression(self, node) -> str:
         self.reorder_alternatives(node)
@@ -2943,6 +2966,8 @@ class EBNFCompiler(Compiler):
         mock_node = Node(node.name, (what,))
         return self.non_terminal(mock_node, 'Counted', ['repetitions=' + rstr])
 
+
+    # TODO: implement smartRE_symbol()
 
     def on_symbol(self, node: Node) -> str:     # called only for symbols on the right hand side!
         symbol = node.content  # ; assert result == cast(str, node.result)
