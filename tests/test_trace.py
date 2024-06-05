@@ -131,7 +131,6 @@ class TestTrace:
         # st = gr('2*(3+4)')
         st = gr('2*(3 + 4*(5 + 6*(7 + 8 + 9*2 - 1/5*1000) + 2) + 5000 + 4000)')
         serialization = st.serialize()
-        print(serialization)
         assert '*' not in serialization   # same for '/', '+', '-'
         log_parsing_history(gr, 'trace_drop')
         history_file = get_history('trace_drop')

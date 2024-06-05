@@ -1704,10 +1704,11 @@ class TestSyntaxExtensions:
         st = parser('Ϳ')
         assert not st.errors
 
-    def test_simple_char_range(self):
+    def test_simple_char_range(self): # TODO: test with alternative-optimization
         set_config_value('syntax_variant', 'strict')
         lang = "Char ::= #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]"
         parser = create_parser(lang)
+        print(parser.python_src__)
         st = parser('賌')
         assert st.as_sxpr() == '(Char "賌")'
 
@@ -1825,10 +1826,13 @@ class TestAlternativeReordering:
                      | 'NMTOKEN'
                      | 'NMTOKENS'
         """
+        save = get_config_value('optimizations')
+        set_config_value('optimizations', frozenset())
         src, errors, ast = compile_ebnf(lang, preserve_AST=True)
         assert src.find("'IDREFS'") < src.find("'IDREF'") < src.find("'ID'")
         assert src.find("'NMTOKENS'") < src.find("'NMTOKEN'")
         assert errors and all(e.code == REORDERING_OF_ALTERNATIVES_REQUIRED for e in errors)
+        set_config_value('optimizations', save)
 
     def test_reordering_alternative_literals_interspersed_with_non_literals(self):
         lang = """
@@ -1840,11 +1844,14 @@ class TestAlternativeReordering:
                      | 'NMTOKEN'
                      | 'NMTOKENS' | /z/
         """
+        save = get_config_value('optimizations')
+        set_config_value('optimizations', frozenset())
         src, errors, ast = compile_ebnf(lang, preserve_AST=True)
         assert src.find("'IDREFS'") < src.find("'IDREF'") < src.find("'ID'")
         assert src.find("'NMTOKENS'") < src.find("'NMTOKEN'")
         assert src.find("'aaa'") < src.find("'aa'") < src.find("'a'")
         assert errors and all(e.code == REORDERING_OF_ALTERNATIVES_REQUIRED for e in errors)
+        set_config_value('optimizations', save)
 
     def test_reordering_alternative_symbols(self):
         lang = """
@@ -2138,6 +2145,7 @@ class TestInclude:
         src, errors, ast = compile_ebnf(arithmetic_ebnf)
         assert not errors, str(errors)
         parser = create_parser(arithmetic_ebnf)
+        print(parser.python_src__)
         tree = parser('2 - (3 * -4.145E+5)')
         assert not tree.errors
 
@@ -2545,6 +2553,17 @@ class TestOptimizations:
         parser = create_parser(lang)
         # print(parser.python_src__)
 
+        set_config_value('optimizations', save)
+
+    def test_plaintext(self):
+        save = get_config_value('optimizations')
+        set_config_value('optimizations', frozenset({'alternative'}))
+        from DHParser.dsl import grammar_provider
+        lang = '''@reduction = merge
+        EXP = (`E`|`e`) [`+`|`-`] /[0-9]+/ '''
+        parser = create_parser(lang)
+        tree = parser('E+18')
+        assert tree.as_sxpr() == '(EXP "E+18")'
         set_config_value('optimizations', save)
 
 

@@ -104,6 +104,7 @@ __all__ = ('parser_names',
            'mixin_nonempty',
            'CombinedParser',
            'TreeReduction',
+           'RX_NAMED_GROUPS',
            'SmartRE',
            'CustomParseFunc',
            'Custom',
@@ -3277,7 +3278,7 @@ def TreeReduction(root_or_parserlist: Union[Parser, Collection[Parser]],
 
 
 KEEP_COMMENTS_NAME = KEEP_COMMENTS_PTYPE[1:] + '__'
-
+RX_NAMED_GROUPS = re.compile(r'\(\?P<(:?\w+)>')
 
 class SmartRE(RegExp, CombinedParser):  # TODO: turn this into a CombinedParser
     r"""
@@ -3306,7 +3307,7 @@ class SmartRE(RegExp, CombinedParser):  # TODO: turn this into a CombinedParser
         super().__init__(pattern)
 
     def lazy_initialization(self, pattern: str):
-        group_names = re.findall(r'\(\?P<(:?\w+)>', pattern)
+        group_names = RX_NAMED_GROUPS.findall(pattern)
         # assert group_names, f"Named group(s) missing in SmartRE: {pattern}"
         names = dict()
         for i, name in enumerate(group_names):
@@ -3319,7 +3320,8 @@ class SmartRE(RegExp, CombinedParser):  # TODO: turn this into a CombinedParser
         regexp = re.compile(pattern)
         groups = {index: names[alias] for alias, index in regexp.groupindex.items()}
         self.group_names = [groups.get(i, ":RegExp") for i in range(1, regexp.groups + 1)]
-        pattern = re.sub(r'\(\?P<(\w+)>', '(', pattern)
+        # pattern = re.sub(r'\(\?P<(\w+)>', '(', pattern)
+        pattern = RX_NAMED_GROUPS.sub('(', pattern)
         self.regexp = re.compile(pattern)
 
     def __deepcopy__(self, memo):
@@ -3344,7 +3346,7 @@ class SmartRE(RegExp, CombinedParser):  # TODO: turn this into a CombinedParser
         if match:
             values = match.groups()
             end = match.end()
-            if not self.disposable or any(len(content) for content in values):
+            if not self.disposable or any((content and len(content)) for content in values):
                 if self.drop_content:
                     return EMPTY_NODE, end
                 assert self.group_names is not None

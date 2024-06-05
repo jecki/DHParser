@@ -255,7 +255,8 @@ from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_
 from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, SmartRE, \
     Drop, DropFrom, Lookahead, NegativeLookahead, Alternative, Series, Option, ZeroOrMore, OneOrMore, \
     Text, Capture, Retrieve, Pop, optional_last_value, GrammarError, Whitespace, Always, Never, \
-    Synonym, INFINITE, matching_bracket, ParseFunc, update_scanner, CombinedParser, parser_names
+    Synonym, INFINITE, matching_bracket, ParseFunc, update_scanner, CombinedParser, parser_names, \
+    RX_NAMED_GROUPS
 from DHParser.preprocess import PreprocessorFunc, PreprocessorResult, gen_find_include_func, \
     preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.nodetree import Node, RootNode, Path, WHITESPACE_PTYPE, KEEP_COMMENTS_PTYPE, \
@@ -1592,9 +1593,8 @@ class EBNFCompiler(Compiler):
         if flags:
             rx = "(?%s)%s" % ("".join(flags), rx)
         try:
-            if smartRE:
-                pass  # TODO: fix smartRE before checking
-            re.compile(rx)
+            test_rx = RX_NAMED_GROUPS.sub('(', rx) if smartRE else rx
+            re.compile(test_rx)
         except Exception as re_error:
             self.tree.new_error(node, "malformed regular expression %s: %s" %
                                 (repr(rx), str(re_error)), MALFORMED_REGULAR_EXPRESSION)
@@ -2080,7 +2080,7 @@ class EBNFCompiler(Compiler):
             elif nd.name == 'macrodef':
                 if nd.get('placeholder', None):
                     macrodefs.append(nd)
-                else:  # macros without arguments must be read first, later, because of early substitution
+                else:  # macros without arguments must be read first, because of early substitution
                     macrosyms.append(nd)
             else:
                 assert nd.name == 'definition', nd.as_sxpr()
@@ -2678,7 +2678,8 @@ class EBNFCompiler(Compiler):
         rxps, rep_strs = [], []
         for nd in node.children:
             rxp, repr_str = self.custom_compile(nd, lambda name: getattr(self, 'smartRE_' + name))
-            if not self.is_practically_plaintext(node):
+            if not self.is_practically_plaintext(node) \
+                    and not (rxp[:1] + rxp[-1:]) == "()":
                 rxp = fr'(?:{rxp})'
             rxps.append(rxp)
             rep_strs.append(repr_str)
@@ -2690,7 +2691,7 @@ class EBNFCompiler(Compiler):
         if 'alternative' in self.optimizations:
             try:
                 pattern, content = self.smartRE_expression(node)
-                pattern = self.check_rx(node, pattern)
+                pattern = self.check_rx(node, pattern, smartRE=True)
                 # print(f"{self.P['SmartRE']}({repr(pattern)}, {repr(content)})")
                 return f"{self.P['SmartRE']}({repr(pattern)}, {repr(content)})"
             except (AttributeError, ValueError):
@@ -2817,7 +2818,6 @@ class EBNFCompiler(Compiler):
         if not node.children or len(node.children) != 2 \
                 or node.children[0].name != 'flowmarker':
             tree_dump = flatten_sxpr(node.as_sxpr())
-            print(self.tree.as_sxpr())
             self.tree.new_error(
                 node, 'Structural error in AST when compiling lookaround operator: '
                 + tree_dump, STRUCTURAL_ERROR_IN_AST)
@@ -3114,8 +3114,8 @@ class EBNFCompiler(Compiler):
 
 
     def smartRE_plaintext(self, node: Node) -> Tuple[str, str]:
-        pattern = self.text_rx(node.content, DROP_BACKTICKED)
-        return pattern, repr(node.content)
+        pattern = self.text_rx(node.content[1:-1], DROP_BACKTICKED)
+        return pattern, node.content
 
     def on_plaintext(self, node: Node) -> str:
         tk = escape_ctrl_chars(node.content)
@@ -3129,12 +3129,12 @@ class EBNFCompiler(Compiler):
 
     def smartRE_regexp(self, node: Node) -> Tuple[str, str]:
         arg = node.content
-        return arg, f'/{arg}/'
+        return f'(?P<:regexp>{arg})', f'/{arg}/'
 
     def on_regexp(self, node: Node) -> str:
-        arg, _ = self.smartRE_regexp(node)
+        arg = node.content
         try:
-            arg = self.check_rx(node, arg)
+            arg = self.check_rx(node, arg, smartRE=True)
         except AttributeError as error:
             from traceback import extract_tb, format_list
             trace = ''.join(format_list(extract_tb(error.__traceback__)))
