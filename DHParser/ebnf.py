@@ -1579,7 +1579,7 @@ class EBNFCompiler(Compiler):
     #     """
     #     pass  # TODO: add verification code here
 
-    def check_rx(self, node: Node, rx: str) -> str:
+    def check_rx(self, node: Node, rx: str, smartRE: bool = False) -> str:
         """
         Checks whether the string `rx` represents a valid regular
         expression. Makes sure that multi-line regular expressions are
@@ -1592,12 +1592,13 @@ class EBNFCompiler(Compiler):
         if flags:
             rx = "(?%s)%s" % ("".join(flags), rx)
         try:
+            if smartRE:
+                pass  # TODO: fix smartRE before checking
             re.compile(rx)
         except Exception as re_error:
             self.tree.new_error(node, "malformed regular expression %s: %s" %
                                 (repr(rx), str(re_error)), MALFORMED_REGULAR_EXPRESSION)
         return rx
-
 
     def extract_regex(self, node: Node) -> str:
         """Extracts regular expression string from regexp-Node."""
@@ -2670,18 +2671,13 @@ class EBNFCompiler(Compiler):
                          and not self.directives.literalws)))
 
 
-    def smartRE_expression(self, node: Node, fail_on_named_groups = True) -> Tuple[str, str]:
+    def smartRE_expression(self, node: Node) -> Tuple[str, str]:
         """:raises: AttributeError, ValueError"""
         # TODO: Not yet tested! smartRE_symbol() not yet implemented!
         self.reorder_alternatives(node)
         rxps, rep_strs = [], []
-        fail_on_named_groups = fail_on_named_groups \
-                               and (len(self.path) >= 2
-                                    and not re.match(self.directives.disposable, self.path[-2].name))
         for nd in node.children:
             rxp, repr_str = self.custom_compile(nd, lambda name: getattr(self, 'smartRE_' + name))
-            if fail_on_named_groups and rxp.find('?P<') >= 0:
-                raise ValueError(f"Cannot nest named groups in SmartREs: {nd.name}: {rxp}")
             if not self.is_practically_plaintext(node):
                 rxp = fr'(?:{rxp})'
             rxps.append(rxp)
@@ -2691,6 +2687,14 @@ class EBNFCompiler(Compiler):
 
     def on_expression(self, node) -> str:
         self.reorder_alternatives(node)
+        if 'alternative' in self.optimizations:
+            try:
+                pattern, content = self.smartRE_expression(node)
+                pattern = self.check_rx(node, pattern)
+                # print(f"{self.P['SmartRE']}({repr(pattern)}, {repr(content)})")
+                return f"{self.P['SmartRE']}({repr(pattern)}, {repr(content)})"
+            except (AttributeError, ValueError):
+                pass
         if len(node.children) == 1:
             # can only occur inside directives, because here expressions are not
             # necessarily replaced by their single child. (See AST-Transformation)
@@ -2813,6 +2817,7 @@ class EBNFCompiler(Compiler):
         if not node.children or len(node.children) != 2 \
                 or node.children[0].name != 'flowmarker':
             tree_dump = flatten_sxpr(node.as_sxpr())
+            print(self.tree.as_sxpr())
             self.tree.new_error(
                 node, 'Structural error in AST when compiling lookaround operator: '
                 + tree_dump, STRUCTURAL_ERROR_IN_AST)
@@ -3002,6 +3007,7 @@ class EBNFCompiler(Compiler):
 
     def REGEXP_PARSER(self, pattern, drop):
         REClass = "SmartRE" if pattern.find('(?P<') >= 0 else "RegExp"
+        pattern = repr(pattern)
         if pattern.find('(?x)') >= 0:
             m = next(re.finditer(r'\\n[ \t]*', pattern))
             indent = len(m.group(0)) - 2
@@ -3083,7 +3089,7 @@ class EBNFCompiler(Compiler):
         content, left, right = self.prepare_literal(node)
         if content[:1] == "'":
             content = '"' + content[1:-1].replace('"', r'\"').replace(r"\'", r"'") + '"'
-        assert content[:1] == '"' and content[:-1] == '"'
+        assert content[:1] == '"' and content[-1:] == '"', content
         pattern = self.literal_rx(content[1:-1], left, right)
         return pattern, content
 
@@ -3122,9 +3128,13 @@ class EBNFCompiler(Compiler):
 
 
     def smartRE_regexp(self, node: Node) -> Tuple[str, str]:
-        rx = node.content
+        arg = node.content
+        return arg, f'/{arg}/'
+
+    def on_regexp(self, node: Node) -> str:
+        arg, _ = self.smartRE_regexp(node)
         try:
-            arg = repr(self.check_rx(node, rx))
+            arg = self.check_rx(node, arg)
         except AttributeError as error:
             from traceback import extract_tb, format_list
             trace = ''.join(format_list(extract_tb(error.__traceback__)))
@@ -3132,10 +3142,6 @@ class EBNFCompiler(Compiler):
                      % (EBNFCompiler.AST_ERROR, str(error), trace, node.as_sxpr())
             self.tree.new_error(node, errmsg)
             arg = '"' + errmsg + '"'
-        return arg, f'/{arg[1:-1]}/'
-
-    def on_regexp(self, node: Node) -> str:
-        arg, _ = self.smartRE_regexp(node)
         return self.REGEXP_PARSER(arg, self.drop_on(DROP_REGEXP))
 
 

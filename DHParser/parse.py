@@ -3352,7 +3352,7 @@ class SmartRE(RegExp, CombinedParser):  # TODO: turn this into a CombinedParser
                                 for name, content in zip(self.group_names, values)
                                 if ((not self.disposable or content)
                                     and name != KEEP_COMMENTS_PTYPE)
-                                   or content.strip())
+                                   or (content and content.strip()))
                 for i, nd in enumerate(results, start=1):  nd._pos = match.start(i)
                 return self._return_values(results), end
             return EMPTY_NODE, end
