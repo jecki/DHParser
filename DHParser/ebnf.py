@@ -264,7 +264,8 @@ from DHParser.nodetree import Node, RootNode, Path, WHITESPACE_PTYPE, KEEP_COMME
 from DHParser.toolkit import load_if_file, wrap_str_literal, escape_ctrl_chars, md5, \
     sane_parser_name, re, expand_table, unrepr, compile_python_object, \
     ThreadLocalSingletonFactory, Any, Iterable, Sequence, Set, AbstractSet, Union, Dict, List, \
-    Tuple, FrozenSet, MutableSet, Optional, Type, Callable, Container, TypeAlias
+    Tuple, FrozenSet, MutableSet, Optional, Type, Callable, Container, TypeAlias, \
+    matching_brackets
 from DHParser.transform import TransformerFunc, transformer, remove_brackets, change_name, \
     reduce_single_child, replace_by_single_child, is_empty, remove_children, add_error, \
     remove_tokens, remove_anonymous_tokens, flatten, forbid, assert_content, remove_children_if, \
@@ -2663,13 +2664,16 @@ class EBNFCompiler(Compiler):
             node.result = tuple(children)
 
 
-    def is_practically_plaintext(self, node) -> bool:
-        return node.name == 'plaintext' \
+    def requires_group(self, node, rxp) -> bool:
+        is_plain_text= node.name == 'plaintext' \
             or (node.name == 'literal'
                 and (node.get_attr('literalws', '') == 'none'
                      or (not node.has_attr('literalws')
                          and not self.directives.literalws)))
-
+        b = len(rxp) - 1
+        is_group = (0, b) in matching_brackets(rxp, "(", ")")
+        is_range = (0, b) in matching_brackets(rxp, "[", "]")
+        return not (is_plain_text or is_group or is_range)
 
     def smartRE_expression(self, node: Node) -> Tuple[str, str]:
         """:raises: AttributeError, ValueError"""
@@ -2678,8 +2682,7 @@ class EBNFCompiler(Compiler):
         rxps, rep_strs = [], []
         for nd in node.children:
             rxp, repr_str = self.custom_compile(nd, lambda name: getattr(self, 'smartRE_' + name))
-            if not self.is_practically_plaintext(node) \
-                    and not (rxp[:1] + rxp[-1:]) == "()":
+            if self.requires_group(node, rxp):
                 rxp = fr'(?:{rxp})'
             rxps.append(rxp)
             rep_strs.append(repr_str)
@@ -3129,7 +3132,7 @@ class EBNFCompiler(Compiler):
 
     def smartRE_regexp(self, node: Node) -> Tuple[str, str]:
         arg = node.content
-        return f'(?P<:regexp>{arg})', f'/{arg}/'
+        return f'(?P<:RegExp>{arg})', f'/{arg}/'
 
     def on_regexp(self, node: Node) -> str:
         arg = node.content
@@ -3162,12 +3165,13 @@ class EBNFCompiler(Compiler):
             # old grammar, can be removed soon
             node = self.on_range_desc(node)
         re_str = re.sub(r"(?<!\\)'", r'\'', node.content)
-        re_str = re.sub(r"(?<!\\)]", r'\]', re_str)
+        re_str = ''.join(['(?P<:RegExp>[', re.sub(r"(?<!\\)]", r'\]', re_str), '])'])
         return re_str, f'/{re_str}/'
 
     def on_char_range(self, node) -> str:
         re_str, _ = self.smartRE_char_range(node)
-        return f"{self.P['RegExp']}('[{re_str}]')"
+        re_str = re_str[re_str.find('['): -1]
+        return f"{self.P['RegExp']}('{re_str}')"
 
 
     def on_range_chain(self, node) -> Node:
