@@ -593,7 +593,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         # Assignment to self.result initializes the attr _result and children
         # The following if-clause is merely an optimization, i.e. a fast-path for leaf-Nodes
         if leafhint:
-            self._result = result        # type: Union[Tuple[Node, ...], StringView, str]
+            self._result = result or ''  # type: Union[Tuple[Node, ...], StringView, str]
             self._children = tuple()     # type: Tuple[Node, ...]
         else:
             self._set_result(result)
@@ -714,7 +714,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 # assert isinstance(result, StringView) \
                 #     or isinstance(result, str)
                 self._children = tuple()
-                self._result = result
+                self._result = result or ''
 
     @property
     def result(self) -> StrictResultType:

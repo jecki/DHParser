@@ -377,7 +377,7 @@ class TestNode:
     """
     Tests for class Node 
     """
-    def setup(self):
+    def setup_class(self):
         self.unique_nodes_sexpr = '(a (b c) (d e) (f (g h)))'
         self.unique_tree = parse_sxpr(self.unique_nodes_sexpr)
         self.recurring_nodes_sexpr = '(a (b x) (c (d e) (b y)))'
@@ -686,6 +686,11 @@ class TestNode:
         node[1:3] = subst
         assert flatten_sxpr(node.as_sxpr()) == '(root (A "0") (Z "-7") (D "3"))'
 
+    def test_new_node_special(self):
+        node = Node('Test', None, leafhint=True)
+        assert node.result == ''
+        node = Node('Test', None)
+        assert node.result == ''
 
 class TestRootNode:
     def test_error_handling(self):

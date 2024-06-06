@@ -2675,6 +2675,16 @@ class EBNFCompiler(Compiler):
         is_range = (0, b) in matching_brackets(rxp, "[", "]")
         return not (is_plain_text or is_group or is_range)
 
+    def add_group_name(self, rxp: str, group_name: str) -> str:
+        if group_name in self.directives.drop \
+                or group_name == ":RegExp" and DROP_REGEXP in self.directives.drop:
+            return rxp
+        if (group_name[:1] == ':' or group_name in self.directives.disposable) \
+                and self.directives.reduction > 0:
+            return f'({rxp})'
+        else:
+            return f'(?P<{group_name}>{rxp})'
+
     def smartRE_expression(self, node: Node) -> Tuple[str, str]:
         """:raises: AttributeError, ValueError"""
         # TODO: Not yet tested! smartRE_symbol() not yet implemented!
@@ -3072,18 +3082,21 @@ class EBNFCompiler(Compiler):
             center_rx = f'(?:{re.escape(content)})'
         else:
             center_rx = f'(?P<{TOKEN_PTYPE}>{re.escape(content)})'
-        return center_rx.replace('{', '{{').replace('}', '}}')
+        return center_rx
 
-    def literal_rx(self, content: str, left: str, right: str) -> str:
+    def literal_rx(self, content: str, left: str, right: str, escape_braces=False) -> str:
         """Returns a regular expression string to parse a literal. This
         can be used to optimize the parsing of literals with adjacent
         whitespace by defining a :py:class:`~parse:SmartRe`-parser with
-        with regular expression."""
+        a regular expression."""
         # TODO: doctests required
 
         left_rx = self.whitespace_rx(left)
         right_rx = self.whitespace_rx(right)
-        return ''.join([left_rx, self.text_rx(content, DROP_STRINGS), right_rx])
+        center_rx = self.text_rx(content, DROP_STRINGS)
+        if escape_braces:
+            center_rx = center_rx.replace('{', '{{').replace('}', '}}')
+        return ''.join([left_rx, center_rx, right_rx])
 
     def smartRE_literal(self, node: Node) -> Tuple[str, str]:
         """Returns unescaped regex-pattern and readable repr_str-represenation for a literal,
@@ -3101,8 +3114,8 @@ class EBNFCompiler(Compiler):
         content, left, right = self.prepare_literal(node)
         if 'literal' in self.optimizations and (left or right):
             q = content[0]
-            rxp = repr(self.literal_rx(content[1:-1], left, right))
-            rxp = ''.join(['fr', q, self.literal_rx(content[1:-1], left, right), q])
+            literal = self.literal_rx(content[1:-1], left, right, escape_braces=True)
+            rxp = ''.join(['fr', q, literal, q])
             rxp = wrap_str_literal(rxp, 80, 12 if self.drop_on(DROP_STRINGS) else 7)
             content = escape_ctrl_chars(content)
             content = ''.join([q, '\\', content[:-1], '\\', content[-1], q])
@@ -3132,7 +3145,8 @@ class EBNFCompiler(Compiler):
 
     def smartRE_regexp(self, node: Node) -> Tuple[str, str]:
         arg = node.content
-        return f'(?P<:RegExp>{arg})', f'/{arg}/'
+        pattern = f'(?:{arg})' if self.drop_on(DROP_REGEXP) else f'(?P<:RegExp>{arg})'
+        return pattern, f'/{arg}/'
 
     def on_regexp(self, node: Node) -> str:
         arg = node.content
@@ -3149,12 +3163,15 @@ class EBNFCompiler(Compiler):
 
 
     def smartRE_char_ranges(self, node) -> Tuple[str, str]:
-        pattern =  "|".join('[' + child.content + ']'
-                            for child in node.children if child.name == "range_chain")
+        arg =  "|".join('[' + child.content + ']'
+                        for child in node.children if child.name == "range_chain")
+        pattern = f'(?:{arg})' if self.drop_on(DROP_REGEXP) else f'(?P<:RegExp>{arg})'
         return pattern, f'/{pattern}/'
 
     def on_char_ranges(self, node) -> str:
-        node.result, _ = self.smartRE_char_ranges(node)
+        node.result = "|".join('[' + child.content + ']'
+                               for child in node.children
+                               if child.name == "range_chain")
         return self.on_regexp(node)
 
 
@@ -3165,7 +3182,8 @@ class EBNFCompiler(Compiler):
             # old grammar, can be removed soon
             node = self.on_range_desc(node)
         re_str = re.sub(r"(?<!\\)'", r'\'', node.content)
-        re_str = ''.join(['(?P<:RegExp>[', re.sub(r"(?<!\\)]", r'\]', re_str), '])'])
+        group = '(?:' if self.drop_on(DROP_REGEXP) else '(?P<:RegExp>'
+        re_str = ''.join([group, '[', re.sub(r"(?<!\\)]", r'\]', re_str), '])'])
         return re_str, f'/{re_str}/'
 
     def on_char_range(self, node) -> str:
@@ -3205,7 +3223,8 @@ class EBNFCompiler(Compiler):
 
 
     def smartRE_character(self, node: Node) -> Tuple[str, str]:
-        pattern = f'[{self.extract_character(node)}]'
+        arg = f'[{self.extract_character(node)}]'
+        pattern = f'(?:{arg})' if self.drop_on(DROP_REGEXP) else f'(?P<:RegExp>{arg})'
         return pattern, f'/{pattern}/'
 
     def on_character(self, node: Node) -> str:
@@ -3214,7 +3233,9 @@ class EBNFCompiler(Compiler):
 
 
     def smartRE_any_char(self, node: Node) -> Tuple[str, str]:
-        return r'.|\n', '/./'
+        arg = r'.|\n', '/./'
+        pattern = f'(?:{arg})' if self.drop_on(DROP_REGEXP) else f'(?P<:RegExp>{arg})'
+        return pattern
 
     def on_any_char(self, node: Node) -> str:
         return f'{self.P["AnyChar"]}()'

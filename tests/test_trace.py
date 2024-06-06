@@ -57,12 +57,14 @@ def reveal(grammar, name):
 
 
 class TestTrace:
-    def setup(self):
+    def setup_method(self):
+        self.save_optimizations = get_config_value('optimizations')
+        set_config_value('optimizations', frozenset())
         self.log_name = unique_name("LOGS")
         start_logging(self.log_name)
         self.save_compiled_EBNF_log = get_config_value('compiled_EBNF_log')
 
-    def teardown(self):
+    def teardown_method(self):
         set_config_value('compiled_EBNF_log', self.save_compiled_EBNF_log)
         LOG_DIR = log_dir()
         assert LOG_DIR.endswith(self.log_name), f"{LOG_DIR} does not end with {self.log_name}!?"
@@ -70,6 +72,7 @@ class TestTrace:
             for fname in os.listdir(LOG_DIR):
                 os.remove(os.path.join(LOG_DIR, fname))
             os.rmdir(LOG_DIR)
+        set_config_value('optimizations', self.save_optimizations)
 
     def test_trace_simple(self):
         lang = """

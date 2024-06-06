@@ -2518,6 +2518,12 @@ class TestStringLiterals:
 
 
 class TestOptimizations:
+    def setup_method(self):
+        self.save_optimizations = get_config_value('optimizations')
+
+    def teardown_method(self):
+        set_config_value('optimizations', self.save_optimizations)
+
     def test_literal_optimization(self):
         save = get_config_value('optimizations')
 
@@ -2566,18 +2572,16 @@ class TestOptimizations:
         assert tree.as_sxpr() == '(EXP "E+18")'
         set_config_value('optimizations', save)
 
-    # def test_char_ranges(self): # TODO: test with alternative-optimization
-    #     save_opt = get_config_value('optimizations')
-    #     set_config_value('optimizations', frozenset({'alternative'}))
-    #     save_syn = get_config_value('syntax_variant')
-    #     set_config_value('syntax_variant', 'strict')
-    #     lang = "Char ::= #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]"
-    #     parser = create_parser(lang)
-    #     print(parser.python_src__)
-    #     st = parser('賌')
-    #     assert st.as_sxpr() == '(Char "賌")', st.as_sxpr()
-    #     set_config_value('syntax_variant', save_opt)
-    #     set_config_value('optimizations', save_opt)
+    def test_char_ranges(self): # TODO: test with alternative-optimization
+        set_config_value('optimizations', frozenset({'alternative'}))
+        save_syn = get_config_value('syntax_variant')
+        set_config_value('syntax_variant', 'strict')
+        lang = "Char ::= #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]"
+        parser = create_parser(lang)
+        print(parser.python_src__)
+        st = parser('賌')
+        assert st.as_sxpr() == '(Char "賌")', st.as_sxpr()
+        set_config_value('syntax_variant', save_syn)
 
 if __name__ == "__main__":
     from DHParser.testing import runner
