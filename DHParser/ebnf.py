@@ -2674,6 +2674,8 @@ class EBNFCompiler(Compiler):
         is_range = (0, b) in matching_brackets(rxp, "[", "]")
         return not (is_plain_text or is_group or is_range)
 
+
+
     def smartRE_expression(self, node: Node) -> Tuple[str, str]:
         """:raises: AttributeError, ValueError"""
         # TODO: Not yet tested! smartRE_symbol() not yet implemented!
@@ -2683,6 +2685,22 @@ class EBNFCompiler(Compiler):
 
         def strip_rx_group(rxp):
             return rxp[1:-1]
+
+        def group_rxps(rxps):
+            def get_group(rxp):
+                if (0, len(rxp) - 1) in matching_brackets(rxp, "(", ")"):
+                    if rxp[1:3] == "?P":
+                        m = RX_NAMED_GROUPS.match(rxp)
+                        assert m, f"Malformed named group in: {rxp}"
+                        return m.group(1)
+                    else:
+                        assert not rxp[1:2] == "?", f"Unexpected group-type: {rxp}"
+                        return ":RegExp"
+            package = []
+            package_list = []
+            group_names
+            for rxp in rxps:
+                pass
 
         self.reorder_alternatives(node)
         rxps, rep_strs = [], []
