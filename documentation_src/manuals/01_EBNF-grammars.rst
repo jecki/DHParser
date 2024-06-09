@@ -144,6 +144,20 @@ unnecessarily complicated definition (e.g. the definition of ``number``,
 above) or to make it more understandable by giving names to its
 components (like ``_EOF``).
 
+Before we try this with some examples, we have to turn DHParser's
+optimizations off to get consistent node-names in the following
+syntax-trees. (Most of DHParser's speed-optimizations work
+by "compressing" nested parsers into "smart" regular expressions
+if possible. However, the serialization of the respective
+parser objects might yield different node-names for anonymous-nodes
+although functionally it is the same.) Speed optmizations can be
+turned off by setting the configuration value "optimizations" to
+an empty frozen set::
+
+    >>> from DHParser.configuration import get_config_value, set_config_value
+    >>> save_optimizations = get_config_value('optimizations')
+    >>> set_config_value('optimizations', frozenset({}))
+
 Let's try this grammar on our test-string.  In order to compile
 this grammar into executable Python-code, we use the high-level-function
 :py:func:`~dsl.create_parser` from the :py:mod:`dsl`-module.
@@ -1302,19 +1316,6 @@ Techniques for resuming the parsing process after an error occurred
 or for passing by erroneous passages in the source code will be
 explained below, under the heading "Fail-tolerant Parsing".
 
-Since uncustomized error messages report (among other things)
-the parser-objects which caught an error, we need to turn any
-speed optimizations off in order to get consistent error-messages
-in the following. DHParser's speed-optizations work by "compressing"
-nested parsers into "smart" regular expressions if possible.
-However, the serialization of the respective parser objects
-might look different although functionally it is the same.
-Speed optmizations can be turned off by setting the configuration
-value "optimizations" to an empty frozen set::
-
-    >>> from DHParser.configuration import get_config_value, set_config_value
-    >>> save_optimizations = get_config_value('optimizations')
-    >>> set_config_value('optimizations', frozenset({}))
 
 Farthest-Fail-Heuristics
 ^^^^^^^^^^^^^^^^^^^^^^^^

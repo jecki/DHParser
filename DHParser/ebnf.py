@@ -2663,7 +2663,6 @@ class EBNFCompiler(Compiler):
                 move_items(children, mv[0], mv[1])
             node.result = tuple(children)
 
-
     def requires_group(self, node, rxp) -> bool:
         is_plain_text= node.name == 'plaintext' \
             or (node.name == 'literal'
@@ -2675,28 +2674,45 @@ class EBNFCompiler(Compiler):
         is_range = (0, b) in matching_brackets(rxp, "[", "]")
         return not (is_plain_text or is_group or is_range)
 
-    def add_group_name(self, rxp: str, group_name: str) -> str:
-        if group_name in self.directives.drop \
-                or group_name == ":RegExp" and DROP_REGEXP in self.directives.drop:
-            return rxp
-        if (group_name[:1] == ':' or group_name in self.directives.disposable) \
-                and self.directives.reduction > 0:
-            return f'({rxp})'
-        else:
-            return f'(?P<{group_name}>{rxp})'
-
     def smartRE_expression(self, node: Node) -> Tuple[str, str]:
         """:raises: AttributeError, ValueError"""
         # TODO: Not yet tested! smartRE_symbol() not yet implemented!
+        def is_rx_group(rxp):
+            assert rxp[0:12] != "(?P<:RegExp>", f"Use unnamed group instead of {rxp}"
+            return rxp[:1] == '(' and rxp[-1:] == ')' and rxp[1:2] != "?"
+
+        def strip_rx_group(rxp):
+            return rxp[1:-1]
+
         self.reorder_alternatives(node)
         rxps, rep_strs = [], []
-        for nd in node.children:
+        packages = []
+        k = 0
+        for i, nd in enumerate(node.children):
             rxp, repr_str = self.custom_compile(nd, lambda name: getattr(self, 'smartRE_' + name))
-            if self.requires_group(node, rxp):
-                rxp = fr'(?:{rxp})'
+            if is_rx_group(rxp):
+                rxp = strip_rx_group(rxp)
+                if self.requires_group(nd, rxp):
+                    rxp = f'(?:{rxp})'
+            else:
+                if i > k:
+                    packages.append((k, i))
+                k = i + 1
             rxps.append(rxp)
             rep_strs.append(repr_str)
-        return '|'.join(rxps), '|'.join(rep_strs)
+        if k < len(node.children):
+            packages.append((k, len(node.children)))
+        if packages:
+            pkgs = []
+            k = 0
+            for a, b in packages:
+                if a > k:
+                    pkgs.append('|'.join(rxps[k:a]))
+                    k = b
+                pkgs.append('(' + '|'.join(rxps[a:b]) + ')')
+        else:
+            pkgs = rxps
+        return '|'.join(pkgs), '|'.join(rep_strs)
 
 
     def on_expression(self, node) -> str:
@@ -3145,7 +3161,7 @@ class EBNFCompiler(Compiler):
 
     def smartRE_regexp(self, node: Node) -> Tuple[str, str]:
         arg = node.content
-        pattern = f'(?:{arg})' if self.drop_on(DROP_REGEXP) else f'(?P<:RegExp>{arg})'
+        pattern = f'(?:{arg})' if self.drop_on(DROP_REGEXP) else f'({arg})'
         return pattern, f'/{arg}/'
 
     def on_regexp(self, node: Node) -> str:
@@ -3165,8 +3181,8 @@ class EBNFCompiler(Compiler):
     def smartRE_char_ranges(self, node) -> Tuple[str, str]:
         arg =  "|".join('[' + child.content + ']'
                         for child in node.children if child.name == "range_chain")
-        pattern = f'(?:{arg})' if self.drop_on(DROP_REGEXP) else f'(?P<:RegExp>{arg})'
-        return pattern, f'/{pattern}/'
+        pattern = f'(?:{arg})' if self.drop_on(DROP_REGEXP) else f'({arg})'
+        return pattern, f'/{arg}/'
 
     def on_char_ranges(self, node) -> str:
         node.result = "|".join('[' + child.content + ']'
@@ -3181,10 +3197,10 @@ class EBNFCompiler(Compiler):
         else:
             # old grammar, can be removed soon
             node = self.on_range_desc(node)
-        re_str = re.sub(r"(?<!\\)'", r'\'', node.content)
-        group = '(?:' if self.drop_on(DROP_REGEXP) else '(?P<:RegExp>'
-        re_str = ''.join([group, '[', re.sub(r"(?<!\\)]", r'\]', re_str), '])'])
-        return re_str, f'/{re_str}/'
+        arg = re.sub(r"(?<!\\)'", r'\'', node.content)
+        group = '(?:' if self.drop_on(DROP_REGEXP) else '('
+        re_str = ''.join([group, '[', re.sub(r"(?<!\\)]", r'\]', arg), '])'])
+        return re_str, f'/[{arg}]/'
 
     def on_char_range(self, node) -> str:
         re_str, _ = self.smartRE_char_range(node)
@@ -3224,8 +3240,8 @@ class EBNFCompiler(Compiler):
 
     def smartRE_character(self, node: Node) -> Tuple[str, str]:
         arg = f'[{self.extract_character(node)}]'
-        pattern = f'(?:{arg})' if self.drop_on(DROP_REGEXP) else f'(?P<:RegExp>{arg})'
-        return pattern, f'/{pattern}/'
+        pattern = f'(?:{arg})' if self.drop_on(DROP_REGEXP) else f'({arg})'
+        return pattern, f'/{arg}/'
 
     def on_character(self, node: Node) -> str:
         return f"{self.P['RegExp']}('[{self.extract_character(node)}]')"
@@ -3233,9 +3249,9 @@ class EBNFCompiler(Compiler):
 
 
     def smartRE_any_char(self, node: Node) -> Tuple[str, str]:
-        arg = r'.|\n', '/./'
-        pattern = f'(?:{arg})' if self.drop_on(DROP_REGEXP) else f'(?P<:RegExp>{arg})'
-        return pattern
+        arg = r'.|\n'
+        pattern = f'(?:{arg})' if self.drop_on(DROP_REGEXP) else f'({arg})'
+        return pattern, '/./'
 
     def on_any_char(self, node: Node) -> str:
         return f'{self.P["AnyChar"]}()'
