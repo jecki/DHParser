@@ -102,6 +102,10 @@ __all__ = ('parser_names',
            'DropRegExp',
            'mixin_comment',
            'mixin_nonempty',
+           'NO_TREE_REDUCTION',
+           'FLATTEN',
+           'MERGE_TREETOPS',
+           'MERGE_LEAVES',
            'CombinedParser',
            'TreeReduction',
            'RX_NAMED_GROUPS',
@@ -3172,14 +3176,12 @@ class CombinedParser(Parser):
     MERGE_LEAVES = 3  #  (A (:Text "hey ") (:RegExp "you") (C "!")) -> (A (:Text "hey you") (C "!"))
     DEFAULT_OPTIMIZATION = FLATTEN
 
-
 # duplicate this definitions on toplevel for forward-compatibility
 
 NO_TREE_REDUCTION = 0
 FLATTEN = 1  # "flatten" vertically    (A (:Text "data"))  -> (A "data")
 MERGE_TREETOPS = 2  # "merge" horizontally  (A (:Text "hey ") (:RegExp "you")) -> (A "hey you")
 MERGE_LEAVES = 3  #  (A (:Text "hey ") (:RegExp "you") (C "!")) -> (A (:Text "hey you") (C "!"))
-DEFAULT_OPTIMIZATION = FLATTEN
 
 
 def copy_combined_parser_attrs(src: CombinedParser, duplicate: CombinedParser):

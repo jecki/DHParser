@@ -256,7 +256,7 @@ from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forwa
     Drop, DropFrom, Lookahead, NegativeLookahead, Alternative, Series, Option, ZeroOrMore, OneOrMore, \
     Text, Capture, Retrieve, Pop, optional_last_value, GrammarError, Whitespace, Always, Never, \
     Synonym, INFINITE, matching_bracket, ParseFunc, update_scanner, CombinedParser, parser_names, \
-    RX_NAMED_GROUPS
+    RX_NAMED_GROUPS, NO_TREE_REDUCTION, FLATTEN, MERGE_TREETOPS, MERGE_LEAVES
 from DHParser.preprocess import PreprocessorFunc, PreprocessorResult, gen_find_include_func, \
     preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.nodetree import Node, RootNode, Path, WHITESPACE_PTYPE, KEEP_COMMENTS_PTYPE, \
@@ -1142,6 +1142,14 @@ VALID_DIRECTIVES = {
 }
 
 
+REDUCTION = {'none': NO_TREE_REDUCTION,
+            'flatten': FLATTEN,
+            'merge_treetops': MERGE_TREETOPS,
+            'merge': MERGE_LEAVES,
+            'merge_leaves': MERGE_LEAVES}
+REDUCTION_VALUES = {key for key in REDUCTION.keys()} | {str(value) for value in REDUCTION.values()}
+
+
 def literalws_set_from_value(lws: str) -> Set[str]:
     if set(lws.split(' ')) == {'left', 'right'}:
         return {'left', 'right'}
@@ -1214,7 +1222,7 @@ class EBNFDirectives:
         self.resume = dict()      # type: Dict[str, List[Union[unrepr, str]]]
         self.disposable = get_config_value('default_disposable_regexp')  # type: str
         self.drop = set()         # type: Set[str]
-        self.reduction = 1        # type: int
+        self.reduction = FLATTEN  # type: int
         self._super_ws = None     # type: Optional[str]
 
     def __getitem__(self, key):
@@ -2243,12 +2251,6 @@ class EBNFCompiler(Compiler):
         nd.result = "".join(parts)
         nd.name = "literal"
 
-    # def add_to_disposable_regexp(self, pattern):
-    #     if self.directives.disposable == NEVER_MATCH_PATTERN:
-    #         self.directives.disposable = pattern
-    #     else:
-    #         old_pattern = self.directives.disposable
-    #         self.directives.disposable = '(?:%s)|(?:%s)' % (old_pattern, pattern)
 
     def on_directive(self, node: Node) -> str:
         for child in node.children:
@@ -2359,15 +2361,13 @@ class EBNFCompiler(Compiler):
         elif key in ('reduction', 'tree_reduction'):
             check_argnum(1)
             arg = node.children[1].content
-            if arg not in ('none', 'flatten', 'merge_treetops', 'merge', 'merge_leaves',
-                           '0', '1', '2', '3'):
+            if arg not in REDUCTION_VALUES:
                 self.tree.new_error(node, 'Wrong value "%s" for Directive "%s". ' % (arg, key) +
                                     'Choose from: 0-4 or none, flatten, merge_treetop, merge.')
             elif arg.isdigit():
                 self.directives.reduction = int(arg)
             else:
-                level = {'none': 0, 'flatten': 1, 'merge_treetops': 2,
-                         'merge': 3, 'merge_leaves': 3}[arg]
+                level = REDUCTION[arg]
                 self.directives.reduction = level
 
         elif key == 'ignorecase':
@@ -2675,6 +2675,35 @@ class EBNFCompiler(Compiler):
         return not (is_plain_text or is_group or is_range)
 
 
+    def group_rxps(self, rxps: List[Tuple[Node, str]]) -> List[Tuple[str, List[str]]]:
+        def get_group(rxp) -> Tuple[str, str]:
+            if (0, len(rxp) - 1) in matching_brackets(rxp, "(", ")"):
+                if rxp[1:3] == "?P":
+                    m = RX_NAMED_GROUPS.match(rxp)
+                    assert m, f"Malformed named group in: {rxp}"
+                    return (("(" if m.group(1) == ":RegExp" else m.group(0)),
+                            rxp[len(m.group(0)):-1])
+                elif rxp[1:3] == "?:":
+                    return "(?:", rxp[3:-1]
+                else:
+                    assert not rxp[1:2] == "?", f"Unexpected group-type: {rxp}"
+                    return "(", rxp[1:-1]
+        packages = []
+        for nd, rxp in rxps:
+            group_type, stripped_re = get_group(rxp)
+            if group_type == "(?:" and not self.requires_group(nd, stripped_re):
+                group_type = ""
+            if not packages:
+                packages.append((group_type, [stripped_re]))
+            elif (group_type == packages[-1][0] or
+                  group_type == "" and packages[-1][0] == "(?:"):
+                packages[-1][1].append(stripped_re)
+            elif group_type == "(?:" and packages[-1][0] == '':
+                packages[-1] = ("(?:", packages[-1][1])
+                packages[-1][1].append(stripped_re)
+            else:
+                packages.append((group_type, [stripped_re]))
+
 
     def smartRE_expression(self, node: Node) -> Tuple[str, str]:
         """:raises: AttributeError, ValueError"""
@@ -2685,22 +2714,6 @@ class EBNFCompiler(Compiler):
 
         def strip_rx_group(rxp):
             return rxp[1:-1]
-
-        def group_rxps(rxps):
-            def get_group(rxp):
-                if (0, len(rxp) - 1) in matching_brackets(rxp, "(", ")"):
-                    if rxp[1:3] == "?P":
-                        m = RX_NAMED_GROUPS.match(rxp)
-                        assert m, f"Malformed named group in: {rxp}"
-                        return m.group(1)
-                    else:
-                        assert not rxp[1:2] == "?", f"Unexpected group-type: {rxp}"
-                        return ":RegExp"
-            package = []
-            package_list = []
-            group_names
-            for rxp in rxps:
-                pass
 
         self.reorder_alternatives(node)
         rxps, rep_strs = [], []
@@ -2738,9 +2751,12 @@ class EBNFCompiler(Compiler):
         if 'alternative' in self.optimizations:
             try:
                 pattern, content = self.smartRE_expression(node)
-                pattern = self.check_rx(node, pattern, smartRE=True)
-                # print(f"{self.P['SmartRE']}({repr(pattern)}, {repr(content)})")
-                return f"{self.P['SmartRE']}({repr(pattern)}, {repr(content)})"
+                if self.directives.reduction > REDUCTION['none']:
+                    pattern = self.check_rx(node, pattern, smartRE=True)
+                    return f"{self.P['SmartRE']}({repr(pattern)}, {repr(content)})"
+                else:
+                    self.tree.new_error(
+                        node, 'Cannot optimize alternatives if @reduction is none', NOTICE)
             except (AttributeError, ValueError):
                 pass
         if len(node.children) == 1:
