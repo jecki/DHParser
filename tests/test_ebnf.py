@@ -117,7 +117,6 @@ class TestDirectives:
         parser = MinilangParser()
         assert parser
         syntax_tree = parser("3 + 4 \n  %comment \n * 12")
-        # print(syntax_tree.as_sxpr())
         assert syntax_tree.pick('comment__')
         assert not syntax_tree.pick(':Whitespace')
 
@@ -1708,7 +1707,6 @@ class TestSyntaxExtensions:
         set_config_value('syntax_variant', 'strict')
         lang = "Char ::= #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]"
         parser = create_parser(lang)
-        print(parser.python_src__)
         st = parser('賌')
         assert st.as_sxpr() == '(Char "賌")'
 
@@ -2145,7 +2143,6 @@ class TestInclude:
         src, errors, ast = compile_ebnf(arithmetic_ebnf)
         assert not errors, str(errors)
         parser = create_parser(arithmetic_ebnf)
-        print(parser.python_src__)
         tree = parser('2 - (3 * -4.145E+5)')
         assert not tree.errors
 
@@ -2514,7 +2511,6 @@ class TestStringLiterals:
         root = p(r"\'")
         assert not root.errors
         assert root.strlen() == 2
-        print(root.as_sxpr())
 
 
 class TestOptimizations:
@@ -2578,7 +2574,6 @@ class TestOptimizations:
         set_config_value('syntax_variant', 'strict')
         lang = "Char ::= #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]"
         parser = create_parser(lang)
-        print(parser.python_src__)
         st = parser('賌')
         assert st.as_sxpr() == '(Char "賌")', st.as_sxpr()
         set_config_value('syntax_variant', save_syn)

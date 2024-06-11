@@ -127,7 +127,6 @@ class TestTrace:
             """
         set_config_value('compiled_EBNF_log', 'test_trace_parser.py')
         p = create_parser(lang)
-        print(p.python_src__)
         gr = grammar_provider(lang)()
         all_desc = gr.root_parser__.descendants()
         set_tracer(all_desc, trace_history)

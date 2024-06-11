@@ -2684,66 +2684,35 @@ class EBNFCompiler(Compiler):
                     return (("(" if m.group(1) == ":RegExp" else m.group(0)),
                             rxp[len(m.group(0)):-1])
                 elif rxp[1:3] == "?:":
-                    return "(?:", rxp[3:-1]
+                    return "", rxp[3:-1]
                 else:
                     assert not rxp[1:2] == "?", f"Unexpected group-type: {rxp}"
                     return "(", rxp[1:-1]
         packages = []
         for nd, rxp in rxps:
             group_type, stripped_re = get_group(rxp)
-            if group_type == "(?:" and not self.requires_group(nd, stripped_re):
-                group_type = ""
+            requires_group = self.requires_group(nd, stripped_re) and stripped_re.find('|') >= 0
+            rx = ''.join(["(?:", stripped_re, ")"]) if requires_group else stripped_re
             if not packages:
-                packages.append((group_type, [stripped_re]))
-            elif (group_type == packages[-1][0] or
-                  group_type == "" and packages[-1][0] == "(?:"):
-                packages[-1][1].append(stripped_re)
-            elif group_type == "(?:" and packages[-1][0] == '':
-                packages[-1] = ("(?:", packages[-1][1])
-                packages[-1][1].append(stripped_re)
+                packages.append((group_type, [rx]))
+            elif group_type == packages[-1][0]:
+                packages[-1][1].append(rx)
             else:
-                packages.append((group_type, [stripped_re]))
+                packages.append((group_type, [rx]))
+        return packages
 
 
     def smartRE_expression(self, node: Node) -> Tuple[str, str]:
         """:raises: AttributeError, ValueError"""
-        # TODO: Not yet tested! smartRE_symbol() not yet implemented!
-        def is_rx_group(rxp):
-            assert rxp[0:12] != "(?P<:RegExp>", f"Use unnamed group instead of {rxp}"
-            return rxp[:1] == '(' and rxp[-1:] == ')' and rxp[1:2] != "?"
-
-        def strip_rx_group(rxp):
-            return rxp[1:-1]
-
         self.reorder_alternatives(node)
         rxps, rep_strs = [], []
-        packages = []
-        k = 0
-        for i, nd in enumerate(node.children):
+        for nd in node.children:
             rxp, repr_str = self.custom_compile(nd, lambda name: getattr(self, 'smartRE_' + name))
-            if is_rx_group(rxp):
-                rxp = strip_rx_group(rxp)
-                if self.requires_group(nd, rxp):
-                    rxp = f'(?:{rxp})'
-            else:
-                if i > k:
-                    packages.append((k, i))
-                k = i + 1
-            rxps.append(rxp)
+            rxps.append((nd, rxp))
             rep_strs.append(repr_str)
-        if k < len(node.children):
-            packages.append((k, len(node.children)))
-        if packages:
-            pkgs = []
-            k = 0
-            for a, b in packages:
-                if a > k:
-                    pkgs.append('|'.join(rxps[k:a]))
-                    k = b
-                pkgs.append('(' + '|'.join(rxps[a:b]) + ')')
-        else:
-            pkgs = rxps
-        return '|'.join(pkgs), '|'.join(rep_strs)
+        groups = self.group_rxps(rxps)
+        packages = [g[0] + '|'.join(rx for rx in g[1]) + (")" if g[0] else "") for g in groups]
+        return '|'.join(packages), '|'.join(rep_strs)
 
 
     def on_expression(self, node) -> str:
