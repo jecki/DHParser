@@ -776,10 +776,11 @@ NOPE = []  # a list that is empty and is supposed to remain empty
 def matching_brackets(text: str,
                       openB: str,
                       closeB: str,
-                      unmatched: list = NOPE) -> List[Tuple[int, int]]:
+                      unmatched: list = NOPE,
+                      rx: bool=False) -> List[Tuple[int, int]]:
     """Returns a list of matching bracket positions. Fills an empty list
     passed to parameter `unmatched` with the positions of all
-    unmatched brackets.
+    unmatched brackets. If rx is True, escaped brackets will be ignored.
 
     >>> matching_brackets('(a(b)c)', '(', ')')
     [(2, 4), (0, 6)]
@@ -793,6 +794,10 @@ def matching_brackets(text: str,
     """
     assert not unmatched, \
         "Please pass an empty list as unmatched flag, not: " + str(unmatched)
+    if rx:
+        # TODO: need to take into account the length of the group when substituting!!!!!!!
+        text = re.sub(r'(?<=\[)(?:(?:\\\\)*\\\]|[^\]])*(?=\])', '', text)
+        text = re.sub(r'(?:\\\\)*\\\)', '', text)
     stack, matches = [], []
     da = len(openB)
     db = len(closeB)

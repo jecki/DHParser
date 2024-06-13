@@ -2123,7 +2123,8 @@ words when parsing a text::
         "    I'm happy again.")
       (EOF))
 
-For another, more detailed example, see :any:`macros`.
+For another, more detailed example, see the :any:`macros`-section in
+the overview.
 
 .. _context_sensitive_parsers:
 

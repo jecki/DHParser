@@ -1622,6 +1622,10 @@ class EBNFCompiler(Compiler):
         return value
 
 
+    def find_smartRE_method(self, name: str) -> Callable:
+        return getattr(self, 'smartRE_' + name)
+
+
     def make_search_rule(self, node: Node, nd: Node, kind: str) -> ReprType:
         """Generates a search rule, which can be either a string for simple
         string search or a regular expression from the node's content. Returns
@@ -1978,6 +1982,10 @@ class EBNFCompiler(Compiler):
                              | set(['$' + k for k in self.macros])
         for symbol, usages in self.symbols.items():
             if symbol not in symbols_and_macros:
+                if symbol[:1] != "$" and ("$" + symbol) in symbols_and_macros:
+                    macrohint = f' Use "${symbol}" to refer to the macro with that name.'
+                else:
+                    macrohint = ""
                 for usage in usages:
                     passage = self.tree.source[usage.pos:usage.pos + len(symbol) + 1]
                     if passage == symbol + '(':
@@ -1988,8 +1996,11 @@ class EBNFCompiler(Compiler):
                             passage += "...)"
                         hint = f' If  {passage}  was meant as a custom parser call, ' \
                                f'then "@" should be added in front of it.'
+                    elif macrohint:
+                        hint = macrohint
                     else:
                         hint = ''
+
                     self.tree.new_error(
                         usage, f'Missing definition for symbol "{symbol}"!' + hint,
                         UNDEFINED_SYMBOL)
@@ -2116,7 +2127,8 @@ class EBNFCompiler(Compiler):
         python_src = self.assemble_parser(list(self.definitions.items()), root_symbol)
         if get_config_value('static_analysis') == 'early' and not \
                 any((e.code >= FATAL or e.code in
-                     (MALFORMED_REGULAR_EXPRESSION, SYMBOL_NAME_IS_PYTHON_KEYWORD))
+                     (MALFORMED_REGULAR_EXPRESSION, SYMBOL_NAME_IS_PYTHON_KEYWORD,
+                      BAD_ORDER_OF_ALTERNATIVES))
                     for e in self.tree.errors):
             errors = []
             # circumvent name-errors for external symbols
@@ -2580,6 +2592,14 @@ class EBNFCompiler(Compiler):
         assert macro_name == _
         return code
 
+    def smartRE_placeholder(self, node) -> Tuple[str, str]:
+        code = self.on_macro(node)
+        rxp, rep_str = self.custom_compile(node, self.find_smartRE_method)
+        if code.startswith(self.P["Drop"]):
+            if rxp[:1] == '(' and rxp[1:3] != "?:":
+                m = RX_NAMED_GROUPS.match(rxp)
+                rxp = '(?:' + (rxp[len(m.group(0)):] if m else rxp[1:])
+        return rxp, rep_str
 
     def on_placeholder(self, node) -> str:
         return self.on_macro(node)
@@ -2688,6 +2708,7 @@ class EBNFCompiler(Compiler):
                 else:
                     assert not rxp[1:2] == "?", f"Unexpected group-type: {rxp}"
                     return "(", rxp[1:-1]
+            assert False, rxp
         packages = []
         for nd, rxp in rxps:
             group_type, stripped_re = get_group(rxp)
@@ -2706,10 +2727,16 @@ class EBNFCompiler(Compiler):
         """:raises: AttributeError, ValueError"""
         self.reorder_alternatives(node)
         rxps, rep_strs = [], []
+        optional_nd = None
         for nd in node.children:
-            rxp, repr_str = self.custom_compile(nd, lambda name: getattr(self, 'smartRE_' + name))
+            rxp, repr_str = self.custom_compile(nd, self.find_smartRE_method)
             rxps.append((nd, rxp))
             rep_strs.append(repr_str)
+            if optional_nd is None and rxp[-2:] == '?)' and rxp[-3:-2] != '\\':
+                optional_nd = nd
+        if optional_nd and optional_nd is not node.children[-1]:
+            self.tree.new_error(optional_nd, 'Only the last alternative may be optional!',
+                                BAD_ORDER_OF_ALTERNATIVES)
         groups = self.group_rxps(rxps)
         packages = [g[0] + '|'.join(rx for rx in g[1]) + (")" if g[0] else "") for g in groups]
         return '|'.join(packages), '|'.join(rep_strs)
@@ -2732,6 +2759,10 @@ class EBNFCompiler(Compiler):
             # can only occur inside directives, because here expressions are not
             # necessarily replaced by their single child. (See AST-Transformation)
             return self.compile(node.children[0])
+        for nd in node.children[:-1]:
+            if nd.name in ('option', 'repetition'):
+                self.tree.new_error(nd, 'Only the very last alternative may be optional!',
+                                    BAD_ORDER_OF_ALTERNATIVES)
         return self.non_terminal(node, 'Alternative')
 
 
@@ -2922,6 +2953,15 @@ class EBNFCompiler(Compiler):
         return self.non_terminal(node, parser_class, custom_args)
 
 
+    def smartRE_option(self, node) -> Tuple[str, str]:
+        rxp, rep_str = self.custom_compile(node.children[0], self.find_smartRE_method)
+        if rxp[:3] == '(?:':
+            stripped_re = rxp[3:-1]
+            if self.requires_group(node.children[0], stripped_re):
+                rxp = stripped_re
+        return ''.join(['(?:', rxp, '?)']), ''.join(['[', rep_str, ']'])
+
+
     def on_option(self, node) -> str:
         return self.non_terminal(node, 'Option')
 
@@ -2994,6 +3034,14 @@ class EBNFCompiler(Compiler):
             else:
                 r = (m, m)
         return what, r
+
+
+    def smartRE_counted(self, node) -> Tuple[str, str]:
+        what, r = self.extract_counted(node)
+        if r == (0, 1):
+            node.name = "option"
+            return self.custom_compile(node, self.find_smartRE_method)
+        raise ValueError('counted-parser can be compiled to smartRE onl if repetions == (0, 1)')
 
 
     def on_counted(self, node) -> str:

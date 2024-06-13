@@ -2568,7 +2568,7 @@ class TestOptimizations:
         assert tree.as_sxpr() == '(EXP "E+18")'
         set_config_value('optimizations', save)
 
-    def test_char_ranges(self): # TODO: test with alternative-optimization
+    def test_char_ranges(self):
         set_config_value('optimizations', frozenset({'alternative'}))
         save_syn = get_config_value('syntax_variant')
         set_config_value('syntax_variant', 'strict')
@@ -2577,6 +2577,32 @@ class TestOptimizations:
         st = parser('賌')
         assert st.as_sxpr() == '(Char "賌")', st.as_sxpr()
         set_config_value('syntax_variant', save_syn)
+
+    def test_macros(self):
+        set_config_value('optimizations', frozenset({'alternative'}))
+        lang = r'''@disposable = $close
+        keyword = "Open" | $close | /\w+/
+        $close = "Close" '''
+        parser = create_parser(lang)
+        assert parser.python_src__.rfind('SmartRE') >= 0, parser.python_src__
+        assert parser('Close').as_sxpr() == '(keyword "Close")'
+
+        lang = '@drop = $close\n' + lang
+        parser = create_parser(lang)
+        assert parser.python_src__.rfind('SmartRE') >= 0, parser.python_src__
+        assert parser('Close').as_sxpr() == '(keyword)'
+
+    def test_option(self):
+        set_config_value('optimizations', frozenset({'alternative'}))
+        lang = r'''lang = keyword /.*/
+        keyword = "Open" | [/\w+/]'''
+        parser = create_parser(lang)
+        assert parser.python_src__.rfind('SmartRE') >= 0, parser.python_src__
+        tree = parser('#*?')
+        assert not tree.errors
+        assert tree.as_sxpr() == '(lang (keyword) (:RegExp "#*?"))'
+
+
 
 if __name__ == "__main__":
     from DHParser.testing import runner

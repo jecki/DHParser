@@ -48,15 +48,10 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \
     positions_of, replace_child_names, add_attributes, delimit_children, merge_connected, \
     has_attr, has_parent, ThreadLocalSingletonFactory, TreeReduction, CombinedParser, \
-    apply_unless, ERROR
+    apply_unless, ERROR, SmartRE
 
 from DHParser.pipeline import PseudoJunction, create_parser_junction
 
-from DHParser.dsl import PseudoJunction, create_parser_junction
-
-from DHParser.dsl import PseudoJunction, create_parser_junction
-
-from DHParser.dsl import PseudoJunction, create_parser_junction
 
 
 #######################################################################
@@ -85,7 +80,7 @@ class XMLGrammar(Grammar):
     element = Forward()
     source_hash__ = "c78a8dd65a4438562ada48b2cc53cd5a"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:$.)|(?:CommentChars$|CData$|PubidCharsSingleQuoted$|Misc$|Reference$|NameChars$|VersionNum$|EncName$|NameStartChar$|PubidChars$|EOF$)')
+    disposable__ = re.compile('(?:$.)|(?:EncName$|CData$|PubidChars$|CommentChars$|NameStartChar$|EOF$|Reference$|NameChars$|VersionNum$|PubidCharsSingleQuoted$|Misc$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''

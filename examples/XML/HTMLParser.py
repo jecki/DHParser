@@ -109,7 +109,7 @@ class HTMLGrammar(Grammar):
     element = Forward()
     source_hash__ = "a9e0431e6f53afd18202f8923fcf668e"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:$.)|(?:Misc$|prolog$|BOM$|CData$|PubidChars$|NameStartChar$|Reference$|VersionNum$|EOF$|tagContent$|PubidCharsSingleQuoted$|CommentChars$|NameChars$|EncName$)')
+    disposable__ = re.compile('(?:$.)|(?:Reference$|PubidCharsSingleQuoted$|NameChars$|PubidChars$|NameStartChar$|CommentChars$|EncName$|tagContent$|BOM$|Misc$|VersionNum$|prolog$|EOF$|CData$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'tagContent': [('', "syntax error in tag-name of opening or empty tag:  {1}")],
