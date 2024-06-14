@@ -382,11 +382,11 @@ class HeuristicEBNFGrammar(Grammar):
     char_range = Series(Text("["), Lookahead(char_range_heuristics), Option(Text("^")),
                         OneOrMore(range_desc), Series(Text("]"), dwsp__))
     regexp = Series(Retrieve(RE_LEADIN), RE_CORE, Retrieve(RE_LEADOUT), dwsp__)
-    plaintext = Alternative(Series(RegExp('`(?:(?<!\\\\)\\\\`|[^`])*?`'), dwsp__),
-                            Series(RegExp('´(?:(?<!\\\\)\\\\´|[^´])*?´'), dwsp__))
-    literal = Alternative(Series(RegExp('"(?:(?<!\\\\)\\\\"|[^"])*?"'), dwsp__),
-                          Series(RegExp("'(?:(?<!\\\\)\\\\'|[^'])*?'"), dwsp__),
-                          Series(RegExp('’(?:(?<!\\\\)\\\\’|[^’])*?’'), dwsp__))
+    plaintext = Alternative(Series(RegExp(r'`(?:(?<!\\)(?:\\\\)*\\`|[^`])*?`'), dwsp__),
+                            Series(RegExp(r'´(?:(?<!\\)(?:\\\\)*\\´|[^´])*?´'), dwsp__))
+    literal = Alternative(Series(RegExp(r'"(?:(?<!\\)(?:\\\\)*\\"|[^"])*?"'), dwsp__),
+                          Series(RegExp(r"'(?:(?<!\\)(?:\\\\)*\\'|[^'])*?'"), dwsp__),
+                          Series(RegExp(r'’(?:(?<!\\)(?:\\\\)*\\’|[^’])*?’'), dwsp__))
     symbol = Series(SYM_REGEX, dwsp__)
     argument = Alternative(literal, Series(name, dwsp__))
     parser = Series(Series(Text("@"), dwsp__), name, Series(Text("("), dwsp__), Option(argument),

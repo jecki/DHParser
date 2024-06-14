@@ -107,8 +107,8 @@ class FlexibleEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "eb343aca16c789bd12a4b6f6cf76995e"
-    disposable__ = re.compile('(?:$.)|(?:is_mdef$|MOD_SYM$|countable$|EOF$|FOLLOW_UP$|ANY_SUFFIX$|no_range$|MOD_SEP$|pure_elem$|component$)')
+    source_hash__ = "02c497abbe547584bd927855e9e84b39"
+    disposable__ = re.compile('(?:$.)|(?:countable$|ANY_SUFFIX$|no_range$|FOLLOW_UP$|component$|MOD_SYM$|pure_elem$|MOD_SEP$|is_mdef$|EOF$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
@@ -153,8 +153,8 @@ class FlexibleEBNFGrammar(Grammar):
     char_ranges = Series(RE_LEADIN, range_chain, ZeroOrMore(Series(Text("|"), range_chain)), RE_LEADOUT, dwsp__)
     char_range = Series(Text("["), Lookahead(char_range_heuristics), Option(Text("^")), OneOrMore(range_desc), Series(Text("]"), dwsp__))
     regexp = Series(Retrieve(RE_LEADIN), RE_CORE, Retrieve(RE_LEADOUT), dwsp__)
-    plaintext = Series(SmartRE('((?:`(?:(?<!\\\\)\\\\`|[^`])*?`)|(?:´(?:(?<!\\\\)\\\\´|[^´])*?´))', '/`(?:(?<!\\\\)\\\\`|[^`])*?`/|/´(?:(?<!\\\\)\\\\´|[^´])*?´/'), dwsp__)
-    literal = Series(SmartRE('((?:"(?:(?<!\\\\)\\\\"|[^"])*?")|(?:\'(?:(?<!\\\\)\\\\\'|[^\'])*?\')|(?:’(?:(?<!\\\\)\\\\’|[^’])*?’))', '/"(?:(?<!\\\\)\\\\"|[^"])*?"/|/\'(?:(?<!\\\\)\\\\\'|[^\'])*?\'/|/’(?:(?<!\\\\)\\\\’|[^’])*?’/'), dwsp__)
+    plaintext = Series(SmartRE('((?:`(?:(?<!\\\\)(?:\\\\\\\\)*\\\\`|[^`])*?`)|(?:´(?:(?<!\\\\)(?:\\\\\\\\)*\\\\´|[^´])*?´))', '/`(?:(?<!\\\\)(?:\\\\\\\\)*\\\\`|[^`])*?`/|/´(?:(?<!\\\\)(?:\\\\\\\\)*\\\\´|[^´])*?´/'), dwsp__)
+    literal = Series(SmartRE('((?:"(?:(?<!\\\\)(?:\\\\\\\\)*\\\\"|[^"])*?")|(?:\'(?:(?<!\\\\)(?:\\\\\\\\)*\\\\\'|[^\'])*?\')|(?:’(?:(?<!\\\\)(?:\\\\\\\\)*\\\\’|[^’])*?’))', '/"(?:(?<!\\\\)(?:\\\\\\\\)*\\\\"|[^"])*?"/|/\'(?:(?<!\\\\)(?:\\\\\\\\)*\\\\\'|[^\'])*?\'/|/’(?:(?<!\\\\)(?:\\\\\\\\)*\\\\’|[^’])*?’/'), dwsp__)
     symbol = Series(SYM_REGEX, dwsp__)
     argument = Alternative(literal, Series(name, dwsp__))
     parser = Series(Series(Text("@"), dwsp__), name, Series(Text("("), dwsp__), Option(argument), Series(Text(")"), dwsp__))
