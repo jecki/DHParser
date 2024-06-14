@@ -495,7 +495,7 @@ def normalize_circular_path(path: Union[Tuple[str, ...], AbstractSet[Tuple[str, 
 
 
 RX_NEVER_MATCH = re.compile(NEVER_MATCH_PATTERN)
-RxPatternType = Any
+RxPatternType = re.Pattern
 
 
 def re_find(s, r, pos=0, endpos=9223372036854775807):
@@ -771,6 +771,44 @@ def as_identifier(s: str, replacement: str = "_") -> str:
 
 NOPE = []  # a list that is empty and is supposed to remain empty
 
+_RX_CHARSET = None
+_RX_ESCAPED_ROUND_BRACKET = None
+_RX_ESCAPED_SQUARE_BRACKET = None
+
+
+def _init_bracket_regexes():
+    global _RX_CHARSET, _RX_ESCAPED_ROUND_BRACKET, _RX_ESCAPED_SQUARE_BRACKET
+    if _RX_CHARSET is None:
+        _RX_CHARSET = re.compile(r'(?<=\[)(?:(?:\\\\)*\\\]|[^\]])*(?=\])')
+    if _RX_ESCAPED_ROUND_BRACKET is None:
+        _RX_ESCAPED_ROUND_BRACKET = re.compile(r'(?:\\\\)*\\\)')
+    if _RX_ESCAPED_SQUARE_BRACKET is None:
+        _RX_ESCAPED_SQUARE_BRACKET = re.compile(r'(?:\\\\)*\\\]')
+
+        # >>> _sub_size(_RX_CHARSET, r'([^\d()]*(?=[\d(]))')
+        # '([     ]*(?=[   ]))'
+
+def _sub_size(rx: RxPatternType, text: str, fill_char: str = ' ') -> str:
+    """Substitutes matches of a regular expression with a fill-string
+    of the same size. Example::
+
+        >>> _RX_CHARSET = re.compile(r'(?<=\\[)(?:(?:\\\\)*\\\\]|[^\\]])*(?=\\])')
+        >>> _sub_size(_RX_CHARSET, r'([^\\d()]*(?=[\\d\\](]))')
+        '([     ]*(?=[     ]))'
+    """
+    assert len(fill_char) == 1
+    a = 0
+    chunks = []
+    for m in rx.finditer(text):
+        start = m.start()
+        end = m.end()
+        if a < start:
+            chunks.append(text[a:start])
+        chunks.append(fill_char * (end - start))
+        a = end
+    if a < len(text): chunks.append(text[a:])
+    return ''.join(chunks)
+
 
 @cython.locals(da=cython.int, db=cython.int, a=cython.int, b=cython.int)
 def matching_brackets(text: str,
@@ -795,9 +833,8 @@ def matching_brackets(text: str,
     assert not unmatched, \
         "Please pass an empty list as unmatched flag, not: " + str(unmatched)
     if rx:
+        _init_bracket_regexes()
         # TODO: need to take into account the length of the group when substituting!!!!!!!
-        text = re.sub(r'(?<=\[)(?:(?:\\\\)*\\\]|[^\]])*(?=\])', '', text)
-        text = re.sub(r'(?:\\\\)*\\\)', '', text)
     stack, matches = [], []
     da = len(openB)
     db = len(closeB)
