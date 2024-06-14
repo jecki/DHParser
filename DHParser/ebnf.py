@@ -2697,18 +2697,18 @@ class EBNFCompiler(Compiler):
 
     def group_rxps(self, rxps: List[Tuple[Node, str]]) -> List[Tuple[str, List[str]]]:
         def get_group(rxp) -> Tuple[str, str]:
-            if (0, len(rxp) - 1) in matching_brackets(rxp, "(", ")"):
-                if rxp[1:3] == "?P":
-                    m = RX_NAMED_GROUPS.match(rxp)
-                    assert m, f"Malformed named group in: {rxp}"
-                    return (("(" if m.group(1) == ":RegExp" else m.group(0)),
-                            rxp[len(m.group(0)):-1])
-                elif rxp[1:3] == "?:":
-                    return "", rxp[3:-1]
-                else:
-                    assert not rxp[1:2] == "?", f"Unexpected group-type: {rxp}"
-                    return "(", rxp[1:-1]
-            assert False, rxp
+            mb = matching_brackets(rxp, "(", ")", is_regex=True)
+            assert (0, len(rxp) - 1) in mb, rxp
+            if rxp[1:3] == "?P":
+                m = RX_NAMED_GROUPS.match(rxp)
+                assert m, f"Malformed named group in: {rxp}"
+                return (("(" if m.group(1) == ":RegExp" else m.group(0)),
+                        rxp[len(m.group(0)):-1])
+            elif rxp[1:3] == "?:":
+                return "", rxp[3:-1]
+            else:
+                assert not rxp[1:2] == "?", f"Unexpected group-type: {rxp}"
+                return "(", rxp[1:-1]
         packages = []
         for nd, rxp in rxps:
             group_type, stripped_re = get_group(rxp)

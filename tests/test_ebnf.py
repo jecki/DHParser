@@ -2602,7 +2602,27 @@ class TestOptimizations:
         assert not tree.errors
         assert tree.as_sxpr() == '(lang (keyword) (:RegExp "#*?"))'
 
+    def test_complex_regexes(self):
+        set_config_value('optimizations', frozenset({'alternative'}))
+        lang = r'''
+            lang = "abcdefg" | /[^\d()]*(?=[\d(])/'''
+        parser = create_parser(lang)
+        tree = parser('abcdefg')
+        assert not tree.errors
 
+    def test_complex_regexes_2(self):
+        set_config_value('optimizations', frozenset({'alternative'}))
+        lang = r'''
+        literal    = /"(?:(?<!\\)\\"|[^"])*?"/    
+                   | /'(?:(?<!\\)\\'|[^'])*?'/  
+                   | /’(?:(?<!\\)\\’|[^’])*?’/
+        plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/    
+                   | /´(?:(?<!\\)\\´|[^´])*?´/        
+        '''
+        parser = create_parser(lang)
+        tree = parser(r'"\""')
+        assert not tree.errors
+        assert tree.as_sxpr() == r'''(literal '"\""')'''
 
 if __name__ == "__main__":
     from DHParser.testing import runner

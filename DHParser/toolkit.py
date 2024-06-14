@@ -779,11 +779,11 @@ _RX_ESCAPED_SQUARE_BRACKET = None
 def _init_bracket_regexes():
     global _RX_CHARSET, _RX_ESCAPED_ROUND_BRACKET, _RX_ESCAPED_SQUARE_BRACKET
     if _RX_CHARSET is None:
-        _RX_CHARSET = re.compile(r'(?<=\[)(?:(?:\\\\)*\\\]|[^\]])*(?=\])')
+        _RX_CHARSET = re.compile(r'(?<=\[)(?:(?<!\\)(?:\\\\)*\\\]|[^\]])*(?=\])')
     if _RX_ESCAPED_ROUND_BRACKET is None:
-        _RX_ESCAPED_ROUND_BRACKET = re.compile(r'(?:\\\\)*\\\)')
+        _RX_ESCAPED_ROUND_BRACKET = re.compile(r'(?<!\\)(?:\\\\)*\\[()]')
     if _RX_ESCAPED_SQUARE_BRACKET is None:
-        _RX_ESCAPED_SQUARE_BRACKET = re.compile(r'(?:\\\\)*\\\]')
+        _RX_ESCAPED_SQUARE_BRACKET = re.compile(r'(?<!\\)(?:\\\\)*\\[\[\]]')
 
         # >>> _sub_size(_RX_CHARSET, r'([^\d()]*(?=[\d(]))')
         # '([     ]*(?=[   ]))'
@@ -815,26 +815,33 @@ def matching_brackets(text: str,
                       openB: str,
                       closeB: str,
                       unmatched: list = NOPE,
-                      rx: bool=False) -> List[Tuple[int, int]]:
+                      is_regex: bool=False) -> List[Tuple[int, int]]:
     """Returns a list of matching bracket positions. Fills an empty list
     passed to parameter `unmatched` with the positions of all
-    unmatched brackets. If rx is True, escaped brackets will be ignored.
+    unmatched brackets. If rx is True, escaped brackets and brackets inside
+    charsets will be ignored. In other words, only brackets that are
+    control-characters of the regular expression will be considered.
+    Examples::
 
-    >>> matching_brackets('(a(b)c)', '(', ')')
-    [(2, 4), (0, 6)]
-    >>> matching_brackets('(a)b(c)', '(', ')')
-    [(0, 2), (4, 6)]
-    >>> unmatched = []
-    >>> matching_brackets('ab(c', '(', ')', unmatched)
-    []
-    >>> unmatched
-    [2]
+        >>> matching_brackets('(a(b)c)', '(', ')')
+        [(2, 4), (0, 6)]
+        >>> matching_brackets('(a)b(c)', '(', ')')
+        [(0, 2), (4, 6)]
+        >>> unmatched = []
+        >>> matching_brackets('ab(c', '(', ')', unmatched)
+        []
+        >>> unmatched
+        [2]
+        >>> matching_brackets(r'([^\\d()]*(?=[\\d(]))', '(', ')', is_regex=True)
+        [(9, 17), (0, 18)]
     """
     assert not unmatched, \
         "Please pass an empty list as unmatched flag, not: " + str(unmatched)
-    if rx:
+    if is_regex:
         _init_bracket_regexes()
-        # TODO: need to take into account the length of the group when substituting!!!!!!!
+        text = _sub_size(_RX_CHARSET, text)
+        text = _sub_size(_RX_ESCAPED_ROUND_BRACKET, text)
+        text = _sub_size(_RX_ESCAPED_SQUARE_BRACKET, text)
     stack, matches = [], []
     da = len(openB)
     db = len(closeB)

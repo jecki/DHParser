@@ -340,6 +340,14 @@ class TestMisc:
         matching_brackets('ab)c', '(', ')')
         matching_brackets('ab)c', '(', ')')
 
+    def test_matching_brackets_regex(self):
+        rxp = r'("(?:(?<!\\)\\"|[^"])*?")'
+        mb = matching_brackets(rxp, '(', ')', is_regex=True)
+        assert (0, len(rxp) - 1) in mb
+
+        rxp = r'(?P<:Text>\()'
+        mb = matching_brackets(rxp, '(', ')', is_regex=True)
+        assert (0, len(rxp) - 1) in mb
 
 if __name__ == "__main__":
     from DHParser.testing import runner
