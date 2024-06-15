@@ -1097,26 +1097,41 @@ def run_tests_in_class(cls_name, namespace, methods=()):
         returns the instance."""
         exec("instance = " + cls + "()", nspace)
         instance = nspace["instance"]
-        setup = instance.setup if "setup" in dir(instance) else lambda : 0
-        teardown = instance.teardown if "teardown" in dir(instance) else lambda : 0
-        return instance, setup, teardown
+        instance_dir = dir(instance)
+        if "setup" in instance_dir:
+            setup_method = instance.setup
+        elif "setup_method" in instance_dir:
+            setup_method = instance.setup_method
+        else:
+            setup_method = lambda : 0
+        if "teardown" in instance_dir:
+            teardown_method = instance.teardown
+        elif "teardown_method" in instance_dir:
+            teardown_method = instance.teardown_method
+        else:
+            teardown_method = lambda : 0
+        setup_class = instance.setup_class if "setup_class" in instance_dir else lambda : 0
+        teardown_class = instance.teardown_class if "teardown_class" in instance_dir else lambda : 0
+
+        return instance, setup_method, teardown_method, setup_class, teardown_class
 
     obj = None
+    obj, setup, teardown, setup_class, teardown_class = instantiate(cls_name, namespace)
+    setup_class()
     if methods:
-        obj, setup, teardown = instantiate(cls_name, namespace)
         for name in methods:
             func = obj.__getattribute__(name)
             if callable(func):
                 print("Running " + cls_name + "." + name)
                 setup();  func();  teardown()
     else:
-        obj, setup, teardown = instantiate(cls_name, namespace)
         for name in dir(obj):
             if name.lower().startswith("test"):
                 func = obj.__getattribute__(name)
                 if callable(func):
                     print("Running " + cls_name + "." + name)
                     setup();  func();  teardown()
+    teardown_class()
 
 
 def run_test_function(func_name, namespace):
