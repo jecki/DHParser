@@ -1600,6 +1600,8 @@ class EBNFCompiler(Compiler):
         rx = rx.replace(r'\/', '/')
         flags = self.re_flags | {'x'} if rx.find('\n') >= 0 else self.re_flags
         if flags:
+            if 'i' in flags:
+                rx = rx.replace('(?P<:Text>', '(?P<:IgnoreCase>')
             rx = "(?%s)%s" % ("".join(flags), rx)
         try:
             test_rx = RX_NAMED_GROUPS.sub('(', rx) if smartRE else rx

@@ -2624,6 +2624,18 @@ class TestOptimizations:
         assert not tree.errors
         assert tree.as_sxpr() == r'''(literal '"\""')'''
 
+    def test_ignore_case(self):
+        set_config_value('optimizations', frozenset({'alternative'}))
+        lang = r'''@ignorecase = True
+        voidElement     = '<' ( 'area' | 'base' | 'br' | 'col' | 'embed' | 'hr'
+                       | 'img' | 'input' | 'link' | 'meta' | 'param'
+                       | 'source' | 'track' | 'wbr' ) '>'
+        '''
+        parser = create_parser(lang)
+        assert parser.python_src__.find("SmartRE('(?i)(?P<:IgnoreCase>") >= 0
+        tree = parser('<BR>')
+        assert tree.as_sxpr() == '(voidElement (:IgnoreCase "<") (:IgnoreCase "BR") (:IgnoreCase ">"))'
+
 if __name__ == "__main__":
     from DHParser.testing import runner
     runner("", globals())
