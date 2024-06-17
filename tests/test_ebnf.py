@@ -2677,12 +2677,14 @@ class TestOptimizations:
         EOF = !/./
         """
         parser = create_parser(numbers)
-        print(parser.python_src__)
+        # print(parser.python_src__)
         tree = parser("2 3 4")
         assert not tree.errors
         tree = parser("2 X 3 Y 4")
         assert len(tree.errors) == 2
-        print(tree.as_sxpr())
+        nd = tree.pick(':RegExp', reverse=True)
+        assert nd.content != "4"  # :RegExp was not reduced!!!
+        # print(tree.as_sxpr())
 
     def test_sequence4(self):
         set_config_value('optimizations', frozenset({'sequence'}))

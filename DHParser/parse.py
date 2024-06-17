@@ -3355,7 +3355,7 @@ class SmartRE(RegExp, CombinedParser):  # TODO: turn this into a CombinedParser
                 results = tuple(Node(name, content)
                                 for name, content in zip(self.group_names, values)
                                 if content is not None
-                                   and (((not self.disposable or content)
+                                   and (((not self.disposable or content)  # TODO: Must be group.disposable!!!
                                          and name != KEEP_COMMENTS_PTYPE)
                                         or content.strip()))
                 for i, nd in enumerate(results, start=1):  nd._pos = match.start(i)
