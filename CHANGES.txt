@@ -1,13 +1,17 @@
 DHParser Version 1.7.3
 ......................
 
-
-
+- optional speed optimizations (experimental!) that
+  work by compiling certain parts of the grammar
+  to regular expressions.
+- serializations for xast and unist ("ndst") added.
+  See https://github.com/syntax-tree/unist
+  and https://github.com/syntax-tree/xast
 
 DHParser Version 1.7.2 (22.2.2024)
 ..................................
 
-- removed unnecessary directories from pyproject.tompl, e.g.
+- removed unnecessary directories from pyproject.toml, e.g.
   tests, documentation_src... These are not required for
   running DHParser and can always be obtained from git
 - comments inside insignificant whitespace can now be retained

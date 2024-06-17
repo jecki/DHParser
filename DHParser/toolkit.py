@@ -1121,7 +1121,7 @@ def compile_python_object(python_src: str, catch_obj="DSLGrammar") -> Any:
 @functools.lru_cache()
 def linebreaks(text: Union[StringView, str]) -> List[int]:
     """
-    Returns a list of indices all line breaks in the text.
+    Returns a list of the indices of all line breaks in the text.
     """
     assert isinstance(text, (StringView, str)), \
         "Type %s of `text` is not a string type!" % str(type(text))

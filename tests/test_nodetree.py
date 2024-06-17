@@ -932,6 +932,27 @@ class TestSerialization:
             .replace('\n', '').replace(' ', '') == \
             "<xml><empty/><empty>not_empty!?</empty><empty/></xml>"
 
+    def test_as_unist(self):
+        tree = parse_sxpr('(BelegText (Anker "interdico_1") (BelegLemma "inter.|ticente") (TEXT ", (") '
+         '(Anker "interdico_2") (BelegLemma "inter.|titente") (L " ") (Zusatz "var. l.") '
+         '(TEXT ") Deo."))')
+        xast = tree.as_xast()
+        obj = json.loads(xast)
+        assert obj['name'] == "BelegText"
+        assert len(obj['children']) == 8
+        tree.with_pos(0)
+        xast = tree.as_xast()
+        obj = json.loads(xast)
+        assert list(obj['position']['start'].values()) == [1, 1, 0]
+        assert list(obj['position']['end'].values()) == [1, 68, 67]
+        ndst = tree.as_ndst()
+        obj = json.loads(ndst)
+        assert obj['type'] == 'BelegText'
+        assert obj['children'][0]['value'] == "interdico_1"
+        assert list(obj['position']['start'].values()) == [1, 1, 0]
+        assert list(obj['position']['end'].values()) == [1, 68, 67]
+
+
 
 class TestSegementExtraction:
     def test_get_path(self):

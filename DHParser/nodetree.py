@@ -266,14 +266,11 @@ NO_PATH = deny
 def LEAF_NODE(nd: Node) -> bool:
     return not nd._children
 
-
 def BRANCH_NODE(nd: Node) -> bool:
     return nd._children
 
-
 def LEAF_PATH(path: Path) -> bool:
     return not path[-1]._children
-
 
 def BRANCH_PATH(path: Path) -> bool:
     return path[-1]._children
@@ -378,6 +375,7 @@ def create_path_match_function(criterion: PathSelector) -> PathMatchFunction:
 RX_IS_SXPR = re.compile(r'\s*\(')
 RX_IS_XML = re.compile(r'\s*<')
 RX_ATTR_NAME = re.compile(r'[\w.:-]')
+
 
 def flatten_sxpr(sxpr: str, threshold: int = -1) -> str:
     """
@@ -1736,6 +1734,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         def opening(node: Node) -> str:
             """Returns the opening string for the representation of `node`."""
+            nonlocal lbreaks
             txt = [left_bracket, node.name]
             # s += " '(pos %i)" % node.add_pos
             # txt.append(str(id(node)))  # for debugging
@@ -2092,6 +2091,65 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                           indent=indent, ensure_ascii=ensure_ascii,
                           separators=(', ', ': ') if indent is not None else (',', ':'))
 
+
+    def as_unist_obj(self, flavor: str = "xast", lbreaks: List[int] = []) -> Dict:
+        """Returns tree as JSON-Object conforming to the
+        `xast <https://github.com/syntax-tree/xast>`_-Specifictaion.
+        In order to get the actual xast, the returned JSON-object
+        needs to be serialized."""
+
+        if self._pos >= 0 and not lbreaks:
+            lbreaks = linebreaks(self.content)
+
+        if flavor == 'xast':
+            unist_obj = {'type': 'root' if isinstance(self, RootNode) else 'element',
+                         'name': self.name}
+        else:
+            assert flavor == "ndst"
+            unist_obj = {'type': self.name}
+        if self._pos >= 0:
+            l, c = line_col(lbreaks, self.pos)
+            start = {'line': l, 'column': c, 'offset': self.pos}
+        if self.has_attr():
+            unist_obj['attributes'] = {k: str(v) for k, v in node.attr}
+        if self.children:
+            unist_obj['children'] = [child.as_unist_obj(flavor, lbreaks) for child in self.children]
+            if self._pos >= 0:
+                end = unist_obj['children'][-1]['position']['end']
+        else:
+            if flavor == 'xast':
+                unist_obj['children'] = [{'type': 'text', 'value': self.content}]
+            else:
+                unist_obj['value'] = self.content
+            if self._pos >= 0:
+                offset = self.pos + self.strlen()
+                l, c = line_col(lbreaks, offset)
+                end = {'line': l, 'column': c, 'offset': offset}
+        if self._pos >= 0:
+            unist_obj['position'] = {'start': start, 'end': end}
+        return unist_obj
+
+    def as_xast(self, indent: Optional[int] = 2) -> str:
+        """Serializes the tree as XML-Abstract-Syntax-Tree following the
+        `xast <https://github.com/syntax-tree/xast>`_ -Specification.
+
+        :param indent: number of spaces for indentation
+        """
+        xast_obj = self.as_unist_obj(flavor='xast')
+        return json.dumps(xast_obj, indent=indent, 
+                          separators=(', ', ': ') if indent is not None else (',', ':'))
+
+    def as_ndst(self, indent: Optional[int] = 2) -> str:
+        """Serializes the tree as Abstract-Syntax-Tree following the
+        `unist <https://github.com/syntax-tree/unist>`_ -Specification.
+
+        :param indent: number of spaces for indentation
+        """
+        xast_obj = self.as_unist_obj(flavor='ndst')
+        return json.dumps(xast_obj, indent=indent,
+                          separators=(', ', ': ') if indent is not None else (',', ':'))
+
+
     # serialization meta-method ###
 
     @cython.locals(vsize=cython.int, i=cython.int, threshold=cython.int)
@@ -2146,6 +2204,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return self.as_json(indent=2, as_dict=True, include_pos=False)
         elif switch in ('indented', 'tree'):
             return self.as_tree()
+        elif switch == 'ndst':
+            return self.as_ndst()
+        elif switch == 'xast':
+            return self.as_xast()
         else:
             s = how if how == switch else (how + '/' + switch)
             raise ValueError('Unknown serialization "%s". Allowed values are either: %s or : %s'

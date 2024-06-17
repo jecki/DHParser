@@ -466,11 +466,16 @@ CONFIG_PRESET['infinite_loop_warning'] = True
 #                  ordered dicts! This could result in the misrepresentation
 #                  of data by JSON parsers that are not aware of the order
 #                  of entries in dictionaries. (e.g. Python < 3.6)
+# 'ndst'         - nodetree-syntax-tree: a JSON-variant following the
+#                  unist-Specification (https://github.com/syntax-tree/unist).
+# 'ndst'         - a JSON-Variant for XML-syntax-trees following the
+#                  xast-Specification (https://github.com/syntax-tree/xast).
 # Default values: "compact" for concrete syntax trees and "XML" for abstract
 #                 syntax trees and "sxpr" (read "S-Expression") for any other
 #                 kind of tree.
-_serializations = frozenset({'XML', 'HTML', 'json', 'indented', 'tree',
-                             'S-expression', 'sxpr', 'SXML', 'SXML1', 'SXML2'})
+_serializations = frozenset({'XML', 'HTML', 'json', 'dict.json', 'indented', 'tree',
+                             'S-expression', 'sxpr', 'SXML', 'SXML1', 'SXML2',
+                             'xast', 'ndst'})
 CONFIG_PRESET['CST_serialization'] = 'sxpr'
 CONFIG_PRESET['AST_serialization'] = 'sxpr'
 CONFIG_PRESET['default_serialization'] = 'sxpr'
