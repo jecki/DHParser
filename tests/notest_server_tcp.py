@@ -433,6 +433,7 @@ class TestLanguageServer:
         stop_tcp_server('127.0.0.1', TEST_PORT)
         if self.p is not None:
             self.p.join()
+            self.p = None
         if self.DEBUG:
             from DHParser import log
             log.suspend_logging()
@@ -441,6 +442,7 @@ class TestLanguageServer:
         stop_tcp_server('127.0.0.1', TEST_PORT)
         if self.p is not None:
             self.p.join()
+            self.p = None
         self.lsp = LSP()
         lsp_table = gen_lsp_table(self.lsp, prefix='lsp_')
         self.p = spawn_tcp_server('127.0.0.1', TEST_PORT, (lsp_table, frozenset(), frozenset()))

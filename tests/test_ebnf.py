@@ -1686,6 +1686,7 @@ class TestSyntaxExtensions:
     def test_any_char(self):
         lang = 'doc = "A".'
         parser = create_parser(lang)
+        print(parser.python_src__)
         st = parser('A翿')
         assert st.as_sxpr() == '(doc (:Text "A") (:AnyChar "翿"))'
 
@@ -2635,6 +2636,20 @@ class TestOptimizations:
         assert parser.python_src__.find("SmartRE('(?i)(?P<:IgnoreCase>") >= 0
         tree = parser('<BR>')
         assert tree.as_sxpr() == '(voidElement (:IgnoreCase "<") (:IgnoreCase "BR") (:IgnoreCase ">"))'
+
+    def test_sequence(self):
+        set_config_value('optimizations', frozenset({'sequence'}))
+        lang = '''@reduction = merge
+        doc = "a" "b" "c"'''
+        parser = create_parser(lang)
+        assert parser.python_src__.find("SmartRE('(?P<:Text>abc)',") >= 0
+        assert parser('abc').as_sxpr() == '(doc "abc")'
+
+        lang = '''@reduction = merge
+        doc = ("a"|"b") ("c"|"d")'''
+        parser = create_parser(lang)
+        assert parser.python_src__.find("SmartRE('(?P<:Text>(?:a|b)(?:c|d))',") >= 0
+        assert parser('ad').as_sxpr() == '(doc "ad")'
 
 if __name__ == "__main__":
     from DHParser.testing import runner

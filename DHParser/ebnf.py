@@ -2752,6 +2752,10 @@ class EBNFCompiler(Compiler):
                 if self.directives.reduction > REDUCTION['none']:
                     pattern = self.check_rx(node, pattern, smartRE=True)
                     return f"{self.P['SmartRE']}({repr(pattern)}, {repr(content)})"
+                    if self.directives.reduction < REDUCTION['merge_leaves']:
+                        self.tree.new_error(
+                            node, 'Optimization of sequence implicitly assumes @reduction = merge'
+                            ' for the optimized part!', WARNING)
                 else:
                     self.tree.new_error(
                         node, 'Cannot optimize alternatives if @reduction is none', NOTICE)
@@ -2830,7 +2834,35 @@ class EBNFCompiler(Compiler):
         return tuple(filtered_children), custom_args
 
 
+    def smartRE_sequence(self, node) -> Tuple[str, str]:
+        if any(nd.name == TOKEN_PTYPE and nd.content == "§" for nd in node.children):
+            raise ValueError('Cannot optimize sequences with mandatory marker!')
+        rxps, rep_strs = [], []
+        for nd in node.children:
+            rxp, repr_str = self.custom_compile(nd, self.find_smartRE_method)
+            rxps.append((nd, rxp))
+            rep_strs.append(repr_str)
+        groups = self.group_rxps(rxps)
+        packages = [g[0] + ''.join(rx for rx in g[1]) + (")" if g[0] else "") for g in groups]
+        return ''.join(packages), ''.join(rep_strs)
+
+
     def on_sequence(self, node) -> str:
+        if 'sequence' in self.optimizations:
+            try:
+                pattern, content = self.smartRE_sequence(node)
+                if self.directives.reduction > REDUCTION['none']:
+                    pattern = self.check_rx(node, pattern, smartRE=True)
+                    return f"{self.P['SmartRE']}({repr(pattern)}, {repr(content)})"
+                    if self.directives.reduction < REDUCTION['merge_leaves']:
+                        self.tree.new_error(
+                            node, 'Optimization of sequence implicitly assumes @reduction = merge'
+                            ' for the optimized part!', WARNING)
+                else:
+                    self.tree.new_error(
+                        node, 'Cannot optimize sequence if @reduction is none', NOTICE)
+            except (AttributeError, ValueError):
+                pass
         filtered_result, custom_args = self._error_customization(node)
         mock_node = Node(node.name, filtered_result)
         return self.non_terminal(mock_node, 'Series', custom_args)
@@ -2974,6 +3006,10 @@ class EBNFCompiler(Compiler):
 
     def on_oneormore(self, node) -> str:
         return self.non_terminal(node, 'OneOrMore')
+
+
+    def smartRE_group(self, node) -> Tuple[str,str]:
+        return self.custom_compile(node.children[0], self.find_smartRE_method)
 
 
     def on_group(self, node) -> str:
