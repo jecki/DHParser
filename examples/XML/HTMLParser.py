@@ -109,7 +109,7 @@ class HTMLGrammar(Grammar):
     element = Forward()
     source_hash__ = "a9e0431e6f53afd18202f8923fcf668e"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:$.)|(?:NameStartChar$|Misc$|PubidChars$|VersionNum$|EOF$|prolog$|BOM$|tagContent$|EncName$|PubidCharsSingleQuoted$|CData$|CommentChars$|NameChars$|Reference$)')
+    disposable__ = re.compile('(?:$.)|(?:PubidCharsSingleQuoted$|Misc$|EncName$|NameChars$|NameStartChar$|CommentChars$|PubidChars$|tagContent$|Reference$|VersionNum$|EOF$|prolog$|BOM$|CData$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'tagContent': [('', "syntax error in tag-name of opening or empty tag:  {1}")],
@@ -134,12 +134,12 @@ class HTMLGrammar(Grammar):
     PubidChars = RegExp("(?i)(?:\\x20|\\x0D|\\x0A|[a-zA-Z0-9]|[-'()+,./:=?;!*#@$_%])+")
     PubidCharsSingleQuoted = RegExp('(?i)(?:\\x20|\\x0D|\\x0A|[a-zA-Z0-9]|[-()+,./:=?;!*#@$_%])+')
     CDSect = Series(Drop(IgnoreCase('<![CDATA[')), CData, Drop(IgnoreCase(']]>')))
-    NameStartChar = RegExp('(?ix)_|:|[A-Z]|[a-z]\n                   |[\\u00C0-\\u00D6]|[\\u00D8-\\u00F6]|['
+    NameStartChar = RegExp('(?xi)_|:|[A-Z]|[a-z]\n                   |[\\u00C0-\\u00D6]|[\\u00D8-\\u00F6]|['
        '\\u00F8-\\u02FF]\n                   |[\\u0370-\\u037D]|[\\u037F-\\u1FFF]|[\\u20'
        '0C-\\u200D]\n                   |[\\u2070-\\u218F]|[\\u2C00-\\u2FEF]|[\\u3001-'
        '\\uD7FF]\n                   |[\\uF900-\\uFDCF]|[\\uFDF0-\\uFFFD]\n               '
        '    |[\\U00010000-\\U000EFFFF]')
-    NameChars = RegExp('(?ix)(?:_|:|-|\\.|[A-Z]|[a-z]|[0-9]\n                   |\\u00B7|[\\u0300-\\u03'
+    NameChars = RegExp('(?xi)(?:_|:|-|\\.|[A-Z]|[a-z]|[0-9]\n                   |\\u00B7|[\\u0300-\\u03'
        '6F]|[\\u203F-\\u2040]\n                   |[\\u00C0-\\u00D6]|[\\u00D8-\\u00F6]|['
        '\\u00F8-\\u02FF]\n                   |[\\u0370-\\u037D]|[\\u037F-\\u1FFF]|[\\u20'
        '0C-\\u200D]\n                   |[\\u2070-\\u218F]|[\\u2C00-\\u2FEF]|[\\u3001-'
@@ -158,14 +158,14 @@ class HTMLGrammar(Grammar):
     content = Series(Option(CharData), ZeroOrMore(Series(Alternative(element, Reference, CDSect, PI, Comment), Option(CharData))))
     Attribute = Series(Name, dwsp__, Drop(IgnoreCase('=')), dwsp__, AttValue, mandatory=2)
     ETag = Series(Drop(IgnoreCase('</')), Name, dwsp__, Drop(IgnoreCase('>')), mandatory=1)
-    tagContent = Series(NegativeLookahead(RegExp('(?i)[/!?]')), Name, ZeroOrMore(Series(dwsp__, Attribute)), dwsp__, Lookahead(SmartRE('(?i)>|/>', '">"|"/>"')), mandatory=1)
+    tagContent = Series(NegativeLookahead(RegExp('(?i)[/!?]')), Name, ZeroOrMore(Series(dwsp__, Attribute)), dwsp__, Lookahead(Alternative(Drop(IgnoreCase('>')), Drop(IgnoreCase('/>')))), mandatory=1)
     STag = Series(Drop(IgnoreCase('<')), tagContent, Drop(IgnoreCase('>')))
-    voidElement = Series(Drop(IgnoreCase('<')), Lookahead(SmartRE('(?i)area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr', '"area"|"base"|"br"|"col"|"embed"|"hr"|"img"|"input"|"link"|"meta"|"param"|"source"|"track"|"wbr"')), tagContent, Drop(IgnoreCase('>')))
+    voidElement = Series(Drop(IgnoreCase('<')), Lookahead(Alternative(Drop(IgnoreCase('area')), Drop(IgnoreCase('base')), Drop(IgnoreCase('br')), Drop(IgnoreCase('col')), Drop(IgnoreCase('embed')), Drop(IgnoreCase('hr')), Drop(IgnoreCase('img')), Drop(IgnoreCase('input')), Drop(IgnoreCase('link')), Drop(IgnoreCase('meta')), Drop(IgnoreCase('param')), Drop(IgnoreCase('source')), Drop(IgnoreCase('track')), Drop(IgnoreCase('wbr')))), tagContent, Drop(IgnoreCase('>')))
     emptyElement = Series(Drop(IgnoreCase('<')), tagContent, Drop(IgnoreCase('/>')))
     BOM = Drop(RegExp('(?i)[\\ufeff]|[\\ufffe]|[\\u0000feff]|[\\ufffe0000]'))
     ExternalID = Alternative(Series(Drop(IgnoreCase('SYSTEM')), dwsp__, SystemLiteral, mandatory=1), Series(Drop(IgnoreCase('PUBLIC')), dwsp__, PubidLiteral, dwsp__, SystemLiteral, mandatory=1))
     doctypedecl = Series(Drop(IgnoreCase('<!DOCTYPE')), dwsp__, Name, Option(Series(dwsp__, ExternalID)), dwsp__, Drop(IgnoreCase('>')), mandatory=2)
-    SDDecl = Series(dwsp__, Drop(IgnoreCase('standalone')), dwsp__, Drop(IgnoreCase('=')), dwsp__, Alternative(Series(Drop(IgnoreCase("\'")), SmartRE('(?i)(?P<:Text>yes|no)', '`yes`|`no`'), Drop(IgnoreCase("\'"))), Series(Drop(IgnoreCase('"')), SmartRE('(?i)(?P<:Text>yes|no)', '`yes`|`no`'), Drop(IgnoreCase('"')))))
+    SDDecl = Series(dwsp__, Drop(IgnoreCase('standalone')), dwsp__, Drop(IgnoreCase('=')), dwsp__, Alternative(Series(Drop(IgnoreCase("\'")), Alternative(IgnoreCase("yes"), IgnoreCase("no")), Drop(IgnoreCase("\'"))), Series(Drop(IgnoreCase('"')), Alternative(IgnoreCase("yes"), IgnoreCase("no")), Drop(IgnoreCase('"')))))
     EncName = RegExp('(?i)[A-Za-z][A-Za-z0-9._\\-]*')
     EncodingDecl = Series(dwsp__, Drop(IgnoreCase('encoding')), dwsp__, Drop(IgnoreCase('=')), dwsp__, Alternative(Series(Drop(IgnoreCase("\'")), EncName, Drop(IgnoreCase("\'"))), Series(Drop(IgnoreCase('"')), EncName, Drop(IgnoreCase('"')))))
     VersionNum = RegExp('(?i)[0-9]+\\.[0-9]+')

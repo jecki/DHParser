@@ -80,7 +80,7 @@ class XMLGrammar(Grammar):
     element = Forward()
     source_hash__ = "c78a8dd65a4438562ada48b2cc53cd5a"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:$.)|(?:NameChars$|Misc$|VersionNum$|EOF$|PubidCharsSingleQuoted$|NameStartChar$|CommentChars$|Reference$|PubidChars$|CData$|EncName$)')
+    disposable__ = re.compile('(?:$.)|(?:EncName$|NameChars$|Reference$|EOF$|CommentChars$|Misc$|CData$|NameStartChar$|PubidCharsSingleQuoted$|VersionNum$|PubidChars$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -133,7 +133,7 @@ class XMLGrammar(Grammar):
     VersionNum = RegExp('[0-9]+\\.[0-9]+')
     ExternalID = Alternative(Series(Drop(Text('SYSTEM')), dwsp__, SystemLiteral, mandatory=1), Series(Drop(Text('PUBLIC')), dwsp__, PubidLiteral, dwsp__, SystemLiteral, mandatory=1))
     doctypedecl = Series(Drop(Text('<!DOCTYPE')), dwsp__, Name, RegExp('[~ ExternalID]'), dwsp__, Drop(Text('>')), mandatory=2)
-    SDDecl = Series(dwsp__, Drop(Text('standalone')), dwsp__, Drop(Text('=')), dwsp__, Alternative(Series(Drop(Text("\'")), SmartRE('(?P<:Text>yes|no)', '`yes`|`no`'), Drop(Text("\'"))), Series(Drop(Text('"')), SmartRE('(?P<:Text>yes|no)', '`yes`|`no`'), Drop(Text('"')))))
+    SDDecl = Series(dwsp__, Drop(Text('standalone')), dwsp__, Drop(Text('=')), dwsp__, Alternative(Series(Drop(Text("\'")), Alternative(Text("yes"), Text("no")), Drop(Text("\'"))), Series(Drop(Text('"')), Alternative(Text("yes"), Text("no")), Drop(Text('"')))))
     EncName = RegExp('[A-Za-z][A-Za-z0-9._\\-]*')
     EncodingDecl = Series(dwsp__, Drop(Text('encoding')), dwsp__, Drop(Text('=')), dwsp__, Alternative(Series(Drop(Text("\'")), EncName, Drop(Text("\'"))), Series(Drop(Text('"')), EncName, Drop(Text('"')))))
     VersionInfo = Series(dwsp__, Drop(Text('version')), dwsp__, Drop(Text('=')), dwsp__, Alternative(Series(Drop(Text("\'")), VersionNum, Drop(Text("\'"))), Series(Drop(Text('"')), VersionNum, Drop(Text('"')))))

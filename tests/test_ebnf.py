@@ -2633,7 +2633,7 @@ class TestOptimizations:
                        | 'source' | 'track' | 'wbr' ) '>'
         '''
         parser = create_parser(lang)
-        assert parser.python_src__.find("SmartRE('(?i)(?P<:IgnoreCase>") >= 0
+        assert parser.python_src__.find("SmartRE(f'(?i)(?P<:IgnoreCase>") >= 0
         tree = parser('<BR>')
         assert tree.as_sxpr() == '(voidElement (:IgnoreCase "<") (:IgnoreCase "BR") (:IgnoreCase ">"))'
 
@@ -2642,14 +2642,71 @@ class TestOptimizations:
         lang = '''@reduction = merge
         doc = "a" "b" "c"'''
         parser = create_parser(lang)
-        assert parser.python_src__.find("SmartRE('(?P<:Text>abc)',") >= 0
+        assert parser.python_src__.find("SmartRE(f'(?P<:Text>abc)',") >= 0
         assert parser('abc').as_sxpr() == '(doc "abc")'
 
         lang = '''@reduction = merge
         doc = ("a"|"b") ("c"|"d")'''
         parser = create_parser(lang)
-        assert parser.python_src__.find("SmartRE('(?P<:Text>(?:a|b)(?:c|d))',") >= 0
+        assert parser.python_src__.find("SmartRE(f'(?P<:Text>(?:a|b)(?:c|d))',") >= 0
         assert parser('ad').as_sxpr() == '(doc "ad")'
+
+        lang = '''@reduction = merge
+        doc = ("a"|"b") ("c"|"d") ("ef"|/gh/|"ij")'''
+        parser = create_parser(lang)
+        assert parser.python_src__.find("SmartRE(f'(?P<:Text>(?:a|b)(?:c|d))(?:(?P<:Text>ef)|(gh)|(?P<:Text>ij))',") >= 0
+        assert parser('bcgh').as_sxpr() == '(doc "bcgh")'
+
+    def test_sequence2(self):
+        set_config_value('optimizations', frozenset({'sequence', 'alternative'}))
+        lang='''
+        doc = `` 'A' | 'B' | 'C'
+        '''
+        parser = create_parser(lang)
+        assert parser.python_src__.find("SmartRE(f'(?P<:Text>)(?P<:Text>A)|(?P<:Text>B|C)',") >= 0
+        lang = "@reduction = merge_treetops" + lang
+        parser = create_parser(lang)
+        assert parser.python_src__.find("SmartRE(f'(?P<:Text>A|B|C)',")
+
+    def test_sequence3(self):
+        set_config_value('optimizations', frozenset({'sequence', 'alternative'}))
+        numbers = r"""@whitespace = vertical
+        document = { ~ number | error } ~ EOF
+        number = /[1-9]\d*/~
+        error  = !EOF @Error("»{1}« is not a valid Number!") /.*?(?=\s|$)/  # skip to next whitespace
+        EOF = !/./
+        """
+        parser = create_parser(numbers)
+        print(parser.python_src__)
+        tree = parser("2 3 4")
+        assert not tree.errors
+        tree = parser("2 X 3 Y 4")
+        assert len(tree.errors) == 2
+        print(tree.as_sxpr())
+
+    def test_sequence4(self):
+        set_config_value('optimizations', frozenset({'sequence'}))
+        lang = """@whitespace = linefeed
+            @ literalws = right
+            expression =  term  { ("+" | "-") term }
+            term       =  factor  { ("*" | "/") factor }
+            factor     =  constant | "("  expression  ")"
+            constant   =  digit { digit } [ ~ ]
+            digit      = /0/ | /1/ | /2/ | /3/ | /4/ | /5/ | /6/ | /7/ | /8/ | /9/ 
+            """
+        parser = create_parser(lang)
+
+    def test_sequence5(self):
+        set_config_value('optimizations', frozenset({'sequence', 'alternative'}))
+        lang = r"""
+        @reduction = merge
+        list = string [WS] { SEP [WS] string [WS] }
+        string = QUOT /[^"]*/ QUOT
+        SEP = `,` -> drop
+        WS = /\s+/ -> drop
+        QUOT = `"` -> hide
+        """
+        parser = create_parser(lang)
 
 if __name__ == "__main__":
     from DHParser.testing import runner

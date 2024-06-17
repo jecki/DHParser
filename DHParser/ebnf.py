@@ -245,7 +245,7 @@ from DHParser.compile import CompilerError, Compiler, CompilationResult, compile
 from DHParser.configuration import access_thread_locals, get_config_value, \
     NEVER_MATCH_PATTERN, ALLOWED_PRESET_VALUES
 from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_TOKEN_WARNING,\
-    REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, \
+    REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, NOTICE, \
     DIRECTIVE_FOR_NONEXISTANT_SYMBOL, UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING, \
     UNCONNECTED_SYMBOL_WARNING, REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES, \
     EMPTY_GRAMMAR_ERROR, MALFORMED_REGULAR_EXPRESSION, PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS, \
@@ -1254,6 +1254,25 @@ class EBNFDirectives:
         if symbols:
             pattern = '$|'.join(symbols) + '$'
             self.disposable = '(?:%s)|(?:%s)' % (self.disposable, pattern)
+
+
+def get_regex_group(rxp, expect_group: bool = True) -> Tuple[str, str]:
+    mb = matching_brackets(rxp, "(", ")", is_regex=True)
+    if (0, len(rxp) - 1) not in mb:
+        if expect_group:
+            raise AssertionError(f"Regex group exptected, not {rxp}")
+        else:
+            return '', ''
+    if rxp[1:3] == "?P":
+        m = RX_NAMED_GROUPS.match(rxp)
+        assert m, f"Malformed named group in: {rxp}"
+        return (("(" if m.group(1) == ":RegExp" else m.group(0)),
+                rxp[len(m.group(0)):-1])
+    elif rxp[1:3] == "?:":
+        return "", rxp[3:-1]
+    else:
+        assert not rxp[1:2] == "?", f"Unexpected group-type: {rxp}"
+        return "(", rxp[1:-1]
 
 
 class EBNFCompilerError(CompilerError):
@@ -2696,26 +2715,15 @@ class EBNFCompiler(Compiler):
         is_range = (0, b) in matching_brackets(rxp, "[", "]")
         return not (is_plain_text or is_group or is_range)
 
+    def fix_group(self, node, stripped_re: str) -> str:
+        rg = self.requires_group(node, stripped_re) and stripped_re.find('|') >= 0
+        return ''.join(["(?:", stripped_re, ")"]) if rg else stripped_re
 
     def group_rxps(self, rxps: List[Tuple[Node, str]]) -> List[Tuple[str, List[str]]]:
-        def get_group(rxp) -> Tuple[str, str]:
-            mb = matching_brackets(rxp, "(", ")", is_regex=True)
-            assert (0, len(rxp) - 1) in mb, rxp
-            if rxp[1:3] == "?P":
-                m = RX_NAMED_GROUPS.match(rxp)
-                assert m, f"Malformed named group in: {rxp}"
-                return (("(" if m.group(1) == ":RegExp" else m.group(0)),
-                        rxp[len(m.group(0)):-1])
-            elif rxp[1:3] == "?:":
-                return "", rxp[3:-1]
-            else:
-                assert not rxp[1:2] == "?", f"Unexpected group-type: {rxp}"
-                return "(", rxp[1:-1]
         packages = []
         for nd, rxp in rxps:
-            group_type, stripped_re = get_group(rxp)
-            requires_group = self.requires_group(nd, stripped_re) and stripped_re.find('|') >= 0
-            rx = ''.join(["(?:", stripped_re, ")"]) if requires_group else stripped_re
+            group_type, stripped_re = get_regex_group(rxp)
+            rx = self.fix_group(nd, stripped_re)
             if not packages:
                 packages.append((group_type, [rx]))
             elif group_type == packages[-1][0]:
@@ -2741,7 +2749,8 @@ class EBNFCompiler(Compiler):
                                 BAD_ORDER_OF_ALTERNATIVES)
         groups = self.group_rxps(rxps)
         packages = [g[0] + '|'.join(rx for rx in g[1]) + (")" if g[0] else "") for g in groups]
-        return '|'.join(packages), '|'.join(rep_strs)
+        expr = packages[0] if len(packages) == 1 else ''.join(["(?:", "|".join(packages), ")"])
+        return expr, '|'.join(rep_strs)
 
 
     def on_expression(self, node) -> str:
@@ -2750,12 +2759,9 @@ class EBNFCompiler(Compiler):
             try:
                 pattern, content = self.smartRE_expression(node)
                 if self.directives.reduction > REDUCTION['none']:
+                    if pattern[:3] == "(?:":  pattern = pattern[3:-1]
                     pattern = self.check_rx(node, pattern, smartRE=True)
-                    return f"{self.P['SmartRE']}({repr(pattern)}, {repr(content)})"
-                    if self.directives.reduction < REDUCTION['merge_leaves']:
-                        self.tree.new_error(
-                            node, 'Optimization of sequence implicitly assumes @reduction = merge'
-                            ' for the optimized part!', WARNING)
+                    return f"{self.P['SmartRE']}(f{repr(pattern)}, {repr(content)})"
                 else:
                     self.tree.new_error(
                         node, 'Cannot optimize alternatives if @reduction is none', NOTICE)
@@ -2840,11 +2846,27 @@ class EBNFCompiler(Compiler):
         rxps, rep_strs = [], []
         for nd in node.children:
             rxp, repr_str = self.custom_compile(nd, self.find_smartRE_method)
-            rxps.append((nd, rxp))
+            rxps.append(rxp)
             rep_strs.append(repr_str)
-        groups = self.group_rxps(rxps)
-        packages = [g[0] + ''.join(rx for rx in g[1]) + (")" if g[0] else "") for g in groups]
-        return ''.join(packages), ''.join(rep_strs)
+        if self.directives.reduction >= REDUCTION['merge_leaves'] \
+                or (self.directives.reduction >= REDUCTION['merge_treetops']
+                    and not any(re.match(r'\(?P<[^:]', r) for r in rxps)):
+            last_group, last_re = get_regex_group(rxps[0])
+            for i in range(1, len(rxps)):
+                this_group, stripped_re = get_regex_group(rxps[i])
+                if this_group == last_group and not re.match(r'\(?P<[^:]', this_group):
+                    if get_regex_group(rxps[i - 1], expect_group=False)[0] == last_group:
+                        last_rx = self.fix_group(node[i - 1], last_re)
+                        rxps[i - 1] = last_group + last_rx
+                    else:
+                        rxps[i - 1] = rxps[i - 1][:-1]
+                    rx = self.fix_group(node[i], stripped_re)
+                    rxps[i] = rx + ')'
+                last_group, last_re = this_group, stripped_re
+        expr = ''.join(rxps)
+        if get_regex_group(expr, expect_group=False) == ('', ''):
+            expr = ''.join(["(?:", *rxps, ")"])
+        return expr, ' '.join(rep_strs)
 
 
     def on_sequence(self, node) -> str:
@@ -2852,12 +2874,9 @@ class EBNFCompiler(Compiler):
             try:
                 pattern, content = self.smartRE_sequence(node)
                 if self.directives.reduction > REDUCTION['none']:
+                    if pattern[:3] == "(?:":  pattern = pattern[3:-1]
                     pattern = self.check_rx(node, pattern, smartRE=True)
-                    return f"{self.P['SmartRE']}({repr(pattern)}, {repr(content)})"
-                    if self.directives.reduction < REDUCTION['merge_leaves']:
-                        self.tree.new_error(
-                            node, 'Optimization of sequence implicitly assumes @reduction = merge'
-                            ' for the optimized part!', WARNING)
+                    return f"{self.P['SmartRE']}(f{repr(pattern)}, {repr(content)})"
                 else:
                     self.tree.new_error(
                         node, 'Cannot optimize sequence if @reduction is none', NOTICE)
@@ -3212,6 +3231,8 @@ class EBNFCompiler(Compiler):
             content = '"' + content[1:-1].replace('"', r'\"').replace(r"\'", r"'") + '"'
         assert content[:1] == '"' and content[-1:] == '"', content
         pattern = self.literal_rx(content[1:-1], left, right)
+        if left or right:
+            pattern = ''.join(["(?:", pattern, ")"])
         return pattern, content
 
     def on_literal(self, node: Node) -> str:

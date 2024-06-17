@@ -107,7 +107,7 @@ class XMLGrammar(Grammar):
     element = Forward()
     source_hash__ = "8d6e36596e09ecbaaeb13c25992c7dd6"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:$.)|(?:CommentChars$|EncName$|Misc$|prolog$|NameChars$|tagContent$|PubidCharsSingleQuoted$|VersionNum$|Reference$|PubidChars$|NameStartChar$|BOM$|EOF$|CData$)')
+    disposable__ = re.compile('(?:$.)|(?:CommentChars$|prolog$|EOF$|PubidChars$|VersionNum$|Misc$|BOM$|NameStartChar$|tagContent$|PubidCharsSingleQuoted$|CData$|EncName$|NameChars$|Reference$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'tagContent': [('', "syntax error in tag-name of opening or empty tag:  {1}")],
@@ -158,13 +158,13 @@ class XMLGrammar(Grammar):
     content = Series(Option(CharData), ZeroOrMore(Series(Alternative(element, Reference, CDSect, PI, Comment), Option(CharData))))
     Attribute = Series(Name, dwsp__, Drop(Text('=')), dwsp__, AttValue, mandatory=2)
     ETag = Series(Drop(Text('</')), Name, dwsp__, Drop(Text('>')), mandatory=1)
-    tagContent = Series(NegativeLookahead(RegExp('[/!?]')), Name, ZeroOrMore(Series(dwsp__, Attribute)), dwsp__, Lookahead(SmartRE('>|/>', '">"|"/>"')), mandatory=1)
+    tagContent = Series(NegativeLookahead(RegExp('[/!?]')), Name, ZeroOrMore(Series(dwsp__, Attribute)), dwsp__, Lookahead(Alternative(Drop(Text('>')), Drop(Text('/>')))), mandatory=1)
     STag = Series(Drop(Text('<')), tagContent, Drop(Text('>')))
     emptyElement = Series(Drop(Text('<')), tagContent, Drop(Text('/>')))
     BOM = Drop(RegExp('[\\ufeff]|[\\ufffe]|[\\u0000feff]|[\\ufffe0000]'))
     ExternalID = Alternative(Series(Drop(Text('SYSTEM')), dwsp__, SystemLiteral, mandatory=1), Series(Drop(Text('PUBLIC')), dwsp__, PubidLiteral, dwsp__, SystemLiteral, mandatory=1))
     doctypedecl = Series(Drop(Text('<!DOCTYPE')), dwsp__, Name, Option(Series(dwsp__, ExternalID)), dwsp__, Drop(Text('>')), mandatory=2)
-    SDDecl = Series(dwsp__, Drop(Text('standalone')), dwsp__, Drop(Text('=')), dwsp__, Alternative(Series(Drop(Text("\'")), SmartRE('(?P<:Text>yes|no)', '`yes`|`no`'), Drop(Text("\'"))), Series(Drop(Text('"')), SmartRE('(?P<:Text>yes|no)', '`yes`|`no`'), Drop(Text('"')))))
+    SDDecl = Series(dwsp__, Drop(Text('standalone')), dwsp__, Drop(Text('=')), dwsp__, Alternative(Series(Drop(Text("\'")), Alternative(Text("yes"), Text("no")), Drop(Text("\'"))), Series(Drop(Text('"')), Alternative(Text("yes"), Text("no")), Drop(Text('"')))))
     EncName = RegExp('[A-Za-z][A-Za-z0-9._\\-]*')
     EncodingDecl = Series(dwsp__, Drop(Text('encoding')), dwsp__, Drop(Text('=')), dwsp__, Alternative(Series(Drop(Text("\'")), EncName, Drop(Text("\'"))), Series(Drop(Text('"')), EncName, Drop(Text('"')))))
     VersionNum = RegExp('[0-9]+\\.[0-9]+')

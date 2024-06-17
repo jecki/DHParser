@@ -129,9 +129,9 @@ class miniXMLGrammar(Grammar):
     TagName = Capture(RegExp('\\w+'), zero_length_warning=True)
     ETag = Series(Drop(Text('</')), Pop(TagName), Drop(Text('>')), mandatory=2)
     STag = Series(Drop(Text('<')), TagName, Drop(Text('>')), mandatory=2)
-    STag_skip_1__ = SmartRE('([^<>]*>)', '/[^<>]*>/')
+    STag_skip_1__ = RegExp('[^<>]*>')
     document = Series(dwsp__, element, dwsp__, EOF, mandatory=3)
-    ETag_skip_1__ = SmartRE('([^<>]*)', '/[^<>]*/')
+    ETag_skip_1__ = RegExp('[^<>]*')
     element.set(Series(STag, content, ETag, mandatory=1))
     element_resume_1__ = Series(Pop(TagName, match_func=optional_last_value), Alternative(Lookahead(Series(Drop(Text('</')), Retrieve(TagName), Drop(Text('>')))), Series(Drop(Text('</')), RegExp('\\w+'), Drop(Text('>')))))
     resume_rules__ = {'element': [element_resume_1__]}
