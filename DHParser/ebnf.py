@@ -3032,7 +3032,11 @@ class EBNFCompiler(Compiler):
 
 
     def smartRE_group(self, node) -> Tuple[str,str]:
-        return self.custom_compile(node.children[0], self.find_smartRE_method)
+        assert len(node.children) == 1, node.as_sxpr()
+        rxp, rep_str = self.custom_compile(node.children[0], self.find_smartRE_method)
+        if get_regex_group(rxp, expect_group=False) == ('', ''):
+            rxp = ''.join(["(?:", rxp, ")"])
+        return rxp, rep_str
 
 
     def on_group(self, node) -> str:
