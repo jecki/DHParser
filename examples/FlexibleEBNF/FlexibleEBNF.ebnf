@@ -1,4 +1,4 @@
-# EBNF-Grammar in EBNF
+ # EBNF-Grammar in EBNF
 
 # This grammar is tuned for flexibility, that is, it supports as many
 # different flavors of EBNF as possible. However, this flexibility

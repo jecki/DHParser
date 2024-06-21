@@ -114,7 +114,7 @@ class XML_DTDGrammar(Grammar):
        '')
     Chars = RegExp('(?:\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-\\U0010FF'
        'FF])+')
-    CharRef = Alternative(SmartRE(f'(?:\\&\\#)([0-9]+)(?:;)', '"&#" /[0-9]+/ ";"'), SmartRE(f'(?:\\&\\#x)([0-9a-fA-F]+)(?:;)', '"&#x" /[0-9a-fA-F]+/ ";"'))
+    CharRef = Alternative(Series(Drop(Text('&#')), RegExp('[0-9]+'), Drop(Text(';'))), Series(Drop(Text('&#x')), RegExp('[0-9a-fA-F]+'), Drop(Text(';'))))
     CommentChars = RegExp('(?:(?!-)(?:\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-'
        '\\U0010FFFF]))+')
     PIChars = RegExp('(?:(?!\\?>)(?:\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U0001000'
@@ -152,7 +152,7 @@ class XML_DTDGrammar(Grammar):
     EntityRef = Series(Drop(Text('&')), Name, Drop(Text(';')))
     Reference = Alternative(EntityRef, CharRef)
     PubidLiteral = Alternative(Series(Drop(Text('"')), Option(PubidChars), Drop(Text('"'))), Series(Drop(Text("\'")), Option(PubidCharsSingleQuoted), Drop(Text("\'"))))
-    SystemLiteral = Alternative(SmartRE(f'(?:\\\\")([^"]*)(?:\\\\")', '"\\"" /[^"]*/ "\\""'), SmartRE(f"(?:')([^']*)(?:')", '"\'" /[^\']*/ "\'"'))
+    SystemLiteral = Alternative(Series(Drop(Text('"')), RegExp('[^"]*'), Drop(Text('"'))), Series(Drop(Text("\'")), RegExp("[^']*"), Drop(Text("\'"))))
     AttValue = Alternative(Series(Drop(Text('"')), ZeroOrMore(Alternative(RegExp('[^<&"]+'), Reference)), Drop(Text('"'))), Series(Drop(Text("\'")), ZeroOrMore(Alternative(RegExp("[^<&']+"), Reference)), Drop(Text("\'"))))
     EntityValue = Alternative(Series(Drop(Text('"')), ZeroOrMore(Alternative(RegExp('[^%&"]+'), PEReference, Reference)), Drop(Text('"'))), Series(Drop(Text("\'")), ZeroOrMore(Alternative(RegExp("[^%&']+"), PEReference, Reference)), Drop(Text("\'"))))
     content = Series(Option(CharData), ZeroOrMore(Series(Alternative(element, Reference, CDSect, PI, Comment), Option(CharData))))
@@ -194,7 +194,7 @@ class XML_DTDGrammar(Grammar):
     VersionNum = RegExp('[0-9]+\\.[0-9]+')
     VersionInfo = Series(dwsp__, Drop(Text('version')), dwsp__, Drop(Text('=')), dwsp__, Alternative(Series(Drop(Text("\'")), VersionNum, Drop(Text("\'"))), Series(Drop(Text('"')), VersionNum, Drop(Text('"')))))
     children = Series(Alternative(choice, seq), Option(Alternative(Drop(Text('?')), Drop(Text('*')), Drop(Text('+')))))
-    Mixed = Alternative(Series(Drop(Text('(')), dwsp__, Drop(Text('#PCDATA')), ZeroOrMore(Series(dwsp__, Drop(Text('|')), dwsp__, Name)), dwsp__, Drop(Text(')*'))), SmartRE(f'(?:\\()(?:{WSP_RE__})(?:\\#PCDATA)(?:{WSP_RE__})(?:\\))', '"(" ~ "#PCDATA" ~ ")"'))
+    Mixed = Alternative(Series(Drop(Text('(')), dwsp__, Drop(Text('#PCDATA')), ZeroOrMore(Series(dwsp__, Drop(Text('|')), dwsp__, Name)), dwsp__, Drop(Text(')*'))), Series(Drop(Text('(')), dwsp__, Drop(Text('#PCDATA')), dwsp__, Drop(Text(')'))))
     ANY = Text('ANY')
     EMPTY = Text('EMPTY')
     contentspec = Alternative(EMPTY, ANY, Mixed, children)
@@ -205,7 +205,7 @@ class XML_DTDGrammar(Grammar):
     ignoreSect = Series(Drop(Text('<![')), dwsp__, Drop(Text('IGNORE')), dwsp__, Drop(Text('[')), ignoreSectContents, Drop(Text(']]>')))
     includeSect = Series(Drop(Text('<![')), dwsp__, Drop(Text('INCLUDE')), dwsp__, Drop(Text('[')), extSubsetDecl, Drop(Text(']]>')))
     conditionalSect = Alternative(includeSect, ignoreSect)
-    SDDecl = SmartRE(f'(?:{WSP_RE__})(?:standalone)(?:{WSP_RE__})(?:=)(?:{WSP_RE__})(?:(?:\')(?P<:Text>yes|no)(?:\'))|(?:(?:\\\\")(?P<:Text>yes|no)(?:\\\\"))', '~ "standalone" ~ "=" ~ "\'" `yes`|`no` "\'"|"\\"" `yes`|`no` "\\""')
+    SDDecl = Series(dwsp__, Drop(Text('standalone')), dwsp__, Drop(Text('=')), dwsp__, Alternative(Series(Drop(Text("\'")), Alternative(Text("yes"), Text("no")), Drop(Text("\'"))), Series(Drop(Text('"')), Alternative(Text("yes"), Text("no")), Drop(Text('"')))))
     extSubset = Series(Option(TextDecl), extSubsetDecl)
     markupdecl = Alternative(elementdecl, AttlistDecl, EntityDecl, NotationDecl, PI, Comment)
     DeclSep = Alternative(PEReference, S)

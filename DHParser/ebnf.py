@@ -2559,11 +2559,11 @@ class EBNFCompiler(Compiler):
         drop_regexp = drop_clause + f'{self.P["RegExp"]}('
         drop_text = drop_clause + f'{self.P["Text"]}('
         if (parser_class == self.P["Series"] and node.name not in self.directives.drop
-            and len(arguments) <= 2
             and DROP_REGEXP in self.directives.drop and self.path[-2].name == "definition"
+            and len([arg for arg in arguments
+                     if arg not in EBNFCompiler.COMMENT_OR_WHITESPACE]) == 1
             and all((arg.startswith(drop_regexp) or arg.startswith(drop_text)
-                     or arg in EBNFCompiler.COMMENT_OR_WHITESPACE) for arg in arguments)
-                and any(arg in EBNFCompiler.COMMENT_OR_WHITESPACE for arg in arguments)):
+                     or arg in EBNFCompiler.COMMENT_OR_WHITESPACE) for arg in arguments)):
             arguments = [arg.replace(drop_clause, '').replace('))', ')') for arg in arguments]
         return parser_class + '(' + ', '.join(arguments) + ')'
 
@@ -2715,8 +2715,8 @@ class EBNFCompiler(Compiler):
                      or (not node.has_attr('literalws')
                          and not self.directives.literalws)))
         b = len(rxp) - 1
-        is_group = (0, b) in matching_brackets(rxp, "(", ")")
-        is_range = (0, b) in matching_brackets(rxp, "[", "]")
+        is_group = (0, b) in matching_brackets(rxp, "(", ")", is_regex=True)
+        is_range = (0, b) in matching_brackets(rxp, "[", "]", is_regex=True)
         return not (is_plain_text or is_group or is_range)
 
     def fix_group(self, node, stripped_re: str) -> str:
@@ -2746,19 +2746,23 @@ class EBNFCompiler(Compiler):
             rxp, repr_str = self.custom_compile(nd, self.find_smartRE_method)
             rxps.append((nd, rxp))
             rep_strs.append(repr_str)
-            if optional_nd is None and rxp[-2:] == '?)' and rxp[-3:-2] != '\\':
-                optional_nd = nd
-        if optional_nd and optional_nd is not node.children[-1]:
-            self.tree.new_error(optional_nd, 'Only the last alternative may be optional!',
-                                BAD_ORDER_OF_ALTERNATIVES)
         groups = self.group_rxps(rxps)
         packages = [g[0] + '|'.join(rx for rx in g[1]) + (")" if g[0] else "") for g in groups]
-        expr = packages[0] if len(packages) == 1 else ''.join(["(?:", "|".join(packages), ")"])
+        if len(packages) == 1:
+            expr = packages[0]
+            if (0, len(expr) - 1) not in matching_brackets(expr, "(", ")", is_regex=True):
+                expr = ''.join(["(?:", expr, ")"])
+        else:
+            expr = ''.join(["(?:", "|".join(packages), ")"])
         return expr, '|'.join(rep_strs)
 
 
     def on_expression(self, node) -> str:
         self.reorder_alternatives(node)
+        for nd in node.children[:-1]:
+            if nd.name in ('option', 'repetition'):
+                self.tree.new_error(nd, 'Only the very last alternative may be optional!',
+                                    BAD_ORDER_OF_ALTERNATIVES)
         if 'alternative' in self.optimizations:
             try:
                 pattern, content = self.smartRE_expression(node)
@@ -2775,10 +2779,6 @@ class EBNFCompiler(Compiler):
             # can only occur inside directives, because here expressions are not
             # necessarily replaced by their single child. (See AST-Transformation)
             return self.compile(node.children[0])
-        for nd in node.children[:-1]:
-            if nd.name in ('option', 'repetition'):
-                self.tree.new_error(nd, 'Only the very last alternative may be optional!',
-                                    BAD_ORDER_OF_ALTERNATIVES)
         return self.non_terminal(node, 'Alternative')
 
 
@@ -2848,8 +2848,15 @@ class EBNFCompiler(Compiler):
         if any(nd.name == TOKEN_PTYPE and nd.content == "§" for nd in node.children):
             raise ValueError('Cannot optimize sequences with mandatory marker!')
         rxps, rep_strs = [], []
+        undrop = len(self.path) >= 2 and self.path[-2].name == "definition" \
+                 and node.name not in self.directives.drop \
+                 and len([child for child in node.children if child.name != "whitespace"]) == 1 \
+                 and all(child.name in ('regexp', 'literal', 'plaintext', 'whitespace',
+                                        'char_range', 'char_ranges', 'character', 'any_char',
+                                        'range_chain') for child in node.children)
         for nd in node.children:
             rxp, repr_str = self.custom_compile(nd, self.find_smartRE_method)
+            if undrop and nd.name != "whitespace" and rxp[:3] == "(?:":  rxp = "(" + rxp[3:]
             rxps.append(rxp)
             rep_strs.append(repr_str)
         if self.directives.reduction >= REDUCTION['merge_leaves'] \
@@ -2864,8 +2871,8 @@ class EBNFCompiler(Compiler):
                         rxps[i - 1] = last_group + last_rx
                     else:
                         rxps[i - 1] = rxps[i - 1][:-1]
-                    rx = self.fix_group(node[i], stripped_re)
-                    rxps[i] = rx + ')'
+                    rxps[i] = self.fix_group(node[i], stripped_re)
+                    if this_group or i < len(rxps) - 1:  rxps[i] += ')'
                 last_group, last_re = this_group, stripped_re
         expr = ''.join(rxps)
         if get_regex_group(expr, expect_group=False) == ('', ''):
@@ -3235,10 +3242,7 @@ class EBNFCompiler(Compiler):
         possibly combined with adjacent whitespace containing comments.
         """
         content, left, right = self.prepare_literal(node)
-        if content[:1] == "'":
-            content = '"' + content[1:-1].replace('"', r'\"').replace(r"\'", r"'") + '"'
-        assert content[:1] == '"' and content[-1:] == '"', content
-        pattern = self.literal_rx(content[1:-1], left, right)
+        pattern = self.literal_rx(content[1:-1], left, right, escape_braces=True)
         if left or right:
             pattern = ''.join(["(?:", pattern, ")"])
         return pattern, content
@@ -3265,7 +3269,7 @@ class EBNFCompiler(Compiler):
 
     def smartRE_plaintext(self, node: Node) -> Tuple[str, str]:
         pattern = self.text_rx(node.content[1:-1], DROP_BACKTICKED)
-        return pattern, node.content
+        return pattern.replace('{', '{{').replace('}', '}}'), node.content
 
     def on_plaintext(self, node: Node) -> str:
         tk = escape_ctrl_chars(node.content)
@@ -3280,7 +3284,7 @@ class EBNFCompiler(Compiler):
     def smartRE_regexp(self, node: Node) -> Tuple[str, str]:
         arg = node.content
         pattern = f'(?:{arg})' if self.drop_on(DROP_REGEXP) else f'({arg})'
-        return pattern, f'/{arg}/'
+        return pattern.replace('{', '{{').replace('}', '}}'), f'/{arg}/'
 
     def on_regexp(self, node: Node) -> str:
         arg = node.content
@@ -3300,7 +3304,7 @@ class EBNFCompiler(Compiler):
         arg =  "|".join('[' + child.content + ']'
                         for child in node.children if child.name == "range_chain")
         pattern = f'(?:{arg})' if self.drop_on(DROP_REGEXP) else f'({arg})'
-        return pattern, f'/{arg}/'
+        return pattern.replace('{', '{{').replace('}', '}}'), f'/{arg}/'
 
     def on_char_ranges(self, node) -> str:
         node.result = "|".join('[' + child.content + ']'
@@ -3318,7 +3322,7 @@ class EBNFCompiler(Compiler):
         arg = re.sub(r"(?<!\\)'", r'\'', node.content)
         group = '(?:' if self.drop_on(DROP_REGEXP) else '('
         re_str = ''.join([group, '[', re.sub(r"(?<!\\)]", r'\]', arg), '])'])
-        return re_str, f'/[{arg}]/'
+        return re_str.replace('{', '{{').replace('}', '}}'), f'/[{arg}]/'
 
     def on_char_range(self, node) -> str:
         re_str, _ = self.smartRE_char_range(node)
@@ -3331,11 +3335,13 @@ class EBNFCompiler(Compiler):
 
 
     def on_range_desc(self, node) -> Node:
-        for child in node.children:
-            if child.name == 'character':
-                child.result = self.extract_character(child)
-            elif child.name == 'free_char':
-                child.result = self.extract_free_char(child)
+        if not node.has_attr('processed'):
+            for child in node.children:
+                if child.name == 'character':
+                    child.result = self.extract_character(child)
+                elif child.name == 'free_char':
+                    child.result = self.extract_free_char(child)
+            node.attr['processed'] = "1"
         return node
 
 
@@ -3359,7 +3365,7 @@ class EBNFCompiler(Compiler):
     def smartRE_character(self, node: Node) -> Tuple[str, str]:
         arg = f'[{self.extract_character(node)}]'
         pattern = f'(?:{arg})' if self.drop_on(DROP_REGEXP) else f'({arg})'
-        return pattern, f'/{arg}/'
+        return pattern.replace('{', '{{').replace('}', '}}'), f'/{arg}/'
 
     def on_character(self, node: Node) -> str:
         return f"{self.P['RegExp']}('[{self.extract_character(node)}]')"

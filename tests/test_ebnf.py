@@ -2658,6 +2658,23 @@ class TestOptimizations:
         assert parser.python_src__.find("SmartRE(f'(?P<:Text>(?:a|b)(?:c|d))(?:(?P<:Text>ef)|(gh)|(?P<:Text>ij))',") >= 0
         assert parser('bcgh').as_sxpr() == '(doc "bcgh")'
 
+    def test_complex_sequence(self):
+        set_config_value('optimizations', frozenset({'sequence', 'alternative'}))
+        lang = """@ whitespace  = /\s*/  
+        @ literalws   = none                 
+        @ comment     = //                   
+        @ ignorecase  = False                
+        @ reduction   = merge_treetops       
+        @ drop        = strings, whitespace
+
+        SDDecl = ~ 'standalone' ~ '=' ~ (("'" (`yes` | `no`) "'") | ('"' (`yes` | `no`) '"'))"""
+        parser = create_parser(lang)
+        #print(parser.python_src__)
+        tree = parser('''standalone="yes"''')
+        # for e in tree.errors:  print(e)
+        assert not tree.errors
+        assert tree.as_sxpr() == '(SDDecl "yes")'
+
     def test_sequence2(self):
         set_config_value('optimizations', frozenset({'sequence', 'alternative'}))
         lang='''
@@ -2763,20 +2780,67 @@ class TestOptimizations:
         '''
         parser = create_parser(lang)
 
-    def test_example_1(self):
+    def test_braces(self):
         set_config_value('optimizations', frozenset({'sequence', 'alternative'}))
-        lang = """@ whitespace  = /\s*/       # insignificant whitespace, signified by ~
-        @ literalws   = none                 # literals have no implicit whitespace
-        @ comment     = //                   # no implicit comments
-        @ ignorecase  = False                # literals and regular expressions are case-sensitive
-        @ reduction   = merge_treetops       # merge anonymous leaf-nodes
-        @ disposable  = BOM, Misc, NameStartChar, NameChars, CommentChars, PubidChars, prolog,
-                        PubidCharsSingleQuoted, VersionNum, EncName, Reference, CData, EOF, tagContent
-        @ drop        = strings, whitespace, BOM, EOF  # drop anonymous tokens, whitespace, EOF and BOM
-
-        SDDecl = ~ 'standalone' ~ '=' ~ (("'" (`yes` | `no`) "'") | ('"' (`yes` | `no`) '"'))"""
+        lang = r"""
+        free_char = /[^\n\[\]\\]/ | /\\[nrtfv`´'"(){}\[\]\/\\]/"""
         parser = create_parser(lang)
 
+    def test_braces2(self):
+        set_config_value('optimizations', frozenset({'sequence', 'alternative'}))
+        lang = r"""
+        tag = "begin{" | "end{" """
+        parser = create_parser(lang)
+
+
+    def test_expression_of_sequences(self):
+        set_config_value('optimizations', frozenset({'sequence', 'alternative'}))
+        lang = r"""@ whitespace  = /\s*/            
+        @ literalws   = none                
+        @ comment     = //              
+        @ ignorecase  = True                
+        @ reduction   = merge_treetops      
+        @ drop        = strings, whitespace
+        SystemLiteral   = '"' /[^"]*/ '"' | "'" /[^']*/ "'" """
+        parser = create_parser(lang)
+
+    def test_char_range(self):
+        set_config_value('optimizations', frozenset({'sequence', 'alternative'}))
+        save = get_config_value('syntax_variant')
+        set_config_value('syntax_variant', 'heuristic')
+        lang = r"""
+        Char <- [nrt´"\[\]\\] / !´\\´        
+        """
+        parser = create_parser(lang)
+        set_config_value('syntax_variant', save)
+
+    def test_keepdata(self):
+        set_config_value('optimizations', frozenset({'alternative', 'sequence'}))
+        lang = r"""@ literalws  = right
+        @ whitespace = /[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?/    # insignificant whitespace, including at most one linefeed
+        @ comment    = /%.*/                                # note: trailing linefeed is not part of the comment proper
+        @ reduction  = merge_treetops
+        @ disposable = /_\w+/
+        @ drop       = strings, backticked, whitespace, regexps
+        CMDNAME = /\\@?(?:(?![\d_])\w)+/~ """
+        parser = create_parser(lang)
+        # print(parser.python_src__)
+        tree = parser(r'\abc')
+        assert tree.as_sxpr() == r'(CMDNAME "\abc")'
+
+    def test_keepdata_plain(self):
+        set_config_value('optimizations', frozenset())
+        lang = r"""@ literalws  = right
+        @ whitespace = /[ \t]*(?:\n(?![ \t]*\n)[ \t]*)?/    # insignificant whitespace, including at most one linefeed
+        @ comment    = /%.*/                                # note: trailing linefeed is not part of the comment proper
+        @ reduction  = merge_treetops
+        @ disposable = /_\w+/
+        @ drop       = strings, backticked, whitespace, regexps
+        CMDNAME = /\\@?(?:(?![\d_])\w)+/~ """
+        parser = create_parser(lang)
+        # print(parser.python_src__)
+        tree = parser(r'\abc')
+        assert tree.as_sxpr() == r'(CMDNAME "\abc")'
 
 if __name__ == "__main__":
     from DHParser.testing import runner
