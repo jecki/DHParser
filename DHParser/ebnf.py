@@ -1253,7 +1253,10 @@ class EBNFDirectives:
             if re.match(self.disposable, s):  symbols.remove(s)
         if symbols:
             pattern = '$|'.join(symbols) + '$'
-            self.disposable = '(?:%s)|(?:%s)' % (self.disposable, pattern)
+            if self.disposable != NEVER_MATCH_PATTERN:
+                self.disposable = f'(?:{self.disposable})|(?:{pattern})'
+            else:
+                self.disposable = f'(?:{pattern})'
 
 
 def get_regex_group(rxp, expect_group: bool = True) -> Tuple[str, str]:
@@ -2161,6 +2164,7 @@ class EBNFCompiler(Compiler):
             try:
                 grammar_class = compile_python_object(
                     probe_src, (self.grammar_name or "DSL") + "Grammar")
+                # print(probe_src)
                 errors = grammar_class().static_analysis_errors__
                 python_src = python_src.replace(
                     'static_analysis_pending__ = [True]',
@@ -3360,7 +3364,7 @@ class EBNFCompiler(Compiler):
 
     def smartRE_any_char(self, node: Node) -> Tuple[str, str]:
         arg = r'.|\n'
-        pattern = f'(?:{arg})' if self.drop_on(DROP_REGEXP) else f'({arg})'
+        pattern = f'(?:{arg})' if self.drop_on(DROP_REGEXP) else f'(?P<:AnyChar>{arg})'
         return pattern, '/./'
 
     def on_any_char(self, node: Node) -> str:

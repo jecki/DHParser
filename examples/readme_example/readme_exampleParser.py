@@ -98,8 +98,8 @@ class readme_exampleGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    value = Series(RegExp('\\"[^"\\n]*\\"'), dwsp__)
-    key = Series(RegExp('\\w+'), dwsp__)
+    value = SmartRE(f'(\\"[^"\\n]*\\")(?:{WSP_RE__})', '/\\"[^"\\n]*\\"/ ~')
+    key = SmartRE(f'(\\w+)(?:{WSP_RE__})', '/\\w+/ ~')
     entry = Series(key, Series(Drop(Text("=")), dwsp__), value)
     key_store = Series(dwsp__, ZeroOrMore(entry))
     root__ = key_store

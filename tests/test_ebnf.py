@@ -194,11 +194,15 @@ class TestDirectives:
         assert str(st) == "A"
 
     def test_no_drop_clause_for_non_dropping_defs(self):
+        save = get_config_value('optimizations')
+        set_config_value('optimizations', frozenset())
         lang = r"""@drop = regexps
         CMDNAME    = /\\@?(?:(?![\d_])\w)+/~
         """
         parser = create_parser(lang)
+        set_config_value('optimizations', save)
         assert parser.python_src__.find('CMDNAME = Series(RegExp(') >= 0
+
 
     def test_drop_error_messages(self):
         lang = r'''
@@ -504,10 +508,10 @@ class TestEBNFParser:
         assert result.as_sxpr() == '(name (first_name "Arthur") (:RegExp " ") (last_name "Schopenhauer"))'
 
         ebnf = (r"""@disposable = name
-                name = /(?P<first_name>\w*)\s*(?P<last_name>\w*)/""")
+                name = /(?P<:first_name>\w*)\s*(?P<:last_name>\w*)/""")
         gr = create_parser(ebnf, 'SmartRETest')
         result = gr('Nietzsche')
-        assert result.as_sxpr() == '(first_name "Nietzsche")'
+        assert result.as_sxpr() == '(:first_name "Nietzsche")'
         result = gr('')
         assert result.as_sxpr() == '(:EMPTY)'
         result = gr('$$$')
@@ -1686,7 +1690,6 @@ class TestSyntaxExtensions:
     def test_any_char(self):
         lang = 'doc = "A".'
         parser = create_parser(lang)
-        print(parser.python_src__)
         st = parser('A翿')
         assert st.as_sxpr() == '(doc (:Text "A") (:AnyChar "翿"))'
 
@@ -2547,14 +2550,12 @@ class TestOptimizations:
     def test_repeated_groups(self):
         save = get_config_value('optimizations')
         set_config_value('optimizations', frozenset({'literal'}))
-
-        from DHParser.dsl import grammar_provider
         lang = '''
                @literalws = both
                doc = "AAA" '''
-
         parser = create_parser(lang)
         # print(parser.python_src__)
+        # TODO: This is a stub
 
         set_config_value('optimizations', save)
 
@@ -2682,6 +2683,7 @@ class TestOptimizations:
         assert not tree.errors
         tree = parser("2 X 3 Y 4")
         assert len(tree.errors) == 2
+        # print(tree.as_sxpr())
         nd = tree.pick(':RegExp', reverse=True)
         assert nd.content != "4"  # :RegExp was not reduced!!!
         # print(tree.as_sxpr())
@@ -2709,6 +2711,72 @@ class TestOptimizations:
         QUOT = `"` -> hide
         """
         parser = create_parser(lang)
+
+    def test_any_char(self):
+        set_config_value('optimizations', frozenset({'sequence', 'alternative'}))
+        lang = 'doc = "A".'
+        parser = create_parser(lang)
+        st = parser('A翿')
+        assert st.as_sxpr() == '(doc (:Text "A") (:AnyChar "翿"))'
+
+    def test_drop(self):
+        set_config_value('optimizations', frozenset({'sequence', 'alternative'}))
+        # set_config_value('optimizations', frozenset())
+        lang = r"""
+        @reduction = none
+        list = string [WS] { SEP [WS] string [WS] }
+        string = ((`'` | QUOT) -> drop) /[^"]*/ (`'` | QUOT)
+        SEP = (`,` -> drop)
+        WS = /\s+/ -> drop
+        QUOT = `"`
+        """
+        parser = create_parser(lang)
+
+    def test_macro_complex_case(self):
+        set_config_value('optimizations', frozenset({'sequence', 'alternative'}))
+        lang = r'''@ whitespace  = /[ \t]*/
+        @ reduction   = merge        
+        @ disposable  = WS, EOF, LINE, S
+        @ drop        = WS, EOF, backticked
+        document = main [WS] §EOF
+        $one_sec($level_sign, $sub_level) = [WS] $level_sign !`#` heading [blocks] { $sub_level }
+        $sec_seq($sec) = { [WS] $sec }+
+        main = $one_sec(`#`, sections)
+        sections = $sec_seq(section)
+        section = $one_sec(`##`, subsections)
+        subsections = $sec_seq(subsection)
+        subsection = $one_sec(`###`, subsubsections)
+        subsubsections = $sec_seq(subsubsection)
+        subsubsection = $one_sec(`####`, NEVER_MATCH)
+        heading = LINE
+        blocks = [WS] block { PARSEP block }
+        block  = !is_heading line { lf !is_heading line }
+          line = LINE
+          lf   = S
+        is_heading = /##?#?#?#?#?(?!#)/
+        LINE      = /[ \t]*[^\n]+/
+        WS        = /(?:[ \t]*\n)+/  # empty lines
+        S         = !PARSEP /\s+/
+        PARSEP    = /[ \t]*\n[ \t]*\n\s*/
+        NEVER_MATCH = /..(?<=^)/
+        EOF       =  !/./
+        '''
+        parser = create_parser(lang)
+
+    def test_example_1(self):
+        set_config_value('optimizations', frozenset({'sequence', 'alternative'}))
+        lang = """@ whitespace  = /\s*/       # insignificant whitespace, signified by ~
+        @ literalws   = none                 # literals have no implicit whitespace
+        @ comment     = //                   # no implicit comments
+        @ ignorecase  = False                # literals and regular expressions are case-sensitive
+        @ reduction   = merge_treetops       # merge anonymous leaf-nodes
+        @ disposable  = BOM, Misc, NameStartChar, NameChars, CommentChars, PubidChars, prolog,
+                        PubidCharsSingleQuoted, VersionNum, EncName, Reference, CData, EOF, tagContent
+        @ drop        = strings, whitespace, BOM, EOF  # drop anonymous tokens, whitespace, EOF and BOM
+
+        SDDecl = ~ 'standalone' ~ '=' ~ (("'" (`yes` | `no`) "'") | ('"' (`yes` | `no`) '"'))"""
+        parser = create_parser(lang)
+
 
 if __name__ == "__main__":
     from DHParser.testing import runner

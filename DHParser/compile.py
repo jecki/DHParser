@@ -343,8 +343,10 @@ class Compiler:
 
         compiler = self.find_compilation_method(node.name)
         self.path.append(node)
-        result = compiler(node)
-        self.path.pop()
+        try:
+            result = compiler(node)
+        finally:
+            self.path.pop()
         if self.has_attribute_visitors:
             self.visit_attributes(node)          
         if result is None and self.forbid_returning_None:
@@ -361,8 +363,10 @@ class Compiler:
                        find_compilation_method: Callable[[str], CompileMethod]) -> Any:
         compiler = find_compilation_method(node.name)
         self.path.append(node)
-        result = compiler(node)
-        self.path.pop()
+        try:
+            result = compiler(node)
+        finally:
+            self.path.pop()
         return result
 
 

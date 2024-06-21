@@ -113,7 +113,7 @@ class miniXMLGrammar(Grammar):
     """
     element = Forward()
     source_hash__ = "8e05bcabc837169bc9c8cf69fb18ea7e"
-    disposable__ = re.compile('(?:$.)|(?:EOF$)')
+    disposable__ = re.compile('(?:EOF$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -133,7 +133,7 @@ class miniXMLGrammar(Grammar):
     document = Series(dwsp__, element, dwsp__, EOF, mandatory=3)
     ETag_skip_1__ = RegExp('[^<>]*')
     element.set(Series(STag, content, ETag, mandatory=1))
-    element_resume_1__ = Series(Pop(TagName, match_func=optional_last_value), Alternative(Lookahead(Series(Drop(Text('</')), Retrieve(TagName), Drop(Text('>')))), Series(Drop(Text('</')), RegExp('\\w+'), Drop(Text('>')))))
+    element_resume_1__ = Series(Pop(TagName, match_func=optional_last_value), Alternative(Lookahead(Series(Drop(Text('</')), Retrieve(TagName), Drop(Text('>')))), SmartRE(f'(?:</)(\\w+)(?:>)', '"</" /\\w+/ ">"')))
     resume_rules__ = {'element': [element_resume_1__]}
     skip_rules__ = {'STag': [STag_skip_1__],
                     'ETag': [ETag_skip_1__]}

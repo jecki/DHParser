@@ -1370,6 +1370,15 @@ def ensure_drop_propagation(p: parser):
                 raise e
 
 
+def is_disposable(name: str, disposables: Set[str]|RxPatternType) -> bool:
+    if name[0:1] == ':':
+        return True
+    elif isinstance(disposables, AbstractSet):
+        return name in disposables
+    else:
+        return bool(re.match(disposables, name))
+
+
 class Grammar:
     r"""
     Class Grammar directs the parsing process and stores global state
@@ -1699,27 +1708,17 @@ class Grammar:
             cdict = cls.__dict__
             # cls.static_analysis_errors__ = []
             cls.parser_names__ = []
-            disposables = cls.disposable__
-            disposables_specified_as_set = isinstance(disposables, AbstractSet)
             for entry, parser in cdict.items():
                 if isinstance(parser, Parser) and entry not in RESERVED_PARSER_NAMES:
-                    if disposables_specified_as_set:
-                        anonymous = ":" if entry in disposables else ""
-                    else:
-                        anonymous = ":" if disposables.match(entry) else ""
+                    anonymous = ":" if is_disposable(entry, cls.disposable__) else ""
                     assert anonymous or not parser.drop_content, entry
                     if isinstance(parser, Forward):
                         if not cast(Forward, parser).parser.pname:
                             cast(Forward, parser).parser.name(anonymous + entry)
-                            # cast(Forward, parser).parser.pname = entry
-                            # cast(Forward, parser).parser.disposable = anonymous
                     else:
                         parser.name(anonymous + entry)
-                        # parser.pname = entry
-                        # parser.disposable = anonymous
                     cls.parser_names__.append(entry)
                     ensure_drop_propagation(parser)
-            # if cls != Grammar:
             cls.parser_initialization__ = ["done"]  # (over-)write subclass-variable
 
 
@@ -3304,7 +3303,7 @@ class SmartRE(RegExp, CombinedParser):  # TODO: turn this into a CombinedParser
     def __init__(self, pattern,
                  repr_str: str = '') -> None:
         self.repr_str = repr_str
-        self.group_names = None
+        self.groups: Optional[List[Tuple(str, bool)]] = None
         self.pattern = pattern if isinstance(pattern, str) else pattern.pattern
         super().__init__(pattern)
 
@@ -3320,9 +3319,12 @@ class SmartRE(RegExp, CombinedParser):  # TODO: turn this into a CombinedParser
             names[alias] = name
             pattern = pattern.replace(f'(?P<{name}>', f'(?P<{alias}>', 1)
         regexp = re.compile(pattern)
-        groups = {index: names[alias] for alias, index in regexp.groupindex.items()}
-        self.group_names = [groups.get(i, ":RegExp") for i in range(1, regexp.groups + 1)]
-        # pattern = re.sub(r'\(\?P<(\w+)>', '(', pattern)
+        realname = {index: names[alias] for alias, index in regexp.groupindex.items()}
+        self.groups = []
+        disposables = self.grammar.disposable__
+        for i in range(1, regexp.groups + 1):
+            name = realname.get(i, ":RegExp")
+            self.groups.append((name, is_disposable(name, disposables)))
         pattern = RX_NAMED_GROUPS.sub('(', pattern)
         self.regexp = re.compile(pattern)
 
@@ -3334,7 +3336,7 @@ class SmartRE(RegExp, CombinedParser):  # TODO: turn this into a CombinedParser
             regexp = self.pattern
         duplicate = self.__class__(regexp, self.repr_str)
         duplicate.pattern = self.pattern
-        duplicate.group_names = self.group_names
+        duplicate.groups = copy.deepcopy(self.groups, memo)
         copy_combined_parser_attrs(self, duplicate)
         return duplicate
 
@@ -3351,11 +3353,11 @@ class SmartRE(RegExp, CombinedParser):  # TODO: turn this into a CombinedParser
             if not self.disposable or any((content and len(content)) for content in values):
                 if self.drop_content:
                     return EMPTY_NODE, end
-                assert self.group_names is not None
+                assert self.groups is not None
                 results = tuple(Node(name, content)
-                                for name, content in zip(self.group_names, values)
+                                for (name, disposable), content in zip(self.groups, values)
                                 if content is not None
-                                   and (((not self.disposable or content)  # TODO: Must be group.disposable!!!
+                                   and (((not disposable or content)
                                          and name != KEEP_COMMENTS_PTYPE)
                                         or content.strip()))
                 for i, nd in enumerate(results, start=1):  nd._pos = match.start(i)
