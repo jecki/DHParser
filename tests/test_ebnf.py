@@ -2842,6 +2842,29 @@ class TestOptimizations:
         tree = parser(r'\abc')
         assert tree.as_sxpr() == r'(CMDNAME "\abc")'
 
+    def test_option(self):
+        set_config_value('optimizations', frozenset({'alternative', 'sequence'}))
+        lang = """EtymologieSprache = "anglosax." ["vet."] | "arab." | "bohem." ["vet."]
+                     | "byz." | "catal." | "dan." | "finnice"
+                     | "franc." ["vet." | "inf." "vet."] | "francog." ["vet."]
+                     | "francoprov."
+                     | "frisic." | "gall." | "germ." | "got." | "gr." ["byz."]
+                     | "hebr." | "hibern." | "hisp." ["vet."] | "hung." | "ital."
+                     | "lombard." | "langob."
+                     # | "lat."     # | "lat-klass." | "lat-mlw." | "lat-erschlossen"
+                     | "occ." ["vet."] | "pers." | "polon." ["vet."]
+                     | "port." | "prov." | "raetoroman."
+                     | "saxon" ["vet."]
+                     | "sard." | "sicil." | "slav." | "theod." ["inf."] ["vet."]
+                     | "turc."
+                     | "val." """
+        parser = create_parser(lang)
+        print(parser.python_src__)
+        tree = parser("theod. vet.")
+        for e in tree.errors_sorted:  print(e)
+        print(tree.as_sxpr())
+
+
 if __name__ == "__main__":
     from DHParser.testing import runner
     runner("", globals())
