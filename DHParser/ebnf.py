@@ -3021,7 +3021,7 @@ class EBNFCompiler(Compiler):
         rxp, rep_str = self.custom_compile(node.children[0], self.find_smartRE_method)
         if rxp[:3] == '(?:':
             stripped_re = rxp[3:-1]
-            if self.requires_group(node.children[0], stripped_re):
+            if not self.requires_group(node.children[0], stripped_re):
                 rxp = stripped_re
         return ''.join(['(?:', rxp, '?)']), ''.join(['[', rep_str, ']'])
 
@@ -3283,6 +3283,14 @@ class EBNFCompiler(Compiler):
 
     def smartRE_regexp(self, node: Node) -> Tuple[str, str]:
         arg = node.content
+        if arg.find('(?P<') < 0:
+            a = 0;  al = []
+            for b, _ in matching_brackets(arg, "(", ")", is_regex=True):
+                if arg[b + 1] != "?":
+                    al.append(arg[a:b + 1])
+                    a = b + 1
+            al.append(arg[a:len(arg)])
+            arg = '?:'.join(al)
         pattern = f'(?:{arg})' if self.drop_on(DROP_REGEXP) else f'({arg})'
         return pattern.replace('{', '{{').replace('}', '}}'), f'/{arg}/'
 
