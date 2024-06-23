@@ -3263,7 +3263,6 @@ class EBNFCompiler(Compiler):
         if left or right:
             args = ", ".join(item for item in (left, center, right) if item)
             return f'{self.P["Series"]}({args})'
-            # return 'Series(' + ", ".join(item for item in (left, center, right) if item) + ')'
         return center
 
 

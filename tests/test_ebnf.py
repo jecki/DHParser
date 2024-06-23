@@ -2534,14 +2534,14 @@ class TestOptimizations:
 
         set_config_value('optimizations', frozenset())
         parser = create_parser(lang)
-        assert parser.python_src__.find('SmartRE') < 0
+        assert parser.python_src__.find('SmartRE(') < 0
         tree = parser("AAA  ")
         assert tree.as_sxpr() == '(doc (:Text "AAA") (:Whitespace "  "))'
 
         grammar_provider.cache_clear()
         set_config_value('optimizations', frozenset({'literal'}))
         parser = create_parser(lang)
-        assert parser.python_src__.find('SmartRE') >= 0
+        assert parser.python_src__.find('SmartRE(') >= 0
         tree = parser("AAA  ")
         assert tree.as_sxpr() == '(doc (:Text "AAA") (:Whitespace "  "))'
 
@@ -2554,6 +2554,7 @@ class TestOptimizations:
                @literalws = both
                doc = "AAA" '''
         parser = create_parser(lang)
+        assert parser.python_src__.find('SmartRE(') >= 0
         # print(parser.python_src__)
         # TODO: This is a stub
 
@@ -2566,6 +2567,7 @@ class TestOptimizations:
         lang = '''@reduction = merge
         EXP = (`E`|`e`) [`+`|`-`] /[0-9]+/ '''
         parser = create_parser(lang)
+        assert parser.python_src__.find('SmartRE(') >= 0
         tree = parser('E+18')
         assert tree.as_sxpr() == '(EXP "E+18")'
         set_config_value('optimizations', save)
@@ -2576,6 +2578,7 @@ class TestOptimizations:
         set_config_value('syntax_variant', 'strict')
         lang = "Char ::= #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]"
         parser = create_parser(lang)
+        assert parser.python_src__.find('SmartRE(') >= 0
         st = parser('賌')
         assert st.as_sxpr() == '(Char "賌")', st.as_sxpr()
         set_config_value('syntax_variant', save_syn)
@@ -2586,7 +2589,7 @@ class TestOptimizations:
         keyword = "Open" | $close | /\w+/
         $close = "Close" '''
         parser = create_parser(lang)
-        assert parser.python_src__.rfind('SmartRE') >= 0, parser.python_src__
+        assert parser.python_src__.rfind('SmartRE(') >= 0, parser.python_src__
         assert parser('Close').as_sxpr() == '(keyword "Close")'
 
         lang = '@drop = $close\n' + lang
@@ -2599,7 +2602,7 @@ class TestOptimizations:
         lang = r'''lang = keyword /.*/
         keyword = "Open" | [/\w+/]'''
         parser = create_parser(lang)
-        assert parser.python_src__.rfind('SmartRE') >= 0, parser.python_src__
+        assert parser.python_src__.rfind('SmartRE(') >= 0, parser.python_src__
         tree = parser('#*?')
         assert not tree.errors
         assert tree.as_sxpr() == '(lang (keyword) (:RegExp "#*?"))'
@@ -2609,6 +2612,7 @@ class TestOptimizations:
         lang = r'''
             lang = "abcdefg" | /[^\d()]*(?=[\d(])/'''
         parser = create_parser(lang)
+        assert parser.python_src__.find('SmartRE(') >= 0
         tree = parser('abcdefg')
         assert not tree.errors
 
@@ -2622,6 +2626,7 @@ class TestOptimizations:
                    | /´(?:(?<!\\)\\´|[^´])*?´/        
         '''
         parser = create_parser(lang)
+        assert parser.python_src__.find('SmartRE(') >= 0
         tree = parser(r'"\""')
         assert not tree.errors
         assert tree.as_sxpr() == r'''(literal '"\""')'''
@@ -2669,7 +2674,7 @@ class TestOptimizations:
 
         SDDecl = ~ 'standalone' ~ '=' ~ (("'" (`yes` | `no`) "'") | ('"' (`yes` | `no`) '"'))"""
         parser = create_parser(lang)
-        #print(parser.python_src__)
+        assert parser.python_src__.find('SmartRE(') >= 0
         tree = parser('''standalone="yes"''')
         # for e in tree.errors:  print(e)
         assert not tree.errors
@@ -2695,7 +2700,7 @@ class TestOptimizations:
         EOF = !/./
         """
         parser = create_parser(numbers)
-        # print(parser.python_src__)
+        assert parser.python_src__.find('SmartRE(') >= 0
         tree = parser("2 3 4")
         assert not tree.errors
         tree = parser("2 X 3 Y 4")
@@ -2706,7 +2711,7 @@ class TestOptimizations:
         # print(tree.as_sxpr())
 
     def test_sequence4(self):
-        set_config_value('optimizations', frozenset({'sequence'}))
+        set_config_value('optimizations', frozenset({'alternative', 'sequence'}))
         lang = """@whitespace = linefeed
             @ literalws = right
             expression =  term  { ("+" | "-") term }
@@ -2716,9 +2721,10 @@ class TestOptimizations:
             digit      = /0/ | /1/ | /2/ | /3/ | /4/ | /5/ | /6/ | /7/ | /8/ | /9/ 
             """
         parser = create_parser(lang)
+        assert parser.python_src__.find('SmartRE(') >= 0
 
     def test_sequence5(self):
-        set_config_value('optimizations', frozenset({'sequence', 'alternative'}))
+        set_config_value('optimizations', frozenset({'sequence', 'alternative', 'literal'}))
         lang = r"""
         @reduction = merge
         list = string [WS] { SEP [WS] string [WS] }
@@ -2733,6 +2739,7 @@ class TestOptimizations:
         set_config_value('optimizations', frozenset({'sequence', 'alternative'}))
         lang = 'doc = "A".'
         parser = create_parser(lang)
+        assert parser.python_src__.find('SmartRE(') >= 0
         st = parser('A翿')
         assert st.as_sxpr() == '(doc (:Text "A") (:AnyChar "翿"))'
 
@@ -2785,13 +2792,14 @@ class TestOptimizations:
         lang = r"""
         free_char = /[^\n\[\]\\]/ | /\\[nrtfv`´'"(){}\[\]\/\\]/"""
         parser = create_parser(lang)
+        assert parser.python_src__.find('SmartRE(') >= 0
 
     def test_braces2(self):
         set_config_value('optimizations', frozenset({'sequence', 'alternative'}))
         lang = r"""
         tag = "begin{" | "end{" """
         parser = create_parser(lang)
-
+        assert parser.python_src__.find('SmartRE(') >= 0
 
     def test_expression_of_sequences(self):
         set_config_value('optimizations', frozenset({'sequence', 'alternative'}))
@@ -2803,6 +2811,7 @@ class TestOptimizations:
         @ drop        = strings, whitespace
         SystemLiteral   = '"' /[^"]*/ '"' | "'" /[^']*/ "'" """
         parser = create_parser(lang)
+        assert parser.python_src__.find('SmartRE(') >= 0
 
     def test_char_range(self):
         set_config_value('optimizations', frozenset({'sequence', 'alternative'}))
@@ -2824,7 +2833,7 @@ class TestOptimizations:
         @ drop       = strings, backticked, whitespace, regexps
         CMDNAME = /\\@?(?:(?![\d_])\w)+/~ """
         parser = create_parser(lang)
-        # print(parser.python_src__)
+        assert parser.python_src__.find('SmartRE(') >= 0
         tree = parser(r'\abc')
         assert tree.as_sxpr() == r'(CMDNAME "\abc")'
 
@@ -2838,7 +2847,6 @@ class TestOptimizations:
         @ drop       = strings, backticked, whitespace, regexps
         CMDNAME = /\\@?(?:(?![\d_])\w)+/~ """
         parser = create_parser(lang)
-        # print(parser.python_src__)
         tree = parser(r'\abc')
         assert tree.as_sxpr() == r'(CMDNAME "\abc")'
 
@@ -2847,6 +2855,7 @@ class TestOptimizations:
         lang = """@ literalws = right
         EtymologieSprache = "theod." ["inf."] ["vet."] """
         parser = create_parser(lang)
+        assert parser.python_src__.find('SmartRE(') >= 0
         tree = parser("theod. vet.")
         assert not tree.errors
         assert tree.as_sxpr() == '(EtymologieSprache (:Text "theod.") (:Whitespace " ") (:Text "vet."))'
@@ -2856,6 +2865,7 @@ class TestOptimizations:
         lang = """@ literalws = right
         ROEM_NORMAL = ~/(?!D[.|])(?![M][^\w])(?=[MDCLXVI])M*(C+[MD]|D?C*)(X+[CL]|L?X*)(I+[XV]|V?I*)(?=1|[^\w]|_)\.?/~ """
         parser = create_parser(lang)
+        assert parser.python_src__.find('SmartRE(') >= 0
         tree = parser("II.")
         assert tree.as_sxpr() == '(ROEM_NORMAL "II.")'
 
