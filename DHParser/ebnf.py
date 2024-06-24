@@ -1200,6 +1200,8 @@ class EBNFDirectives:
             be dropped during the parsing process, already.
     :ivar reduction: The reduction level (0-3) for early tree-reduction
             during the parsing stage.
+    :ivar optimizations: Selects optimizations, overriding configuration
+            value "optimizations".
     :ivar \_super\_ws: Cache for the "super whitespace" which
             is a regular expression that merges whitespace and
             comments. This property should only be accessed after
@@ -1207,7 +1209,7 @@ class EBNFDirectives:
             with the values parsed from the EBNF source.
     """
     __slots__ = ['whitespace', 'comment', 'literalws', 'tokens', 'filter', 'error', 'skip',
-                 'resume', 'disposable', 'drop', 'reduction', '_super_ws']
+                 'resume', 'disposable', 'drop', 'reduction', 'optimizations', '_super_ws']
 
     REPEATABLE_DIRECTIVES = {'tokens', 'preprocessor_tokens', 'disposable', 'drop'}
 
@@ -1223,6 +1225,7 @@ class EBNFDirectives:
         self.disposable = get_config_value('default_disposable_regexp')  # type: str
         self.drop = set()         # type: Set[str]
         self.reduction = FLATTEN  # type: int
+        self.optimizations = get_config_value('optimizations')  # type: FrozenSet[str]
         self._super_ws = None     # type: Optional[str]
 
     def __getitem__(self, key):
@@ -1266,16 +1269,31 @@ def get_regex_group(rxp, expect_group: bool = True) -> Tuple[str, str]:
             raise AssertionError(f"Regex group exptected, not {rxp}")
         else:
             return '', ''
-    if rxp[1:3] == "?P":
+    group_type = rxp[1:3]
+    if group_type == "?P":
         m = RX_NAMED_GROUPS.match(rxp)
         assert m, f"Malformed named group in: {rxp}"
         return (("(" if m.group(1) == ":RegExp" else m.group(0)),
                 rxp[len(m.group(0)):-1])
-    elif rxp[1:3] == "?:":
+    elif group_type == "?:":
         return "", rxp[3:-1]
+    elif group_type in ('?=', '?!'):
+        return "", rxp
     else:
         assert not rxp[1:2] == "?", f"Unexpected group-type: {rxp}"
         return "(", rxp[1:-1]
+
+
+def neutralize_unnamed_groups(rxp: str) -> str:
+    """Replaces unnamed groups by non-catching groups, i.e. (\w+) -> (?:w+)"""
+    a = 0;
+    al = []
+    for b, _ in matching_brackets(rxp, "(", ")", is_regex=True):
+        if rxp[b + 1] != "?":
+            al.append(rxp[a:b + 1])
+            a = b + 1
+    al.append(rxp[a:len(rxp)])
+    return '?:'.join(al)
 
 
 class EBNFCompilerError(CompilerError):
@@ -1482,7 +1500,6 @@ class EBNFCompiler(Compiler):
         self.consumed_custom_errors = set()    # type: Set[str]
         self.consumed_skip_rules = set()       # type: Set[str]
         self.P = {p: p for p in parser_names}  # type: Dict[str, str]
-        self.optimizations = get_config_value('optimizations')  # type: FrozenSet[str]
 
 
     @property
@@ -2096,8 +2113,7 @@ class EBNFCompiler(Compiler):
 
 
     def on_syntax(self, node: Node) -> str:
-        # update optimzations:
-        self.optimizations = get_config_value('optimizations')
+        self.directives.optimizations = get_config_value('optimizations')  # use possibly updated optimizations
 
         # drop the wrapping sequence node
         if len(node.children) == 1 and node.children[0].anonymous:
@@ -2431,6 +2447,20 @@ class EBNFCompiler(Compiler):
                                     code=REDECLARED_TOKEN_WARNING)
             self.directives.tokens |= tokens - redeclared
 
+        elif key == "optimizations":
+            values = frozenset(child.content.strip().lower() for child in node.children[1:])
+            allowed = ALLOWED_PRESET_VALUES['optimizations']
+            if len(values) == 1:
+                val = tuple(values)[0].lower()
+                if val == 'none':  values = frozenset()
+                elif val == 'some':  values = frozenset({'rearrange_alternative'})
+                elif val == 'all': values = allowed
+            if any(v not in allowed for v in values):
+                self.tree.new_error(
+                    node, f'Directive "optimizations" allows only "none", "some", "all" '
+                          f'or any subset of {set(allowed)} as values, not {values} .')
+            self.directives.optimizations = values
+
         elif key.endswith('_filter'):
             check_argnum()
             symbol = key[:-7]
@@ -2619,6 +2649,8 @@ class EBNFCompiler(Compiler):
 
     def smartRE_placeholder(self, node) -> Tuple[str, str]:
         code = self.on_macro(node)
+        if node.name == 'placeholder':
+            return '(?:ERROR)', 'ERROR while expanding placeholder'
         rxp, rep_str = self.custom_compile(node, self.find_smartRE_method)
         if code.startswith(self.P["Drop"]):
             if rxp[:1] == '(' and rxp[1:3] != "?:":
@@ -2763,7 +2795,7 @@ class EBNFCompiler(Compiler):
             if nd.name in ('option', 'repetition'):
                 self.tree.new_error(nd, 'Only the very last alternative may be optional!',
                                     BAD_ORDER_OF_ALTERNATIVES)
-        if 'alternative' in self.optimizations:
+        if 'alternative' in self.directives.optimizations:
             try:
                 pattern, content = self.smartRE_expression(node)
                 if self.directives.reduction > REDUCTION['none']:
@@ -2881,7 +2913,7 @@ class EBNFCompiler(Compiler):
 
 
     def on_sequence(self, node) -> str:
-        if 'sequence' in self.optimizations:
+        if 'sequence' in self.directives.optimizations:
             try:
                 pattern, content = self.smartRE_sequence(node)
                 if self.directives.reduction > REDUCTION['none']:
@@ -2938,10 +2970,25 @@ class EBNFCompiler(Compiler):
         return self.non_terminal(mock_node, 'Interleave', custom_args)
 
 
+    def smartRE_lookaround(self, node) -> Tuple[str]:
+        if len(node.children) != 2:
+            raise ValueError("Wrong number of arguments for lookaround operator!")
+        prefix = node.children[0].content
+        if prefix not in ('&', '!'):
+            raise ValueError(f'Can only optimize lookhead operators, but not "{prefix}".')
+        arg, rep_str = self.custom_compile(node.children[1], self.find_smartRE_method)
+        arg = RX_NAMED_GROUPS.sub('(?:', arg)
+        arg = neutralize_unnamed_groups(arg)
+        opening = "(?=" if prefix == "&" else "(?!"
+        if arg[0:3] == "(?:":
+            assert arg[-1] == ")"
+            arg = opening + arg[3:]
+        else:
+            arg = ''.join([opening, arg, ")"])
+        return arg, prefix + rep_str
+
+
     def on_lookaround(self, node: Node) -> str:
-        # assert node.children
-        # assert len(node.children) == 2, self.node.as_sxpr()
-        # assert node.children[0].name == 'flowmarker'
         if not node.children or len(node.children) != 2 \
                 or node.children[0].name != 'flowmarker':
             tree_dump = flatten_sxpr(node.as_sxpr())
@@ -2950,9 +2997,16 @@ class EBNFCompiler(Compiler):
                 + tree_dump, STRUCTURAL_ERROR_IN_AST)
             return 'Structural Error in AST: ' + tree_dump
         prefix = node.children[0].content
-        # arg_node = node.children[1]
-        node.result = node.children[1:]
         assert prefix in {'&', '!', '<-&', '<-!'}
+
+        if prefix in ('&', '!') and 'lookahead' in self.directives.optimizations:
+            try:
+                pattern, content = self.smartRE_lookaround(node)
+                pattern = self.check_rx(node, pattern, smartRE=True)
+                return f"{self.P['SmartRE']}(f{repr(pattern)}, {repr(content)})"
+            except (AttributeError, ValueError):
+                pass
+        node.result = node.children[1:]
 
         parser_class = self.PREFIX_TABLE[prefix]
         result = self.non_terminal(node, parser_class)
@@ -3250,7 +3304,7 @@ class EBNFCompiler(Compiler):
     def on_literal(self, node: Node) -> str:
         # TODO: Tests
         content, left, right = self.prepare_literal(node)
-        if 'literal' in self.optimizations and (left or right):
+        if 'literal' in self.directives.optimizations and (left or right):
             q = content[0]
             literal = self.literal_rx(content[1:-1], left, right, escape_braces=True)
             rxp = ''.join(['fr', q, literal, q])
@@ -3283,13 +3337,7 @@ class EBNFCompiler(Compiler):
     def smartRE_regexp(self, node: Node) -> Tuple[str, str]:
         arg = node.content
         if arg.find('(?P<') < 0:
-            a = 0;  al = []
-            for b, _ in matching_brackets(arg, "(", ")", is_regex=True):
-                if arg[b + 1] != "?":
-                    al.append(arg[a:b + 1])
-                    a = b + 1
-            al.append(arg[a:len(arg)])
-            arg = '?:'.join(al)
+            arg = neutralize_unnamed_groups(arg)
         pattern = f'(?:{arg})' if self.drop_on(DROP_REGEXP) else f'({arg})'
         return pattern.replace('{', '{{').replace('}', '}}'), f'/{arg}/'
 

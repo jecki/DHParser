@@ -115,7 +115,7 @@ class XML_DTDGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    EOF = NegativeLookahead(RegExp('.'))
+    EOF = SmartRE(f'(?!.)', '!/./')
     S = RegExp('\\s+')
     Char = RegExp('\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-\\U0010FFFF]'
        '')
@@ -149,7 +149,7 @@ class XML_DTDGrammar(Grammar):
                           '|[\\U00010000-\\U000EFFFF])+')
     Comment = Series(Drop(Text('<!--')), ZeroOrMore(Alternative(CommentChars, RegExp('-(?!-)'))), Drop(Text('-->')))
     Name = Series(NameStartChar, Option(NameChars))
-    PITarget = Series(NegativeLookahead(RegExp('X|xM|mL|l')), Name)
+    PITarget = Series(SmartRE(f'(?!X|xM|mL|l)', '!/X|xM|mL|l/'), Name)
     PI = Series(Drop(Text('<?')), PITarget, RegExp('[~ PIChars]'), Drop(Text('?>')))
     Misc = OneOrMore(Alternative(Comment, PI, S))
     Names = Series(Name, ZeroOrMore(Series(RegExp(' '), Name)))

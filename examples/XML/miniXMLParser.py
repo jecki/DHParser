@@ -123,7 +123,7 @@ class miniXMLGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    EOF = Drop(NegativeLookahead(RegExp('.')))
+    EOF = Drop(SmartRE(f'(?!.)', '!/./'))
     CharData = RegExp('(?:(?!\\]\\]>)[^<&])+')
     content = Series(Option(CharData), ZeroOrMore(Series(Alternative(element, comment__), Option(CharData))))
     TagName = Capture(RegExp('\\w+'), zero_length_warning=True)

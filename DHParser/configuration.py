@@ -645,10 +645,11 @@ CONFIG_PRESET['delimiter_set'] = {
 # Default value: empty frozen set
 ALLOWED_PRESET_VALUES['optimizations'] = frozenset({
     'literal',
+    'lookahead',
     'alternative',
     'rearrange_alternative',  # this is also implied by 'alternative'
     'sequence'})
-CONFIG_PRESET['optimizations'] = frozenset()  # frozenset({'alternative', 'sequence'})
+CONFIG_PRESET['optimizations'] = frozenset({'literal', 'lookahead', 'alternative', 'sequence'})
 
 
 ########################################################################

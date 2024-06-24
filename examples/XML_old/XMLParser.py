@@ -80,7 +80,7 @@ class XMLGrammar(Grammar):
     element = Forward()
     source_hash__ = "c78a8dd65a4438562ada48b2cc53cd5a"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:Reference$|NameStartChar$|PubidChars$|VersionNum$|NameChars$|EncName$|CData$|EOF$|PubidCharsSingleQuoted$|CommentChars$|Misc$)')
+    disposable__ = re.compile('(?:Reference$|EOF$|PubidCharsSingleQuoted$|Misc$|NameChars$|EncName$|VersionNum$|PubidChars$|NameStartChar$|CommentChars$|CData$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -89,7 +89,7 @@ class XMLGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    EOF = NegativeLookahead(RegExp('.'))
+    EOF = SmartRE(f'(?!.)', '!/./')
     S = RegExp('\\s+')
     CharRef = SmartRE(f'(?:\\&\\#)([0-9]+)(?:;)|(?:\\&\\#x)([0-9a-fA-F]+)(?:;)', "'&#' /[0-9]+/ ';'|'&#x' /[0-9a-fA-F]+/ ';'")
     CommentChars = RegExp('(?:(?!-)(?:\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-'
@@ -117,7 +117,7 @@ class XMLGrammar(Grammar):
                           '|[\\U00010000-\\U000EFFFF])+')
     Comment = Series(Drop(Text('<!--')), ZeroOrMore(Alternative(CommentChars, RegExp('-(?!-)'))), dwsp__, Drop(Text('-->')))
     Name = Series(NameStartChar, Option(NameChars))
-    PITarget = Series(NegativeLookahead(RegExp('X|xM|mL|l')), Name)
+    PITarget = Series(SmartRE(f'(?!X|xM|mL|l)', '!/X|xM|mL|l/'), Name)
     PI = Series(Drop(Text('<?')), PITarget, RegExp('[~ PIChars]'), Drop(Text('?>')))
     Misc = OneOrMore(Alternative(Comment, PI, S))
     EntityRef = Series(Drop(Text('&')), Name, Drop(Text(';')))

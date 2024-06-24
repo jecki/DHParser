@@ -107,7 +107,7 @@ class XMLGrammar(Grammar):
     element = Forward()
     source_hash__ = "8d6e36596e09ecbaaeb13c25992c7dd6"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:EOF$|Reference$|prolog$|Misc$|CData$|PubidChars$|VersionNum$|BOM$|tagContent$|NameStartChar$|EncName$|NameChars$|PubidCharsSingleQuoted$|CommentChars$)')
+    disposable__ = re.compile('(?:NameChars$|EOF$|CommentChars$|PubidCharsSingleQuoted$|BOM$|EncName$|CData$|VersionNum$|Misc$|prolog$|PubidChars$|tagContent$|NameStartChar$|Reference$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'tagContent': [('', "syntax error in tag-name of opening or empty tag:  {1}")],
@@ -119,7 +119,7 @@ class XMLGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    EOF = Drop(NegativeLookahead(RegExp('.')))
+    EOF = Drop(SmartRE(f'(?!.)', '!/./'))
     S = RegExp('\\s+')
     CharRef = SmartRE(f'(?:\\&\\#)([0-9]+)(?:;)|(?:\\&\\#x)([0-9a-fA-F]+)(?:;)', "'&#' /[0-9]+/ ';'|'&#x' /[0-9a-fA-F]+/ ';'")
     CommentChars = RegExp('(?:(?!-)(?:\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-'
@@ -147,7 +147,7 @@ class XMLGrammar(Grammar):
                           '|[\\U00010000-\\U000EFFFF])+')
     Comment = Series(Drop(Text('<!--')), ZeroOrMore(Alternative(CommentChars, RegExp('-(?!-)'))), dwsp__, Drop(Text('-->')))
     Name = Series(NameStartChar, Option(NameChars))
-    PITarget = Series(NegativeLookahead(RegExp('X|xM|mL|l')), Name)
+    PITarget = Series(SmartRE(f'(?!X|xM|mL|l)', '!/X|xM|mL|l/'), Name)
     PI = Series(Drop(Text('<?')), PITarget, Option(Series(dwsp__, PIChars)), Drop(Text('?>')))
     Misc = OneOrMore(Alternative(Comment, PI, S))
     EntityRef = Series(Drop(Text('&')), Name, Drop(Text(';')))
@@ -158,7 +158,7 @@ class XMLGrammar(Grammar):
     content = Series(Option(CharData), ZeroOrMore(Series(Alternative(element, Reference, CDSect, PI, Comment), Option(CharData))))
     Attribute = Series(Name, dwsp__, Drop(Text('=')), dwsp__, AttValue, mandatory=2)
     ETag = Series(Drop(Text('</')), Name, dwsp__, Drop(Text('>')), mandatory=1)
-    tagContent = Series(NegativeLookahead(RegExp('[/!?]')), Name, ZeroOrMore(Series(dwsp__, Attribute)), dwsp__, Lookahead(SmartRE(f'>|/>', "'>'|'/>'")), mandatory=1)
+    tagContent = Series(SmartRE(f'(?![/!?])', '!/[\\/!?]/'), Name, ZeroOrMore(Series(dwsp__, Attribute)), dwsp__, SmartRE(f'(?=>|/>)', "&'>'|'/>'"), mandatory=1)
     STag = Series(Drop(Text('<')), tagContent, Drop(Text('>')))
     emptyElement = Series(Drop(Text('<')), tagContent, Drop(Text('/>')))
     BOM = Drop(RegExp('[\\ufeff]|[\\ufffe]|[\\u0000feff]|[\\ufffe0000]'))

@@ -4288,8 +4288,10 @@ class Series(ErrorCatchingNary):
                     if parser.node_name[0] == ":" and qq in ('""', "''", "``"):
                         parser_str = f'»{parser_str[1:-1]}«'
                     reloc, node = self.get_reentry_point(location_)
+                    lookahead = isinstance(parser, Lookahead) \
+                                or (isinstance(parser, SmartRE) and parser.pattern[0:3] in ("(?=", "(?!"))
                     error, location_ = self.mandatory_violation(
-                        location_, isinstance(parser, Lookahead), parser_str, reloc, node)
+                        location_, lookahead, parser_str, reloc, node)
                     # check if parsing of the series can be resumed somewhere
                     if reloc >= 0:
                         nd, location_ = parser(location_)  # try current parser again

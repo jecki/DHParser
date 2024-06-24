@@ -109,7 +109,7 @@ class HTMLGrammar(Grammar):
     element = Forward()
     source_hash__ = "a9e0431e6f53afd18202f8923fcf668e"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:EncName$|CData$|NameChars$|NameStartChar$|CommentChars$|PubidChars$|EOF$|tagContent$|VersionNum$|BOM$|prolog$|Misc$|PubidCharsSingleQuoted$|Reference$)')
+    disposable__ = re.compile('(?:NameChars$|Reference$|BOM$|EOF$|prolog$|tagContent$|PubidChars$|PubidCharsSingleQuoted$|Misc$|VersionNum$|EncName$|CommentChars$|CData$|NameStartChar$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'tagContent': [('', "syntax error in tag-name of opening or empty tag:  {1}")],
@@ -121,7 +121,7 @@ class HTMLGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    EOF = Drop(NegativeLookahead(RegExp('(?i).')))
+    EOF = Drop(SmartRE(f'(?i)(?!.)', '!/./'))
     S = RegExp('(?i)\\s+')
     CharRef = SmartRE(f'(?i)(?:\\&\\#)([0-9]+)(?:;)|(?:\\&\\#x)([0-9a-fA-F]+)(?:;)', "'&#' /[0-9]+/ ';'|'&#x' /[0-9a-fA-F]+/ ';'")
     CommentChars = RegExp('(?i)(?:(?!-)(?:\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U000100'
@@ -134,12 +134,12 @@ class HTMLGrammar(Grammar):
     PubidChars = RegExp("(?i)(?:\\x20|\\x0D|\\x0A|[a-zA-Z0-9]|[-'()+,./:=?;!*#@$_%])+")
     PubidCharsSingleQuoted = RegExp('(?i)(?:\\x20|\\x0D|\\x0A|[a-zA-Z0-9]|[-()+,./:=?;!*#@$_%])+')
     CDSect = Series(Drop(IgnoreCase('<![CDATA[')), CData, Drop(IgnoreCase(']]>')))
-    NameStartChar = RegExp('(?ix)_|:|[A-Z]|[a-z]\n                   |[\\u00C0-\\u00D6]|[\\u00D8-\\u00F6]|['
+    NameStartChar = RegExp('(?xi)_|:|[A-Z]|[a-z]\n                   |[\\u00C0-\\u00D6]|[\\u00D8-\\u00F6]|['
        '\\u00F8-\\u02FF]\n                   |[\\u0370-\\u037D]|[\\u037F-\\u1FFF]|[\\u20'
        '0C-\\u200D]\n                   |[\\u2070-\\u218F]|[\\u2C00-\\u2FEF]|[\\u3001-'
        '\\uD7FF]\n                   |[\\uF900-\\uFDCF]|[\\uFDF0-\\uFFFD]\n               '
        '    |[\\U00010000-\\U000EFFFF]')
-    NameChars = RegExp('(?ix)(?:_|:|-|\\.|[A-Z]|[a-z]|[0-9]\n                   |\\u00B7|[\\u0300-\\u03'
+    NameChars = RegExp('(?xi)(?:_|:|-|\\.|[A-Z]|[a-z]|[0-9]\n                   |\\u00B7|[\\u0300-\\u03'
        '6F]|[\\u203F-\\u2040]\n                   |[\\u00C0-\\u00D6]|[\\u00D8-\\u00F6]|['
        '\\u00F8-\\u02FF]\n                   |[\\u0370-\\u037D]|[\\u037F-\\u1FFF]|[\\u20'
        '0C-\\u200D]\n                   |[\\u2070-\\u218F]|[\\u2C00-\\u2FEF]|[\\u3001-'
@@ -147,7 +147,7 @@ class HTMLGrammar(Grammar):
        '    |[\\U00010000-\\U000EFFFF])+')
     Comment = Series(Drop(IgnoreCase('<!--')), ZeroOrMore(Alternative(CommentChars, RegExp('(?i)-(?!-)'))), dwsp__, Drop(IgnoreCase('-->')))
     Name = Series(NameStartChar, Option(NameChars))
-    PITarget = Series(NegativeLookahead(RegExp('(?i)X|xM|mL|l')), Name)
+    PITarget = Series(SmartRE(f'(?i)(?!X|xM|mL|l)', '!/X|xM|mL|l/'), Name)
     PI = Series(Drop(IgnoreCase('<?')), PITarget, Option(Series(dwsp__, PIChars)), Drop(IgnoreCase('?>')))
     Misc = OneOrMore(Alternative(Comment, PI, S))
     EntityRef = Series(Drop(IgnoreCase('&')), Name, Drop(IgnoreCase(';')))
@@ -158,9 +158,9 @@ class HTMLGrammar(Grammar):
     content = Series(Option(CharData), ZeroOrMore(Series(Alternative(element, Reference, CDSect, PI, Comment), Option(CharData))))
     Attribute = Series(Name, dwsp__, Drop(IgnoreCase('=')), dwsp__, AttValue, mandatory=2)
     ETag = Series(Drop(IgnoreCase('</')), Name, dwsp__, Drop(IgnoreCase('>')), mandatory=1)
-    tagContent = Series(NegativeLookahead(RegExp('(?i)[/!?]')), Name, ZeroOrMore(Series(dwsp__, Attribute)), dwsp__, Lookahead(SmartRE(f'(?i)>|/>', "'>'|'/>'")), mandatory=1)
+    tagContent = Series(SmartRE(f'(?i)(?![/!?])', '!/[\\/!?]/'), Name, ZeroOrMore(Series(dwsp__, Attribute)), dwsp__, SmartRE(f'(?i)(?=>|/>)', "&'>'|'/>'"), mandatory=1)
     STag = Series(Drop(IgnoreCase('<')), tagContent, Drop(IgnoreCase('>')))
-    voidElement = Series(Drop(IgnoreCase('<')), Lookahead(SmartRE(f'(?i)area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr', "'area'|'base'|'br'|'col'|'embed'|'hr'|'img'|'input'|'link'|'meta'|'param'|'source'|'track'|'wbr'")), tagContent, Drop(IgnoreCase('>')))
+    voidElement = Series(Drop(IgnoreCase('<')), SmartRE(f'(?i)(?=area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)', "&'area'|'base'|'br'|'col'|'embed'|'hr'|'img'|'input'|'link'|'meta'|'param'|'source'|'track'|'wbr'"), tagContent, Drop(IgnoreCase('>')))
     emptyElement = Series(Drop(IgnoreCase('<')), tagContent, Drop(IgnoreCase('/>')))
     BOM = Drop(RegExp('(?i)[\\ufeff]|[\\ufffe]|[\\u0000feff]|[\\ufffe0000]'))
     ExternalID = Alternative(Series(Drop(IgnoreCase('SYSTEM')), dwsp__, SystemLiteral, mandatory=1), Series(Drop(IgnoreCase('PUBLIC')), dwsp__, PubidLiteral, dwsp__, SystemLiteral, mandatory=1))

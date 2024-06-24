@@ -2337,6 +2337,7 @@ class TestMacros:
         assert not tree.errors
 
     def test_macro_errors(self):
+        import sys
         lang = '''@reduction = merge
         doc = ~ $undefined(`,`) { `,`~ $phrase(`,`) } 
         $phrase($separator) = /[^.,;]+/ { !$separator /[.,;]/ /[^,.;]/+ }   
@@ -2868,6 +2869,9 @@ class TestOptimizations:
         assert parser.python_src__.find('SmartRE(') >= 0
         tree = parser("II.")
         assert tree.as_sxpr() == '(ROEM_NORMAL "II.")'
+
+    def test_lookahead(self):
+        set_config_value('optimizations', frozenset({'alternative', 'sequence', 'lookahead'}))
 
 if __name__ == "__main__":
     from DHParser.testing import runner

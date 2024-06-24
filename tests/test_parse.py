@@ -1147,7 +1147,7 @@ class TestPopRetrieve:
         assert not st.errors, str(st.errors)
         assert st.equals(st1)
         st = parser('')
-        # for e in st.errors: print(e)
+        for e in st.errors: print(e)
         assert "EOF = !/./ :?defsign expected" in str(st.errors), st.as_sxpr()
 
 
