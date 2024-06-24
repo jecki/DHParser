@@ -2872,6 +2872,12 @@ class TestOptimizations:
 
     def test_lookahead(self):
         set_config_value('optimizations', frozenset({'alternative', 'sequence', 'lookahead'}))
+        lang = """
+        doc = "Hallo" & "?" """
+        parser = create_parser(lang)
+        tree = parser("Hallo?")
+        for e in tree.errors: print(e)
+        print(tree.as_sxpr())
 
 if __name__ == "__main__":
     from DHParser.testing import runner
