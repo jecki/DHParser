@@ -1975,8 +1975,13 @@ class Grammar:
                         return True
 
                 try:
-                    return (name in self and isinstance(self[name], Lookahead)
-                            or name[0] == ':' and issubclass(eval(name[1:]), Lookahead))
+                    return ((name in self
+                             and (isinstance(self[name], Lookahead)
+                                  or (isinstance(self[name], RegExp)
+                                      and self[name].regexp.pattern[0:3] in ('(?=', '(?!'))
+                                  or (isinstance(self[name], SmartRE)
+                                      and self[name].pattern[0:3] in ('(?=', '(?!'))))
+                            or (name[0] == ':' and issubclass(eval(name[1:]), Lookahead)))
                 except NameError:  
                     #  eval(name[1:]) failed, because custom parsers are not visible from here
                     nonlocal parser

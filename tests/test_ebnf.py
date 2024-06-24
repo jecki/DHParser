@@ -2871,10 +2871,13 @@ class TestOptimizations:
         assert tree.as_sxpr() == '(ROEM_NORMAL "II.")'
 
     def test_lookahead(self):
+        from DHParser.trace import set_tracer, trace_history
         set_config_value('optimizations', frozenset({'alternative', 'sequence', 'lookahead'}))
         lang = """
         doc = "Hallo" & "?" """
         parser = create_parser(lang)
+        print(parser.python_src__)
+        set_tracer(parser["doc"].descendants(), trace_history)
         tree = parser("Hallo?")
         for e in tree.errors: print(e)
         print(tree.as_sxpr())
