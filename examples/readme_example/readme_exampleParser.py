@@ -100,7 +100,7 @@ class readme_exampleGrammar(Grammar):
     dwsp__ = Drop(Whitespace(WSP_RE__))
     value = SmartRE(f'(\\"[^"\\n]*\\")(?:{WSP_RE__})', '/\\"[^"\\n]*\\"/ ~')
     key = SmartRE(f'(\\w+)(?:{WSP_RE__})', '/\\w+/ ~')
-    entry = Series(key, SmartRE(fr"(?:=)(?:{WSP_RE__})", "\"=\""), value)
+    entry = Series(key, Series(Drop(Text("=")), dwsp__), value)
     key_store = Series(dwsp__, ZeroOrMore(entry))
     root__ = key_store
         

@@ -2913,7 +2913,9 @@ class EBNFCompiler(Compiler):
 
 
     def on_sequence(self, node) -> str:
-        if 'sequence' in self.directives.optimizations:
+        if 'sequence' in self.directives.optimizations \
+                and any(child.name not in ('plaintext', 'literal', ':Whitespace')
+                        for child in node.children):
             try:
                 pattern, content = self.smartRE_sequence(node)
                 if self.directives.reduction > REDUCTION['none']:
@@ -2999,7 +3001,8 @@ class EBNFCompiler(Compiler):
         prefix = node.children[0].content
         assert prefix in {'&', '!', '<-&', '<-!'}
 
-        if prefix in ('&', '!') and 'lookahead' in self.directives.optimizations:
+        if prefix in ('&', '!') and 'lookahead' in self.directives.optimizations \
+                and node.children[1].name not in ('literal', 'plaintext'):
             try:
                 pattern, content = self.smartRE_lookaround(node)
                 pattern = self.check_rx(node, pattern, smartRE=True)
@@ -3304,7 +3307,7 @@ class EBNFCompiler(Compiler):
     def on_literal(self, node: Node) -> str:
         # TODO: Tests
         content, left, right = self.prepare_literal(node)
-        if 'literal' in self.directives.optimizations and (left or right):
+        if 'literal' in self.directives.optimizations and (left and right):
             q = content[0]
             literal = self.literal_rx(content[1:-1], left, right, escape_braces=True)
             rxp = ''.join(['fr', q, literal, q])

@@ -121,7 +121,7 @@ def call_item(parser: Parser, location: int, prefix: str = '') -> Tuple[str, int
         return f"{' ' or prefix}{parser.repr}", location  # ' ' added to avoid ':' as first char!
     else:
         name = parser.pname or parser.node_name
-        if isinstance(parser, SmartRE):
+        if isinstance(parser, SmartRE) and parser.is_lookahead():
             name += ":SmartRE_Lookahead"
         return f"{prefix}{name}", location
 
@@ -135,7 +135,8 @@ def history_record(parser: Parser, grammar: Grammar,
     hnd = Node(node.name, doc[location:location_]).with_pos(location) if node else None
     lc = line_col(grammar.document_lbreaks__, location)
     errors = grammar.tree__.error_nodes.get(id(node), [])
-    if parser.node_name[0:1] == ':':
+    if parser.node_name[0:1] == ':' \
+            and not (isinstance(parser, SmartRE) and parser.is_lookahead()):
         if parser.pname:
             grammar.call_stack__[-1] = (f"{prefix}{parser.pname}", location)
         else:
@@ -212,6 +213,10 @@ def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], c
     if self.node_name in (":Lookbehind", ":NegativeLookbehind"):
         grammar.call_stack__.append((' ' + cast(UnaryParser, self).parser.repr, location))
         stack_counter += 1
+    elif isinstance(self, SmartRE) and self.is_lookahead() \
+            and not grammar.call_stack__[-1][0].endswith(':SmartRE_Lookahead'):
+        grammar.call_stack__.append((' :SmartRE_Lookahead', location))
+        stack_counter += 1
     grammar.moving_forward__ = True
 
     try:
@@ -265,7 +270,8 @@ def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], c
                     record.call_stack[-2][0] in (":Lookbehind", ":NegativeLookbehind"):
                 record.text = grammar.reversed__[len(grammar.document__) - location_:]
             if not grammar.moving_forward__ \
-                    and not any(tag == ':Lookahead' \
+                    and not any(tag in (':Lookahead', ":NegativeLookahead")
+                                or tag.endswith(":SmartRE_Lookahead")
                                 for tag, _ in grammar.history__[-1].call_stack):
                 grammar.history__.pop()
             grammar.history__.append(record)

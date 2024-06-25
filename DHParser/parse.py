@@ -2098,20 +2098,30 @@ class Grammar:
                                       str(HistoryRecord.last_match(self.history__)))
                 else:
                     stitches.append(result)
+                    error_msg = ""
                     for h in reversed(self.history__):
-                        if h.node and (h.node.name != EMPTY_NODE.name or h.node.result) \
-                                and any((tag in (':Lookahead', ':NegativeLookahead')
-                                         or tag.endswith(':SmartRE_Lookahead'))
-                                        for tag, _ in h.call_stack):
+                        if h.node and (h.node.name != EMPTY_NODE.name or h.node.result
+                                       or h.call_stack[-1][0].endswith(':SmartRE_Lookahead')):
+                            for tag, _ in h.call_stack:
+                                if tag in (':Lookahead', ':NegativeLookahead'):
+                                    if h.node.pos + h.node.strlen() == len(self.document__):
+                                        error_msg = "Parser stopped before end, " \
+                                                  "but matched with lookahead."
+                                    break
+                                elif tag.endswith(':SmartRE_Lookahead'):
+                                    if h.node.pos >= self.ff_pos__:
+                                        error_msg = "Parser stopped before end, " \
+                                                  "but might have matched with lookahead."
+                                    break
+                            else:
+                                continue
                             break
                     else:
                         h = HistoryRecord([], Node(EMPTY_NODE.name, '').with_pos(0),
                                           StringView(''), (0, 0))
-                    if h.status in (h.MATCH, h.DROP) \
-                            and (h.node.pos + h.node.strlen() == len(self.document__)):
+                    if h.status in (h.MATCH, h.DROP) and error_msg:
                         # TODO: this case still needs unit-tests and support in testing.py
                         err_pos = h.node.pos
-                        error_msg = "Parser stopped before end, but matched with lookahead."
                         error_code = PARSER_LOOKAHEAD_MATCH_ONLY
                         max_parser_dropouts = -1  # no further retries!
                     else:
@@ -3413,6 +3423,8 @@ class SmartRE(RegExp, CombinedParser):  # TODO: turn this into a CombinedParser
             True
             >>> print(SmartRE(r'(?P<x>\w+)(?=\d)\d+').is_lookahead())
             False
+            >>> print(SmartRE(r'(?=(?::)(?:\s*))').is_lookahead())
+            True
         """
         if self.is_lookahead_ is not None:
             return self.is_lookahead_
