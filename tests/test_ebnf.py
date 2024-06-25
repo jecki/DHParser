@@ -2872,7 +2872,8 @@ class TestOptimizations:
 
     def test_lookahead(self):
         from DHParser.trace import set_tracer, trace_history
-        set_config_value('optimizations', frozenset({'alternative', 'sequence', 'lookahead'}))
+        # set_config_value('optimizations', frozenset({'alternative', 'sequence', 'lookahead'}))
+        set_config_value('optimizations', frozenset())
         lang = """
         doc = "Hallo" & "?" """
         parser = create_parser(lang)

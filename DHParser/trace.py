@@ -50,7 +50,7 @@ from DHParser.error import Error, RESUME_NOTICE, RECURSION_DEPTH_LIMIT_HIT
 from DHParser.nodetree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE, ZOMBIE_TAG
 from DHParser.log import HistoryRecord, NONE_NODE
 from DHParser.parse import Grammar, Parser, ParserError, ParseFunc, ContextSensitive, \
-    UnaryParser, ERR, PARSER_PLACEHOLDER
+    UnaryParser, SmartRE, ERR, PARSER_PLACEHOLDER
 from DHParser.toolkit import line_col
 
 __all__ = ('trace_history', 'set_tracer', 'resume_notices_on', 'resume_notices_off')
@@ -116,10 +116,14 @@ def result_changed(node, history) -> bool:
 
 
 def call_item(parser: Parser, location: int, prefix: str = '') -> Tuple[str, int]:
-    if parser.node_name in (REGEXP_PTYPE, TOKEN_PTYPE, ":Retrieve", ":Pop"):
+    if parser.node_name in (REGEXP_PTYPE, TOKEN_PTYPE, ":Retrieve", ":Pop",
+                            ":SmartRE", ":SmartRE_Lookahead"):
         return f"{' ' or prefix}{parser.repr}", location  # ' ' added to avoid ':' as first char!
     else:
-        return f"{prefix}{parser.pname or parser.node_name}", location
+        name = parser.pname or parser.node_name
+        if isinstance(parser, SmartRE):
+            name += ":SmartRE_Lookahead"
+        return f"{prefix}{name}", location
 
 
 def history_record(parser: Parser, grammar: Grammar,
@@ -265,12 +269,6 @@ def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], c
                                 for tag, _ in grammar.history__[-1].call_stack):
                 grammar.history__.pop()
             grammar.history__.append(record)
-    # elif node and node.name == ZOMBIE_TAG:
-    #     if id(node) in grammar.tree__.error_nodes:
-    #         lc = line_col(grammar.document_lbreaks__, location)
-    #         record = HistoryRecord(grammar.call_stack__, node, doc[location_:], lc,
-    #                                self.tree__.error_nodes[id(node)])
-    #         grammar.history__.append(record)
 
 
     grammar.moving_forward__ = False

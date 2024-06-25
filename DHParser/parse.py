@@ -58,7 +58,7 @@ from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.nodetree import ChildrenType, Node, RootNode, WHITESPACE_PTYPE, \
     KEEP_COMMENTS_PTYPE, TOKEN_PTYPE, MIXED_CONTENT_TEXT_PTYPE, ZOMBIE_TAG, EMPTY_NODE, \
     EMPTY_PTYPE, ResultType, LEAF_NODE
-from DHParser.toolkit import sane_parser_name, escape_ctrl_chars, re, \
+from DHParser.toolkit import sane_parser_name, escape_ctrl_chars, re, matching_brackets, \
     abbreviate_middle, RX_NEVER_MATCH, RxPatternType, linebreaks, line_col, TypeAlias
 
 try:
@@ -2100,7 +2100,9 @@ class Grammar:
                     stitches.append(result)
                     for h in reversed(self.history__):
                         if h.node and (h.node.name != EMPTY_NODE.name or h.node.result) \
-                                and any(tag == ':Lookahead' for tag, _ in h.call_stack):
+                                and any((tag in (':Lookahead', ':NegativeLookahead')
+                                         or tag.endswith(':SmartRE_Lookahead'))
+                                        for tag, _ in h.call_stack):
                             break
                     else:
                         h = HistoryRecord([], Node(EMPTY_NODE.name, '').with_pos(0),
@@ -2765,6 +2767,11 @@ class RegExp(LeafParser):
     def _signature(self) -> Hashable:
         return self.__class__.__name__, self.regexp.pattern
 
+    def is_lookahead(self) -> bool:
+        """Just a heuristic for the simplemost cases!"""
+        return self.regex.pattern[0:3] in ('(?=', '(?!')
+
+
 
 def DropText(text: str) -> Text:
     return cast(Text, Drop(Text(text)))
@@ -3286,6 +3293,7 @@ def TreeReduction(root_or_parserlist: Union[Parser, Collection[Parser]],
 KEEP_COMMENTS_NAME = KEEP_COMMENTS_PTYPE[1:] + '__'
 RX_NAMED_GROUPS = re.compile(r'\(\?P<(:?\w+)>')
 
+
 class SmartRE(RegExp, CombinedParser):  # TODO: turn this into a CombinedParser
     r"""
     Regular expression parser that returns a tree with a node for every
@@ -3310,6 +3318,7 @@ class SmartRE(RegExp, CombinedParser):  # TODO: turn this into a CombinedParser
         self.repr_str = repr_str
         self.groups: Optional[List[Tuple(str, bool)]] = None
         self.pattern = pattern if isinstance(pattern, str) else pattern.pattern
+        self.is_lookahead_: Optional[bool] = None
         super().__init__(pattern)
 
     def lazy_initialization(self, pattern: str):
@@ -3333,6 +3342,9 @@ class SmartRE(RegExp, CombinedParser):  # TODO: turn this into a CombinedParser
         pattern = RX_NAMED_GROUPS.sub('(', pattern)
         self.regexp = re.compile(pattern)
 
+        if self.is_lookahead() and self.node_name[:1] == ":":
+            self.node_name = ":SmartRE_Lookahead"
+
     def __deepcopy__(self, memo):
         # `regex` supports deep copies, but not `re`
         try:
@@ -3342,6 +3354,7 @@ class SmartRE(RegExp, CombinedParser):  # TODO: turn this into a CombinedParser
         duplicate = self.__class__(regexp, self.repr_str)
         duplicate.pattern = self.pattern
         duplicate.groups = copy.deepcopy(self.groups, memo)
+        duplicate.is_lookahead_ = self.is_lookahead_
         copy_combined_parser_attrs(self, duplicate)
         return duplicate
 
@@ -3390,6 +3403,49 @@ class SmartRE(RegExp, CombinedParser):  # TODO: turn this into a CombinedParser
         except (AttributeError, NameError):
             pass
         return '/' + abbreviate_middle(pattern, 118) + '/'
+
+    def is_lookahead(self) -> bool:
+        r"""Just a heuristic test - not perfect::
+
+            >>> print(SmartRE(r'(?:alpha(?=x))').is_lookahead())
+            True
+            >>> print(SmartRE(r'(?!alpha)').is_lookahead())
+            True
+            >>> print(SmartRE(r'(?P<x>\w+)(?=\d)\d+').is_lookahead())
+            False
+        """
+        if self.is_lookahead_ is not None:
+            return self.is_lookahead_
+        pattern = RX_NAMED_GROUPS.sub('(', self.regexp.pattern).replace('(?:', '(')
+        if pattern.lstrip('(')[0:2] in ('?=', '?!'):
+            return True
+        mb = None
+        rs_pattern = None
+        i = pattern.rfind('(?=')
+        if i > 0:
+            mb = matching_brackets(pattern, '(', ')', )
+            mb.reverse()
+            rs_pattern = pattern.rstrip(')')
+            for a, b in mb:
+                if a == i:
+                    if len(rs_pattern) <= b:
+                        self.is_lookahead_ = True
+                        return True
+        i = pattern.rfind('(?!')
+        if i > 0:
+            if mb is None:
+                mb = matching_brackets(pattern, '(', ')', )
+                mb.reverse()
+                rs_pattern = pattern.rstrip(')')
+            rs_pattern = pattern.rstrip(')')
+            for a, b in mb:
+                if a == i:
+                    if len(rs_pattern) <= b:
+                        self.is_lookahead_ = True
+                        return True
+        return False
+
+
 
 CustomParseFunc: TypeAlias = Callable[[StringView], Optional[Node]]
 
@@ -5010,12 +5066,6 @@ class Forward(UnaryParser):
         super().reset()
         self.recursion_counter: Dict[int, int] = dict()
         assert not self.pname, "Forward-Parsers mustn't have a name!"
-
-    # def name(self, pname: str="", disposable: Optional[bool] = None) -> Parser:
-    #     """Sets the parser name to ``pname`` and returns ``self``."""
-    #     self.pname = pname
-    #     self.disposable = True if disposable is True else False
-    #     return self
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__()
