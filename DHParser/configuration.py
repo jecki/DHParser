@@ -649,7 +649,8 @@ ALLOWED_PRESET_VALUES['optimizations'] = frozenset({
     'alternative',
     'rearrange_alternative',  # this is also implied by 'alternative'
     'sequence'})
-CONFIG_PRESET['optimizations'] = frozenset({'literal', 'lookahead', 'alternative', 'sequence'})
+CONFIG_PRESET['optimizations'] = frozenset(
+    {'literal', 'lookahead', 'alternative', 'sequence'})
 
 
 ########################################################################

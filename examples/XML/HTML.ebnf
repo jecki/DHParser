@@ -6,6 +6,7 @@
 #
 #######################################################################
 
+@ optimizations = all
 @ whitespace  = /\s*/                # insignificant whitespace, signified by ~
 @ literalws   = none                 # literals have no implicit whitespace
 @ comment     = //                   # no implicit comments

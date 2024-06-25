@@ -1285,7 +1285,7 @@ def get_regex_group(rxp, expect_group: bool = True) -> Tuple[str, str]:
 
 
 def neutralize_unnamed_groups(rxp: str) -> str:
-    """Replaces unnamed groups by non-catching groups, i.e. (\w+) -> (?:w+)"""
+    r"""Replaces unnamed groups by non-catching groups, i.e. (\w+) -> (?:w+)"""
     a = 0;
     al = []
     for b, _ in matching_brackets(rxp, "(", ")", is_regex=True):
