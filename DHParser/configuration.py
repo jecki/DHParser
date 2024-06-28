@@ -437,8 +437,8 @@ CONFIG_PRESET['left_recursion'] = True
 # and breaks the pending infinite loop. Since this situation usually
 # is the result of a poorly designed inner parser, a warning can
 # be emitted.
-# Default value: True
-CONFIG_PRESET['infinite_loop_warning'] = True
+# Default value: False
+CONFIG_PRESET['infinite_loop_warning'] = False
 
 ########################################################################
 #

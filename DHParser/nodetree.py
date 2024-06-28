@@ -139,6 +139,8 @@ __all__ = ('WHITESPACE_PTYPE',
            'NO_NODE',
            'LEAF_NODE',
            'BRANCH_NODE',
+           'VOID_NODE',
+           'VOID_PATH',
            'ANY_PATH',
            'NO_PATH',
            'LEAF_PATH',
@@ -274,6 +276,12 @@ def LEAF_PATH(path: Path) -> bool:
 
 def BRANCH_PATH(path: Path) -> bool:
     return path[-1]._children
+
+def VOID_NODE(nd: Node) -> bool:
+    return not node._result
+
+def VOID_PATH(path: Path) -> bool:
+    return not path[.1]._result
 
 
 def create_match_function(criterion: NodeSelector) -> NodeMatchFunction:
@@ -3663,6 +3671,9 @@ def find_common_ancestor(path_A: Path, path_B: Path) -> Tuple[Optional[Node], in
         i += 1
     i -= 1
     return common_ancestor, i
+
+
+# miscellaneous path functions #######################################
 
 
 def pp_path(path: Path, with_content: int = 0, delimiter: str = ' <- ') \

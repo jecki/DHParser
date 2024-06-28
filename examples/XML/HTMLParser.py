@@ -109,7 +109,7 @@ class HTMLGrammar(Grammar):
     element = Forward()
     source_hash__ = "93fbcd35ba6ff9952aafcdf6405eac39"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:NameChars$|VersionNum$|CommentChars$|BOM$|Misc$|NameStartChar$|PubidChars$|prolog$|PubidCharsSingleQuoted$|Reference$|tagContent$|EOF$|CData$|EncName$)')
+    disposable__ = re.compile('(?:Misc$|EOF$|EncName$|tagContent$|PubidChars$|prolog$|BOM$|NameChars$|VersionNum$|PubidCharsSingleQuoted$|NameStartChar$|Reference$|CData$|CommentChars$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'tagContent': [('', "syntax error in tag-name of opening or empty tag:  {1}")],
@@ -134,12 +134,12 @@ class HTMLGrammar(Grammar):
     PubidChars = RegExp("(?i)(?:\\x20|\\x0D|\\x0A|[a-zA-Z0-9]|[-'()+,./:=?;!*#@$_%])+")
     PubidCharsSingleQuoted = RegExp('(?i)(?:\\x20|\\x0D|\\x0A|[a-zA-Z0-9]|[-()+,./:=?;!*#@$_%])+')
     CDSect = Series(Drop(IgnoreCase('<![CDATA[')), CData, Drop(IgnoreCase(']]>')))
-    NameStartChar = RegExp('(?xi)_|:|[A-Z]|[a-z]\n                   |[\\u00C0-\\u00D6]|[\\u00D8-\\u00F6]|['
+    NameStartChar = RegExp('(?ix)_|:|[A-Z]|[a-z]\n                   |[\\u00C0-\\u00D6]|[\\u00D8-\\u00F6]|['
        '\\u00F8-\\u02FF]\n                   |[\\u0370-\\u037D]|[\\u037F-\\u1FFF]|[\\u20'
        '0C-\\u200D]\n                   |[\\u2070-\\u218F]|[\\u2C00-\\u2FEF]|[\\u3001-'
        '\\uD7FF]\n                   |[\\uF900-\\uFDCF]|[\\uFDF0-\\uFFFD]\n               '
        '    |[\\U00010000-\\U000EFFFF]')
-    NameChars = RegExp('(?xi)(?:_|:|-|\\.|[A-Z]|[a-z]|[0-9]\n                   |\\u00B7|[\\u0300-\\u03'
+    NameChars = RegExp('(?ix)(?:_|:|-|\\.|[A-Z]|[a-z]|[0-9]\n                   |\\u00B7|[\\u0300-\\u03'
        '6F]|[\\u203F-\\u2040]\n                   |[\\u00C0-\\u00D6]|[\\u00D8-\\u00F6]|['
        '\\u00F8-\\u02FF]\n                   |[\\u0370-\\u037D]|[\\u037F-\\u1FFF]|[\\u20'
        '0C-\\u200D]\n                   |[\\u2070-\\u218F]|[\\u2C00-\\u2FEF]|[\\u3001-'
@@ -148,7 +148,7 @@ class HTMLGrammar(Grammar):
     Comment = Series(Drop(IgnoreCase('<!--')), ZeroOrMore(Alternative(CommentChars, RegExp('(?i)-(?!-)'))), dwsp__, Drop(IgnoreCase('-->')))
     Name = Series(NameStartChar, Option(NameChars))
     PITarget = Series(SmartRE(f'(?i)(?!X|xM|mL|l)', '!/X|xM|mL|l/'), Name)
-    PI = Series(Drop(IgnoreCase('<?')), PITarget, RegExp('[~ PIChars]'), Drop(IgnoreCase('?>')))
+    PI = Series(Drop(IgnoreCase('<?')), PITarget, Option(Series(dwsp__, PIChars)), Drop(IgnoreCase('?>')))
     Misc = OneOrMore(Alternative(Comment, PI, S))
     EntityRef = Series(Drop(IgnoreCase('&')), Name, Drop(IgnoreCase(';')))
     Reference = Alternative(EntityRef, CharRef)
@@ -162,9 +162,9 @@ class HTMLGrammar(Grammar):
     STag = Series(Drop(IgnoreCase('<')), tagContent, Drop(IgnoreCase('>')))
     voidElement = Series(Drop(IgnoreCase('<')), SmartRE(f'(?i)(?=area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)', "&'area'|'base'|'br'|'col'|'embed'|'hr'|'img'|'input'|'link'|'meta'|'param'|'source'|'track'|'wbr'"), tagContent, Drop(IgnoreCase('>')))
     emptyElement = Series(Drop(IgnoreCase('<')), tagContent, Drop(IgnoreCase('/>')))
-    BOM = Drop(RegExp('(?i)[feff]|[fffe]|[0000feff]|[fffe0000]'))
+    BOM = Drop(RegExp('(?i)[\\ufeff]|[\\ufffe]|[\\u0000feff]|[\\ufffe0000]'))
     ExternalID = Alternative(Series(Drop(IgnoreCase('SYSTEM')), dwsp__, SystemLiteral, mandatory=1), Series(Drop(IgnoreCase('PUBLIC')), dwsp__, PubidLiteral, dwsp__, SystemLiteral, mandatory=1))
-    doctypedecl = Series(Drop(IgnoreCase('<!DOCTYPE')), dwsp__, Name, RegExp('[~ ExternalID]'), dwsp__, Drop(IgnoreCase('>')), mandatory=2)
+    doctypedecl = Series(Drop(IgnoreCase('<!DOCTYPE')), dwsp__, Name, Option(Series(dwsp__, ExternalID)), dwsp__, Drop(IgnoreCase('>')), mandatory=2)
     SDDecl = SmartRE(f'(?i){WSP_RE__}standalone{WSP_RE__}={WSP_RE__}(?:(?:(?:\')(?P<:IgnoreCase>yes|no)(?:\'))|(?:(?:")(?P<:IgnoreCase>yes|no)(?:")))', '~ \'standalone\' ~ \'=\' ~ "\'" `yes`|`no` "\'"|\'"\' `yes`|`no` \'"\'')
     EncName = RegExp('(?i)[A-Za-z][A-Za-z0-9._\\-]*')
     EncodingDecl = Series(dwsp__, Drop(IgnoreCase('encoding')), dwsp__, Drop(IgnoreCase('=')), dwsp__, Alternative(Series(Drop(IgnoreCase("\'")), EncName, Drop(IgnoreCase("\'"))), Series(Drop(IgnoreCase('"')), EncName, Drop(IgnoreCase('"')))))

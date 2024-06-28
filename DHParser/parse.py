@@ -1264,7 +1264,10 @@ def mixin_comment(whitespace: str, comment: str, always_match: bool = True) -> s
         >>> rx.match('   # comment').group(0)
         '   # '
     """
-    whitespace = '(?:' + whitespace + (')?' if always_match else ')')
+    if re.match(whitespace, ""):
+        whitespace = f'(?:{whitespace})'
+    else:
+        whitespace = '(?:' + whitespace + (')?' if always_match else ')')
 
     if comment:
         comment = '(?:' + comment + ')'
@@ -3641,8 +3644,8 @@ class Option(UnaryParser):
     EBNF-Example:  ``number = ["-"]  /\d+/  [ /\.\d+/ ]``
     """
 
-    def __init__(self, parser: Parser) -> None:
-        super().__init__(parser)
+    # def __init__(self, parser: Parser) -> None:
+    #     super().__init__(parser)
 
     def _parse(self, location: cython.int) -> ParsingResult:
         node, location = self.parser(location)
