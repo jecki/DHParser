@@ -1812,7 +1812,7 @@ parser when an error was raised by the string-parser::
       (:Text '"')
       (characters
         (plain "al"))
-      (ZOMBIE__ `(err "1:4: Error (1010): Illegal escape sequence »\pha\"«") "\pha")
+      (string_skip_R1__ `(err "1:4: Error (1010): Illegal escape sequence »\pha\"«") "\pha")
       (:Text '"'))
 
 After the error has occurred at the illegal escape-sequence, the
@@ -1845,7 +1845,7 @@ expression::
       (:Text '"')
       (characters
         (plain "al"))
-      (ZOMBIE__ `(err "1:4: Error (1010): Illegal escape sequence »\pha\"«") '\pha"'))
+      (string_resume_R1__ `(err "1:4: Error (1010): Illegal escape sequence »\pha\"«") '\pha"'))
 
 Note, that this time, the zombie-node also contains the closing
 quotation marks. Also, it should be observed, that the regular

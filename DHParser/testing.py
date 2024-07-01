@@ -55,7 +55,7 @@ from DHParser.error import Error, is_error, PARSER_LOOKAHEAD_MATCH_ONLY, \
     MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, CAPTURE_STACK_NOT_EMPTY_NON_ROOT_ONLY, \
     AUTOCAPTURED_SYMBOL_NOT_CLEARED_NON_ROOT, PYTHON_ERROR_IN_TEST
 from DHParser.log import is_logging, clear_logs, local_log_dir, log_parsing_history
-from DHParser.parse import Lookahead
+from DHParser.parse import Lookahead, artifact
 from DHParser.server import RX_CONTENT_LENGTH, RE_DATA_START, JSONRPC_HEADER_BYTES
 from DHParser.nodetree import Node, RootNode, deserialize, flatten_sxpr, ZOMBIE_TAG
 from DHParser.trace import set_tracer, trace_history
@@ -535,7 +535,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         if is_artifact:
             # don't remove zombie node with error message at the end
             # but change its name to indicate that it is an artifact!
-            for zombie in syntax_tree.select(ZOMBIE_TAG):
+            for zombie in syntax_tree.select(artifact):
                 zombie.name = TEST_ARTIFACT
                 zombie.result = 'Artifact can be ignored. Be aware, though, that also the ' \
                                 'tree structure may not be the same as in a non-testing ' \

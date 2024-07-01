@@ -17,6 +17,7 @@ cdef class EBNFDirectives:
     cdef public set drop
     cdef public int reduction
     cdef public object _super_ws
+    cdef public object optimizations
 
 
 # cdef class EBNFCompiler:

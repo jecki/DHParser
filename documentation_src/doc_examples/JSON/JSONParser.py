@@ -62,7 +62,6 @@ from DHParser.transform import is_empty, remove_if, TransformationDict, Transfor
     positions_of, replace_child_names, add_attributes, delimit_children, merge_connected, \
     has_attr, has_parent, has_children, has_child, apply_unless, apply_ifelse, traverse
 
-from DHParser.pipeline import PseudoJunction, create_parser_junction
 
 #######################################################################
 #
@@ -108,28 +107,28 @@ class JSONGrammar(Grammar):
     r"""Parser for a JSON source file.
     """
     _element = Forward()
-    source_hash__ = "55c1d4ce9df3a26e2825b49ec6a5eb55"
+    source_hash__ = "78e2453ffb76bd945ed675adecc5045b"
     disposable__ = re.compile('_\\w+')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
-    COMMENT__ = r'(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)'
+    COMMENT__ = r'(?://.*)|(?:/\*(?:.|\n)*?\*/)'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    _EOF = NegativeLookahead(RegExp('.'))
-    EXP = Series(Alternative(Text("E"), Text("e")), Option(Alternative(Text("+"), Text("-"))), RegExp('[0-9]+'))
-    FRAC = Series(Text("."), RegExp('[0-9]+'))
-    INT = Series(Option(Text("-")), Alternative(RegExp('[1-9][0-9]+'), RegExp('[0-9]')))
+    _EOF = SmartRE(f'(?!.)', '!/./')
+    EXP = SmartRE(f'(?P<:Text>E|e)(?:(?P<:Text>\\+|\\-)?)([0-9]+)', '`E`|`e` [`+`|`-`] /[0-9]+/')
+    FRAC = SmartRE(f'(?P<:Text>\\.)([0-9]+)', '`.` /[0-9]+/')
+    INT = SmartRE(f'(?:(?P<:Text>\\-)?)([1-9][0-9]+|[0-9])', '[`-`] /[1-9][0-9]+/|/[0-9]/')
     HEX = RegExp('[0-9a-fA-F][0-9a-fA-F]')
     UNICODE = Series(Series(Drop(Text("\\u")), dwsp__), HEX, HEX)
     ESCAPE = RegExp('\\\\[/bnrt\\\\"]')
     PLAIN = RegExp('[^"\\\\]+')
     _CHARACTERS = ZeroOrMore(Alternative(PLAIN, ESCAPE, UNICODE))
     null = Series(Text("null"), dwsp__)
-    false = Series(Text("false"), dwsp__)
-    true = Series(Text("true"), dwsp__)
+    false = SmartRE(f'(?P<:Text>false)(?:{WSP_RE__})', '`false` ~')
+    true = SmartRE(f'(?P<:Text>true)(?:{WSP_RE__})', '`true` ~')
     _bool = Alternative(true, false)
     number = Series(INT, Option(FRAC), Option(EXP), dwsp__)
     string = Series(Text('"'), _CHARACTERS, Text('"'), dwsp__, mandatory=1)
@@ -139,11 +138,9 @@ class JSONGrammar(Grammar):
     _element.set(Alternative(object, array, string, number, _bool, null))
     json = Series(dwsp__, _element, _EOF)
     root__ = json
-    
-    
-parsing: PseudoJunction = create_parser_junction(
-    JSONGrammar)
-get_grammar = parsing.factory # for backwards compatibility, only    
+        
+parsing: PseudoJunction = create_parser_junction(JSONGrammar)
+get_grammar = parsing.factory # for backwards compatibility, only
 
 
 #######################################################################

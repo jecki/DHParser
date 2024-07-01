@@ -123,17 +123,17 @@ class miniXMLGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    EOF = Drop(SmartRE(f'(?!.)', '!/./'))
+    EOF = Drop(NegativeLookahead(RegExp('.')))
     CharData = RegExp('(?:(?!\\]\\]>)[^<&])+')
     content = Series(Option(CharData), ZeroOrMore(Series(Alternative(element, comment__), Option(CharData))))
     TagName = Capture(RegExp('\\w+'), zero_length_warning=True)
     ETag = Series(Drop(Text('</')), Pop(TagName), Drop(Text('>')), mandatory=2)
     STag = Series(Drop(Text('<')), TagName, Drop(Text('>')), mandatory=2)
-    STag_skip_1__ = SmartRE(f'([^<>]*>)', '/[^<>]*>/')
+    STag_skip_1__ = RegExp('[^<>]*>')
     document = Series(dwsp__, element, dwsp__, EOF, mandatory=3)
-    ETag_skip_1__ = SmartRE(f'([^<>]*)', '/[^<>]*/')
+    ETag_skip_1__ = RegExp('[^<>]*')
     element.set(Series(STag, content, ETag, mandatory=1))
-    element_resume_1__ = Series(Pop(TagName, match_func=optional_last_value), Alternative(Lookahead(Series(Drop(Text('</')), Retrieve(TagName), Drop(Text('>')))), SmartRE(f'(?:</)(\\w+)(?:>)', "'</' /\\w+/ '>'")))
+    element_resume_1__ = Series(Pop(TagName, match_func=optional_last_value), Alternative(Lookahead(Series(Drop(Text('</')), Retrieve(TagName), Drop(Text('>')))), Series(Drop(Text('</')), RegExp('\\w+'), Drop(Text('>')))))
     resume_rules__ = {'element': [element_resume_1__]}
     skip_rules__ = {'STag': [STag_skip_1__],
                     'ETag': [ETag_skip_1__]}

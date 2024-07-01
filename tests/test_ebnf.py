@@ -1138,7 +1138,7 @@ class TestErrorCustomizationErrors:
         assert not cst.errors
         cst = parser('ANFANGMISSEENDE')
         assert cst.errors
-        assert 'alles' in cst and 'ZOMBIE__' in cst['alles'] and 'ende' in cst['alles']
+        assert 'alles' in cst and 'alles_skip_R1__' in cst['alles'] and 'ende' in cst['alles']
 
     def test_multiple_resume_definitions(self):
         lang = """
@@ -2667,7 +2667,7 @@ class TestOptimizations:
 
     def test_complex_sequence(self):
         set_config_value('optimizations', frozenset({'sequence', 'alternative'}))
-        lang = """@ whitespace  = /\s*/  
+        lang = r"""@ whitespace  = /\s*/  
         @ literalws   = none                 
         @ comment     = //                   
         @ ignorecase  = False                
@@ -2864,7 +2864,7 @@ class TestOptimizations:
 
     def test_regex(self):
         set_config_value('optimizations', frozenset({'alternative', 'sequence'}))
-        lang = """@ literalws = right
+        lang = r"""@ literalws = right
         ROEM_NORMAL = ~/(?!D[.|])(?![M][^\w])(?=[MDCLXVI])M*(C+[MD]|D?C*)(X+[CL]|L?X*)(I+[XV]|V?I*)(?=1|[^\w]|_)\.?/~ """
         parser = create_parser(lang)
         assert parser.python_src__.find('SmartRE(') >= 0

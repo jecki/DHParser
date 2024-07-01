@@ -46,9 +46,12 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     positions_of, replace_child_names, add_attributes, delimit_children, merge_connected, \
     has_attr, has_parent, ThreadLocalSingletonFactory, Error, canonical_error_strings, \
     has_errors, ERROR, FATAL, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN, \
-    gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
+    gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors, \
+    SmartRE
 
 from DHParser.pipeline import PseudoJunction, create_parser_junction
+
+
 
 #######################################################################
 #
@@ -77,7 +80,7 @@ def preprocessor_factory() -> PreprocessorFunc:
     return chain_preprocessors(include_prep, tokenizing_prep)
 
 
-get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident=1)
+get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory)
 
 
 def preprocess_miniXML(source):
@@ -94,8 +97,8 @@ class miniXMLGrammar(Grammar):
     r"""Parser for a miniXML source file.
     """
     element = Forward()
-    source_hash__ = "b7e1eabdd75eb1bfe12f2fd4e9b53004"
-    disposable__ = re.compile('EOF$')
+    source_hash__ = "1d3066e3eb0204564e007439bd85d82b"
+    disposable__ = re.compile('(?:EOF$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -104,7 +107,7 @@ class miniXMLGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    EOF = Drop(NegativeLookahead(RegExp('.')))
+    EOF = Drop(SmartRE(f'(?!.)', '!/./'))
     CharData = RegExp('(?:(?!\\]\\]>)[^<&])+')
     TagName = RegExp('\\w+')
     content = Series(Option(CharData), ZeroOrMore(Series(element, Option(CharData))))
@@ -113,11 +116,9 @@ class miniXMLGrammar(Grammar):
     element.set(Series(STag, content, ETag, mandatory=1))
     document = Series(dwsp__, element, dwsp__, EOF, mandatory=3)
     root__ = document
-    
-    
-parsing: PseudoJunction = create_parser_junction(
-    miniXMLGrammar)
-get_grammar = parsing.factory # for backwards compatibility, only    
+        
+parsing: PseudoJunction = create_parser_junction(miniXMLGrammar)
+get_grammar = parsing.factory # for backwards compatibility, only
 
 
 #######################################################################
@@ -169,7 +170,7 @@ class XMLTransformer(Compiler):
         return node
 
 
-get_transformer = ThreadLocalSingletonFactory(XMLTransformer, ident=1)
+get_transformer = ThreadLocalSingletonFactory(XMLTransformer)
 
 
 def transform_XML(cst):
@@ -223,7 +224,7 @@ class miniXMLCompiler(Compiler):
     #     return node
 
 
-get_compiler = ThreadLocalSingletonFactory(miniXMLCompiler, ident=1)
+get_compiler = ThreadLocalSingletonFactory(miniXMLCompiler)
 
 
 def compile_miniXML(ast):

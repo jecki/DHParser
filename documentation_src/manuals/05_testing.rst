@@ -1951,15 +1951,15 @@ unit-testing:
    As of Version 1.7 DHParser's testing framework has no support for
    testing errors. This may change with future versions.
 
-2. Testing of data-stages in which the data is not compositional, any more
+2. Testing of data-stages in which the data is not compositional, anymore,
    in the sense that you could test isolated pieces of code (without
    context) and still receive meaningful results.
 
    This assumption which is true for parsing of context-free grammars
    (save for the use of lookahead and lookbehind-parsers for which
    DHParsers testing-framework offers some workarounds, though),
-   might not be true for later processing stages, any more.
-   The assumption context-independence is baked into DHParser's
+   might not be true for later processing stages, anymore.
+   The assumption of context-independence is baked into DHParser's
    testing-framework and will therefore not change in the future.
 
 Therefore, we will illustrate how conventional unit-testing works.
@@ -1968,7 +1968,7 @@ pain-point of parser-building) and error-reporting in case
 something goes wrong. The glue code for a conventional unit-test
 looks like this::
 
-    TO BE CONTINUED...
+
 
 .. _CommonMark: https://spec.commonmark.org/0.30/#emphasis-and-strong-emphasis
 .. _GROBID: https://github.com/kermitt2/grobid

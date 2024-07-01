@@ -674,6 +674,7 @@ class TestSeries:
         """
         parser = create_parser(lang)
         st = parser("(3 + ) * 2")
+        assert st.pick(lambda nd: nd.name.endswith('_resume_R1__'))
         assert st.errors
 
     def test_mandatory4(selfself):
@@ -812,7 +813,7 @@ class TestErrorRecovery:
         data2 = data.replace('cursed', 'cur?ed')
         st = parser(data2)
         assert len(st.errors) == 1
-        zombie = st.pick('ZOMBIE__')
+        zombie = st.pick(lambda nd: nd.name[-2:] == '__' and nd.name.find('_skip_') >= 0)  # st.pick('ZOMBIE__')
         assert zombie.content == '?ed ', zombie.content
 
     def test_irrelevance_of_error_definition_order(self):
@@ -1420,7 +1421,7 @@ def next_valid_letter(text, start, end):
         parser = create_parser(lang, additional_code=proc)
         tree = parser('ab*xyz')
         assert 'block_A' in tree and 'block_B' in tree
-        assert tree.pick('ZOMBIE__')
+        assert tree.pick('block_A_skip_R1__')
 
 
     def test_skip_comment_on_resume(self):

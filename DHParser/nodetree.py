@@ -105,7 +105,7 @@ from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, linebreaks, line_col, JSONnull, \
     validate_XML_attribute_value, fix_XML_attribute_value, lxml_XML_attribute_value, \
-    abbreviate_middle, TypeAlias, deprecated
+    abbreviate_middle, TypeAlias, deprecated, RxPatternType
 
 try:
     import cython
@@ -278,7 +278,7 @@ def BRANCH_PATH(path: Path) -> bool:
     return path[-1]._children
 
 def VOID_NODE(nd: Node) -> bool:
-    return not node._result
+    return not nd._result
 
 def VOID_PATH(path: Path) -> bool:
     return not path[.1]._result
@@ -330,7 +330,8 @@ def create_match_function(criterion: NodeSelector) -> NodeMatchFunction:
         return cast(Callable, criterion)
     elif isinstance(criterion, Container):
         return lambda nd: nd.name in cast(Container, criterion)
-    elif str(type(criterion)) in ("<class '_regex.Pattern'>", "<class 're.Pattern'>"):
+    elif isinstance(criterion, RxPatternType) \
+            or str(type(criterion)) in ("<class '_regex.Pattern'>", "<class 're.Pattern'>"):
         return lambda nd: criterion.fullmatch(nd.content)
     raise TypeError("Criterion %s of type %s does not represent a legal criteria type"
                     % (repr(criterion), type(criterion)))
@@ -371,7 +372,8 @@ def create_path_match_function(criterion: PathSelector) -> PathMatchFunction:
         return cast(Callable, criterion)
     elif isinstance(criterion, Container):
         return lambda trl: trl[-1].name in cast(Container, criterion)
-    elif str(type(criterion)) in ("<class '_regex.Pattern'>", "<class 're.Pattern'>"):
+    elif isinstance(criterion, RxPatternType) \
+            or str(type(criterion)) in ("<class '_regex.Pattern'>", "<class 're.Pattern'>"):
         return lambda trl: criterion.fullmatch(trl[-1].content)
     raise TypeError("Criterion %s of type %s does not represent a legal criteria type"
                     % (repr(criterion), type(criterion)))
@@ -2119,7 +2121,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             l, c = line_col(lbreaks, self.pos)
             start = {'line': l, 'column': c, 'offset': self.pos}
         if self.has_attr():
-            unist_obj['attributes'] = {k: str(v) for k, v in node.attr}
+            unist_obj['attributes'] = {k: str(v) for k, v in self.attr}
         if self.children:
             unist_obj['children'] = [child.as_unist_obj(flavor, lbreaks) for child in self.children]
             if self._pos >= 0:

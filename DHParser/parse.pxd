@@ -99,6 +99,12 @@ cdef class CombinedParser(Parser):
     cpdef _return_values_merge_treetops(self, results)
     cpdef _return_values_merge_leaves(self, results)
 
+cdef class SmartRE(CombinedParser):
+    cdef public str repr_str
+    cdef public object groups
+    cdef public str pattern
+    cdef public object is_lookahead_
+
 cdef class UnaryParser(CombinedParser):
     cdef public object parser
 
@@ -117,12 +123,12 @@ cdef class OneOrMore(UnaryParser):
 cdef class Counted(UnaryParser):
     cdef public (int, int) repetitions
 
-cdef class MandatoryNary(NaryParser):
+cdef class ErrorCatchingNary(NaryParser):
     cdef public int mandatory
     cdef public object err_msgs
     cdef public object skip
 
-cdef class Series(MandatoryNary):
+cdef class Series(ErrorCatchingNary):
     pass
 
 cdef class Alternative(NaryParser):
@@ -135,7 +141,7 @@ cdef class TextAlternative(Alternative):
     cdef public object indices
     cdef public int min_head_size
 
-cdef class Interleave(MandatoryNary):
+cdef class Interleave(ErrorCatchingNary):
     cdef public object repetitions
     cdef public object non_mandatory
     cdef public object parsers_set

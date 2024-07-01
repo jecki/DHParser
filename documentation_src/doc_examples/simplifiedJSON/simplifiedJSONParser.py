@@ -46,7 +46,11 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     positions_of, replace_child_names, add_attributes, delimit_children, merge_connected, \
     has_attr, has_parent, ThreadLocalSingletonFactory, Error, canonical_error_strings, \
     has_errors, ERROR, FATAL, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN, \
-    gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
+    gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors, \
+    SmartRE
+
+from DHParser.pipeline import PseudoJunction, create_parser_junction
+
 
 
 #######################################################################
@@ -76,7 +80,7 @@ def preprocessor_factory() -> PreprocessorFunc:
     return chain_preprocessors(include_prep, tokenizing_prep)
 
 
-get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory, ident=1)
+get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory)
 
 
 def preprocess_simplifiedJSON(source):
@@ -93,18 +97,18 @@ class simplifiedJSONGrammar(Grammar):
     r"""Parser for a simplifiedJSON source file.
     """
     _element = Forward()
-    source_hash__ = "d3a0e5846946bdc6542ac50cb366d075"
+    source_hash__ = "36c6051aca4d32e237a2c7a35af08c99"
     disposable__ = re.compile('_\\w+')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
-    COMMENT__ = r'(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)'
+    COMMENT__ = r'(?://.*)|(?:/\*(?:.|\n)*?\*/)'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    _EOF = NegativeLookahead(RegExp('.'))
-    other_literal = Series(RegExp('[\\w\\d.+-]+'), dwsp__)
+    _EOF = SmartRE(f'(?!.)', '!/./')
+    other_literal = SmartRE(f'([\\w\\d.+-]+)(?:{WSP_RE__})', '/[\\w\\d.+-]+/ ~')
     string = Series(Text('"'), RegExp('[^"]+'), Text('"'), dwsp__, mandatory=1)
     array = Series(Series(Drop(Text("[")), dwsp__), Option(Series(_element, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), _element)))), Series(Drop(Text("]")), dwsp__), mandatory=2)
     member = Series(string, Series(Drop(Text(":")), dwsp__), _element, mandatory=1)
@@ -112,25 +116,9 @@ class simplifiedJSONGrammar(Grammar):
     _element.set(Alternative(object, array, string, other_literal))
     json = Series(dwsp__, _element, _EOF)
     root__ = json
-    
-
-_raw_grammar = ThreadLocalSingletonFactory(simplifiedJSONGrammar, ident=1)
-
-def get_grammar() -> simplifiedJSONGrammar:
-    grammar = _raw_grammar()
-    if get_config_value('resume_notices'):
-        resume_notices_on(grammar)
-    elif get_config_value('history_tracking'):
-        set_tracer(grammar, trace_history)
-    try:
-        if not grammar.__class__.python_src__:
-            grammar.__class__.python_src__ = get_grammar.python_src__
-    except AttributeError:
-        pass
-    return grammar
-    
-def parse_simplifiedJSON(document, start_parser = "root_parser__", *, complete_match=True):
-    return get_grammar()(document, start_parser, complete_match)
+        
+parsing: PseudoJunction = create_parser_junction(simplifiedJSONGrammar)
+get_grammar = parsing.factory # for backwards compatibility, only
 
 
 #######################################################################
@@ -161,7 +149,7 @@ def simplifiedJSONTransformer() -> TransformerFunc:
     return partial(traverse, transformation_table=simplifiedJSON_AST_transformation_table.copy())
 
 
-get_transformer = ThreadLocalSingletonFactory(simplifiedJSONTransformer, ident=1)
+get_transformer = ThreadLocalSingletonFactory(simplifiedJSONTransformer)
 
 
 def transform_simplifiedJSON(cst):

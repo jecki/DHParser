@@ -500,6 +500,7 @@ def compile_on_disk(source_file: str,
             source = f.read()
             sections = split_source(parser_name, source)
             intro, imports, preprocessor, _, ast, compiler, outro = sections
+            if imports[-1:] != '\n':  imports += "\n\n"
             ast_trans_python_src = imports + ast
             ast_trans_table = dict()  # type: TransformationDict
             try:
@@ -541,7 +542,7 @@ def compile_on_disk(source_file: str,
         elif imports.find("from DHParser.") < 0 \
                 or imports.find('PseudoJunction') < 0 \
                 or imports.find('create_parser_junction') < 0:
-            imports += "\nfrom DHParser.pipeline import PseudoJunction, create_parser_junction\n"
+            imports += "\nfrom DHParser.pipeline import PseudoJunction, create_parser_junction\n\n"
         if RX_WHITESPACE.fullmatch(preprocessor):
             preprocessor = ebnf_compiler.gen_preprocessor_skeleton()
         if RX_WHITESPACE.fullmatch(ast):

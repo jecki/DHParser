@@ -13,9 +13,7 @@
 document = main [WS] §EOF
 
 main  = [WS] `#` !`#` ~ heading [WS blocks] { WS section }
-@section_skip = /\n(?=#{1,3}+ |$)/  # /#{1,3}(?!#)|$/
-# @section_skip = ({!(section|subsection|EOF) /.|\n/ })
-section  = `##` !`#` ~ heading [WS blocks] { WS (§ & (section|subsection|EOF)) subsection }
+section  = `##` !`#` ~ heading [WS blocks] { WS subsection }
 subsection  = `###` !`#` ~ heading [WS blocks] { WS subsubsection }
 subsubsection  = `####` !`#` ~ heading [WS blocks] { WS s5section }
 s5section  = `#####` !`#` ~ heading [WS blocks] { WS s6section }
@@ -23,7 +21,7 @@ s6section  = `######` !`#` ~ heading [WS blocks]
 
 heading = LINE
 
-#: block
+#: blocks
 
 blocks  = !is_heading markup { GAP !is_heading markup }
 is_heading = /##?#?#?#?#?(?!#)/

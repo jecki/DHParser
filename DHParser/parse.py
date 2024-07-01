@@ -69,6 +69,8 @@ except (ImportError, NameError):
 
 __all__ = ('parser_names',
            'ParserError',
+           'ARTIFACT_NAMES',
+           'artifact',
            'ApplyFunc',
            'ApplyToTrailFunc',
            'FlagFunc',
@@ -293,7 +295,8 @@ ReentryPointAlgorithm: TypeAlias = Callable[[StringView, int, int], Tuple[int, i
 def reentry_point(rest: StringView,
                   rules: ResumeList,
                   comment_regex,
-                  search_window: int = -1) -> Tuple[int, Node]:
+                  search_window: int = -1,
+                  skip_node_name: str = "") -> Tuple[int, Node]:
     """
     Finds the point where parsing should resume after a ParserError has been caught.
     The algorithm makes sure that this reentry-point does not lie inside a comment.
@@ -401,7 +404,8 @@ def reentry_point(rest: StringView,
         return k + length if k >= 0 else upper_limit
 
     # find the closest match
-    for rule in rules:
+    nr = 0
+    for nr, rule in enumerate(rules, 1):
         comments = rest.finditer(comment_regex)
         if isinstance(rule, Parser):
             parser = cast(Parser, rule)
@@ -440,8 +444,15 @@ def reentry_point(rest: StringView,
     if closest_match == upper_limit:
         closest_match = -1
     if skip_node is None:
-        skip_node = Node(ZOMBIE_TAG, rest[:max(closest_match, 0)])
+        skip_node = Node(f'{skip_node_name}_R{nr}__', rest[:max(closest_match, 0)])
     return closest_match, skip_node
+
+
+ARTIFACT_NAMES = ('_skip_', '_resume_', ZOMBIE_TAG)
+
+def artifact(nd: Node) -> bool:
+    """Returns True, if node is a skip, resume or ZOMBIE-node."""
+    return nd.name[-2:] == '__' and any(nd.name.find(part) >= 0 for part in ARTIFACT_NAMES)
 
 
 ########################################################################
@@ -665,17 +676,19 @@ class Parser:
         rules = tuple(grammar.resume_rules__.get(self.symbol.pname, []))
         next_location = pe.location + pe.node_orig_len
         rest = grammar.document__[next_location:]
-        i, skip_node = reentry_point(rest, rules, grammar.comment_rx__,
-                                     grammar.reentry_search_window__)
+        i, skip_node = reentry_point(
+            rest, rules, grammar.comment_rx__, grammar.reentry_search_window__,
+            f'{grammar.associated_symbol__(pe.parser).pname}_resume')
         if i >= 0 or self == grammar.start_parser__:
             # either a reentry point was found or the
             # error has fallen through to the first level
             assert pe.node._children or (not pe.node.result)
             # apply reentry-rule or catch error at root-parser
             if i < 0:  i = 0
-            zombie = pe.node.pick_child(ZOMBIE_TAG)  # type: Optional[Node]
+            zombie = pe.node.pick_child(artifact)  # type: Optional[Node]
             if zombie and not zombie.result:
                 zombie.result = rest[:i]
+                zombie.name = skip_node.name
                 tail = tuple()  # type: ChildrenType
             else:
                 # nd.attr['err'] = pe.error.message
@@ -1338,7 +1351,7 @@ class GrammarError(Exception):
 class UninitializedError(Exception):
     """An error that results from unintialized objects. This can be
     a consequence of some broken boot-strapping-process."""
-    def __init__(self, msg: string):
+    def __init__(self, msg: str):
         self.msg = msg
 
     def __str__(self):
@@ -1352,7 +1365,7 @@ def reset_parser(parser):
     return parser.reset()
 
 
-def _propagate_drop(p: parser):
+def _propagate_drop(p: Parser):
     """propagates the drop_content flag to all unnamed children."""
     assert p.drop_content
     for c in p.sub_parsers:
@@ -1360,7 +1373,7 @@ def _propagate_drop(p: parser):
             c.drop_content = True
             _propagate_drop(c)
 
-def ensure_drop_propagation(p: parser):
+def ensure_drop_propagation(p: Parser):
     if p.drop_content:
         _propagate_drop(p)
     else:
@@ -4221,7 +4234,8 @@ class ErrorCatchingNary(NaryParser):
         skip = tuple(self.grammar.skip_rules__.get(self.symbol.pname, []))
         if skip:
             gr = self._grammar
-            reloc, zombie = reentry_point(text_, skip, gr.comment_rx__, gr.reentry_search_window__)
+            reloc, zombie = reentry_point(text_, skip, gr.comment_rx__, gr.reentry_search_window__,
+                                          f'{self.grammar.associated_symbol__(self).pname}_skip')
             return reloc, zombie
         return -1, Node(ZOMBIE_TAG, '')
 
