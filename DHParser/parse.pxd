@@ -86,7 +86,7 @@ cdef class RegExp(LeafParser):
     cdef public object regexp
 
 cdef class Whitespace(RegExp):
-    pass
+    cdef public bint keep_comments
 
 cdef class CombinedParser(Parser):
     cdef public object _return_value
@@ -104,12 +104,18 @@ cdef class SmartRE(CombinedParser):
     cdef public object groups
     cdef public str pattern
     cdef public object is_lookahead_
+    cdef public object regexp
 
 cdef class UnaryParser(CombinedParser):
     cdef public object parser
 
+
+cdef class LateBindingUnary(UnaryParser):
+    cdef public str parser_name
+
 cdef class NaryParser(CombinedParser):
     cdef public object parsers
+
 
 cdef class Option(UnaryParser):
     pass

@@ -607,8 +607,8 @@ class Parser:
         try:
             self._grammar = get_grammar_placeholder()  # type: Grammar
         except NameError:
-            pass                      # ensures Cython-compatibility
-        self._symbol = ''             # type: Parser
+            pass                        # ensures Cython-compatibility
+        self._symbol = ''               # type: str
         self._descendants_cache = None  # type: Optional[AbstractSet[Parser]]
         self._anon_desc_cache = None    # type: Optional[AbstractSet[Parser]]
         self._desc_trails_cache = None  # type: Optional[AbstractSet[ParserTrail]]
@@ -643,7 +643,7 @@ class Parser:
         This is the closest parser with a pname that contains this parser."""
         if not self._symbol:
             try:
-                self._symbol = self.grammar.associated_symbol__(self)
+                self._symbol = self.grammar.associated_symbol__(self).pname
             except AttributeError:
                 # return an empty string, if parser is not connected to grammar,
                 # but be sure not to save the empty string in self._symbol
@@ -673,12 +673,12 @@ class Parser:
         grammar = self._grammar
         gap = pe.location - location
         cut = grammar.document__[location:location + gap]
-        rules = tuple(grammar.resume_rules__.get(self.symbol.pname, []))
+        rules = tuple(grammar.resume_rules__.get(self.symbol, []))
         next_location = pe.location + pe.node_orig_len
         rest = grammar.document__[next_location:]
         i, skip_node = reentry_point(
             rest, rules, grammar.comment_rx__, grammar.reentry_search_window__,
-            f'{grammar.associated_symbol__(pe.parser).pname}_resume')
+            f'{pe.parser.symbol}_resume')
         if i >= 0 or self == grammar.start_parser__:
             # either a reentry point was found or the
             # error has fallen through to the first level
@@ -1035,7 +1035,7 @@ class Parser:
 
 
     def static_error(self, msg: str, code: ErrorCode) -> 'AnalysisError':
-        return AnalysisError(self.symbol.pname, self, Error(msg, 0, code))
+        return AnalysisError(self.symbol, self, Error(msg, 0, code))
 
     def static_analysis(self) -> List['AnalysisError']:
         """Analyses the parser for logical errors after the grammar has been
@@ -2145,7 +2145,7 @@ class Grammar:
                         err_pos = i
                         fs = self.document__[i:i + 10].replace('\n', '\\n')
                         if i + 10 < len(self.document__) - 1:  fs += '...'
-                        root_name = self.associated_symbol__(self.start_parser__).pname
+                        root_name = self.start_parser__.symbol
                         error_msg = f'Parser "{root_name}" ' \
                             f"stopped before end, at: »{fs}«" + \
                             (("Trying to recover" +
@@ -2411,7 +2411,7 @@ class Grammar:
         for parser in self.all_parsers__:
             error_list.extend(parser.static_analysis())
             if parser.pname and not has_leaf_parsers(parser):
-                error_list.append(AnalysisError(parser.symbol.pname, parser, Error(
+                error_list.append(AnalysisError(parser.symbol, parser, Error(
                     'Parser %s is entirely cyclical and, therefore, cannot even touch '
                     'the parsed document' % cast('CombinedParser', parser).location_info(),
                     0, PARSER_NEVER_TOUCHES_DOCUMENT)))
@@ -3205,7 +3205,7 @@ class CombinedParser(Parser):
         """Returns a description of the location of the parser within the grammar
         for the purpose of transparent error reporting."""
         return '%s%s in definition of "%s" as %s' \
-            % (self.pname or '_', self.ptype, self.symbol.pname, str(self))
+            % (self.pname or '_', self.ptype, self.symbol, str(self))
 
     NO_TREE_REDUCTION = 0
     FLATTEN = 1  # "flatten" vertically    (A (:Text "data"))  -> (A "data")
@@ -3320,7 +3320,7 @@ KEEP_COMMENTS_NAME = KEEP_COMMENTS_PTYPE[1:] + '__'
 RX_NAMED_GROUPS = re.compile(r'\(\?P<(:?\w+)>')
 
 
-class SmartRE(RegExp, CombinedParser):  # TODO: turn this into a CombinedParser
+class SmartRE(CombinedParser):  # TODO: turn this into a CombinedParser
     r"""
     Regular expression parser that returns a tree with a node for every
     captured group (named as the group or as the number of the group,
@@ -3341,12 +3341,18 @@ class SmartRE(RegExp, CombinedParser):  # TODO: turn this into a CombinedParser
     """
     def __init__(self, pattern,
                  repr_str: str = '') -> None:
+        super().__init__()
         self.repr_str = repr_str
         self.groups: Optional[List[Tuple(str, bool)]] = None
-        self.pattern = pattern if isinstance(pattern, str) else pattern.pattern
+        if isinstance(pattern, str):
+            self.pattern = pattern
+            self.regexp = LazyPattern(self, pattern)
+        else:
+            self.pattern = pattern.pattern
+            self.regexp = pattern
         self.is_lookahead_: Optional[bool] = None
-        super().__init__(pattern)
 
+    @cython.locals(i=cython.int)
     def lazy_initialization(self, pattern: str):
         group_names = RX_NAMED_GROUPS.findall(pattern)
         # assert group_names, f"Named group(s) missing in SmartRE: {pattern}"
@@ -3384,6 +3390,7 @@ class SmartRE(RegExp, CombinedParser):  # TODO: turn this into a CombinedParser
         copy_combined_parser_attrs(self, duplicate)
         return duplicate
 
+    @cython.locals(i=cython.int, disposable=cython.bint)
     def _parse(self, location: cython.int) -> ParsingResult:
         try:
             match = self.regexp.match(self._grammar.text__, location)
@@ -3429,6 +3436,14 @@ class SmartRE(RegExp, CombinedParser):  # TODO: turn this into a CombinedParser
         except (AttributeError, NameError):
             pass
         return '/' + abbreviate_middle(pattern, 118) + '/'
+
+    def is_optional(self) -> Optional[bool]:
+        if not self.regexp.pattern:
+            return True
+        return super().is_optional()
+
+    def _signature(self) -> Hashable:
+        return self.__class__.__name__, self.regexp.pattern
 
     def is_lookahead(self) -> bool:
         r"""Just a heuristic test - not perfect::
@@ -3687,7 +3702,7 @@ def infinite_loop_warning(parser, node, location):
         if node is EMPTY_NODE:  node = Node(EMPTY_PTYPE, '').with_pos(location)
         dsl_error(parser, node,
                   f'Repeating parser did not make any progress! Was inner parser '
-                  f'of "{parser.symbol.pname}" really intended to capture empty text?',
+                  f'of "{parser.symbol}" really intended to capture empty text?',
                   INFINITE_LOOP_WARNING)
 
 
@@ -4231,11 +4246,11 @@ class ErrorCatchingNary(NaryParser):
         skip-list ist empty, -1 and a zombie-node are returned.
         """
         text_ = self.grammar.document__[location:]
-        skip = tuple(self.grammar.skip_rules__.get(self.symbol.pname, []))
+        skip = tuple(self.grammar.skip_rules__.get(self.symbol, []))
         if skip:
             gr = self._grammar
             reloc, zombie = reentry_point(text_, skip, gr.comment_rx__, gr.reentry_search_window__,
-                                          f'{self.grammar.associated_symbol__(self).pname}_skip')
+                                          f'{self.symbol}_skip')
             return reloc, zombie
         return -1, Node(ZOMBIE_TAG, '')
 
@@ -4280,7 +4295,7 @@ class ErrorCatchingNary(NaryParser):
             found = '»' + text_[:10].replace('\n', '\\n') + '«'
         else:
             found = "END OF FILE"
-        sym = self.symbol.pname
+        sym = self.symbol
         err_msgs = self.grammar.error_messages__.get(sym, [])
         for search, message in err_msgs:
             is_func = callable(search)           # search rule is a function: StringView -> bool
@@ -4321,7 +4336,7 @@ class ErrorCatchingNary(NaryParser):
         errors = super().static_analysis()
         msg = []
         length = len(self.parsers)
-        sym = self.grammar.associated_symbol__(self).pname
+        sym = self.symbol
         # if self.mandatory == NO_MANDATORY and sym in self.grammar.error_messages__:
         #     msg.append('Custom error messages require that parameter "mandatory" is set!')
         # elif self.mandatory == NO_MANDATORY and sym in self.grammar.skip_rules__:
@@ -4982,7 +4997,7 @@ class Pop(Retrieve):
         super().__init__(symbol, match_func)
 
     def reset(self):
-        super().reset()
+        super(Pop, self).reset()
         self.values = []
 
     # def __deepcopy__(self, memo):
@@ -5092,7 +5107,7 @@ class Forward(UnaryParser):
         self.sub_parsers = frozenset()
 
     def reset(self):
-        super().reset()
+        super(Forward, self).reset()
         self.recursion_counter: Dict[int, int] = dict()
         assert not self.pname, "Forward-Parsers mustn't have a name!"
 

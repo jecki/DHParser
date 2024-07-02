@@ -2180,7 +2180,6 @@ class EBNFCompiler(Compiler):
             try:
                 grammar_class = compile_python_object(
                     probe_src, (self.grammar_name or "DSL") + "Grammar")
-                # print(probe_src)
                 errors = grammar_class().static_analysis_errors__
                 python_src = python_src.replace(
                     'static_analysis_pending__ = [True]',
@@ -2206,7 +2205,7 @@ class EBNFCompiler(Compiler):
                 se.msg += f' "{src_lines[se.lineno - 1]}" '
                 raise se
             for sym, parser, err in errors:
-                psym = parser.symbol.pname
+                psym = parser.symbol
                 for dic, key in [(self.rules, sym), (self.rules, psym), (self.macros, psym)]:
                     symdef_node = dic.get(key, [None])[0]
                     if symdef_node:  break
@@ -3439,7 +3438,7 @@ class EBNFCompiler(Compiler):
         return f'{self.P["AnyChar"]}()'
 
 
-    def smartRE_whitespace(self, node: Node) -> str:
+    def smartRE_whitespace(self, node: Node) -> Tuple[str, str]:
         return self.whitespace_rx(self.WSPC_PARSER()), '~'
 
     def on_whitespace(self, node: Node) -> str:
