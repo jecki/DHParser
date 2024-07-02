@@ -455,13 +455,13 @@ def xml_tag_name(tag_name: str) -> str:
     lead to invalid XML::
 
         >>> xml_tag_name(':Series')
-        'Series__'
+        '__Series__'
 
     :param tag_name: the original tag name
     :returns: the XML-conform name
     """
     if tag_name[:1] == ':':
-        return f'{tag_name[1:]}__'
+        return f'__{tag_name[1:]}__'
     return tag_name
 
 
@@ -470,14 +470,14 @@ def restore_tag_name(tag_name: str) -> str:
 
     >>> restore_tag_name('ANONYMOUS_Series__')
     ':Series'
-    >>> restore_tag_name('Series__')
+    >>> restore_tag_name('__Series__')
     ':Series'
     """
     if tag_name[-2:] == "__":
         if tag_name[:10] == "ANONYMOUS_":
             return ':' + tag_name[10:-2]
-        else:
-            return ':' + tag_name[:-2]
+        elif tag_name[:2] == '__':
+            return ':' + tag_name[2:-2]
     return tag_name
 
 

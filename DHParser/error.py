@@ -368,12 +368,14 @@ class Error:
         return msg
 
     def __eq__(self, other):
-        return self._normalize_msg(self.message) == self._normalize_msg(other.message) \
-            and self.code == other.code \
-            and self._pos == other._pos  # and self.length == other.length
+        # return self._normalize_msg(self.message) == self._normalize_msg(other.message) \
+        #     and self.code == other.code \
+        #     and self._pos == other._pos  # and self.length == other.length
+        return self.code == other.code and self._pos == other._pos
 
     def __hash__(self):
-        return hash((self._normalize_msg(self.message), self.code, self._pos))
+        return hash((self.code, self._pos))
+        # return hash((self._normalize_msg(self.message), self.code, self._pos))
 
     def __str__(self):
         if self.orig_doc and self.orig_doc != 'UNKNOWN_FILE':
