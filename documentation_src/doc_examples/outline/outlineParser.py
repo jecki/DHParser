@@ -113,17 +113,17 @@ class outlineGrammar(Grammar):
     section = Forward()
     subsection = Forward()
     subsubsection = Forward()
-    source_hash__ = "96887b2b5f81786cf9adfd133d93c25a"
+    source_hash__ = "5d7b98fbe298bb87c33cd1ca57661994"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:GAP$|CHARS$|ESCAPED$|inner_emph$|blocks$|WS$|LINE$|L$|LLF$|inner_bold$|TEXT$|EOF$)')
+    disposable__ = re.compile('(?:WS$|GAP$|L$|EOF$|TEXT$|inner_emph$|LLF$|inner_bold$|ESCAPED$|LINE$|CHARS$|blocks$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
-    error_messages__ = {'document': [(re.compile(r'(?=)'), "Dateiende erwartet!")],
-                        'main': [(re.compile(r'(?=#)'), "2010:Falsche Gliederungsebene")],
-                        'section': [(re.compile(r'(?=#)'), "2010:Falsche Gliederungsebene")],
-                        'subsection': [(re.compile(r'(?=#)'), "2010:Falsche Gliederungsebene")],
-                        'subsubsection': [(re.compile(r'(?=#)'), "2010:Falsche Gliederungsebene")],
-                        's5section': [(re.compile(r'(?=#)'), "2010:Falsche Gliederungsebene")]}
+    error_messages__ = {'document': [(re.compile(r'(?=)'), "End of file expected!")],
+                        'main': [(re.compile(r'(?=#)'), "2010:Bad nesting of headings")],
+                        'section': [(re.compile(r'(?=#)'), "2010:Bad nesting of headings")],
+                        'subsection': [(re.compile(r'(?=#)'), "2010:Bad nesting of headings")],
+                        'subsubsection': [(re.compile(r'(?=#)'), "2010:Bad nesting of headings")],
+                        's5section': [(re.compile(r'(?=#)'), "2010:Bad nesting of headings")]}
     COMMENT__ = r''
     comment_rx__ = RX_NEVER_MATCH
     WHITESPACE__ = r'[ \t]*'
