@@ -261,7 +261,15 @@ built and installed, you can run the "dhparser_cythonize"-script
 from the command line:
 
     dhparser_cythonize
-       
+
+On Linux-systems, in case you want to use clang instead of the
+gcc-compiler, type:
+
+    export CC=/usr/bin/clang; dhparser_cythonize 
+
+Using clang may also help to circumvent C-errors like 
+"incompatible pointer types".
+
 The Cython-compiled version is about 2-3 times faster than the 
 CPython-interpreted version. Compiling can take quite a while. 
 If you are in a hurry, you can just can also just call
@@ -277,7 +285,7 @@ the xxxParser.py-script each time when parsing many documents subsequently.
 
 Another way to speed up your parser is by adding "@ optimizations = all"
 at the beginning of your EBNF-grammar-file. DHParser then tries to 
-compile (some) non recursive parts of your grammar to entirely to regular 
+compile (some) non-recursive parts of your grammar to entirely to regular 
 rexpressions which yields a 10-20% speedup. Beware that this option
 is still experimental!
 

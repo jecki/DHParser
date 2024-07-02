@@ -1526,16 +1526,18 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     child = parent
             return child
 
-        if begin.pos > end.pos:
+        nodes = isinstance(begin, Node)
+        assert nodes == isinstance(end, Node)
+        if (begin.pos > end.pos) if nodes else (begin[-1].pos > end[-1].pos):
             begin, end = end, begin
         common_ancestor = self  # type: Node
-        trlA = self.reconstruct_path(begin) if isinstance(begin, Node) else begin
-        trlB = self.reconstruct_path(end) if isinstance(end, Node) else end
+        trlA = self.reconstruct_path(begin) if nodes else begin
+        trlB = self.reconstruct_path(end) if nodes else end
         for a, b in zip(trlA, trlB):
             if a != b:
                 break
             common_ancestor = a
-        left = cut(trlA[trlA.index(common_ancestor):], left_cut)    # type: Node
+        left = cut(trlA[trlA.index(common_ancestor):], left_cut)  # type: Node
         right = cut(trlB[trlB.index(common_ancestor):], right_cut)  # type: Node
         left_children = left._children    # type: Tuple[Node, ...]
         right_children = right._children  # type: Tuple[Node, ...]
