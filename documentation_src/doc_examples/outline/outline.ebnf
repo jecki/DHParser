@@ -22,12 +22,12 @@ s5section  = `#####` !`#` ~ heading [WS blocks]
              { WS (§ &(section|subsection|subsubsection|s5section|s6section|EOF)) s6section }
 s6section  = `######` !`#` ~ heading [WS blocks]
 
-@document_error = '', "Dateiende erwartet!"
-@main_error = /(?=#)/, "2010:Falsche Gliederungsebene"
-@section_error = /(?=#)/, "2010:Falsche Gliederungsebene"
-@subsection_error = /(?=#)/, "2010:Falsche Gliederungsebene"
-@subsubsection_error = /(?=#)/, "2010:Falsche Gliederungsebene"
-@s5section_error = /(?=#)/, "2010:Falsche Gliederungsebene"
+@document_error = '', "End of file expected!"
+@main_error = /(?=#)/, "2010:Bad nesting of headings"
+@section_error = /(?=#)/, "2010:Bad nesting of headings"
+@subsection_error = /(?=#)/, "2010:Bad nesting of headings"
+@subsubsection_error = /(?=#)/, "2010:Bad nesting of headings"
+@s5section_error = /(?=#)/, "2010:Bad nesting of headings"
 
 @document_skip = /(?:.|\n)*/
 @main_skip = ({!(section|EOF) /#*[^#]*/ })
