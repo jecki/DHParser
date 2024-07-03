@@ -37,7 +37,7 @@ s5section_expect = section | subsection | subsubsection | s5section | s6section 
 @subsubsection_error = /(?=#)/, "2010:Bad nesting of headings"
 @s5section_error = /(?=#)/, "2010:Bad nesting of headings"
 
-@document_skip = /(?:.|\n)*/
+@document_skip = /(?!.|\n)/
 @main_skip = ({!main_expect until_heading})
 @section_skip = ({!section_expect until_heading})
 @subsection_skip = ({!subsection_expect until_heading})
@@ -81,4 +81,4 @@ LF        = /[ \t]*\n[ \t]*(?!\n)/  #  single line-feed
 PARSEP    = ~/\n/ ~/\n/
 WS        = GAP                     # same as GAP, but will be dropped
 GAP       = /(?:[ \t]*\n)+/    # any ws at line-end and all following empty lines
-EOF       =  !/./  # no more characters ahead, end of file reached
+EOF       =  !/.|\n/  # no more characters ahead, end of file reached

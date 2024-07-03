@@ -113,9 +113,9 @@ class outlineGrammar(Grammar):
     section = Forward()
     subsection = Forward()
     subsubsection = Forward()
-    source_hash__ = "809d0a1e6dea72e310a5caef009a4f79"
+    source_hash__ = "890252b79760daa7513f0584cfe58d1e"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:WS$|GAP$|LINE$|TEXT$|ESCAPED$|inner_emph$|L$|LLF$|EOF$|inner_bold$|CHARS$|blocks$)')
+    disposable__ = re.compile('(?:L$|TEXT$|blocks$|inner_emph$|EOF$|GAP$|inner_bold$|LLF$|CHARS$|ESCAPED$|WS$|LINE$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'document': [(re.compile(r'(?=)'), "End of file expected!")],
@@ -130,7 +130,7 @@ class outlineGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    EOF = Drop(NegativeLookahead(RegExp('.')))
+    EOF = Drop(NegativeLookahead(RegExp('.|\\n')))
     GAP = Drop(RegExp('(?:[ \\t]*\\n)+'))
     WS = Drop(Synonym(GAP))
     PARSEP = Series(dwsp__, RegExp('\\n'), dwsp__, RegExp('\\n'))
@@ -169,7 +169,7 @@ class outlineGrammar(Grammar):
     subsection.set(Series(Drop(Text("###")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, Series(Lookahead(subsection_expect), mandatory=0), subsubsection))))
     section.set(Series(Drop(Text("##")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, Series(Lookahead(section_expect), mandatory=0), subsection))))
     main_skip_1__ = ZeroOrMore(Series(NegativeLookahead(main_expect), until_heading))
-    skip_rules__ = {'document': [re.compile(r'(?:.|\n)*')],
+    skip_rules__ = {'document': [re.compile(r'(?!.|\n)')],
                     'main': [main_skip_1__],
                     'section': [section_skip_1__],
                     'subsection': [subsection_skip_1__],
