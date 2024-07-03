@@ -8,19 +8,27 @@
                 CHARS, TEXT, ESCAPED, inner_emph, inner_bold, blocks
 @ drop        = WS, EOF, GAP, backticked, whitespace
 
-#:  Outline
+#: outline
 
 document = main [WS] §EOF
 
-main  = [WS] `#` !`#` ~ heading [WS blocks] { WS (§ &(section|EOF)) section }
-section  = `##` !`#` ~ heading [WS blocks] { WS (§ &(section|subsection|EOF)) subsection }
-subsection  = `###` !`#` ~ heading [WS blocks]
-              { WS (§ &(section|subsection|subsubsection|EOF)) subsubsection }
-subsubsection  = `####` !`#` ~ heading [WS blocks]
-                 { WS (§ &(section|subsection|subsubsection|s5section|EOF)) s5section }
-s5section  = `#####` !`#` ~ heading [WS blocks]
-             { WS (§ &(section|subsection|subsubsection|s5section|s6section|EOF)) s6section }
+main  = [WS] `#` !`#` ~ heading [WS blocks] { WS (§&main_expect) section }
+section  = `##` !`#` ~ heading [WS blocks] { WS (§&section_expect) subsection }
+subsection  = `###` !`#` ~ heading [WS blocks] { WS (§&subsection_expect) subsubsection }
+subsubsection  = `####` !`#` ~ heading [WS blocks] { WS (§&subsubsection_expect) s5section }
+s5section  = `#####` !`#` ~ heading [WS blocks] { WS (§&s5section_expect) s6section }
 s6section  = `######` !`#` ~ heading [WS blocks]
+
+heading = LINE
+
+
+# error-handling for outline
+
+main_expect = section | EOF
+section_expect = section | subsection | EOF
+subsection_expect = section | subsection | subsubsection | EOF
+subsubsection_expect = section | subsection | subsubsection | s5section | EOF
+s5section_expect = section | subsection | subsubsection | s5section | s6section | EOF
 
 @document_error = '', "End of file expected!"
 @main_error = /(?=#)/, "2010:Bad nesting of headings"
@@ -30,15 +38,16 @@ s6section  = `######` !`#` ~ heading [WS blocks]
 @s5section_error = /(?=#)/, "2010:Bad nesting of headings"
 
 @document_skip = /(?:.|\n)*/
-@main_skip = ({!(section|EOF) /#*[^#]*/ })
-@section_skip = ({!(section|subsection|EOF) /#*[^#]*/ })
-@subsection_skip = ({!(section|subsection|subsubsection|EOF) /#*[^#]*/ })
-@subsubsection_skip = ({!(section|subsection|subsubsection|s5section|EOF) /#*[^#]*/ })
-@s5section_skip = ({!(section|subsection|subsubsection|s5section|s6section|EOF) /#*[^#]*/ })
+@main_skip = ({!main_expect until_heading})
+@section_skip = ({!section_expect until_heading})
+@subsection_skip = ({!subsection_expect until_heading})
+@subsubsection_skip = ({!subsubsection_expect until_heading})
+@s5section_skip = ({!s5section_expect until_heading})
 
-heading = LINE
+until_heading = /#*[^#]*/
 
-#: block
+
+#: blocks
 
 blocks  = !is_heading markup { GAP !is_heading markup }
 is_heading = /##?#?#?#?#?(?!#)/
@@ -46,6 +55,7 @@ is_heading = /##?#?#?#?#?(?!#)/
 markup    = [indent] (text | bold | emphasis) { [LLF] (text | bold | emphasis) }
 indent    = /[ \t]+(?=[^\s])/
 text      = (TEXT | ESCAPED) { [LLF] (TEXT | ESCAPED) }
+
 
 #: inline-elements
 
@@ -56,6 +66,7 @@ bold      = `**` §inner_bold `**`
 
 inner_emph = [~ &/[*_]/] (text | bold) { [LLF] (text | bold) } [<-&/[*_]/ ~]
 inner_bold = [~ &/[*_]/] (text | emphasis) { [LLF] (text | emphasis) } [<-&/[*_]/ ~]
+
 
 #:  Regular Expressions
 

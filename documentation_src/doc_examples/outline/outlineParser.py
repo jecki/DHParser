@@ -113,9 +113,9 @@ class outlineGrammar(Grammar):
     section = Forward()
     subsection = Forward()
     subsubsection = Forward()
-    source_hash__ = "5d7b98fbe298bb87c33cd1ca57661994"
+    source_hash__ = "809d0a1e6dea72e310a5caef009a4f79"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:WS$|GAP$|L$|EOF$|TEXT$|inner_emph$|LLF$|inner_bold$|ESCAPED$|LINE$|CHARS$|blocks$)')
+    disposable__ = re.compile('(?:WS$|GAP$|LINE$|TEXT$|ESCAPED$|inner_emph$|L$|LLF$|EOF$|inner_bold$|CHARS$|blocks$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'document': [(re.compile(r'(?=)'), "End of file expected!")],
@@ -144,25 +144,31 @@ class outlineGrammar(Grammar):
     text = Series(Alternative(TEXT, ESCAPED), ZeroOrMore(Series(Option(LLF), Alternative(TEXT, ESCAPED))))
     inner_bold = Series(Option(Series(dwsp__, Lookahead(RegExp('[*_]')))), Alternative(text, emphasis), ZeroOrMore(Series(Option(LLF), Alternative(text, emphasis))), Option(Series(Lookbehind(RegExp('[*_]')), dwsp__)))
     bold = Alternative(Series(Drop(Text("**")), inner_bold, Drop(Text("**")), mandatory=1), Series(Drop(Text("__")), inner_bold, Drop(Text("__")), mandatory=1))
+    main_expect = Alternative(section, EOF)
     heading = Synonym(LINE)
-    is_heading = RegExp('##?#?#?#?#?(?!#)')
     inner_emph = Series(Option(Series(dwsp__, Lookahead(RegExp('[*_]')))), Alternative(text, bold), ZeroOrMore(Series(Option(LLF), Alternative(text, bold))), Option(Series(Lookbehind(RegExp('[*_]')), dwsp__)))
     indent = RegExp('[ \\t]+(?=[^\\s])')
     markup = Series(Option(indent), Alternative(text, bold, emphasis), ZeroOrMore(Series(Option(LLF), Alternative(text, bold, emphasis))))
+    is_heading = RegExp('##?#?#?#?#?(?!#)')
     blocks = Series(NegativeLookahead(is_heading), markup, ZeroOrMore(Series(GAP, NegativeLookahead(is_heading), markup)))
-    main = Series(Option(WS), Drop(Text("#")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, Series(Lookahead(Alternative(section, EOF)), mandatory=0), section)))
+    until_heading = RegExp('#*[^#]*')
+    main = Series(Option(WS), Drop(Text("#")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, Series(Lookahead(main_expect), mandatory=0), section)))
+    subsubsection_expect = Alternative(section, subsection, subsubsection, s5section, EOF)
+    subsection_expect = Alternative(section, subsection, subsubsection, EOF)
+    section_expect = Alternative(section, subsection, EOF)
     document = Series(main, Option(WS), EOF, mandatory=2)
     s6section = Series(Drop(Text("######")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)))
-    s5section_skip_1__ = ZeroOrMore(Series(NegativeLookahead(Alternative(section, subsection, subsubsection, s5section, s6section, EOF)), RegExp('#*[^#]*')))
-    subsubsection_skip_1__ = ZeroOrMore(Series(NegativeLookahead(Alternative(section, subsection, subsubsection, s5section, EOF)), RegExp('#*[^#]*')))
-    subsection_skip_1__ = ZeroOrMore(Series(NegativeLookahead(Alternative(section, subsection, subsubsection, EOF)), RegExp('#*[^#]*')))
-    section_skip_1__ = ZeroOrMore(Series(NegativeLookahead(Alternative(section, subsection, EOF)), RegExp('#*[^#]*')))
+    s5section_expect = Alternative(section, subsection, subsubsection, s5section, s6section, EOF)
+    s5section_skip_1__ = ZeroOrMore(Series(NegativeLookahead(s5section_expect), until_heading))
+    subsubsection_skip_1__ = ZeroOrMore(Series(NegativeLookahead(subsubsection_expect), until_heading))
+    subsection_skip_1__ = ZeroOrMore(Series(NegativeLookahead(subsection_expect), until_heading))
+    section_skip_1__ = ZeroOrMore(Series(NegativeLookahead(section_expect), until_heading))
     emphasis.set(Alternative(Series(Drop(Text("*")), NegativeLookahead(Drop(Text("*"))), inner_emph, Drop(Text("*")), mandatory=2), Series(Drop(Text("_")), NegativeLookahead(Drop(Text("_"))), inner_emph, Drop(Text("_")), mandatory=2)))
-    s5section.set(Series(Drop(Text("#####")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, Series(Lookahead(Alternative(section, subsection, subsubsection, s5section, s6section, EOF)), mandatory=0), s6section))))
-    subsubsection.set(Series(Drop(Text("####")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, Series(Lookahead(Alternative(section, subsection, subsubsection, s5section, EOF)), mandatory=0), s5section))))
-    subsection.set(Series(Drop(Text("###")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, Series(Lookahead(Alternative(section, subsection, subsubsection, EOF)), mandatory=0), subsubsection))))
-    section.set(Series(Drop(Text("##")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, Series(Lookahead(Alternative(section, subsection, EOF)), mandatory=0), subsection))))
-    main_skip_1__ = ZeroOrMore(Series(NegativeLookahead(Alternative(section, EOF)), RegExp('#*[^#]*')))
+    s5section.set(Series(Drop(Text("#####")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, Series(Lookahead(s5section_expect), mandatory=0), s6section))))
+    subsubsection.set(Series(Drop(Text("####")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, Series(Lookahead(subsubsection_expect), mandatory=0), s5section))))
+    subsection.set(Series(Drop(Text("###")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, Series(Lookahead(subsection_expect), mandatory=0), subsubsection))))
+    section.set(Series(Drop(Text("##")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, Series(Lookahead(section_expect), mandatory=0), subsection))))
+    main_skip_1__ = ZeroOrMore(Series(NegativeLookahead(main_expect), until_heading))
     skip_rules__ = {'document': [re.compile(r'(?:.|\n)*')],
                     'main': [main_skip_1__],
                     'section': [section_skip_1__],

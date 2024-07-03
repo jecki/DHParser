@@ -932,7 +932,7 @@ EBNF_AST_transformation_table = {
         [reduce_single_child],
     "SYM_REGEX": [pythonize_identifier],
     "RAISE_EXPR_WO_BRACKETS":
-        [add_error("PEG Expressions in directives must be enclosed in barckets (...)",
+        [add_error("PEG Expressions in directives must be enclosed in brackets (...)",
                    PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS)],
     "EOF, DEF, OR, AND, ENDL, BRACE_SIGN, RNG_BRACE, RNG_DELIM, RNG_OPEN, "
     "RNG_CLOSE, TIMES, RE_LEADIN, RE_CORE, RE_LEADOUT, CH_LEADIN":
