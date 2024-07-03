@@ -2899,6 +2899,23 @@ class TestOptimizations:
         tree = parser("Hallo?")
         assert any(e.code == PARSER_LOOKAHEAD_MATCH_ONLY for e in tree.errors)
 
+    def test_comments(self):
+        lang = r"""@ optimizations = all
+        @ whitespace  = /\s*/           # implicit whitespace, includes linefeeds
+        @ literalws   = right           # literals have implicit whitespace on the right hand side
+        @ comment     = /(?:\/\/.*)\n?|(?:\/\*(?:.|\n)*?\*\/) *\n?/   # /* ... */ or // to EOL
+        @ ignorecase  = False           # literals and regular expressions are case-sensitive
+        @ reduction   = merge_treetops  # anonymous nodes are being reduced where possible
+        @ drop        = whitespace, no_comments, strings
+        
+        document = `hallo` ~
+        word     = /\w+/                
+        """
+        parser = create_parser(lang)
+        tree = parser('hallo /* Kommentar */ ')
+        assert not tree.errors
+        assert tree.as_sxpr() == '(document (:Text "hallo") (comment__ " /* Kommentar */ "))'
+
 if __name__ == "__main__":
     from DHParser.testing import runner
     runner("", globals())
