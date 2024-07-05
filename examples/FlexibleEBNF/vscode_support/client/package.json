@@ -10,7 +10,7 @@
 		"url": "https://gitlab.lrz.de/badw-it/DHParser"
 	},
 	"engines": {
-		"vscode": "^1.60.0"
+		"vscode": ">=1.60.0"
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",
@@ -20,10 +20,10 @@
 		"test": ""
 	},
 	"dependencies": {
-		"vscode-languageclient": "^6.1.1"
+		"vscode-languageclient": "^9.0.0"
 	},
 	"devDependencies": {
-		"@types/vscode": "^1.60.0",
-		"@vscode/test-electron": "^1.6.1"
+		"@types/vscode": ">=1.60.0",
+		"@vscode/test-electron": ">=2.4.0"
 	}
 }

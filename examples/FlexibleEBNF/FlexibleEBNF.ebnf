@@ -89,6 +89,7 @@ hide       = "HIDE" | "Hide" | "hide" | "DISPOSE" | "Dispose" | "dispose"
 
 #: elements
 
+
 countable  = option | oneormore | element
 pure_elem  = element § !ANY_SUFFIX              # element strictly without a suffix
 element    = [retrieveop] symbol !is_def        # negative lookahead to be sure it's not a definition

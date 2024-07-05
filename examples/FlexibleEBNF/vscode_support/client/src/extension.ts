@@ -15,29 +15,21 @@ import {
     ServerOptions,
     // TransportKind,
     InitializeError
-} from 'vscode-languageclient';
+} from 'vscode-languageclient/node';
 
 import { ResponseError } from 'vscode-languageserver-protocol';
 
+const DEBUG: boolean = true;
+
+const isLinux = process.platform === "linux";
+const isMacOS = process.platform === "darwin";
+const isWindows = process.platform === "win32";
+
 let client: LanguageClient;
-
-// import * as path from 'path';
-
-// function startLangServer(command: string): Disposable {
-//     const serverOptions: ServerOptions = {
-//         command: command,
-//     };
-//     const clientOptions: LanguageClientOptions = {
-//         documentSelector: [{scheme: 'file', language: 'json'}],
-//     };
-//     return new LanguageClient(command, serverOptions, clientOptions).start();
-// }
-
-
 let defaultPort: number = 8888;
 
 
-function startLangServerStream(command: string, args: string[]): Disposable {
+function startLangServerStream(command: string, args: string[]): void {
     const serverOptions: ServerOptions = {
         command,
         args,
@@ -56,7 +48,9 @@ function startLangServerStream(command: string, args: string[]): Disposable {
         clear() { console.log('clear()'); },
         show() { console.log('show()'); },
         hide() { console.log('hide()'); },
-        dispose() { console.log('dispose()'); }
+        dispose() { console.log('dispose()'); },
+        replace(value: string){ console.log('replace: ' + value + '.');
+        }
     };
 
     const clientOptions: LanguageClientOptions = {
@@ -73,11 +67,12 @@ function startLangServerStream(command: string, args: string[]): Disposable {
         }
     };
     console.log('activating language server connector ' + args.toString());
-    return new LanguageClient(command, `ebnf stream lang server`, serverOptions, clientOptions).start();
+    client = new LanguageClient(command, `ebnf stream lang server`, serverOptions, clientOptions);
+    client.start();
 }
 
 
-function startLangServerTCP(addr: number) : Disposable {
+function startLangServerTCP(addr: number) : void {
     const serverOptions: ServerOptions = function() {
         return new Promise((resolve, reject) => {
             var client = new net.Socket();
@@ -104,7 +99,8 @@ function startLangServerTCP(addr: number) : Disposable {
         clear() { console.log('clear()'); },
         show() { console.log('show()'); },
         hide() { console.log('hide()'); },
-        dispose() { console.log('dispose()'); }
+        dispose() { console.log('dispose()'); },
+        replace(){ console.log('replace()'); }
     };
 
     // Options to control the language client
@@ -127,15 +123,24 @@ function startLangServerTCP(addr: number) : Disposable {
         `ebnf tcp lang server (port ${addr})`,
         serverOptions,
         clientOptions);
-    let disposable = client.start();
-    return disposable;
+    client.start();
 }
 
 
 export function activate(context: ExtensionContext) {
-    let disposable = startLangServerStream("python", ["FlexibleEBNFServer.py", "--stream", "--logging"]);
-    // let disposable = startLangServerTCP(defaultPort);
-    context.subscriptions.push(disposable);
+    if (DEBUG) {
+        if (isLinux||isMacOS) {
+           startLangServerStream("python3", ["FlexibleEBNFServer.py", "--stream", "--logging"]);
+        } else {
+           startLangServerStream("python", ["FlexibleEBNFServer.py", "--stream", "--logging"]);
+        }
+    } else {
+        if (isLinux||isMacOS) {
+            startLangServerStream("python3", ["FlexibleEBNFServer.py", "--stream"]);
+         } else {
+            startLangServerStream("python", ["FlexibleEBNFServer.py", "--stream"]);
+         }
+    }
 }
 
 

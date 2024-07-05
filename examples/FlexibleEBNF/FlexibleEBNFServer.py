@@ -225,6 +225,8 @@ class EBNFLanguageServerProtocol:
                     'shall be eaten'],
                    ['@ whitespace', '@ whitespace = /${1:\\s*}/', 2, 'Regular expression for '
                     'insignificant whitespace (denoted by a tilde ~)'],
+                   ['@ optimizations', '@ optimizations = all', 2, 'Level of optimizations '
+                    'performed by EBNF -> Python compiler. Possible values: none, some, all'],
                    ['@ _resume', '@ ${1:SYMBOL}_resume = /${2: }/', 2, 'A list of regular '
                     'expressions identifying a place where the parent parser shall catch up the '
                     'parsing process, if within the given parser an element marked as mandatory '
@@ -309,9 +311,11 @@ class EBNFLanguageServerProtocol:
         return {}
 
     async def compile_text(self, uri: str) -> None:
+        from typing import Optional
         from DHParser.toolkit import JSONstr
-        text_buffer = self.current_text.get(uri, None)
-        version = text_buffer.version
+        from DHParser.stringview import TextBuffer
+        text_buffer: Optional[TextBuffer] = self.current_text.get(uri, None)
+        version = text_buffer.version if text_buffer else 0
         if text_buffer and version > self.last_compiled_version.get(uri, -1):
             exenv = self.connection.exec
             self.last_compiled_version[uri] = version
