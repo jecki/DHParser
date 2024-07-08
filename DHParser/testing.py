@@ -97,7 +97,7 @@ RE_ONELINE_DOUBLE_QUOTE = r'(".*?")'
 RE_ONELINE_SINGLE_QUOTE = r"('.*?')"
 # Any data as long as it is indented after the first line.
 # In practice, S-expressions, XML and nodetree-JSON will be interpreted
-RE_MULTILINE_DATA = r'([^\n]*(?:\n    [^\n]*|\n[ \t]*(?!\n[^ ]))*)'
+RE_MULTILINE_DATA = r"([^\n]*(?:\n     *[^ ][^\n]*|\s*?(?=\n     *[^ ]))*)"
 RE_VALUE = '|'.join([RE_MULTILINE_DOUBLE_QUOTE,
                      RE_MULTILINE_SINGLE_QUOTE,
                      RE_ONELINE_DOUBLE_QUOTE,
