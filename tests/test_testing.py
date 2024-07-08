@@ -85,11 +85,19 @@ CFG_FILE_3 = r'''
 20: Paragraphs are separated by gaps.
 
     Like this one.
+    Like this one.
 
 21: \begin{enumerate}
 
 [match:csttest]
 M1*: """Trigger CST-output with an asterix!"""
+
+[match:_text_element]
+1 : \command
+
+2 : \textbackslash
+
+3 : \footnote{footnote}
 '''
 
 CFG_FILE_4 = '''
@@ -568,12 +576,11 @@ class TestConfigSwitch:
     L    = /\s+/
     """
     test_sxml = """
-    [config]
-    AST_serialization: "SXML2"
+[config]
+AST_serialization: "SXML2"
     
-    [match:document]
-    M1: "The little dog jumped over the hedge"
-    """
+[match:document]
+M1: "The little dog jumped over the hedge"""
 
     def setup(self):
         self.save_dir = os.getcwd()
@@ -587,7 +594,7 @@ class TestConfigSwitch:
         parser_factory = grammar_provider(TestConfigSwitch.grammar)
         test_sxml = unit_from_config(TestConfigSwitch.test_sxml, 'test_sxml.ini')
         assert 'config__' in test_sxml
-        assert test_sxml['config__'] == {'AST_serialization': 'SXML2'}
+        assert test_sxml['config__'] == {'AST_serialization': '"SXML2"'}
         errata = grammar_unit(test_sxml, parser_factory, lambda: lambda _:_, 'REPORT')
         fname = os.listdir('REPORT')[0]
         with open(os.path.join('REPORT', fname), 'r', encoding='utf-8') as f:

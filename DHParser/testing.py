@@ -97,7 +97,7 @@ RE_ONELINE_DOUBLE_QUOTE = r'(".*?")'
 RE_ONELINE_SINGLE_QUOTE = r"('.*?')"
 # Any data as long as it is indented after the first line.
 # In practice, S-expressions, XML and nodetree-JSON will be interpreted
-RE_MULTILINE_DATA = r'(.*(?:\n(?:\s*\n)*    .*)*)'
+RE_MULTILINE_DATA = r'([^\n]*(?:\n    [^\n]*|\n[ \t]*(?!\n[^ ]))*)'
 RE_VALUE = '|'.join([RE_MULTILINE_DOUBLE_QUOTE,
                      RE_MULTILINE_SINGLE_QUOTE,
                      RE_ONELINE_DOUBLE_QUOTE,
@@ -227,7 +227,7 @@ def unit_from_config(config_str: str, filename: str, allowed_stages=UNIT_STAGES)
         entry_match = RX_ENTRY.match(cfg, pos)
         while entry_match:
             key, value = [group for group in entry_match.groups() if group is not None]
-            value = normalize_code(value, full_normalization=True)
+#            value = normalize_code(value, full_normalization=True)
             unit[mdsection][key] = value
             pos = eat_comments(cfg, entry_match.span()[1])
             entry_match = RX_ENTRY.match(cfg, pos)
@@ -584,7 +584,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
             assert parser_name == 'config__', f'Unknown metadata-type: "{parser_name}"'
             for key, value in tests.items():
                 saved_config_values[key] = get_config_value(key)
-                set_config_value(key, value)
+                set_config_value(key, eval(value))
             continue
 
         track_history = get_config_value('history_tracking')

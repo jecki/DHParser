@@ -15,7 +15,7 @@ import {
     ServerOptions,
     // TransportKind,
     InitializeError
-} from 'vscode-languageclient/node';
+} from 'vscode-languageclient';
 
 import { ResponseError } from 'vscode-languageserver-protocol';
 
@@ -29,7 +29,7 @@ let client: LanguageClient;
 let defaultPort: number = 8888;
 
 
-function startLangServerStream(command: string, args: string[]): void {
+function startLangServerStream(command: string, args: string[]): Disposable {
     const serverOptions: ServerOptions = {
         command,
         args,
@@ -68,11 +68,11 @@ function startLangServerStream(command: string, args: string[]): void {
     };
     console.log('activating language server connector ' + args.toString());
     client = new LanguageClient(command, `ebnf stream lang server`, serverOptions, clientOptions);
-    client.start();
+    return client.start();
 }
 
 
-function startLangServerTCP(addr: number) : void {
+function startLangServerTCP(addr: number) : Disposable {
     const serverOptions: ServerOptions = function() {
         return new Promise((resolve, reject) => {
             var client = new net.Socket();
@@ -123,24 +123,26 @@ function startLangServerTCP(addr: number) : void {
         `ebnf tcp lang server (port ${addr})`,
         serverOptions,
         clientOptions);
-    client.start();
+    return client.start();
 }
 
 
 export function activate(context: ExtensionContext) {
+    let disposable;
     if (DEBUG) {
         if (isLinux||isMacOS) {
-           startLangServerStream("python3", ["FlexibleEBNFServer.py", "--stream", "--logging"]);
+           disposable = startLangServerStream("python3", ["FlexibleEBNFServer.py", "--stream", "--logging"]);
         } else {
-           startLangServerStream("python", ["FlexibleEBNFServer.py", "--stream", "--logging"]);
+           disposable = startLangServerStream("python", ["FlexibleEBNFServer.py", "--stream", "--logging"]);
         }
     } else {
         if (isLinux||isMacOS) {
-            startLangServerStream("python3", ["FlexibleEBNFServer.py", "--stream"]);
+            disposable = startLangServerStream("python3", ["FlexibleEBNFServer.py", "--stream"]);
          } else {
-            startLangServerStream("python", ["FlexibleEBNFServer.py", "--stream"]);
+            disposable = startLangServerStream("python", ["FlexibleEBNFServer.py", "--stream"]);
          }
     }
+    context.subscriptions.push(disposable);
 }
 
 
@@ -149,5 +151,6 @@ export function deactivate(): Thenable<void> | undefined {
          return undefined;
      }
      console.log('stop lsp client');
-     return client.stop();
+     const promise: Thenable<void> = client.stop();
+     promise.then(() => undefined);
 }

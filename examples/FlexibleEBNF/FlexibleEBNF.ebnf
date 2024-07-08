@@ -19,6 +19,7 @@
 # Ambiguities can also be avoided by NOT using all the syntactic variants
 # made possible by this EBNF-grammar within one and the same EBNF-document
 
+@ optimizations = all
 @ comment    = /(?!#x[A-Fa-f0-9])#.*(?:\n|$)|\/\*(?:.|\n)*?\*\/|\(\*(?:.|\n)*?\*\)/
     # comments can be either C-Style: /* ... */
     # or pascal/modula/oberon-style: (* ... *)

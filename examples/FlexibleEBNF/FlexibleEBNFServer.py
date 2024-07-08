@@ -335,6 +335,9 @@ class EBNFLanguageServerProtocol:
                                                           publishDiagnostics)
         return None
 
+#    async def lsp_S_setTraceNotification(self, ID: int, ):
+#        return None
+
     async def lsp_textDocument_didOpen(self, ID: int, textDocument):
         from DHParser.stringview import TextBuffer
         uri = textDocument['uri']

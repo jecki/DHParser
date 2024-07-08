@@ -19,7 +19,7 @@
 	"activationEvents": [
 		"onLanguage:ebnf"
 	],
-	"main": "./client/out/extension",
+	"main": "./out/extension",
 	"contributes": {
 		"configuration": {
 			"type": "object",
@@ -69,8 +69,10 @@
 		"vscode:prepublish": "npm run compile",
 		"compile": "tsc -b",
 		"watch": "tsc -b -w",
-		"postinstall": "cd client && npm install && cd ..",
 		"test": ""
+	},
+	"dependencies": {
+		"vscode-languageclient": "^6.1.1"
 	},
 	"devDependencies": {
 		"@types/mocha": "^10.0.0",
