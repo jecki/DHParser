@@ -484,6 +484,28 @@ class TestOptimizations:
         assert tree.equals(parse_sxpr('(array (number "1") (number "2.0") (string "a string"))'))
 
 
+class TestGlobalPreAndPost:
+    def test_global_pre_post(self):
+        def pre(p: Path):
+            p[0].attr['globals'] = p[0].get_attr('globals', '') + '*'
+        def post(p: Path):
+            assert p[0].has_attr('globals')
+            assert p[0].attr['globals'] == '*'
+            del p[0].attr['globals']
+        def check(p: Path):
+            assert p[0].has_attr('globals')
+            assert p[0].attr['globals'] == '*'
+            if len(p) > 1: assert not p[-1].has_attr()
+        tree = parse_sxpr('(a (b 1) (c 2))')
+        table = {
+            '<<<': pre,
+            'b, c': check,
+            '>>>': post
+        }
+        tree = traverse(tree, table)
+        assert not tree.has_attr()
+
+
 class TestErrors:
     def test_add_error(self):
         lang = r"""

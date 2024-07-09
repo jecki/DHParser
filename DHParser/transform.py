@@ -454,7 +454,9 @@ def traverse(tree: Node,
                 raise AssertionError('An exception occurred when transforming "%s" with %s:\n%s'
                                      % (key, str(call), ae.__class__.__name__ + ': ' + str(ae)))
 
+    for call in table.get('<<<', []):  call([tree])
     traverse_recursive([tree])
+    for call in table.get('>>>', []):  call([tree])
     return tree
     # assert transformation_table['__cache__']
 
