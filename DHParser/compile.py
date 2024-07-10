@@ -451,7 +451,7 @@ def compile_source(source: str,
     log_file_name = logfile_basename(source, compiler) if is_logging() else ''  # type: str
     if not hasattr(parser, 'free_char_parsefunc__') or parser.history_tracking__:
         # log only for custom parser/transformer/compilers
-        log_syntax_trees = get_config_value('log_syntax_trees')
+        log_syntax_trees = {t.upper() for t in get_config_value('log_syntax_trees')}
     else:
         log_syntax_trees = set()
 
