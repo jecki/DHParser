@@ -2264,6 +2264,7 @@ class EBNFCompiler(Compiler):
                 SYMBOL_NAME_IS_PYTHON_KEYWORD)
 
         # process definition
+        save_path = self.path.copy()
         try:
             self.current_symbols = [node]
             self.rules[rule] = self.current_symbols
@@ -2286,6 +2287,7 @@ class EBNFCompiler(Compiler):
                                     + flatten_sxpr(defn.as_sxpr()), STRUCTURAL_ERROR_IN_AST)
                 defn = "Malformed AST"
         except TypeError as error:
+            self.path = save_path
             from traceback import extract_tb, format_list
             trace = ''.join(format_list((extract_tb(error.__traceback__))))
             errmsg = "%s (TypeError: %s;\n%s)\n%s" \
@@ -2797,6 +2799,7 @@ class EBNFCompiler(Compiler):
                 self.tree.new_error(nd, 'Only the very last alternative may be optional!',
                                     BAD_ORDER_OF_ALTERNATIVES)
         if 'alternative' in self.directives.optimizations:
+            save_path = self.path.copy()
             try:
                 pattern, content = self.smartRE_expression(node)
                 if self.directives.reduction > REDUCTION['none']:
@@ -2807,7 +2810,7 @@ class EBNFCompiler(Compiler):
                     self.tree.new_error(
                         node, 'Cannot optimize alternatives if @reduction is none', NOTICE)
             except (AttributeError, ValueError):
-                pass
+                self.path = save_path
         if len(node.children) == 1:
             # can only occur inside directives, because here expressions are not
             # necessarily replaced by their single child. (See AST-Transformation)
@@ -2917,6 +2920,7 @@ class EBNFCompiler(Compiler):
         if 'sequence' in self.directives.optimizations \
                 and any(child.name not in ('plaintext', 'literal', ':Whitespace')
                         for child in node.children):
+            save_path = self.path.copy()
             try:
                 pattern, content = self.smartRE_sequence(node)
                 if self.directives.reduction > REDUCTION['none']:
@@ -2927,7 +2931,7 @@ class EBNFCompiler(Compiler):
                     self.tree.new_error(
                         node, 'Cannot optimize sequence if @reduction is none', NOTICE)
             except (AttributeError, ValueError):
-                pass
+                self.path = save_path
         filtered_result, custom_args = self._error_customization(node)
         mock_node = Node(node.name, filtered_result)
         return self.non_terminal(mock_node, 'Series', custom_args)
@@ -3004,12 +3008,13 @@ class EBNFCompiler(Compiler):
 
         if prefix in ('&', '!') and 'lookahead' in self.directives.optimizations \
                 and node.children[1].name not in ('literal', 'plaintext'):
+            save_path = self.path.copy()
             try:
                 pattern, content = self.smartRE_lookaround(node)
                 pattern = self.check_rx(node, pattern, smartRE=True)
                 return f"{self.P['SmartRE']}(f{repr(pattern)}, {repr(content)})"
             except (AttributeError, ValueError):
-                pass
+                self.path = save_path
         node.result = node.children[1:]
 
         parser_class = self.PREFIX_TABLE[prefix]

@@ -9,7 +9,15 @@ destfile = os.path.abspath(os.path.join(scriptdir, '..', 'lsp.py'))
 
 LSP_SPEC_SOURCE = \
     "https://raw.githubusercontent.com/microsoft/language-server-protocol/" \
-    "gh-pages/_specifications/specification-current.md"
+    "gh-pages/_specifications/lsp/3.18/specification.md"
+
+
+def no_declaration(l):
+    if l[0:1] in ("{", "["):
+        return True
+    if re.match(r'\w+(?:\.\w+)*\(', l):
+        return True
+    return False
 
 
 def extract_ts_code(specs):
@@ -24,11 +32,14 @@ def extract_ts_code(specs):
             ts.append('')
         else:
             if copy_flag:
-                ts.append(l)
+                if no_declaration(l):
+                    copy_flag = False
+                elif l[0:2] != "//":
+                    ts.append(l)
     return '\n'.join(ts)
 
 
-def download_specs(url: str) -> str:
+def download_specfile(url: str) -> str:
     import urllib.request
     max_indirections = 2
     while max_indirections > 0:
@@ -39,7 +50,7 @@ def download_specs(url: str) -> str:
         else:
             with open(url, 'rb') as f:
                 specs = f.read()
-        if len(specs) < 255:
+        if len(specs) < 255 and specs.find(b'\n') < 0:
             url = url[: url.rfind('/') + 1] + specs.decode('utf-8').strip()
             max_indirections -= 1
         else:
@@ -47,13 +58,43 @@ def download_specs(url: str) -> str:
     return specs.decode('utf-8')
 
 
+RX_INCLUDE = re.compile(r'{%\s*include_relative\s*(?P<relative>[A-Za-z0-9/.]+?\.md)\s*%}|{%\s*include\s*(?P<absolute>[A-Za-z0-9/.]+?\.md)\s*%}')
+
+
+def download_specs(url: str) -> str:
+    specfile = download_specfile(url)
+    relurl_path = url[:url.rfind('/') + 1]
+    absurl_path = url[:url.find('_specifications/')] + '_includes/'
+    parts = []
+    e = 0
+    for m in RX_INCLUDE.finditer(specfile):
+        s = m.start()
+        parts.append(specfile[e:s])
+        if m.group('relative') is not None:
+            incpath = m.group('relative')
+            incl_url = relurl_path + incpath
+        else:
+            assert m.group('absolute') is not None
+            incpath = m.group('absolute')
+            incl_url = absurl_path + incpath
+        parts.append(f'\n```typescript\n\n/* source file: "{incpath}" */\n```\n')
+        include = download_specs(incl_url)
+        parts.append(include)
+        e = m.end()
+    parts.append(specfile[e:])
+    specs = ''.join(parts)
+    return specs
+
+
 def transpile_ts_to_python(specs):
+    sys.path.append(os.path.join(scriptdir, '..', '..'))
     from ts2pythonParser import compile_src
     specs_py, errors = compile_src(specs)
     if errors:
         for err in errors:
             print(err)
         sys.exit(1)
+    sys.path.pop()
     return specs_py
 
 

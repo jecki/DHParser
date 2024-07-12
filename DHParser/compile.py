@@ -343,10 +343,8 @@ class Compiler:
 
         compiler = self.find_compilation_method(node.name)
         self.path.append(node)
-        try:
-            result = compiler(node)
-        finally:
-            self.path.pop()
+        result = compiler(node)
+        self.path.pop()   # do not put this into a try ... finally: clause, as error reporting still requires the path
         if self.has_attribute_visitors:
             self.visit_attributes(node)          
         if result is None and self.forbid_returning_None:
@@ -363,10 +361,8 @@ class Compiler:
                        find_compilation_method: Callable[[str], CompileMethod]) -> Any:
         compiler = find_compilation_method(node.name)
         self.path.append(node)
-        try:
-            result = compiler(node)
-        finally:
-            self.path.pop()
+        result = compiler(node)
+        self.path.pop()  # do not put this into a try ... finally: clause, as error reporting still requires the path
         return result
 
 
@@ -564,11 +560,12 @@ def process_tree(tp: CompilerFunc, tree: RootNode) -> Any:
                 result = tp(tree)
             except Exception as e:
                 node = (getattr(tp, 'path', [tree]) or [tree])[-1]
-                # st = traceback.format_list(traceback.extract_tb(e.__traceback__))
-                # trace = ''.join(st)  # filter_stacktrace(st)
+                import traceback
+                st = traceback.format_list(traceback.extract_tb(e.__traceback__))
+                mini_trace = st[-1][:st[-1].rstrip().rfind('\n')].replace('\n', '\\')
                 tree.new_error(
                     node, "Tree-processing failed, most likely, due to errors earlier in "
-                          "the processing pipeline.", TREE_PROCESSING_CRASH)
+                          f"the processing pipeline: {e}  {mini_trace}", TREE_PROCESSING_CRASH)
                           # "Crash Message: %s: %s\n%s" % (e.__class__.__name__, str(e), trace),
                           # TREE_PROCESSING_CRASH)
         else:

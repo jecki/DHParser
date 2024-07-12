@@ -2746,7 +2746,7 @@ class TestOptimizations:
         assert st.as_sxpr() == '(doc (:Text "A") (:AnyChar "翿"))'
 
     def test_drop(self):
-        set_config_value('optimizations', frozenset({'sequence', 'alternative'}))
+        set_config_value('optimizations', frozenset({'sequence', 'alternative', 'literal'}))
         # set_config_value('optimizations', frozenset())
         lang = r"""
         @reduction = none

@@ -16,12 +16,8 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 implied. See the License for the specific language governing
 permissions and limitations under the License.
-
-This module has been copied and slightly adjusted from:
-https://github.com/jecki/ts2python
 """
 
-from __future__ import annotations
 
 from enum import Enum, IntEnum
 import functools
@@ -32,15 +28,20 @@ try:
     from typing_extensions import GenericMeta, \
         ClassVar, Final, Protocol, NoReturn
 except (ImportError, ModuleNotFoundError):
-    from DHParser.externallibs.typing_extensions import GenericMeta, \
+    from .typing_extensions import GenericMeta, \
         ClassVar, Final, Protocol, NoReturn
 
-try:
-    from typeddict_shim import TypedDict, GenericTypedDict, _TypedDictMeta, get_origin, \
-        ForwardRef
-except (ImportError, ModuleNotFoundError):
-    from .typeddict_shim import TypedDict, GenericTypedDict, _TypedDictMeta, get_origin, \
-        ForwardRef
+if sys.version_info >= (3, 11):
+    from typing import TypedDict, _TypedDictMeta, get_origin, ForwardRef
+else:
+    try:
+        from ts2python.typeddict_shim import TypedDict, _TypedDictMeta, get_origin, ForwardRef
+    except (ImportError, ModuleNotFoundError):
+        try:
+            from typeddict_shim import TypedDict, _TypedDictMeta, get_origin, ForwardRef
+        except (ImportError, ModuleNotFoundError):
+            from .typeddict_shim import TypedDict, _TypedDictMeta, get_origin, ForwardRef
+
 
 
 __all__ = ['validate_type', 'type_check', 'validate_uniform_sequence']
@@ -76,6 +77,14 @@ def validate_enum(val: Any, typ: Enum):
         raise ValueError(f"{val} is not contained in enum {typ}")
 
 
+def is_TypedDictClass(typ) -> bool:
+    """True, if typ is an instance of _TypedDictMeta."""
+    return isinstance(typ, _TypedDictMeta)
+    # try:
+    #   return isinstance(typ, _TypedDictMeta) or str(typ.__class__)[-16:-2] == "_TypedDictMeta"
+    # except AttributeError:
+    #     return False
+
 def validate_type(val: Any, typ):
     """Raises a TypeError if value `val` is not of type `typ`.
     In particualr, `validate_type()` can be used to validate
@@ -95,10 +104,10 @@ def validate_type(val: Any, typ):
     ...     validate_type(bad_json_data, Position)
     ... except TypeError as e:
     ...     print(e)
-    Type error(s) in dictionary of type <class 'DHParser.json_validation.Position'>:
+    Type error(s) in dictionary of type <class 'json_validation.Position'>:
     Field character: 'A' is not a <class 'int'>, but a <class 'str'>
     """
-    if isinstance(typ, _TypedDictMeta):
+    if is_TypedDictClass(typ):
         if not isinstance(val, Dict):
             raise TypeError(f"{val} is not even a dictionary")
         validate_TypedDict(val, typ)
@@ -128,7 +137,7 @@ def validate_uniform_sequence(sequence: Iterable, item_type):
 
     """
     # assert not isinstance(item_type, str), f'Unresolved type name or forward reference for {item_type}!'
-    if isinstance(item_type, _TypedDictMeta):
+    if is_TypedDictClass(item_type):
         for val in sequence:
             if not isinstance(val, Dict):
                 raise TypeError(f"{val} is not of type {item_type}")
@@ -203,7 +212,7 @@ def validate_TypedDict(D: Dict, T: _TypedDictMeta):
     ...     validate_TypedDict(p, Position)
     ... except TypeError as e:
     ...     print(e)
-    Type error(s) in dictionary of type <class 'DHParser.json_validation.Position'>:
+    Type error(s) in dictionary of type <class 'json_validation.Position'>:
     Missing required keys: {'character'}
 
     :param D: the dictionary to be validated
@@ -212,7 +221,7 @@ def validate_TypedDict(D: Dict, T: _TypedDictMeta):
     :raise: TypeError in case a type error has been detected.
     """
     assert isinstance(D, Dict), str(D)
-    assert isinstance(T, _TypedDictMeta), str(T)
+    assert is_TypedDictClass(T), str(T)
     type_errors = []
     missing = T.__required_keys__ - D.keys()
     if missing:
@@ -227,7 +236,7 @@ def validate_TypedDict(D: Dict, T: _TypedDictMeta):
         if resolved_field_type != field_type:
             field_type = resolved_field_type
             T.__annotations__[field] = field_type
-        if isinstance(field_type, _TypedDictMeta):
+        if is_TypedDictClass(field_type):
             value = D[field]
             if isinstance(value, Dict):
                 validate_TypedDict(value, field_type)
@@ -239,7 +248,7 @@ def validate_TypedDict(D: Dict, T: _TypedDictMeta):
             for union_typ in field_type.__args__:
                 # if isinstance(union_typ, ForwardRef):
                 #     union_typ = union_typ._evaluate(globals(), sys.modules[T.__module__].__dict__)
-                if isinstance(union_typ, _TypedDictMeta):
+                if is_TypedDictClass(union_typ):
                     if isinstance(value, Dict):
                         try:
                             validate_TypedDict(value, union_typ)
@@ -304,9 +313,9 @@ def type_check(func: Callable, check_return_type: bool = True) -> Callable:
     ... except TypeError as e:
     ...     print(e)
     Parameter "rng" of function "middle_line" failed the type-check, because:
-    Type error(s) in dictionary of type <class 'DHParser.json_validation.Range'>:
-    Field start: '1' is not of <class 'DHParser.json_validation.Position'>, but of type <class 'int'>
-    Field end: '8' is not of <class 'DHParser.json_validation.Position'>, but of type <class 'int'>
+    Type error(s) in dictionary of type <class 'json_validation.Range'>:
+    Field start: '1' is not of <class 'json_validation.Position'>, but of type <class 'int'>
+    Field end: '8' is not of <class 'json_validation.Position'>, but of type <class 'int'>
 
     :param func: The function, the parameters and return value of which shall
         be type-checked during runtime.

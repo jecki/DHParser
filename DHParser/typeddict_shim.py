@@ -1,6 +1,6 @@
 """typeddict_shim.py - A version of typed-dict that supports
    Required / NotRequired -fields across all version of Python
-   from 3.7 onward.
+   from 3.6 onward.
 
 Until Python version 3.10, the STL's TypeDict merely supports
 classifying all fields of a TypedDict class as either required
@@ -29,12 +29,7 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 implied. See the License for the specific language governing
 permissions and limitations under the License.
-
-This module has been copied and slightly adjusted from:
-https://github.com/jecki/ts2python
 """
-
-from __future__ import annotations
 
 import sys
 from typing import Generic, Optional, Union, Any, TypeVar
@@ -43,7 +38,7 @@ try:
     from typing_extensions import GenericMeta, \
         ClassVar, Final, Protocol, NoReturn, Literal
 except (ImportError, ModuleNotFoundError):
-    from DHParser.externallibs.typing_extensions import GenericMeta, \
+    from .typing_extensions import GenericMeta, \
         ClassVar, Final, Protocol, NoReturn, Literal
 
 try:
@@ -52,13 +47,13 @@ except (ImportError, ModuleNotFoundError):
     from typing import _ForwardRef  # Python 3.6 compatibility
     ForwardRef = _ForwardRef
     _GenericAlias = GenericMeta
-    _SpecialForm = Any
+    _SpecialForm = object
 
 try:
     from typing_extensions import get_origin
 except (ImportError, ModuleNotFoundError):
     try:
-        from DHParser.externallibs.typing_extensions import get_origin
+        from .typing_extensions import get_origin
     except (ImportError, ModuleNotFoundError):
         def get_origin(typ):
             try:
@@ -159,12 +154,15 @@ def _new_typed_dict(meta, name, bases, ns) -> dict:
 
     total = True
     for field, field_type in own_annotations.items():
-        if ((isinstance(field_type, ForwardRef)
-             and (field_type.__forward_arg__.startswith('Optional[')
-                  or (field_type.__forward_arg__.startswith('Union[')
-                      and field_type.__forward_arg__.endswith(', None]'))))
-            or (get_origin(field_type) is Union
-                and type(None) in field_type.__args__)):
+        field_type_origin = get_origin(field_type)
+        if (field_type_origin is NotRequired
+            or (field_type_origin is Union
+                and type(None) in field_type.__args__)
+            or (isinstance(field_type, ForwardRef)
+                and (field_type.__forward_arg__.startswith('Optional[')
+                     or field_type.__forward_arg__.startswith('NotRequired')
+                     or (field_type.__forward_arg__.startswith('Union[')
+                         and field_type.__forward_arg__.endswith(', None]'))))):
             optional_keys.add(field)
             total = False
         else:
@@ -201,7 +199,7 @@ class _TypedDictMeta(type):
 
 _is_pypy = hasattr(sys, 'pypy_version_info')
     
-if sys.version_info >= (3,11) and not _is_pypy:
+if sys.version_info >= (3, 11) and not _is_pypy:
     from typing import TypedDict
     GenericTypedDict = TypedDict
 
@@ -266,6 +264,9 @@ elif sys.version_info >= (3, 7) and not _is_pypy:
 
     GenericTypedDict = TypedDict
 
+    _TypedDict = type.__new__(_TypedDictMeta, 'TypedDict', (), {})
+    TypedDict.__mro_entries__ = lambda bases: (_TypedDict,)
+
 else:  # Python Version 3.6
     TypedDict = _TypedDictMeta('TypedDict', (dict,), {})
     TypedDict.__module__ = __name__
@@ -280,8 +281,8 @@ else:  # Python Version 3.6
     GenericTypedDict = _GenericTypedDictMeta('TypedDict', (dict,), {})
     GenericTypedDict.__module__ = __name__
 
-_TypedDict = type.__new__(_TypedDictMeta, 'TypedDict', (), {})
-TypedDict.__mro_entries__ = lambda bases: (_TypedDict,)
+    _TypedDict = type.__new__(_TypedDictMeta, 'TypedDict', (), {})
+    TypedDict.__mro_entries__ = lambda bases: (_TypedDict,)
 
 # up to this point all functions have been copied and adapted from
 # the typing.py module of the Python-STL
