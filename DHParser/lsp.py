@@ -28,7 +28,7 @@ import bisect
 from enum import Enum, IntEnum
 
 from typing import Union, List, Tuple, Optional, Dict, Any, \
-    Iterator, Iterable, Callable
+    Iterator, Iterable, Callable, TypedDict
 
 try:
     from typing_extensions import Generic, TypeVar, Literal, TypeAlias, NotRequired
@@ -36,7 +36,7 @@ except ImportError:
     from DHParser.externallibs.typing_extensions import \
         Generic, TypeVar, Literal, TypeAlias, NotRequired
 
-from DHParser.json_validation import validate_type, type_check, TypedDict
+# from DHParser.json_validation import validate_type, type_check, TypedDict
 
 
 #######################################################################

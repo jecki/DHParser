@@ -35,7 +35,7 @@ if sys.version_info >= (3, 11):
     from typing import TypedDict, _TypedDictMeta, get_origin, get_args, ForwardRef
 else:
     try:
-        from ts2python.typeddict_shim import TypedDict, _TypedDictMeta, get_origin, \
+        from DHParser.typeddict_shim import TypedDict, _TypedDictMeta, get_origin, \
             get_args, ForwardRef
     except (ImportError, ModuleNotFoundError):
         try:
