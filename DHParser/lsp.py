@@ -29,13 +29,14 @@ from enum import Enum, IntEnum
 
 from typing import Union, List, Tuple, Optional, Dict, Any, \
     Iterator, Iterable, Callable
+
 try:
     from typing_extensions import Generic, TypeVar, Literal, TypeAlias, NotRequired
 except ImportError:
     from DHParser.externallibs.typing_extensions import \
         Generic, TypeVar, Literal, TypeAlias, NotRequired
 
-from DHParser.json_validation import TypedDict, validate_type, type_check
+from DHParser.json_validation import validate_type, type_check, TypedDict
 
 
 #######################################################################
@@ -1271,7 +1272,6 @@ class SymbolTag(IntEnum):
 
 SymbolTag = Literal[1]
 
-
 class DocumentSymbol(TypedDict):
     name: str
     detail: NotRequired[str]
@@ -1281,7 +1281,6 @@ class DocumentSymbol(TypedDict):
     range: Range
     selectionRange: Range
     children: NotRequired[List['DocumentSymbol']]
-
 
 class SymbolInformation(TypedDict):
     name: str
