@@ -48,11 +48,6 @@ try:
 except ImportError:
     import re
 
-try:
-    import dataclasses
-except ImportError:
-    from DHParser.externallibs import dataclasses36 as dataclasses
-
 if sys.version_info >= (3, 12, 0):
     from collections.abc import Iterable, Sequence, Set, MutableSet, Callable, Container
     from typing import Any, AbstractSet, FrozenSet, Type, Union, Optional, TypeAlias, Protocol
@@ -89,7 +84,6 @@ from DHParser.stringview import StringView
 
 
 __all__ = ('re',
-           'dataclasses',
            'cython_optimized',
            'identify_python',
            'identity',

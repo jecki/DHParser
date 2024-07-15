@@ -87,9 +87,9 @@ def download_specs(url: str) -> str:
 
 
 def transpile_ts_to_python(specs):
-    sys.path.append(os.path.join(scriptdir, '..', '..'))
-    from ts2pythonParser import compile_src
-    specs_py, errors = compile_src(specs)
+    sys.path.append(os.path.join(scriptdir, '..'))
+    from ts2python import ts2pythonParser
+    specs_py, errors = ts2pythonParser.compile_src(specs)
     if errors:
         for err in errors:
             print(err)
@@ -126,6 +126,7 @@ def run_update():
     specs_ts = extract_ts_code(specs_md)
     specs_py = transpile_ts_to_python(specs_ts)
     update_lsp_module(specs_py, destfile)
+    print(destfile + " updated.")
 
 if __name__ == "__main__":
     run_update()

@@ -1,6 +1,6 @@
 # lsp.py - Language Server Protocol data structures and support functions
 #
-# Copyright 20w0  by Eckhart Arnold (arnold@badw.de)
+# Copyright 2024  by Eckhart Arnold (arnold@badw.de)
 #                 Bavarian Academy of Sciences an Humanities (badw.de)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,15 +26,61 @@ from __future__ import annotations
 
 import bisect
 from enum import Enum, IntEnum
+import sys
 
 from typing import Union, List, Tuple, Optional, Dict, Any, \
     Iterator, Iterable, Callable, TypedDict
 
+if sys.version_info >= (3, 9, 0):
+    from typing import Union, Optional, Any, Generic, TypeVar, Callable, List, Tuple, Dict
+    # do not use list, tuple, dict, because contained types won't be forward ref'd
+    from collections.abc import Coroutine
+else:
+    from typing import Union, List, Tuple, Optional, Dict, Any, Generic, TypeVar, Callable, Coroutine
+
+
 try:
-    from typing_extensions import Generic, TypeVar, Literal, TypeAlias, NotRequired
+    from ts2python.typeddict_shim import TypedDict, GenericTypedDict, NotRequired, Literal
+    # Overwrite typing.TypedDict for Runtime-Validation
 except ImportError:
-    from DHParser.externallibs.typing_extensions import \
-        Generic, TypeVar, Literal, TypeAlias, NotRequired
+    print("Module ts2python.typeddict_shim not found. Only coarse-grained "
+          "runtime type-validation of TypedDicts possible")
+    try:
+        from typing import TypedDict, Literal
+    except ImportError:
+        try:
+            from ts2python.typing_extensions import TypedDict, Literal
+        except ImportError:
+            print(f'Please install the "typing_extensions" module via the shell '
+                  f'command "# pip install typing_extensions" before running '
+                  f'{__file__} with Python-versions <= 3.7!')
+    try:
+        from typing_extensions import NotRequired
+    except ImportError:
+        NotRequired = Optional
+    if sys.version_info >= (3, 7, 0):  GenericMeta = type
+    else:
+        from typing import GenericMeta
+    class _GenericTypedDictMeta(GenericMeta):
+        def __new__(cls, name, bases, ns, total=True):
+            return type.__new__(_GenericTypedDictMeta, name, (dict,), ns)
+        __call__ = dict
+    GenericTypedDict = _GenericTypedDictMeta('TypedDict', (dict,), {})
+    GenericTypedDict.__module__ = __name__
+
+
+try:
+    from ts2python.singledispatch_shim import singledispatch, singledispatchmethod
+except ImportError:
+    print("ts2python.singledispatch_shim not found! @singledispatch-annotation"
+          " imported from functools may cause NameErrors on forward-referenced"
+          " types.")
+    try:
+        from functools import singledispatch, singledispatchmethod
+    except ImportError:
+        print(f"functools.singledispatchmethod does not exist in Python Version "
+              f"{sys.version}. This module may therefore fail to run if "
+              f"singledispatchmethod is needed, anywhere!")
 
 # from DHParser.json_validation import validate_type, type_check, TypedDict
 
@@ -145,26 +191,26 @@ LSPObject = Dict[str, LSPAny]
 LSPArray = List[LSPAny]
 
 
-class Message(TypedDict):
+class Message(TypedDict, total=True):
     jsonrpc: str
 
 
-class RequestMessage(Message, TypedDict):
+class RequestMessage(Message, TypedDict, total=False):
     id: Union[int, str]
     method: str
-    params: NotRequired[Union[List, Dict]]
+    params: Union[List, Dict, None]
 
 
-class ResponseMessage(Message, TypedDict):
+class ResponseMessage(Message, TypedDict, total=False):
     id: Union[int, str, None]
-    result: NotRequired[LSPAny]
-    error: NotRequired['ResponseError']
+    result: Optional[LSPAny]
+    error: Optional['ResponseError']
 
 
-class ResponseError(TypedDict):
+class ResponseError(TypedDict, total=False):
     code: int
     message: str
-    data: NotRequired[LSPAny]
+    data: Optional[LSPAny]
 
 class ErrorCodes(IntEnum):
     ParseError = -32700
@@ -186,32 +232,32 @@ class ErrorCodes(IntEnum):
     lspReservedErrorRangeEnd = -32800
 
 
-class NotificationMessage(Message, TypedDict):
+class NotificationMessage(Message, TypedDict, total=False):
     method: str
-    params: NotRequired[Union[List, Dict]]
+    params: Union[List, Dict, None]
 
 
-class CancelParams(TypedDict):
+class CancelParams(TypedDict, total=True):
     id: Union[int, str]
 
 ProgressToken = Union[int, str]
 
 T = TypeVar('T')
 
-class ProgressParams(Generic[T], TypedDict):
+class ProgressParams(Generic[T], GenericTypedDict, total=True):
     token: ProgressToken
     value: T
 
 
-class HoverParams(TypedDict):
-    class Position_0(TypedDict):
+class HoverParams(TypedDict, total=True):
+    class Position_0(TypedDict, total=True):
         line: int
         character: int
     textDocument: str
     position: Position_0
 
 
-class HoverResult(TypedDict):
+class HoverResult(TypedDict, total=True):
     value: str
 
 DocumentUri = str
@@ -219,112 +265,112 @@ DocumentUri = str
 URI = str
 
 
-class RegularExpressionsClientCapabilities(TypedDict):
+class RegularExpressionsClientCapabilities(TypedDict, total=False):
     engine: str
-    version: NotRequired[str]
+    version: Optional[str]
 
 EOL: List[str] = ['\n', '\r\n', '\r']
 
 
-class Position(TypedDict):
+class Position(TypedDict, total=True):
     line: int
     character: int
 
 PositionEncodingKind = str
 
 
-class Range(TypedDict):
+class Range(TypedDict, total=True):
     start: Position
     end: Position
 
 
-class TextDocumentItem(TypedDict):
+class TextDocumentItem(TypedDict, total=True):
     uri: DocumentUri
     languageId: str
     version: int
     text: str
 
 
-class TextDocumentIdentifier(TypedDict):
+class TextDocumentIdentifier(TypedDict, total=True):
     uri: DocumentUri
 
 
-class VersionedTextDocumentIdentifier(TextDocumentIdentifier, TypedDict):
+class VersionedTextDocumentIdentifier(TextDocumentIdentifier, TypedDict, total=True):
     version: int
 
 
-class OptionalVersionedTextDocumentIdentifier(TextDocumentIdentifier, TypedDict):
+class OptionalVersionedTextDocumentIdentifier(TextDocumentIdentifier, TypedDict, total=True):
     version: Union[int, None]
 
 
-class TextDocumentPositionParams(TypedDict):
+class TextDocumentPositionParams(TypedDict, total=True):
     textDocument: TextDocumentIdentifier
     position: Position
 
 
-class DocumentFilter(TypedDict):
-    language: NotRequired[str]
-    scheme: NotRequired[str]
-    pattern: NotRequired[str]
+class DocumentFilter(TypedDict, total=False):
+    language: Optional[str]
+    scheme: Optional[str]
+    pattern: Optional[str]
 
 DocumentSelector = List[DocumentFilter]
 
 
-class StringValue(TypedDict):
-    kind: Literal['snippet']
+class StringValue(TypedDict, total=True):
+    kind: str
     value: str
 
 
-class TextEdit(TypedDict):
+class TextEdit(TypedDict, total=True):
     range: Range
     newText: str
 
 
-class ChangeAnnotation(TypedDict):
+class ChangeAnnotation(TypedDict, total=False):
     label: str
-    needsConfirmation: NotRequired[bool]
-    description: NotRequired[str]
+    needsConfirmation: Optional[bool]
+    description: Optional[str]
 
 ChangeAnnotationIdentifier = str
 
 
-class AnnotatedTextEdit(TextEdit, TypedDict):
+class AnnotatedTextEdit(TextEdit, TypedDict, total=True):
     annotationId: ChangeAnnotationIdentifier
 
 
-class SnippetTextEdit(TypedDict):
+class SnippetTextEdit(TypedDict, total=False):
     range: Range
     snippet: StringValue
-    annotationId: NotRequired[ChangeAnnotationIdentifier]
+    annotationId: Optional[ChangeAnnotationIdentifier]
 
 
-class TextDocumentEdit(TypedDict):
+class TextDocumentEdit(TypedDict, total=True):
     textDocument: OptionalVersionedTextDocumentIdentifier
     edits: List[Union[TextEdit, AnnotatedTextEdit, SnippetTextEdit]]
 
 
-class Location(TypedDict):
+class Location(TypedDict, total=True):
     uri: DocumentUri
     range: Range
 
 
-class LocationLink(TypedDict):
-    originSelectionRange: NotRequired[Range]
+class LocationLink(TypedDict, total=False):
+    originSelectionRange: Optional[Range]
     targetUri: DocumentUri
     targetRange: Range
     targetSelectionRange: Range
 
 
-class Diagnostic(TypedDict):
+class Diagnostic(TypedDict, total=False):
     range: Range
-    severity: NotRequired['DiagnosticSeverity']
-    code: NotRequired[Union[int, str]]
-    codeDescription: NotRequired['CodeDescription']
-    source: NotRequired[str]
+    severity: Optional['DiagnosticSeverity']
+    code: Union[int, str, None]
+    codeDescription: Optional['CodeDescription']
+    source: Optional[str]
     message: Union[str, 'MarkupContent']
-    tags: NotRequired[List['DiagnosticTag']]
-    relatedInformation: NotRequired[List['DiagnosticRelatedInformation']]
-    data: NotRequired[LSPAny]
+    tags: Optional[List['DiagnosticTag']]
+    relatedInformation: Optional[List['DiagnosticRelatedInformation']]
+    data: Optional[LSPAny]
 
 class DiagnosticSeverity(IntEnum):
     Error = 1
@@ -332,384 +378,384 @@ class DiagnosticSeverity(IntEnum):
     Information = 3
     Hint = 4
 
-DiagnosticSeverity = Literal[1, 2, 3, 4]
+DiagnosticSeverity = int
 
 class DiagnosticTag(IntEnum):
     Unnecessary = 1
     Deprecated = 2
 
-DiagnosticTag = Literal[1, 2]
+DiagnosticTag = int
 
 
-class DiagnosticRelatedInformation(TypedDict):
+class DiagnosticRelatedInformation(TypedDict, total=True):
     location: Location
     message: str
 
 
-class CodeDescription(TypedDict):
+class CodeDescription(TypedDict, total=True):
     href: URI
 
 
-class Command(TypedDict):
+class Command(TypedDict, total=False):
     title: str
-    tooltip: NotRequired[str]
+    tooltip: Optional[str]
     command: str
-    arguments: NotRequired[List[LSPAny]]
+    arguments: Optional[List[LSPAny]]
 
 class MarkupKind(Enum):
     PlainText = 'plaintext'
     Markdown = 'markdown'
 
-MarkupKind = Literal['plaintext', 'markdown']
+MarkupKind = str
 
 
-class MarkupContent(TypedDict):
+class MarkupContent(TypedDict, total=True):
     kind: MarkupKind
     value: str
 
 
-class MarkdownClientCapabilities(TypedDict):
+class MarkdownClientCapabilities(TypedDict, total=False):
     parser: str
-    version: NotRequired[str]
-    allowedTags: NotRequired[List[str]]
+    version: Optional[str]
+    allowedTags: Optional[List[str]]
 
 
-class CreateFileOptions(TypedDict):
-    overwrite: NotRequired[bool]
-    ignoreIfExists: NotRequired[bool]
+class CreateFileOptions(TypedDict, total=False):
+    overwrite: Optional[bool]
+    ignoreIfExists: Optional[bool]
 
 
-class CreateFile(TypedDict):
-    kind: Literal['create']
+class CreateFile(TypedDict, total=False):
+    kind: str
     uri: DocumentUri
-    options: NotRequired[CreateFileOptions]
-    annotationId: NotRequired[ChangeAnnotationIdentifier]
+    options: Optional[CreateFileOptions]
+    annotationId: Optional[ChangeAnnotationIdentifier]
 
 
-class RenameFileOptions(TypedDict):
-    overwrite: NotRequired[bool]
-    ignoreIfExists: NotRequired[bool]
+class RenameFileOptions(TypedDict, total=False):
+    overwrite: Optional[bool]
+    ignoreIfExists: Optional[bool]
 
 
-class RenameFile(TypedDict):
-    kind: Literal['rename']
+class RenameFile(TypedDict, total=False):
+    kind: str
     oldUri: DocumentUri
     newUri: DocumentUri
-    options: NotRequired[RenameFileOptions]
-    annotationId: NotRequired[ChangeAnnotationIdentifier]
+    options: Optional[RenameFileOptions]
+    annotationId: Optional[ChangeAnnotationIdentifier]
 
 
-class DeleteFileOptions(TypedDict):
-    recursive: NotRequired[bool]
-    ignoreIfNotExists: NotRequired[bool]
+class DeleteFileOptions(TypedDict, total=False):
+    recursive: Optional[bool]
+    ignoreIfNotExists: Optional[bool]
 
 
-class DeleteFile(TypedDict):
-    kind: Literal['delete']
+class DeleteFile(TypedDict, total=False):
+    kind: str
     uri: DocumentUri
-    options: NotRequired[DeleteFileOptions]
-    annotationId: NotRequired[ChangeAnnotationIdentifier]
+    options: Optional[DeleteFileOptions]
+    annotationId: Optional[ChangeAnnotationIdentifier]
 
 
-class WorkspaceEdit(TypedDict):
-    changes: NotRequired[Dict[DocumentUri, List[TextEdit]]]
-    documentChanges: NotRequired[Union[List[TextDocumentEdit], List[Union[TextDocumentEdit, CreateFile, RenameFile, DeleteFile]]]]
-    changeAnnotations: NotRequired[Dict[str, ChangeAnnotation]]
+class WorkspaceEdit(TypedDict, total=False):
+    changes: Optional[Dict[DocumentUri, List[TextEdit]]]
+    documentChanges: Union[List[TextDocumentEdit], List[Union[TextDocumentEdit, CreateFile, RenameFile, DeleteFile]], None]
+    changeAnnotations: Optional[Dict[str, ChangeAnnotation]]
 
 
-class WorkspaceEditClientCapabilities(TypedDict):
-    class ChangeAnnotationSupport_0(TypedDict):
-        groupsOnLabel: NotRequired[bool]
-    documentChanges: NotRequired[bool]
-    resourceOperations: NotRequired[List['ResourceOperationKind']]
-    failureHandling: NotRequired['FailureHandlingKind']
-    normalizesLineEndings: NotRequired[bool]
-    changeAnnotationSupport: NotRequired[ChangeAnnotationSupport_0]
-    metadataSupport: NotRequired[bool]
-    snippetEditSupport: NotRequired[bool]
+class WorkspaceEditClientCapabilities(TypedDict, total=False):
+    class ChangeAnnotationSupport_0(TypedDict, total=False):
+        groupsOnLabel: Optional[bool]
+    documentChanges: Optional[bool]
+    resourceOperations: Optional[List['ResourceOperationKind']]
+    failureHandling: Optional['FailureHandlingKind']
+    normalizesLineEndings: Optional[bool]
+    changeAnnotationSupport: Optional[ChangeAnnotationSupport_0]
+    metadataSupport: Optional[bool]
+    snippetEditSupport: Optional[bool]
 
-ResourceOperationKind = Literal['create', 'rename', 'delete']
-
-
-FailureHandlingKind = Literal['abort', 'transactional', 'undo', 'textOnlyTransactional']
+ResourceOperationKind = str
 
 
-class WorkDoneProgressBegin(TypedDict):
-    kind: Literal['begin']
+FailureHandlingKind = str
+
+
+class WorkDoneProgressBegin(TypedDict, total=False):
+    kind: str
     title: str
-    cancellable: NotRequired[bool]
-    message: NotRequired[str]
-    percentage: NotRequired[int]
+    cancellable: Optional[bool]
+    message: Optional[str]
+    percentage: Optional[int]
 
 
-class WorkDoneProgressReport(TypedDict):
-    kind: Literal['report']
-    cancellable: NotRequired[bool]
-    message: NotRequired[str]
-    percentage: NotRequired[int]
+class WorkDoneProgressReport(TypedDict, total=False):
+    kind: str
+    cancellable: Optional[bool]
+    message: Optional[str]
+    percentage: Optional[int]
 
 
-class WorkDoneProgressEnd(TypedDict):
-    kind: Literal['end']
-    message: NotRequired[str]
+class WorkDoneProgressEnd(TypedDict, total=False):
+    kind: str
+    message: Optional[str]
 
 
-class WorkDoneProgressParams(TypedDict):
-    workDoneToken: NotRequired[ProgressToken]
+class WorkDoneProgressParams(TypedDict, total=False):
+    workDoneToken: Optional[ProgressToken]
 
 
-class WorkDoneProgressOptions(TypedDict):
-    workDoneProgress: NotRequired[bool]
+class WorkDoneProgressOptions(TypedDict, total=False):
+    workDoneProgress: Optional[bool]
 
 
-class PartialResultParams(TypedDict):
-    partialResultToken: NotRequired[ProgressToken]
+class PartialResultParams(TypedDict, total=False):
+    partialResultToken: Optional[ProgressToken]
 
-TraceValue = Literal['off', 'messages', 'verbose']
+TraceValue = str
 
 
-class InitializeParams(WorkDoneProgressParams, TypedDict):
-    class ClientInfo_0(TypedDict):
+class InitializeParams(WorkDoneProgressParams, TypedDict, total=False):
+    class ClientInfo_0(TypedDict, total=False):
         name: str
-        version: NotRequired[str]
+        version: Optional[str]
     processId: Union[int, None]
-    clientInfo: NotRequired[ClientInfo_0]
-    locale: NotRequired[str]
-    rootPath: NotRequired[Union[str, None]]
+    clientInfo: Optional[ClientInfo_0]
+    locale: Optional[str]
+    rootPath: Union[str, None]
     rootUri: Union[DocumentUri, None]
-    initializationOptions: NotRequired[LSPAny]
+    initializationOptions: Optional[LSPAny]
     capabilities: 'ClientCapabilities'
-    trace: NotRequired[TraceValue]
-    workspaceFolders: NotRequired[Union[List['WorkspaceFolder'], None]]
+    trace: Optional[TraceValue]
+    workspaceFolders: Union[List['WorkspaceFolder'], None]
 
 
-class TextDocumentClientCapabilities(TypedDict):
-    synchronization: NotRequired['TextDocumentSyncClientCapabilities']
-    completion: NotRequired['CompletionClientCapabilities']
-    hover: NotRequired['HoverClientCapabilities']
-    signatureHelp: NotRequired['SignatureHelpClientCapabilities']
-    declaration: NotRequired['DeclarationClientCapabilities']
-    definition: NotRequired['DefinitionClientCapabilities']
-    typeDefinition: NotRequired['TypeDefinitionClientCapabilities']
-    implementation: NotRequired['ImplementationClientCapabilities']
-    references: NotRequired['ReferenceClientCapabilities']
-    documentHighlight: NotRequired['DocumentHighlightClientCapabilities']
-    documentSymbol: NotRequired['DocumentSymbolClientCapabilities']
-    codeAction: NotRequired['CodeActionClientCapabilities']
-    codeLens: NotRequired['CodeLensClientCapabilities']
-    documentLink: NotRequired['DocumentLinkClientCapabilities']
-    colorProvider: NotRequired['DocumentColorClientCapabilities']
-    formatting: NotRequired['DocumentFormattingClientCapabilities']
-    rangeFormatting: NotRequired['DocumentRangeFormattingClientCapabilities']
-    onTypeFormatting: NotRequired['DocumentOnTypeFormattingClientCapabilities']
-    rename: NotRequired['RenameClientCapabilities']
-    publishDiagnostics: NotRequired['PublishDiagnosticsClientCapabilities']
-    foldingRange: NotRequired['FoldingRangeClientCapabilities']
-    selectionRange: NotRequired['SelectionRangeClientCapabilities']
-    linkedEditingRange: NotRequired['LinkedEditingRangeClientCapabilities']
-    callHierarchy: NotRequired['CallHierarchyClientCapabilities']
-    semanticTokens: NotRequired['SemanticTokensClientCapabilities']
-    moniker: NotRequired['MonikerClientCapabilities']
-    typeHierarchy: NotRequired['TypeHierarchyClientCapabilities']
-    inlineValue: NotRequired['InlineValueClientCapabilities']
-    inlayHint: NotRequired['InlayHintClientCapabilities']
-    diagnostic: NotRequired['DiagnosticClientCapabilities']
-    inlineCompletion: NotRequired['InlineCompletionClientCapabilities']
+class TextDocumentClientCapabilities(TypedDict, total=False):
+    synchronization: Optional['TextDocumentSyncClientCapabilities']
+    completion: Optional['CompletionClientCapabilities']
+    hover: Optional['HoverClientCapabilities']
+    signatureHelp: Optional['SignatureHelpClientCapabilities']
+    declaration: Optional['DeclarationClientCapabilities']
+    definition: Optional['DefinitionClientCapabilities']
+    typeDefinition: Optional['TypeDefinitionClientCapabilities']
+    implementation: Optional['ImplementationClientCapabilities']
+    references: Optional['ReferenceClientCapabilities']
+    documentHighlight: Optional['DocumentHighlightClientCapabilities']
+    documentSymbol: Optional['DocumentSymbolClientCapabilities']
+    codeAction: Optional['CodeActionClientCapabilities']
+    codeLens: Optional['CodeLensClientCapabilities']
+    documentLink: Optional['DocumentLinkClientCapabilities']
+    colorProvider: Optional['DocumentColorClientCapabilities']
+    formatting: Optional['DocumentFormattingClientCapabilities']
+    rangeFormatting: Optional['DocumentRangeFormattingClientCapabilities']
+    onTypeFormatting: Optional['DocumentOnTypeFormattingClientCapabilities']
+    rename: Optional['RenameClientCapabilities']
+    publishDiagnostics: Optional['PublishDiagnosticsClientCapabilities']
+    foldingRange: Optional['FoldingRangeClientCapabilities']
+    selectionRange: Optional['SelectionRangeClientCapabilities']
+    linkedEditingRange: Optional['LinkedEditingRangeClientCapabilities']
+    callHierarchy: Optional['CallHierarchyClientCapabilities']
+    semanticTokens: Optional['SemanticTokensClientCapabilities']
+    moniker: Optional['MonikerClientCapabilities']
+    typeHierarchy: Optional['TypeHierarchyClientCapabilities']
+    inlineValue: Optional['InlineValueClientCapabilities']
+    inlayHint: Optional['InlayHintClientCapabilities']
+    diagnostic: Optional['DiagnosticClientCapabilities']
+    inlineCompletion: Optional['InlineCompletionClientCapabilities']
 
 
-class NotebookDocumentClientCapabilities(TypedDict):
+class NotebookDocumentClientCapabilities(TypedDict, total=True):
     synchronization: 'NotebookDocumentSyncClientCapabilities'
 
 
-class ClientCapabilities(TypedDict):
-    class Workspace_0(TypedDict):
-        class FileOperations_0(TypedDict):
-            dynamicRegistration: NotRequired[bool]
-            didCreate: NotRequired[bool]
-            willCreate: NotRequired[bool]
-            didRename: NotRequired[bool]
-            willRename: NotRequired[bool]
-            didDelete: NotRequired[bool]
-            willDelete: NotRequired[bool]
-        applyEdit: NotRequired[bool]
-        workspaceEdit: NotRequired[WorkspaceEditClientCapabilities]
-        didChangeConfiguration: NotRequired['DidChangeConfigurationClientCapabilities']
-        didChangeWatchedFiles: NotRequired['DidChangeWatchedFilesClientCapabilities']
-        symbol: NotRequired['WorkspaceSymbolClientCapabilities']
-        executeCommand: NotRequired['ExecuteCommandClientCapabilities']
-        workspaceFolders: NotRequired[bool]
-        configuration: NotRequired[bool]
-        semanticTokens: NotRequired['SemanticTokensWorkspaceClientCapabilities']
-        codeLens: NotRequired['CodeLensWorkspaceClientCapabilities']
-        fileOperations: NotRequired[FileOperations_0]
-        inlineValue: NotRequired['InlineValueWorkspaceClientCapabilities']
-        inlayHint: NotRequired['InlayHintWorkspaceClientCapabilities']
-        diagnostics: NotRequired['DiagnosticWorkspaceClientCapabilities']
-    class Window_0(TypedDict):
-        workDoneProgress: NotRequired[bool]
-        showMessage: NotRequired['ShowMessageRequestClientCapabilities']
-        showDocument: NotRequired['ShowDocumentClientCapabilities']
-    class General_0(TypedDict):
-        class StaleRequestSupport_0(TypedDict):
+class ClientCapabilities(TypedDict, total=False):
+    class Workspace_0(TypedDict, total=False):
+        class FileOperations_0(TypedDict, total=False):
+            dynamicRegistration: Optional[bool]
+            didCreate: Optional[bool]
+            willCreate: Optional[bool]
+            didRename: Optional[bool]
+            willRename: Optional[bool]
+            didDelete: Optional[bool]
+            willDelete: Optional[bool]
+        applyEdit: Optional[bool]
+        workspaceEdit: Optional[WorkspaceEditClientCapabilities]
+        didChangeConfiguration: Optional['DidChangeConfigurationClientCapabilities']
+        didChangeWatchedFiles: Optional['DidChangeWatchedFilesClientCapabilities']
+        symbol: Optional['WorkspaceSymbolClientCapabilities']
+        executeCommand: Optional['ExecuteCommandClientCapabilities']
+        workspaceFolders: Optional[bool]
+        configuration: Optional[bool]
+        semanticTokens: Optional['SemanticTokensWorkspaceClientCapabilities']
+        codeLens: Optional['CodeLensWorkspaceClientCapabilities']
+        fileOperations: Optional[FileOperations_0]
+        inlineValue: Optional['InlineValueWorkspaceClientCapabilities']
+        inlayHint: Optional['InlayHintWorkspaceClientCapabilities']
+        diagnostics: Optional['DiagnosticWorkspaceClientCapabilities']
+    class Window_0(TypedDict, total=False):
+        workDoneProgress: Optional[bool]
+        showMessage: Optional['ShowMessageRequestClientCapabilities']
+        showDocument: Optional['ShowDocumentClientCapabilities']
+    class General_0(TypedDict, total=False):
+        class StaleRequestSupport_0(TypedDict, total=True):
             cancel: bool
             retryOnContentModified: List[str]
-        staleRequestSupport: NotRequired[StaleRequestSupport_0]
-        regularExpressions: NotRequired[RegularExpressionsClientCapabilities]
-        markdown: NotRequired[MarkdownClientCapabilities]
-        positionEncodings: NotRequired[List[PositionEncodingKind]]
-    workspace: NotRequired[Workspace_0]
-    textDocument: NotRequired[TextDocumentClientCapabilities]
-    notebookDocument: NotRequired[NotebookDocumentClientCapabilities]
-    window: NotRequired[Window_0]
-    general: NotRequired[General_0]
-    experimental: NotRequired[LSPAny]
+        staleRequestSupport: Optional[StaleRequestSupport_0]
+        regularExpressions: Optional[RegularExpressionsClientCapabilities]
+        markdown: Optional[MarkdownClientCapabilities]
+        positionEncodings: Optional[List[PositionEncodingKind]]
+    workspace: Optional[Workspace_0]
+    textDocument: Optional[TextDocumentClientCapabilities]
+    notebookDocument: Optional[NotebookDocumentClientCapabilities]
+    window: Optional[Window_0]
+    general: Optional[General_0]
+    experimental: Optional[LSPAny]
 
 
-class InitializeResult(TypedDict):
-    class ServerInfo_0(TypedDict):
+class InitializeResult(TypedDict, total=False):
+    class ServerInfo_0(TypedDict, total=False):
         name: str
-        version: NotRequired[str]
+        version: Optional[str]
     capabilities: 'ServerCapabilities'
-    serverInfo: NotRequired[ServerInfo_0]
+    serverInfo: Optional[ServerInfo_0]
 
 class InitializeErrorCodes(IntEnum):
     unknownProtocolVersion = 1
 
-InitializeErrorCodes = Literal[1]
+InitializeErrorCodes = int
 
 
-class InitializeError(TypedDict):
+class InitializeError(TypedDict, total=True):
     retry: bool
 
 
-class ServerCapabilities(TypedDict):
-    class TextDocument_0(TypedDict):
-        class Diagnostic_0(TypedDict):
-            markupMessageSupport: NotRequired[bool]
-        diagnostic: NotRequired[Diagnostic_0]
-    class Workspace_0(TypedDict):
-        class FileOperations_0(TypedDict):
-            didCreate: NotRequired['FileOperationRegistrationOptions']
-            willCreate: NotRequired['FileOperationRegistrationOptions']
-            didRename: NotRequired['FileOperationRegistrationOptions']
-            willRename: NotRequired['FileOperationRegistrationOptions']
-            didDelete: NotRequired['FileOperationRegistrationOptions']
-            willDelete: NotRequired['FileOperationRegistrationOptions']
-        workspaceFolders: NotRequired['WorkspaceFoldersServerCapabilities']
-        fileOperations: NotRequired[FileOperations_0]
-    positionEncoding: NotRequired[PositionEncodingKind]
-    textDocumentSync: NotRequired[Union['TextDocumentSyncOptions', 'TextDocumentSyncKind']]
-    notebookDocumentSync: NotRequired[Union['NotebookDocumentSyncOptions', 'NotebookDocumentSyncRegistrationOptions']]
-    completionProvider: NotRequired['CompletionOptions']
-    hoverProvider: NotRequired[Union[bool, 'HoverOptions']]
-    signatureHelpProvider: NotRequired['SignatureHelpOptions']
-    declarationProvider: NotRequired[Union[bool, 'DeclarationOptions', 'DeclarationRegistrationOptions']]
-    definitionProvider: NotRequired[Union[bool, 'DefinitionOptions']]
-    typeDefinitionProvider: NotRequired[Union[bool, 'TypeDefinitionOptions', 'TypeDefinitionRegistrationOptions']]
-    implementationProvider: NotRequired[Union[bool, 'ImplementationOptions', 'ImplementationRegistrationOptions']]
-    referencesProvider: NotRequired[Union[bool, 'ReferenceOptions']]
-    documentHighlightProvider: NotRequired[Union[bool, 'DocumentHighlightOptions']]
-    documentSymbolProvider: NotRequired[Union[bool, 'DocumentSymbolOptions']]
-    codeActionProvider: NotRequired[Union[bool, 'CodeActionOptions']]
-    codeLensProvider: NotRequired['CodeLensOptions']
-    documentLinkProvider: NotRequired['DocumentLinkOptions']
-    colorProvider: NotRequired[Union[bool, 'DocumentColorOptions', 'DocumentColorRegistrationOptions']]
-    documentFormattingProvider: NotRequired[Union[bool, 'DocumentFormattingOptions']]
-    documentRangeFormattingProvider: NotRequired[Union[bool, 'DocumentRangeFormattingOptions']]
-    documentOnTypeFormattingProvider: NotRequired['DocumentOnTypeFormattingOptions']
-    renameProvider: NotRequired[Union[bool, 'RenameOptions']]
-    foldingRangeProvider: NotRequired[Union[bool, 'FoldingRangeOptions', 'FoldingRangeRegistrationOptions']]
-    executeCommandProvider: NotRequired['ExecuteCommandOptions']
-    selectionRangeProvider: NotRequired[Union[bool, 'SelectionRangeOptions', 'SelectionRangeRegistrationOptions']]
-    linkedEditingRangeProvider: NotRequired[Union[bool, 'LinkedEditingRangeOptions', 'LinkedEditingRangeRegistrationOptions']]
-    callHierarchyProvider: NotRequired[Union[bool, 'CallHierarchyOptions', 'CallHierarchyRegistrationOptions']]
-    semanticTokensProvider: NotRequired[Union['SemanticTokensOptions', 'SemanticTokensRegistrationOptions']]
-    monikerProvider: NotRequired[Union[bool, 'MonikerOptions', 'MonikerRegistrationOptions']]
-    typeHierarchyProvider: NotRequired[Union[bool, 'TypeHierarchyOptions', 'TypeHierarchyRegistrationOptions']]
-    inlineValueProvider: NotRequired[Union[bool, 'InlineValueOptions', 'InlineValueRegistrationOptions']]
-    inlayHintProvider: NotRequired[Union[bool, 'InlayHintOptions', 'InlayHintRegistrationOptions']]
-    diagnosticProvider: NotRequired[Union['DiagnosticOptions', 'DiagnosticRegistrationOptions']]
-    workspaceSymbolProvider: NotRequired[Union[bool, 'WorkspaceSymbolOptions']]
-    inlineCompletionProvider: NotRequired[Union[bool, 'InlineCompletionOptions']]
-    textDocument: NotRequired[TextDocument_0]
-    workspace: NotRequired[Workspace_0]
-    experimental: NotRequired[LSPAny]
+class ServerCapabilities(TypedDict, total=False):
+    class TextDocument_0(TypedDict, total=False):
+        class Diagnostic_0(TypedDict, total=False):
+            markupMessageSupport: Optional[bool]
+        diagnostic: Optional[Diagnostic_0]
+    class Workspace_0(TypedDict, total=False):
+        class FileOperations_0(TypedDict, total=False):
+            didCreate: Optional['FileOperationRegistrationOptions']
+            willCreate: Optional['FileOperationRegistrationOptions']
+            didRename: Optional['FileOperationRegistrationOptions']
+            willRename: Optional['FileOperationRegistrationOptions']
+            didDelete: Optional['FileOperationRegistrationOptions']
+            willDelete: Optional['FileOperationRegistrationOptions']
+        workspaceFolders: Optional['WorkspaceFoldersServerCapabilities']
+        fileOperations: Optional[FileOperations_0]
+    positionEncoding: Optional[PositionEncodingKind]
+    textDocumentSync: Union['TextDocumentSyncOptions', 'TextDocumentSyncKind', None]
+    notebookDocumentSync: Union['NotebookDocumentSyncOptions', 'NotebookDocumentSyncRegistrationOptions', None]
+    completionProvider: Optional['CompletionOptions']
+    hoverProvider: Union[bool, 'HoverOptions', None]
+    signatureHelpProvider: Optional['SignatureHelpOptions']
+    declarationProvider: Union[bool, 'DeclarationOptions', 'DeclarationRegistrationOptions', None]
+    definitionProvider: Union[bool, 'DefinitionOptions', None]
+    typeDefinitionProvider: Union[bool, 'TypeDefinitionOptions', 'TypeDefinitionRegistrationOptions', None]
+    implementationProvider: Union[bool, 'ImplementationOptions', 'ImplementationRegistrationOptions', None]
+    referencesProvider: Union[bool, 'ReferenceOptions', None]
+    documentHighlightProvider: Union[bool, 'DocumentHighlightOptions', None]
+    documentSymbolProvider: Union[bool, 'DocumentSymbolOptions', None]
+    codeActionProvider: Union[bool, 'CodeActionOptions', None]
+    codeLensProvider: Optional['CodeLensOptions']
+    documentLinkProvider: Optional['DocumentLinkOptions']
+    colorProvider: Union[bool, 'DocumentColorOptions', 'DocumentColorRegistrationOptions', None]
+    documentFormattingProvider: Union[bool, 'DocumentFormattingOptions', None]
+    documentRangeFormattingProvider: Union[bool, 'DocumentRangeFormattingOptions', None]
+    documentOnTypeFormattingProvider: Optional['DocumentOnTypeFormattingOptions']
+    renameProvider: Union[bool, 'RenameOptions', None]
+    foldingRangeProvider: Union[bool, 'FoldingRangeOptions', 'FoldingRangeRegistrationOptions', None]
+    executeCommandProvider: Optional['ExecuteCommandOptions']
+    selectionRangeProvider: Union[bool, 'SelectionRangeOptions', 'SelectionRangeRegistrationOptions', None]
+    linkedEditingRangeProvider: Union[bool, 'LinkedEditingRangeOptions', 'LinkedEditingRangeRegistrationOptions', None]
+    callHierarchyProvider: Union[bool, 'CallHierarchyOptions', 'CallHierarchyRegistrationOptions', None]
+    semanticTokensProvider: Union['SemanticTokensOptions', 'SemanticTokensRegistrationOptions', None]
+    monikerProvider: Union[bool, 'MonikerOptions', 'MonikerRegistrationOptions', None]
+    typeHierarchyProvider: Union[bool, 'TypeHierarchyOptions', 'TypeHierarchyRegistrationOptions', None]
+    inlineValueProvider: Union[bool, 'InlineValueOptions', 'InlineValueRegistrationOptions', None]
+    inlayHintProvider: Union[bool, 'InlayHintOptions', 'InlayHintRegistrationOptions', None]
+    diagnosticProvider: Union['DiagnosticOptions', 'DiagnosticRegistrationOptions', None]
+    workspaceSymbolProvider: Union[bool, 'WorkspaceSymbolOptions', None]
+    inlineCompletionProvider: Union[bool, 'InlineCompletionOptions', None]
+    textDocument: Optional[TextDocument_0]
+    workspace: Optional[Workspace_0]
+    experimental: Optional[LSPAny]
 
 
-class InitializedParams(TypedDict):
+class InitializedParams(TypedDict, total=True):
     pass
 
 
-class Registration(TypedDict):
+class Registration(TypedDict, total=False):
     id: str
     method: str
-    registerOptions: NotRequired[LSPAny]
+    registerOptions: Optional[LSPAny]
 
 
-class RegistrationParams(TypedDict):
+class RegistrationParams(TypedDict, total=True):
     registrations: List[Registration]
 
 
-class StaticRegistrationOptions(TypedDict):
-    id: NotRequired[str]
+class StaticRegistrationOptions(TypedDict, total=False):
+    id: Optional[str]
 
 
-class TextDocumentRegistrationOptions(TypedDict):
+class TextDocumentRegistrationOptions(TypedDict, total=True):
     documentSelector: Union[DocumentSelector, None]
 
 
-class Unregistration(TypedDict):
+class Unregistration(TypedDict, total=True):
     id: str
     method: str
 
 
-class UnregistrationParams(TypedDict):
+class UnregistrationParams(TypedDict, total=True):
     unregisterations: List[Unregistration]
 
 
-class SetTraceParams(TypedDict):
+class SetTraceParams(TypedDict, total=True):
     value: TraceValue
 
 
-class LogTraceParams(TypedDict):
+class LogTraceParams(TypedDict, total=False):
     message: str
-    verbose: NotRequired[str]
+    verbose: Optional[str]
 
 class TextDocumentSyncKind(IntEnum):
     None_ = 0
     Full = 1
     Incremental = 2
 
-TextDocumentSyncKind = Literal[0, 1, 2]
+TextDocumentSyncKind = int
 
 
-class TextDocumentSyncOptions(TypedDict):
-    openClose: NotRequired[bool]
-    change: NotRequired[TextDocumentSyncKind]
+class TextDocumentSyncOptions(TypedDict, total=False):
+    openClose: Optional[bool]
+    change: Optional[TextDocumentSyncKind]
 
 
-class DidOpenTextDocumentParams(TypedDict):
+class DidOpenTextDocumentParams(TypedDict, total=True):
     textDocument: TextDocumentItem
 
 
-class TextDocumentChangeRegistrationOptions(TextDocumentRegistrationOptions, TypedDict):
+class TextDocumentChangeRegistrationOptions(TextDocumentRegistrationOptions, TypedDict, total=True):
     syncKind: TextDocumentSyncKind
 
 
-class DidChangeTextDocumentParams(TypedDict):
+class DidChangeTextDocumentParams(TypedDict, total=True):
     textDocument: VersionedTextDocumentIdentifier
     contentChanges: List['TextDocumentContentChangeEvent']
 
-class TextDocumentContentChangeEvent_0(TypedDict):
+class TextDocumentContentChangeEvent_0(TypedDict, total=False):
     range: Range
-    rangeLength: NotRequired[int]
+    rangeLength: Optional[int]
     text: str
-class TextDocumentContentChangeEvent_1(TypedDict):
+class TextDocumentContentChangeEvent_1(TypedDict, total=True):
     text: str
 TextDocumentContentChangeEvent = Union[TextDocumentContentChangeEvent_0, TextDocumentContentChangeEvent_1]
 
 
-class WillSaveTextDocumentParams(TypedDict):
+class WillSaveTextDocumentParams(TypedDict, total=True):
     textDocument: TextDocumentIdentifier
     reason: 'TextDocumentSaveReason'
 
@@ -718,457 +764,457 @@ class TextDocumentSaveReason(IntEnum):
     AfterDelay = 2
     FocusOut = 3
 
-TextDocumentSaveReason = Literal[1, 2, 3]
+TextDocumentSaveReason = int
 
 
-class SaveOptions(TypedDict):
-    includeText: NotRequired[bool]
+class SaveOptions(TypedDict, total=False):
+    includeText: Optional[bool]
 
 
-class TextDocumentSaveRegistrationOptions(TextDocumentRegistrationOptions, TypedDict):
-    includeText: NotRequired[bool]
+class TextDocumentSaveRegistrationOptions(TextDocumentRegistrationOptions, TypedDict, total=False):
+    includeText: Optional[bool]
 
 
-class DidSaveTextDocumentParams(TypedDict):
+class DidSaveTextDocumentParams(TypedDict, total=False):
     textDocument: TextDocumentIdentifier
-    text: NotRequired[str]
+    text: Optional[str]
 
 
-class DidCloseTextDocumentParams(TypedDict):
+class DidCloseTextDocumentParams(TypedDict, total=True):
     textDocument: TextDocumentIdentifier
 
 
-class TextDocumentSyncClientCapabilities(TypedDict):
-    dynamicRegistration: NotRequired[bool]
-    willSave: NotRequired[bool]
-    willSaveWaitUntil: NotRequired[bool]
-    didSave: NotRequired[bool]
+class TextDocumentSyncClientCapabilities(TypedDict, total=False):
+    dynamicRegistration: Optional[bool]
+    willSave: Optional[bool]
+    willSaveWaitUntil: Optional[bool]
+    didSave: Optional[bool]
 
 
-class TextDocumentSyncOptions(TypedDict):
-    openClose: NotRequired[bool]
-    change: NotRequired[TextDocumentSyncKind]
-    willSave: NotRequired[bool]
-    willSaveWaitUntil: NotRequired[bool]
-    save: NotRequired[Union[bool, SaveOptions]]
+class TextDocumentSyncOptions(TypedDict, total=False):
+    openClose: Optional[bool]
+    change: Optional[TextDocumentSyncKind]
+    willSave: Optional[bool]
+    willSaveWaitUntil: Optional[bool]
+    save: Union[bool, SaveOptions, None]
 
 
-class NotebookDocument(TypedDict):
+class NotebookDocument(TypedDict, total=False):
     uri: URI
     notebookType: str
     version: int
-    metadata: NotRequired[LSPObject]
+    metadata: Optional[LSPObject]
     cells: List['NotebookCell']
 
 
-class NotebookCell(TypedDict):
+class NotebookCell(TypedDict, total=False):
     kind: 'NotebookCellKind'
     document: DocumentUri
-    metadata: NotRequired[LSPObject]
-    executionSummary: NotRequired['ExecutionSummary']
+    metadata: Optional[LSPObject]
+    executionSummary: Optional['ExecutionSummary']
 
 class NotebookCellKind(IntEnum):
     Markup = 1
     Code = 2
 
 
-class ExecutionSummary(TypedDict):
+class ExecutionSummary(TypedDict, total=False):
     executionOrder: int
-    success: NotRequired[bool]
+    success: Optional[bool]
 
 
-class NotebookCellTextDocumentFilter(TypedDict):
+class NotebookCellTextDocumentFilter(TypedDict, total=False):
     notebook: Union[str, 'NotebookDocumentFilter']
-    language: NotRequired[str]
+    language: Optional[str]
 
-class NotebookDocumentFilter_0(TypedDict):
+class NotebookDocumentFilter_0(TypedDict, total=False):
     notebookType: str
-    scheme: NotRequired[str]
-    pattern: NotRequired[str]
-class NotebookDocumentFilter_1(TypedDict):
-    notebookType: NotRequired[str]
+    scheme: Optional[str]
+    pattern: Optional[str]
+class NotebookDocumentFilter_1(TypedDict, total=False):
+    notebookType: Optional[str]
     scheme: str
-    pattern: NotRequired[str]
-class NotebookDocumentFilter_2(TypedDict):
-    notebookType: NotRequired[str]
-    scheme: NotRequired[str]
+    pattern: Optional[str]
+class NotebookDocumentFilter_2(TypedDict, total=False):
+    notebookType: Optional[str]
+    scheme: Optional[str]
     pattern: str
 NotebookDocumentFilter = Union[NotebookDocumentFilter_0, NotebookDocumentFilter_1, NotebookDocumentFilter_2]
 
 
-class NotebookDocumentSyncClientCapabilities(TypedDict):
-    dynamicRegistration: NotRequired[bool]
-    executionSummarySupport: NotRequired[bool]
+class NotebookDocumentSyncClientCapabilities(TypedDict, total=False):
+    dynamicRegistration: Optional[bool]
+    executionSummarySupport: Optional[bool]
 
 
-class NotebookDocumentSyncOptions(TypedDict):
-    class NotebookSelector_0(TypedDict):
-        class Cells_0(TypedDict):
+class NotebookDocumentSyncOptions(TypedDict, total=False):
+    class NotebookSelector_0(TypedDict, total=False):
+        class Cells_0(TypedDict, total=True):
             language: str
         notebook: Union[str, NotebookDocumentFilter]
-        cells: NotRequired[List[Cells_0]]
-    class NotebookSelector_1(TypedDict):
-        class Cells_0(TypedDict):
+        cells: Optional[List[Cells_0]]
+    class NotebookSelector_1(TypedDict, total=False):
+        class Cells_0(TypedDict, total=True):
             language: str
-        notebook: NotRequired[Union[str, NotebookDocumentFilter]]
+        notebook: Union[str, NotebookDocumentFilter, None]
         cells: List[Cells_0]
     notebookSelector: List[Union[NotebookSelector_0, NotebookSelector_1]]
-    save: NotRequired[bool]
+    save: Optional[bool]
 
 
-class NotebookDocumentSyncRegistrationOptions(NotebookDocumentSyncOptions, StaticRegistrationOptions, TypedDict):
+class NotebookDocumentSyncRegistrationOptions(NotebookDocumentSyncOptions, StaticRegistrationOptions, TypedDict, total=True):
     pass
 
 
-class DidOpenNotebookDocumentParams(TypedDict):
+class DidOpenNotebookDocumentParams(TypedDict, total=True):
     notebookDocument: NotebookDocument
     cellTextDocuments: List[TextDocumentItem]
 
 
-class DidChangeNotebookDocumentParams(TypedDict):
+class DidChangeNotebookDocumentParams(TypedDict, total=True):
     notebookDocument: 'VersionedNotebookDocumentIdentifier'
     change: 'NotebookDocumentChangeEvent'
 
 
-class VersionedNotebookDocumentIdentifier(TypedDict):
+class VersionedNotebookDocumentIdentifier(TypedDict, total=True):
     version: int
     uri: URI
 
 
-class NotebookDocumentChangeEvent(TypedDict):
-    class Cells_0(TypedDict):
-        class Structure_0(TypedDict):
+class NotebookDocumentChangeEvent(TypedDict, total=False):
+    class Cells_0(TypedDict, total=False):
+        class Structure_0(TypedDict, total=False):
             array: 'NotebookCellArrayChange'
-            didOpen: NotRequired[List[TextDocumentItem]]
-            didClose: NotRequired[List[TextDocumentIdentifier]]
-        class TextContent_0(TypedDict):
+            didOpen: Optional[List[TextDocumentItem]]
+            didClose: Optional[List[TextDocumentIdentifier]]
+        class TextContent_0(TypedDict, total=True):
             document: VersionedTextDocumentIdentifier
             changes: List[TextDocumentContentChangeEvent]
-        structure: NotRequired[Structure_0]
-        data: NotRequired[List[NotebookCell]]
-        textContent: NotRequired[List[TextContent_0]]
-    metadata: NotRequired[LSPObject]
-    cells: NotRequired[Cells_0]
+        structure: Optional[Structure_0]
+        data: Optional[List[NotebookCell]]
+        textContent: Optional[List[TextContent_0]]
+    metadata: Optional[LSPObject]
+    cells: Optional[Cells_0]
 
 
-class NotebookCellArrayChange(TypedDict):
+class NotebookCellArrayChange(TypedDict, total=False):
     start: int
     deleteCount: int
-    cells: NotRequired[List[NotebookCell]]
+    cells: Optional[List[NotebookCell]]
 
 
-class DidSaveNotebookDocumentParams(TypedDict):
+class DidSaveNotebookDocumentParams(TypedDict, total=True):
     notebookDocument: 'NotebookDocumentIdentifier'
 
 
-class DidCloseNotebookDocumentParams(TypedDict):
+class DidCloseNotebookDocumentParams(TypedDict, total=True):
     notebookDocument: 'NotebookDocumentIdentifier'
     cellTextDocuments: List[TextDocumentIdentifier]
 
 
-class NotebookDocumentIdentifier(TypedDict):
+class NotebookDocumentIdentifier(TypedDict, total=True):
     uri: URI
 
 
-class DeclarationClientCapabilities(TypedDict):
-    dynamicRegistration: NotRequired[bool]
-    linkSupport: NotRequired[bool]
+class DeclarationClientCapabilities(TypedDict, total=False):
+    dynamicRegistration: Optional[bool]
+    linkSupport: Optional[bool]
 
 
-class DeclarationOptions(WorkDoneProgressOptions, TypedDict):
+class DeclarationOptions(WorkDoneProgressOptions, TypedDict, total=True):
     pass
 
 
-class DeclarationRegistrationOptions(DeclarationOptions, TextDocumentRegistrationOptions, StaticRegistrationOptions, TypedDict):
+class DeclarationRegistrationOptions(DeclarationOptions, TextDocumentRegistrationOptions, StaticRegistrationOptions, TypedDict, total=True):
     pass
 
 
-class DeclarationParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict):
+class DeclarationParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
     pass
 
 
-class DefinitionClientCapabilities(TypedDict):
-    dynamicRegistration: NotRequired[bool]
-    linkSupport: NotRequired[bool]
+class DefinitionClientCapabilities(TypedDict, total=False):
+    dynamicRegistration: Optional[bool]
+    linkSupport: Optional[bool]
 
 
-class DefinitionOptions(WorkDoneProgressOptions, TypedDict):
+class DefinitionOptions(WorkDoneProgressOptions, TypedDict, total=True):
     pass
 
 
-class DefinitionRegistrationOptions(TextDocumentRegistrationOptions, DefinitionOptions, TypedDict):
+class DefinitionRegistrationOptions(TextDocumentRegistrationOptions, DefinitionOptions, TypedDict, total=True):
     pass
 
 
-class DefinitionParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict):
+class DefinitionParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
     pass
 
 
-class TypeDefinitionClientCapabilities(TypedDict):
-    dynamicRegistration: NotRequired[bool]
-    linkSupport: NotRequired[bool]
+class TypeDefinitionClientCapabilities(TypedDict, total=False):
+    dynamicRegistration: Optional[bool]
+    linkSupport: Optional[bool]
 
 
-class TypeDefinitionOptions(WorkDoneProgressOptions, TypedDict):
+class TypeDefinitionOptions(WorkDoneProgressOptions, TypedDict, total=True):
     pass
 
 
-class TypeDefinitionRegistrationOptions(TextDocumentRegistrationOptions, TypeDefinitionOptions, StaticRegistrationOptions, TypedDict):
+class TypeDefinitionRegistrationOptions(TextDocumentRegistrationOptions, TypeDefinitionOptions, StaticRegistrationOptions, TypedDict, total=True):
     pass
 
 
-class TypeDefinitionParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict):
+class TypeDefinitionParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
     pass
 
 
-class ImplementationClientCapabilities(TypedDict):
-    dynamicRegistration: NotRequired[bool]
-    linkSupport: NotRequired[bool]
+class ImplementationClientCapabilities(TypedDict, total=False):
+    dynamicRegistration: Optional[bool]
+    linkSupport: Optional[bool]
 
 
-class ImplementationOptions(WorkDoneProgressOptions, TypedDict):
+class ImplementationOptions(WorkDoneProgressOptions, TypedDict, total=True):
     pass
 
 
-class ImplementationRegistrationOptions(TextDocumentRegistrationOptions, ImplementationOptions, StaticRegistrationOptions, TypedDict):
+class ImplementationRegistrationOptions(TextDocumentRegistrationOptions, ImplementationOptions, StaticRegistrationOptions, TypedDict, total=True):
     pass
 
 
-class ImplementationParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict):
+class ImplementationParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
     pass
 
 
-class ReferenceClientCapabilities(TypedDict):
-    dynamicRegistration: NotRequired[bool]
+class ReferenceClientCapabilities(TypedDict, total=False):
+    dynamicRegistration: Optional[bool]
 
 
-class ReferenceOptions(WorkDoneProgressOptions, TypedDict):
+class ReferenceOptions(WorkDoneProgressOptions, TypedDict, total=True):
     pass
 
 
-class ReferenceRegistrationOptions(TextDocumentRegistrationOptions, ReferenceOptions, TypedDict):
+class ReferenceRegistrationOptions(TextDocumentRegistrationOptions, ReferenceOptions, TypedDict, total=True):
     pass
 
 
-class ReferenceParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict):
+class ReferenceParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
     context: 'ReferenceContext'
 
 
-class ReferenceContext(TypedDict):
+class ReferenceContext(TypedDict, total=True):
     includeDeclaration: bool
 
 
-class CallHierarchyClientCapabilities(TypedDict):
-    dynamicRegistration: NotRequired[bool]
+class CallHierarchyClientCapabilities(TypedDict, total=False):
+    dynamicRegistration: Optional[bool]
 
 
-class CallHierarchyOptions(WorkDoneProgressOptions, TypedDict):
+class CallHierarchyOptions(WorkDoneProgressOptions, TypedDict, total=True):
     pass
 
 
-class CallHierarchyRegistrationOptions(TextDocumentRegistrationOptions, CallHierarchyOptions, StaticRegistrationOptions, TypedDict):
+class CallHierarchyRegistrationOptions(TextDocumentRegistrationOptions, CallHierarchyOptions, StaticRegistrationOptions, TypedDict, total=True):
     pass
 
 
-class CallHierarchyPrepareParams(TextDocumentPositionParams, WorkDoneProgressParams, TypedDict):
+class CallHierarchyPrepareParams(TextDocumentPositionParams, WorkDoneProgressParams, TypedDict, total=True):
     pass
 
 
-class CallHierarchyItem(TypedDict):
+class CallHierarchyItem(TypedDict, total=False):
     name: str
     kind: 'SymbolKind'
-    tags: NotRequired[List['SymbolTag']]
-    detail: NotRequired[str]
+    tags: Optional[List['SymbolTag']]
+    detail: Optional[str]
     uri: DocumentUri
     range: Range
     selectionRange: Range
-    data: NotRequired[LSPAny]
+    data: Optional[LSPAny]
 
 
-class CallHierarchyIncomingCallsParams(WorkDoneProgressParams, PartialResultParams, TypedDict):
+class CallHierarchyIncomingCallsParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
     item: CallHierarchyItem
 
 
-class CallHierarchyIncomingCall(TypedDict):
+class CallHierarchyIncomingCall(TypedDict, total=True):
     from_: CallHierarchyItem
     fromRanges: List[Range]
 
 
-class CallHierarchyOutgoingCallsParams(WorkDoneProgressParams, PartialResultParams, TypedDict):
+class CallHierarchyOutgoingCallsParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
     item: CallHierarchyItem
 
 
-class CallHierarchyOutgoingCall(TypedDict):
+class CallHierarchyOutgoingCall(TypedDict, total=True):
     to: CallHierarchyItem
     fromRanges: List[Range]
 
-class TypeHierarchyClientCapabilities_0(TypedDict):
-    dynamicRegistration: NotRequired[bool]
+class TypeHierarchyClientCapabilities_0(TypedDict, total=False):
+    dynamicRegistration: Optional[bool]
 TypeHierarchyClientCapabilities = TypeHierarchyClientCapabilities_0
 
 
-class TypeHierarchyOptions(WorkDoneProgressOptions, TypedDict):
+class TypeHierarchyOptions(WorkDoneProgressOptions, TypedDict, total=True):
     pass
 
 
-class TypeHierarchyRegistrationOptions(TextDocumentRegistrationOptions, TypeHierarchyOptions, StaticRegistrationOptions, TypedDict):
+class TypeHierarchyRegistrationOptions(TextDocumentRegistrationOptions, TypeHierarchyOptions, StaticRegistrationOptions, TypedDict, total=True):
     pass
 
 
-class TypeHierarchyPrepareParams(TextDocumentPositionParams, WorkDoneProgressParams, TypedDict):
+class TypeHierarchyPrepareParams(TextDocumentPositionParams, WorkDoneProgressParams, TypedDict, total=True):
     pass
 
 
-class TypeHierarchyItem(TypedDict):
+class TypeHierarchyItem(TypedDict, total=False):
     name: str
     kind: 'SymbolKind'
-    tags: NotRequired[List['SymbolTag']]
-    detail: NotRequired[str]
+    tags: Optional[List['SymbolTag']]
+    detail: Optional[str]
     uri: DocumentUri
     range: Range
     selectionRange: Range
-    data: NotRequired[LSPAny]
+    data: Optional[LSPAny]
 
 
-class TypeHierarchySupertypesParams(WorkDoneProgressParams, PartialResultParams, TypedDict):
+class TypeHierarchySupertypesParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
     item: TypeHierarchyItem
 
 
-class TypeHierarchySubtypesParams(WorkDoneProgressParams, PartialResultParams, TypedDict):
+class TypeHierarchySubtypesParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
     item: TypeHierarchyItem
 
 
-class DocumentHighlightClientCapabilities(TypedDict):
-    dynamicRegistration: NotRequired[bool]
+class DocumentHighlightClientCapabilities(TypedDict, total=False):
+    dynamicRegistration: Optional[bool]
 
 
-class DocumentHighlightOptions(WorkDoneProgressOptions, TypedDict):
+class DocumentHighlightOptions(WorkDoneProgressOptions, TypedDict, total=True):
     pass
 
 
-class DocumentHighlightRegistrationOptions(TextDocumentRegistrationOptions, DocumentHighlightOptions, TypedDict):
+class DocumentHighlightRegistrationOptions(TextDocumentRegistrationOptions, DocumentHighlightOptions, TypedDict, total=True):
     pass
 
 
-class DocumentHighlightParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict):
+class DocumentHighlightParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
     pass
 
 
-class DocumentHighlight(TypedDict):
+class DocumentHighlight(TypedDict, total=False):
     range: Range
-    kind: NotRequired['DocumentHighlightKind']
+    kind: Optional['DocumentHighlightKind']
 
 class DocumentHighlightKind(IntEnum):
     Text = 1
     Read = 2
     Write = 3
 
-DocumentHighlightKind = Literal[1, 2, 3]
+DocumentHighlightKind = int
 
 
-class DocumentLinkClientCapabilities(TypedDict):
-    dynamicRegistration: NotRequired[bool]
-    tooltipSupport: NotRequired[bool]
+class DocumentLinkClientCapabilities(TypedDict, total=False):
+    dynamicRegistration: Optional[bool]
+    tooltipSupport: Optional[bool]
 
 
-class DocumentLinkOptions(WorkDoneProgressOptions, TypedDict):
-    resolveProvider: NotRequired[bool]
+class DocumentLinkOptions(WorkDoneProgressOptions, TypedDict, total=False):
+    resolveProvider: Optional[bool]
 
 
-class DocumentLinkRegistrationOptions(TextDocumentRegistrationOptions, DocumentLinkOptions, TypedDict):
+class DocumentLinkRegistrationOptions(TextDocumentRegistrationOptions, DocumentLinkOptions, TypedDict, total=True):
     pass
 
 
-class DocumentLinkParams(WorkDoneProgressParams, PartialResultParams, TypedDict):
+class DocumentLinkParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
     textDocument: TextDocumentIdentifier
 
 
-class DocumentLink(TypedDict):
+class DocumentLink(TypedDict, total=False):
     range: Range
-    target: NotRequired[URI]
-    tooltip: NotRequired[str]
-    data: NotRequired[LSPAny]
+    target: Optional[URI]
+    tooltip: Optional[str]
+    data: Optional[LSPAny]
 
 
-class HoverClientCapabilities(TypedDict):
-    dynamicRegistration: NotRequired[bool]
-    contentFormat: NotRequired[List[MarkupKind]]
+class HoverClientCapabilities(TypedDict, total=False):
+    dynamicRegistration: Optional[bool]
+    contentFormat: Optional[List[MarkupKind]]
 
 
-class HoverOptions(WorkDoneProgressOptions, TypedDict):
+class HoverOptions(WorkDoneProgressOptions, TypedDict, total=True):
     pass
 
 
-class HoverRegistrationOptions(TextDocumentRegistrationOptions, HoverOptions, TypedDict):
+class HoverRegistrationOptions(TextDocumentRegistrationOptions, HoverOptions, TypedDict, total=True):
     pass
 
 
-class HoverParams(TextDocumentPositionParams, WorkDoneProgressParams, TypedDict):
+class HoverParams(TextDocumentPositionParams, WorkDoneProgressParams, TypedDict, total=True):
     pass
 
 
-class Hover(TypedDict):
+class Hover(TypedDict, total=False):
     contents: Union['MarkedString', List['MarkedString'], MarkupContent]
-    range: NotRequired[Range]
+    range: Optional[Range]
 
-class MarkedString_1(TypedDict):
+class MarkedString_1(TypedDict, total=True):
     language: str
     value: str
 MarkedString = Union[str, MarkedString_1]
 
 
-class CodeLensClientCapabilities(TypedDict):
-    dynamicRegistration: NotRequired[bool]
-    resolveSupport: NotRequired['ClientCodeLensResolveOptions']
+class CodeLensClientCapabilities(TypedDict, total=False):
+    dynamicRegistration: Optional[bool]
+    resolveSupport: Optional['ClientCodeLensResolveOptions']
 
-class ClientCodeLensResolveOptions_0(TypedDict):
+class ClientCodeLensResolveOptions_0(TypedDict, total=True):
     properties: List[str]
 ClientCodeLensResolveOptions = ClientCodeLensResolveOptions_0
 
 
-class CodeLensOptions(WorkDoneProgressOptions, TypedDict):
-    resolveProvider: NotRequired[bool]
+class CodeLensOptions(WorkDoneProgressOptions, TypedDict, total=False):
+    resolveProvider: Optional[bool]
 
 
-class CodeLensRegistrationOptions(TextDocumentRegistrationOptions, CodeLensOptions, TypedDict):
+class CodeLensRegistrationOptions(TextDocumentRegistrationOptions, CodeLensOptions, TypedDict, total=True):
     pass
 
 
-class CodeLensParams(WorkDoneProgressParams, PartialResultParams, TypedDict):
+class CodeLensParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
     textDocument: TextDocumentIdentifier
 
 
-class CodeLens(TypedDict):
+class CodeLens(TypedDict, total=False):
     range: Range
-    command: NotRequired[Command]
-    data: NotRequired[LSPAny]
+    command: Optional[Command]
+    data: Optional[LSPAny]
 
 
-class CodeLensWorkspaceClientCapabilities(TypedDict):
-    refreshSupport: NotRequired[bool]
+class CodeLensWorkspaceClientCapabilities(TypedDict, total=False):
+    refreshSupport: Optional[bool]
 
 
-class FoldingRangeClientCapabilities(TypedDict):
-    class FoldingRangeKind_0(TypedDict):
-        valueSet: NotRequired[List['FoldingRangeKind']]
-    class FoldingRange_0(TypedDict):
-        collapsedText: NotRequired[bool]
-    dynamicRegistration: NotRequired[bool]
-    rangeLimit: NotRequired[int]
-    lineFoldingOnly: NotRequired[bool]
-    foldingRangeKind: NotRequired[FoldingRangeKind_0]
-    foldingRange: NotRequired[FoldingRange_0]
+class FoldingRangeClientCapabilities(TypedDict, total=False):
+    class FoldingRangeKind_0(TypedDict, total=False):
+        valueSet: Optional[List['FoldingRangeKind']]
+    class FoldingRange_0(TypedDict, total=False):
+        collapsedText: Optional[bool]
+    dynamicRegistration: Optional[bool]
+    rangeLimit: Optional[int]
+    lineFoldingOnly: Optional[bool]
+    foldingRangeKind: Optional[FoldingRangeKind_0]
+    foldingRange: Optional[FoldingRange_0]
 
 
-class FoldingRangeOptions(WorkDoneProgressOptions, TypedDict):
+class FoldingRangeOptions(WorkDoneProgressOptions, TypedDict, total=True):
     pass
 
 
-class FoldingRangeRegistrationOptions(TextDocumentRegistrationOptions, FoldingRangeOptions, StaticRegistrationOptions, TypedDict):
+class FoldingRangeRegistrationOptions(TextDocumentRegistrationOptions, FoldingRangeOptions, StaticRegistrationOptions, TypedDict, total=True):
     pass
 
 
-class FoldingRangeParams(WorkDoneProgressParams, PartialResultParams, TypedDict):
+class FoldingRangeParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
     textDocument: TextDocumentIdentifier
 
 class FoldingRangeKind(Enum):
@@ -1179,62 +1225,62 @@ class FoldingRangeKind(Enum):
 FoldingRangeKind = str
 
 
-class FoldingRange(TypedDict):
+class FoldingRange(TypedDict, total=False):
     startLine: int
-    startCharacter: NotRequired[int]
+    startCharacter: Optional[int]
     endLine: int
-    endCharacter: NotRequired[int]
-    kind: NotRequired[FoldingRangeKind]
-    collapsedText: NotRequired[str]
+    endCharacter: Optional[int]
+    kind: Optional[FoldingRangeKind]
+    collapsedText: Optional[str]
 
 
-class FoldingRangeWorkspaceClientCapabilities(TypedDict):
-    refreshSupport: NotRequired[bool]
+class FoldingRangeWorkspaceClientCapabilities(TypedDict, total=False):
+    refreshSupport: Optional[bool]
 
 
-class SelectionRangeClientCapabilities(TypedDict):
-    dynamicRegistration: NotRequired[bool]
+class SelectionRangeClientCapabilities(TypedDict, total=False):
+    dynamicRegistration: Optional[bool]
 
 
-class SelectionRangeOptions(WorkDoneProgressOptions, TypedDict):
+class SelectionRangeOptions(WorkDoneProgressOptions, TypedDict, total=True):
     pass
 
 
-class SelectionRangeRegistrationOptions(SelectionRangeOptions, TextDocumentRegistrationOptions, StaticRegistrationOptions, TypedDict):
+class SelectionRangeRegistrationOptions(SelectionRangeOptions, TextDocumentRegistrationOptions, StaticRegistrationOptions, TypedDict, total=True):
     pass
 
 
-class SelectionRangeParams(WorkDoneProgressParams, PartialResultParams, TypedDict):
+class SelectionRangeParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
     textDocument: TextDocumentIdentifier
     positions: List[Position]
 
 
-class SelectionRange(TypedDict):
+class SelectionRange(TypedDict, total=False):
     range: Range
-    parent: NotRequired['SelectionRange']
+    parent: Optional['SelectionRange']
 
 
-class DocumentSymbolClientCapabilities(TypedDict):
-    class SymbolKind_0(TypedDict):
-        valueSet: NotRequired[List['SymbolKind']]
-    class TagSupport_0(TypedDict):
+class DocumentSymbolClientCapabilities(TypedDict, total=False):
+    class SymbolKind_0(TypedDict, total=False):
+        valueSet: Optional[List['SymbolKind']]
+    class TagSupport_0(TypedDict, total=True):
         valueSet: List['SymbolTag']
-    dynamicRegistration: NotRequired[bool]
-    symbolKind: NotRequired[SymbolKind_0]
-    hierarchicalDocumentSymbolSupport: NotRequired[bool]
-    tagSupport: NotRequired[TagSupport_0]
-    labelSupport: NotRequired[bool]
+    dynamicRegistration: Optional[bool]
+    symbolKind: Optional[SymbolKind_0]
+    hierarchicalDocumentSymbolSupport: Optional[bool]
+    tagSupport: Optional[TagSupport_0]
+    labelSupport: Optional[bool]
 
 
-class DocumentSymbolOptions(WorkDoneProgressOptions, TypedDict):
-    label: NotRequired[str]
+class DocumentSymbolOptions(WorkDoneProgressOptions, TypedDict, total=False):
+    label: Optional[str]
 
 
-class DocumentSymbolRegistrationOptions(TextDocumentRegistrationOptions, DocumentSymbolOptions, TypedDict):
+class DocumentSymbolRegistrationOptions(TextDocumentRegistrationOptions, DocumentSymbolOptions, TypedDict, total=True):
     pass
 
 
-class DocumentSymbolParams(WorkDoneProgressParams, PartialResultParams, TypedDict):
+class DocumentSymbolParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
     textDocument: TextDocumentIdentifier
 
 class SymbolKind(IntEnum):
@@ -1265,30 +1311,32 @@ class SymbolKind(IntEnum):
     Operator = 25
     TypeParameter = 26
 
-SymbolKind = Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26]
+SymbolKind = int
 
 class SymbolTag(IntEnum):
     Deprecated = 1
 
-SymbolTag = Literal[1]
+SymbolTag = int
 
-class DocumentSymbol(TypedDict):
+
+class DocumentSymbol(TypedDict, total=False):
     name: str
-    detail: NotRequired[str]
+    detail: Optional[str]
     kind: SymbolKind
-    tags: NotRequired[List[SymbolTag]]
-    deprecated: NotRequired[bool]
+    tags: Optional[List[SymbolTag]]
+    deprecated: Optional[bool]
     range: Range
     selectionRange: Range
-    children: NotRequired[List['DocumentSymbol']]
+    children: Optional[List['DocumentSymbol']]
 
-class SymbolInformation(TypedDict):
+
+class SymbolInformation(TypedDict, total=False):
     name: str
     kind: SymbolKind
-    tags: NotRequired[List[SymbolTag]]
-    deprecated: NotRequired[bool]
+    tags: Optional[List[SymbolTag]]
+    deprecated: Optional[bool]
     location: Location
-    containerName: NotRequired[str]
+    containerName: Optional[str]
 
 class SemanticTokenTypes(Enum):
     namespace = 'namespace'
@@ -1330,195 +1378,195 @@ class SemanticTokenModifiers(Enum):
 class TokenFormat(Enum):
     Relative = 'relative'
 
-TokenFormat = Literal['relative']
+TokenFormat = str
 
 
-class SemanticTokensLegend(TypedDict):
+class SemanticTokensLegend(TypedDict, total=True):
     tokenTypes: List[str]
     tokenModifiers: List[str]
 
 
-class SemanticTokensClientCapabilities(TypedDict):
-    class Requests_0(TypedDict):
-        class Range_1(TypedDict):
+class SemanticTokensClientCapabilities(TypedDict, total=False):
+    class Requests_0(TypedDict, total=False):
+        class Range_1(TypedDict, total=True):
             pass
-        class Full_1(TypedDict):
-            delta: NotRequired[bool]
-        range: NotRequired[Union[bool, Range_1]]
-        full: NotRequired[Union[bool, Full_1]]
-    dynamicRegistration: NotRequired[bool]
+        class Full_1(TypedDict, total=False):
+            delta: Optional[bool]
+        range: Union[bool, Range_1, None]
+        full: Union[bool, Full_1, None]
+    dynamicRegistration: Optional[bool]
     requests: Requests_0
     tokenTypes: List[str]
     tokenModifiers: List[str]
     formats: List[TokenFormat]
-    overlappingTokenSupport: NotRequired[bool]
-    multilineTokenSupport: NotRequired[bool]
-    serverCancelSupport: NotRequired[bool]
-    augmentsSyntaxTokens: NotRequired[bool]
+    overlappingTokenSupport: Optional[bool]
+    multilineTokenSupport: Optional[bool]
+    serverCancelSupport: Optional[bool]
+    augmentsSyntaxTokens: Optional[bool]
 
 
-class SemanticTokensOptions(WorkDoneProgressOptions, TypedDict):
-    class Range_1(TypedDict):
+class SemanticTokensOptions(WorkDoneProgressOptions, TypedDict, total=False):
+    class Range_1(TypedDict, total=True):
         pass
-    class Full_1(TypedDict):
-        delta: NotRequired[bool]
+    class Full_1(TypedDict, total=False):
+        delta: Optional[bool]
     legend: SemanticTokensLegend
-    range: NotRequired[Union[bool, Range_1]]
-    full: NotRequired[Union[bool, Full_1]]
+    range: Union[bool, Range_1, None]
+    full: Union[bool, Full_1, None]
 
 
-class SemanticTokensRegistrationOptions(TextDocumentRegistrationOptions, SemanticTokensOptions, StaticRegistrationOptions, TypedDict):
+class SemanticTokensRegistrationOptions(TextDocumentRegistrationOptions, SemanticTokensOptions, StaticRegistrationOptions, TypedDict, total=True):
     pass
 
 
-class SemanticTokensParams(WorkDoneProgressParams, PartialResultParams, TypedDict):
+class SemanticTokensParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
     textDocument: TextDocumentIdentifier
 
 
-class SemanticTokens(TypedDict):
-    resultId: NotRequired[str]
+class SemanticTokens(TypedDict, total=False):
+    resultId: Optional[str]
     data: List[int]
 
 
-class SemanticTokensPartialResult(TypedDict):
+class SemanticTokensPartialResult(TypedDict, total=True):
     data: List[int]
 
 
-class SemanticTokensDeltaParams(WorkDoneProgressParams, PartialResultParams, TypedDict):
+class SemanticTokensDeltaParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
     textDocument: TextDocumentIdentifier
     previousResultId: str
 
 
-class SemanticTokensDelta(TypedDict):
-    resultId: NotRequired[str]
+class SemanticTokensDelta(TypedDict, total=False):
+    resultId: Optional[str]
     edits: List['SemanticTokensEdit']
 
 
-class SemanticTokensEdit(TypedDict):
+class SemanticTokensEdit(TypedDict, total=False):
     start: int
     deleteCount: int
-    data: NotRequired[List[int]]
+    data: Optional[List[int]]
 
 
-class SemanticTokensDeltaPartialResult(TypedDict):
+class SemanticTokensDeltaPartialResult(TypedDict, total=True):
     edits: List[SemanticTokensEdit]
 
 
-class SemanticTokensRangeParams(WorkDoneProgressParams, PartialResultParams, TypedDict):
+class SemanticTokensRangeParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
     textDocument: TextDocumentIdentifier
     range: Range
 
 
-class SemanticTokensWorkspaceClientCapabilities(TypedDict):
-    refreshSupport: NotRequired[bool]
+class SemanticTokensWorkspaceClientCapabilities(TypedDict, total=False):
+    refreshSupport: Optional[bool]
 
 
-class InlayHintClientCapabilities(TypedDict):
-    class ResolveSupport_0(TypedDict):
+class InlayHintClientCapabilities(TypedDict, total=False):
+    class ResolveSupport_0(TypedDict, total=True):
         properties: List[str]
-    dynamicRegistration: NotRequired[bool]
-    resolveSupport: NotRequired[ResolveSupport_0]
+    dynamicRegistration: Optional[bool]
+    resolveSupport: Optional[ResolveSupport_0]
 
 
-class InlayHintOptions(WorkDoneProgressOptions, TypedDict):
-    resolveProvider: NotRequired[bool]
+class InlayHintOptions(WorkDoneProgressOptions, TypedDict, total=False):
+    resolveProvider: Optional[bool]
 
 
-class InlayHintRegistrationOptions(InlayHintOptions, TextDocumentRegistrationOptions, StaticRegistrationOptions, TypedDict):
+class InlayHintRegistrationOptions(InlayHintOptions, TextDocumentRegistrationOptions, StaticRegistrationOptions, TypedDict, total=True):
     pass
 
 
-class InlayHintParams(WorkDoneProgressParams, TypedDict):
+class InlayHintParams(WorkDoneProgressParams, TypedDict, total=True):
     textDocument: TextDocumentIdentifier
     range: Range
 
 
-class InlayHint(TypedDict):
+class InlayHint(TypedDict, total=False):
     position: Position
     label: Union[str, List['InlayHintLabelPart']]
-    kind: NotRequired['InlayHintKind']
-    textEdits: NotRequired[List[TextEdit]]
-    tooltip: NotRequired[Union[str, MarkupContent]]
-    paddingLeft: NotRequired[bool]
-    paddingRight: NotRequired[bool]
-    data: NotRequired[LSPAny]
+    kind: Optional['InlayHintKind']
+    textEdits: Optional[List[TextEdit]]
+    tooltip: Union[str, MarkupContent, None]
+    paddingLeft: Optional[bool]
+    paddingRight: Optional[bool]
+    data: Optional[LSPAny]
 
 
-class InlayHintLabelPart(TypedDict):
+class InlayHintLabelPart(TypedDict, total=False):
     value: str
-    tooltip: NotRequired[Union[str, MarkupContent]]
-    location: NotRequired[Location]
-    command: NotRequired[Command]
+    tooltip: Union[str, MarkupContent, None]
+    location: Optional[Location]
+    command: Optional[Command]
 
 class InlayHintKind(IntEnum):
     Type = 1
     Parameter = 2
 
-InlayHintKind = Literal[1, 2]
+InlayHintKind = int
 
 
-class InlayHintWorkspaceClientCapabilities(TypedDict):
-    refreshSupport: NotRequired[bool]
+class InlayHintWorkspaceClientCapabilities(TypedDict, total=False):
+    refreshSupport: Optional[bool]
 
 
-class InlineValueClientCapabilities(TypedDict):
-    dynamicRegistration: NotRequired[bool]
+class InlineValueClientCapabilities(TypedDict, total=False):
+    dynamicRegistration: Optional[bool]
 
 
-class InlineValueOptions(WorkDoneProgressOptions, TypedDict):
+class InlineValueOptions(WorkDoneProgressOptions, TypedDict, total=True):
     pass
 
 
-class InlineValueRegistrationOptions(InlineValueOptions, TextDocumentRegistrationOptions, StaticRegistrationOptions, TypedDict):
+class InlineValueRegistrationOptions(InlineValueOptions, TextDocumentRegistrationOptions, StaticRegistrationOptions, TypedDict, total=True):
     pass
 
 
-class InlineValueParams(WorkDoneProgressParams, TypedDict):
+class InlineValueParams(WorkDoneProgressParams, TypedDict, total=True):
     textDocument: TextDocumentIdentifier
     range: Range
     context: 'InlineValueContext'
 
 
-class InlineValueContext(TypedDict):
+class InlineValueContext(TypedDict, total=True):
     frameId: int
     stoppedLocation: Range
 
 
-class InlineValueText(TypedDict):
+class InlineValueText(TypedDict, total=True):
     range: Range
     text: str
 
 
-class InlineValueVariableLookup(TypedDict):
+class InlineValueVariableLookup(TypedDict, total=False):
     range: Range
-    iableName: NotRequired[str]
+    iableName: Optional[str]
     caseSensitiveLookup: bool
 
 
-class InlineValueEvaluatableExpression(TypedDict):
+class InlineValueEvaluatableExpression(TypedDict, total=False):
     range: Range
-    expression: NotRequired[str]
+    expression: Optional[str]
 
 InlineValue = Union[InlineValueText, InlineValueVariableLookup, InlineValueEvaluatableExpression]
 
 
-class InlineValueWorkspaceClientCapabilities(TypedDict):
-    refreshSupport: NotRequired[bool]
+class InlineValueWorkspaceClientCapabilities(TypedDict, total=False):
+    refreshSupport: Optional[bool]
 
 
-class MonikerClientCapabilities(TypedDict):
-    dynamicRegistration: NotRequired[bool]
+class MonikerClientCapabilities(TypedDict, total=False):
+    dynamicRegistration: Optional[bool]
 
 
-class MonikerOptions(WorkDoneProgressOptions, TypedDict):
+class MonikerOptions(WorkDoneProgressOptions, TypedDict, total=True):
     pass
 
 
-class MonikerRegistrationOptions(TextDocumentRegistrationOptions, MonikerOptions, TypedDict):
+class MonikerRegistrationOptions(TextDocumentRegistrationOptions, MonikerOptions, TypedDict, total=True):
     pass
 
 
-class MonikerParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict):
+class MonikerParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
     pass
 
 class UniquenessLevel(Enum):
@@ -1534,99 +1582,99 @@ class MonikerKind(Enum):
     local = 'local'
 
 
-class Moniker(TypedDict):
+class Moniker(TypedDict, total=False):
     scheme: str
     identifier: str
     unique: UniquenessLevel
-    kind: NotRequired[MonikerKind]
+    kind: Optional[MonikerKind]
 
 
-class CompletionClientCapabilities(TypedDict):
-    class CompletionItem_0(TypedDict):
-        class TagSupport_0(TypedDict):
+class CompletionClientCapabilities(TypedDict, total=False):
+    class CompletionItem_0(TypedDict, total=False):
+        class TagSupport_0(TypedDict, total=True):
             valueSet: List['CompletionItemTag']
-        class ResolveSupport_0(TypedDict):
+        class ResolveSupport_0(TypedDict, total=True):
             properties: List[str]
-        class InsertTextModeSupport_0(TypedDict):
+        class InsertTextModeSupport_0(TypedDict, total=True):
             valueSet: List['InsertTextMode']
-        snippetSupport: NotRequired[bool]
-        commitCharactersSupport: NotRequired[bool]
-        documentationFormat: NotRequired[List[MarkupKind]]
-        deprecatedSupport: NotRequired[bool]
-        preselectSupport: NotRequired[bool]
-        tagSupport: NotRequired[TagSupport_0]
-        insertReplaceSupport: NotRequired[bool]
-        resolveSupport: NotRequired[ResolveSupport_0]
-        insertTextModeSupport: NotRequired[InsertTextModeSupport_0]
-        labelDetailsSupport: NotRequired[bool]
-    class CompletionItemKind_0(TypedDict):
-        valueSet: NotRequired[List['CompletionItemKind']]
-    class CompletionList_0(TypedDict):
-        itemDefaults: NotRequired[List[str]]
-    dynamicRegistration: NotRequired[bool]
-    completionItem: NotRequired[CompletionItem_0]
-    completionItemKind: NotRequired[CompletionItemKind_0]
-    contextSupport: NotRequired[bool]
-    insertTextMode: NotRequired['InsertTextMode']
-    completionList: NotRequired[CompletionList_0]
+        snippetSupport: Optional[bool]
+        commitCharactersSupport: Optional[bool]
+        documentationFormat: Optional[List[MarkupKind]]
+        deprecatedSupport: Optional[bool]
+        preselectSupport: Optional[bool]
+        tagSupport: Optional[TagSupport_0]
+        insertReplaceSupport: Optional[bool]
+        resolveSupport: Optional[ResolveSupport_0]
+        insertTextModeSupport: Optional[InsertTextModeSupport_0]
+        labelDetailsSupport: Optional[bool]
+    class CompletionItemKind_0(TypedDict, total=False):
+        valueSet: Optional[List['CompletionItemKind']]
+    class CompletionList_0(TypedDict, total=False):
+        itemDefaults: Optional[List[str]]
+    dynamicRegistration: Optional[bool]
+    completionItem: Optional[CompletionItem_0]
+    completionItemKind: Optional[CompletionItemKind_0]
+    contextSupport: Optional[bool]
+    insertTextMode: Optional['InsertTextMode']
+    completionList: Optional[CompletionList_0]
 
 
-class CompletionOptions(WorkDoneProgressOptions, TypedDict):
-    class CompletionItem_0(TypedDict):
-        labelDetailsSupport: NotRequired[bool]
-    triggerCharacters: NotRequired[List[str]]
-    allCommitCharacters: NotRequired[List[str]]
-    resolveProvider: NotRequired[bool]
-    completionItem: NotRequired[CompletionItem_0]
+class CompletionOptions(WorkDoneProgressOptions, TypedDict, total=False):
+    class CompletionItem_0(TypedDict, total=False):
+        labelDetailsSupport: Optional[bool]
+    triggerCharacters: Optional[List[str]]
+    allCommitCharacters: Optional[List[str]]
+    resolveProvider: Optional[bool]
+    completionItem: Optional[CompletionItem_0]
 
 
-class CompletionRegistrationOptions(TextDocumentRegistrationOptions, CompletionOptions, TypedDict):
+class CompletionRegistrationOptions(TextDocumentRegistrationOptions, CompletionOptions, TypedDict, total=True):
     pass
 
 
-class CompletionParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict):
-    context: NotRequired['CompletionContext']
+class CompletionParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams, TypedDict, total=False):
+    context: Optional['CompletionContext']
 
 class CompletionTriggerKind(IntEnum):
     Invoked = 1
     TriggerCharacter = 2
     TriggerForIncompleteCompletions = 3
 
-CompletionTriggerKind = Literal[1, 2, 3]
+CompletionTriggerKind = int
 
 
-class CompletionContext(TypedDict):
+class CompletionContext(TypedDict, total=False):
     triggerKind: CompletionTriggerKind
-    triggerCharacter: NotRequired[str]
+    triggerCharacter: Optional[str]
 
 
-class CompletionList(TypedDict):
-    class ItemDefaults_0(TypedDict):
-        class EditRange_1(TypedDict):
+class CompletionList(TypedDict, total=False):
+    class ItemDefaults_0(TypedDict, total=False):
+        class EditRange_1(TypedDict, total=True):
             insert: Range
             replace: Range
-        commitCharacters: NotRequired[List[str]]
-        editRange: NotRequired[Union[Range, EditRange_1]]
-        insertTextFormat: NotRequired['InsertTextFormat']
-        insertTextMode: NotRequired['InsertTextMode']
-        data: NotRequired[LSPAny]
+        commitCharacters: Optional[List[str]]
+        editRange: Union[Range, EditRange_1, None]
+        insertTextFormat: Optional['InsertTextFormat']
+        insertTextMode: Optional['InsertTextMode']
+        data: Optional[LSPAny]
     isIncomplete: bool
-    itemDefaults: NotRequired[ItemDefaults_0]
+    itemDefaults: Optional[ItemDefaults_0]
     items: List['CompletionItem']
 
 class InsertTextFormat(IntEnum):
     PlainText = 1
     Snippet = 2
 
-InsertTextFormat = Literal[1, 2]
+InsertTextFormat = int
 
 class CompletionItemTag(IntEnum):
     Deprecated = 1
 
-CompletionItemTag = Literal[1]
+CompletionItemTag = int
 
 
-class InsertReplaceEdit(TypedDict):
+class InsertReplaceEdit(TypedDict, total=True):
     newText: str
     insert: Range
     replace: Range
@@ -1635,34 +1683,34 @@ class InsertTextMode(IntEnum):
     asIs = 1
     adjustIndentation = 2
 
-InsertTextMode = Literal[1, 2]
+InsertTextMode = int
 
 
-class CompletionItemLabelDetails(TypedDict):
-    detail: NotRequired[str]
-    description: NotRequired[str]
+class CompletionItemLabelDetails(TypedDict, total=False):
+    detail: Optional[str]
+    description: Optional[str]
 
 
-class CompletionItem(TypedDict):
+class CompletionItem(TypedDict, total=False):
     label: str
-    labelDetails: NotRequired[CompletionItemLabelDetails]
-    kind: NotRequired['CompletionItemKind']
-    tags: NotRequired[List[CompletionItemTag]]
-    detail: NotRequired[str]
-    documentation: NotRequired[Union[str, MarkupContent]]
-    deprecated: NotRequired[bool]
-    preselect: NotRequired[bool]
-    sortText: NotRequired[str]
-    filterText: NotRequired[str]
-    insertText: NotRequired[str]
-    insertTextFormat: NotRequired[InsertTextFormat]
-    insertTextMode: NotRequired[InsertTextMode]
-    textEdit: NotRequired[Union[TextEdit, InsertReplaceEdit]]
-    textEditText: NotRequired[str]
-    additionalTextEdits: NotRequired[List[TextEdit]]
-    commitCharacters: NotRequired[List[str]]
-    command: NotRequired[Command]
-    data: NotRequired[LSPAny]
+    labelDetails: Optional[CompletionItemLabelDetails]
+    kind: Optional['CompletionItemKind']
+    tags: Optional[List[CompletionItemTag]]
+    detail: Optional[str]
+    documentation: Union[str, MarkupContent, None]
+    deprecated: Optional[bool]
+    preselect: Optional[bool]
+    sortText: Optional[str]
+    filterText: Optional[str]
+    insertText: Optional[str]
+    insertTextFormat: Optional[InsertTextFormat]
+    insertTextMode: Optional[InsertTextMode]
+    textEdit: Union[TextEdit, InsertReplaceEdit, None]
+    textEditText: Optional[str]
+    additionalTextEdits: Optional[List[TextEdit]]
+    commitCharacters: Optional[List[str]]
+    command: Optional[Command]
+    data: Optional[LSPAny]
 
 class CompletionItemKind(IntEnum):
     Text = 1
@@ -1691,45 +1739,45 @@ class CompletionItemKind(IntEnum):
     Operator = 24
     TypeParameter = 25
 
-CompletionItemKind = Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
+CompletionItemKind = int
 
 
-class PublishDiagnosticsClientCapabilities(TypedDict):
-    class TagSupport_0(TypedDict):
+class PublishDiagnosticsClientCapabilities(TypedDict, total=False):
+    class TagSupport_0(TypedDict, total=True):
         valueSet: List[DiagnosticTag]
-    relatedInformation: NotRequired[bool]
-    tagSupport: NotRequired[TagSupport_0]
-    versionSupport: NotRequired[bool]
-    codeDescriptionSupport: NotRequired[bool]
-    dataSupport: NotRequired[bool]
+    relatedInformation: Optional[bool]
+    tagSupport: Optional[TagSupport_0]
+    versionSupport: Optional[bool]
+    codeDescriptionSupport: Optional[bool]
+    dataSupport: Optional[bool]
 
 
-class PublishDiagnosticsParams(TypedDict):
+class PublishDiagnosticsParams(TypedDict, total=False):
     uri: DocumentUri
-    version: NotRequired[int]
+    version: Optional[int]
     diagnostics: List[Diagnostic]
 
 
-class DiagnosticClientCapabilities(TypedDict):
-    dynamicRegistration: NotRequired[bool]
-    relatedDocumentSupport: NotRequired[bool]
-    markupMessageSupport: NotRequired[bool]
+class DiagnosticClientCapabilities(TypedDict, total=False):
+    dynamicRegistration: Optional[bool]
+    relatedDocumentSupport: Optional[bool]
+    markupMessageSupport: Optional[bool]
 
 
-class DiagnosticOptions(WorkDoneProgressOptions, TypedDict):
-    identifier: NotRequired[str]
+class DiagnosticOptions(WorkDoneProgressOptions, TypedDict, total=False):
+    identifier: Optional[str]
     interFileDependencies: bool
     workspaceDiagnostics: bool
 
 
-class DiagnosticRegistrationOptions(TextDocumentRegistrationOptions, DiagnosticOptions, StaticRegistrationOptions, TypedDict):
+class DiagnosticRegistrationOptions(TextDocumentRegistrationOptions, DiagnosticOptions, StaticRegistrationOptions, TypedDict, total=True):
     pass
 
 
-class DocumentDiagnosticParams(WorkDoneProgressParams, PartialResultParams, TypedDict):
+class DocumentDiagnosticParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total=False):
     textDocument: TextDocumentIdentifier
-    identifier: NotRequired[str]
-    previousResultId: NotRequired[str]
+    identifier: Optional[str]
+    previousResultId: Optional[str]
 
 DocumentDiagnosticReport = Union['RelatedFullDocumentDiagnosticReport', 'RelatedUnchangedDocumentDiagnosticReport']
 
@@ -1737,161 +1785,161 @@ class DocumentDiagnosticReportKind(Enum):
     Full = 'full'
     Unchanged = 'unchanged'
 
-DocumentDiagnosticReportKind = Literal['full', 'unchanged']
+DocumentDiagnosticReportKind = str
 
 
-class FullDocumentDiagnosticReport(TypedDict):
+class FullDocumentDiagnosticReport(TypedDict, total=False):
     kind: 'DocumentDiagnosticReportKindFull'
-    resultId: NotRequired[str]
+    resultId: Optional[str]
     items: List[Diagnostic]
 
 
-class UnchangedDocumentDiagnosticReport(TypedDict):
+class UnchangedDocumentDiagnosticReport(TypedDict, total=True):
     kind: 'DocumentDiagnosticReportKindUnchanged'
     resultId: str
 
 
-class RelatedFullDocumentDiagnosticReport(FullDocumentDiagnosticReport, TypedDict):
-    relatedDocuments: NotRequired[Dict[str, Union[FullDocumentDiagnosticReport, UnchangedDocumentDiagnosticReport]]]
+class RelatedFullDocumentDiagnosticReport(FullDocumentDiagnosticReport, TypedDict, total=False):
+    relatedDocuments: Optional[Dict[str, Union[FullDocumentDiagnosticReport, UnchangedDocumentDiagnosticReport]]]
 
 
-class RelatedUnchangedDocumentDiagnosticReport(UnchangedDocumentDiagnosticReport, TypedDict):
-    relatedDocuments: NotRequired[Dict[str, Union[FullDocumentDiagnosticReport, UnchangedDocumentDiagnosticReport]]]
+class RelatedUnchangedDocumentDiagnosticReport(UnchangedDocumentDiagnosticReport, TypedDict, total=False):
+    relatedDocuments: Optional[Dict[str, Union[FullDocumentDiagnosticReport, UnchangedDocumentDiagnosticReport]]]
 
 
-class DocumentDiagnosticReportPartialResult(TypedDict):
+class DocumentDiagnosticReportPartialResult(TypedDict, total=True):
     relatedDocuments: Dict[str, Union[FullDocumentDiagnosticReport, UnchangedDocumentDiagnosticReport]]
 
 
-class DiagnosticServerCancellationData(TypedDict):
+class DiagnosticServerCancellationData(TypedDict, total=True):
     retriggerRequest: bool
 
 
-class WorkspaceDiagnosticParams(WorkDoneProgressParams, PartialResultParams, TypedDict):
-    identifier: NotRequired[str]
+class WorkspaceDiagnosticParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total=False):
+    identifier: Optional[str]
     previousResultIds: List['PreviousResultId']
 
 
-class PreviousResultId(TypedDict):
+class PreviousResultId(TypedDict, total=True):
     uri: DocumentUri
     value: str
 
 
-class WorkspaceDiagnosticReport(TypedDict):
+class WorkspaceDiagnosticReport(TypedDict, total=True):
     items: List['WorkspaceDocumentDiagnosticReport']
 
 
-class WorkspaceFullDocumentDiagnosticReport(FullDocumentDiagnosticReport, TypedDict):
+class WorkspaceFullDocumentDiagnosticReport(FullDocumentDiagnosticReport, TypedDict, total=True):
     uri: DocumentUri
     version: Union[int, None]
 
 
-class WorkspaceUnchangedDocumentDiagnosticReport(UnchangedDocumentDiagnosticReport, TypedDict):
+class WorkspaceUnchangedDocumentDiagnosticReport(UnchangedDocumentDiagnosticReport, TypedDict, total=True):
     uri: DocumentUri
     version: Union[int, None]
 
 WorkspaceDocumentDiagnosticReport = Union[WorkspaceFullDocumentDiagnosticReport, WorkspaceUnchangedDocumentDiagnosticReport]
 
 
-class WorkspaceDiagnosticReportPartialResult(TypedDict):
+class WorkspaceDiagnosticReportPartialResult(TypedDict, total=True):
     items: List[WorkspaceDocumentDiagnosticReport]
 
 
-class DiagnosticWorkspaceClientCapabilities(TypedDict):
-    refreshSupport: NotRequired[bool]
+class DiagnosticWorkspaceClientCapabilities(TypedDict, total=False):
+    refreshSupport: Optional[bool]
 
 
-class SignatureHelpClientCapabilities(TypedDict):
-    class SignatureInformation_0(TypedDict):
-        class ParameterInformation_0(TypedDict):
-            labelOffsetSupport: NotRequired[bool]
-        documentationFormat: NotRequired[List[MarkupKind]]
-        parameterInformation: NotRequired[ParameterInformation_0]
-        activeParameterSupport: NotRequired[bool]
-        noActiveParameterSupport: NotRequired[bool]
-    dynamicRegistration: NotRequired[bool]
-    signatureInformation: NotRequired[SignatureInformation_0]
-    contextSupport: NotRequired[bool]
+class SignatureHelpClientCapabilities(TypedDict, total=False):
+    class SignatureInformation_0(TypedDict, total=False):
+        class ParameterInformation_0(TypedDict, total=False):
+            labelOffsetSupport: Optional[bool]
+        documentationFormat: Optional[List[MarkupKind]]
+        parameterInformation: Optional[ParameterInformation_0]
+        activeParameterSupport: Optional[bool]
+        noActiveParameterSupport: Optional[bool]
+    dynamicRegistration: Optional[bool]
+    signatureInformation: Optional[SignatureInformation_0]
+    contextSupport: Optional[bool]
 
 
-class SignatureHelpOptions(WorkDoneProgressOptions, TypedDict):
-    triggerCharacters: NotRequired[List[str]]
-    retriggerCharacters: NotRequired[List[str]]
+class SignatureHelpOptions(WorkDoneProgressOptions, TypedDict, total=False):
+    triggerCharacters: Optional[List[str]]
+    retriggerCharacters: Optional[List[str]]
 
 
-class SignatureHelpRegistrationOptions(TextDocumentRegistrationOptions, SignatureHelpOptions, TypedDict):
+class SignatureHelpRegistrationOptions(TextDocumentRegistrationOptions, SignatureHelpOptions, TypedDict, total=True):
     pass
 
 
-class SignatureHelpParams(TextDocumentPositionParams, WorkDoneProgressParams, TypedDict):
-    context: NotRequired['SignatureHelpContext']
+class SignatureHelpParams(TextDocumentPositionParams, WorkDoneProgressParams, TypedDict, total=False):
+    context: Optional['SignatureHelpContext']
 
 class SignatureHelpTriggerKind(IntEnum):
     Invoked = 1
     TriggerCharacter = 2
     ContentChange = 3
 
-SignatureHelpTriggerKind = Literal[1, 2, 3]
+SignatureHelpTriggerKind = int
 
 
-class SignatureHelpContext(TypedDict):
+class SignatureHelpContext(TypedDict, total=False):
     triggerKind: SignatureHelpTriggerKind
-    triggerCharacter: NotRequired[str]
+    triggerCharacter: Optional[str]
     isRetrigger: bool
-    activeSignatureHelp: NotRequired['SignatureHelp']
+    activeSignatureHelp: Optional['SignatureHelp']
 
 
-class SignatureHelp(TypedDict):
+class SignatureHelp(TypedDict, total=False):
     signatures: List['SignatureInformation']
-    activeSignature: NotRequired[int]
-    activeParameter: NotRequired[Union[int, None]]
+    activeSignature: Optional[int]
+    activeParameter: Union[int, None]
 
 
-class SignatureInformation(TypedDict):
+class SignatureInformation(TypedDict, total=False):
     label: str
-    documentation: NotRequired[Union[str, MarkupContent]]
-    parameters: NotRequired[List['ParameterInformation']]
-    activeParameter: NotRequired[Union[int, None]]
+    documentation: Union[str, MarkupContent, None]
+    parameters: Optional[List['ParameterInformation']]
+    activeParameter: Union[int, None]
 
 
-class ParameterInformation(TypedDict):
+class ParameterInformation(TypedDict, total=False):
     label: Union[str, Tuple[int, int]]
-    documentation: NotRequired[Union[str, MarkupContent]]
+    documentation: Union[str, MarkupContent, None]
 
 
-class CodeActionClientCapabilities(TypedDict):
-    class CodeActionLiteralSupport_0(TypedDict):
-        class CodeActionKind_0(TypedDict):
+class CodeActionClientCapabilities(TypedDict, total=False):
+    class CodeActionLiteralSupport_0(TypedDict, total=True):
+        class CodeActionKind_0(TypedDict, total=True):
             valueSet: List['CodeActionKind']
         codeActionKind: CodeActionKind_0
-    class ResolveSupport_0(TypedDict):
+    class ResolveSupport_0(TypedDict, total=True):
         properties: List[str]
-    dynamicRegistration: NotRequired[bool]
-    codeActionLiteralSupport: NotRequired[CodeActionLiteralSupport_0]
-    isPreferredSupport: NotRequired[bool]
-    disabledSupport: NotRequired[bool]
-    dataSupport: NotRequired[bool]
-    resolveSupport: NotRequired[ResolveSupport_0]
-    honorsChangeAnnotations: NotRequired[bool]
-    documentationSupport: NotRequired[bool]
+    dynamicRegistration: Optional[bool]
+    codeActionLiteralSupport: Optional[CodeActionLiteralSupport_0]
+    isPreferredSupport: Optional[bool]
+    disabledSupport: Optional[bool]
+    dataSupport: Optional[bool]
+    resolveSupport: Optional[ResolveSupport_0]
+    honorsChangeAnnotations: Optional[bool]
+    documentationSupport: Optional[bool]
 
 
-class CodeActionKindDocumentation(TypedDict):
+class CodeActionKindDocumentation(TypedDict, total=True):
     kind: 'CodeActionKind'
     command: Command
 
 
-class CodeActionOptions(WorkDoneProgressOptions, TypedDict):
-    codeActionKinds: NotRequired[List['CodeActionKind']]
-    documentation: NotRequired[List[CodeActionKindDocumentation]]
-    resolveProvider: NotRequired[bool]
+class CodeActionOptions(WorkDoneProgressOptions, TypedDict, total=False):
+    codeActionKinds: Optional[List['CodeActionKind']]
+    documentation: Optional[List[CodeActionKindDocumentation]]
+    resolveProvider: Optional[bool]
 
 
-class CodeActionRegistrationOptions(TextDocumentRegistrationOptions, CodeActionOptions, TypedDict):
+class CodeActionRegistrationOptions(TextDocumentRegistrationOptions, CodeActionOptions, TypedDict, total=True):
     pass
 
 
-class CodeActionParams(WorkDoneProgressParams, PartialResultParams, TypedDict):
+class CodeActionParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
     textDocument: TextDocumentIdentifier
     range: Range
     context: 'CodeActionContext'
@@ -1899,135 +1947,135 @@ class CodeActionParams(WorkDoneProgressParams, PartialResultParams, TypedDict):
 CodeActionKind = str
 
 
-class CodeActionContext(TypedDict):
+class CodeActionContext(TypedDict, total=False):
     diagnostics: List[Diagnostic]
-    only: NotRequired[List[CodeActionKind]]
-    triggerKind: NotRequired['CodeActionTriggerKind']
+    only: Optional[List[CodeActionKind]]
+    triggerKind: Optional['CodeActionTriggerKind']
 
 class CodeActionTriggerKind(IntEnum):
     Invoked = 1
     Automatic = 2
 
-CodeActionTriggerKind = Literal[1, 2]
+CodeActionTriggerKind = int
 
 
-class CodeAction(TypedDict):
-    class Disabled_0(TypedDict):
+class CodeAction(TypedDict, total=False):
+    class Disabled_0(TypedDict, total=True):
         reason: str
     title: str
-    kind: NotRequired[CodeActionKind]
-    diagnostics: NotRequired[List[Diagnostic]]
-    isPreferred: NotRequired[bool]
-    disabled: NotRequired[Disabled_0]
-    edit: NotRequired[WorkspaceEdit]
-    command: NotRequired[Command]
-    data: NotRequired[LSPAny]
+    kind: Optional[CodeActionKind]
+    diagnostics: Optional[List[Diagnostic]]
+    isPreferred: Optional[bool]
+    disabled: Optional[Disabled_0]
+    edit: Optional[WorkspaceEdit]
+    command: Optional[Command]
+    data: Optional[LSPAny]
 
 
-class DocumentColorClientCapabilities(TypedDict):
-    dynamicRegistration: NotRequired[bool]
+class DocumentColorClientCapabilities(TypedDict, total=False):
+    dynamicRegistration: Optional[bool]
 
 
-class DocumentColorOptions(WorkDoneProgressOptions, TypedDict):
+class DocumentColorOptions(WorkDoneProgressOptions, TypedDict, total=True):
     pass
 
 
-class DocumentColorRegistrationOptions(TextDocumentRegistrationOptions, StaticRegistrationOptions, DocumentColorOptions, TypedDict):
+class DocumentColorRegistrationOptions(TextDocumentRegistrationOptions, StaticRegistrationOptions, DocumentColorOptions, TypedDict, total=True):
     pass
 
 
-class DocumentColorParams(WorkDoneProgressParams, PartialResultParams, TypedDict):
+class DocumentColorParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
     textDocument: TextDocumentIdentifier
 
 
-class ColorInformation(TypedDict):
+class ColorInformation(TypedDict, total=True):
     range: Range
     color: 'Color'
 
 
-class Color(TypedDict):
+class Color(TypedDict, total=True):
     red: float
     green: float
     blue: float
     alpha: float
 
 
-class ColorPresentationParams(WorkDoneProgressParams, PartialResultParams, TypedDict):
+class ColorPresentationParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
     textDocument: TextDocumentIdentifier
     color: Color
     range: Range
 
 
-class ColorPresentation(TypedDict):
+class ColorPresentation(TypedDict, total=False):
     label: str
-    textEdit: NotRequired[TextEdit]
-    additionalTextEdits: NotRequired[List[TextEdit]]
+    textEdit: Optional[TextEdit]
+    additionalTextEdits: Optional[List[TextEdit]]
 
 
-class DocumentFormattingClientCapabilities(TypedDict):
-    dynamicRegistration: NotRequired[bool]
+class DocumentFormattingClientCapabilities(TypedDict, total=False):
+    dynamicRegistration: Optional[bool]
 
 
-class DocumentFormattingOptions(WorkDoneProgressOptions, TypedDict):
+class DocumentFormattingOptions(WorkDoneProgressOptions, TypedDict, total=True):
     pass
 
 
-class DocumentFormattingRegistrationOptions(TextDocumentRegistrationOptions, DocumentFormattingOptions, TypedDict):
+class DocumentFormattingRegistrationOptions(TextDocumentRegistrationOptions, DocumentFormattingOptions, TypedDict, total=True):
     pass
 
 
-class DocumentFormattingParams(WorkDoneProgressParams, TypedDict):
+class DocumentFormattingParams(WorkDoneProgressParams, TypedDict, total=True):
     textDocument: TextDocumentIdentifier
     options: 'FormattingOptions'
 
 
-class FormattingOptions(TypedDict):
+class FormattingOptions(TypedDict, total=False):
     tabSize: int
     insertSpaces: bool
-    trimTrailingWhitespace: NotRequired[bool]
-    insertFinalNewline: NotRequired[bool]
-    trimFinalNewlines: NotRequired[bool]
+    trimTrailingWhitespace: Optional[bool]
+    insertFinalNewline: Optional[bool]
+    trimFinalNewlines: Optional[bool]
 
 
-class DocumentRangeFormattingClientCapabilities(TypedDict):
-    dynamicRegistration: NotRequired[bool]
-    rangesSupport: NotRequired[bool]
+class DocumentRangeFormattingClientCapabilities(TypedDict, total=False):
+    dynamicRegistration: Optional[bool]
+    rangesSupport: Optional[bool]
 
 
-class DocumentRangeFormattingOptions(WorkDoneProgressOptions, TypedDict):
-    rangesSupport: NotRequired[bool]
+class DocumentRangeFormattingOptions(WorkDoneProgressOptions, TypedDict, total=False):
+    rangesSupport: Optional[bool]
 
 
-class DocumentRangeFormattingRegistrationOptions(TextDocumentRegistrationOptions, DocumentRangeFormattingOptions, TypedDict):
+class DocumentRangeFormattingRegistrationOptions(TextDocumentRegistrationOptions, DocumentRangeFormattingOptions, TypedDict, total=True):
     pass
 
 
-class DocumentRangeFormattingParams(WorkDoneProgressParams, TypedDict):
+class DocumentRangeFormattingParams(WorkDoneProgressParams, TypedDict, total=True):
     textDocument: TextDocumentIdentifier
     range: Range
     options: FormattingOptions
 
 
-class DocumentRangesFormattingParams(WorkDoneProgressParams, TypedDict):
+class DocumentRangesFormattingParams(WorkDoneProgressParams, TypedDict, total=True):
     textDocument: TextDocumentIdentifier
     ranges: List[Range]
     options: FormattingOptions
 
 
-class DocumentOnTypeFormattingClientCapabilities(TypedDict):
-    dynamicRegistration: NotRequired[bool]
+class DocumentOnTypeFormattingClientCapabilities(TypedDict, total=False):
+    dynamicRegistration: Optional[bool]
 
 
-class DocumentOnTypeFormattingOptions(TypedDict):
+class DocumentOnTypeFormattingOptions(TypedDict, total=False):
     firstTriggerCharacter: str
-    moreTriggerCharacter: NotRequired[List[str]]
+    moreTriggerCharacter: Optional[List[str]]
 
 
-class DocumentOnTypeFormattingRegistrationOptions(TextDocumentRegistrationOptions, DocumentOnTypeFormattingOptions, TypedDict):
+class DocumentOnTypeFormattingRegistrationOptions(TextDocumentRegistrationOptions, DocumentOnTypeFormattingOptions, TypedDict, total=True):
     pass
 
 
-class DocumentOnTypeFormattingParams(TypedDict):
+class DocumentOnTypeFormattingParams(TypedDict, total=True):
     textDocument: TextDocumentIdentifier
     position: Position
     ch: str
@@ -2036,239 +2084,239 @@ class DocumentOnTypeFormattingParams(TypedDict):
 class PrepareSupportDefaultBehavior(IntEnum):
     Identifier = 1
 
-PrepareSupportDefaultBehavior = Literal[1]
+PrepareSupportDefaultBehavior = int
 
 
-class RenameClientCapabilities(TypedDict):
-    dynamicRegistration: NotRequired[bool]
-    prepareSupport: NotRequired[bool]
-    prepareSupportDefaultBehavior: NotRequired[PrepareSupportDefaultBehavior]
-    honorsChangeAnnotations: NotRequired[bool]
+class RenameClientCapabilities(TypedDict, total=False):
+    dynamicRegistration: Optional[bool]
+    prepareSupport: Optional[bool]
+    prepareSupportDefaultBehavior: Optional[PrepareSupportDefaultBehavior]
+    honorsChangeAnnotations: Optional[bool]
 
 
-class RenameOptions(WorkDoneProgressOptions, TypedDict):
-    prepareProvider: NotRequired[bool]
+class RenameOptions(WorkDoneProgressOptions, TypedDict, total=False):
+    prepareProvider: Optional[bool]
 
 
-class RenameRegistrationOptions(TextDocumentRegistrationOptions, RenameOptions, TypedDict):
+class RenameRegistrationOptions(TextDocumentRegistrationOptions, RenameOptions, TypedDict, total=True):
     pass
 
 
-class RenameParams(TextDocumentPositionParams, WorkDoneProgressParams, TypedDict):
+class RenameParams(TextDocumentPositionParams, WorkDoneProgressParams, TypedDict, total=True):
     newName: str
 
 
-class PrepareRenameParams(TextDocumentPositionParams, WorkDoneProgressParams, TypedDict):
+class PrepareRenameParams(TextDocumentPositionParams, WorkDoneProgressParams, TypedDict, total=True):
     pass
 
 
-class LinkedEditingRangeClientCapabilities(TypedDict):
-    dynamicRegistration: NotRequired[bool]
+class LinkedEditingRangeClientCapabilities(TypedDict, total=False):
+    dynamicRegistration: Optional[bool]
 
 
-class LinkedEditingRangeOptions(WorkDoneProgressOptions, TypedDict):
+class LinkedEditingRangeOptions(WorkDoneProgressOptions, TypedDict, total=True):
     pass
 
 
-class LinkedEditingRangeRegistrationOptions(TextDocumentRegistrationOptions, LinkedEditingRangeOptions, StaticRegistrationOptions, TypedDict):
+class LinkedEditingRangeRegistrationOptions(TextDocumentRegistrationOptions, LinkedEditingRangeOptions, StaticRegistrationOptions, TypedDict, total=True):
     pass
 
 
-class LinkedEditingRangeParams(TextDocumentPositionParams, WorkDoneProgressParams, TypedDict):
+class LinkedEditingRangeParams(TextDocumentPositionParams, WorkDoneProgressParams, TypedDict, total=True):
     pass
 
 
-class LinkedEditingRanges(TypedDict):
+class LinkedEditingRanges(TypedDict, total=False):
     ranges: List[Range]
-    wordPattern: NotRequired[str]
+    wordPattern: Optional[str]
 
 
-class InlineCompletionClientCapabilities(TypedDict):
-    dynamicRegistration: NotRequired[bool]
+class InlineCompletionClientCapabilities(TypedDict, total=False):
+    dynamicRegistration: Optional[bool]
 
 
-class InlineCompletionOptions(WorkDoneProgressOptions, TypedDict):
+class InlineCompletionOptions(WorkDoneProgressOptions, TypedDict, total=True):
     pass
 
 
-class InlineCompletionRegistrationOptions(InlineCompletionOptions, TextDocumentRegistrationOptions, StaticRegistrationOptions, TypedDict):
+class InlineCompletionRegistrationOptions(InlineCompletionOptions, TextDocumentRegistrationOptions, StaticRegistrationOptions, TypedDict, total=True):
     pass
 
 
-class InlineCompletionParams(TextDocumentPositionParams, WorkDoneProgressParams, TypedDict):
+class InlineCompletionParams(TextDocumentPositionParams, WorkDoneProgressParams, TypedDict, total=True):
     context: 'InlineCompletionContext'
 
 
-class InlineCompletionContext(TypedDict):
+class InlineCompletionContext(TypedDict, total=False):
     triggerKind: 'InlineCompletionTriggerKind'
-    selectedCompletionInfo: NotRequired['SelectedCompletionInfo']
+    selectedCompletionInfo: Optional['SelectedCompletionInfo']
 
 class InlineCompletionTriggerKind(IntEnum):
     Invoked = 1
     Automatic = 2
 
-InlineCompletionTriggerKind = Literal[1, 2]
+InlineCompletionTriggerKind = int
 
 
-class SelectedCompletionInfo(TypedDict):
+class SelectedCompletionInfo(TypedDict, total=True):
     range: Range
     text: str
 
 
-class InlineCompletionList(TypedDict):
+class InlineCompletionList(TypedDict, total=True):
     items: List['InlineCompletionItem']
 
 
-class InlineCompletionItem(TypedDict):
+class InlineCompletionItem(TypedDict, total=False):
     insertText: Union[str, StringValue]
-    filterText: NotRequired[str]
-    range: NotRequired[Range]
-    command: NotRequired[Command]
+    filterText: Optional[str]
+    range: Optional[Range]
+    command: Optional[Command]
 
 
-class WorkspaceSymbolClientCapabilities(TypedDict):
-    class SymbolKind_0(TypedDict):
-        valueSet: NotRequired[List[SymbolKind]]
-    class TagSupport_0(TypedDict):
+class WorkspaceSymbolClientCapabilities(TypedDict, total=False):
+    class SymbolKind_0(TypedDict, total=False):
+        valueSet: Optional[List[SymbolKind]]
+    class TagSupport_0(TypedDict, total=True):
         valueSet: List[SymbolTag]
-    class ResolveSupport_0(TypedDict):
+    class ResolveSupport_0(TypedDict, total=True):
         properties: List[str]
-    dynamicRegistration: NotRequired[bool]
-    symbolKind: NotRequired[SymbolKind_0]
-    tagSupport: NotRequired[TagSupport_0]
-    resolveSupport: NotRequired[ResolveSupport_0]
+    dynamicRegistration: Optional[bool]
+    symbolKind: Optional[SymbolKind_0]
+    tagSupport: Optional[TagSupport_0]
+    resolveSupport: Optional[ResolveSupport_0]
 
 
-class WorkspaceSymbolOptions(WorkDoneProgressOptions, TypedDict):
-    resolveProvider: NotRequired[bool]
+class WorkspaceSymbolOptions(WorkDoneProgressOptions, TypedDict, total=False):
+    resolveProvider: Optional[bool]
 
 
-class WorkspaceSymbolRegistrationOptions(WorkspaceSymbolOptions, TypedDict):
+class WorkspaceSymbolRegistrationOptions(WorkspaceSymbolOptions, TypedDict, total=True):
     pass
 
 
-class WorkspaceSymbolParams(WorkDoneProgressParams, PartialResultParams, TypedDict):
+class WorkspaceSymbolParams(WorkDoneProgressParams, PartialResultParams, TypedDict, total=True):
     query: str
 
 
-class WorkspaceSymbol(TypedDict):
-    class Location_1(TypedDict):
+class WorkspaceSymbol(TypedDict, total=False):
+    class Location_1(TypedDict, total=True):
         uri: DocumentUri
     name: str
     kind: SymbolKind
-    tags: NotRequired[List[SymbolTag]]
-    containerName: NotRequired[str]
+    tags: Optional[List[SymbolTag]]
+    containerName: Optional[str]
     location: Union[Location, Location_1]
-    data: NotRequired[LSPAny]
+    data: Optional[LSPAny]
 
 
-class ConfigurationParams(TypedDict):
+class ConfigurationParams(TypedDict, total=True):
     items: List['ConfigurationItem']
 
 
-class ConfigurationItem(TypedDict):
-    scopeUri: NotRequired[URI]
-    section: NotRequired[str]
+class ConfigurationItem(TypedDict, total=False):
+    scopeUri: Optional[URI]
+    section: Optional[str]
 
 
-class DidChangeConfigurationClientCapabilities(TypedDict):
-    dynamicRegistration: NotRequired[bool]
+class DidChangeConfigurationClientCapabilities(TypedDict, total=False):
+    dynamicRegistration: Optional[bool]
 
 
-class DidChangeConfigurationParams(TypedDict):
+class DidChangeConfigurationParams(TypedDict, total=True):
     settings: LSPAny
 
 
-class WorkspaceFoldersServerCapabilities(TypedDict):
-    supported: NotRequired[bool]
-    changeNotifications: NotRequired[Union[str, bool]]
+class WorkspaceFoldersServerCapabilities(TypedDict, total=False):
+    supported: Optional[bool]
+    changeNotifications: Union[str, bool, None]
 
 
-class WorkspaceFolder(TypedDict):
+class WorkspaceFolder(TypedDict, total=True):
     uri: URI
     name: str
 
 
-class DidChangeWorkspaceFoldersParams(TypedDict):
+class DidChangeWorkspaceFoldersParams(TypedDict, total=True):
     event: 'WorkspaceFoldersChangeEvent'
 
 
-class WorkspaceFoldersChangeEvent(TypedDict):
+class WorkspaceFoldersChangeEvent(TypedDict, total=True):
     added: List[WorkspaceFolder]
     removed: List[WorkspaceFolder]
 
 
-class FileOperationRegistrationOptions(TypedDict):
+class FileOperationRegistrationOptions(TypedDict, total=True):
     filters: List['FileOperationFilter']
 
 class FileOperationPatternKind(Enum):
     file = 'file'
     folder = 'folder'
 
-FileOperationPatternKind = Literal['file', 'folder']
+FileOperationPatternKind = str
 
 
-class FileOperationPatternOptions(TypedDict):
-    ignoreCase: NotRequired[bool]
+class FileOperationPatternOptions(TypedDict, total=False):
+    ignoreCase: Optional[bool]
 
 
-class FileOperationPattern(TypedDict):
+class FileOperationPattern(TypedDict, total=False):
     glob: str
-    matches: NotRequired[FileOperationPatternKind]
-    options: NotRequired[FileOperationPatternOptions]
+    matches: Optional[FileOperationPatternKind]
+    options: Optional[FileOperationPatternOptions]
 
 
-class FileOperationFilter(TypedDict):
-    scheme: NotRequired[str]
+class FileOperationFilter(TypedDict, total=False):
+    scheme: Optional[str]
     pattern: FileOperationPattern
 
 
-class CreateFilesParams(TypedDict):
+class CreateFilesParams(TypedDict, total=True):
     files: List['FileCreate']
 
 
-class FileCreate(TypedDict):
+class FileCreate(TypedDict, total=True):
     uri: str
 
 
-class RenameFilesParams(TypedDict):
+class RenameFilesParams(TypedDict, total=True):
     files: List['FileRename']
 
 
-class FileRename(TypedDict):
+class FileRename(TypedDict, total=True):
     oldUri: str
     newUri: str
 
 
-class DeleteFilesParams(TypedDict):
+class DeleteFilesParams(TypedDict, total=True):
     files: List['FileDelete']
 
 
-class FileDelete(TypedDict):
+class FileDelete(TypedDict, total=True):
     uri: str
 
 
-class DidChangeWatchedFilesClientCapabilities(TypedDict):
-    dynamicRegistration: NotRequired[bool]
-    relativePatternSupport: NotRequired[bool]
+class DidChangeWatchedFilesClientCapabilities(TypedDict, total=False):
+    dynamicRegistration: Optional[bool]
+    relativePatternSupport: Optional[bool]
 
 
-class DidChangeWatchedFilesRegistrationOptions(TypedDict):
+class DidChangeWatchedFilesRegistrationOptions(TypedDict, total=True):
     watchers: List['FileSystemWatcher']
 
 Pattern = str
 
 
-class RelativePattern(TypedDict):
+class RelativePattern(TypedDict, total=True):
     baseUri: Union[WorkspaceFolder, URI]
     pattern: Pattern
 
 GlobPattern = Union[Pattern, RelativePattern]
 
 
-class FileSystemWatcher(TypedDict):
+class FileSystemWatcher(TypedDict, total=False):
     globPattern: GlobPattern
-    kind: NotRequired['WatchKind']
+    kind: Optional['WatchKind']
 
 class WatchKind(IntEnum):
     Create = 1
@@ -2278,11 +2326,11 @@ class WatchKind(IntEnum):
 WatchKind = int
 
 
-class DidChangeWatchedFilesParams(TypedDict):
+class DidChangeWatchedFilesParams(TypedDict, total=True):
     changes: List['FileEvent']
 
 
-class FileEvent(TypedDict):
+class FileEvent(TypedDict, total=True):
     uri: DocumentUri
     type: 'FileChangeType'
 
@@ -2291,43 +2339,43 @@ class FileChangeType(IntEnum):
     Changed = 2
     Deleted = 3
 
-FileChangeType = Literal[1, 2, 3]
+FileChangeType = int
 
 
-class ExecuteCommandClientCapabilities(TypedDict):
-    dynamicRegistration: NotRequired[bool]
+class ExecuteCommandClientCapabilities(TypedDict, total=False):
+    dynamicRegistration: Optional[bool]
 
 
-class ExecuteCommandOptions(WorkDoneProgressOptions, TypedDict):
+class ExecuteCommandOptions(WorkDoneProgressOptions, TypedDict, total=True):
     commands: List[str]
 
 
-class ExecuteCommandRegistrationOptions(ExecuteCommandOptions, TypedDict):
+class ExecuteCommandRegistrationOptions(ExecuteCommandOptions, TypedDict, total=True):
     pass
 
 
-class ExecuteCommandParams(WorkDoneProgressParams, TypedDict):
+class ExecuteCommandParams(WorkDoneProgressParams, TypedDict, total=False):
     command: str
-    arguments: NotRequired[List[LSPAny]]
+    arguments: Optional[List[LSPAny]]
 
 
-class ApplyWorkspaceEditParams(TypedDict):
-    label: NotRequired[str]
+class ApplyWorkspaceEditParams(TypedDict, total=False):
+    label: Optional[str]
     edit: WorkspaceEdit
-    metadata: NotRequired['WorkspaceEditMetadata']
+    metadata: Optional['WorkspaceEditMetadata']
 
 
-class WorkspaceEditMetadata(TypedDict):
-    isRefactoring: NotRequired[bool]
+class WorkspaceEditMetadata(TypedDict, total=False):
+    isRefactoring: Optional[bool]
 
 
-class ApplyWorkspaceEditResult(TypedDict):
+class ApplyWorkspaceEditResult(TypedDict, total=False):
     applied: bool
-    failureReason: NotRequired[str]
-    failedChange: NotRequired[int]
+    failureReason: Optional[str]
+    failedChange: Optional[int]
 
 
-class ShowMessageParams(TypedDict):
+class ShowMessageParams(TypedDict, total=True):
     type: 'MessageType'
     message: str
 
@@ -2338,50 +2386,50 @@ class MessageType(IntEnum):
     Log = 4
     Debug = 5
 
-MessageType = Literal[1, 2, 3, 4, 5]
+MessageType = int
 
 
-class ShowMessageRequestClientCapabilities(TypedDict):
-    class MessageActionItem_0(TypedDict):
-        additionalPropertiesSupport: NotRequired[bool]
-    messageActionItem: NotRequired[MessageActionItem_0]
+class ShowMessageRequestClientCapabilities(TypedDict, total=False):
+    class MessageActionItem_0(TypedDict, total=False):
+        additionalPropertiesSupport: Optional[bool]
+    messageActionItem: Optional[MessageActionItem_0]
 
 
-class ShowMessageRequestParams(TypedDict):
+class ShowMessageRequestParams(TypedDict, total=False):
     type: MessageType
     message: str
-    actions: NotRequired[List['MessageActionItem']]
+    actions: Optional[List['MessageActionItem']]
 
 
-class MessageActionItem(TypedDict):
+class MessageActionItem(TypedDict, total=True):
     title: str
 
 
-class ShowDocumentClientCapabilities(TypedDict):
+class ShowDocumentClientCapabilities(TypedDict, total=True):
     support: bool
 
 
-class ShowDocumentParams(TypedDict):
+class ShowDocumentParams(TypedDict, total=False):
     uri: URI
-    external: NotRequired[bool]
-    takeFocus: NotRequired[bool]
-    selection: NotRequired[Range]
+    external: Optional[bool]
+    takeFocus: Optional[bool]
+    selection: Optional[Range]
 
 
-class ShowDocumentResult(TypedDict):
+class ShowDocumentResult(TypedDict, total=True):
     success: bool
 
 
-class LogMessageParams(TypedDict):
+class LogMessageParams(TypedDict, total=True):
     type: MessageType
     message: str
 
 
-class WorkDoneProgressCreateParams(TypedDict):
+class WorkDoneProgressCreateParams(TypedDict, total=True):
     token: ProgressToken
 
 
-class WorkDoneProgressCancelParams(TypedDict):
+class WorkDoneProgressCancelParams(TypedDict, total=True):
     token: ProgressToken
 
 
@@ -2441,3 +2489,8 @@ class LSPBase:
         self.lsp_data['rootUri'] = ''
         self.lsp_data['clientCapabilities'] = dict()
         return {}
+
+
+if __name__ == "__main__":
+    print("A small self-test of DHParser.lsp")
+    print(DocumentSymbol.__required_keys__)
