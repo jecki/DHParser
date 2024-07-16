@@ -125,7 +125,7 @@ def check_infinite_loop_warning(result):
 
 
 class TestInfiLoopsAndRecursion:
-    def setup(self):
+    def setup_class(self):
         pass
         # set_config_value('history_tracking', True)
         # set_config_value('resume_notices', True)
@@ -897,7 +897,7 @@ class TestPopRetrieve:
         text           = /[^<>]+/        
     """
 
-    def setup(self):
+    def setup_class(self):
         self.minilang_parser = grammar_provider(self.mini_language)()
         self.minilang_parser2 = grammar_provider(self.mini_lang2)()
         self.minilang_parser3 = grammar_provider(self.mini_lang3)()
@@ -1186,7 +1186,7 @@ class TestErrorReporting:
         anything  = /.*/
         """
 
-    def setup(self):
+    def setup_class(self):
         self.parser = grammar_provider(self.grammar)()
 
     def test_error_propagation(self):
@@ -1605,11 +1605,11 @@ class TestMetaParser:
 
 
 class TestStaticAnalysis:
-    def setup(self):
+    def setup_class(self):
         self.static_analysis = get_config_value('static_analysis')
         set_config_value('static_analysis', 'early')
 
-    def teardown(self):
+    def teardown_class(self):
         set_config_value('static_analysis', self.static_analysis)
 
     def test_cannot_capture_dropped_content(self):

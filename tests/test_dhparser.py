@@ -78,7 +78,7 @@ VARIABLE   = /[A-Za-z]/~
 
 
 class TestDHParserCommandLineTool:
-    def setup(self):
+    def setup_method(self):
         self.cwd = os.getcwd()
         os.chdir(scriptpath)
         # avoid race-condition
@@ -96,7 +96,7 @@ class TestDHParserCommandLineTool:
         self.nulldevice = " >/dev/null" if platform.system() != "Windows" else " > NUL"
         self.python = sys.executable + ' '
 
-    def teardown(self):
+    def teardown_method(self):
         # return
         name = self.dirname
         if os.path.exists(os.path.join(name, '%sServer.py' % name)):

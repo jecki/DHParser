@@ -92,7 +92,7 @@ custom_5 = False
 """
 
 class TestLocalConfig:
-    def setup(self):
+    def setup_class(self):
         self.cwd = os.getcwd()
         os.chdir(scriptpath)
         # avoid race-condition
@@ -113,7 +113,7 @@ class TestLocalConfig:
         self.save_delimiter_set = get_preset_value('delimiter_set')
         finalize_presets()
 
-    def teardown(self):
+    def teardown_class(self):
         access_presets()
         set_preset_value('resume_notices', self.save_resume_notices)
         set_preset_value('delimiter_set', self.save_delimiter_set)

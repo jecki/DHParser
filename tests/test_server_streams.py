@@ -38,12 +38,12 @@ from DHParser.testing import read_full_content, add_header, MockStream
 
 
 class TestStreamProxies:
-    def setup(self):
+    def setup_method(self):
         self.pipe = MockStream()
         self.reader = StreamReaderProxy(self.pipe)
         self.writer = StreamWriterProxy(self.pipe)
 
-    def teardown(self):
+    def teardown_method(self):
         self.writer.close()
 
     def test_pipe(self):
@@ -112,7 +112,7 @@ def mock_compiler(src: str, log_dir: str='') -> str:
 
 
 class TestServer:
-    def setup(self):
+    def setup_method(self):
         self.pipeA = MockStream('pipeA')
         self.pipeB = MockStream('pipeB')
         self.readerA = StreamReaderProxy(self.pipeA)
@@ -120,7 +120,7 @@ class TestServer:
         self.readerB = StreamReaderProxy(self.pipeB)
         self.writerB = StreamWriterProxy(self.pipeB)
 
-    def teardown(self):
+    def teardown_method(self):
         self.writerA.close()
         self.writerB.close()
 

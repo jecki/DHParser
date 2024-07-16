@@ -98,10 +98,10 @@ def json_rpc(method: str, params: dict) -> str:
 class TestServer:
     spawn = multiprocessing.get_start_method() in ["spawn", "forkserver"]
 
-    def setup(self):
+    def setup_class(self):
         stop_tcp_server('127.0.0.1', TEST_PORT)
 
-    def teardown(self):
+    def teardown_class(self):
         stop_tcp_server('127.0.0.1', TEST_PORT)
 
     def test_server_process(self):
@@ -315,10 +315,10 @@ class TestServer:
 class TestSpawning:
     """Tests spawning a server by starting a script via subprocess.Popen."""
 
-    def setup(self):
+    def setup_class(self):
         stop_tcp_server('127.0.0.1', TEST_PORT)
 
-    def teardown(self):
+    def teardown_class(self):
         stop_tcp_server('127.0.0.1', TEST_PORT)
 
     def test_spawn(self):
@@ -420,7 +420,7 @@ class LSP:
 class TestLanguageServer:
     """Tests for the generic LanguageServer-class."""
 
-    def setup(self):
+    def setup_class(self):
         stop_tcp_server('127.0.0.1', TEST_PORT)
         self.p = None
         self.DEBUG = False
@@ -429,7 +429,7 @@ class TestLanguageServer:
             log.start_logging('LOGS')
             set_config_value('log_server', True)
 
-    def teardown(self):
+    def teardown_class(self):
         stop_tcp_server('127.0.0.1', TEST_PORT)
         if self.p is not None:
             self.p.join()

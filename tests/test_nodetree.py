@@ -1133,10 +1133,10 @@ class TestPathNavigation:
 
 
 class TestEvaluation:
-    def setup(self):
+    def setup_class(self):
         self.save = get_config_value('syntax_variant')
 
-    def teardown(self):
+    def teardown_class(self):
         set_config_value('syntax_variant', self.save)
 
     def test_evaluate(self):

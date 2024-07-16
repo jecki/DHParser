@@ -68,7 +68,7 @@ class TestCompilerGeneration:
         WSPC = /\s+/
         """
 
-    def setup(self):
+    def setup_class(self):
         self.tmpname = 'tmp_' + concurrent_ident()
         self.tmp = os.path.join('test', self.tmpname) if os.path.isdir('test/') else self.tmpname
         self.trivial_text = u"""Es war ein Koenig in Thule.\n"""
@@ -83,7 +83,7 @@ class TestCompilerGeneration:
         with open(self.text_name, "w") as f:
             f.write(self.trivial_text)
 
-    def teardown(self):
+    def teardown_class(self):
         for name in (self.grammar_name, self.compiler_name, self.text_name, self.result_name):
             if os.path.exists(name):
                 os.remove(name)

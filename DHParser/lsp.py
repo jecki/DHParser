@@ -28,8 +28,10 @@ import bisect
 from enum import Enum, IntEnum
 import sys
 
+assert sys.version_info >= (3, 7), "Python 3.7 or newer is required."
+
 from typing import Union, List, Tuple, Optional, Dict, Any, \
-    Iterator, Iterable, Callable, TypedDict
+    Iterator, Iterable, Callable
 
 if sys.version_info >= (3, 9, 0):
     from typing import Union, Optional, Any, Generic, TypeVar, Callable, List, Tuple, Dict
@@ -40,7 +42,7 @@ else:
 
 
 try:
-    from ts2python.typeddict_shim import TypedDict, GenericTypedDict, NotRequired, Literal
+    from DHParser.ts2python.typeddict_shim import TypedDict, GenericTypedDict, NotRequired, Literal
     # Overwrite typing.TypedDict for Runtime-Validation
 except ImportError:
     print("Module ts2python.typeddict_shim not found. Only coarse-grained "
@@ -49,18 +51,13 @@ except ImportError:
         from typing import TypedDict, Literal
     except ImportError:
         try:
-            from ts2python.typing_extensions import TypedDict, Literal
+            from DHParser.ts2python.typing_extensions import TypedDict, Literal
         except ImportError:
             print(f'Please install the "typing_extensions" module via the shell '
                   f'command "# pip install typing_extensions" before running '
                   f'{__file__} with Python-versions <= 3.7!')
-    try:
-        from typing_extensions import NotRequired
-    except ImportError:
-        NotRequired = Optional
-    if sys.version_info >= (3, 7, 0):  GenericMeta = type
-    else:
-        from typing import GenericMeta
+
+    GenericMeta = type
     class _GenericTypedDictMeta(GenericMeta):
         def __new__(cls, name, bases, ns, total=True):
             return type.__new__(_GenericTypedDictMeta, name, (dict,), ns)
@@ -70,7 +67,7 @@ except ImportError:
 
 
 try:
-    from ts2python.singledispatch_shim import singledispatch, singledispatchmethod
+    from DHParser.ts2python.singledispatch_shim import singledispatch, singledispatchmethod
 except ImportError:
     print("ts2python.singledispatch_shim not found! @singledispatch-annotation"
           " imported from functools may cause NameErrors on forward-referenced"

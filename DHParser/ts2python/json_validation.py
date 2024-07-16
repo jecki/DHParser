@@ -33,7 +33,7 @@ except (ImportError, ModuleNotFoundError):
         ClassVar, Final, Protocol, NoReturn, Literal
 
 try:
-    from ts2python.typeddict_shim import TypedDict, _TypedDictMeta, get_origin, \
+    from DHParser.ts2python.typeddict_shim import TypedDict, _TypedDictMeta, get_origin, \
         get_args, ForwardRef, _GenericAlias, is_typeddict
 except (ImportError, ModuleNotFoundError):
     try:
@@ -69,7 +69,7 @@ def resolve_forward_refs(T: type, Ur_T: type = None,) -> type:
             T = T._evaluate(globals(), sys.modules[Ur_T.__module__].__dict__,
                             recursive_guard=set())
         else:
-           T = T._evaluate(globals(), sys.modules[Ur_T.__module__].__dict__)
+            T = T._evaluate(globals(), sys.modules[Ur_T.__module__].__dict__)
         # T = resolve_forward_refs(T, Ur_T)
         return T
     elif str(T).find('ForwardRef') >= 0:

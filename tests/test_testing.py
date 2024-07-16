@@ -127,7 +127,7 @@ M4: <a>
 
 
 class TestTestfiles:
-    def setup(self):
+    def setup_class(self):
         self.save_dir = os.getcwd()
         os.chdir(scriptpath)
         self.cfg1 = unique_name('configfile_test_1.ini')
@@ -143,7 +143,7 @@ class TestTestfiles:
         with open(self.cfg4, 'w', encoding="utf-8") as f:
             f.write(CFG_FILE_4)
 
-    def teardown(self):
+    def teardown_class(self):
         if os.path.exists(self.cfg1):  os.remove(self.cfg1)
         if os.path.exists(self.cfg2):  os.remove(self.cfg2)
         if os.path.exists(self.cfg3):  os.remove(self.cfg3)
@@ -284,11 +284,11 @@ class TestGrammarTest:
         }
     }
 
-    def setup(self):
+    def setup_class(self):
         self.save_dir = os.getcwd()
         os.chdir(scriptpath)
 
-    def teardown(self):
+    def teardown_class(self):
         clean_report('REPORT_TestGrammarTest')
         os.chdir(self.save_dir)
 
@@ -343,11 +343,11 @@ class TestASTErrors:
         }
     }}
 
-    def setup(self):
+    def setup_class(self):
         self.save_dir = os.getcwd()
         os.chdir(scriptpath)
 
-    def teardown(self):
+    def teardown_class(self):
         clean_report('REPORT_ASTFailureTest')
         os.chdir(self.save_dir)
 
@@ -407,11 +407,11 @@ class TestLookahead:
     grammar_fac = grammar_provider(EBNF)
     trans_fac = lambda: partial(traverse, transformation_table={"*": [flatten, remove_empty]})
 
-    def setup(self):
+    def setup_class(self):
         self.save_dir = os.getcwd()
         os.chdir(scriptpath)
 
-    def teardown(self):
+    def teardown_class(self):
         clean_report('REPORT_TestLookahead')
         os.chdir(self.save_dir)
 
@@ -463,11 +463,11 @@ M2: '''
 
 
 class TestLookaheadDroppedTokens:
-    def setup(self):
+    def setup_class(self):
         self.save_dir = os.getcwd()
         os.chdir(scriptpath)
 
-    def teardown(self):
+    def teardown_class(self):
         clean_report('REPORT_void')
         os.chdir(self.save_dir)
 
@@ -530,11 +530,11 @@ class TestSExpr:
 
 
 class TestFalsePositives:
-    def setup(self):
+    def setup_class(self):
         self.save_dir = os.getcwd()
         os.chdir(scriptpath)
 
-    def teardown(self):
+    def teardown_class(self):
         clean_report('REPORT_ZP')
         os.chdir(self.save_dir)
 
@@ -582,11 +582,11 @@ AST_serialization: "SXML2"
 [match:document]
 M1: "The little dog jumped over the hedge"""
 
-    def setup(self):
+    def setup_class(self):
         self.save_dir = os.getcwd()
         os.chdir(scriptpath)
 
-    def teardown(self):
+    def teardown_class(self):
         clean_report('REPORT')
         os.chdir(self.save_dir)
 

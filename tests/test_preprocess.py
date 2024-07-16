@@ -255,7 +255,7 @@ def system(s: str) -> int:
 class TestIncludes:
     cwd = os.getcwd()
 
-    def setup(self):
+    def setup_class(self):
         os.chdir(scriptpath)
         # avoid race-condition
         counter = 10
@@ -269,7 +269,7 @@ class TestIncludes:
                 counter -= 1
         os.chdir(os.path.join(scriptpath, self.dirname))
 
-    def teardown(self):
+    def teardown_class(self):
         os.chdir(scriptpath)
         if os.path.exists(self.dirname) and os.path.isdir(self.dirname):
             shutil.rmtree(self.dirname)

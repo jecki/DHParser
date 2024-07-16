@@ -36,7 +36,7 @@ from DHParser.log import log_dir, start_logging, is_logging, suspend_logging, re
 
 
 class TestLoggingAndLoading:
-    def setup(self):
+    def setup_class(self):
         self.tmpname = 'tmp_' + concurrent_ident()
         self.filename = os.path.join("test", self.tmpname, "key_value_example.py") if os.path.isdir('test') \
             else os.path.join(self.tmpname, "key_value_example.py")
@@ -49,7 +49,7 @@ class TestLoggingAndLoading:
             f.write(self.code2)
         self.LOGDIR = os.path.abspath(os.path.join(scriptpath, "TESTLOGS" + str(os.getpid())))
 
-    def teardown(self):
+    def teardown_class(self):
         if os.path.exists(self.filename):  os.remove(self.filename)
         pycachedir = os.path.join(self.dirname,'__pycache__')
         if os.path.exists(pycachedir):
