@@ -45,7 +45,7 @@ from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compi
     parse_ebnf, DHPARSER_IMPORTS, compile_ebnf
 from DHParser.dsl import grammar_provider, create_parser
 from DHParser.preprocess import gen_neutral_srcmap_func
-from DHParser.nodetree import Node, parse_sxpr
+from DHParser.nodetree import Node, parse_sxpr, ANY_NODE
 from DHParser.stringview import StringView
 from DHParser.trace import set_tracer, trace_history, resume_notices_on
 
@@ -2043,7 +2043,236 @@ class TestDropPropagation:
         assert beta.parsers[1].drop_content
         assert beta.parsers[1].parser.drop_content
 
+class TestPosInitialization:
+    def test_position_initialization(self):
+        lang = r"""# interfaces subset of typescript-grammar
+# for typescript see: https://www.typescriptlang.org/docs/
+# for examples of typescript-interfaces
+# see: https://microsoft.github.io/language-server-protocol/specifications/specification-current/
 
+#######################################################################
+#
+#  EBNF-Directives
+#
+#######################################################################
+
+# @ optimizations = all
+@ whitespace  = /\s*/           # insignificant whitespace, includes linefeeds
+@ literalws   = right           # literals have implicit whitespace on the right hand side
+@ comment     = /(?:\/\/.*)\n?|(?:\/\*(?:.|\n)*?\*\/) *\n?/   # /* ... */ or // to EOL
+@ ignorecase  = False           # literals and regular expressions are case-sensitive
+@ reduction   = merge_treetops  # anonymous nodes are being reduced where possible
+@ disposable  = INT, NEG, FRAC, DOT, EXP, EOF,
+                _array_ellipsis, _top_level_assignment, _top_level_literal,
+                _quoted_identifier, _namespace, _part
+@ drop        = whitespace, no_comments, strings, EOF,
+                _array_ellipsis, _top_level_assignment, _top_level_literal
+
+
+#######################################################################
+#
+#:  Typescript Document
+#
+#######################################################################
+
+root        = document EOF
+document    = ~ { interface | type_alias | _namespace | enum | const | module
+                | _top_level_assignment | _array_ellipsis | _top_level_literal
+                | ["export"] declaration ";" | ["export"] function ";"
+                | Import ";" }
+
+@interface_resume = /(?=export|$)/
+@type_alias_resume = /(?=export|$)/
+@enum_resume = /(?=export|$)/
+@const_resume = /(?=export|$)/
+@declaration_resume = /(?=export|$)/
+@_top_level_assignment_resume = /(?=export|$)/
+@_top_level_literal_resume = /(?=export|$)/
+@module_resume = /(?=export|$)/
+
+module      = "declare" "module" _quoted_identifier "{" document "}"
+
+
+#######################################################################
+#
+#:  Imports
+#
+#######################################################################
+
+Import      = "import" [( symlist | symbol ) "from"] string
+symlist     = "{" symbol { "," symbol } "}"
+symbol      = identifier | wildcard [ "as" alias ]
+alias       = identifier
+wildcard    =   "*"
+
+#######################################################################
+#
+#:  Interfaces
+#
+#######################################################################
+
+interface   = ["export"] ["declare"] ("interface"|"class") §identifier [type_parameters]
+              [extends] declarations_block [";"]
+extends     = ("extends" | "implements")
+              (generic_type|type_name) { "," (generic_type|type_name)}
+
+declarations_block = "{" [(function|declaration) { [";"|","] (function|declaration) }
+                          [";" map_signature] [";"|","]] "}"
+declaration = qualifiers ["let"|"var"] identifier [optional] !`(` [":" types]
+
+
+# @function_resume = /(?=;)/
+
+function    = [["export"] [static]
+               ["function"] identifier [optional] [type_parameters]]
+              "(" §[arg_list] ")" [":" types]
+            | special
+  arg_list  = argument { "," argument } ["," arg_tail] | arg_tail
+  arg_tail  = "..." identifier [":" (array_of | generic_type)]
+  argument  = identifier [optional] [":" types]  # same as declaration ?
+special     = "[" name "]" "(" §[arg_list] ")" [":" types]
+
+
+qualifiers  = [readonly] ° [static]
+readonly    = "readonly"
+static      = "static"
+
+optional    = "?"
+
+#######################################################################
+#
+#:  Types
+#
+#######################################################################
+
+type_alias  = ["export"] "type" §identifier [type_parameters] "=" types ";"
+
+types       = ["|"] (intersection | type) { "|" (intersection | type) }
+intersection = type { "&" §type }+
+type        = array_of | basic_type | generic_type | indexed_type
+            | type_name !`(` | "(" types ")" | mapped_type
+            | declarations_block | type_tuple | literal | func_type
+
+generic_type = type_name type_parameters
+  type_parameters = "<" §parameter_types { "," parameter_types } ">"
+  parameter_types = ["|"] parameter_type  { "|" parameter_type }
+  parameter_type  = array_of | basic_type | generic_type     # actually, only a subset of array_of
+                  | indexed_type | type_name [extends_type] [equals_type]
+                  | declarations_block | type_tuple | declarations_tuple
+  extends_type = "extends" [keyof] (basic_type | type_name | mapped_type)
+  equals_type  = "=" (basic_type|type_name)
+
+array_of    = [ "readonly" ] array_types "[]"
+  array_types = array_type
+  array_type = basic_type | generic_type | type_name | "(" types ")"
+              | type_tuple | declarations_block
+
+type_name   = name
+type_tuple  = "[" types {"," types} "]"
+declarations_tuple = "[" declaration { "," declaration } "]"
+
+mapped_type = "{" map_signature [";"] "}"
+map_signature = index_signature ":" types
+  index_signature = [readonly]
+                    "[" identifier (":" | ["in"] keyof | "in") type "]"
+                    [optional]
+  keyof = "keyof"
+
+indexed_type = type_name "[" (type_name | literal) "]"
+
+func_type   = ["new"] "(" [arg_list] ")" "=>" types
+
+#######################################################################
+#
+#:  Namespaces
+#
+#######################################################################
+
+_namespace   = virtual_enum | namespace
+
+virtual_enum = ["export"] "namespace" identifier "{"
+              { interface | type_alias | enum | const
+              | declaration ";" }  "}"
+
+namespace    = ["export"] "namespace" §identifier "{"
+               { interface | type_alias | enum | const
+               | ["export"] declaration ";"
+               | ["export"] function ";" }  "}"
+
+#######################################################################
+#
+#:  Enums
+#
+#######################################################################
+
+enum        = ["export"] "enum" identifier §"{" item { "," item } [","] "}"
+  item      = _quoted_identifier ["=" literal]
+
+#######################################################################
+#
+#: Consts
+#
+#######################################################################
+
+const       = ["export"] "const" §declaration ["=" (literal | identifier)] ";"
+_top_level_assignment = assignment
+assignment  = variable "=" (literal | variable) ";"  # no expressions, yet
+
+#######################################################################
+#
+#: literals
+#
+#######################################################################
+
+_array_ellipsis = literal { "," literal }
+
+_top_level_literal = literal
+literal    = integer | number | boolean | string | array | object
+integer    = INT !/[.Ee]/ ~
+number     = INT FRAC EXP ~
+boolean    = (`true` | `false`) ~
+string     = /"[^"\n]*"/~ | /'[^'\n]*'/~
+array      = "[" [ literal { "," literal } ] "]"
+object     = "{" [ association { "," association } ] [","] "}"
+  association = key §":" literal
+  key         = identifier | '"' identifier '"'
+
+#######################################################################
+#
+#: Keywords
+#
+#######################################################################
+
+basic_type   = (`object` | `array` | `string` | `number` | `boolean` | `null`
+               | `integer` | `uinteger` | `decimal` | `unknown` | `any` | `void`) ~
+
+#######################################################################
+#
+#: Entities
+#
+#######################################################################
+
+variable   = name
+_quoted_identifier = identifier | '"' identifier §'"' | "'" identifier §"'"
+name       = !(`true`|`false`) _part {`.` _part} ~
+identifier = !(`true`|`false`) _part ~
+  _part    = /(?!\d)\w+/
+INT         = [NEG] ( /[1-9][0-9]+/ | /[0-9]/ )
+NEG         = `-`
+FRAC        = [ DOT /[0-9]+/ ]
+DOT         = `.`
+EXP         = [ (`E`|`e`) [`+`|`-`] /[0-9]+/ ]
+
+EOF        =  !/./        # no more characters ahead, end of file reached
+
+        """
+        save = get_config_value('history_tracking')
+        set_config_value('history_tracking', True)
+        parser = create_parser(lang)
+        set_tracer(parser.root__.descendants(), trace_history)
+        parser.history_tracking__ = True
+        tree = parser('readonly [number, number] | undefined', "types")
+        # This must not fail with an uninitialized position error!
 
 if __name__ == "__main__":
     from DHParser.testing import runner

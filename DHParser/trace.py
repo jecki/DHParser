@@ -50,7 +50,7 @@ from DHParser.error import Error, RESUME_NOTICE, RECURSION_DEPTH_LIMIT_HIT
 from DHParser.nodetree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE, ZOMBIE_TAG
 from DHParser.log import HistoryRecord, NONE_NODE
 from DHParser.parse import Grammar, Parser, ParserError, ParseFunc, ContextSensitive, \
-    UnaryParser, SmartRE, ERR, PARSER_PLACEHOLDER
+    UnaryParser, SmartRE, ERR, PARSER_PLACEHOLDER, INFINITE
 from DHParser.toolkit import line_col
 
 __all__ = ('trace_history', 'set_tracer', 'resume_notices_on', 'resume_notices_off')
@@ -149,7 +149,9 @@ def history_record(parser: Parser, grammar: Grammar,
 def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], cython.int]:
     grammar = self._grammar  # type: Grammar
     if not grammar.history_tracking__:
-        if location < 0:  return self.visited[-location]
+        if location < 0:
+            if location <= -INFINITE:  location = 0
+            return self.visited[-location]
         try:
             node, location = self._parse(location)  # <===== call to the actual parser!
         except ParserError as pe:
@@ -157,6 +159,7 @@ def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], c
         return node, location
 
     if location < 0:  # a negative location signals a memo-hit
+        if location <= -INFINITE:  location = 0
         location = -location
         grammar.call_stack__.append(call_item(self, location, "RECALL: "))
         node, location_ = self.visited[location]
