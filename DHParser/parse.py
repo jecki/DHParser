@@ -461,7 +461,7 @@ def artifact(nd: Node) -> bool:
 #
 ########################################################################
 
-
+INFINITE = 2**30
 _GRAMMAR_PLACEHOLDER = None  # type: Optional[Grammar]
 
 
@@ -474,7 +474,6 @@ def get_grammar_placeholder() -> 'Grammar':
 
 def is_grammar_placeholder(grammar: Optional['Grammar']) -> bool:
     return grammar is None or cast(Grammar, grammar) is _GRAMMAR_PLACEHOLDER
-
 
 
 ParsingResult: TypeAlias = Tuple[Optional[Node], int]
@@ -749,7 +748,7 @@ class Parser:
             visited = self.visited  # using local variable for better performance
             if location in visited:
                 if grammar.history_tracking__ and self._parse_proxy != self._parse:
-                    return self._parse_proxy(-location)  # a negative location signals a memo-hit
+                    return self._parse_proxy(-location or -INFINITE)  # a negative location signals a memo-hit
                 else:
                     return visited[location]
 
@@ -3818,9 +3817,6 @@ class OneOrMore(UnaryParser):
                 "Use ZeroOrMore instead of nesting OneOrMore with an optional parser in "
                 + self.location_info(), BADLY_NESTED_OPTIONAL_PARSER))
         return errors
-
-
-INFINITE = 2**30
 
 
 def to_interleave(parser: Parser) -> Parser:
