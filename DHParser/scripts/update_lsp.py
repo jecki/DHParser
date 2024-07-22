@@ -91,9 +91,12 @@ def transpile_ts_to_python(specs):
     from ts2python import ts2pythonParser
     specs_py, errors = ts2pythonParser.compile_src(specs)
     if errors:
+        not_just_warnings = False
         for err in errors:
             print(err)
-        sys.exit(1)
+            not_just_warnings |= err.code >= 1000
+        if not_just_warnings:
+            sys.exit(1)
     sys.path.pop()
     return specs_py
 

@@ -275,6 +275,11 @@ class Position(TypedDict, total=True):
 
 PositionEncodingKind = str
 
+class PositionEncodingKind(Enum):
+    UTF8 = 'utf-8'
+    UTF16 = 'utf-16'
+    UTF32 = 'utf-32'
+
 
 class Range(TypedDict, total=True):
     start: Position
@@ -375,13 +380,15 @@ class DiagnosticSeverity(IntEnum):
     Information = 3
     Hint = 4
 
-DiagnosticSeverity = int
+# commented out, because there is already an enumeration with the same name
+# DiagnosticSeverity = int
 
 class DiagnosticTag(IntEnum):
     Unnecessary = 1
     Deprecated = 2
 
-DiagnosticTag = int
+# commented out, because there is already an enumeration with the same name
+# DiagnosticTag = int
 
 
 class DiagnosticRelatedInformation(TypedDict, total=True):
@@ -403,7 +410,8 @@ class MarkupKind(Enum):
     PlainText = 'plaintext'
     Markdown = 'markdown'
 
-MarkupKind = str
+# commented out, because there is already an enumeration with the same name
+# MarkupKind = str
 
 
 class MarkupContent(TypedDict, total=True):
@@ -473,8 +481,18 @@ class WorkspaceEditClientCapabilities(TypedDict, total=False):
 
 ResourceOperationKind = str
 
+class ResourceOperationKind(Enum):
+    Create = 'create'
+    Rename = 'rename'
+    Delete = 'delete'
 
 FailureHandlingKind = str
+
+class FailureHandlingKind(Enum):
+    Abort = 'abort'
+    Transactional = 'transactional'
+    TextOnlyTransactional = 'textOnlyTransactional'
+    Undo = 'undo'
 
 
 class WorkDoneProgressBegin(TypedDict, total=False):
@@ -618,7 +636,8 @@ class InitializeResult(TypedDict, total=False):
 class InitializeErrorCodes(IntEnum):
     unknownProtocolVersion = 1
 
-InitializeErrorCodes = int
+# commented out, because there is already an enumeration with the same name
+# InitializeErrorCodes = int
 
 
 class InitializeError(TypedDict, total=True):
@@ -723,7 +742,8 @@ class TextDocumentSyncKind(IntEnum):
     Full = 1
     Incremental = 2
 
-TextDocumentSyncKind = int
+# commented out, because there is already an enumeration with the same name
+# TextDocumentSyncKind = int
 
 
 class TextDocumentSyncOptions(TypedDict, total=False):
@@ -761,7 +781,8 @@ class TextDocumentSaveReason(IntEnum):
     AfterDelay = 2
     FocusOut = 3
 
-TextDocumentSaveReason = int
+# commented out, because there is already an enumeration with the same name
+# TextDocumentSaveReason = int
 
 
 class SaveOptions(TypedDict, total=False):
@@ -1106,7 +1127,8 @@ class DocumentHighlightKind(IntEnum):
     Read = 2
     Write = 3
 
-DocumentHighlightKind = int
+# commented out, because there is already an enumeration with the same name
+# DocumentHighlightKind = int
 
 
 class DocumentLinkClientCapabilities(TypedDict, total=False):
@@ -1219,7 +1241,8 @@ class FoldingRangeKind(Enum):
     Imports = 'imports'
     Region = 'region'
 
-FoldingRangeKind = str
+# commented out, because there is already an enumeration with the same name
+# FoldingRangeKind = str
 
 
 class FoldingRange(TypedDict, total=False):
@@ -1308,12 +1331,14 @@ class SymbolKind(IntEnum):
     Operator = 25
     TypeParameter = 26
 
-SymbolKind = int
+# commented out, because there is already an enumeration with the same name
+# SymbolKind = int
 
 class SymbolTag(IntEnum):
     Deprecated = 1
 
-SymbolTag = int
+# commented out, because there is already an enumeration with the same name
+# SymbolTag = int
 
 
 class DocumentSymbol(TypedDict, total=False):
@@ -1375,7 +1400,8 @@ class SemanticTokenModifiers(Enum):
 class TokenFormat(Enum):
     Relative = 'relative'
 
-TokenFormat = str
+# commented out, because there is already an enumeration with the same name
+# TokenFormat = str
 
 
 class SemanticTokensLegend(TypedDict, total=True):
@@ -1499,7 +1525,8 @@ class InlayHintKind(IntEnum):
     Type = 1
     Parameter = 2
 
-InlayHintKind = int
+# commented out, because there is already an enumeration with the same name
+# InlayHintKind = int
 
 
 class InlayHintWorkspaceClientCapabilities(TypedDict, total=False):
@@ -1637,7 +1664,8 @@ class CompletionTriggerKind(IntEnum):
     TriggerCharacter = 2
     TriggerForIncompleteCompletions = 3
 
-CompletionTriggerKind = int
+# commented out, because there is already an enumeration with the same name
+# CompletionTriggerKind = int
 
 
 class CompletionContext(TypedDict, total=False):
@@ -1663,12 +1691,14 @@ class InsertTextFormat(IntEnum):
     PlainText = 1
     Snippet = 2
 
-InsertTextFormat = int
+# commented out, because there is already an enumeration with the same name
+# InsertTextFormat = int
 
 class CompletionItemTag(IntEnum):
     Deprecated = 1
 
-CompletionItemTag = int
+# commented out, because there is already an enumeration with the same name
+# CompletionItemTag = int
 
 
 class InsertReplaceEdit(TypedDict, total=True):
@@ -1680,7 +1710,8 @@ class InsertTextMode(IntEnum):
     asIs = 1
     adjustIndentation = 2
 
-InsertTextMode = int
+# commented out, because there is already an enumeration with the same name
+# InsertTextMode = int
 
 
 class CompletionItemLabelDetails(TypedDict, total=False):
@@ -1736,7 +1767,8 @@ class CompletionItemKind(IntEnum):
     Operator = 24
     TypeParameter = 25
 
-CompletionItemKind = int
+# commented out, because there is already an enumeration with the same name
+# CompletionItemKind = int
 
 
 class PublishDiagnosticsClientCapabilities(TypedDict, total=False):
@@ -1782,17 +1814,18 @@ class DocumentDiagnosticReportKind(Enum):
     Full = 'full'
     Unchanged = 'unchanged'
 
-DocumentDiagnosticReportKind = str
+# commented out, because there is already an enumeration with the same name
+# DocumentDiagnosticReportKind = str
 
 
 class FullDocumentDiagnosticReport(TypedDict, total=False):
-    kind: 'DocumentDiagnosticReportKindFull'
+    kind: 'DocumentDiagnosticReportKind.Full'
     resultId: Optional[str]
     items: List[Diagnostic]
 
 
 class UnchangedDocumentDiagnosticReport(TypedDict, total=True):
-    kind: 'DocumentDiagnosticReportKindUnchanged'
+    kind: 'DocumentDiagnosticReportKind.Unchanged'
     resultId: str
 
 
@@ -1876,7 +1909,8 @@ class SignatureHelpTriggerKind(IntEnum):
     TriggerCharacter = 2
     ContentChange = 3
 
-SignatureHelpTriggerKind = int
+# commented out, because there is already an enumeration with the same name
+# SignatureHelpTriggerKind = int
 
 
 class SignatureHelpContext(TypedDict, total=False):
@@ -1943,6 +1977,19 @@ class CodeActionParams(WorkDoneProgressParams, PartialResultParams, TypedDict, t
 
 CodeActionKind = str
 
+class CodeActionKind(Enum):
+    Empty = ''
+    QuickFix = 'quickfix'
+    Refactor = 'refactor'
+    RefactorExtract = 'refactor.extract'
+    RefactorInline = 'refactor.inline'
+    RefactorMove = 'refactor.move'
+    RefactorRewrite = 'refactor.rewrite'
+    Source = 'source'
+    SourceOrganizeImports = 'source.organizeImports'
+    SourceFixAll = 'source.fixAll'
+    Notebook = 'notebook'
+
 
 class CodeActionContext(TypedDict, total=False):
     diagnostics: List[Diagnostic]
@@ -1953,7 +2000,8 @@ class CodeActionTriggerKind(IntEnum):
     Invoked = 1
     Automatic = 2
 
-CodeActionTriggerKind = int
+# commented out, because there is already an enumeration with the same name
+# CodeActionTriggerKind = int
 
 
 class CodeAction(TypedDict, total=False):
@@ -2081,7 +2129,8 @@ class DocumentOnTypeFormattingParams(TypedDict, total=True):
 class PrepareSupportDefaultBehavior(IntEnum):
     Identifier = 1
 
-PrepareSupportDefaultBehavior = int
+# commented out, because there is already an enumeration with the same name
+# PrepareSupportDefaultBehavior = int
 
 
 class RenameClientCapabilities(TypedDict, total=False):
@@ -2152,7 +2201,8 @@ class InlineCompletionTriggerKind(IntEnum):
     Invoked = 1
     Automatic = 2
 
-InlineCompletionTriggerKind = int
+# commented out, because there is already an enumeration with the same name
+# InlineCompletionTriggerKind = int
 
 
 class SelectedCompletionInfo(TypedDict, total=True):
@@ -2250,7 +2300,8 @@ class FileOperationPatternKind(Enum):
     file = 'file'
     folder = 'folder'
 
-FileOperationPatternKind = str
+# commented out, because there is already an enumeration with the same name
+# FileOperationPatternKind = str
 
 
 class FileOperationPatternOptions(TypedDict, total=False):
@@ -2320,7 +2371,8 @@ class WatchKind(IntEnum):
     Change = 2
     Delete = 4
 
-WatchKind = int
+# commented out, because there is already an enumeration with the same name
+# WatchKind = int
 
 
 class DidChangeWatchedFilesParams(TypedDict, total=True):
@@ -2336,7 +2388,8 @@ class FileChangeType(IntEnum):
     Changed = 2
     Deleted = 3
 
-FileChangeType = int
+# commented out, because there is already an enumeration with the same name
+# FileChangeType = int
 
 
 class ExecuteCommandClientCapabilities(TypedDict, total=False):
@@ -2383,7 +2436,8 @@ class MessageType(IntEnum):
     Log = 4
     Debug = 5
 
-MessageType = int
+# commented out, because there is already an enumeration with the same name
+# MessageType = int
 
 
 class ShowMessageRequestClientCapabilities(TypedDict, total=False):

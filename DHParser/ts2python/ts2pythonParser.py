@@ -35,10 +35,12 @@ from typing import Tuple, List, Union, Any, Callable, Set, Dict, Sequence, cast
 
 try:
     scriptpath = os.path.abspath(os.path.dirname(__file__))
+    dhparser_path = os.path.abspath(os.path.join(scriptpath, '..', '..'))
 except NameError:
     scriptpath = ''
-if scriptpath not in sys.path:
-    sys.path.append(scriptpath)
+    dhparser_path = ''
+if dhparser_path and dhparser_path not in sys.path:
+    sys.path.append(dhparser_path)
 
 try:
     import regex as re
@@ -138,9 +140,9 @@ class ts2pythonGrammar(Grammar):
     literal = Forward()
     type = Forward()
     types = Forward()
-    source_hash__ = "a75b6322b18773cef744341a4a4277a1"
+    source_hash__ = "f5a5dc3cbfe4c1e981bc8faaf6cbaba8"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:EXP$|_namespace$|_quoted_identifier$|INT$|_part$|EOF$|_array_ellipsis$|DOT$|NEG$|FRAC$|_root$|_top_level_literal$|_top_level_assignment$)')
+    disposable__ = re.compile('(?:_part$|_namespace$|EXP$|FRAC$|EOF$|_top_level_assignment$|NEG$|INT$|_array_ellipsis$|_top_level_literal$|_quoted_identifier$|DOT$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'(?://.*)\n?|(?:/\*(?:.|\n)*?\*/) *\n?'
@@ -157,7 +159,7 @@ class ts2pythonGrammar(Grammar):
     INT = Series(Option(NEG), Alternative(RegExp('[1-9][0-9]+'), RegExp('[0-9]')))
     _part = RegExp('(?!\\d)\\w+')
     identifier = Series(NegativeLookahead(Alternative(Text("true"), Text("false"))), _part, dwsp__)
-    name = Series(NegativeLookahead(Alternative(Text("true"), Text("false"))), _part, ZeroOrMore(Series(Series(Drop(Text('.')), dwsp__), _part)), dwsp__)
+    name = Series(NegativeLookahead(Alternative(Text("true"), Text("false"))), _part, ZeroOrMore(Series(Text("."), _part)), dwsp__)
     _quoted_identifier = Alternative(identifier, Series(Series(Drop(Text('"')), dwsp__), identifier, Series(Drop(Text('"')), dwsp__), mandatory=2), Series(Series(Drop(Text("\'")), dwsp__), identifier, Series(Drop(Text("\'")), dwsp__), mandatory=2))
     variable = Synonym(name)
     basic_type = Series(Alternative(Text("object"), Text("array"), Text("string"), Text("number"), Text("boolean"), Text("null"), Text("integer"), Text("uinteger"), Text("decimal"), Text("unknown"), Text("any"), Text("void")), dwsp__)
@@ -181,18 +183,19 @@ class ts2pythonGrammar(Grammar):
     readonly = Series(Text("readonly"), dwsp__)
     optional = Series(Text("?"), dwsp__)
     func_type = Series(Option(Series(Drop(Text("new")), dwsp__)), Series(Drop(Text("(")), dwsp__), Option(arg_list), Series(Drop(Text(")")), dwsp__), Series(Drop(Text("=>")), dwsp__), types)
-    extends = Series(Series(Drop(Text("extends")), dwsp__), Alternative(generic_type, type_name), ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), Alternative(generic_type, type_name))))
+    extends = Series(Alternative(Series(Drop(Text("extends")), dwsp__), Series(Drop(Text("implements")), dwsp__)), Alternative(generic_type, type_name), ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), Alternative(generic_type, type_name))))
     index_signature = Series(Option(readonly), Series(Drop(Text("[")), dwsp__), identifier, Alternative(Series(Drop(Text(":")), dwsp__), Series(Option(Series(Drop(Text("in")), dwsp__)), keyof), Series(Drop(Text("in")), dwsp__)), type, Series(Drop(Text("]")), dwsp__), Option(optional))
     map_signature = Series(index_signature, Series(Drop(Text(":")), dwsp__), types)
     mapped_type = Series(Series(Drop(Text("{")), dwsp__), map_signature, Option(Series(Drop(Text(";")), dwsp__)), Series(Drop(Text("}")), dwsp__))
     extends_type = Series(Series(Drop(Text("extends")), dwsp__), Option(keyof), Alternative(basic_type, type_name, mapped_type))
+    declarations_tuple = Series(Series(Drop(Text("[")), dwsp__), declaration, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), declaration)), Series(Drop(Text("]")), dwsp__))
     type_tuple = Series(Series(Drop(Text("[")), dwsp__), types, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), types)), Series(Drop(Text("]")), dwsp__))
     indexed_type = Series(type_name, Series(Drop(Text("[")), dwsp__), Alternative(type_name, literal), Series(Drop(Text("]")), dwsp__))
     array_type = Alternative(basic_type, generic_type, type_name, Series(Series(Drop(Text("(")), dwsp__), types, Series(Drop(Text(")")), dwsp__)), type_tuple, declarations_block)
     array_types = Synonym(array_type)
-    array_of = Series(Option(Series(Drop(Text("readonly")), dwsp__)), array_types, Series(Drop(Text("[]")), dwsp__))
+    array_of = Series(array_types, Series(Drop(Text("[]")), dwsp__))
     equals_type = Series(Series(Drop(Text("=")), dwsp__), Alternative(basic_type, type_name))
-    parameter_type = Alternative(array_of, basic_type, generic_type, indexed_type, Series(type_name, Option(extends_type), Option(equals_type)), declarations_block, type_tuple)
+    parameter_type = Series(Option(Series(Drop(Text("readonly")), dwsp__)), Alternative(array_of, basic_type, generic_type, indexed_type, Series(type_name, Option(extends_type), Option(equals_type)), declarations_block, type_tuple, declarations_tuple))
     parameter_types = Series(Option(Series(Drop(Text("|")), dwsp__)), parameter_type, ZeroOrMore(Series(Series(Drop(Text("|")), dwsp__), parameter_type)))
     type_parameters = Series(Series(Drop(Text("<")), dwsp__), parameter_types, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), parameter_types)), Series(Drop(Text(">")), dwsp__), mandatory=1)
     interface = Series(Option(Series(Drop(Text("export")), dwsp__)), Option(Series(Drop(Text("declare")), dwsp__)), Alternative(Series(Drop(Text("interface")), dwsp__), Series(Drop(Text("class")), dwsp__)), identifier, Option(type_parameters), Option(extends), declarations_block, Option(Series(Drop(Text(";")), dwsp__)), mandatory=3)
@@ -205,22 +208,23 @@ class ts2pythonGrammar(Grammar):
     static = Series(Text("static"), dwsp__)
     _namespace = Alternative(virtual_enum, namespace)
     qualifiers = Interleave(readonly, static, repetitions=[(0, 1), (0, 1)])
+    special = Series(Series(Drop(Text("[")), dwsp__), name, Series(Drop(Text("]")), dwsp__), Series(Drop(Text("(")), dwsp__), Option(arg_list), Series(Drop(Text(")")), dwsp__), Option(Series(Series(Drop(Text(":")), dwsp__), types)), mandatory=4)
     argument = Series(identifier, Option(optional), Option(Series(Series(Drop(Text(":")), dwsp__), types)))
-    arg_tail = Series(Series(Drop(Text("...")), dwsp__), identifier, Option(Series(Series(Drop(Text(":")), dwsp__), array_of)))
+    arg_tail = Series(Series(Drop(Text("...")), dwsp__), identifier, Option(Series(Series(Drop(Text(":")), dwsp__), Alternative(array_of, generic_type))))
     symbol = Alternative(identifier, Series(wildcard, Option(Series(Series(Drop(Text("as")), dwsp__), alias))))
     symlist = Series(Series(Drop(Text("{")), dwsp__), symbol, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), symbol)), Series(Drop(Text("}")), dwsp__))
     Import = Series(Series(Drop(Text("import")), dwsp__), Option(Series(Alternative(symlist, symbol), Series(Drop(Text("from")), dwsp__))), string)
     module = Series(Series(Drop(Text("declare")), dwsp__), Series(Drop(Text("module")), dwsp__), _quoted_identifier, Series(Drop(Text("{")), dwsp__), document, Series(Drop(Text("}")), dwsp__))
     literal.set(Alternative(integer, number, boolean, string, array, object))
     generic_type.set(Series(type_name, type_parameters))
-    type.set(Alternative(array_of, basic_type, generic_type, indexed_type, Series(type_name, NegativeLookahead(Text("("))), Series(Series(Drop(Text("(")), dwsp__), types, Series(Drop(Text(")")), dwsp__)), mapped_type, declarations_block, type_tuple, literal, func_type))
+    type.set(Series(Option(Series(Drop(Text("readonly")), dwsp__)), Alternative(array_of, basic_type, generic_type, indexed_type, Series(type_name, NegativeLookahead(Text("("))), Series(Series(Drop(Text("(")), dwsp__), types, Series(Drop(Text(")")), dwsp__)), mapped_type, declarations_block, type_tuple, declarations_tuple, literal, func_type)))
     types.set(Series(Option(Series(Drop(Text("|")), dwsp__)), Alternative(intersection, type), ZeroOrMore(Series(Series(Drop(Text("|")), dwsp__), Alternative(intersection, type)))))
-    arg_list.set(Alternative(Series(argument, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), argument)), Option(Series(Series(Drop(Text(",")), dwsp__), arg_tail))), arg_tail))
-    function.set(Series(Option(Series(Option(Series(Drop(Text("export")), dwsp__)), Option(static), Option(Series(Drop(Text("function")), dwsp__)), identifier, Option(optional), Option(type_parameters))), Series(Drop(Text("(")), dwsp__), Option(arg_list), Series(Drop(Text(")")), dwsp__), Option(Series(Series(Drop(Text(":")), dwsp__), types)), mandatory=2))
+    arg_list.set(Series(Alternative(Series(argument, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), argument)), Option(Series(Series(Drop(Text(",")), dwsp__), arg_tail))), arg_tail), Option(Series(Drop(Text(",")), dwsp__))))
+    function.set(Alternative(Series(Option(Series(Option(Series(Drop(Text("export")), dwsp__)), Option(static), Option(Series(Drop(Text("function")), dwsp__)), identifier, Option(optional), Option(type_parameters))), Series(Drop(Text("(")), dwsp__), Option(arg_list), Series(Drop(Text(")")), dwsp__), Option(Series(Series(Drop(Text(":")), dwsp__), types)), mandatory=2), special))
     declaration.set(Series(qualifiers, Option(Alternative(Series(Drop(Text("let")), dwsp__), Series(Drop(Text("var")), dwsp__))), identifier, Option(optional), NegativeLookahead(Text("(")), Option(Series(Series(Drop(Text(":")), dwsp__), types))))
     declarations_block.set(Series(Series(Drop(Text("{")), dwsp__), Option(Series(Alternative(function, declaration), ZeroOrMore(Series(Option(Alternative(Series(Drop(Text(";")), dwsp__), Series(Drop(Text(",")), dwsp__))), Alternative(function, declaration))), Option(Series(Series(Drop(Text(";")), dwsp__), map_signature)), Option(Alternative(Series(Drop(Text(";")), dwsp__), Series(Drop(Text(",")), dwsp__))))), Series(Drop(Text("}")), dwsp__)))
     document.set(Series(dwsp__, ZeroOrMore(Alternative(interface, type_alias, _namespace, enum, const, module, _top_level_assignment, _array_ellipsis, _top_level_literal, Series(Option(Series(Drop(Text("export")), dwsp__)), declaration, Series(Drop(Text(";")), dwsp__)), Series(Option(Series(Drop(Text("export")), dwsp__)), function, Series(Drop(Text(";")), dwsp__)), Series(Import, Series(Drop(Text(";")), dwsp__))))))
-    _root = Series(document, EOF)
+    root = Series(document, EOF)
     resume_rules__ = {'interface': [re.compile(r'(?=export|$)')],
                       'type_alias': [re.compile(r'(?=export|$)')],
                       'enum': [re.compile(r'(?=export|$)')],
@@ -229,7 +233,7 @@ class ts2pythonGrammar(Grammar):
                       '_top_level_assignment': [re.compile(r'(?=export|$)')],
                       '_top_level_literal': [re.compile(r'(?=export|$)')],
                       'module': [re.compile(r'(?=export|$)')]}
-    root__ = _root
+    root__ = root
         
 parsing: PseudoJunction = create_parser_junction(ts2pythonGrammar)
 get_grammar = parsing.factory # for backwards compatibility, only
@@ -240,6 +244,15 @@ get_grammar = parsing.factory # for backwards compatibility, only
 # AST SECTION - Can be edited. Changes will be preserved.
 #
 #######################################################################
+
+SPECIAL_FUNCTIONS = {"Symbol.iterator": "__iter__"}
+
+def convert_special_function(p: Path):
+    node = p[-1]
+    assert node.name == "special"
+    identifier = node['name']
+    identifier.name = "identifier"
+    identifier.result = SPECIAL_FUNCTIONS.get(identifier.content, "__unknown__")
 
 def add_flags(p: Path):
     p[0].attr['keep_comments'] = get_config_value('ts2python.KeepMultilineComments', False)
@@ -254,6 +267,10 @@ ts2python_AST_transformation_table = {
     ":Text": change_name('TEXT'),
     "comment__": remove_if(lambda p: p[-1].content.rfind('\n') < 0 \
                                      or not p[0].get_attr('keep_comments', True)),
+    "special": [apply_if(add_error("Unknown special function"),
+                         lambda p: p[-1]['name'].content not in SPECIAL_FUNCTIONS),
+                convert_special_function],
+    "function": apply_if(reduce_single_child, has_child('special')),
     "*": move_fringes(lambda p: p[-1].name == "comment__"),
     ">>>": clear_flags
 }
@@ -310,18 +327,18 @@ else:
 """
 
 TYPEDDICT_IMPORTS = """
-from typing import TypedDict, NotRequired, Literal
+from typing import TypedDict, NotRequired, Literal, Iterable, Iterator
 """
 
 TYPEDDICT_IMPORTS_LEGACY = """
 try:
-    from ts2python.typeddict_shim import TypedDict, GenericTypedDict, NotRequired, Literal
+    from ts2python.typeddict_shim import TypedDict, GenericTypedDict, NotRequired, Literal, Iterable, Iterator
     # Override typing.TypedDict for Runtime-Validation
 except ImportError:
     print("Module ts2python.typeddict_shim not found. Only coarse-grained " 
           "runtime type-validation of TypedDicts possible")
     try:
-        from typing import TypedDict, Literal
+        from typing import TypedDict, Literal, Iterable, Iterator
     except ImportError:
         try:
             from ts2python.typing_extensions import TypedDict, Literal
@@ -408,6 +425,7 @@ TYPE_NAME_SUBSTITUTION = {
     'void': 'None',
 
     'Thenable': 'Coroutine',
+    'IterableIterator': 'Iterator',
     'Array': 'List',
     'ReadonlyArray': 'List',
     'Uint32Array': 'List[int]',
@@ -449,10 +467,11 @@ class ts2pythonCompiler(Compiler):
         self.keep_comments = get_config_value('ts2python.KeepMultilineComments', False)
 
         self.overloaded_type_names: Set[str] = set()
-        self.known_types: List[Set[str]] = [
-            {'Union', 'List', 'Tuple', 'Optional', 'Dict', 'Set', 'Any',
-             'Generic', 'Coroutine', 'list', 'tuple', 'dict', 'set',
-             'frozenset', 'int', 'float'}]
+        self.known_types: List[Dict[str]] = [
+            {'Union': 'Union', 'List': 'List', 'Tuple': 'Tuple', 'Optional': 'Optional',
+             'Dict': 'Dict', 'Set': 'Set', 'Any': 'Any', 'Generic': 'Generic',
+             'Coroutine': 'Coroutine', 'list': 'list', 'tuple': 'tuple', 'dict': 'dict',
+             'set': 'set', 'frozenset': 'frozenset', 'int': 'int', 'float': 'float'}]
         self.local_classes: List[List[str]] = [[]]
         self.base_classes: Dict[str, List[str]] = {}
         self.typed_dicts: Set[str] = {'TypedDict'}  # names of classes that are TypedDicts
@@ -482,6 +501,13 @@ class ts2pythonCompiler(Compiler):
                 return True
         return False
 
+    def add_to_known_types(self, node, typename: str, kind: str):
+        if typename in self.known_types[-1] and kind != '?':
+            self.tree.new_error(
+                node, f'{node.name} {typename} has already been defined earlier as '
+                f'{self.known_types[-1][typename]}!', WARNING)
+        self.known_types[-1][typename] = kind
+
     def prepare(self, root: Node) -> None:
         type_aliases = {nd['identifier'].content for nd in root.select_children('type_alias')}
         namespaces = {nd['identifier'].content for nd in root.select_children('namespace')}
@@ -491,7 +517,7 @@ class ts2pythonCompiler(Compiler):
 
     def finalize(self, python_code: Any) -> Any:
         chksum = f'source_hash__ = "{source_hash(self.tree.source)}"'
-        if self.tree.name == 'document':
+        if self.tree.name == 'root':
             code_blocks = [
                 f'# Generated by ts2python version {version} on {datetime.datetime.now()}\n',
                 GENERAL_IMPORTS,
@@ -504,7 +530,7 @@ class ts2pythonCompiler(Compiler):
         else:
             code_blocks = []
         code_blocks.append(python_code)
-        if self.tree.name == 'document':
+        if self.tree.name == 'root':
             code_blocks.append('\n##### END OF LSP SPECS\n')
         cooked = '\n\n'.join(code_blocks)
         cooked = re.sub(' +(?=\n)', '', cooked)
@@ -534,6 +560,10 @@ class ts2pythonCompiler(Compiler):
             comment = '\n'.join(lines)
             return f"\n{comment}" if multiline else comment
         return ""
+
+    def on_root(self, node) -> str:
+        assert len(node.children) == 1
+        return self.compile(node.children[0])
 
     def on_document(self, node) -> str:
         if 'module' in node and isinstance(node['module'], Sequence) > 1:
@@ -605,7 +635,7 @@ class ts2pythonCompiler(Compiler):
             # tps = '[' + tp + ']'
             preface = ''.join(f"{p} = TypeVar('{p}')\n"
                               for p in tpl if not self.is_known_type(p))
-            for p in tpl:  self.known_types[-1].add(p)
+            for p in tpl:  self.add_to_known_types(node, p, '?')
         except KeyError:
             pass
         return tps, preface
@@ -621,15 +651,21 @@ class ts2pythonCompiler(Compiler):
         # else:  tps =''
         preface += '\n'
         preface += node.get_attr('preface', '')
-        self.known_types.append(set())
+        self.known_types.append(dict())
         base_class_list = []
         try:
             base_class_list = self.bases(node['extends'])
-            base_classes = self.compile(node['extends'])
+            base_classes = ', '.join(base_class_list)  # self.compile(node['extends'])
+            if self.local_classes[-1]:
+                preface += self.render_local_classes() + '\n'
+                self.local_classes[-1] = []
             if tps and not self.use_variadic_generics:
                 base_classes += f", Generic{tps}"
         except KeyError:
-            base_classes = f"Generic{tps}" if tps and not self.use_variadic_generics else ''
+            base_classes = f"Generic{tps}" \
+                if tps and (not self.use_variadic_generics
+                            or 'function' in node['declarations_block'])\
+                else ''
         if any(bc not in self.typed_dicts for bc in base_class_list):
             force_base_class = ' '
         elif 'function' in node['declarations_block']:
@@ -643,11 +679,11 @@ class ts2pythonCompiler(Compiler):
         if self.base_class_name == "TypedDict" and self.render_anonymous == "toplevel":
             interface = self.render_local_classes() + '\n' + interface
         else:
-            interface += ('    '+self.render_local_classes().replace('\n', '\n    ')).rstrip(' ')
+            interface += ('    ' + self.render_local_classes().replace('\n', '\n    ')).rstrip(' ')
         self.optional_keys.pop()
         self.local_classes.pop()
         self.known_types.pop()
-        self.known_types[-1].add(name)
+        self.add_to_known_types(node, name, 'interface')
         self.scope_type.pop()
         self.obj_name.pop()
         return preface + interface + '    ' + decls.replace('\n', '\n    ')
@@ -672,7 +708,12 @@ class ts2pythonCompiler(Compiler):
         self.obj_name.append(alias)
         if alias not in self.overloaded_type_names:
             _, preface = self.process_type_parameters(node)
-            self.known_types[-1].add(alias)
+            if self.known_types[-1].get(alias, '') \
+                    in ('namespace', 'enum', 'virtual_enum'):
+                preface = ('# commented out, because there is already an '
+                           'enumeration with the same name\n# ' + preface)
+            else:
+                self.add_to_known_types(node, alias, 'type_alias')
             self.local_classes.append([])
             self.optional_keys.append([])
             types = self.compile(node['types'])
@@ -704,6 +745,9 @@ class ts2pythonCompiler(Compiler):
                     first_use[name] = func_decl
         except KeyError:
             pass  # no functions in declarations block
+
+    def on_declarations_tuple(self, node) -> str:
+        return self.on_declarations_block(node)
 
     def on_declarations_block(self, node) -> str:
         self.mark_overloaded_functions(node)
@@ -843,7 +887,8 @@ class ts2pythonCompiler(Compiler):
     def render_union(self, preface, union) -> str:
         if self.use_type_union or len(union) <= 1:
             if any(typ[0:1] in ('"', "'") for typ in union):
-                union = [typ.strip("'").strip('"') for typ in union]
+                # union = [typ.strip("'").strip('"') for typ in union]
+                union = [typ.replace("'", '').replace('"', '') for typ in union]
                 return f"{preface}'{' | '.join(union)}'"
             return preface + ' | '.join(union)
         else:
@@ -852,15 +897,19 @@ class ts2pythonCompiler(Compiler):
     def on_types(self, node) -> str:
         union = []
         i = 0
+
+        obj_name_stub = self.obj_name[-1]
+        fname = self.func_name[:1].upper() + self.func_name[1:]
         for nd in node.children:
-            obj_name_stub = self.obj_name[-1]
             n = obj_name_stub.rfind('_')
             ending = obj_name_stub[n + 1:]
             if n >= 0 and (not ending or ending.isdecimal()):
                 obj_name_stub = obj_name_stub[:n]
-            fname = self.func_name[:1].upper() + self.func_name[1:]
             self.obj_name[-1] = fname + obj_name_stub + '_' + str(i)
+            save = self.func_name
+            self.func_name = ""
             typ = self.compile_type_expression(node, nd)
+            self.func_name = save
             if typ not in union:
                 union.append(typ)
                 i += 1
@@ -881,12 +930,13 @@ class ts2pythonCompiler(Compiler):
         if self.use_literal_type and \
                 any(nd[0].name == 'literal' for nd in node.children):
             if all(nd[0].name == 'literal' for nd in node.children):
-                return f"Literal[{', '.join(nd.content   for nd in node.children)}]"
+                return f"Literal[{', '.join(typ for typ in union)}]"
+                # return f"Literal[{', '.join(nd.content for nd in node.children)}]"
             new_union = []
             literal_package = []
             for i, nd in enumerate(node.children):
                 if nd[0].name == 'literal':
-                    literal_package.append(nd.content)
+                    literal_package.append(union[i])
                 else:
                     if literal_package:
                         new_union.append(f"Literal[{', '.join(l for l in literal_package)}]")
@@ -916,7 +966,7 @@ class ts2pythonCompiler(Compiler):
     def on_type(self, node) -> str:
         assert len(node.children) == 1
         typ = node[0]
-        if typ.name == 'declarations_block':
+        if typ.name in ('declarations_block', 'declarations_tuple'):
             self.local_classes.append([])
             self.optional_keys.append([])
             decls = self.compile(typ)
@@ -989,11 +1039,11 @@ class ts2pythonCompiler(Compiler):
 
     def on_virtual_enum(self, node) -> str:
         name = self.compile(node['identifier'])
-        if self.is_known_type(name):
-            # self.tree.new_error(node,
-            #     f'Name {name} has already been defined earlier!', WARNING)
-            return ''
-        self.known_types[-1].add(name)
+        if self.known_types[-1].get(name, '') == 'type_alias':
+            # silently overwrite type_alias
+            self.known_types[-1][name] = 'virtual_enum'
+        else:
+            self.add_to_known_types(node, name, 'virtual_enum')
         save = self.strip_type_from_const
         if all(child.name == 'const' for child in node.children[1:]):
             if all(nd['literal'][0].name == 'integer'
@@ -1020,6 +1070,7 @@ class ts2pythonCompiler(Compiler):
         # self.tree.new_error(node, errmsg, NOT_YET_IMPLEMENTED_WARNING)
         # return "# " + errmsg
         name = self.compile(node['identifier'])
+        self.add_to_known_types(node, name, 'namespace')
         declarations = [f'class {name}:']
         assert len(node.children) >= 2
         self.mark_overloaded_functions(node)
@@ -1027,7 +1078,7 @@ class ts2pythonCompiler(Compiler):
         self.scope_type.append('namespace')
         self.local_classes.append([])
         self.optional_keys.append([])
-        self.known_types.append(set())
+        self.known_types.append(dict())
         self.mark_overloaded_functions(node)
         declaration = self.compile(node[1])
         declaration = declaration.lstrip('\n')
@@ -1039,7 +1090,7 @@ class ts2pythonCompiler(Compiler):
         if local_classes:
             declarations.insert(1, local_classes)
         self.known_types.pop()
-        self.known_types[-1].add(name)
+        self.add_to_known_types(node, name, 'namespace')
         self.local_classes.pop()
         self.optional_keys.pop()
         self.scope_type.pop()
@@ -1056,7 +1107,7 @@ class ts2pythonCompiler(Compiler):
         else:
             base_class = ''
         name = self.compile(node['identifier'])
-        self.known_types[-1].add(name)
+        self.add_to_known_types(node, name, 'enum')
         enum = ['class ' + name + base_class + ':']
         for item in node.select_children('item'):
             enum.append(self.compile(item))
