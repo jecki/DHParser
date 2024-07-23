@@ -28,6 +28,8 @@ no more specialized grammar exists or where the particular EBNF-flavor
 used could not be detected beforehand by probing.
 """
 
+from __future__ import annotations
+
 #######################################################################
 #
 # SYMBOLS SECTION - Can be edited. Changes will be preserved.

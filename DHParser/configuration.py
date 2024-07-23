@@ -83,7 +83,7 @@ def validate_value(key: str, value: Any):
             if not isinstance(value, (int, float)):
                 raise TypeError('Value %s is not an int or float as required!' % str(value))
             elif not allowed[0] <= value <= allowed[1]:
-                raise ValueError('Value %s lies not within the range from %s to %s (included)!'
+                raise ValueError('Value %s does not lie within the range from %s to %s (included)!'
                                  % (str(value), str(allowed[0]), str(allowed[1])))
         else:
             if not isinstance(value, str) and isinstance(value, Container):

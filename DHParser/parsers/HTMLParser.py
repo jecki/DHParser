@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 #######################################################################
 #
 # SYMBOLS SECTION - Can be edited. Changes will be preserved.
