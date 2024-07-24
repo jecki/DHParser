@@ -1164,7 +1164,7 @@ def copy_parser_base_attrs(src: Parser, duplicate: Parser):
 
 def determine_eq_classes(parsers: Collection[Parser]):
     """Sorts the parsers originating in root (imperfectly) into equivalence
-    classes and assigns respective the class identifier to the ``eq_class``-field
+    classes and assigns the respective class identifier to the ``eq_class``-field
     of each parser."""
     eq_classes: Dict[Hashable, int] = {}
 
@@ -2997,11 +2997,17 @@ class CombinedParser(Parser):
         super().__init__()
         self._return_value = self._return_value_flatten
         self._return_values = self._return_values_flatten
+        self._signature_cache = None
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__()
         copy_combined_parser_attrs(self, duplicate)
         return duplicate
+
+    def signature(self) -> Hashable:
+        if not self._signature_cache:
+            self._signature_cache = super().signature()
+        return self._signature_cache
 
     def _return_value_no_optimization(self, node: Optional[Node]) -> Node:
         # assert node is None or isinstance(node, Node)
