@@ -108,7 +108,7 @@ class FlexibleEBNFGrammar(Grammar):
     element = Forward()
     expression = Forward()
     source_hash__ = "f28102ebed9fa2a532524a8a7fc322a7"
-    disposable__ = re.compile('(?:no_range$|MOD_SEP$|MOD_SYM$|ANY_SUFFIX$|EOF$|pure_elem$|is_mdef$|component$|FOLLOW_UP$|countable$)')
+    disposable__ = re.compile('(?:ANY_SUFFIX$|FOLLOW_UP$|countable$|no_range$|component$|pure_elem$|EOF$|is_mdef$|MOD_SYM$|MOD_SEP$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
