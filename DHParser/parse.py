@@ -1164,8 +1164,8 @@ def copy_parser_base_attrs(src: Parser, duplicate: Parser):
 
 def determine_eq_classes(parsers: Collection[Parser]):
     """Sorts the parsers originating in root (imperfectly) into equivalence
-    classes and assigns the respective class identifier to the ``eq_class``-field
-    of each parser."""
+    classes and assigns the respective class identifier to the
+    ``eq_class``-field of each parser."""
     eq_classes: Dict[Hashable, int] = {}
 
     def assign_eq_class(p: Parser) -> bool:
