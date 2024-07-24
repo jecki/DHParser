@@ -990,7 +990,7 @@ class Parser:
                 return True
         return False
 
-    def _signature(self) -> str:
+    def _signature(self) -> Hashable:
         """This method should be implemented by any non-abstract descendant
         parser class. The implementation must make sure that all instances
         that have the same signature always yield the same parsing result
@@ -1005,9 +1005,9 @@ class Parser:
         it will turn signature-based memoization-optimization off for
         this parser.
         """
-        return hex(id(self))
+        return id(self)
 
-    def signature(self) -> str:
+    def signature(self) -> Hashable:
         """Returns a value that is identical for two different
         parser objects if they are functionally equivalent, i.e.
         yield the same return value for the same call parameters::
@@ -2459,8 +2459,8 @@ class Unparameterized(NoMemoizationParser):
     As a consequence, different instances of the same unparameterized
     parser are always functionally equivalent."""
 
-    def _signature(self) -> str:
-        return self.__class__.__name__ + '()'
+    def _signature(self) -> Hashable:
+        return self.__class__.__name__,
 
 
 class Always(Unparameterized):
@@ -2663,8 +2663,8 @@ class Text(NoMemoizationParser):
     def is_optional(self) -> Optional[bool]:
         return not self.text
 
-    def _signature(self) -> str:
-        return f'{self.__class__.__name__}({self.text})'
+    def _signature(self) -> Hashable:
+        return self.__class__.__name__, self.text
 
 
 class IgnoreCase(Text):
@@ -2789,8 +2789,8 @@ class RegExp(LeafParser):
             return True
         return super().is_optional()
 
-    def _signature(self) -> str:
-        return f'{self.__class__.__name__}({self.regexp.pattern})'
+    def _signature(self) -> Hashable:
+        return self.__class__.__name__, self.regexp.pattern
 
     def is_lookahead(self) -> bool:
         """Just a heuristic for the simplemost cases!"""
@@ -3447,8 +3447,8 @@ class SmartRE(CombinedParser):  # TODO: turn this into a CombinedParser
             return True
         return super().is_optional()
 
-    def _signature(self) -> str:
-        return f'{self.__class__.__name__}({self.regexp.pattern})'
+    def _signature(self) -> Hashable:
+        return self.__class__.__name__, self.regexp.pattern
 
     def is_lookahead(self) -> bool:
         r"""Just a heuristic test - not perfect::
@@ -3546,8 +3546,8 @@ class CustomParser(CombinedParser):
                 node.name = save_name
             return node, location + node.strlen()
 
-    def _signature(self) -> str:
-        return f'{self.__class__.__name__}({hex(id(self.parse_func))}'
+    def _signature(self) -> Hashable:
+        return self.__class__.__name__, id(self.parse_func)
 
     def __repr__(self):
         pf = self.parse_func
@@ -3597,8 +3597,8 @@ class UnaryParser(CombinedParser):
         copy_combined_parser_attrs(self, duplicate)
         return duplicate
 
-    def _signature(self) -> str:
-        return f'{self.__class__.__name__}({self.parser.signature()})'
+    def _signature(self) -> Hashable:
+        return self.__class__.__name__, self.parser.signature()
 
 
 class LateBindingUnary(UnaryParser):
@@ -3635,8 +3635,8 @@ class LateBindingUnary(UnaryParser):
             self.sub_parsers = frozenset({self.parser})
         return self.parser
 
-    def _signature(self) -> str:
-        return f'{self.__class__.__name__}({self.parser_name})'
+    def _signature(self) -> Hashable:
+        return self.__class__.__name__, self.parser_name
 
     @property
     def sub_parsers(self) -> FrozenSet[Parser]:
@@ -3928,8 +3928,8 @@ class Counted(UnaryParser):
                 + self.location_info(), BADLY_NESTED_OPTIONAL_PARSER))
         return errors
 
-    def _signature(self) -> str:
-        return f'{self.__class__.__name__}({self.parser.signature()},{str(self.repetitions)})'
+    def _signature(self) -> Hashable:
+        return self.__class__.__name__, self.parser.signature(), self.repetitions
 
 
 ########################################################################
@@ -3966,8 +3966,8 @@ class NaryParser(CombinedParser):
         copy_combined_parser_attrs(self, duplicate)
         return duplicate
 
-    def _signature(self) -> str:
-        return f'{self.__class__.__name__}({','.join(p.signature() for p in self.parsers)})'
+    def _signature(self) -> Hashable:
+        return (self.__class__.__name__,) + tuple(p.signature() for p in self.parsers)
 
 
 def starting_string(parser: Parser) -> str:
@@ -4577,9 +4577,10 @@ class Interleave(ErrorCatchingNary):
                     BAD_REPETITION_COUNT))
         return errors
 
-    def _signature(self) -> str:
-        return f'{self.__class__.__name__}({','.join(p.signature() for p in self.parsers)},' \
-               f'[{','.join(str(rep) for rep in self.repetitions)}])'
+    def _signature(self) -> Hashable:
+        return (self.__class__.__name__,) \
+               + tuple(p.signature() for p in self.parsers) \
+               + tuple(self.repetitions)
 
 ########################################################################
 #
@@ -4769,8 +4770,8 @@ class ContextSensitive(UnaryParser):
         """
         return location if location != location_ else location-1
 
-    def _signature(self) -> str:
-        return hex(id(self))
+    def _signature(self) -> Hashable:
+        return id(self)
 
 
 class Capture(ContextSensitive):
@@ -5268,7 +5269,7 @@ class Forward(UnaryParser):
         self.drop_content = parser.drop_content
         self.pname = ""
 
-    def _signature(self) -> str:
+    def _signature(self) -> Hashable:
         # This code should theoretically never be reached, except when debugging
         signature = self.pname or self.parser.pname
         assert signature
