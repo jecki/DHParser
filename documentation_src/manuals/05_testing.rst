@@ -2124,6 +2124,110 @@ The other "expect"-parsers follow the same pattern::
     subsubsection_expect = section | subsection | subsubsection | s5section | EOF
     s5section_expect = section | subsection | subsubsection | s5section | s6section | EOF
 
+Before we can let our tests run again, we must make sure that the parser
+gets updated with the new grammar. We can do this by running our
+"tst_outline_grammar.py"-script which does this automatically for us.
+Doing so has the additional benefit that we make sure that we haven't
+messed up the grammar whil adding better error-handling-code, for
+otherwise we'd now see errors in when running the grammar-tests. So,
+we run this script from the commant line::
+
+    # python tst_outline_grammar.py
+
+If we let our tests run, now, three errors will be reported instead of two!
+This does not need to surprise us, because so far we have only amended the grammar
+with better code for the error localization, not for the continuation after an
+error has been found. The third error that has newly appeared is "merely" a
+fatal error due to a compilation-stage further down the processing pipeline
+that crashes because of an unrecognised syntax-tree. It is not surprising that
+the syntax-tree for a test source-code with syntax-errors changes if we work
+on the error management. So no need to worry!
+
+What is more important: The message of the error at the location where our
+syntax-error lies now precisely tells us the the parser (or part of the grammar)
+within which the error occurred, namely "section"::
+
+    3:1: Error (1010): &section_expect expected by parser 'section', but »#### BADLY...« found instead!
+
+Let's now continue by adding grammar-code that allows the parser to catch up
+after an error of this type has occurred::
+
+    @document_skip = /(?!.|\n)/
+    @main_skip = ({!main_expect until_heading})
+    @section_skip = ({!section_expect until_heading})
+    @subsection_skip = ({!subsection_expect until_heading})
+    @subsubsection_skip = ({!subsubsection_expect until_heading})
+    @s5section_skip = ({!s5section_expect until_heading})
+
+    until_heading = /#*[^#]*/
+
+As explained in detail in the :ref:`grammar manual <skip_and_resume>`, the
+``@skip``-directive moves the location in the text forward but stays within
+the sequence parser where the error has been raised. Again, as explained
+in the manual, there exist two different methods, how a suitable location
+for error recovery can be searched, either by specifying a regular
+expression that matches the next suitable reentry point
+(see the definition of ``@document_skip`` above) an which must be enclosed
+in slashes "/.../", or by a full fleged parser which eats all characters
+until the next suitable reentry-point and which must be enclosed in round
+bracket "(...)". (Example: ``@main_skip = ({!main_expect until_heading})``)
+When using the latter method, the skip-parser specified may, of course,
+refer to other parsers defined outside the skip-directive itself. In our
+very last example @main_skip thus refers to "main_expect" and "until_heading".
+
+The working-mechanism of the parser ``{!main_expect until_heading}`` is
+to continue to move forward until the next heading, unless the heading
+reached is matched by "main_exepct" (and likewise for the skip-parser of
+section, subsection, ...)
+
+Again, we first update the parser by running the "tst...grammar.py"-skript::
+
+    # python tst_outline_grammar.py
+
+If we now run our unit-test-skript, we find that there is only one
+error left. In particular, no "stopped before end"-error is reported,
+any more. The error-message left, reads:
+
+    3:1: Error (1010): &section_expect expected by parser 'section', but »#### BADLY...« found instead!
+
+Still, the second assertion in our test code fails (as expected),
+because the error message and code have not yet been customized.
+In order to do so, we have to add yet another couple of statements
+to our grammar::
+
+    @document_error = '', "End of file expected!"
+    @main_error = /(?=#)/, "2010:Bad nesting of headings"
+    @section_error = /(?=#)/, "2010:Bad nesting of headings"
+    @subsection_error = /(?=#)/, "2010:Bad nesting of headings"
+    @subsubsection_error = /(?=#)/, "2010:Bad nesting of headings"
+    @s5section_error = /(?=#)/, "2010:Bad nesting of headings"
+
+As explained in the :ref:`grammar manual <custom_error_messages>`,
+customized error messages are attached to the parser where an error
+may occurr and they consist of a regular expression (optional) and an
+error message that will be picked instead of DHParser's stock error
+when the regular expression matches at the location of the error
+in the source code.
+
+Algthough, not shown here, several error messages (with different regular
+expressions) can be defined for one and the same parser. An empty
+string instead of the regular expression indicates that this
+message will be picked if none of the regular expression matches.
+
+An error code separated by a colon can be placed right before
+the error message. (If no code is speficied, the code is defaults
+to 1000). Here, we have decided to use the code 2010.
+
+Once these last changes are in placed, our test does not fail any more,
+because the only remaining error message is::
+
+    3:1: Error (2010): Bad nesting of headings
+
+But that is exactly the error message we wanted to show to the
+user in case the nesting of the headings was wrong. So our unit-test
+for this error message succeeds correctly.
+
+
 
 
 .. _CommonMark: https://spec.commonmark.org/0.30/#emphasis-and-strong-emphasis

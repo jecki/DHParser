@@ -1432,6 +1432,8 @@ only after the grammar has reached a certain amount of maturity, because
 changing the grammar ofter requires re-adjusting customized error messages
 and resume-clauses as well, which can become tedious.
 
+.. _custom_error_messages:
+
 Custom error messages
 ^^^^^^^^^^^^^^^^^^^^^
 

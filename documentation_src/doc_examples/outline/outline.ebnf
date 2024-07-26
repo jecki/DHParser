@@ -29,6 +29,21 @@ subsection_expect = section | subsection | subsubsection | EOF
 subsubsection_expect = section | subsection | subsubsection | s5section | EOF
 s5section_expect = section | subsection | subsubsection | s5section | s6section | EOF
 
+@document_skip = /(?!.|\n)/
+@main_skip = ({!main_expect until_heading})
+@section_skip = ({!section_expect until_heading})
+@subsection_skip = ({!subsection_expect until_heading})
+@subsubsection_skip = ({!subsubsection_expect until_heading})
+@s5section_skip = ({!s5section_expect until_heading})
+
+until_heading = /#*[^#]*/
+
+@document_error = '', "End of file expected!"
+@main_error = /(?=#)/, "2010:Bad nesting of headings"
+@section_error = /(?=#)/, "2010:Bad nesting of headings"
+@subsection_error = /(?=#)/, "2010:Bad nesting of headings"
+@subsubsection_error = /(?=#)/, "2010:Bad nesting of headings"
+@s5section_error = /(?=#)/, "2010:Bad nesting of headings"
 
 #: blocks
 
