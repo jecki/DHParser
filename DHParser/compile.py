@@ -52,7 +52,7 @@ from DHParser.error import is_error, is_fatal, Error, FATAL, \
     TREE_PROCESSING_CRASH, COMPILER_CRASH, AST_TRANSFORM_CRASH, has_errors
 from DHParser.log import log_parsing_history, log_ST, is_logging
 from DHParser.toolkit import load_if_file, is_filename, re, TypeAlias, \
-    deprecated
+    deprecated, DHPARSER_FILES
 
 
 __all__ = ('CompilerError',
@@ -530,6 +530,9 @@ def filter_stacktrace(stacktrace: List[str]) -> List[str]:
     return stacktrace[n:]
 
 
+RX_STACKTRACE_FNAME = re.compile(r' *File "([^"]*)"')
+
+
 def process_tree(tp: CompilerFunc, tree: RootNode) -> Any:
     """Process a tree with the tree-processor `tp` only if no fatal error
     has occurred so far. Catch any Python-exceptions in case
@@ -562,10 +565,15 @@ def process_tree(tp: CompilerFunc, tree: RootNode) -> Any:
                 node = (getattr(tp, 'path', [tree]) or [tree])[-1]
                 import traceback
                 st = traceback.format_list(traceback.extract_tb(e.__traceback__))
-                mini_trace = st[-1][:st[-1].rstrip().rfind('\n')].replace('\n', '\\')
+                for i in range(1, len(st)):  # find last call in client-code
+                    m = RX_STACKTRACE_FNAME.match(st[-i])
+                    if m and os.path.basename(m.group(1)) not in DHPARSER_FILES:
+                        x = m.group(1)
+                        break
+                mini_trace = st[-i][:st[-i].rstrip().rfind('\n')].replace('\n', '\\n')
                 tree.new_error(
                     node, "Tree-processing failed, most likely, due to errors earlier in "
-                          f"the processing pipeline: {e}  {mini_trace}", TREE_PROCESSING_CRASH)
+                          f"the processing pipeline: {repr(e)}  {mini_trace}", TREE_PROCESSING_CRASH)
                           # "Crash Message: %s: %s\n%s" % (e.__class__.__name__, str(e), trace),
                           # TREE_PROCESSING_CRASH)
         else:

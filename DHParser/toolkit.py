@@ -85,6 +85,7 @@ from DHParser.stringview import StringView
 
 __all__ = ('re',
            'cython_optimized',
+           'DHPARSER_FILES',
            'identify_python',
            'identity',
            # 'gen_id',
@@ -172,6 +173,12 @@ __all__ = ('re',
 # miscellaneous (generic)
 #
 #######################################################################
+
+DHPARSER_FILES = {'dsl.py', 'log.py', 'parse.py', 'server.py', 'testing.py', 'transform.py',
+                  'compile.py', 'ebnf.py', 'lsp.py', 'pipeline.py', 'singledispatch_shim.py',
+                  'toolkit.py', 'validate.py', 'configuration.py', 'error.py', 'nodetree.py',
+                  'preprocess.py', 'stringview.py', 'trace.py', 'versionnumber.py'}
+
 
 def identify_python() -> str:
     """Returns a reasonable identification string for the python interpreter,

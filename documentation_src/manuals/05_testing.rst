@@ -1966,7 +1966,163 @@ Therefore, we will illustrate how conventional unit-testing works.
 Let's assume that we want to test error-localization (a common
 pain-point of parser-building) and error-reporting in case
 something goes wrong. The glue code for a conventional unit-test
-looks like this::
+for the `pytest`_-Framework (not for the unittest-module from
+the Python standard library) looks like this::
+
+    import outlineParser
+
+    BAD_NESTING_EXAMPLE = """# Main Heading
+    ## Section 1
+    #### BADLY NESTED SubSubSection 1.1.1
+    ## Section 2"""
+
+    class TestErrorReporting:
+        def test_bad_nesting(self):
+            html, errors = outlineParser.compile_src(BAD_NESTING_EXAMPLE)
+            for e in errors:  print(e)
+
+In case you do not have `pytest`_ installed you can also employ DHParser's
+micro testing framework by adding the following code at the end of the test-script::
+
+    if __name__ == "__main__":
+        from DHParser.testing import runner
+        runner("", globals())
+
+Now, the tests can be run simply by calling the script. However, I strongly
+recommend using `pytest`_, because it is more flexible and more powerful.
+
+The test-example consists of a badly nested outline-structure where a heading
+of the 4th level erroneously follows up on a heding of the 2nd level.
+Our test-code does not yet include any ``assert``-statements that actually test
+anything. Instead it simply outputs the results that we later want to test.
+This is typical pattern when developing unit-test. You first write a "test"
+that merely output's the results of the function that you want to test.
+Then, looking at those results, you determine where the error lies and think
+of suitable ``assert``-statements that could test for the error.
+
+Now, let's see what this script prints on the screen and then we will think
+about where the errors-messages could be improved. The output of the script is::
+
+    3:1: Error (1010): EOF expected by parser 'document', but »#### BADLY...« found instead!
+    3:4: Error (1040): Parser "document" stopped before end, at: »# BADLY NE...« Terminating parser.
+
+Now, while the location of the first error is correct, the error message
+"end of file expected" is confusing, because clearly (for a human observer)
+the error lies in a mistakenly specified heading level, not in an abrupt ending
+of the document. Also, it would be preferable if the parser would just skip
+the erroneous passage and continue parsing, rather than stopping shortly
+after the error occurred.
+
+The meaning of the error codes, e.g. 1010, 1040, ...,
+can by the way, be looked up in the :py:mod:`~error`-module. Codes between
+1000 and 9999 indicate "normal" errors while codes above 10000 indicate "fatal"
+errors and codes of 999 and below mean warnings. The codes between 1000 and 2000
+are reserved for DHParser-errors and should not be used for custom error codes
+(see below).
+
+Now, let's first think about what kind of error report we would like to receive
+in such a case as that of our example. Then, again following the idea of
+test-driven-development, we will first implement a test, i.e. the missing
+``assert``-statements in the code, above and check that this test duly fails.
+Finally, we implement the desired form of error-reporting in our parser or,
+rather by exploiting the error-specification facilities of the DHParser,
+in our grammar.
+
+So, what we would like to see would probably be single, concrete error
+message for bad nesting with a specific error code that allows us to uniquely
+this type of error, e.g. ::
+
+    3:1: Error(2010): Bad nesting of headings
+
+Here, we have (arbitrarily) assigned the error code 2010 for the error that
+indicates a bad nesting of headings. The second error from above
+("stopped before end") should not appear at all. So let's adjust our
+test-code, accordingly::
+
+    class TestErrorReporting:
+        def test_bad_nesting(self):
+            html, errors = outlineParser.compile_src(BAD_NESTING_EXAMPLE)
+            assert len(errors) == 1, '\n'.join(str(e) for e in errors)
+            assert errors[0].code == 2010
+
+If we run the test-code, now, it will fail with the first assertion, already.
+So let's now amend our grammar a little bit. Firstly, by using DHParser's
+``@..._skip`` directive to instruct the parser how to continue after some
+error occurred within a particular sub-parser (see:
+:ref:`skip directive <skip_and_resume>` in the grammar-manual). This
+requires a bit of preparation. Because in order to use the skip-directive
+we first need to make sure that we catch bad nestings not only at the right
+location in the source code (which already happed) but also that we pick
+the error up at the particular point in our grammar, i.e. the particular
+sub-parser(s) that does not (or do not) match, because of the error.
+
+Admittedly, this requires a bit of the black-magic art of designing
+fail-tolerant parsers. But what is meant should easily become clear when
+presenting the solution to this challenge. First we need to adjust the
+parsers for the different levels of the outline, so that they "catch"
+any nesting error. For this, we can use the
+:ref:`mandatory-operator "§" <mandatory_items>` that
+instructs the parser to raise an error (an not just return a non-match)
+when the grammatical structure-definitions following this operator do
+not match::
+
+    main  = [WS] `#` !`#` ~ heading [WS blocks] { WS (§&main_expect) section }
+    section  = `##` !`#` ~ heading [WS blocks] { WS (§&section_expect) subsection }
+    subsection  = `###` !`#` ~ heading [WS blocks] { WS (§&subsection_expect) subsubsection }
+    subsubsection  = `####` !`#` ~ heading [WS blocks] { WS (§&subsubsection_expect) s5section }
+    s5section  = `#####` !`#` ~ heading [WS blocks] { WS (§&s5section_expect) s6section }
+    s6section  = `######` !`#` ~ heading [WS blocks]
+
+Here, the mandatory operator "§" is followed by a lookahead parser "&..." (defined below) that
+specifies for each heading what kind of items can follow under that heading. Let's just
+think this through for the subsection-level. Once we are inside a subsection-environment what
+can follow it either an other subsection, or a subsubsection (one, but only one level down) or
+a section or, in fact, any of the upper levels (because the end of a lower level can be the
+end of any of the upper level, not just one level above - note this asymmetrie of the levels
+above that can follow in comparison with the levels below that can follow). And, of course,
+the end of file may also always follow. So what we have to consider are the following
+structures:
+
+Case 1 (one level down)::
+
+    # main
+    ## section
+    ### SUBSECTION
+    #### subsubsection
+
+Case 2 (same level)::
+
+    # main
+    ## section
+    ### SUBSECTION
+    ### subsection
+
+Case 3 (one level up)::
+
+    # main
+    ## section  1
+    ### SUBSECTION
+    ## section 2
+
+CASE 4 (two levels up and, in this case, also end of file)::
+
+    # main
+    ## section
+    ### SUBSECTION
+
+All these cases and only these cases are allowed. So for our lookahead-parser
+"subsection_expect" we need to find a parser that catches these and only these
+cases. But this is simple::
+
+    subsection_expect = section | subsection | subsubsection | EOF
+
+The other "expect"-parsers follow the same pattern::
+
+    main_expect = section | EOF
+    section_expect = section | subsection | EOF
+    subsection_expect = section | subsection | subsubsection | EOF
+    subsubsection_expect = section | subsection | subsubsection | s5section | EOF
+    s5section_expect = section | subsection | subsubsection | s5section | s6section | EOF
 
 
 
@@ -1974,3 +2130,4 @@ looks like this::
 .. _GROBID: https://github.com/kermitt2/grobid
 .. _Zacherl 2022: http://www.kit.gwi.uni-muenchen.de/?band=82908&v=2#subchapter:5-2-abbildung-von-semi-strukturierten-texten 
 .. _sxml_spec: https://okmij.org/ftp/papers/SXML-paper.pdf
+.. _pytest: https://docs.pytest.org/en/stable/

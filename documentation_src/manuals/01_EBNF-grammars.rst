@@ -1752,6 +1752,8 @@ forgotten. So, to be absolutely sure, one would have to consider
 different follow-up sequences, say empty lines, keywords that mark
 new parts of the document and the like.
 
+.. _skip_and_resume:
+
 Skip and Resume
 ^^^^^^^^^^^^^^^
 

@@ -200,7 +200,7 @@ def run_pipeline(junctions: Set[Junction],
                         disposables.add(s)
                 if tree is None:
                     results[t] = None
-                    errata[t] = []
+                    errata[t] = errata[s]
                 else:
                     if not isinstance(tree, RootNode):
                         raise ValueError(f'Object in stage "{s}" is not a tree but a {type(tree)}'

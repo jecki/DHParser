@@ -8,7 +8,7 @@
                 CHARS, TEXT, ESCAPED, inner_emph, inner_bold, blocks
 @ drop        = WS, EOF, GAP, backticked, whitespace
 
-#:  Outline
+#: outline
 
 document = main [WS] §EOF
 
@@ -29,6 +29,22 @@ subsection_expect = section | subsection | subsubsection | EOF
 subsubsection_expect = section | subsection | subsubsection | s5section | EOF
 s5section_expect = section | subsection | subsubsection | s5section | s6section | EOF
 
+@document_error = '', "End of file expected!"
+@main_error = /(?=#)/, "2010:Bad nesting of headings"
+@section_error = /(?=#)/, "2010:Bad nesting of headings"
+@subsection_error = /(?=#)/, "2010:Bad nesting of headings"
+@subsubsection_error = /(?=#)/, "2010:Bad nesting of headings"
+@s5section_error = /(?=#)/, "2010:Bad nesting of headings"
+
+@document_skip = /(?!.|\n)/
+@main_skip = ({!main_expect until_heading})
+@section_skip = ({!section_expect until_heading})
+@subsection_skip = ({!subsection_expect until_heading})
+@subsubsection_skip = ({!subsubsection_expect until_heading})
+@s5section_skip = ({!s5section_expect until_heading})
+
+until_heading = /#*[^#]*/
+
 
 #: blocks
 
@@ -39,6 +55,7 @@ markup    = [indent] (text | bold | emphasis) { [LLF] (text | bold | emphasis) }
 indent    = /[ \t]+(?=[^\s])/
 text      = (TEXT | ESCAPED) { [LLF] (TEXT | ESCAPED) }
 
+
 #: inline-elements
 
 emphasis  = `*` !`*` §inner_emph `*`
@@ -48,6 +65,7 @@ bold      = `**` §inner_bold `**`
 
 inner_emph = [~ &/[*_]/] (text | bold) { [LLF] (text | bold) } [<-&/[*_]/ ~]
 inner_bold = [~ &/[*_]/] (text | emphasis) { [LLF] (text | emphasis) } [<-&/[*_]/ ~]
+
 
 #:  Regular Expressions
 
@@ -62,4 +80,4 @@ LF        = /[ \t]*\n[ \t]*(?!\n)/  #  single line-feed
 PARSEP    = ~/\n/ ~/\n/
 WS        = GAP                     # same as GAP, but will be dropped
 GAP       = /(?:[ \t]*\n)+/    # any ws at line-end and all following empty lines
-EOF       =  !/./  # no more characters ahead, end of file reached
+EOF       =  !/.|\n/  # no more characters ahead, end of file reached

@@ -31,7 +31,7 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from functools import partial
 
-from DHParser.configuration import set_config_value
+from DHParser.configuration import get_config_value, set_config_value
 from DHParser.dsl import grammar_provider
 from DHParser.compile import compile_source
 from DHParser.preprocess import make_token, tokenized_to_original_mapping, source_map, \
@@ -144,24 +144,29 @@ def preprocess_comments(src: str, src_name: str) -> PreprocessorResult:
 
 
 class TestTokenParsing:
-    ebnf = r"""
-        @ tokens     = BEGIN_INDENT, END_INDENT
-        @ whitespace = /[ \t]*/ 
-        block       = { line | indentBlock }+
-        line        = ~/[^\x1b\x1c\x1d\n]*\n/
-        indentBlock = BEGIN_INDENT block END_INDENT
-        """
-    set_config_value('max_parser_dropouts', 3)
-    grammar = grammar_provider(ebnf)()
-    code = '\n' + normalize_docstring("""
-        def func(x, y):
-            if x > 0:         # a comment
-                if y > 0:
-                    print(x)  # another comment
-                    print(y)
-        """) + '\n'
-    tokenized, _ = tokenize_indentation(code)
-    srcmap = tokenized_to_original_mapping(tokenized, code)
+    def setup_class(self):
+        self.ebnf = r"""
+            @ tokens     = BEGIN_INDENT, END_INDENT
+            @ whitespace = /[ \t]*/ 
+            block       = { line | indentBlock }+
+            line        = ~/[^\x1b\x1c\x1d\n]*\n/
+            indentBlock = BEGIN_INDENT block END_INDENT
+            """
+        self.save_max_parser_dropouts = get_config_value('max_parser_dropouts')
+        set_config_value('max_parser_dropouts', 3)
+        self.grammar = grammar_provider(self.ebnf)()
+        self.code = '\n' + normalize_docstring("""
+            def func(x, y):
+                if x > 0:         # a comment
+                    if y > 0:
+                        print(x)  # another comment
+                        print(y)
+            """) + '\n'
+        self.tokenized, _ = tokenize_indentation(self.code)
+        self.srcmap = tokenized_to_original_mapping(self.tokenized, self.code)
+
+    def teardown_class(self):
+        set_config_value('max_parser_dropouts', self.save_max_parser_dropouts)
 
     def verify_mapping(self, teststr, orig_text, preprocessed_text, mapping):
         mapped_pos = preprocessed_text.find(teststr)

@@ -113,24 +113,18 @@ class outlineGrammar(Grammar):
     section = Forward()
     subsection = Forward()
     subsubsection = Forward()
-    source_hash__ = "890252b79760daa7513f0584cfe58d1e"
+    source_hash__ = "1733f231ee889a6a76d4f45d0eb7bfd6"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:L$|TEXT$|blocks$|inner_emph$|EOF$|GAP$|inner_bold$|LLF$|CHARS$|ESCAPED$|WS$|LINE$)')
+    disposable__ = re.compile('(?:LLF$|WS$|GAP$|inner_emph$|LINE$|ESCAPED$|L$|EOF$|inner_bold$|CHARS$|TEXT$|blocks$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
-    error_messages__ = {'document': [(re.compile(r'(?=)'), "End of file expected!")],
-                        'main': [(re.compile(r'(?=#)'), "2010:Bad nesting of headings")],
-                        'section': [(re.compile(r'(?=#)'), "2010:Bad nesting of headings")],
-                        'subsection': [(re.compile(r'(?=#)'), "2010:Bad nesting of headings")],
-                        'subsubsection': [(re.compile(r'(?=#)'), "2010:Bad nesting of headings")],
-                        's5section': [(re.compile(r'(?=#)'), "2010:Bad nesting of headings")]}
     COMMENT__ = r''
     comment_rx__ = RX_NEVER_MATCH
     WHITESPACE__ = r'[ \t]*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    EOF = Drop(NegativeLookahead(RegExp('.|\\n')))
+    EOF = Drop(NegativeLookahead(RegExp('.')))
     GAP = Drop(RegExp('(?:[ \\t]*\\n)+'))
     WS = Drop(Synonym(GAP))
     PARSEP = Series(dwsp__, RegExp('\\n'), dwsp__, RegExp('\\n'))
@@ -144,37 +138,25 @@ class outlineGrammar(Grammar):
     text = Series(Alternative(TEXT, ESCAPED), ZeroOrMore(Series(Option(LLF), Alternative(TEXT, ESCAPED))))
     inner_bold = Series(Option(Series(dwsp__, Lookahead(RegExp('[*_]')))), Alternative(text, emphasis), ZeroOrMore(Series(Option(LLF), Alternative(text, emphasis))), Option(Series(Lookbehind(RegExp('[*_]')), dwsp__)))
     bold = Alternative(Series(Drop(Text("**")), inner_bold, Drop(Text("**")), mandatory=1), Series(Drop(Text("__")), inner_bold, Drop(Text("__")), mandatory=1))
-    main_expect = Alternative(section, EOF)
+    is_heading = RegExp('##?#?#?#?#?(?!#)')
     heading = Synonym(LINE)
     inner_emph = Series(Option(Series(dwsp__, Lookahead(RegExp('[*_]')))), Alternative(text, bold), ZeroOrMore(Series(Option(LLF), Alternative(text, bold))), Option(Series(Lookbehind(RegExp('[*_]')), dwsp__)))
     indent = RegExp('[ \\t]+(?=[^\\s])')
     markup = Series(Option(indent), Alternative(text, bold, emphasis), ZeroOrMore(Series(Option(LLF), Alternative(text, bold, emphasis))))
-    is_heading = RegExp('##?#?#?#?#?(?!#)')
     blocks = Series(NegativeLookahead(is_heading), markup, ZeroOrMore(Series(GAP, NegativeLookahead(is_heading), markup)))
-    until_heading = RegExp('#*[^#]*')
-    main = Series(Option(WS), Drop(Text("#")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, Series(Lookahead(main_expect), mandatory=0), section)))
+    s6section = Series(Drop(Text("######")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)))
+    s5section_expect = Alternative(section, subsection, subsubsection, s5section, s6section, EOF)
     subsubsection_expect = Alternative(section, subsection, subsubsection, s5section, EOF)
     subsection_expect = Alternative(section, subsection, subsubsection, EOF)
     section_expect = Alternative(section, subsection, EOF)
-    document = Series(main, Option(WS), EOF, mandatory=2)
-    s6section = Series(Drop(Text("######")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)))
-    s5section_expect = Alternative(section, subsection, subsubsection, s5section, s6section, EOF)
-    s5section_skip_1__ = ZeroOrMore(Series(NegativeLookahead(s5section_expect), until_heading))
-    subsubsection_skip_1__ = ZeroOrMore(Series(NegativeLookahead(subsubsection_expect), until_heading))
-    subsection_skip_1__ = ZeroOrMore(Series(NegativeLookahead(subsection_expect), until_heading))
-    section_skip_1__ = ZeroOrMore(Series(NegativeLookahead(section_expect), until_heading))
+    main_expect = Alternative(section, EOF)
+    main = Series(Option(WS), Drop(Text("#")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, Series(Lookahead(main_expect), mandatory=0), section)))
     emphasis.set(Alternative(Series(Drop(Text("*")), NegativeLookahead(Drop(Text("*"))), inner_emph, Drop(Text("*")), mandatory=2), Series(Drop(Text("_")), NegativeLookahead(Drop(Text("_"))), inner_emph, Drop(Text("_")), mandatory=2)))
     s5section.set(Series(Drop(Text("#####")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, Series(Lookahead(s5section_expect), mandatory=0), s6section))))
     subsubsection.set(Series(Drop(Text("####")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, Series(Lookahead(subsubsection_expect), mandatory=0), s5section))))
     subsection.set(Series(Drop(Text("###")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, Series(Lookahead(subsection_expect), mandatory=0), subsubsection))))
     section.set(Series(Drop(Text("##")), NegativeLookahead(Drop(Text("#"))), dwsp__, heading, Option(Series(WS, blocks)), ZeroOrMore(Series(WS, Series(Lookahead(section_expect), mandatory=0), subsection))))
-    main_skip_1__ = ZeroOrMore(Series(NegativeLookahead(main_expect), until_heading))
-    skip_rules__ = {'document': [re.compile(r'(?!.|\n)')],
-                    'main': [main_skip_1__],
-                    'section': [section_skip_1__],
-                    'subsection': [subsection_skip_1__],
-                    'subsubsection': [subsubsection_skip_1__],
-                    's5section': [s5section_skip_1__]}
+    document = Series(main, Option(WS), EOF, mandatory=2)
     root__ = document
         
 parsing: PseudoJunction = create_parser_junction(outlineGrammar)
@@ -373,7 +355,7 @@ serializations = expand_table({'DOM': ['sxpr'], '*': ['sxpr']})
 
 #######################################################################
 
-def compile_src(source: str, target: str = "outline".lower()) -> Tuple[Any, List[Error]]:
+def compile_src(source: str, target: str = "html") -> Tuple[Any, List[Error]]:
     """Compiles the source to a single targte and returns the result of the compilation
     as well as a (possibly empty) list or errors or warnings that have occurred in the
     process.
