@@ -1171,7 +1171,7 @@ def determine_eq_classes(parsers: Collection[Parser]):
     def assign_eq_class(p: Parser) -> bool:
         nonlocal eq_classes
         signature = p.signature()
-        p.eq_class = eq_classes.setdefault(signature, id(p))
+        eq_classes.setdefault(signature, id(p))
         return False
 
     for p in parsers:
@@ -2460,7 +2460,7 @@ class Unparameterized(NoMemoizationParser):
     parser are always functionally equivalent."""
 
     def _signature(self) -> Hashable:
-        return self.__class__.__name__,
+        return self.__class__.__name__
 
 
 class Always(Unparameterized):
@@ -2997,17 +2997,11 @@ class CombinedParser(Parser):
         super().__init__()
         self._return_value = self._return_value_flatten
         self._return_values = self._return_values_flatten
-        self._signature_cache = None
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__()
         copy_combined_parser_attrs(self, duplicate)
         return duplicate
-
-    def signature(self) -> Hashable:
-        if not self._signature_cache:
-            self._signature_cache = super().signature()
-        return self._signature_cache
 
     def _return_value_no_optimization(self, node: Optional[Node]) -> Node:
         # assert node is None or isinstance(node, Node)
@@ -3967,7 +3961,7 @@ class NaryParser(CombinedParser):
         return duplicate
 
     def _signature(self) -> Hashable:
-        return (self.__class__.__name__,) + tuple(p.signature() for p in self.parsers)
+        return (self.__class__.__name__, *(p.signature() for p in self.parsers))
 
 
 def starting_string(parser: Parser) -> str:
@@ -4578,9 +4572,8 @@ class Interleave(ErrorCatchingNary):
         return errors
 
     def _signature(self) -> Hashable:
-        return (self.__class__.__name__,) \
-               + tuple(p.signature() for p in self.parsers) \
-               + tuple(self.repetitions)
+        return (self.__class__.__name__, *(p.signature() for p in self.parsers),*self.repetitions)
+
 
 ########################################################################
 #

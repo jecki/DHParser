@@ -8,6 +8,7 @@
 # RE_LEADOUT either within this grammar definition or in the Grammar-object
 # changing the `text`-field of the respective parser objects.
 
+@ optimizations = all
 @ comment    = /(?!#x[A-Fa-f0-9])#.*(?:\n|$)|\/\*(?:.|\n)*?\*\/|\(\*(?:.|\n)*?\*\)/
     # comments can be either C-Style: /* ... */
     # or pascal/modula/oberon-style: (* ... *)
