@@ -1,4 +1,4 @@
-DHParser Version 1.7.3
+DHParser Version 1.8.0
 ......................
 
 - optional speed optimizations (experimental!) that work by compiling

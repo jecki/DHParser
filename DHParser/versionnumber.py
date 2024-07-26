@@ -18,6 +18,6 @@
 from __future__ import annotations
 
 __all__ = ('__version__', '__version_info__')
-__version__ = '1.7.3'
+__version__ = '1.8.0'
 __version_info__ = tuple(int(part) for part in __version__.split('.'))
 
