@@ -546,13 +546,6 @@ class Parser:
                 ``pname``, otherwise it is the name of the parser's type
                 prefixed with a colon ":".
 
-    :ivar eq_class: A unique number for the class of functionally
-                equivalent parsers that this parser belongs to.
-                (This serves the purpose of optimizing memoization,
-                by tying memoization dictionaries to the classes
-                of functionally equivalent parsers, rather than to
-                the individual parsers themselves.)
-
     :ivar visited:  Mapping of places this parser has already been to
                 during the current parsing process onto the results the
                 parser returned at the respective place. This dictionary
@@ -599,7 +592,6 @@ class Parser:
         self.node_name = self.ptype   # type: str   # can be changed later
         self.disposable = True        # type: bool
         self.drop_content = False     # type: bool
-        self.eq_class = id(self)      # type: int
         self._sub_parsers = frozenset()  # type: AbstractSet[Parser]
         # this indirection is required for Cython-compatibility
         self._parse_proxy = self._parse  # type: ParseFunc
@@ -654,18 +646,13 @@ class Parser:
         """Returns the parser's name if it has a name and ``self.__repr__()`` otherwise."""
         return self.pname if self.pname else self.__repr__()
 
-    def gen_memoization_dict(self) -> dict:
-        """Create and return an empty memoization dictionary. This allows to customize
-        memoization dictionaries. The default is to just return a new plain dictionary."""
-        return dict()
-
     def reset(self):
         """Initializes or resets any parser variables. If overwritten,
         the ``reset()``-method of the parent class must be called from the
         ``reset()``-method of the derived class."""
         # global _GRAMMAR_PLACEHOLDER
         # grammar = self._grammar
-        self.visited: MemoizationDict = self._grammar.get_memoization_dict__(self)
+        self.visited: MemoizationDict = dict()
 
     @cython.locals(next_location=cython.int, location=cython.int, gap=cython.int, i=cython.int)
     def _handle_parsing_error(self, pe: ParserError, location: cython.int) -> ParsingResult:
@@ -1149,9 +1136,6 @@ class NoMemoizationParser(LeafParser):
 
         return node, next_location
 
-    def gen_memoization_dict(self) -> dict:
-        return self.visited  # BlackHoleDict()
-
 
 def copy_parser_base_attrs(src: Parser, duplicate: Parser):
     """Duplicates all attributes of the Parser-class from ``src`` to ``duplicate``."""
@@ -1159,23 +1143,6 @@ def copy_parser_base_attrs(src: Parser, duplicate: Parser):
     duplicate.disposable = src.disposable
     duplicate.drop_content = src.drop_content
     duplicate.node_name = src.node_name
-    duplicate.eq_class = src.eq_class
-
-
-def determine_eq_classes(parsers: Collection[Parser]):
-    """Sorts the parsers originating in root (imperfectly) into equivalence
-    classes and assigns the respective class identifier to the
-    ``eq_class``-field of each parser."""
-    eq_classes: Dict[Hashable, int] = {}
-
-    def assign_eq_class(p: Parser) -> bool:
-        nonlocal eq_classes
-        signature = p.signature()
-        eq_classes.setdefault(signature, id(p))
-        return False
-
-    for p in parsers:
-        assign_eq_class(p)
 
 
 def Drop(parser: Parser) -> Parser:
@@ -1214,7 +1181,6 @@ def get_parser_placeholder() -> Parser:
         PARSER_PLACEHOLDER.disposable = False
         PARSER_PLACEHOLDER.drop_content = False
         PARSER_PLACEHOLDER.node_name = ':PLACEHOLDER__'
-        PARSER_PLACEHOLDER.eq_class = id(PARSER_PLACEHOLDER)
         PARSER_PLACEHOLDER.sub_parsers = frozenset()
     return cast(Parser, PARSER_PLACEHOLDER)
 
@@ -1849,7 +1815,6 @@ class Grammar:
             parser = self[name]  # deep-copy and initialize with grammar-object (see __getitem__)
             if parser not in root_connected:  self.unconnected_parsers__.add(parser)
 
-        determine_eq_classes(self.all_parsers__)
         for p in self.all_parsers__:  reset_parser(p)
         if not root:  TreeReduction(self.all_parsers__, self.early_tree_reduction__)
 
@@ -1906,8 +1871,6 @@ class Grammar:
         self.rollback__: List[Tuple[int, Callable]] = []
         self.last_rb__loc__: int = -2
         self.suspend_memoization__: bool = False
-        # memoization dictionaries, one per parser equivalence class
-        self.memoization__: Dict[int, MemoizationDict] = {}
         # support for call stack tracing
         self.call_stack__: List[CallItem] = []  # name, location
         # snapshots of call stacks
@@ -1932,15 +1895,6 @@ class Grammar:
         if not self._reversed__:
             self._reversed__ = StringView(self.document__.get_text()[::-1])
         return self._reversed__
-
-
-    def get_memoization_dict__(self, parser: Parser) -> MemoizationDict:
-        """Returns the memoization dictionary for the parser's equivalence class.
-        """
-        try:
-            return self.memoization__.setdefault(parser.eq_class, parser.gen_memoization_dict())
-        except AttributeError:  # happens when grammar object is the _GRAMMAR_PLACEHOLDER
-            return dict()
 
 
     def __call__(self,
@@ -5116,7 +5070,6 @@ class Forward(UnaryParser):
         duplicate.disposable = self.disposable
         duplicate.node_name = self.node_name  # Forward-Parser should not have a tag name!
         duplicate.drop_content = parser.drop_content
-        # duplicate.eq_class = self.eq_class
         duplicate.sub_parsers = frozenset({parser})
         return duplicate
 
