@@ -18,6 +18,7 @@ cdef class EBNFDirectives:
     cdef public int reduction
     cdef public object _super_ws
     cdef public object optimizations
+    cdef public str flavor
 
 
 # cdef class EBNFCompiler:
