@@ -977,49 +977,6 @@ class Parser:
                 return True
         return False
 
-    def _signature(self) -> Hashable:
-        """This method should be implemented by any non-abstract descendant
-        parser class. The implementation must make sure that all instances
-        that have the same signature always yield the same parsing result
-        for the same piece of text.
-
-        It does not hurt, but only wastes an opportunity for optimization,
-        if two functionally equivalent parsers provide different signatures.
-        It is a serious mistake, though, if two functionally non-equivalent
-        parsers have the same signature.
-
-        By returning ``id(self)`` this mistake will become impossible, but
-        it will turn signature-based memoization-optimization off for
-        this parser.
-        """
-        return id(self)
-
-    def signature(self) -> Hashable:
-        """Returns a value that is identical for two different
-        parser objects if they are functionally equivalent, i.e.
-        yield the same return value for the same call parameters::
-
-            >>> a = Text('[')
-            >>> b = Text('[')
-            >>> c = Text(']')
-            >>> a is b
-            False
-            >>> a.signature() == b.signature()
-            True
-            >>> a.signature() == c.signature()
-            False
-
-        The purpose of parser-signatures is to optimize better
-        memoization in cases of code repetition in the grammar.
-
-        DO NOT OVERRIDE THIS METHOD. In order to implement a
-        signature function, the protected method ``_signature``
-        should be overridden instead.
-        """
-        # hex-id is added to ensure uniqueness (for macro-names, in particular)
-        return f'{self.pname}_{hex(id(self))}' if self.pname else self._signature()
-
-
     def static_error(self, msg: str, code: ErrorCode) -> 'AnalysisError':
         return AnalysisError(self.symbol, self, Error(msg, 0, code))
 
@@ -2412,9 +2369,7 @@ class Unparameterized(NoMemoizationParser):
     """Unparameterized parsers do not receive any parameters on instantiation.
     As a consequence, different instances of the same unparameterized
     parser are always functionally equivalent."""
-
-    def _signature(self) -> Hashable:
-        return self.__class__.__name__
+    pass
 
 
 class Always(Unparameterized):
@@ -2617,9 +2572,6 @@ class Text(NoMemoizationParser):
     def is_optional(self) -> Optional[bool]:
         return not self.text
 
-    def _signature(self) -> Hashable:
-        return self.__class__.__name__, self.text
-
 
 class IgnoreCase(Text):
     """
@@ -2742,9 +2694,6 @@ class RegExp(LeafParser):
         if not self.regexp.pattern:
             return True
         return super().is_optional()
-
-    def _signature(self) -> Hashable:
-        return self.__class__.__name__, self.regexp.pattern
 
     def is_lookahead(self) -> bool:
         """Just a heuristic for the simplemost cases!"""
@@ -3395,9 +3344,6 @@ class SmartRE(CombinedParser):  # TODO: turn this into a CombinedParser
             return True
         return super().is_optional()
 
-    def _signature(self) -> Hashable:
-        return self.__class__.__name__, self.regexp.pattern
-
     def is_lookahead(self) -> bool:
         r"""Just a heuristic test - not perfect::
 
@@ -3494,9 +3440,6 @@ class CustomParser(CombinedParser):
                 node.name = save_name
             return node, location + node.strlen()
 
-    def _signature(self) -> Hashable:
-        return self.__class__.__name__, id(self.parse_func)
-
     def __repr__(self):
         pf = self.parse_func
         pfname = getattr(pf, '__name__', getattr(pf.__class__, '__name__', str(pf)))
@@ -3545,9 +3488,6 @@ class UnaryParser(CombinedParser):
         copy_combined_parser_attrs(self, duplicate)
         return duplicate
 
-    def _signature(self) -> Hashable:
-        return self.__class__.__name__, self.parser.signature()
-
 
 class LateBindingUnary(UnaryParser):
     """Superclass for late-binding unary parsers. LateBindingUnary only stores
@@ -3582,9 +3522,6 @@ class LateBindingUnary(UnaryParser):
             self.parser = getattr(self.grammar, self.parser_name)
             self.sub_parsers = frozenset({self.parser})
         return self.parser
-
-    def _signature(self) -> Hashable:
-        return self.__class__.__name__, self.parser_name
 
     @property
     def sub_parsers(self) -> FrozenSet[Parser]:
@@ -3876,9 +3813,6 @@ class Counted(UnaryParser):
                 + self.location_info(), BADLY_NESTED_OPTIONAL_PARSER))
         return errors
 
-    def _signature(self) -> Hashable:
-        return self.__class__.__name__, self.parser.signature(), self.repetitions
-
 
 ########################################################################
 #
@@ -3913,9 +3847,6 @@ class NaryParser(CombinedParser):
         duplicate = self.__class__(*parsers)
         copy_combined_parser_attrs(self, duplicate)
         return duplicate
-
-    def _signature(self) -> Hashable:
-        return (self.__class__.__name__, *(p.signature() for p in self.parsers))
 
 
 def starting_string(parser: Parser) -> str:
@@ -4525,9 +4456,6 @@ class Interleave(ErrorCatchingNary):
                     BAD_REPETITION_COUNT))
         return errors
 
-    def _signature(self) -> Hashable:
-        return (self.__class__.__name__, *(p.signature() for p in self.parsers),*self.repetitions)
-
 
 ########################################################################
 #
@@ -4716,9 +4644,6 @@ class ContextSensitive(UnaryParser):
         determines whether memoization should be blocked.
         """
         return location if location != location_ else location-1
-
-    def _signature(self) -> Hashable:
-        return id(self)
 
 
 class Capture(ContextSensitive):
@@ -5214,9 +5139,3 @@ class Forward(UnaryParser):
         if not parser.drop_content:  parser.disposable = self.disposable
         self.drop_content = parser.drop_content
         self.pname = ""
-
-    def _signature(self) -> Hashable:
-        # This code should theoretically never be reached, except when debugging
-        signature = self.pname or self.parser.pname
-        assert signature
-        return signature
