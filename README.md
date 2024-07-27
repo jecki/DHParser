@@ -69,7 +69,7 @@ Features
     - Unlimited look ahead and look behind
 
 * [Macros](
-  https://dhparser.readthedocs.io/en/latest/manuals/01_ebnf.html#macro_system)
+  https://dhparser.readthedocs.io/en/latest/manuals/01_EBNF-grammars.html#macros)
   to avoid code-repetition within grammars
 
 * [Declarative tree-transformations](
