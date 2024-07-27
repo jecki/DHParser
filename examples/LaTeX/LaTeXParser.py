@@ -108,7 +108,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     param_block = Forward()
     tabular_config = Forward()
-    source_hash__ = "f9aa20970fd84f72e7e78bbf46af28ce"
+    source_hash__ = "b008dcbbae519d3f1c842df1a7c1cfa7"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
     disposable__ = re.compile('_\\w+')
     static_analysis_pending__ = []  # type: List[bool]

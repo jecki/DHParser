@@ -89,7 +89,7 @@ class ArithmeticGrammar(Grammar):
     r"""Parser for an Arithmetic source file.
     """
     expression = Forward()
-    source_hash__ = "fc042e3bec447864e1a9752b41666f77"
+    source_hash__ = "0a8adfcd391be48f834920fc966c9f7a"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

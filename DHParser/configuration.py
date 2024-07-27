@@ -581,7 +581,7 @@ CONFIG_PRESET['default_literalws'] = "none"
 
 
 # Default value for the brand of EBNF that DHParser accepts
-# 'fixed'       - Allows to use suffix syntax (?, +, *) as well as classic
+# 'fixed', 'dhparser' - Allows to use suffix syntax (?, +, *) as well as classic
 #       EBNF-syntax ([], {}). The delimiters are fixed before first use to
 #       the DHParser-standard and will only be read once from
 #       configuration-value "delimiter_set" upon first usage.
@@ -612,6 +612,7 @@ CONFIG_PRESET['default_literalws'] = "none"
 # Default value: "fixed"
 CONFIG_PRESET['syntax_variant'] = 'fixed'
 ALLOWED_PRESET_VALUES['syntax_variant'] = frozenset({
+    'dhparser',
     'fixed',
     'classic',
     'strict',

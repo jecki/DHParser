@@ -2540,7 +2540,6 @@ class TestOptimizations:
         tree = parser("AAA  ")
         assert tree.as_sxpr() == '(doc (:Text "AAA") (:Whitespace "  "))'
 
-        grammar_provider.cache_clear()
         set_config_value('optimizations', frozenset({'literal'}))
         parser = create_parser(lang)
         assert parser.python_src__.find('SmartRE(') >= 0
@@ -2578,7 +2577,8 @@ class TestOptimizations:
         set_config_value('optimizations', frozenset({'alternative'}))
         save_syn = get_config_value('syntax_variant')
         set_config_value('syntax_variant', 'strict')
-        lang = "Char ::= #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]"
+        lang = """Char ::= #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]
+        """
         parser = create_parser(lang)
         assert parser.python_src__.find('SmartRE(') >= 0
         st = parser('賌')
@@ -2739,9 +2739,9 @@ class TestOptimizations:
 
     def test_any_char(self):
         set_config_value('optimizations', frozenset({'sequence', 'alternative'}))
-        lang = 'doc = "A".'
+        lang = '''doc = "A".'''
         parser = create_parser(lang)
-        assert parser.python_src__.find('SmartRE(') >= 0
+        assert parser.python_src__.find('SmartRE(') >= 0, str(get_config_value('optimizations'))
         st = parser('A翿')
         assert st.as_sxpr() == '(doc (:Text "A") (:AnyChar "翿"))'
 

@@ -281,8 +281,6 @@ def compileEBNF(ebnf_src: str, branding="DSL") -> str:
 
 
 
-
-@lru_cache()
 def grammar_provider(ebnf_src: str,
                      branding="DSL",
                      additional_code: str = '',

@@ -685,7 +685,7 @@ def get_ebnf_grammar() -> Grammar:
     mode = get_config_value('syntax_variant')
     try:
         grammar = THREAD_LOCALS.ebnf_grammar_singleton
-        if mode in ('fixed', 'configurable'):
+        if mode in ('dhparser', 'fixed', 'configurable'):
             if not isinstance(grammar, ConfigurableEBNFGrammar):
                 raise AttributeError
         else:
@@ -693,9 +693,9 @@ def get_ebnf_grammar() -> Grammar:
             if not isinstance(grammar, HeuristicEBNFGrammar):
                 raise AttributeError
     except AttributeError:
-        if mode in ('fixed', 'configurable'):
+        if mode in ('dhparser', 'fixed', 'configurable'):
             grammar = ConfigurableEBNFGrammar(static_analysis=False)
-            if mode == "fixed":
+            if mode in ('fixed', 'dhparser'):
                 # configure grammar once
                 update_scanner(grammar, get_config_value('delimiter_set'))
             grammar.mode__ = mode
@@ -705,7 +705,8 @@ def get_ebnf_grammar() -> Grammar:
             grammar = HeuristicEBNFGrammar(static_analysis=False)
             grammar.mode__ = mode
             THREAD_LOCALS.ebnf_grammar_singleton = grammar
-    if mode == 'configurable' or (mode == 'fixed' and grammar.mode__ != 'fixed'):
+    if mode == 'configurable' or (mode in ('fixed', 'dhparser')
+                                  and grammar.mode__ not in ('fixed', 'dhparser')):
         # configure grammar on each request of the grammar object
         update_scanner(grammar, get_config_value('delimiter_set'))
     grammar.mode__ = mode
@@ -740,6 +741,7 @@ def get_globals(path: Path) -> Dict[str, Any]:
                 break
         else:
             globals['literalws'] = get_config_value('default_literalws')
+        root.attr['globals'] = globals
     return globals
 
 
@@ -849,9 +851,9 @@ EBNF_AST_transformation_table = {
     # AST Transformations for EBNF-grammar
     "<":
         [remove_children_if(all_of(not_one_of('regexp', "RAISE_EXPR_WO_BRACKETS"), is_empty))],
-    "syntax":
-        [cleanup_globals
-         ],
+    ">>>":
+        [cleanup_globals],
+    "syntax": [],
     "directive":
         [flatten, remove_tokens('@', '=', ',', '(', ')'),
          remove_children("RAISE_EXPR_WO_BRACKETS")],
@@ -873,8 +875,7 @@ EBNF_AST_transformation_table = {
          # from regex-parser semantics in @skip and @resume-directives
          flatten, remove_children('OR'),
          remove_tokens('|'),  # remove_tokens('|') is only for backwards-compatibility
-         rearrange_expression
-         ],
+         rearrange_expression],
     "sequence":
         [replace_by_single_child, flatten, remove_children('AND')],
     "interleave":
@@ -1126,7 +1127,9 @@ VALID_DIRECTIVES = {
     '$SYMBOL_filer': 'Function that transforms captured values of the given symbol on retrieval',
     '$SYMBOL_error': 'Pair of regular expression an custom error message if regex matches',
     '$SYMBOL_skip': 'List of regexes or functions to find reentry point after an error',
-    '$SYMBOL_resume': 'List or regexes or functions to find reentry point for parent parser'
+    '$SYMBOL_resume': 'List or regexes or functions to find reentry point for parent parser',
+    'optimizations': 'Optimization level: none, some, all',
+    'flavor': 'EBNF-flavor: dhparser, heuristic'
 }
 
 
@@ -1190,6 +1193,7 @@ class EBNFDirectives:
             during the parsing stage.
     :ivar optimizations: Selects optimizations, overriding configuration
             value "optimizations".
+    :ivar flavor:  Selects the EBNF-flavor (or "syntax-variant") to be used.
     :ivar \_super\_ws: Cache for the "super whitespace" which
             is a regular expression that merges whitespace and
             comments. This property should only be accessed after
@@ -1197,7 +1201,8 @@ class EBNFDirectives:
             with the values parsed from the EBNF source.
     """
     __slots__ = ['whitespace', 'comment', 'literalws', 'tokens', 'filter', 'error', 'skip',
-                 'resume', 'disposable', 'drop', 'reduction', 'optimizations', '_super_ws']
+                 'resume', 'disposable', 'drop', 'reduction', 'optimizations', 'flavor',
+                 '_super_ws']
 
     REPEATABLE_DIRECTIVES = {'tokens', 'preprocessor_tokens', 'disposable', 'drop'}
 
@@ -1214,6 +1219,7 @@ class EBNFDirectives:
         self.drop = set()         # type: Set[str]
         self.reduction = FLATTEN  # type: int
         self.optimizations = get_config_value('optimizations')  # type: FrozenSet[str]
+        self.flavor = get_config_value('syntax_variant')  # type: str
         self._super_ws = None     # type: Optional[str]
 
     def __getitem__(self, key):
@@ -2104,7 +2110,6 @@ class EBNFCompiler(Compiler):
 
     def on_syntax(self, node: Node) -> str:
         self.directives.optimizations = get_config_value('optimizations')  # use possibly updated optimizations
-
         # drop the wrapping sequence node
         if len(node.children) == 1 and node.children[0].anonymous:
             node = node.children[0]
@@ -2451,6 +2456,18 @@ class EBNFCompiler(Compiler):
                     node, f'Directive "optimizations" allows only "none", "some", "all" '
                           f'or any subset of {set(allowed)} as values, not {values} .')
             self.directives.optimizations = values
+
+        elif key == "flavor":
+            check_argnum(1)
+            arg = node[1].content
+            allowed = ALLOWED_PRESET_VALUES['syntax_variant']
+            if arg not in allowed:
+                self.tree.new_error(
+                    node, f'Directive "flavor" allows only {set(allowed)}, not {arg} .')
+            else:
+                self.directives.flavor = arg
+            # no further action needed, because this directive has already been interpreted
+            # earlier in the pipeline
 
         elif key.endswith('_filter'):
             check_argnum()
