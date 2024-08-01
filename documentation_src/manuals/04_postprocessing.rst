@@ -853,8 +853,8 @@ Types and Functions
         callables) that is defined by a set of junctions and returns the
         results for selected target stages.
 
-   * :py:func:`compile.full_pipeline`: Like
-        :py:func:`compile.compile_source`, but also runs any
+   * :py:func:`~compile.full_pipeline`: Like
+        :py:func:`~compile.compile_source`, but also runs any
         post-processing stages beyond the compilation. Or, like
         :py:func:`~pipeline.run_pipeline`, but also runs the
         pre-processing- and parsing-stages before running the

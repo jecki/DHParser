@@ -1,4 +1,4 @@
-.. manuals:
+.. _manuals:
 
 Manuals
 =======

@@ -8,7 +8,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -784,7 +784,7 @@ def has_ancestor(path: Path,
 
     :param generations: determines how deep `has_ancestor` should dive into
         the ancestry. "1" means only the immediate parents wil be considered,
-        "2" means also the grandparents, ans so on.
+        "2" means also the grandparents, and so on.
         A value smaller or equal zero means all ancestors will be considered.
     :param until: node-names which, when reached, will stop `has_ancestor`
         from searching further, even if the `generations`-parameter would
@@ -822,6 +822,18 @@ def has_children(path: Path) -> bool:
 def has_descendant(path: Path, name_set: AbstractSet[str],
                    generations: int = -1,
                    until: Union[AbstractSet[str], str] = frozenset()) -> bool:
+    """Checks whether a node with one of the given tag names appears somewhere
+    among the descendants (children and children's children etc.)
+    of the last node in the path.
+
+    :param generations: determines how deep `has_descendant` should dive into
+        the descendants. "1" means only the immediate children wil be considered,
+        "2" means also the grandchildren, and so on.
+        A value smaller or equal zero means all ancestors will be considered.
+    :param until: node-names which, when reached, will stop `has_descendant`
+        from searching further, even if the `generations`-parameter would
+        allow a deeper search.
+    """
     assert generations != 0
     if until:
         if isinstance(until, str):  until = {until}
@@ -850,6 +862,8 @@ def has_child(path: Path, name_set: AbstractSet[str]) -> bool:
 
 @transformation_factory(collections.abc.Set)
 def has_sibling(path: Path, name_set: AbstractSet[str]):
+    """Checks whether the last node in the path has a node with one of the
+    given names as sibling."""
     if len(path) >= 2:
         node = path[-1]
         for child in path[-2]._children:

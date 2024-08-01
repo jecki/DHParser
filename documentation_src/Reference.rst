@@ -47,7 +47,7 @@ editing via the `language server protocol`_.
    suitable for complex transformations that make heavy use of
    algorithms as well as transformations from trees to non-tree objects
    like program code. (An example for the latter kind of transformation
-   is the :py:class`~ebnf.EBNFCompiler`-class of DHParser's
+   is the :py:class:`~ebnf.EBNFCompiler`-class of DHParser's
    ebnf-module.)
 
 :py:mod:`pipeline`
@@ -128,8 +128,7 @@ editing via the `language server protocol`_.
 
 :py:mod:`lsp`
     (as of now, this is just a stub!) provides data classes that
-    resemble the typescript-interfaces of the `language server protocol
-    specification`_.
+    resemble the typescript-interfaces of the `language server protocol specification`_.
 
 :py:mod:`stringview`
     defines a low level class that provides views on slices
@@ -170,6 +169,12 @@ Module ``compile``
 ------------------
 
 .. automodule:: compile
+   :members:
+
+Module ``pipeline``
+-------------------
+
+.. automodule:: pipeline
    :members:
 
 Module ``parse``

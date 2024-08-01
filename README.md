@@ -39,7 +39,7 @@ DHParser has been developed with three main purposes in mind:
    of well-designed formal languages. Thus, DHParser's elaborated
    testing and debugging-framework for grammars.
 
-   (See Florian Zacherl's [Dissertation on the retro-digitalization of dictionary data](http://www.kit.gwi.uni-muenchen.de/?band=82908&v=1)
+   (See Florian Zacherl's [Dissertation on the retro-digitalization of dictionary data](https://www.kit.gwi.uni-muenchen.de/?band=82908&v=1)
    for an interesting case study. I am confident that the development of
    a suitable formal grammar is much easier with an elaborated framework
    like DHParser than with the PHP-parsing-expression-grammar-kit that
@@ -73,7 +73,7 @@ Features
   to avoid code-repetition within grammars
 
 * [Declarative tree-transformations](
-  https://dhparser.readthedocs.io/en/latest/manuals/03_transform.html#declarative-tree-transformation)
+  https://dhparser.readthedocs.io/en/latest/manuals/03_AST-transformation.html#declarative-tree-transformation)
   for post-processing syntax-trees
 
 * Unit testing framework and post-mortem-debuger for [test-driven grammar
@@ -82,22 +82,22 @@ Features
   and rapid-prototyping of grammars
 
 * [Customizable error reporting](
-  https://dhparser.readthedocs.io/en/latest/manuals/01_ebnf.html#error-catching),
+  https://dhparser.readthedocs.io/en/latest/manuals/01_EBNF-grammars.html#error-catching),
   [recovery after syntax errors](
-  https://dhparser.readthedocs.io/en/latest/manuals/01_ebnf.html#skip-and-resume) 
+  https://dhparser.readthedocs.io/en/latest/manuals/01_EBNF-grammars.html#skip-and-resume) 
   and support for [fail-tolerant parsers](
-  https://dhparser.readthedocs.io/en/latest/manuals/01_ebnf.html#fail-tolerant-parsing)
+  https://dhparser.readthedocs.io/en/latest/manuals/01_EBNF-grammars.html#fail-tolerant-parsing)
 
 * Support for [Language-servers](https://microsoft.github.io/language-server-protocol/)
 
 * Workflow-support and [data-processing-pipelines](
-  https://dhparser.readthedocs.io/en/latest/manuals/04_compile.html#processing-pipelines)
+  https://dhparser.readthedocs.io/en/latest/manuals/04_postprocessing.html#processing-pipelines)
 
 * XML-support like [mapping flat-text to the DOM-tree](
-  https://dhparser.readthedocs.io/en/latest/manuals/02_nodetree.html#content-mappings)
+  https://dhparser.readthedocs.io/en/latest/manuals/02_document-trees.html#content-mappings)
   ("node-tree" in DHParser's terminology) and 
   [adding markup in arbitrary places](
-  https://dhparser.readthedocs.io/en/latest/manuals/02_nodetree.html#markup-insertion),
+  https://dhparser.readthedocs.io/en/latest/manuals/02_document-trees.html#markup-insertion),
   even if this requires splitting tags.
 
 * Full unicode support
@@ -333,11 +333,6 @@ Munich Germany 2017, https://gitlab.lrz.de/badw-it/dhparser
 References and Acknowledgement
 ------------------------------
 
-Juancarlo Añez: grako, a PEG parser generator in Python, 2017. URL:
-[bitbucket.org/apalala/grako][Añez_2017]
-
-[Añez_2017]: https://bitbucket.org/apalala/grako
-
 Eckhart Arnold: Domänenspezifische Notationen. Eine (noch)
 unterschätzte Technologie in den Digitalen Geisteswissenschaften,
 Präsentation auf dem
@@ -352,7 +347,7 @@ Massachusetts, 2004. Short-URL:[t1p.de/jihs][Ford_2004]
 
 [Ford_2004]: https://pdos.csail.mit.edu/~baford/packrat/popl04/peg-popl04.pdf
 
-[Ford_20XX]: http://bford.info/packrat/
+[Ford_20XX]: https://bford.info/packrat/
 
 Richard A. Frost, Rahmatullah Hafiz and Paul Callaghan: Parser
 Combinators for Ambiguous Left-Recursive Grammars, in: P. Hudak and
@@ -363,36 +358,36 @@ Elizabeth Scott and Adrian Johnstone, GLL Parsing,
 in: Electronic Notes in Theoretical Computer Science 253 (2010) 177–189,
 [dotat.at/tmp/gll.pdf][scott_johnstone_2010]
 
-[scott_johnstone_2010]: http://dotat.at/tmp/gll.pdf
+[scott_johnstone_2010]: https://dotat.at/tmp/gll.pdf
 
 Dominikus Herzberg: Objekt-orientierte Parser-Kombinatoren in Python,
 Blog-Post, September, 18th 2008 on denkspuren. gedanken, ideen,
 anregungen und links rund um informatik-themen, short-URL:
 [t1p.de/bm3k][Herzberg_2008a]
 
-[Herzberg_2008a]: http://denkspuren.blogspot.de/2008/09/objekt-orientierte-parser-kombinatoren.html
+[Herzberg_2008a]: https://denkspuren.blogspot.de/2008/09/objekt-orientierte-parser-kombinatoren.html
 
 Dominikus Herzberg: Eine einfache Grammatik für LaTeX, Blog-Post,
 September, 18th 2008 on denkspuren. gedanken, ideen, anregungen und
 links rund um informatik-themen, short-URL:
 [t1p.de/7jzh][Herzberg_2008b]
 
-[Herzberg_2008b]: http://denkspuren.blogspot.de/2008/09/eine-einfache-grammatik-fr-latex.html
+[Herzberg_2008b]: https://denkspuren.blogspot.de/2008/09/eine-einfache-grammatik-fr-latex.html
 
 Dominikus Herzberg: Uniform Syntax, Blog-Post, February, 27th 2007 on
 denkspuren. gedanken, ideen, anregungen und links rund um
 informatik-themen, short-URL: [t1p.de/s0zk][Herzberg_2007]
 
-[Herzberg_2007]: http://denkspuren.blogspot.de/2007/02/uniform-syntax.html
+[Herzberg_2007]: https://denkspuren.blogspot.de/2007/02/uniform-syntax.html
 
-[ISO_IEC_14977]: http://www.cl.cam.ac.uk/~mgk25/iso-14977.pdf
+[ISO_IEC_14977]: https://www.cl.cam.ac.uk/~mgk25/iso-14977.pdf
 
 John MacFarlane, David Greenspan, Vicent Marti, Neil Williams,
 Benjamin Dumke-von der Ehe, Jeff Atwood: CommonMark. A strongly
 defined, highly compatible specification of
 Markdown, 2017. [commonmark.org][MacFarlane_et_al_2017]
 
-[MacFarlane_et_al_2017]: http://commonmark.org/
+[MacFarlane_et_al_2017]: https://commonmark.org/
 
 Stefan Müller: DSLs in den digitalen Geisteswissenschaften,
 Präsentation auf dem
@@ -415,11 +410,11 @@ Vegard Øye: General Parser Combinators in Racket, 2012,
 
 [vegard_2012]: https://epsil.github.io/gll/
 
-[seaton_2007]: http://chrisseaton.com/katahdin/katahdin.pdf
+[seaton_2007]: https://chrisseaton.com/katahdin/katahdin.pdf
 
 [voelter_2013]: http://dslbook.org/
 
-[tex_stackexchange_no_bnf]: http://tex.stackexchange.com/questions/4201/is-there-a-bnf-grammar-of-the-tex-language
+[tex_stackexchange_no_bnf]: https://tex.stackexchange.com/questions/4201/is-there-a-bnf-grammar-of-the-tex-language
 
 [tex_stackexchange_latex_parsers]: http://tex.stackexchange.com/questions/4223/what-parsers-for-latex-mathematics-exist-outside-of-the-tex-engines
 

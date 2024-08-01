@@ -7,7 +7,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -258,7 +258,7 @@ class ParserError(Exception):
 
     def new_PE(self, **kwargs):
         """Returns a new ParserError object with the same attribute values
-        as ``self``, except those that are reassigned in ``kwargs``.::
+        as ``self``, except those that are reassigned in ``kwargs``::
 
             >>> pe = ParserError(Parser(), Node('test', ""), 0, 0, Error("", 0), first_throw=True)
             >>> pe_derived = pe.new_PE(first_throw = False)
@@ -310,8 +310,7 @@ def reentry_point(rest: StringView,
     use constructs that look like comments (i.e. will be matched by ``comment_regex``)
     but are none in other areas. For example::
 
-            my_string = "# This is not a comment"; foo()  # This is a comment
-            bar()
+        my_string = "# This is not a comment"; foo()  # This is a comment bar()
 
     Here the reentry-algorithm would overlook ``foo()`` and jump directly to ``bar()``.
     However, since the reentry-algorithm only needs to be good enough to do its
@@ -988,11 +987,11 @@ class Parser:
 
 def assign(name: str, parser: Parser) -> Parser:
     r"""Assigns a name to the given parser. This does the same
-    as the :py:meth:`Parser.name`-method. Example:::
+    as the :py:meth:`Parser.name`-method. Example::
 
-    >>> doc = assign("doc", RegExp(r"\w+"))
-    >>> print(doc.pname)
-    doc
+        >>> doc = assign("doc", RegExp(r"\w+"))
+        >>> print(doc.pname)
+        doc
     """
     return parser.name(name)
 
@@ -1183,7 +1182,7 @@ def mixin_comment(whitespace: str, comment: str, always_match: bool = True) -> s
     nesting comments is not possible. It also makes it much harder to
     use directives inside comments (which isn't recommended, anyway).
 
-    Examples:
+    Examples::
 
         >>> import re
         >>> combined = mixin_comment(r"\s+", r"#.*")
@@ -2752,7 +2751,7 @@ class Whitespace(RegExp):
         containing comments should be kept, even if the self.drop_content
         flag is True. If keep_comments and drop_flag are both True
         a stretch of whitespace containing a comment will be renamed
-        to "comment__" and whitspace that does not contain any comments
+        to "comment\__" and whitspace that does not contain any comments
         will be dropped.
 
     Example::
@@ -3139,7 +3138,7 @@ def TreeReduction(root_or_parserlist: Union[Parser, Collection[Parser]],
     Returns the root-parser or, if a collection has been passed, the
     PARSER_PLACEHOLDER
 
-    Examples, how tree-reduction wors::
+    Examples, how tree-reduction works::
 
         >>> root = Text('A') + Text('B') | Text('C') + Text('D')
         >>> grammar = Grammar(TreeReduction(root, CombinedParser.NO_TREE_REDUCTION))
@@ -3345,7 +3344,8 @@ class SmartRE(CombinedParser):  # TODO: turn this into a CombinedParser
         return super().is_optional()
 
     def is_lookahead(self) -> bool:
-        r"""Just a heuristic test - not perfect::
+        r"""
+        Just a heuristic test - not perfect::
 
             >>> print(SmartRE(r'(?:alpha(?=x))').is_lookahead())
             True
@@ -3906,6 +3906,7 @@ class Alternative(NaryParser):
 
     EBNF-Example:  ``number = /\d+\.\d+/ | /\d+/``
     """
+
     @cython.locals(location_=cython.int)
     def _parse(self, location: cython.int) -> ParsingResult:
         for parser in self.parsers:
@@ -5013,7 +5014,7 @@ class Forward(UnaryParser):
         The algorithm roughly follows:
         https://medium.com/@gvanrossum_83706/left-recursive-peg-grammars-65dab3c580e1
         See also:
-        http://www.vpri.org/pdf/tr2007002_packrat.pdf
+        https://tinlizzie.org/VPRIPapers/tr2007002_packrat.pdf
         """
         grammar = self._grammar
         if not grammar.left_recursion__:  # TODO: add a static check and flag: self.left_recursive__!

@@ -15,7 +15,7 @@ something like this:
     <gedicht>
         <bibliographisches>
             <autor gnd="118548018">Heinrich Heine</autor>
-            <werk href="http://www.deutschestextarchiv.de/book/show/heine_lieder_1827"
+            <werk href="https://www.deutschestextarchiv.de/book/show/heine_lieder_1827"
                   urn="nbn:de:kobv:b4-200905192211">
                 Buch der Lieder
             </werk>
@@ -45,7 +45,7 @@ a few drawbacks to this approach:
 
 - The syntax is cumbersome and the encoding not very legible to humans
   working with it. (And this is not even
-  [TEI-XML](http://www.tei-c.org/index.xml), yet...)
+  [TEI-XML](https://www.tei-c.org/index.xml), yet...)
   Editing and revising XML-encoded text is tedious.
 
 - The XML encoding, especially TEI-XML, is often not intuitive. Only
@@ -57,7 +57,7 @@ a few drawbacks to this approach:
 - With the use of XML one is more or less confined to tree-data-structures.
   However, to represent a complex text-transmission-history, other data structures, like
   graph data structures are much more suitable. See Andreas Kuczera's Blog-entry on
-  ["Graphdatenbanken für Historiker"](http://mittelalter.hypotheses.org/5995).
+  ["Graphdatenbanken für Historiker"](https://mittelalter.hypotheses.org/5995).
 
 - While most text-editors have an XML-mode, there exist only few good
   dedicated XML editors that can mitigate the above mentioned obstacles
@@ -65,7 +65,7 @@ a few drawbacks to this approach:
 
 On the other hand, there are good reasons why XML is used in the
 humanities: Important encoding standards like
-[TEI-XML](http://www.tei-c.org/index.xml) are defined in XML. Its strict
+[TEI-XML](https://www.tei-c.org/index.xml) are defined in XML. Its strict
 syntax and the possibility to check data against a schema help to detect
 and avoiding encoding errors. If the schema is well-defined, it is
 unambiguous, and it is easy to parse for a computer. Most of these

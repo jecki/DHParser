@@ -6,7 +6,7 @@ Testing
 DHParser provides a powerful unit-testing framework that allows testing
 individual components of a grammar separately through all stages of the
 :ref:`processing pipeline <processing_pipelines>`. DHParser's
-unit-testing framework allows to::
+unit-testing framework allows to:
 
 - break down the complicated process of writing a grammar into
   relatively simpler tasks of designing grammar-components each
@@ -166,10 +166,10 @@ on the shape of the abstract syntax-tree.
 In our example of the outline-parser tests,
 an excerpt from the report file might look like this::
 
-  Match-test "M3"
-  ----------------
+    Match-test "M3"
+    ----------------
 
-  ### Test-code:
+    ### Test-code:
 
       # Main Heading
       ## Section 1
@@ -177,7 +177,7 @@ an excerpt from the report file might look like this::
       ### SubSection 1.2
       ## Section 2
 
-  ### AST
+    ### AST
 
       (document
         (main
@@ -2232,6 +2232,6 @@ for this error message succeeds correctly.
 
 .. _CommonMark: https://spec.commonmark.org/0.30/#emphasis-and-strong-emphasis
 .. _GROBID: https://github.com/kermitt2/grobid
-.. _Zacherl 2022: http://www.kit.gwi.uni-muenchen.de/?band=82908&v=2#subchapter:5-2-abbildung-von-semi-strukturierten-texten 
+.. _Zacherl 2022: https://www.kit.gwi.uni-muenchen.de/?band=82908&v=2#subchapter:5-2-abbildung-von-semi-strukturierten-texten
 .. _sxml_spec: https://okmij.org/ftp/papers/SXML-paper.pdf
 .. _pytest: https://docs.pytest.org/en/stable/

@@ -203,7 +203,7 @@ Da entspricht dem ursprünglichen XML bis auf das umschließende `:XML`-tag. Bei
 letzterem handelt es sich um eine Artefakt von DHParser
 <https://gitlab.lrz.de/badw-it/DHParser>, weil die Baumverarbeitungsroutinen von
 DHParser verlagen, das jedes Dokument genau eine Wurzel hat. (Vgl.
-<https://dhparser.readthedocs.io/en/latest/manuals/nodetree.html>) Diese Tag
+<https://dhparser.readthedocs.io/en/latest/manuals/02_document-trees.html>) Diese Tag
 kann bei der Serialierung als XML einfach weggelassen werden.
 
 Unklarheit des Begriffs "AST"
@@ -218,4 +218,4 @@ oder mehr weiteren Transformationen gewonnen wurde.
 Das würde der Bedeutung des Begriffs "AST" bei Programmiersprachen eher
 entsprechen, wo der AST eine Struktur darstellt, die zumindes im Prinzip schon
 durch einen Interpreter ausführbar wäre und so gesehen schon das lauffähige 
-Programm repräsentiert. Vgl. <https://dhparser.readthedocs.io/en/latest/manuals/transform.html>
+Programm repräsentiert. Vgl. <https://dhparser.readthedocs.io/en/latest/manuals/03_AST-transformation.html>

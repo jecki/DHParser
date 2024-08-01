@@ -7,7 +7,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -261,7 +261,7 @@ def is_html_name(url: str) -> bool:
 @cython.locals(i=cython.int, L=cython.int)
 def relative_path(from_path: str, to_path: str) -> str:
     """Returns the relative path in order to open a file from
-    `to_path` when the script is running in `from_path`. Example:
+    `to_path` when the script is running in `from_path`. Example::
 
         >>> relative_path('project/common/dir_A', 'project/dir_B').replace(chr(92), '/')
         '../../dir_B'
@@ -309,9 +309,8 @@ class unrepr:
     unrepr encapsulates a string representing a python function in such
     a way that the representation of the string yields the function call
     itself rather than a string representing the function call and delimited
-    by quotation marks.
+    by quotation marks. Example::
 
-    Example:
         >>> "re.compile(r'abc+')"
         "re.compile(r'abc+')"
         >>> unrepr("re.compile(r'abc+')")
@@ -474,10 +473,10 @@ def normalize_circular_path(path: Union[Tuple[str, ...], AbstractSet[Tuple[str, 
     definition of a factor includes a (bracketed) expression and thus
     refers back to `expression`
     Normalizing is done by "ring-shifting" the tuple so that it starts
-    with the alphabetically first symbol in the path.
+    with the alphabetically first symbol in the path::
 
-    >>> normalize_circular_path(('term', 'factor', 'expression'))
-    ('expression', 'term', 'factor')
+        >>> normalize_circular_path(('term', 'factor', 'expression'))
+        ('expression', 'term', 'factor')
     """
     if isinstance(path, AbstractSet):
         return {normalize_circular_path(p) for p in path}
@@ -597,23 +596,23 @@ def wrap_str_literal(s: Union[str, List[str]], column: int = 80, offset: int = 0
     r"""Wraps an excessively long string literal over several lines.
     Example::
 
-    >>> s = '"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"'
-    >>> print(wrap_str_literal(s, 25))
-    "abcdefghijklmnopqrstuvwx"
-    "yzABCDEFGHIJKLMNOPQRSTUVW"
-    "XYZ0123456789"
-    >>> s = 'r"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"'
-    >>> print("Call(" + wrap_str_literal(s, 40, 5) + ")")
-    Call(r"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLM"
-         r"NOPQRSTUVWXYZ0123456789")
-    >>> s = 'fr"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"'
-    >>> print("Call(" + wrap_str_literal(s, 40, 5) + ")")
-    Call(fr"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLM"
-         fr"NOPQRSTUVWXYZ0123456789")
-    >>> s = ['r"abcde', 'ABCDE"']
-    >>> print(wrap_str_literal(s))
-    r"abcde"
-    r"ABCDE"
+        >>> s = '"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"'
+        >>> print(wrap_str_literal(s, 25))
+        "abcdefghijklmnopqrstuvwx"
+        "yzABCDEFGHIJKLMNOPQRSTUVW"
+        "XYZ0123456789"
+        >>> s = 'r"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"'
+        >>> print("Call(" + wrap_str_literal(s, 40, 5) + ")")
+        Call(r"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLM"
+             r"NOPQRSTUVWXYZ0123456789")
+        >>> s = 'fr"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"'
+        >>> print("Call(" + wrap_str_literal(s, 40, 5) + ")")
+        Call(fr"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLM"
+             fr"NOPQRSTUVWXYZ0123456789")
+        >>> s = ['r"abcde', 'ABCDE"']
+        >>> print(wrap_str_literal(s))
+        r"abcde"
+        r"ABCDE"
     """
     if isinstance(s, list):
         assert len(s) > 0
@@ -751,10 +750,10 @@ RX_NON_IDENTIFIER = re.compile(r'\W+')
 def as_identifier(s: str, replacement: str = "_") -> str:
     r"""Converts a string to an identifier that matches /\w+/ by
     substituting any character not matching /\w/ with the given
-    replacement string:
+    replacement string::
 
-    >>> as_identifier('EBNF-m')
-    'EBNF_m'
+        >>> as_identifier('EBNF-m')
+        'EBNF_m'
     """
     ident = []
     i = 0
@@ -1189,30 +1188,34 @@ def smart_list(arg: Union[str, Iterable, Any]) -> Union[Sequence, Set]:
 
     If the argument is a string, it will be interpreted as a list of
     comma separated values, trying ';', ',', ' ' as possible delimiters
-    in this order, e.g.
-    >>> smart_list('1; 2, 3; 4')
-    ['1', '2, 3', '4']
-    >>> smart_list('2, 3')
-    ['2', '3']
-    >>> smart_list('a b cd')
-    ['a', 'b', 'cd']
+    in this order, e.g.::
+
+        >>> smart_list('1; 2, 3; 4')
+        ['1', '2, 3', '4']
+        >>> smart_list('2, 3')
+        ['2', '3']
+        >>> smart_list('a b cd')
+        ['a', 'b', 'cd']
 
     If the argument is a collection other than a string, it will be
-    returned as is, e.g.
-    >>> smart_list((1, 2, 3))
-    (1, 2, 3)
-    >>> smart_list({1, 2, 3})
-    {1, 2, 3}
+    returned as is, e.g.::
+
+        >>> smart_list((1, 2, 3))
+        (1, 2, 3)
+        >>> smart_list({1, 2, 3})
+        {1, 2, 3}
 
     If the argument is another iterable than a collection, it will
-    be converted into a list, e.g.
-    >>> smart_list(i for i in {1,2,3})
-    [1, 2, 3]
+    be converted into a list, e.g.::
+
+        >>> smart_list(i for i in {1,2,3})
+        [1, 2, 3]
 
     Finally, if none of the above is true, the argument will be
-    wrapped in a list and returned, e.g.
-    >>> smart_list(125)
-    [125]
+    wrapped in a list and returned, e.g.::
+
+        >>> smart_list(125)
+        [125]
     """
 
     if isinstance(arg, str):

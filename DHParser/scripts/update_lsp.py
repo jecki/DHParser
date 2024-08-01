@@ -8,8 +8,7 @@ destfile = os.path.abspath(os.path.join(scriptdir, '..', 'lsp.py'))
 
 
 LSP_SPEC_SOURCE = \
-    "https://raw.githubusercontent.com/microsoft/language-server-protocol/" \
-    "gh-pages/_specifications/lsp/3.18/specification.md"
+    "https://raw.githubusercontent.com/microsoft/language-server-protocol/gh-pages/_specifications/lsp/3.18/specification.md"
 
 
 def no_declaration(l):

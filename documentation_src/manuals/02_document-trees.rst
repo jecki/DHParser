@@ -1177,7 +1177,7 @@ important of these:
 class Node
 ^^^^^^^^^^
 
-* :py:class:`~snytaxtree.Node`: the central building-block of a node-tree
+* :py:class:`~nodetree.Node`: the central building-block of a node-tree
 
   * :py:attr:`~nodetree.Node.result`: either the child nodes or the node's
     string content
@@ -1185,7 +1185,7 @@ class Node
     empty tuple
   * :py:attr:`~nodetree.Node.content`: the concatenated string content of
     all descendants
-  * :py:attr:`~nodetree.Node.tag_name`: the node's name
+  * :py:attr:`~nodetree.Node.name`: the node's name
   * :py:attr:`~nodetree.Node.attr`: the dictionary of the node's
     attributes
   * :py:attr:`~nodetree.Node.pos`: the source-code position of this node, in
@@ -1252,26 +1252,20 @@ Traversing trees via paths
       preceding a given path.
 * :py:func:`~nodetree.next_path`: Returns the :ref:`path <paths>`
       following a given path.
-* :py:func:`~nodetree.generate_content_mapping`: Generates a
-      path-mapping for all leaf-nodes of a tree, i.e. a dictionary
-      mapping the current text position of each leaf-node (not the
-      source-code position!) to the leaf-node itself.
-* :py:func:`~nodetree.get_path_and_offset`: Returns the leaf-node for a
-      given text position and the number of characters of this position
-      into the leaf-node.
+* :py:func:`~nodetree.pp_path`: Pretty-prints the given :ref:`path <paths>`
 
 
 Attribute-handling
 ^^^^^^^^^^^^^^^^^^
 
-* :py:func:`~nodetree.has_token_attr`: Checks whether an attribute of a node
+* :py:func:`~nodetree.has_token_on_attr`: Checks whether an attribute of a node
       contains one or more tokens, i.e. blank separated sequences of letters.
-* :py:func:`~nodetree.ad_token_to_attr`: Adds a token to a particular
+* :py:func:`~nodetree.add_token_to_attr`: Adds a token to a particular
       attribute of a node.
-* :py:func:`~nodetree.ad_token_to_attr`: Removes a token from a particular
+* :py:func:`~nodetree.remove_token_from_attr`: Removes a token from a particular
       attribute of a node.
-* :py:func:`~nodetree.has_class`, :py:func:`~nodetree.has_class`,
-      :py:func:`~nodetree.has_class`: the same as above, only that
+* :py:func:`~nodetree.has_class`, :py:func:`~nodetree.add_class`,
+      :py:func:`~nodetree.remove_class`: the same as above, only that
       these methods manipulate the tokens specifically of the class-attribute
 
 
@@ -1288,24 +1282,24 @@ root-node or swallow a a tree originating in a common node later.
 
 * :py:class:`~nodetree.RootNode`: additional functionality for a tree of nodes
 
-  * :py:attr:`~nodetree.RootNode.errors`:  a list of errors
+  * :py:data:`~nodetree.RootNode.errors`:  a list of errors
   * :py:attr:`~nodetree.RootNode.errors_sorted`: the errors sorted by
         their position in the source code instead of the time of their
         having been added
-  * :py:attr:`~nodetree.RootNode.inline_tags`: a set of tags that will
+  * :py:data:`~nodetree.RootNode.inline_tags`: a set of tags that will
         be printed on a single line with their content when serializing. (This
         helps to avoid undesired whitespace when exporting to HTML!)
-  * :py:attr:`~nodetree.RootNode.string_tags`: a set of tags that will be
+  * :py:data:`~nodetree.RootNode.string_tags`: a set of tags that will be
         converted to simple strings that appear as mixed content inside their
         parent when serializing as XML
-  * :py:attr:`~nodetree.RootNode.empty_tags`: a set of tags that will be
+  * :py:data:`~nodetree.RootNode.empty_tags`: a set of tags that will be
         rendered as empty tags, e.g. ``<mytag />`` when serializing as
         XML
   * :py:meth:`~nodetree.RootNode.swallow`: Can be called once in the
         lifetime of the RootNode-object to assign this root-node to an existing
         tree of nodes.
   * :py:meth:`~nodetree.RootNode.new_error`: Creates and adds new error.
-  * :py:meth:`~nodetree.RootNode.customized_XML`: Serializes the tree as
+  * :py:meth:`~nodetree.RootNode.as_xml`: Serializes the tree as
         XML taking into account the XML-customization attributes of the
         RootNode-object.
 
