@@ -496,7 +496,10 @@ def normalize_circular_path(path: Union[Tuple[str, ...], AbstractSet[Tuple[str, 
 
 
 RX_NEVER_MATCH = re.compile(NEVER_MATCH_PATTERN)
-RxPatternType = re.Pattern
+try:
+    RxPatternType = re.Pattern
+except AttributeError:
+    RxPatternType = Any
 
 
 def re_find(s, r, pos=0, endpos=9223372036854775807):
