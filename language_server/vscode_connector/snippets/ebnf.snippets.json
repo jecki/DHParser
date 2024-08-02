@@ -1,13 +1,18 @@
 {
+  "EBNF variant": {
+    "prefix": "@ flavor",
+    "body": "@ flavor = ${1|dhparser,classic,regex-like,peg-like,heuristic|}",
+    "description": "Declares the flavor (or syntax-variant) of the following EBNF-code. 'dhparser' is the default, 'classic' ist closest to the ISO-standard and 'heuristic' tries to guess the flavor."
+  },
+  "Optimizations": {
+    "prefix": "@ optimizations",
+    "body": "@ optimization = ${1|none,some,all|}",
+    "description": "Optimization level: 'all' yields slightly faster parsers (av. 20%), but parser will be a bit harder to debug."
+  },
   "Comment definition": {
     "prefix": "@ comment",
     "body": "@ comment = /${1:#.*(?:\\n|$)}/",
     "description": "Regular expression defining comments, example: /#.*(?:\\n|$)/"
-  },
-  "Anonymous nodes": {
-    "prefix": "@ anonymous",
-    "body": "@ anonymous = /${1:_\\w+}/",
-    "description": "List of symbols or a regular expression to identify those definitions that shall not yield named tags in the syntax tree."
   },
   "Whitespace definition": {
     "prefix": "@ whitespace",
@@ -18,6 +23,21 @@
     "prefix": "@ literalws",
     "body": "@ literalws = ${1|right,left,both,none|}",
     "description": "Selects the side on which implicitly capture whitespace, possible values: right, left, both, none\\default value: right. Only a single value is possible!"
+  },
+  "Ignore case": {
+    "prefix": "@ ignorecase",
+    "body": "@ ignorecase = ${1|True,False|}",
+    "description": "Small and capital letters are treated as the same, e.g. a parser for '<image>' also matches '<IMAGE>'."
+  },
+  "Syntax-Tree simplification level": {
+    "prefix": "@ tree_reduction",
+    "body": "@ tree_reduction = ${1|none,flatten,merge_treetops,merge|}",
+    "description": "Reduction level for simplifying the syntax tree while parsing. Possible levels: none, flatten, merge_treetops, merge"
+  },
+  "Early elimination of intermediary nodes": {
+    "prefix": "@ hide",
+    "body": "@ hide = ${1:SYMBOL}, ...",
+    "description": "List of nodes that can be replaced by their child-nodes or redcued to their parent node, to simplify the syntax tree. Requires at least @tree_reduction = flatten!"
   },
   "Early dropping of irrelevant nodes": {
     "prefix": "@ drop",

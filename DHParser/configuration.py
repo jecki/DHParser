@@ -609,8 +609,8 @@ CONFIG_PRESET['default_literalws'] = "none"
 # 'peg-like' - like regex-like, but uses / instead of | for the
 #       alternative-parser. Does not allow regular expressions between, i.e.
 #       / ... / within the EBNF-code!
-# Default value: "fixed"
-CONFIG_PRESET['syntax_variant'] = 'fixed'
+# Default value: "dhparser"
+CONFIG_PRESET['syntax_variant'] = 'dhparser'
 ALLOWED_PRESET_VALUES['syntax_variant'] = frozenset({
     'dhparser',
     'fixed',
