@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""FlexibleEBNFServer.py - starts a server (if not already running)
+"""EBNFLanguageServer.py - starts a server (if not already running)
                            for the compilation of EBNF
 
 Author: Eckhart Arnold <arnold@badw.de>
@@ -162,7 +162,7 @@ def compile_EBNF(text: str, diagnostics_signature: bytes) -> (str, bytes):
     from DHParser.ebnf import get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, \
         get_ebnf_compiler
     from DHParser.toolkit import json_dumps
-    compiler = get_ebnf_compiler("EBNFServerAnalyse", text)
+    compiler = get_ebnf_compiler("UnknownGrammar", text)
     result, messages, _ = compile_source(
         text, get_ebnf_preprocessor(), get_ebnf_grammar(), get_ebnf_transformer(), compiler)
     # TODO: return errors as well as (distilled) information about symbols for code propositions
@@ -253,7 +253,7 @@ class EBNFLanguageServerProtocol:
             'processId': 0,
             'rootUri': '',
             'clientCapabilities': {},
-            'serverInfo': {"name": "FlexibleEBNFServer", "version": "0.2"},
+            'serverInfo': {"name": "EBNFLangugeServer", "version": "0.3"},
             'serverCapabilities': {
                 "textDocumentSync": TextDocumentSyncKind.Incremental,
                 "completionProvider": {
@@ -444,23 +444,16 @@ def run_server(host, port, log_path=None):
         sys.path.append(scriptpath)
     if dhparserdir not in sys.path:
         sys.path.append(dhparserdir)
-    try:
-        from FlexibleEBNFParser import compile_src
-    except ModuleNotFoundError:
-        from tst_FlexibleEBNF_grammar import recompile_grammar
-        recompile_grammar(grammar_src, force=False)
-        from FlexibleEBNFParser import compile_src
     from DHParser.server import Server, probe_tcp_server, StreamReaderProxy, StreamWriterProxy
     from DHParser.lsp import gen_lsp_table
 
     EBNF_lsp = EBNFLanguageServerProtocol()
     lsp_table = EBNF_lsp.lsp_fulltable.copy()
-    lsp_table.setdefault('default', compile_src)
     EBNF_server = Server(rpc_functions=lsp_table,
                          cpu_bound=set(EBNF_lsp.cpu_bound.lsp_table.keys()),
                          blocking=set(EBNF_lsp.blocking.lsp_table.keys()),
                          connection_callback=EBNF_lsp.connect,
-                         server_name='FlexibleEBNFServer',
+                         server_name='EBNFLanguageServer',
                          strict_lsp=True)
 
     if log_path is not None:
@@ -783,11 +776,11 @@ if __name__ == "__main__":
 
     else:
         echo('Usages:\n'
-             + '    python FlexibleEBNFServer.py --startserver [--host host] [--port port] [--logging [ON|LOG_PATH|OFF]]\n'
-             + '    python FlexibleEBNFServer.py --startdaemon [--host host] [--port port] [--logging [ON|LOG_PATH|OFF]]\n'
-             + '    python FlexibleEBNFServer.py --stream\n'
-             + '    python FlexibleEBNFServer.py --stopserver\n'
-             + '    python FlexibleEBNFServer.py --status\n'
-             + '    python FlexibleEBNFServer.py --logging [ON|LOG_PATH|OFF]\n'
-             + '    python FlexibleEBNFServer.py FILENAME.dsl [--host host] [--port port]  [--logging [ON|LOG_PATH|OFF]]')
+             + '    python EBNFLanguageServer.py --startserver [--host host] [--port port] [--logging [ON|LOG_PATH|OFF]]\n'
+             + '    python EBNFLanguageServer.py --startdaemon [--host host] [--port port] [--logging [ON|LOG_PATH|OFF]]\n'
+             + '    python EBNFLanguageServer.py --stream\n'
+             + '    python EBNFLanguageServer.py --stopserver\n'
+             + '    python EBNFLanguageServer.py --status\n'
+             + '    python EBNFLanguageServer.py --logging [ON|LOG_PATH|OFF]\n'
+             + '    python EBNFLanguageServer.py FILENAME.dsl [--host host] [--port port]  [--logging [ON|LOG_PATH|OFF]]')
         sys.exit(1)

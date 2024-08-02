@@ -131,15 +131,15 @@ export function activate(context: ExtensionContext) {
     let disposable;
     if (DEBUG) {
         if (isLinux||isMacOS) {
-           disposable = startLangServerStream("python3", ["FlexibleEBNFServer.py", "--stream", "--logging"]);
+           disposable = startLangServerStream("python3", ["EBNFLanguageServer.py", "--stream", "--logging"]);
         } else {
-           disposable = startLangServerStream("python", ["FlexibleEBNFServer.py", "--stream", "--logging"]);
+           disposable = startLangServerStream("python", ["EBNFLanguageServer.py", "--stream", "--logging"]);
         }
     } else {
         if (isLinux||isMacOS) {
-            disposable = startLangServerStream("python3", ["FlexibleEBNFServer.py", "--stream"]);
+            disposable = startLangServerStream("python3", ["EBNFLanguageServer.py", "--stream"]);
          } else {
-            disposable = startLangServerStream("python", ["FlexibleEBNFServer.py", "--stream"]);
+            disposable = startLangServerStream("python", ["EBNFLanguageServer.py", "--stream"]);
          }
     }
     context.subscriptions.push(disposable);
