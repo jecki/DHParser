@@ -453,13 +453,13 @@ def traverse(tree: Node,
             except Exception as ae:
                 if isinstance(path[0], RootNode) and path[0].docname:
                     raise AssertionError(
-                        f'An exepction occured when transforming {pp_path(path, (1, 20))} '
-                        f'in document "{path[0].docname}" with {str(call)}:\n'
+                        f'An exepction occured when transforming {pp_path(path, (1, 20))}\n'
+                        f'in document "{path[0].docname}"\nwith {str(call)}:\n'
                         f'{ae.__class__.__name__}: {ae}')
                 else:
                     raise AssertionError(
-                        f'An exception occurred when transforming {pp_path(path, (1, 20))} '
-                        f'with {str(call)}:\n{ae.__class__.__name__}: {ae}')
+                        f'An exception occurred when transforming {pp_path(path, (1, 20))}\n'
+                        f'with\n{str(call)}:\n{ae.__class__.__name__}: {ae}')
 
     for call in table.get('<<<', []):  call([tree])
     traverse_recursive([tree])
@@ -1148,7 +1148,7 @@ MergeRule = Callable[[Sequence[Node]], Node]
 
 
 def join_content(package: Sequence[Node]) -> Node:
-    return Node('joined', "".join(nd.content for nd in package), True)
+    return Node('joined', "".join(nd.content for nd in package), True).with_pos(package[0]._pos)
 
 
 def pick_longest_content(package: Sequence[Node]) -> Node:
@@ -1160,13 +1160,13 @@ def pick_longest_content(package: Sequence[Node]) -> Node:
         if ndL > L:
             longest = content
             L = ndL
-    return Node('joined', longest, True)
+    return Node('joined', longest, True).with_pos(package[0]._pos)
 
 
 def fix_content(fixed_content: str) -> MergeRule:
     def fix(package: Sequence[Node]) -> Node:
         nonlocal fixed_content
-        return Node('joined', fixed_content)
+        return Node('joined', fixed_content).with_pos(package[0]._pos)
     return fix
 
 

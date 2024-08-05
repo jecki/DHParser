@@ -830,16 +830,19 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             [('a', 0), ('b', 0), ('c', 0), ('d', 1), ('e', 1), ('f', 2), ('g', 3)]
 
         :param pos: The position assigned to be assigned to the node.
-            Value must be >= 0.
+            Value must be >= 0 if the position value as already been initialized,
+            before. If not, a value < 0 has no effect.
         :returns: the node itself (for convenience).
         :raises: AssertionError if position has already been assigned or
             if parameter `pos` has a value < 0.
         """
         # condition self.pos == pos cannot be assumed when tokens or whitespace are dropped early!
+        if pos < 0:
+            if self._pos < 0:
+                return self
         if pos != self._pos >= 0:
             raise AssertionError(f"Position value {self._pos} of node {self.name} cannot be "
                                  f"reassigned to a different value ({pos})!")
-        assert pos >= 0, "Negative value %i not allowed!"
         if self._pos < 0:
             self._pos = pos
             for nd in self.walk_tree(include_root=False):

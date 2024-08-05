@@ -3221,6 +3221,12 @@ KEEP_COMMENTS_NAME = KEEP_COMMENTS_PTYPE[1:] + '__'
 RX_NAMED_GROUPS = re.compile(r'\(\?P<(:?\w+)>')
 
 
+def _with_pos(nd: Node, pos: int) -> Node:
+    """A faster replacement for Node.with_pos()"""
+    nd._pos = pos
+    return nd
+
+
 class SmartRE(CombinedParser):  # TODO: turn this into a CombinedParser
     r"""
     Regular expression parser that returns a tree with a node for every
@@ -3244,7 +3250,7 @@ class SmartRE(CombinedParser):  # TODO: turn this into a CombinedParser
                  repr_str: str = '') -> None:
         super().__init__()
         self.repr_str = repr_str
-        self.groups: Optional[List[Tuple(str, bool)]] = None
+        self.groups: Optional[List[Tuple[str, bool]]] = None
         if isinstance(pattern, str):
             self.pattern = pattern
             self.regexp = LazyPattern(self, pattern)
@@ -3306,13 +3312,12 @@ class SmartRE(CombinedParser):  # TODO: turn this into a CombinedParser
                 if self.drop_content:
                     return EMPTY_NODE, end
                 assert self.groups is not None
-                results = tuple(Node(name, content)
-                                for (name, disposable), content in zip(self.groups, values)
+                results = tuple(_with_pos(Node(name, content), match.start(i))
+                                for i, ((name, disposable), content) in enumerate(zip(self.groups, values), start=1)
                                 if content is not None
                                    and (((not disposable or content)
                                          and name != KEEP_COMMENTS_PTYPE)
                                         or content.strip()))
-                for i, nd in enumerate(results, start=1):  nd._pos = match.start(i)
                 return self._return_values(results), end
             return EMPTY_NODE, end
         return None, location

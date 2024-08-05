@@ -457,24 +457,25 @@ class TestBoolean:
         assert flatten_sxpr(tree.as_sxpr()) == '(A (X `(renamed "True") "1") (C "1") (X `(renamed "True") "2"))'
 
 class TestOptimizations:
-    model = RootNode(parse_sxpr('''(array
-          (number "1")
-          (number
-            (:RegExp "2")
-            (:RegExp ".")
-            (:RegExp "0"))
-          (string "a string"))''')).with_pos(0)
+    def setup_class(self):
+        self.model = RootNode(parse_sxpr('''(array
+              (number "1")
+              (number
+                (:RegExp "2")
+                (:RegExp ".")
+                (:RegExp "0"))
+              (string "a string"))''')).with_pos(0)
 
     def raise_error(self, context):
         raise AssertionError()
 
     def test_squeeze_tree(self):
-        tree = copy.deepcopy(TestOptimizations.model)
+        tree = copy.deepcopy(self.model)
         merge_treetops(tree)
         assert tree.as_sxpr() == '''(array (number "1") (number "2.0") (string "a string"))'''
 
     def test_blocking(self):
-        tree = copy.deepcopy(TestOptimizations.model)
+        tree = copy.deepcopy(self.model)
         transtable = {
             '<': BLOCK_ANONYMOUS_LEAVES,
             'number': [merge_leaves, reduce_single_child],

@@ -39,7 +39,7 @@ from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMor
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, \
     Interleave, CombinedParser, Text, EMPTY_NODE, Capture, Drop, Whitespace, \
     GrammarError, Counted, Always, longest_match, extract_error_code, \
-    Option, DTKN, RegExp, ensure_drop_propagation
+    Option, DTKN, RegExp, ensure_drop_propagation, Option, SmartRE
 from DHParser.compile import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
     parse_ebnf, DHPARSER_IMPORTS, compile_ebnf
@@ -1735,6 +1735,22 @@ class TestStringAlternative:
         assert longest_match(l, 'abcdefg', 2) == 'abc'
         assert longest_match(l, 'ax12345', 2) == ''
         assert longest_match(l, 'a', 2) == ''
+
+
+class TestSmartRE:
+    def test_SmartRE(self):
+        # check for uninitialized position values
+        punkt = Text(".").name("punk")
+        nom_klasse = Series(SmartRE(f'(?P<:Text>unbestimmt)(?P<:Whitespace>\s*)|(?P<:Text>bestimmt)(?P<:Whitespace>\s*)'),
+                     Option(punkt)).name("doc")
+        doc = Series(nom_klasse, Option(punkt))
+        parser = Grammar(doc)
+        tree = parser("bestimmt ")
+        # print(tree.as_sxpr(""))
+        assert tree.pick(':Text').pos >= 0
+        assert tree.pick(':Whitespace').pos >= 0
+
+    # TODO: Another test, taking into account disposables would still be needed!
 
 
 class TestErrorLocations:
