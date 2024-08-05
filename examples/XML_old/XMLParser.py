@@ -29,8 +29,7 @@ except ImportError:
     import re
 from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, AnyChar, \
-    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, \
-    Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
+    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \
     Node, TransformerCallable, TransformationDict, transformation_factory, traverse, \
@@ -49,6 +48,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     positions_of, replace_child_names, add_attributes, delimit_children, merge_connected, \
     has_attr, has_parent, ThreadLocalSingletonFactory, TreeReduction, CombinedParser, \
     apply_unless, ERROR, SmartRE
+from DHParser.toolkit import INFINITE
 
 from DHParser.pipeline import PseudoJunction, create_parser_junction
 
@@ -80,7 +80,7 @@ class XMLGrammar(Grammar):
     element = Forward()
     source_hash__ = "759025274905f347b3c99c7196d7ee97"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:CData$|EOF$|Reference$|Misc$|EncName$|PubidChars$|VersionNum$|PubidCharsSingleQuoted$|NameChars$|CommentChars$|NameStartChar$)')
+    disposable__ = re.compile('(?:PubidCharsSingleQuoted$|CommentChars$|EOF$|Reference$|EncName$|CData$|Misc$|VersionNum$|NameStartChar$|PubidChars$|NameChars$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''

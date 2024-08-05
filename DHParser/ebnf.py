@@ -255,7 +255,7 @@ from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_
 from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, SmartRE, \
     Drop, DropFrom, Lookahead, NegativeLookahead, Alternative, Series, Option, ZeroOrMore, OneOrMore, \
     Text, Capture, Retrieve, Pop, optional_last_value, GrammarError, Whitespace, Always, Never, \
-    Synonym, INFINITE, matching_bracket, ParseFunc, update_scanner, CombinedParser, parser_names, \
+    Synonym, matching_bracket, ParseFunc, update_scanner, CombinedParser, parser_names, \
     RX_NAMED_GROUPS, NO_TREE_REDUCTION, FLATTEN, MERGE_TREETOPS, MERGE_LEAVES
 from DHParser.preprocess import PreprocessorFunc, PreprocessorResult, gen_find_include_func, \
     preprocess_includes, make_preprocessor, chain_preprocessors
@@ -265,7 +265,7 @@ from DHParser.toolkit import load_if_file, wrap_str_literal, escape_ctrl_chars, 
     sane_parser_name, re, expand_table, unrepr, compile_python_object, \
     ThreadLocalSingletonFactory, Any, Iterable, Sequence, Set, AbstractSet, Union, Dict, List, \
     Tuple, FrozenSet, MutableSet, Optional, Type, Callable, Container, TypeAlias, \
-    matching_brackets
+    matching_brackets, INFINITE
 from DHParser.transform import TransformerFunc, transformer, remove_brackets, change_name, \
     reduce_single_child, replace_by_single_child, is_empty, remove_children, add_error, \
     remove_tokens, remove_anonymous_tokens, flatten, forbid, assert_content, remove_children_if, \

@@ -37,7 +37,7 @@ from collections import defaultdict, namedtuple
 import copy
 from functools import lru_cache
 from typing import Callable, cast, List, Tuple, Set, FrozenSet, Dict, Collection, \
-    DefaultDict, Sequence, Union, Optional, Iterator, Hashable, AbstractSet
+    DefaultDict, Sequence, Union, Optional, Iterator, AbstractSet
 
 from DHParser.configuration import get_config_value
 from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
@@ -59,7 +59,7 @@ from DHParser.nodetree import ChildrenType, Node, RootNode, WHITESPACE_PTYPE, \
     KEEP_COMMENTS_PTYPE, TOKEN_PTYPE, MIXED_CONTENT_TEXT_PTYPE, ZOMBIE_TAG, EMPTY_NODE, \
     EMPTY_PTYPE, ResultType, LEAF_NODE
 from DHParser.toolkit import sane_parser_name, escape_ctrl_chars, re, matching_brackets, \
-    abbreviate_middle, RX_NEVER_MATCH, RxPatternType, linebreaks, line_col, TypeAlias
+    abbreviate_middle, RX_NEVER_MATCH, RxPatternType, linebreaks, line_col, TypeAlias, INFINITE
 
 try:
     import cython
@@ -129,7 +129,6 @@ __all__ = ('parser_names',
            'Series',
            'Alternative',
            'longest_match',
-           'INFINITE',
            'Counted',
            'Interleave',
            'Required',
@@ -460,7 +459,6 @@ def artifact(nd: Node) -> bool:
 #
 ########################################################################
 
-INFINITE = 2**30
 _GRAMMAR_PLACEHOLDER = None  # type: Optional[Grammar]
 
 
@@ -1956,6 +1954,8 @@ class Grammar:
         result = None  # type: Optional[Node]
         stitches = []  # type: List[Node]
         L = len(self.document__)
+        if L >= INFINITE:
+            raise ValueError(f"Document of size {L} exceeds maximum size of {INFINITE - 1} !")
         if L == 0:
             try:
                 result, _ = parser(0)

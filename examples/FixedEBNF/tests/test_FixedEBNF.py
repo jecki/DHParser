@@ -31,7 +31,7 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 from DHParser.configuration import get_config_value, set_config_value
 from DHParser.compile import Compiler
 from DHParser.dsl import compileDSL
-from DHParser.toolkit import compile_python_object, re
+from DHParser.toolkit import compile_python_object, re, INFINITE
 from DHParser.log import is_logging, log_ST, log_parsing_history, start_logging, append_log
 from DHParser.error import Error, is_error, add_source_locations, MANDATORY_CONTINUATION, \
     MALFORMED_ERROR_STRING, MANDATORY_CONTINUATION_AT_EOF, RESUME_NOTICE, PARSER_STOPPED_BEFORE_END, \
@@ -40,7 +40,7 @@ from DHParser.error import Error, is_error, add_source_locations, MANDATORY_CONT
 from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, ParserFactory, \
     Interleave, CombinedParser, Text, EMPTY_NODE, Capture, Drop, Whitespace, Grammar, \
-    GrammarError, Counted, Always, INFINITE, longest_match, extract_error_code
+    GrammarError, Counted, Always, longest_match, extract_error_code
 from DHParser import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
     parse_ebnf, get_ebnf_preprocessor, DHPARSER_IMPORTS, compile_ebnf

@@ -105,7 +105,7 @@ from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, linebreaks, line_col, JSONnull, \
     validate_XML_attribute_value, fix_XML_attribute_value, lxml_XML_attribute_value, \
-    abbreviate_middle, TypeAlias, deprecated, RxPatternType
+    abbreviate_middle, TypeAlias, deprecated, RxPatternType, INFINITE
 
 try:
     import cython
@@ -3680,22 +3680,32 @@ def find_common_ancestor(path_A: Path, path_B: Path) -> Tuple[Optional[Node], in
 # miscellaneous path functions #######################################
 
 
-def pp_path(path: Path, with_content: int = 0, delimiter: str = ' <- ') \
+def pp_path(path: Path,
+            with_content: Union[int, Tuple[int, int]] = 0,
+            delimiter: str = ' <- ') \
         -> str:
     """Serializes a path as string.
 
     :param path: the path to be serialized.
     :param with_content: the number of nodes from the end of the path for
-        which the content will be displayed next to the name.
+        which the content will be displayed next to the name. If
+        a tuple is given, the first integer is the number of nodes and
+        the second integer is the maximum length of the content string,
+        before it is abbreviated.
     :param delimiter: The delimiter separating the nodes in the returned string.
     :returns: the string-serialization of the given path.
     """
+    if isinstance(with_content, Container):
+        with_content, max_content_len = with_content
+    else:
+        max_content_len = INFINITE
     if with_content == 0:
         steps = [nd.name for nd in path]
     else:
         n = with_content if with_content > 0 else len(path)
         steps = [nd.name for nd in path[:-n]]
-        steps.extend(f'{nd.name} "{nd.content}"' for nd in path[-n:])
+        steps.extend(f'{nd.name} "{abbreviate_middle(nd.content, max_content_len)}"'
+                     for nd in path[-n:])
     return delimiter.join(steps)
 
 

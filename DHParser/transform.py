@@ -42,7 +42,7 @@ except ImportError:
 
 from DHParser.error import ErrorCode, AST_TRANSFORM_CRASH, ERROR
 from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, LEAF_PTYPES, PLACEHOLDER, \
-    RootNode, parse_sxpr, flatten_sxpr, Path
+    RootNode, parse_sxpr, flatten_sxpr, Path, pp_path
 from DHParser.toolkit import issubtype, isgenerictype, expand_table, smart_list, re, \
     deprecation_warning, TypeAlias
 
@@ -451,8 +451,15 @@ def traverse(tree: Node,
             try:
                 call(path)
             except Exception as ae:
-                raise AssertionError('An exception occurred when transforming "%s" with %s:\n%s'
-                                     % (key, str(call), ae.__class__.__name__ + ': ' + str(ae)))
+                if isinstance(path[0], RootNode) and path[0].docname:
+                    raise AssertionError(
+                        f'An exepction occured when transforming {pp_path(path, (1, 20))} '
+                        f'in document "{path[0].docname}" with {str(call)}:\n'
+                        f'{ae.__class__.__name__}: {ae}')
+                else:
+                    raise AssertionError(
+                        f'An exception occurred when transforming {pp_path(path, (1, 20))} '
+                        f'with {str(call)}:\n{ae.__class__.__name__}: {ae}')
 
     for call in table.get('<<<', []):  call([tree])
     traverse_recursive([tree])

@@ -50,8 +50,8 @@ from DHParser.error import Error, RESUME_NOTICE, RECURSION_DEPTH_LIMIT_HIT
 from DHParser.nodetree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE, ZOMBIE_TAG
 from DHParser.log import HistoryRecord, NONE_NODE
 from DHParser.parse import Grammar, Parser, ParserError, ParseFunc, ContextSensitive, \
-    UnaryParser, SmartRE, ERR, PARSER_PLACEHOLDER, INFINITE
-from DHParser.toolkit import line_col
+    UnaryParser, SmartRE, ERR, PARSER_PLACEHOLDER
+from DHParser.toolkit import line_col, INFINITE
 
 __all__ = ('trace_history', 'set_tracer', 'resume_notices_on', 'resume_notices_off')
 
