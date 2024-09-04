@@ -29,6 +29,7 @@ for CST -> AST transformations.
 from __future__ import annotations
 
 import collections.abc
+import copy
 from functools import partial, singledispatch, reduce
 import inspect
 import operator

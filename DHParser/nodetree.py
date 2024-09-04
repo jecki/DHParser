@@ -455,13 +455,13 @@ def xml_tag_name(tag_name: str) -> str:
     lead to invalid XML::
 
         >>> xml_tag_name(':Series')
-        '__Series__'
+        'Series__'
 
     :param tag_name: the original tag name
     :returns: the XML-conform name
     """
     if tag_name[:1] == ':':
-        return f'__{tag_name[1:]}__'
+        return f'{tag_name[1:]}__'
     return tag_name
 
 
@@ -470,7 +470,7 @@ def restore_tag_name(tag_name: str) -> str:
 
     >>> restore_tag_name('ANONYMOUS_Series__')
     ':Series'
-    >>> restore_tag_name('__Series__')
+    >>> restore_tag_name('Series__')
     ':Series'
     """
     if tag_name[-2:] == "__":
@@ -478,6 +478,8 @@ def restore_tag_name(tag_name: str) -> str:
             return ':' + tag_name[10:-2]
         elif tag_name[:2] == '__':
             return ':' + tag_name[2:-2]
+        else:
+            return ':' + tag_name[:-2]
     return tag_name
 
 
@@ -3831,7 +3833,7 @@ def split_node(node: Node, parent: Node, i: cython.int, left_biased: bool = True
         which the node will be split.
     :param left_biased: if True, yields the location after the end of
         the previous path rather than the location at the very beginning
-        of the next path. Default value is "False".
+        of the next path. Default value is "True".
     :param chain_attr: a dictionary with a single key and value resembling
         an attribute and value that will be added to the attributes-dicitonary
         of both nodes after the split, if the node is named node.
