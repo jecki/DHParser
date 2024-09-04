@@ -193,8 +193,8 @@ class TestParseXML:
         assert flatten_sxpr(tree.as_sxpr()) == '(a (:Text "alpha ") (b "beta") (:Text " gamma"))'
         tree = parse_xml(' <a>  <b>beta</b>  </a> ')
         assert flatten_xml(tree.as_xml(string_tags=set())) == \
-               '<a><__Text__>  </__Text__><b>beta</b>' \
-               '<__Text__>  </__Text__></a>'
+               '<a><Text__>  </Text__><b>beta</b>' \
+               '<Text__>  </Text__></a>'
         assert tree.as_xml(inline_tags={'a'}, string_tags={':Text'}) == '<a>  <b>beta</b>  </a>'
         tree = parse_xml(' <a>\n  <b>beta</b>\n</a> ')
         assert tree.as_xml(inline_tags={'a'}) == '<a><b>beta</b></a>'
