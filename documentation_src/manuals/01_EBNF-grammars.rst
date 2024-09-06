@@ -1963,7 +1963,7 @@ DHParser will try all of these rules and resume at the closest of the
 locations these rules yield. The `@list_resume`-rule moves to a point
 after the list, where the list parser might have returned, if no error
 had occurred, which is after the closing square bracket plus any
-adjacent whitespace. The '@_items_skip`-rule moves to any point within
+adjacent whitespace. The `@_items_skip`-rule moves to any point within
 the sequence of items where the `_items` could catch up (another comma
 "," followed by further items) or end, because the sequence is exhausted
 ("]" or the end of the document caught be the regular expression marker
