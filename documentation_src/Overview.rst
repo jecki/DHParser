@@ -603,7 +603,7 @@ This is supplemented by a powerful markup-function
 position of the text to be marked up can be passed. No worries about
 tags lying in between::
 
-    >>> parent = cm.markup(ny_pos, ny_pos + len('New York'), 'location')
+    >>> parent, _ = cm.markup(ny_pos, ny_pos + len('New York'), 'location')
     >>> print(parent.as_xml(inline_tags='doc'))
     <doc>This is <location><em>New</em> York</location>, not "old" York</doc>
 

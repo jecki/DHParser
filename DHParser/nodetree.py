@@ -4006,7 +4006,7 @@ def deep_split(path: Path, i: cython.int, left_biased: bool=True,
 def can_split(t: Path, i: cython.int, left_biased: bool = True, greedy: bool = True,
               match_func: PathMatchFunction = ANY_PATH,
               skip_func: PathMatchFunction = NO_PATH,
-              divisible: AbstractSet[str] = LEAF_PTYPES) -> int:
+              divisible: Container[str] = LEAF_PTYPES) -> int:
     """Returns the negative index of the first node in the path, from which
     on all nodes can be split or do not need to be split, because the
     split-index lies to the left or right of the node.
@@ -4091,7 +4091,7 @@ def markup_right(path: Path, i: cython.int, name: str, attr_dict: Dict[str, Any]
                  greedy: bool = True,
                  match_func: PathMatchFunction = ANY_PATH,
                  skip_func: PathMatchFunction = NO_PATH,
-                 divisible: AbstractSet[str] = LEAF_PTYPES,
+                 divisible: Container[str] = LEAF_PTYPES,
                  chain_attr_name: str = ''):
     """Markup the content from string position i within the last node of
     the path up to the very end of the content of the first node of the
@@ -4197,7 +4197,7 @@ def markup_left(path: Path, i: cython.int, name: str, attr_dict: Dict[str, Any],
                 greedy: bool = True,
                 match_func: PathMatchFunction = ANY_PATH,
                 skip_func: PathMatchFunction = NO_PATH,
-                divisible: AbstractSet[str] = LEAF_PTYPES,
+                divisible: Container[str] = LEAF_PTYPES,
                 chain_attr_name: str = ''):
     """Markup the content from string position i within the last node of
     the path up to the very end of the content of the first node of the
@@ -4427,18 +4427,18 @@ class ContentMapping:
         self.greedy: bool = greedy
         if isinstance(divisibility, Dict):
             if '*' not in divisibility:  divisibility['*'] = set()
-            self.divisability: Dict[str, Container] = divisibility
+            self.divisibility: Dict[str, Container] = divisibility
         elif isinstance(divisibility, str):
             for delimiter in (';', ',', ' '):
                 lst = divisibility.split(delimiter)
                 if len(lst) > 1:
-                    self.divisability = {'*': {s.strip() for s in lst}}
+                    self.divisibility = {'*': {s.strip() for s in lst}}
                     break
             else:
                 raise ValueError(f'String value "{divisibility}" of parameter "divisability" '
                                  f'does not look like a list node-names!')
         else:
-            self.divisability = {'*': divisibility}
+            self.divisibility = {'*': divisibility}
         self.chain_attr_name: str = chain_attr_name
         self.auto_cleanup = auto_cleanup
 
@@ -4758,7 +4758,7 @@ class ContentMapping:
             12 -> a, e, f, h "ABC"
             15 -> a, e, i "DEF"
             >>> cm.auto_cleanup = False
-            >>> common_ancestor = cm.markup(10, 16, 'Y')
+            >>> common_ancestor, _ = cm.markup(10, 16, 'Y')
             >>> print(common_ancestor.as_sxpr())
             (e (f (g (:Text "7") (Y "89")) (Y (h "ABC"))) (i (Y "D") (:Text "EF")))
             >>> print(cm)
@@ -4785,7 +4785,7 @@ class ContentMapping:
 
             >>> tree = parse_sxpr('(a (b (c "123") (d "456")) (e (f (g "789") (h "ABC")) (i "DEF")))')
             >>> cm = ContentMapping(tree, auto_cleanup=False)
-            >>> common_ancestor = cm.markup(0, 6, 'Y')
+            >>> common_ancestor, _ = cm.markup(0, 6, 'Y')
             >>> print(common_ancestor.as_sxpr())
             (b (Y (c "123") (d "456")))
             >>> a = cm.get_path_index(0)
@@ -4853,7 +4853,7 @@ class ContentMapping:
         last_index = self.get_path_index(end_pos)
         self.rebuild_mapping_slice(first_index, last_index)
 
-    def insert_node(self, pos: int, node: Node) -> Node:
+    def insert_node(self, pos: int, node: Node) -> Tuple[Node, int]:
         """Inserts a node at a specific position into the last or
         eventually second but last node in the path from the context mapping
         that covers this position. Returns the parent of the newly inserted
@@ -4863,12 +4863,12 @@ class ContentMapping:
         rel_pos = pos - self._pos_list[index]
         parent = insert_node(path, rel_pos, node)
         self.rebuild_mapping_slice(index, index)
-        return parent
+        return parent, index
 
 
     @cython.locals(i=cython.int, k=cython.int, q=cython.int, r=cython.int, t=cython.int, u=cython.int, L=cython.int)
     def markup(self, start_pos: cython.int, end_pos: cython.int, name: str,
-               *attr_dict, **attributes) -> Node:
+               *attr_dict, **attributes) -> Tuple[Node, int]:
         """ Marks the span [start_pos, end_pos[ up by adding one or more Node's
         with ``name``, eventually cutting through ``divisible`` nodes. Returns the
         nearest common ancestor of ``start_pos`` and ``end_pos``.
@@ -4970,26 +4970,26 @@ class ContentMapping:
         attr_dict.update(attributes)
         if start_pos == end_pos:
             milestone = Node(name, '').with_attr(attr_dict)
-            common_ancestor = self.insert_node(start_pos, milestone)
-            return common_ancestor
+            common_ancestor, path_index = self.insert_node(start_pos, milestone)
+            return common_ancestor, path_index
 
         path_A, pos_A = self.get_path_and_offset(start_pos)
         path_B, pos_B = self.get_path_and_offset(end_pos, left_biased=True)
         assert path_A
         assert path_B
-        common_ancestor, i = find_common_ancestor(path_A, path_B)
+        common_ancestor, pi = find_common_ancestor(path_A, path_B)
         assert common_ancestor
         assert not common_ancestor.pick_if(lambda nd: nd.name == ':Text' and nd.children, include_root=True), common_ancestor.as_sxpr()
 
         if self.chain_attr_name and self.chain_attr_name not in attr_dict:
             attr_dict[self.chain_attr_name] = gen_chain_ID()
 
-        divisible = self.divisability.get(name, self.divisability.get('*', frozenset()))
+        divisible = self.divisibility.get(name, self.divisibility.get('*', frozenset()))
 
         if not common_ancestor._children:
             attr_dict.pop(self.chain_attr_name, None)
             markup_leaf(common_ancestor, pos_A, pos_B, name, attr_dict)
-            if (not self.greedy or common_ancestor.name[0:1] == ":") and i != 0 \
+            if (not self.greedy or common_ancestor.name[0:1] == ":") and pi != 0 \
                     and (common_ancestor.name in divisible or common_ancestor.anonymous):
                 for child in common_ancestor.children:
                     if child.name == TOKEN_PTYPE:
@@ -4999,7 +4999,7 @@ class ContentMapping:
                         assert child.name == name
                         assert not child._children
                         child.result = Node(common_ancestor.name, child.result).with_attr(common_ancestor.attr)
-                ur_ancestor = path_A[i - 1]
+                ur_ancestor = path_A[pi - 1]
                 t = ur_ancestor.index(common_ancestor)
                 ur_ancestor.result = ur_ancestor[:t] + common_ancestor.children + ur_ancestor[t + 1:]
                 common_ancestor = ur_ancestor
@@ -5007,10 +5007,10 @@ class ContentMapping:
             if self.auto_cleanup:
                 self.rebuild_mapping_slice(self.get_path_index(start_pos),
                                            self.get_path_index(end_pos, left_biased=True))
-            return common_ancestor
+            return common_ancestor, pi
 
-        stump_A = path_A[i:]
-        stump_B = path_B[i:]
+        stump_A = path_A[pi:]
+        stump_B = path_B[pi:]
 
         q = can_split(
             stump_A, pos_A, False, self.greedy, self.select_func, self.ignore_func, divisible)
@@ -5065,7 +5065,7 @@ class ContentMapping:
             self.rebuild_mapping_slice(self.get_path_index(start_pos),
                                        self.get_path_index(end_pos, left_biased=True))
         assert not common_ancestor.pick_if(lambda nd: nd.name == ':Text' and nd.children, include_root=True), common_ancestor.as_sxpr()
-        return common_ancestor
+        return common_ancestor, pi
 
 
 class LocalContentMapping(ContentMapping):
@@ -5083,7 +5083,7 @@ class LocalContentMapping(ContentMapping):
                  chain_attr_name: str = '',
                  auto_cleanup: bool = True):
         ancestor, index = find_common_ancestor(start_path, end_path)
-        super().__init__(self, ancestor, select, ignore, greedy, divisibility,
+        super().__init__(ancestor, select, ignore, greedy, divisibility,
                          chain_attr_name, auto_cleanup)
         self.stump: Path = start_path[:index]
         start_path_tail = start_path[index:]
@@ -5137,11 +5137,11 @@ class LocalContentMapping(ContentMapping):
     def rebuild_mapping(self, start_pos: int, end_pos: int):
         super().rebuild_mapping(start_pos + self.pos_offset, end_pos + self.pos_offset)
 
-    def insert_node(self, pos: int, node: Node) -> Node:
+    def insert_node(self, pos: int, node: Node) -> Tuple[Node, int]:
         return super().insert_node(pos + self.pos_offset, node)
 
     def markup(self, start_pos: int, end_pos: int, name: str,
-               *attr_dict, **attributes) -> Node:
+               *attr_dict, **attributes) -> Tuple[Node, int]:
         return super().markup(start_pos + self.pos_offset, end_pos + self.pos_offset, name,
                               *attr_dict, **attributes)
 
