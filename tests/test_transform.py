@@ -359,7 +359,7 @@ class TestWhitespaceTransformations:
 
         dom = parse_sxpr('(p (Author "Mus") (:Text ". ") (Author "Enchir."))')
         for path in dom.select_path(BRANCH_NODE, include_root=True):
-            merge_connected(path, is_author, is_delimiter, 'span', TOKEN_PTYPE)
+            merge_connected(path, is_author, is_delimiter, 'Author', TOKEN_PTYPE)
         assert dom.as_sxpr() == '(p (Author "Mus. Enchir."))'
 
 

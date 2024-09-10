@@ -1276,10 +1276,9 @@ def merge_adjacent(path: Path, condition: Callable, preferred_name: str = ''):
                 if i > k:
                     adjacent = children[k:i]
                     head = adjacent[0]
-                    names = {nd.name for nd in adjacent}
                     head.result = reduce(operator.add, (nd.result for nd in adjacent), initial)
                     update_attr(head, adjacent[1:], cast(RootNode, path[0]))
-                    if preferred_name and len(adjacent) > 1:  #  in names:
+                    if preferred_name and len(adjacent) > 1:
                         head.name = preferred_name
                     new_result.append(head)
             else:
@@ -1297,7 +1296,8 @@ def merge_connected(path: Path, content: Callable, delimiter: Callable,
     """
     Merges sequences of content and delimiters. Other than `merge_adjacent()`, which
     does not make this distinction, delimiters at the fringe of content blocks are not
-    included in the merge.
+    included in the merge. (Note that other than :py:func:`merge_adjacent` the
+    content name is always assigned to content nodes, but not to delimiters.)
 
     :param path: The path, i.e. list of "ancestor" nodes, ranging from the
         root node (`path[0]`) to the current node (`path[-1]`)
@@ -1329,10 +1329,9 @@ def merge_connected(path: Path, content: Callable, delimiter: Callable,
                 if i > k:
                     adjacent = children[k:i]
                     head = adjacent[0]
-                    names = {nd.name for nd in adjacent}
                     head.result = reduce(operator.add, (nd.result for nd in adjacent), initial)
                     update_attr(head, adjacent[1:], cast(RootNode, path[0]))
-                    if content_name in names:
+                    if content_name:  # and len(adjacent) > 1:
                         head.name = content_name
                     new_result.append(head)
             else:
