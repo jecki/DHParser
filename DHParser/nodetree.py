@@ -182,6 +182,10 @@ __all__ = ('WHITESPACE_PTYPE',
            'select_from_path',
            'pick_from_path_if',
            'pick_from_path',
+           'path_head_if',
+           'path_head',
+           'path_tail_if',
+           'path_tail',
            'find_common_ancestor',
            'pp_path',
            'path_sanity_check',
@@ -3611,7 +3615,7 @@ def pick_path(start_path: Path,
     """
     Returns the first path for which the criterion matches. If no
     path in the given direction (forward by default or reverse,
-    if paramter reverse is True), None is returned.
+    if parameter reverse is True), None is returned.
     """
     try:
         return next(select_path(
@@ -3660,6 +3664,68 @@ def pick_from_path(path: Path, criterion: NodeSelector, reverse: bool=False) \
         return next(select_from_path(path, criterion, reverse=reverse))
     except StopIteration:
         return None
+
+
+def path_head_if(path: Path, match_func: NodeMatchFunction, greedy: bool=False) -> Path:
+    """Returns the beginning of the path until and including the first
+    node for which match_func is True."""
+    k = 0
+    for i, nd in enumerate(path):
+        if match_func(nd):
+            k = i + 1
+            if not greedy:  break
+    return path[:k]
+
+
+def path_head(path: Path, criterion: NodeSelector, greedy: bool=False) -> Path:
+    """Returns the beginning of the path until and including the first
+    node for which the criterion holds.
+    >>> tree = parse_sxpr('(A (B (C (D (B (E "?"))))))')
+    >>> path = tree.pick_path('E')
+    >>> print(pp_path(path))
+    A <- B <- C <- D <- B <- E
+    >>> head = path_head(path, 'B')
+    >>> print(pp_path(head))
+    A <- B
+    >>> head2 = path_head(path, 'B', greedy=True)
+    >>> print(pp_path(head2))
+    A <- B <- C <- D <- B
+    >>> failure = path_head(path, '?')
+    >>> print(failure)
+    []
+    """
+    return path_head_if(path, create_match_function(criterion), greedy)
+
+
+def path_tail_if(path: Path, match_func: NodeMatchFunction, greedy: bool=False) -> Path:
+    """Returns the beginning of the path until and including the first
+    node for which match_func is True."""
+    k = len(path)
+    for i in range(len(path) - 1, -1, -1):
+        if match_func(path[i]):
+            k = i
+            if not greedy:  break
+    return path[k:]
+
+
+def path_tail(path: Path, criterion: NodeSelector, greedy: bool=False) -> Path:
+    """Returns the beginning of the path until and including the first
+    node for which the criterion holds.
+    >>> tree = parse_sxpr('(A (B (C (D (B (E "?"))))))')
+    >>> path = tree.pick_path('E')
+    >>> print(pp_path(path))
+    A <- B <- C <- D <- B <- E
+    >>> tail = path_tail(path, 'B')
+    >>> print(pp_path(tail))
+    B <- E
+    >>> tail2 = path_tail(path, 'B', greedy=True)
+    >>> print(pp_path(tail2))
+    B <- C <- D <- B <- E
+    >>> failure = path_tail(path, '?')
+    >>> print(failure)
+    []
+    """
+    return path_tail_if(path, create_match_function(criterion), greedy)
 
 
 def find_common_ancestor(path_A: Path, path_B: Path) -> Tuple[Optional[Node], int]:
@@ -4539,16 +4605,25 @@ class ContentMapping:
             raise IndexError(errmsg(pos))
         return path_index
 
-    def get_path_and_offset(self, pos: int, left_biased: bool = False) -> Tuple[Path, int]:
+    def get_path_and_offset(self, pos: int, left_biased: bool = False,
+                            index_out: Optional[List[int]] = None) -> Tuple[Path, int]:
         """Returns the path and relative position for the absolute
-        position ``pos``. See :py:meth:`ContentMappin.get_path_index` for the description
-        of the parameters.
+        position ``pos``.
 
-        :returns:   tuple (path, offset) where the offset is the position of
-            ``pos`` relative to the actual position of the last node in the path.
+        :param pos:   a position in the content of the tree for which the
+            path mapping ``cm`` was generated
+        :param left_biased: yields the location after the end of the previous
+            path rather than the location at the very beginning of the
+            next path. Default value is "False".
+        :param index_out: the index of the path in the content mapping's path-list
+            will be appended to index_out (optional parameter!)
+
+        :returns:   tuple (path, offset, path_index) where the offset is the position
+            of ``pos`` relative to the actual position of the last node in the path.
         :raises:    IndexError if not 0 <= position < length of document
         """
         path_index = self.get_path_index(pos, left_biased)
+        if index_out is not None:  index_out.append(path_index)
         return self._path_list[path_index], pos - self._pos_list[path_index]
 
     def get_node_index(self, node: Node, reverse: bool=False) -> int:
@@ -4973,11 +5048,13 @@ class ContentMapping:
             common_ancestor, path_index = self.insert_node(start_pos, milestone)
             return common_ancestor, path_index
 
-        path_A, pos_A = self.get_path_and_offset(start_pos)
+        bag = []
+        path_A, pos_A = self.get_path_and_offset(start_pos, index_out=bag)
+        path_index = bag[0]
         path_B, pos_B = self.get_path_and_offset(end_pos, left_biased=True)
         assert path_A
         assert path_B
-        common_ancestor, pi = find_common_ancestor(path_A, path_B)
+        common_ancestor, i = find_common_ancestor(path_A, path_B)
         assert common_ancestor
         assert not common_ancestor.pick_if(lambda nd: nd.name == ':Text' and nd.children, include_root=True), common_ancestor.as_sxpr()
 
@@ -4989,7 +5066,7 @@ class ContentMapping:
         if not common_ancestor._children:
             attr_dict.pop(self.chain_attr_name, None)
             markup_leaf(common_ancestor, pos_A, pos_B, name, attr_dict)
-            if (not self.greedy or common_ancestor.name[0:1] == ":") and pi != 0 \
+            if (not self.greedy or common_ancestor.name[0:1] == ":") and i != 0 \
                     and (common_ancestor.name in divisible or common_ancestor.anonymous):
                 for child in common_ancestor.children:
                     if child.name == TOKEN_PTYPE:
@@ -4999,7 +5076,7 @@ class ContentMapping:
                         assert child.name == name
                         assert not child._children
                         child.result = Node(common_ancestor.name, child.result).with_attr(common_ancestor.attr)
-                ur_ancestor = path_A[pi - 1]
+                ur_ancestor = path_A[i - 1]
                 t = ur_ancestor.index(common_ancestor)
                 ur_ancestor.result = ur_ancestor[:t] + common_ancestor.children + ur_ancestor[t + 1:]
                 common_ancestor = ur_ancestor
@@ -5007,10 +5084,10 @@ class ContentMapping:
             if self.auto_cleanup:
                 self.rebuild_mapping_slice(self.get_path_index(start_pos),
                                            self.get_path_index(end_pos, left_biased=True))
-            return common_ancestor, pi
+            return common_ancestor, path_index
 
-        stump_A = path_A[pi:]
-        stump_B = path_B[pi:]
+        stump_A = path_A[i:]
+        stump_B = path_B[i:]
 
         q = can_split(
             stump_A, pos_A, False, self.greedy, self.select_func, self.ignore_func, divisible)
@@ -5065,7 +5142,7 @@ class ContentMapping:
             self.rebuild_mapping_slice(self.get_path_index(start_pos),
                                        self.get_path_index(end_pos, left_biased=True))
         assert not common_ancestor.pick_if(lambda nd: nd.name == ':Text' and nd.children, include_root=True), common_ancestor.as_sxpr()
-        return common_ancestor, pi
+        return common_ancestor, path_index
 
 
 class LocalContentMapping(ContentMapping):
