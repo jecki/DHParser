@@ -4969,8 +4969,9 @@ class ContentMapping:
         :param attributes: Alternatively, the attributes can also be passed as a
             list of named parameters.
 
-        :returns: The nearest (from the top of the tree) node within which the
-            entire markup lies.
+        :returns: The nearest (from the top of the tree) node, e.g. "ancestor", within
+            which the entire markup lies as well as the first path-index of that
+            ancestor.
 
         Examples::
 
