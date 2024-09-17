@@ -186,6 +186,7 @@ __all__ = ('WHITESPACE_PTYPE',
            'path_head',
            'path_tail_if',
            'path_tail',
+           'drop_leaf',
            'find_common_ancestor',
            'pp_path',
            'path_sanity_check',
@@ -3698,7 +3699,7 @@ def path_head(path: Path, criterion: NodeSelector, greedy: bool=False) -> Path:
 
 
 def path_tail_if(path: Path, match_func: NodeMatchFunction, greedy: bool=False) -> Path:
-    """Returns the beginning of the path until and including the first
+    """Returns the ending of the path until and including the first
     node for which match_func is True."""
     k = len(path)
     for i in range(len(path) - 1, -1, -1):
@@ -3709,23 +3710,51 @@ def path_tail_if(path: Path, match_func: NodeMatchFunction, greedy: bool=False) 
 
 
 def path_tail(path: Path, criterion: NodeSelector, greedy: bool=False) -> Path:
-    """Returns the beginning of the path until and including the first
-    node for which the criterion holds.
-    >>> tree = parse_sxpr('(A (B (C (D (B (E "?"))))))')
-    >>> path = tree.pick_path('E')
-    >>> print(pp_path(path))
-    A <- B <- C <- D <- B <- E
-    >>> tail = path_tail(path, 'B')
-    >>> print(pp_path(tail))
-    B <- E
-    >>> tail2 = path_tail(path, 'B', greedy=True)
-    >>> print(pp_path(tail2))
-    B <- C <- D <- B <- E
-    >>> failure = path_tail(path, '?')
-    >>> print(failure)
-    []
+    """Returns the ending of the path until and including the first
+    node for which the criterion holds. Examples::
+
+        >>> tree = parse_sxpr('(A (B (C (D (B (E "?"))))))')
+        >>> path = tree.pick_path('E')
+        >>> print(pp_path(path))
+        A <- B <- C <- D <- B <- E
+        >>> tail = path_tail(path, 'B')
+        >>> print(pp_path(tail))
+        B <- E
+        >>> tail2 = path_tail(path, 'B', greedy=True)
+        >>> print(pp_path(tail2))
+        B <- C <- D <- B <- E
+        >>> failure = path_tail(path, '?')
+        >>> print(failure)
+        []
     """
     return path_tail_if(path, create_match_function(criterion), greedy)
+
+
+def drop_leaf(leaf_path: Path):
+    """Drops the last node in the leaf_path, if it is a leaf. Recursively drops
+    all parent nodes, if they are empty after dropping the leaf. Examples::
+
+        >>> tree = parse_sxpr('(A (B (C (D (B (E "?"))))))')
+        >>> drop_leaf(tree.pick_path('E'))
+        >>> print(tree.as_sxpr())
+        (A)
+        >>> tree = parse_sxpr('(A (B (C (D (B (E "?"))) (F "!"))))')
+        >>> drop_leaf(tree.pick_path('E'))
+        >>> print(tree.as_sxpr())
+        (A (B (C (F "!"))))
+        >>> tree = parse_sxpr('(A (B (C (D (B (E "?"))) (F "!"))))')
+        >>> drop_leaf(tree.pick_path('F'))
+        >>> print(tree.as_sxpr())
+        (A (B (C (D (B (E "?"))))))
+
+    """
+    assert not leaf_path[-1].children, f'{pp_path(leaf_path)} is not a leaf-path!'
+    tail = path_tail_if(leaf_path, lambda nd: len(nd.children) > 1)
+    if tail:
+        parent = tail[0]
+        del parent[tail[1]]
+    else:
+        leaf_path[0].result = ''
 
 
 def find_common_ancestor(path_A: Path, path_B: Path) -> Tuple[Optional[Node], int]:
