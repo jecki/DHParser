@@ -418,7 +418,7 @@ def compile_source(source: str,
     and :py:func:`full_compile` for postprocessing and compiling plus
     postprocessing.
 
-    :param source: The input text for compilation or a the name of a
+    :param source: The input text for compilation or the name of a
             file containing the input text.
     :param preprocessor:  text -> text. A preprocessor function
             or None, if no preprocessor is needed.

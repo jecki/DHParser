@@ -3539,21 +3539,21 @@ def select_path_if(start_path: Path,
                    match_func: PathMatchFunction,
                    include_root: bool = False,
                    reverse: bool = False,
-                   skip_func: PathMatchFunction = NO_PATH) -> Iterator[Path]:
+                   skip_subtree: PathMatchFunction = NO_PATH) -> Iterator[Path]:
     """
     Creates an Iterator yielding all `paths` for which the
     `match_function` is true, starting from `path`.
     """
 
     def recursive(trl):
-        nonlocal match_func, reverse, skip_func
+        nonlocal match_func, reverse, skip_subtree
         if match_func(trl):
             yield trl
         top = trl[-1]
         child_iterator = reversed(top._children) if reverse else top._children
         for child in child_iterator:
             child_trl = trl + [child]
-            if not skip_func(child_trl):
+            if not skip_subtree(child_trl):
                 yield from recursive(child_trl)
 
     path = start_path.copy()
