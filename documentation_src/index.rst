@@ -37,7 +37,7 @@ License
 
 DHParser is open source software under the `Apache 2.0 License`_.
 
-Copyright 2016-2023  `Eckhart Arnold <arnold@badw.de>`_, Bavarian Academy of Sciences and Humanities
+Copyright 2016-2024  `Eckhart Arnold <arnold@badw.de>`_, Bavarian Academy of Sciences and Humanities
 
 The source code can downloaded from: `gitlab.lrz.de/badw-it/DHParser <https://gitlab.lrz.de/badw-it/DHParser>`_
 
