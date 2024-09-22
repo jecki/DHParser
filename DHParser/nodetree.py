@@ -286,7 +286,7 @@ def VOID_NODE(nd: Node) -> bool:
     return not nd._result
 
 def VOID_PATH(path: Path) -> bool:
-    return not path[.1]._result
+    return not path[-1]._result
 
 
 def create_match_function(criterion: NodeSelector) -> NodeMatchFunction:
