@@ -32,9 +32,8 @@ from __future__ import annotations
 import bisect
 from collections import namedtuple
 import functools
-import inspect
 import os
-from typing import Union, Optional, Callable, Tuple, List, Any, NamedTuple
+from typing import Union, Optional, Callable, Tuple, List, Any
 
 from DHParser.error import Error, SourceMap, SourceLocation, SourceMapFunc, \
     add_source_locations
