@@ -46,7 +46,7 @@ techniques, like RelaxNG.
 The next step and, evidently, the hard part would be to not only 
 validate various specimen of abstract syntax trees, but to verify 
 automatically, that, given a certain grammar and a table of 
-transformations, the abstract syntax tree thet any well formed 
+transformations, the abstract syntax tree that any well-formed 
 source code yields is valid according to the structural definition.    
 
 
@@ -71,7 +71,7 @@ parsers:
 - Another Alternative would be to add an EBNF-compiler directive, say `@
   trace`, so one could write `@ trace = option` at the beginning of the
   EBNF-code.
-  * disadvantage: only parsers represented by symobols can be traced
+  * disadvantage: only parsers represented by symbols can be traced
     (can always be circumvented by introducing further symbols.)
   * advantages: less clutter in the EBNF-code and easier to switch
     between debugging and production code by simply commenting out the
@@ -83,7 +83,7 @@ Semantic Actions
 
 A alternative way (instead of using Capture-Pop/Retrieve with retrieve
 filters) to implement semantic actions would be by using derived classes
-in place of of the stock parser classes in the Grammar object. The
+in place of the stock parser classes in the Grammar object. The
 derived classes can easily implement semantic actions.
 
 In order to integrate derived classes into the ebnf-based parser

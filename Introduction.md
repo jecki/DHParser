@@ -6,7 +6,7 @@ Motto: **Computers enjoy XML, humans don't.**
 Why use domain specific languages in the humanities
 ---------------------------------------------------
 
-Suppose you are a literary scientist and you would like to edit a poem
+Suppose you are a literary scientist, and you would like to edit a poem
 like Heinrich Heine's "Lyrisches Intermezzo". Usually, the technology of
 choice would be XML and you would use an XML-Editor to write
 something like this:
@@ -60,7 +60,7 @@ a few drawbacks to this approach:
   ["Graphdatenbanken für Historiker"](https://mittelalter.hypotheses.org/5995).
 
 - While most text-editors have an XML-mode, there exist only few good
-  dedicated XML editors that can mitigate the above mentioned obstacles
+  dedicated XML editors that can mitigate the above-mentioned obstacles
   and none of the is open source.
 
 On the other hand, there are good reasons why XML is used in the
@@ -194,12 +194,12 @@ after each stanza a blank line follows, it is not necessary to
 encode these in the data as long as this mentioned as a rule in 
 the data description and as long as we pay attention to insert 
 the line feeds and blanks according to these rules when 
-serializing the data in a human readable form. The philosophy 
+serializing the data in a human-readable form. The philosophy 
 behind this design decision can be called "rule-based data enrichment".
 
 The output of "LyrikParser_example.py" follows a different philosophy,
 namely that of "comprehensive data modeling". In this case everything
-that is needed for rendering the data in a human readable form is 
+that is needed for rendering the data in a human-readable form is 
 included in the data itself in addition to every aspect that is 
 modeled for processing the data with a machine. This does not mean that
 every aspect of the source data will be preserved. Rather, the philosophy
@@ -210,10 +210,10 @@ convey the meaning, only one blank like will be included in the data.
 
 One cannot say that one of these philosophies ist better than the other. It
 really depends on the purpose. The philosophy of "rule-based-enrichment"
-shines when machine-processing of the data (say feeding a data base or a
+shines when machine-processing of the data (say feeding a database or a
 search engine, linking the data with other data and the like) is the primary
 purpose. "Comprehensive data modeling" has advantages when producing accurate
-human readable versions (online or in print) is considered most important.
+human-readable versions (online or in print) is considered most important.
 
 As always in the digital humanities, it does not hurt to preserve several instances 
 of the same data in different formats as long as it is ensured that they are 
@@ -269,7 +269,7 @@ that what is enclosed in the curly braces must follow one or more times rather t
 just zero or more times as in the case of the simple curly braces. 
 
 Apart from the curly braces, there are two more signs in this snipped, the
-tilde '~' and the the `§`-sign. The tilde stands for insignificant whitespace 
+tilde '~' and the `§`-sign. The tilde stands for insignificant whitespace 
 (which in this case is restricted to horizontal whitespace, i.e. blanks and
 tabulators). Insignificant whitespace will be dropped in the instant the parser 
 reads it and never appear in the data. Here the tile-sign is used to allow leading
@@ -287,11 +287,11 @@ The meaning of the paragraph-sign `§` could also be understood as such: By the 
 the `§` is reached, we are sure that the item that is just parsed is a poem. Therefore,
 if it does not continue like a poem, this is an error. We could not tell this earlier, because
 parsers typically work by trying to match different items to the following text. Now, if there
-is no title, then the parser for `gedicht` (poem) would not produce an error but it simply 
+is no title, then the parser for `gedicht` (poem) would not produce an error, but it simply 
 would not match, which makes sense, because the lack of a title might just indicate that
-the end of a chapter or the end of the text has been reached.)
+the end of a chapter or the end of the text has been reached.
  
-Strictly speaking, the §-sign is not necessary and it does not occur in the standard 
+Strictly speaking, the §-sign is not necessary, and it does not occur in the standard 
 EBNF-formalism, but it tremendously helpful in pin-pointing syntax-errors and producing
 useful error messages in this case. 
 
@@ -372,7 +372,7 @@ Heinrich Heine's Lyrisches Intermezzo encoded in our own human-readable
 poetry-DSL that has been shown above. Since we have redirected the
 output to `result.xml`, you'll find a new file with this name in the
 directory. If you look at it with an editor - preferably one that
-provides syntax-highlighting for XML-files, you'll find that it look's
+provides syntax-highlighting for XML-files, you'll find that it looks
 pretty much like XML. However, this XML-code still looks much more
 obfuscated than in the Introduction before. If you look closely, you can
 nonetheless see that the poem itself has faithfully been preserved. For
@@ -475,10 +475,10 @@ suffice.) This keeps the specification of the AST-transformation simple and conc
 the same time, we avoid adding hints for the AST-transformation in the
 grammar specification, which would render the grammar less readable.
 
-The rule "collapse" for example replaces the children of a node by the their concatenated
+The rule "collapse" for example replaces the children of a node by their concatenated
 content. Persons used to XML can think of a node as a tag and of the children as child-tags
 enclosed by this tag. The tree structures, DHParser works produces, however, are more 
-restricted than those of XML: Theres exists no mixed content, which means that a tag 
+restricted than those of XML: There exists no mixed content, which means that a tag 
 contains either child-tags or text but not both at the same time. Thus, where in XML it
 is possible to write `<text>It's a <emph>beautiful</empth> day today!</text>`, in DHParser
 this would internally be represented as:

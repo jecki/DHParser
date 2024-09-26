@@ -9,7 +9,7 @@ Author: Eckhart Arnold <eckhart.arnold@posteo.de>,
         Bavarian Academy of Sciences and Humanities
 
 
-This EBNF-grammar is tunes towards maximal flexibility. It's purpose is 
+This EBNF-grammar is tunes towards maximal flexibility. Its purpose is 
 to support as many different variants of EBNF as possible. The price
 for this flexibility is that the grammar is less readable than the
 grammar for one particular flavor of EBNF. Also, because it makes use

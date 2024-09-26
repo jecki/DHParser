@@ -631,7 +631,7 @@ def any_of(path: Path, bool_func_set: AbstractSet[collections.abc.Callable]) -> 
 
 @transformation_factory(collections.abc.Set)
 def all_of(path: Path, bool_func_set: AbstractSet[collections.abc.Callable]) -> bool:
-    """Returns True, if all of the bool functions in `bool_func_set` evaluate to True
+    """Returns True, if all the bool functions in `bool_func_set` evaluate to True
     for the given path."""
     return all(bf(path) for bf in bool_func_set)
 
@@ -1194,7 +1194,7 @@ def collapse_children_if(path: Path,
 
     node = path[-1]
     if not node._children:
-        return  # do nothing if its a leaf node
+        return  # do nothing if it is a leaf node
     package = []  # type: List[Node]
     result = []  # type: List[Node]
 
@@ -1547,7 +1547,7 @@ def lean_left(path: Path, operators: AbstractSet[str]):
     precedence right, when writing a grammar, say, for arithmetic
     that avoids left-recursion. (DHParser does support left-recursion
     but left-recursive grammars might not be compatible with
-    other PEG-frameworks any more.)
+    other PEG-frameworks anymore.)
 
     ATTENTION: This transformation function moves forward recursively,
     so grouping nodes must not be eliminated during traversal! This
@@ -1766,7 +1766,7 @@ def remove_if(path: Path, condition: Callable):
 def transform_result(path: Path, func: Callable):  # Callable[[ResultType], ResultType]
     """
     Replaces the result of the node. ``func`` takes the node's result
-    as an argument an returns the mapped result.
+    as an argument and returns the mapped result.
     """
     node = path[-1]
     node.result = func(node.result)
@@ -1828,7 +1828,7 @@ NodeGenerator = Callable[[], Node]
 DynamicResultType = Union[Tuple[NodeGenerator, ...], NodeGenerator, str]
 
 
-AT_THE_END = 2**32   # VERY VERY last position in a tuple of childe nodes
+AT_THE_END = 2**32   # VERY, VERY last position in a tuple of childe nodes
 
 
 def node_maker(name: str,
@@ -1980,7 +1980,7 @@ def error_on(path: Path,
 # @transformation_factory(collections.abc.Callable)
 # def warn_on(path: Path, condition: Callable, warning: str = ''):
 #     """
-#     Checks for `condition`; adds an warning message if condition is not met.
+#     Checks for `condition`; adds a warning message if condition is not met.
 #     """
 #     node = path[-1]
 #     if not condition(path):

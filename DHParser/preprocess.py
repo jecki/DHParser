@@ -162,9 +162,9 @@ def _apply_preprocessors(original_text: str, original_name: str,
         -> PreprocessorResult:
     """
     Applies several preprocessing functions sequentially to a source text
-    and returns the preprocessed text as well as a function that maps text-
-    positions in the processed text onto the corresponding position in the
-    original source test.
+    and returns the preprocessed text as well as a function that maps
+    text-positions in the processed text onto the corresponding position
+    in theoriginal source test.
     """
     processed = original_text
     mapping_chain = []

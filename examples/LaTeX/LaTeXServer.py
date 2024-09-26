@@ -115,7 +115,7 @@ def lsp_rpc(f):
     after shutdown and returns an error message instead.
     This decorator should only be used on methods of
     LanguageServerProtocol-objects as it expects the first parameter
-    to be a the `self`-reference of this object.
+    to be the `self`-reference of this object.
     All LSP-methods should be decorated with this decorator except
     initialize and exit
     """

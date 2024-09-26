@@ -433,7 +433,7 @@ def flatten_sxpr(sxpr: str, threshold: int = -1) -> str:
 
 def flatten_xml(xml: str) -> str:
     """
-    Returns an XML-tree as a one liner without unnecessary whitespace,
+    Returns an XML-tree as a one-liner without unnecessary whitespace,
     i.e. only whitespace within leaf-nodes is preserved.
 
     A more precise alternative to `flatten_xml` is to use Node.as_xml()
@@ -2051,7 +2051,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if isinstance(json_obj, Sequence):  # list flavor
             assert 2 <= len(json_obj) <= 4, str(json_obj)
             if isinstance(json_obj[1], str):
-                result = json_obj[1]  # type: Union[Tuple[Node, ...], StringView, str]
+                result = json_obj[1]  # type Union[Tuple[Node, ...], StringView, str]
             else:
                 result = tuple(Node.from_json_obj(item) for item in json_obj[1])
             node = Node(json_obj[0], result)
@@ -2343,7 +2343,7 @@ def content_of(segment: Union[Node, Tuple[Node, ...], StringView, str],
     return ''.join(content_list)
 
 
-def _strlen_of(segment: Union[Node, Sequence[Node, ...]],
+def _strlen_of(segment: Union[Node, Sequence[Node]],
               match_func: PathMatchFunction = LEAF_PATH,
               skip_func: PathMatchFunction = NO_PATH) -> int:
     if skip_func is NO_PATH and (match_func is LEAF_PATH or match_func is ANY_PATH):
@@ -2361,7 +2361,7 @@ def _strlen_of(segment: Union[Node, Sequence[Node, ...]],
     return length
 
 
-def strlen_of(segment: Union[Node, Sequence[Node, ...], StringView, str],
+def strlen_of(segment: Union[Node, Sequence[Node], StringView, str],
               select: PathSelector = LEAF_PATH,
               ignore: PathSelector = NO_PATH) -> int:
     """Returns the string size from a single node or a tuple of Nodes."""
@@ -2711,7 +2711,7 @@ class RootNode(Node):
                 "%i <= %i <= %i ?" % (node.pos, error.pos, node.pos + max(1, node.strlen() - 1))
             assert node.pos >= 0, "Errors cannot be assigned to nodes without position!"
         self.error_nodes.setdefault(id(node), []).append(error)
-        if node is None:  raise AssertionError('This should never happen!')
+        node = cast(Node, node)
         if node.pos <= error.pos <= node.pos + max(node.strlen(), 1):  # node.pos == error.pos:
             self.error_positions.setdefault(error.pos, set()).add(id(node))
         if self.source:
@@ -2902,7 +2902,7 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> RootNode:
         remaining = s
 
     @cython.locals(pos=cython.int, i=cython.int, k=cython.int, m=cython.int, L=cython.int)
-    def parse_attrs(sxpr: Union[StringView, str], attr_start: str, attributes: Dict[str, Any]) \
+    def parse_attrs(sxpr: StringView, attr_start: str, attributes: Dict[str, Any]) \
                    -> Tuple[StringView, int]:
         pos: int = -1
         L: int = len(attr_start)
@@ -3496,7 +3496,7 @@ def zoom_into_path(path: Optional[Path],
                    steps: int) \
                       -> Optional[Path]:
     """Returns the path of a descendant that follows `steps` generations
-    up the tree originating in 'path[-1]`. If `steps` < 0 this will be
+    up the tree originating in `path[-1]`. If `steps` < 0 this will be
     as many generations as are needed to reach a leaf-node.
     The function `pick_child` determines which branch to follow during each
     iteration, as long as the top of the path is not yet a leaf node.
@@ -4039,7 +4039,7 @@ def deep_split(path: Path, i: cython.int, left_biased: bool=True,
                match_func: PathMatchFunction = ANY_PATH,
                skip_func: PathMatchFunction = NO_PATH,
                chain_attr_name: str = '') -> int:
-    """Splits a tree along the path where i the is offset (or relative
+    """Splits a tree along the path where i is the offset (or relative
     index) of the split in the last node of the path.
     Returns the index of the split-location in the first node of the path.
 
@@ -4131,7 +4131,7 @@ def can_split(t: Path, i: cython.int, left_biased: bool = True, greedy: bool = T
         >>> # anonymous nodes, like ":Text" are always divisible
         >>> can_split([tree, tree[0], tree[0][0]], 1, divisible=set())
         -1
-        >>> # However, non anonymous nodes aren't ...
+        >>> # However, non-anonymous nodes aren't ...
         >>> tree = parse_sxpr('(doc (p (Text "ABC")))')
         >>> can_split([tree, tree[0], tree[0][0]], 1, divisible=set())
         0

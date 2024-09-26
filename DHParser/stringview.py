@@ -25,7 +25,7 @@ Slicing Python-strings always yields copies of a segment of the original
 string. See: https://mail.python.org/pipermail/python-dev/2008-May/079699.html
 However, this becomes costly (in terms of space and as a consequence also
 time) when parsing longer documents. Unfortunately, Python's `memoryview`
-does not work for unicode strings. Hence, the StringView class.
+does not work for Unicode strings. Hence, the StringView class.
 
 It is recommended to compile this module with the Cython-compiler for
 speedup. The module comes with a ``stringview.pxd`` that contains some type

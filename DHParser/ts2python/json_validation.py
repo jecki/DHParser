@@ -175,7 +175,7 @@ def validate_compound_type(value: Any, T):
     ...     print(e)
     1.5 is not of type <class 'int'>
 
-    :param value: the value which shall by validated against the given type
+    :param value: the value which shall be validated against the given type
     :param T: the type which the value is supposed to represent.
     :return: None
     :raise: TypeError if value is not of compound type T.

@@ -556,7 +556,7 @@ CONFIG_PRESET['static_analysis'] = "early"
 # Default value: 'True'
 CONFIG_PRESET['reorder_definitions'] = True
 
-# DHParser.ebnf.EBNFCompiler class adds the the EBNF-grammar to the
+# DHParser.ebnf.EBNFCompiler class adds the EBNF-grammar to the
 # docstring of the generated Grammar-class
 # Default value: False
 CONFIG_PRESET['add_grammar_source_to_parser_docstring'] = False
@@ -713,7 +713,7 @@ CONFIG_PRESET['compiled_EBNF_log'] = ''
 
 # Defines the kind of threading that `toolkit.instantiate_executor()`
 # will allow. Possible values are:
-# 'multitprocessing" - Full multiprocessing will be allowed.
+# 'multitprocessing' - Full multiprocessing will be allowed.
 # 'multithreading' -   A ThreadPoolExecutor will be substituted for any
 #         ProcessPoolExecutor.
 # 'singlethread' -     A SingleThreadExecutor will be substituted for

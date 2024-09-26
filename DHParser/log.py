@@ -139,7 +139,7 @@ def log_dir(path: str = "") -> str:
     as well as the information whether logging is turned on or off will not
     automatically be transferred to any subprocesses. This needs to be done
     explicitly. (See :py:func:`testing.grammar_suite` for an example, how this can
-    be done.
+    be done.)
 
     Parameters:
         path:   The directory path. If empty, the configured value will be

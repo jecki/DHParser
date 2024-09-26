@@ -31,7 +31,7 @@ This functionality can be used for several purposes:
 2. recording of parsing history and "post-mortem"-debugging,
    implemented here and in module :py:mod:`log`
 
-3. Interrupting long running parser processes by polling
+3. Interrupting long-running parser processes by polling
    a threading.Event or multiprocessing.Event once in a while
 """
 
@@ -172,7 +172,7 @@ def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], c
     mre: Optional[ParserError] = grammar.most_recent_error__
     if mre is not None and location >= mre.error.pos:
         # add resume notice (mind that skip notices are added by
-        # `parse.MandatoryElementsParser.mandatory_violation()`
+        # `parse.MandatoryElementsParser.mandatory_violation()`)
         if mre.error.code == RECURSION_DEPTH_LIMIT_HIT:
             return mre.node, location
 

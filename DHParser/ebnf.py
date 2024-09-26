@@ -1777,7 +1777,7 @@ class EBNFCompiler(Compiler):
     @cython.locals(N=cython.int, top=cython.int, pointer=cython.int,
                    i=cython.int, k=cython.int, j=cython.int)
     def optimize_definitions_order(self, definitions: List[Tuple[str, str]]):
-        """Reorders the definitions so as to minimize the number of Forward
+        """Reorders the definitions to minimize the number of Forward
         declarations. Forward declarations remain inevitable only where
         recursion is involved.
         """
@@ -2183,7 +2183,7 @@ class EBNFCompiler(Compiler):
                 try:
                     if ne.name not in self.symbols:
                         # undefined symbols in the grammar have already been caught and reported
-                        raise(ne)
+                        raise ne
                 except AttributeError:
                     pass  # In Python3.7/3.8/3.9 NameError does not have a name attribute
             except GrammarError as ge:

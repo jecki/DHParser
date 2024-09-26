@@ -704,7 +704,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                         # ignore key errors in case they are only consequential errors
                         # of earlier errors
                         if err.code != PYTHON_ERROR_IN_TEST:
-                            raise(ke)
+                            raise ke
                 # keep test-items, so that the order of the items is the same as
                 # in which they are processed in the pipeline.
                 for t in targets:
@@ -975,7 +975,7 @@ def extract_symbols(ebnf_text_or_file: str) -> SymbolsDictType:
     Extracts all defined symbols from an EBNF-grammar. This can be used to
     prepare grammar-tests. The symbols will be returned as lists of strings
     which are grouped by the sections to which they belong and returned as
-    an ordered dictionary, they keys of which are the section names.
+    an ordered dictionary, the keys of which are the section names.
     In order to define a section in the ebnf-source, add a comment-line
     starting with "#:", followed by the section name. It is recommended
     to use valid file names as section names. Example:
@@ -1162,8 +1162,8 @@ def runner(tests, namespace, profile=False):
 
     :param tests: String or list of strings with the names of tests
         to run. If empty, runner searches by itself all objects the
-        of which starts with 'test' and runs it (if its a function)
-        or all of its methods that start with "test" if its a class
+        of which starts with 'test' and runs it (if it is a function)
+        or all of its methods that start with "test" if it is a class
         plus the "setup" and "teardown" methods if they exist.
 
     :param namespace: The namespace for running the test, usually
@@ -1267,8 +1267,8 @@ def run_path(path):
 
 
 def clean_report(report_dir='REPORT'):
-    """Deletes any test-report-files in the REPORT sub-directory and removes
-    the REPORT sub-directory, if it is empty after deleting the files."""
+    """Deletes any test-report-files in the REPORT subdirectory and removes
+    the REPORT subdirectory, if it is empty after deleting the files."""
     # TODO: make this thread/process safe, if possible!!!!
     if os.path.exists(report_dir):
         files = os.listdir(report_dir)
@@ -1330,7 +1330,7 @@ async def stdio(limit=asyncio.streams._DEFAULT_LIMIT, loop=None):
 
 
 class MockStream:
-    """Simulates a stream that can be written to from one side and read from
+    """Simulates a stream that can be written to from one side and read
     from the other side like a pipe. Usage pattern::
 
         pipe = MockStream()

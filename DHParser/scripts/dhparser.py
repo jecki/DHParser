@@ -3,11 +3,11 @@
 """dhparser.py - command line tool for DHParser
 
 Copyright 2016  by Eckhart Arnold (arnold@badw.de)
-                Bavarian Academy of Sciences an Humanities (badw.de)
+                Bavarian Academy of Sciences and Humanities (badw.de)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
-You may obtain a copy of the Licenseq at
+You may obtain a copy of the License at
 
     http://www.apache.org/licenses/LICENSE-2.0
 
@@ -43,7 +43,7 @@ TEST_DIRNAME = 'tests_grammar'
 
 
 def create_project(path: str):
-    """Creates the a new DHParser-project in the given `path`.
+    """Creates a new DHParser-project in the given `path`.
     """
     def create_file(name, content):
         """Create a file with `name` and write `content` to file."""

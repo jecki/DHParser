@@ -27,7 +27,7 @@ const
     AN_ERROR* = ErrorCode(1000)
     A_FATALITY* = ErrorCode(10_000)
 
-    MandatoryCondinuation* = ErrorCode(1010)
+    MandatoryContinuation* = ErrorCode(1010)
     MandatoryContinuationAtEOF* = ErrorCode(1015)
     ParserStoppedBeforeEnd* = ErrorCode(1040)
 

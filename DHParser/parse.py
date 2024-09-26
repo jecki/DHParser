@@ -210,7 +210,7 @@ class ParserError(Exception):
     :ivar node:  The node within which the error is locted
     :ivar node_orig_len:  The original size of that node. The actual size
         of that node may change due to later processing steps und thus not
-        be reliable any more for the description of the error.
+        be reliable anymore for the description of the error.
     :ivar location:  The location in the document where the parser that caused the
         error started. This is not to be confused with the location where the error
         occurred, because by the time the error occurs the parser may already have
@@ -603,8 +603,8 @@ class Parser:
         self.reset()
 
     def __deepcopy__(self, memo):
-        """Deepcopy method of the parser. Upon instantiation of a Grammar-
-        object, parsers will be deep-copied to the Grammar object. If a
+        """Deepcopy method of the parser. Upon instantiation of a Grammar-object,
+        parsers will be deep-copied to the Grammar object. If a
         derived parser-class changes the signature of the ``__init__``-constructor,
         ``__deepcopy__``-method must be replaced (i.e. overridden without
         calling the same method from the superclass) by the derived class.
@@ -1415,7 +1415,7 @@ class Grammar:
                 matches the error message of the first matching expression is used
                 instead of the generic mandatory violation error messages. This
                 allows to answer typical kinds of errors (say putting a colon ","
-                where a semi-colon ";" is expected) with more informative error
+                where a semicolon ";" is expected) with more informative error
                 messages.
 
     :cvar disposable\__: A set of parser-names or a regular expression to
@@ -2390,7 +2390,7 @@ class Never(Unparameterized):
 
 
 class AnyChar(Unparameterized):
-    """A parser that returns the next unicode character of the document
+    """A parser that returns the next Unicode character of the document
     whatever that is. The parser fails only at the very end of the text."""
     @cython.locals(location_=cython.int, L=cython.int)
     def _parse(self, location: cython.int) -> ParsingResult:
@@ -2882,7 +2882,7 @@ class CombinedParser(Parser):
     process, as well.
 
     Doing flatteining or merging during AST-transformation will ensure
-    that it is only performed only on those nodes that made it into the
+    that it is performed only on those nodes that made it into the
     concrete-syntax-tree. Mergeing, in particular, might become costly
     because of potentially many string-concatenations. But then again,
     the usual depth-first-traversal during AST-transformation will take
@@ -2891,7 +2891,7 @@ class CombinedParser(Parser):
     merging to the AST-transformation stage.)
 
     Another optimization consists in returning the singleton EMPTY_NODE
-    for dropped contents, rather than creating an new empty node every
+    for dropped contents, rather than creating a new empty node every
     time empty content is returned. This optimization should always work.
     """
 
@@ -3726,7 +3726,7 @@ def to_interleave(parser: Parser) -> Parser:
 
 class Counted(UnaryParser):
     """Counted applies a parser for a number of repetitions within a given range, i.e.
-    the parser must at least match the lower bound number of repetitions and it can
+    the parser must at least match the lower bound number of repetitions, and it can
     at most match the upper bound number of repetitions.
 
     Examples::

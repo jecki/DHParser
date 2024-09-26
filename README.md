@@ -23,7 +23,7 @@ DHParser has been developed with three main purposes in mind:
    notations, like, LaTeX, or newly created DSLs, like the
    [Medieval-Latin-Dictionary-DSL](https://gitlab.lrz.de/badw-it/mlw-dsl-oeffentlich).
 
-   Typically these languages are strict formal languages the grammar of
+   Typically, these languages are strict formal languages the grammar of
    which can be described with context-free grammars. (In cases where
    this does not hold like TeX, it is often still possible to describe a 
    reasonably large subset of the formal language with a context free grammar.) 
@@ -49,7 +49,7 @@ DHParser has been developed with three main purposes in mind:
 
    In typical digital humanities applications one wants to produce
    different forms of output (say, printed, online-human-readable,
-   online-machine-readable) from one an the same source of data.
+   online-machine-readable) from one and the same source of data.
    Therefore, the parsing stage (if the data source is structured
    text-data) will be followed by more or less intricate bifurcated
    processing pipelines.
@@ -100,7 +100,7 @@ Features
   https://dhparser.readthedocs.io/en/latest/manuals/02_document-trees.html#markup-insertion),
   even if this requires splitting tags.
 
-* Full unicode support
+* Full Unicode support
 
 * No dependencies except the Python Standard Library
 
@@ -192,7 +192,7 @@ use:
   
   $ dhparser NEW_PROJECT_NAME 
 
-to setup a project-directory with all the scaffolding for a new DSL-project,
+to set up a project-directory with all the scaffolding for a new DSL-project,
 including the full unit-testing-framework.
 
 Installation
@@ -212,7 +212,7 @@ Getting Started
 See [Introduction.md](https://gitlab.lrz.de/badw-it/DHParser/blob/master/Introduction.md) for the
 motivation and an overview how DHParser works or jump right into the
 [Step by Step Guide](https://gitlab.lrz.de/badw-it/DHParser/blob/master/documentation_src/StepByStepGuide.rst) to
-learn how to setup and use DHParser.
+learn how to set up and use DHParser.
 Or have a look at the 
 [comprehensive overview of DHParser's features](https://gitlab.lrz.de/badw-it/DHParser/-/blob/master/documentation_src/Overview.rst) 
 to see how DHParser supports the construction of domain specific languages.
@@ -298,7 +298,7 @@ Get them with:
 
     git clone https://gitlab.lrz.de/badw-it/DHParser
 
-There exists a mirror of this repository on github:
+There exists a mirror of this repository on Github:
 https://github.com/jecki/DHParser Be aware, though, that the github-mirror
 may occasionally lag behind a few commits.
 
@@ -399,7 +399,7 @@ München 2016. Short-URL: [tiny.badw.de/2JVy][Müller_2016]
 Markus Voelter, Sbastian Benz, Christian Dietrich, Birgit Engelmann,
 Mats Helander, Lennart Kats, Eelco Visser, Guido Wachsmuth:
 DSL Engineering. Designing, Implementing and Using Domain-Specific Languages, 2013.
-[dslbook.org/][Voelter_2013]
+[dslbook.org/][voelter_2013]
 
 Christopher Seaton: A Programming Language Where the Syntax and Semantics
 are Mutuable at Runtime, University of Bristol 2007,

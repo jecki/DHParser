@@ -81,7 +81,7 @@ async def stdio(limit=asyncio.streams._DEFAULT_LIMIT, loop=None):
 
 
 class MockStream:
-    """Simulations a stream that can be written to from one side and read from
+    """Simulations a stream that can be written to from one side and read
     from the other side like a pipe. Usage pattern::
 
         pipe = MockStream()

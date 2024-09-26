@@ -108,7 +108,7 @@ def preprocess_HTML(source):
 #######################################################################
 
 class HTMLGrammar(Grammar):
-    r"""Parser for a HTML source file.
+    r"""Parser for an HTML source file.
     """
     element = Forward()
     source_hash__ = "93fbcd35ba6ff9952aafcdf6405eac39"
@@ -227,9 +227,9 @@ ERROR_VALIDITY_CONSTRAINT_VIOLATION = ErrorCode(2020)
 
 
 class HTMLTransformer(Compiler):
-    """Compiler for the abstract-syntax-tree of a HTML source file.
+    """Compiler for the abstract-syntax-tree of an HTML source file.
 
-    As of now, processing instructions, cdata-sections an document-type definition
+    As of now, processing instructions, cdata-sections and document-type definition
     declarations are simply dropped.
     """
     def __init__(self):

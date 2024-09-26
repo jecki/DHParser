@@ -28,7 +28,7 @@ sacrifice startup-speed for running-speed.
 
 It is up to the compilation function to either return the result of the
 compilation in serialized form, or just save the compilation results on the
-file system an merely return an success or failure message. Module `server`
+file system and merely return a success or failure message. Module `server`
 does not define any of these message. This is completely up to the clients
 of module `server`, i.e. the compilation-modules, to decide.
 
@@ -113,6 +113,8 @@ __all__ = ('RPC_Table',
            'asyncio_run',
            'asyncio_connect',
            'split_header',
+           'StreamReaderProxy',
+           'StreamWriterProxy',
            'ExecutionEnvironment',
            'Connection',
            'connection_cb_dummy',
@@ -514,7 +516,7 @@ class ExecutionEnvironment:
         return result, rpc_error
 
     def submit_as_process(self, func, *args) -> Future:
-        """Submits a long running function to the secondary process-pool.
+        """Submits a long-running function to the secondary process-pool.
         Other than `execute()` this works synchronously and thread-safe.
         """
         # if self.submit_pool is None:
@@ -582,7 +584,7 @@ async def asyncio_connect(
             else:
                 delay = retry_timeout  # exit while loop
         except OSError as error:
-            # workaround for strange erratic OSError (MacOS only?)
+            # workaround for strange erratic OSError (macOS only?)
             OSError_countdown -= 1
             if OSError_countdown < 0:
                 save_error = error
@@ -780,7 +782,7 @@ class Connection:
                 and errors received from a language server client as result of
                 commands initiated by the server.
         pending_responses:  A dictionary of jsonrpc-/task-id's to lists of
-                JSON-objects that have been fetched from the the response queue
+                JSON-objects that have been fetched from the response queue
                 but not yet been collected by the calling task.
         lsp_initialized: A string-flag indicating that the connection to a language
                 sever via json-rpc has been established.
@@ -878,8 +880,8 @@ class Connection:
     # LSP-initialization support
 
     def verify_initialization(self, method: str, strict: bool = True) -> RPC_Error_Type:
-        """Implements the LSP-initialization logic and returns an rpc-error if
-        either initialization went wrong or an rpc-method other than 'initialize'
+        """Implements the LSP-initialization logic and returns a rpc-error if
+        either initialization went wrong or a rpc-method other than 'initialize'
         was called on an uninitialized language server.
         """
         if method == 'initialize':
@@ -1448,7 +1450,7 @@ class Server:
             if m:
                 # TODO: use urllib to parse parameters
                 func_name, argument = (m.group(1).decode().strip('/').split('/', 1) + [None])[:2]
-                # really bad hack to determine mime-type of response
+                # really poor hack to determine mime-type of response
                 mime = 'text/html'
                 if argument:
                     if argument[-4:].lower() == '.css':  mime = 'text/css'

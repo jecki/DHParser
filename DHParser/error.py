@@ -492,7 +492,7 @@ def is_fatal(code: Union[Error, int]) -> bool:
 #     Raises a ValueError if `code`` is not within the range for warnings.
 #     """
 #     if not is_warning(code):
-#         raise ValueError("Tried to create a warning with a error code {}. "
+#         raise ValueError("Tried to create a warning with an error code {}. "
 #                          "Warning codes must be smaller than {}".format(code, ERROR))
 #     return Error(message, pos, code, orig_pos, line, column)
 

@@ -15,7 +15,7 @@ Client-module for Visual Studio Code to connect EBNFServer.py as a language-serv
 - Open VS Code on this folder.
 - Press Ctrl+Shift+B to compile the client and server.
 - Switch to the Debug viewlet.
-- Select `Launch Client` from the drop down.
+- Select `Launch Client` from the drop-down menu.
 - Run the launch config.
 - If you want to debug the server as well use the launch configuration `Attach to Server`
 - In the [Extension Development Host] instance of VSCode, open a document in 'ebnf' language mode.

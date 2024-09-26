@@ -46,7 +46,7 @@ from DHParser.configuration import get_config_value
 from DHParser.preprocess import PreprocessorFunc
 from DHParser.nodetree import Node, RootNode, EMPTY_PTYPE, Path
 from DHParser.transform import TransformerFunc
-from DHParser.parse import ParserFunc
+from DHParser.parse import ParseFunc
 from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.error import is_error, is_fatal, Error, FATAL, \
     TREE_PROCESSING_CRASH, COMPILER_CRASH, AST_TRANSFORM_CRASH, has_errors
@@ -477,7 +477,7 @@ def compile_source(source: str,
         log_parsing_history(parser, log_file_name)
 
     # assert is_error(syntax_tree.error_flag) or str(syntax_tree) == strip_tokens(source_text), \
-    #     str(syntax_tree) # Ony valid if neither tokens or whitespace are dropped early
+    #     str(syntax_tree) # Ony valid if neither tokens nor whitespace are dropped early
 
     result = None
     if not is_fatal(syntax_tree.error_flag):
@@ -574,8 +574,6 @@ def process_tree(tp: CompilerFunc, tree: RootNode) -> Any:
                 tree.new_error(
                     node, "Tree-processing failed, most likely, due to errors earlier in "
                           f"the processing pipeline: {repr(e)}  {mini_trace}", TREE_PROCESSING_CRASH)
-                          # "Crash Message: %s: %s\n%s" % (e.__class__.__name__, str(e), trace),
-                          # TREE_PROCESSING_CRASH)
         else:
             # assume Python crashes are programming mistakes, so let
             # the exceptions through
