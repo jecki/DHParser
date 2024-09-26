@@ -2130,8 +2130,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             lbreaks = linebreaks(self.content)
 
         if flavor == 'xast':
-            unist_obj = {'type': 'root' if isinstance(self, RootNode) else 'element',
-                         'name': self.name}
+            unist_obj: Dict[str, Any] = {'type': 'root' if isinstance(self, RootNode)
+                                                        else 'element',
+                                         'name': self.name}
         else:
             assert flavor == "ndst"
             unist_obj = {'type': self.name}
@@ -2710,6 +2711,7 @@ class RootNode(Node):
                 "%i <= %i <= %i ?" % (node.pos, error.pos, node.pos + max(1, node.strlen() - 1))
             assert node.pos >= 0, "Errors cannot be assigned to nodes without position!"
         self.error_nodes.setdefault(id(node), []).append(error)
+        if node is None:  raise AssertionError('This should never happen!')
         if node.pos <= error.pos <= node.pos + max(node.strlen(), 1):  # node.pos == error.pos:
             self.error_positions.setdefault(error.pos, set()).add(id(node))
         if self.source:
@@ -2900,7 +2902,8 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> RootNode:
         remaining = s
 
     @cython.locals(pos=cython.int, i=cython.int, k=cython.int, m=cython.int, L=cython.int)
-    def parse_attrs(sxpr: StringView, attr_start: str, attributes: Dict[str, Any]) -> Tuple[str, int]:
+    def parse_attrs(sxpr: Union[StringView, str], attr_start: str, attributes: Dict[str, Any]) \
+                   -> Tuple[StringView, int]:
         pos: int = -1
         L: int = len(attr_start)
         while sxpr[:L] == attr_start:
@@ -2970,6 +2973,8 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> RootNode:
                         break
                 else:
                     match = sxpr.match(RX_SXPR_NOTEXT)
+                    if match is None:
+                        raise AssertionError(f'Malformed S-expression: {sxpr} ')
                     end = sxpr.index(match.end())
                     lines.append(str(sxpr[:end]))
                     sxpr = sxpr[end:]
@@ -3207,14 +3212,14 @@ class DHParser_JSONEncoder(json.JSONEncoder):
     """A JSON-encoder that also encodes ``nodetree.Node`` as valid json objects.
     Node-objects are encoded using Node.as_json.
     """
-    def default(self, obj):
-        if isinstance(obj, Node):
-            return cast(Node, obj).to_json_obj()
-        elif obj is JSONnull or isinstance(obj, JSONnull):
+    def default(self, o):
+        if isinstance(o, Node):
+            return cast(Node, o).to_json_obj()
+        elif o is JSONnull or isinstance(o, JSONnull):
             return None
-        elif isinstance(obj, StringView):
-            obj = str(obj)
-        return json.JSONEncoder.default(self, obj)
+        elif isinstance(o, StringView):
+            o = str(o)
+        return json.JSONEncoder.default(self, o)
 
 
 def parse_json(json_str: str) -> RootNode:
@@ -3395,18 +3400,19 @@ def pred_siblings(path: Path, criteria: NodeSelector = ANY_NODE, reverse: bool =
     if len(path) <= 1:
         raise ValueError(f"End node of path {path} has no parent and thus no siblings.")
     children = path[-2].children
+    match_function = create_match_function(criteria)
     if reverse:
         i = children.index(path[-1])
         for k in range(i - 1, -1, -1):
             sibling = children[k]
-            if criteria(sibling):
+            if match_function(sibling):
                 yield sibling
     else:
         node = path[-1]
         for sibling in children:
             if sibling == node:
                 break
-            if criteria(sibling):
+            if match_function(sibling):
                 yield sibling
 
 
@@ -3418,16 +3424,17 @@ def succ_siblings(path: Path, criteria: NodeSelector = ANY_NODE, reverse: bool =
     if len(path) <= 1:
         raise ValueError(f"End node of path {path} has no parent and thus no siblings.")
     children = path[-2].children
+    match_function = create_match_function(criteria)
     if reverse:
         i = children.index(path[-1])
         for k in range(len(children) - 1, i, -1):
             sibling = children[k]
-            if criteria(sibling):
+            if match_function(sibling):
                 yield sibling
     else:
         i = children.index(path[-1])
         for sibling in children[i + 1:]:
-            if criteria(sibling):
+            if match_function(sibling):
                 yield sibling
 
 
@@ -3545,21 +3552,21 @@ def select_path_if(start_path: Path,
                    match_func: PathMatchFunction,
                    include_root: bool = False,
                    reverse: bool = False,
-                   skip_subtree: PathMatchFunction = NO_PATH) -> Iterator[Path]:
+                   skip_func: PathMatchFunction = NO_PATH) -> Iterator[Path]:
     """
     Creates an Iterator yielding all `paths` for which the
     `match_function` is true, starting from `path`.
     """
 
     def recursive(trl):
-        nonlocal match_func, reverse, skip_subtree
+        nonlocal match_func, reverse, skip_func
         if match_func(trl):
             yield trl
         top = trl[-1]
         child_iterator = reversed(top._children) if reverse else top._children
         for child in child_iterator:
             child_trl = trl + [child]
-            if not skip_subtree(child_trl):
+            if not skip_func(child_trl):
                 yield from recursive(child_trl)
 
     path = start_path.copy()
@@ -3600,7 +3607,7 @@ def pick_path_if(start_path: Path,
                  match_func: PathMatchFunction,
                  include_root: bool = False,
                  reverse: bool = False,
-                 skip_func: PathMatchFunc = NO_PATH) -> Optional[Path]:
+                 skip_func: PathMatchFunction = NO_PATH) -> Optional[Path]:
     """
     Returns the first path for which match_func becomes True. If no
     path in the given direction (forward by default or reverse,
@@ -3849,10 +3856,10 @@ def insert_node(leaf_path: Path, rel_pos: int, node: Node,
             return parent
         if leaf.name in divisible_leaves:
             content = leaf.content
-            parent.result = parent.result[:i] + \
+            parent.result = parent.children[:i] + \
                             (Node(leaf.name, content[:rel_pos]), node,
                              Node(leaf.name, content[rel_pos:])) + \
-                            parent.result[i + 1:]
+                            parent.children[i + 1:]
             return parent
     if rel_pos == 0:
         leaf.result = (node, Node(leaf.name, leaf.content))
@@ -4792,6 +4799,7 @@ class ContentMapping:
         assert start_from >= 0, "Cannot select from empty ContentMapping" if L == 0 \
             else f"start_from value {start_from} is below zero!"
         path_indices = range(start_from, -1, -1) if reverse else range(start_from, L)
+        k = -1  # unnecessary, except to suppress a pyright message in the next if-statement
         for i in path_indices:
             path = self._path_list[i]
             try:
@@ -4809,7 +4817,7 @@ class ContentMapping:
 
     def pick_if(self, match_func: NodeMatchFunction,
                 start_from: int = DEFAULT_START_INDEX_SENTINEL,
-                reverse: bool = False) -> Tuple[Node, int]:
+                reverse: bool = False) -> Tuple[Optional[Node], int]:
         return next(self.select_if(match_func, start_from, reverse), (None, -1))
 
     def select(self, criterion: NodeSelector,
@@ -4828,7 +4836,7 @@ class ContentMapping:
 
     def pick(self, criterion: NodeSelector,
              start_from: int = DEFAULT_START_INDEX_SENTINEL,
-             reverse: bool = False) -> Tuple[Node, int]:
+             reverse: bool = False) -> Tuple[Optional[Node], int]:
         return next(self.select(criterion, start_from, reverse), (None, -1))
 
     @cython.locals(i=cython.int, start_pos=cython.int, end_pos=cython.int, offset=cython.int)
@@ -5092,7 +5100,8 @@ class ContentMapping:
         assert path_B
         common_ancestor, i = find_common_ancestor(path_A, path_B)
         assert common_ancestor
-        assert not common_ancestor.pick_if(lambda nd: nd.name == ':Text' and nd.children, include_root=True), common_ancestor.as_sxpr()
+        assert not common_ancestor.pick_if(lambda nd: nd.name == ':Text' and bool(nd.children),
+            include_root=True), common_ancestor.as_sxpr()
 
         if self.chain_attr_name and self.chain_attr_name not in attr_dict:
             attr_dict[self.chain_attr_name] = gen_chain_ID()
@@ -5177,7 +5186,8 @@ class ContentMapping:
         if self.auto_cleanup:
             self.rebuild_mapping_slice(self.get_path_index(start_pos),
                                        self.get_path_index(end_pos, left_biased=True))
-        assert not common_ancestor.pick_if(lambda nd: nd.name == ':Text' and nd.children, include_root=True), common_ancestor.as_sxpr()
+        assert not common_ancestor.pick_if(lambda nd: nd.name == ':Text' and bool(nd.children),
+            include_root=True), common_ancestor.as_sxpr()
         return common_ancestor, path_index
 
 
@@ -5196,8 +5206,12 @@ class LocalContentMapping(ContentMapping):
                  chain_attr_name: str = '',
                  auto_cleanup: bool = True):
         ancestor, index = find_common_ancestor(start_path, end_path)
-        super().__init__(ancestor, select, ignore, greedy, divisibility,
-                         chain_attr_name, auto_cleanup)
+        if ancestor is None:
+            raise AssertionError(f'start_path: {pp_path(start_path)} and end_path: '
+                                 f'{pp_path(end_path)} do not belong to the same tree!')
+        else:
+            super().__init__(ancestor, select, ignore, greedy, divisibility,
+                             chain_attr_name, auto_cleanup)
         self.stump: Path = start_path[:index]
         start_path_tail = start_path[index:]
         end_path_tail = end_path[index:]
@@ -5206,13 +5220,15 @@ class LocalContentMapping(ContentMapping):
                 self.first_index = i
                 break
         else:
+            i = 0
             self.first_index = 0
         for k in range(i, len(self._path_list)):
             if self._path_list[k] == end_path_tail:
                 self.last_index = k
                 break
         else:
-            self.last_index = len(self._path_list) - 1
+            k = len(self._path_list) - 1
+            self.last_index = k
         self.pos_offset: int = strlen_of(tuple(path[-1] for path in self._path_list[:i]))
         pathL, posL = self._gen_local_path_and_pos_list(i, k)
         self.local_path_list: List[Path] = pathL
@@ -5231,21 +5247,23 @@ class LocalContentMapping(ContentMapping):
         return self.local_pos_list
 
     def get_path_index(self, pos: int, left_biased: bool = False) -> int:
-        return super().get_path_index(self, pos + self.pos_offset, left_biased) - self.first_index
+        return super().get_path_index(pos + self.pos_offset, left_biased) - self.first_index
 
-    def get_path_and_offset(self, pos: int, left_biased: bool = False) -> Tuple[Path, int]:
+    def get_path_and_offset(self, pos: int, left_biased: bool = False,
+                            index_out: Optional[List[int]] = None) -> Tuple[Path, int]:
         pth, off = super().get_path_and_offset(pos + self.pos_offset, left_biased)
         return pth, off - self.pos_offset
 
     def iterate_paths(self, start_pos: int, end_pos: int, left_biased: bool = False) \
             -> Iterator[Path]:
         yield from super().iterate_paths(
-            self, start_pos + self.pos_offset, end_pos + self.pos_offset, left_biased)
+            start_pos + self.pos_offset, end_pos + self.pos_offset, left_biased)
 
     def rebuild_mapping_slice(self, first_index: int, last_index: int):
         super().rebuild_mapping_slice(first_index + self.first_index,
                                       last_index + self.first_index)
-        self.local_path_list, self.local_pos_list = self._gen_local_path_and_pos_list()
+        self.local_path_list, self.local_pos_list = \
+            self._gen_local_path_and_pos_list(self.first_index, self.last_index)
 
     def rebuild_mapping(self, start_pos: int, end_pos: int):
         super().rebuild_mapping(start_pos + self.pos_offset, end_pos + self.pos_offset)
