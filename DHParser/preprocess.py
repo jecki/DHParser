@@ -367,6 +367,7 @@ def gen_find_include_func(rx: Union[str, Any],
             return IncludeInfo(-1, 0, '')
 
     def find_comment(text: str, begin: int) -> Tuple[int, int]:
+        nonlocal rx
         m = comment_rx.search(text, begin)
         return m.span() if m else (-1, -2)
 

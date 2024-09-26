@@ -346,7 +346,7 @@ class Compiler:
         result = compiler(node)
         self.path.pop()   # do not put this into a try ... finally: clause, as error reporting still requires the path
         if self.has_attribute_visitors:
-            self.visit_attributes(node)          
+            self.visit_attributes(node)
         if result is None and self.forbid_returning_None:
             raise CompilerError(
                 ('Method on_%s returned `None` instead of a valid compilation '
@@ -400,7 +400,7 @@ def NoTransformation(root: RootNode) -> RootNode:
 
 def compile_source(source: str,
                    preprocessor: Optional[PreprocessorFunc],
-                   parser: ParserFunc,
+                   parser: ParseFunc,
                    transformer: TransformerFunc = NoTransformation,
                    compiler: CompilerFunc = NoTransformation,
                    *, preserve_AST: bool = False) -> CompilationResult:
@@ -609,4 +609,3 @@ def full_compile(source: str, preprocessor_factory, parser_factory,
     from DHParser import pipeline
     return pipeline.full_pipeline(source, preprocessor_factory, parser_factory,
                                   junctions, target_stages)
-

@@ -176,7 +176,7 @@ def grammar_instance(grammar_representation) -> Tuple[Grammar, str]:
             resume_logging(lg_dir)
         if has_errors(messages):
             raise DefinitionError(only_errors(messages), grammar_src)
-        imports = DHPARSER_IMPORTS  
+        imports = DHPARSER_IMPORTS
         grammar_class = compile_python_object(imports + parser_py, r'\w+Grammar$')
         if inspect.isclass(grammar_class) and issubclass(grammar_class, Grammar):
             parser_root = grammar_class()
@@ -307,7 +307,7 @@ def grammar_provider(ebnf_src: str,
         get_ebnf_compiler(branding, ebnf_src), fail_when)
     log_name = get_config_value('compiled_EBNF_log')
     if log_name and is_logging():  append_log(log_name, grammar_src)
-    imports = DHPARSER_IMPORTS  
+    imports = DHPARSER_IMPORTS
     parsing_stage = compile_python_object('\n'.join([imports, additional_code, grammar_src]),
                                           r'parsing')  # r'get_(?:\w+_)?grammar$'
     if callable(parsing_stage.factory):
@@ -433,7 +433,7 @@ def run_compiler(text_or_file: str, compiler_suite: str, fail_when: ErrorCode = 
 def compile_on_disk(source_file: str,
                     parser_name: str = '',
                     compiler_suite: str = "",
-                    extension: str = ".xml") -> Iterable[Error]:
+                    extension: str = ".xml") -> Sequence[Error]:
     """
     Compiles a source file with a given compiler and writes the
     result to a file.
@@ -639,7 +639,7 @@ def recompile_grammar(ebnf_filename: str,
     if not parser_name:
         parser_name = base + 'Parser.py'
     error_file_name = base + '_ebnf_MESSAGES.txt'
-    messages = []  # type: Iterable[Error]
+    messages = []  # type: Sequence[Error]
     if (not os.path.exists(parser_name) or force
             or grammar_changed(parser_name, ebnf_filename)):
         notify()
@@ -839,8 +839,8 @@ def never_cancel() -> bool:
 
 def batch_process(file_names: List[str], out_dir: str,
                   process_file: Callable[[Tuple[str, str]], str],
-                  *, submit_func: Callable = None,
-                  log_func: Callable = None,
+                  *, submit_func: Optional[Callable] = None,
+                  log_func: Optional[Callable] = None,
                   cancel_func: Callable = never_cancel) -> List[str]:
     """Compiles all files listed in file_names and writes the results and/or
     error messages to the directory `our_dir`. Returns a list of error

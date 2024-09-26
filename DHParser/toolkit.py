@@ -48,8 +48,8 @@ try:
 except ImportError:
     import re
 
-if sys.version_info >= (3, 12, 0):
-    from collections.abc import Iterable, Sequence, Set, MutableSet, Callable, Container
+if sys.version_info >= (3, 13, 0):
+    from collections.abc import Iterable, Sequence, Set, MutableSet, Callable, Container, Hashable
     from typing import Any, AbstractSet, FrozenSet, Type, Union, Optional, TypeAlias, Protocol
     AbstractSet: TypeAlias = Set
     FrozenSet: TypeAlias = frozenset
@@ -58,7 +58,7 @@ if sys.version_info >= (3, 12, 0):
     Tuple: TypeAlias = tuple
 else:
     from typing import Any, Iterable, Sequence, Set, AbstractSet, Union, Dict, List, Tuple, \
-        FrozenSet, MutableSet, Optional, Type, Callable, Container
+        FrozenSet, MutableSet, Optional, Type, Callable, Container, Hashable
     try:
         from typing import Protocol
     except ImportError:
@@ -353,7 +353,7 @@ def as_tuple(item_or_sequence) -> Tuple[Any]:
     return (item_or_sequence,)
 
 
-def as_set(item_or_sequence) -> Set[Any]:
+def as_set(item_or_sequence: Hashable) -> MutableSet[Any]:
     """Turns an arbitrary sequence or a single item into a set. In case of
     a single item, the set contains this element as its sole item."""
     if isinstance(item_or_sequence, Iterable) \
@@ -362,7 +362,7 @@ def as_set(item_or_sequence) -> Set[Any]:
     return {item_or_sequence}
 
 
-def as_frozenset(item_or_sequence) -> FrozenSet[Any]:
+def as_frozenset(item_or_sequence: Hashable) -> FrozenSet[Any]:
     """Turns an arbitrary sequence or a single item into a set. In case of
     a single item, the set contains this element as its sole item."""
     if isinstance(item_or_sequence, Iterable) \
@@ -389,7 +389,7 @@ def last(item_or_sequence: Union[Sequence, Any]) -> Any:
         return item_or_sequence
 
 
-DEPRECATION_WARNINGS_ISSUED: Set[str] = set()
+DEPRECATION_WARNINGS_ISSUED: MutableSet[str] = set()
 
 
 def deprecation_warning(message: str):
@@ -458,7 +458,7 @@ def sane_parser_name(name) -> bool:
 
 
 def normalize_circular_path(path: Union[Tuple[str, ...], AbstractSet[Tuple[str, ...]]]) \
-        -> Union[Tuple[str, ...], Set[Tuple[str, ...]]]:
+        -> Union[Tuple[str, ...], MutableSet[Tuple[str, ...]], MutableSet]:
     """Returns a normalized version of a `circular path` represented as
     a tuple or - if called with a set of paths instead of a single path
     - a set of normalized paths.
@@ -1016,7 +1016,7 @@ def load_if_file(text_or_file) -> str:
         except FileNotFoundError:
             if RX_FILEPATH.fullmatch(text_or_file):
                 raise FileNotFoundError(
-                    'File not found or not a valid filepath or URL: "%s".\n' 
+                    'File not found or not a valid filepath or URL: "%s".\n'
                     '(If "%s" was not meant to be a file name then, please, add '
                     'an empty line to distinguish source data from a file name.)'
                     % (text_or_file, text_or_file))
@@ -1313,7 +1313,7 @@ def json_dumps(obj: JSON_Type, *, cls=json.JSONEncoder, partially_serialized: bo
     """Returns json-object as string. Other than the standard-library's
     `json.dumps()`-function `json_dumps` allows to include alrady serialzed
     parts (in the form of JSONStr-objects) in the json-object. Example::
-        
+
         >>> already_serialized = '{"width":640,"height":400"}'
         >>> literal = JSONstr(already_serialized)
         >>> json_obj = {"jsonrpc": "2.0", "method": "report_size", "params": literal, "id": None}
@@ -1405,10 +1405,10 @@ def json_dumps(obj: JSON_Type, *, cls=json.JSONEncoder, partially_serialized: bo
         return ''.join(serialize(obj))
     else:
         class MyEncoder(json.JSONEncoder):
-            def default(self, obj):
-                if obj is JSONnull or isinstance(obj, JSONnull):
+            def default(self, o):
+                if o is JSONnull or isinstance(o, JSONnull):
                     return None
-                return cls.default(self, obj)
+                return cls.default(self, o)
         return json.dumps(obj, cls=MyEncoder, indent=None, separators=(',', ':'))
 
 
@@ -1417,10 +1417,10 @@ def json_rpc(method: str,
              ID: Optional[int] = None,
              partially_serialized: bool = True) -> str:
     """Generates a JSON-RPC-call string for `method` with parameters `params`.
-    
+
     :param method: The name of the rpc-function that shall be called
     :param params: A json-object representing the parameters of the call
-    :param ID: An ID for the json-rpc-call or `None` 
+    :param ID: An ID for the json-rpc-call or `None`
     :param partially_serialized: If True, the `params`-object may contain
         already serialized parts in form of `JSONStr`-objects.
         If False, any `JSONStr`-objects will lead to a TypeError.
@@ -1570,7 +1570,7 @@ def instantiate_executor(allow_parallel: bool,
     if allow_parallel:
         mode = get_config_value('debug_parallel_execution')  # type: str
         if mode == "commandline":
-            options = [arg for arg in sys.argv if arg[:2] == '--']  # type: List[str]
+            options = [arg for arg in sys.argv if arg[:2] == '--']
             if '--singlethread' in options:  mode = 'singlethread'
             elif '--multithreading' in options:  mode = 'multithreading'
             else:  mode = 'multiprocessing'

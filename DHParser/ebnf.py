@@ -1008,7 +1008,7 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, DropFro
     LateBindingUnary, mixin_comment, last_value, matching_bracket, optional_last_value, \\
     PARSER_PLACEHOLDER, UninitializedError
 from DHParser.pipeline import end_points, full_pipeline, create_parser_junction, \\
-    create_preprocess_junction, create_junction, PseudoJunction 
+    create_preprocess_junction, create_junction, PseudoJunction
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \\
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.stringview import StringView
@@ -1034,7 +1034,7 @@ from DHParser import parse as parse_namespace__
 
 PREPROCESSOR_FACTORY = '''
 
-# To capture includes, replace the NEVER_MATCH_PATTERN 
+# To capture includes, replace the NEVER_MATCH_PATTERN
 # by a pattern with group "name" here, e.g. r'\\input{{(?P<name>.*)}}'
 RE_INCLUDE = NEVER_MATCH_PATTERN
 RE_COMMENT = {COMMENT__}  # THIS MUST ALWAYS BE THE SAME AS {NAME}Grammar.COMMENT__ !!!
@@ -1051,14 +1051,14 @@ preprocessing: PseudoJunction = create_preprocess_junction(
 
 
 CUSTOM_PARSER_EXAMPLE = '''
-# Examples for custom parsers. Use these as role models for your own 
+# Examples for custom parsers. Use these as role models for your own
 # Python-implemented parsing-functions
 
 # 1. Plain parsing function (denoted as "@pCustom(parse_word)" is the grammar)
 
 def parse_word(s: StringView) -> Optional[Node]:
     m = s.match(r'\\w+')
-    if m: 
+    if m:
         return Node('word', s[:m.end()])
     return None
 
@@ -1070,7 +1070,7 @@ def parse_word(s: StringView) -> Optional[Node]:
 '''
 
 
-GRAMMAR_FACTORY = '''    
+GRAMMAR_FACTORY = '''
 parsing: PseudoJunction = create_parser_junction({NAME}Grammar)
 get_grammar = parsing.factory # for backwards compatibility, only
 '''
@@ -1141,7 +1141,7 @@ REDUCTION = {'none': NO_TREE_REDUCTION,
 REDUCTION_VALUES = {key for key in REDUCTION.keys()} | {str(value) for value in REDUCTION.values()}
 
 
-def literalws_set_from_value(lws: str) -> Set[str]:
+def literalws_set_from_value(lws: str) -> MutableSet[str]:
     if set(lws.split(' ')) == {'left', 'right'}:
         return {'left', 'right'}
     return {'left', 'right'} if lws == 'both' else (set() if lws == 'none' else {lws})
@@ -1209,14 +1209,14 @@ class EBNFDirectives:
     def __init__(self):
         self.whitespace = WHITESPACE_TYPES['linefeed']  # type: str
         self.comment = ''         # type: str
-        self.literalws: Set[str] = literalws_set_from_value(get_config_value('default_literalws'))
-        self.tokens = set()       # type: Set[str]
+        self.literalws: MutableSet[str] = literalws_set_from_value(get_config_value('default_literalws'))
+        self.tokens = set()       # type: MutableSet[str]
         self.filter = dict()      # type: Dict[str, str]
         self.error = dict()       # type: Dict[str, List[Tuple[ReprType, ReprType]]]
         self.skip = dict()        # type: Dict[str, List[Union[unrepr, str]]]
         self.resume = dict()      # type: Dict[str, List[Union[unrepr, str]]]
         self.disposable = get_config_value('default_disposable_regexp')  # type: str
-        self.drop = set()         # type: Set[str]
+        self.drop = set()         # type: MutableSet[str]
         self.reduction = FLATTEN  # type: int
         self.optimizations = get_config_value('optimizations')  # type: FrozenSet[str]
         self.flavor = get_config_value('syntax_variant')  # type: str
@@ -1244,7 +1244,7 @@ class EBNFDirectives:
         else:
             self.disposable = '(?:%s)|(?:%s)' % (self.disposable, pattern)
 
-    def add_to_disposable_symbols(self, symbols: Union[str, Container[str]]):
+    def add_to_disposable_symbols(self, symbols: Union[str, Iterable[str]]):
         symbols = {symbols} if isinstance(symbols, str) else set(symbols)
         for s in frozenset(symbols):
             if re.match(self.disposable, s):  symbols.remove(s)
@@ -1472,27 +1472,27 @@ class EBNFCompiler(Compiler):
     def reset(self):
         super().reset()
         self.python_src = ''                   # type: str
-        self.re_flags = set()                  # type: Set[str]
+        self.re_flags = set()                  # type: MutableSet[str]
         self.rules = OrderedDict()             # type: OrderedDict[str, List[Node]]
         self.referred_symbols_cache = dict()   # type: Dict[str, FrozenSet[str]]
         self.directly_referred_cache = dict()  # type: Dict[str, FrozenSet[str]]
-        self.referred_otherwise = set()        # type: Set[str]
+        self.referred_otherwise = set()        # type: MutableSet[str]
         self.current_symbols = []              # type: List[Node]
         self.cache_literal_symbols = None      # type: Optional[Dict[str, str]]
         self.symbols = {}                      # type: Dict[str, List[Node]]
-        self.py_symbols = set()                # type: Set[str]
+        self.py_symbols = set()                # type: MutableSet[str]
         self.variables = {}                    # type: Dict[str, List[Node]]
-        self.forward = set()                   # type: Set[str]
+        self.forward = set()                   # type: MutableSet[str]
         self.definitions = {}                  # type: Dict[str, str]
         self.macros = {}                       # type: Dict[str, Tuple[Node, List[str], Node]]
         self.macro_stack = []                  # type: List[str]
-        self.required_keywords = set()         # type: Set[str]
+        self.required_keywords = set()         # type: MutableSet[str]
         self.deferred_tasks = []               # type: List[Callable]
         self.root_symbol = ""                  # type: str
         self.directives = EBNFDirectives()     # type: EBNFDirectives
         self.defined_directives = dict()       # type: Dict[str, List[Node]]
-        self.consumed_custom_errors = set()    # type: Set[str]
-        self.consumed_skip_rules = set()       # type: Set[str]
+        self.consumed_custom_errors = set()    # type: MutableSet[str]
+        self.consumed_skip_rules = set()       # type: MutableSet[str]
         self.P = {p: p for p in parser_names}  # type: Dict[str, str]
 
 
@@ -1739,7 +1739,7 @@ class EBNFCompiler(Compiler):
             return self.referred_symbols_cache[symbol]
         except KeyError:
             pass
-        collected = set()  # type: Set[str]
+        collected = set()  # type: MutableSet[str]
 
         def gather(sym: str):
             for s in self.directly_referred(sym):
@@ -1758,7 +1758,7 @@ class EBNFCompiler(Compiler):
         sym is not recursive, the returned tuple (of paths) will be empty.
         This method exists only for debugging (so far...)."""
         path = []  # type: List[str]
-        recursive_paths = set()  # type: Set[Tuple[str, ...]]
+        recursive_paths = set()  # type: MutableSet[Tuple[str, ...]]
 
         def gather(sym: str):
             nonlocal path, recursive_paths
@@ -2708,7 +2708,7 @@ class EBNFCompiler(Compiler):
                 literals.append([i, content])
 
         move = []  # type: List[Tuple[int, int]]
-        snapshots = set()  # type: Set[Tuple[int, ...]]
+        snapshots = set()  # type: MutableSet[Tuple[int, ...]]
         start_over = True  # type: bool
         while start_over:
             start_over = False
@@ -3527,4 +3527,3 @@ def compile_ebnf(ebnf_source: str, branding: str = 'DSL', *, preserve_AST: bool 
                             get_ebnf_compiler(branding, ebnf_source),
                             preserve_AST=preserve_AST)
     return result
-

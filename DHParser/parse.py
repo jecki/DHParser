@@ -36,8 +36,7 @@ from bisect import bisect_left
 from collections import defaultdict, namedtuple
 import copy
 from functools import lru_cache
-from typing import Callable, cast, List, Tuple, Set, FrozenSet, Dict, Collection, \
-    DefaultDict, Sequence, Union, Optional, Iterator, AbstractSet
+from typing import Callable, cast, Collection, DefaultDict, Sequence, Union, Optional, Iterator
 
 from DHParser.configuration import get_config_value
 from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
@@ -59,7 +58,8 @@ from DHParser.nodetree import ChildrenType, Node, RootNode, WHITESPACE_PTYPE, \
     KEEP_COMMENTS_PTYPE, TOKEN_PTYPE, MIXED_CONTENT_TEXT_PTYPE, ZOMBIE_TAG, EMPTY_NODE, \
     EMPTY_PTYPE, ResultType, LEAF_NODE
 from DHParser.toolkit import sane_parser_name, escape_ctrl_chars, re, matching_brackets, \
-    abbreviate_middle, RX_NEVER_MATCH, RxPatternType, linebreaks, line_col, TypeAlias, INFINITE
+    abbreviate_middle, RX_NEVER_MATCH, RxPatternType, linebreaks, line_col, TypeAlias, \
+    List, Tuple, Set, MutableSet, AbstractSet, FrozenSet, Dict, INFINITE
 
 try:
     import cython
@@ -480,7 +480,7 @@ ApplyFunc: TypeAlias = Callable[['Parser'], Optional[bool]]
 ParserTrail: TypeAlias = Tuple['Parser']
 ApplyToTrailFunc: TypeAlias = Callable[[ParserTrail], Optional[bool]]
 # The return value of ``True`` stops any further application
-FlagFunc: TypeAlias = Callable[[ApplyFunc, Set[ApplyFunc]], bool]
+FlagFunc: TypeAlias = Callable[[ApplyFunc, MutableSet[ApplyFunc]], bool]
 ParseFunc: TypeAlias = Callable[['Parser', int], ParsingResult]
 
 
@@ -552,7 +552,7 @@ class Parser:
                 be overwritten to run th call to the ``_parse``-method
                 through a proxy like, for example, a tracing debugger.
                 See :py:mod:`~DHParser.trace`
-                
+
     :ivar sub_parsers: set of parsers that are directly referred to by
                 this parser, e.g. parser "a" defined by the EBNF-expression
                 "a = b (b | c)" has the sub-parser-set {b, c}.
@@ -589,7 +589,7 @@ class Parser:
         self.node_name = self.ptype   # type: str   # can be changed later
         self.disposable = True        # type: bool
         self.drop_content = False     # type: bool
-        self._sub_parsers = frozenset()  # type: AbstractSet[Parser]
+        self._sub_parsers = frozenset()  # type: FrozenSet[Parser]
         # this indirection is required for Cython-compatibility
         self._parse_proxy = self._parse  # type: ParseFunc
         try:
@@ -1305,7 +1305,7 @@ def ensure_drop_propagation(p: Parser):
                 raise e
 
 
-def is_disposable(name: str, disposables: Set[str]|RxPatternType) -> bool:
+def is_disposable(name: str, disposables: AbstractSet[str]|RxPatternType) -> bool:
     if name[0:1] == ':':
         return True
     elif isinstance(disposables, AbstractSet):
@@ -1605,7 +1605,7 @@ class Grammar:
     resume_rules__ = dict()        # type: Dict[str, ResumeList]
     skip_rules__ = dict()          # type: Dict[str, ResumeList]
     error_messages__ = dict()      # type: Dict[str, Sequence[PatternMatchType, str]]
-    disposable__ = frozenset()     # type: Set[str]|RxPatternType
+    disposable__ = frozenset()     # type: FrozenSet[str]|RxPatternType
     # some default values
     COMMENT__ = r''  # type: str  # r'#.*'  or r'#.*(?:\n|$)' if combined with horizontal wspc
     WHITESPACE__ = r'[ \t]*(?:\n[ \t]*)?(?!\n)'  # spaces plus at most a single linefeed
@@ -1700,7 +1700,7 @@ class Grammar:
         :param static_analysis: If not None, this overrides the config value
             "static_analysis".
         """
-        self.all_parsers__ = set()             # type: Set[Parser]
+        self.all_parsers__ = set()             # type: MutableSet[Parser]
         # add compiled regular expression for comments, if it does not already exist
         if not hasattr(self, 'comment_rx__') or self.comment_rx__ is None:
             if hasattr(self.__class__, 'COMMENT__') and self.__class__.COMMENT__:
@@ -1750,8 +1750,8 @@ class Grammar:
         assert 'root_parser__' in self.__dict__
         assert self.root_parser__ == self.__dict__['root_parser__']
         self.ff_parser__ = self.root_parser__
-        self.unconnected_parsers__: Set[Parser] = set()
-        self.resume_parsers__: Set[Parser] = set()
+        self.unconnected_parsers__: MutableSet[Parser] = set()
+        self.resume_parsers__: MutableSet[Parser] = set()
         resume_lists = []
         if hasattr(self, 'resume_rules__'):
             resume_lists.extend(self.resume_rules__.values())
@@ -1875,7 +1875,8 @@ class Grammar:
             predecessors to the node."""
             if predecessors:
                 tail = predecessors[-1].pick(LEAF_NODE, reverse=True, include_root=True)
-                return tail.pos + tail.strlen()
+                if tail is not None:
+                    return tail.pos + tail.strlen()
             return 0
 
         def lookahead_failure_only(parser):
@@ -1905,7 +1906,7 @@ class Grammar:
                                   or (isinstance(self[name], SmartRE)
                                       and self[name].pattern[0:3] in ('(?=', '(?!'))))
                             or (name[0] == ':' and issubclass(eval(name[1:]), Lookahead)))
-                except NameError:  
+                except NameError:
                     #  eval(name[1:]) failed, because custom parsers are not visible from here
                     nonlocal parser
                     parser.apply(functools.partial(find_parser_class, name=name[1:]))
@@ -2315,7 +2316,7 @@ class Grammar:
             return result
 
         self.fill_associated_symbol_cache__()
-        # cache = dict()  # type: Dict[Parser, Set[Parser]]
+        # cache = dict()  # type: Dict[Parser, MutableSet[Parser]]
         # for debugging: all_parsers = sorted(list(self.all_parsers__), key=lambda p:p.pname)
         for parser in self.all_parsers__:
             error_list.extend(parser.static_analysis())
@@ -3458,7 +3459,10 @@ def Custom(custom_parser: Union[Parser, CustomParseFunc, str]) -> Parser:
         return CustomParser(custom_parser)
     elif isinstance(custom_parser, str):
         custom_parser = globals().get(custom_parser, custom_parser)
-        assert callable(custom_parser), f"Not a CustomParseFunc: {custom_parser}"
+        if callable(custom_parser):
+            return CustomParser(cast(CustomParseFunc, custom_parser))
+        else:
+            raise AssertionError(f"Not a CustomParseFunc: {custom_parser}")
     else:
         raise ValueError(f'Illegal parameter {custom_parser} of type {type(custom_parser)}')
 
@@ -4383,7 +4387,7 @@ class Interleave(ErrorCatchingNary):
         results = ()  # type: Tuple[Node, ...]
         location_ = location  # type: int
         counter = [0] * len(self.parsers)
-        consumed = set()  # type: Set[Parser]
+        consumed = set()  # type: MutableSet[Parser]
         error = None  # type: Optional[Error]
         while True:
             # there is an order of testing, but no promise about the order of testing, here!
@@ -4785,7 +4789,7 @@ class Retrieve(ContextSensitive):
         be (mis-)used to execute any kind of semantic action.
     """
 
-    def __init__(self, symbol: Parser, match_func: MatchVariableFunc = None) -> None:
+    def __init__(self, symbol: Parser, match_func: Optional[MatchVariableFunc] = None) -> None:
         assert isinstance(symbol, Capture)
         super().__init__(symbol)
         self.match = match_func if match_func else last_value
@@ -4873,7 +4877,7 @@ class Pop(Retrieve):
     The constructor parameter ``symbol`` determines which variable is
     used.
     """
-    def __init__(self, symbol: Parser, match_func: MatchVariableFunc = None) -> None:
+    def __init__(self, symbol: Parser, match_func: Optional[MatchVariableFunc] = None) -> None:
         super().__init__(symbol, match_func)
 
     def reset(self):

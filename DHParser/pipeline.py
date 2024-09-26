@@ -134,7 +134,7 @@ def run_pipeline(junctions: Set[Junction],
             import traceback
             stack = traceback.extract_stack()
             for call in stack:
-                if call.line.find('run_grammar_tests') >= 0:
+                if call.line and call.line.find('run_grammar_tests') >= 0:
                     if call.line.find('get_') >= 0:
                         # Be kind and backwards-compatible with old code
                         deprecation_warning(f'Your transformation {junction[0]}->{junction[2]}: '
@@ -427,4 +427,3 @@ def create_junction(tool: Union[dict, type],
             raise AssertionError('Cannot determine transformation-type automatically! '
                 'Please, add optional parameter "hint" to the function call with one of the '
                 'following values: "transtable", "evaluate_with_path", "evaluate_without_path"!')
-
