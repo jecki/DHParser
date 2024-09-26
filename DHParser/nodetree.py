@@ -103,7 +103,7 @@ from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END, \
     add_source_locations, SourceMapFunc, has_errors, only_errors
 from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.stringview import StringView  # , real_indices
-from DHParser.toolkit import re, linebreaks, line_col, JSONnull, \
+from DHParser.toolkit import re, linebreaks, line_col, JSONnull, JSON_Type, JSON_Dict, \
     validate_XML_attribute_value, fix_XML_attribute_value, lxml_XML_attribute_value, \
     abbreviate_middle, TypeAlias, deprecated, RxPatternType, INFINITE
 
@@ -274,13 +274,13 @@ def LEAF_NODE(nd: Node) -> bool:
     return not nd._children
 
 def BRANCH_NODE(nd: Node) -> bool:
-    return nd._children
+    return bool(nd._children)
 
 def LEAF_PATH(path: Path) -> bool:
     return not path[-1]._children
 
 def BRANCH_PATH(path: Path) -> bool:
-    return path[-1]._children
+    return bool(path[-1]._children)
 
 def VOID_NODE(nd: Node) -> bool:
     return not nd._result
@@ -337,7 +337,7 @@ def create_match_function(criterion: NodeSelector) -> NodeMatchFunction:
         return lambda nd: nd.name in cast(Container, criterion)
     elif isinstance(criterion, RxPatternType) \
             or str(type(criterion)) in ("<class '_regex.Pattern'>", "<class 're.Pattern'>"):
-        return lambda nd: criterion.fullmatch(nd.content)
+        return lambda nd: bool(criterion.fullmatch(nd.content))
     raise TypeError("Criterion %s of type %s does not represent a legal criteria type"
                     % (repr(criterion), type(criterion)))
 
@@ -373,13 +373,13 @@ def create_path_match_function(criterion: PathSelector) -> PathMatchFunction:
                 is_node_match_func = True
             break
         if is_node_match_func:
-            return lambda path: criterion(path[-1])
+            return lambda path: bool(criterion(path[-1]))
         return cast(Callable, criterion)
     elif isinstance(criterion, Container):
         return lambda trl: trl[-1].name in cast(Container, criterion)
     elif isinstance(criterion, RxPatternType) \
             or str(type(criterion)) in ("<class '_regex.Pattern'>", "<class 're.Pattern'>"):
-        return lambda trl: criterion.fullmatch(trl[-1].content)
+        return lambda trl: bool(criterion.fullmatch(trl[-1].content))
     raise TypeError("Criterion %s of type %s does not represent a legal criteria type"
                     % (repr(criterion), type(criterion)))
 
@@ -804,7 +804,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         self._result = str(self._result)
         return self._result
 
-        # un-optimized algorithm (strings will be copied over and over 
+        # un-optimized algorithm (strings will be copied over and over
         # again for each level of the tree!)
         # return "".join(child.content for child in self._children) if self._children \
         #     else str(self._result)
@@ -1007,7 +1007,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             >>> as_tuple(tree['e'])
             (Node('e', (Node('X', 'F'))),)
 
-        :param key(str): A tag-name (string) or an index or a slice of the 
+        :param key(str): A tag-name (string) or an index or a slice of the
             child or children that shall be returned.
         :returns: The node with the given index (always type Node) or a
             list of all nodes which have a given tag name, if `key` was a
@@ -1024,8 +1024,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         else:
             mf = create_match_function(key)
             items = tuple(child for child in self._children if mf(child))
-            if items:
-                return items if len(items) >= 2 else items[0]
+            L = len(items)
+            if L >= 2:
+                return items
+            elif L > 0:
+                return items[0]
             raise KeyError(str(key))
 
     def __setitem__(self,
@@ -1089,7 +1092,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             else:
                 raise IndexError("index %s out of range [0, %i[" % (key, len(self._children)))
         elif isinstance(key, slice):
-            children = list(self.children)
+            children: List[Optional[Node]] = list(self.children)
             for i in range(*key.indices(len(children))):
                 children[i] = None
             self.result = tuple(child for child in children if child is not None)
@@ -1283,12 +1286,12 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def pick_if(self, match_func: NodeMatchFunction,
                 include_root: bool = False,
                 reverse: bool = False,
-                skip_subtree: NodeSelector = NO_NODE) -> Optional[Node]:
+                skip_func: NodeMatchFunction = NO_NODE) -> Optional[Node]:
         """Picks the first (or last if run in reverse mode) descendant for
         which the match-functions returns True. Or, returns None if no matching
         node exists."""
         try:
-            return next(self.select_if(match_func, include_root, reverse, skip_subtree))
+            return next(self.select_if(match_func, include_root, reverse, skip_func))
         except StopIteration:
             return None
 
@@ -1397,7 +1400,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 if child._children and not skip_func(child_trl):
                     yield from recursive(child_trl)
 
-        trl = [self]
+        trl: List[Node] = [self]
         if include_root:
             if match_func(trl):  yield trl
             if not skip_func(trl):
@@ -1421,12 +1424,13 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def pick_path_if(self, match_func: PathMatchFunction,
                 include_root: bool = False,
                 reverse: bool = False,
-                skip_subtree: NodeSelector = NO_NODE) -> Path:
+                skip_func: PathMatchFunction = NO_NODE) -> Optional[Path]:
         """Picks the first (or last if run in reverse mode) descendant-path for
         which the match-functions returns True. Or, returns None if no matching
         node exists."""
         try:
-            return next(self.select_path_if(match_func, include_root, reverse, skip_subtree))
+            return next(self.select_path_if(match_func, include_root, reverse,
+                                            skip_func))
         except StopIteration:
             return None
 
@@ -1536,13 +1540,14 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     child = parent
             return child
 
-        nodes = isinstance(begin, Node)
-        assert nodes == isinstance(end, Node)
-        if (begin.pos > end.pos) if nodes else (begin[-1].pos > end[-1].pos):
+        assert isinstance(begin, Node) == isinstance(end, Node)
+        nodes = isinstance(begin, Node) and isinstance(end, Node)
+        if ((cast(Node, begin).pos > cast(Node, end).pos) if nodes
+                else (cast(Path, begin)[-1].pos > cast(Path, end)[-1].pos)):
             begin, end = end, begin
         common_ancestor = self  # type: Node
-        trlA = self.reconstruct_path(begin) if nodes else begin
-        trlB = self.reconstruct_path(end) if nodes else end
+        trlA = self.reconstruct_path(cast(Node, begin)) if nodes else cast(Path, begin)
+        trlB = self.reconstruct_path(cast(Node, end)) if nodes else cast(Path, end)
         for a, b in zip(trlA, trlB):
             if a != b:
                 break
@@ -1776,7 +1781,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     else:
                         txt.append((' (pos "%i")' if sxml else ' `(pos %i)') % node.pos)
                 if has_errors and not node.has_attr('err'):
-                    err_str = ';  '.join(str(err) for err in root.node_errors(node))
+                    err_str = ';  '.join(str(err)
+                        for err in cast(RootNode, root).node_errors(node))
                     if err_str:
                         err_str = err_str.replace('"', r'\"')
                         txt.append(attr('err', err_str))
@@ -2004,18 +2010,18 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 if nd.name in names:
                     # if any name appears more than once among the child node's names,
                     # lists must be used instead of dictionaries!
-                    jo = {node.name: [[nd.name, dict_flavor(nd)[nd.name]]
-                                      for nd in node._children]
-                                     if node._children else str(node._result)}
+                    jo: JSON_Dict = {node.name: [[nd.name, dict_flavor(nd)[nd.name]]
+                                                  for nd in node._children]
+                                                 if node._children else str(node._result)}
                     break
                 else:
                     names.add(nd.name)
             else:
                 # use a dictionary only after having made sure
                 # that each child node's name is unique
-                jo = {node.name: {nd.name: dict_flavor(nd)[nd.name]
-                                  for nd in node._children}
-                                 if node._children else node._result}
+                jo: JSON_Dict = {node.name: {nd.name: dict_flavor(nd)[nd.name]
+                                             for nd in node._children}
+                                            if node._children else node._result}
             additional = {}
             if include_pos:
                 pos = node._pos
@@ -2158,7 +2164,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         :param indent: number of spaces for indentation
         """
         xast_obj = self.as_unist_obj(flavor='xast')
-        return json.dumps(xast_obj, indent=indent, 
+        return json.dumps(xast_obj, indent=indent,
                           separators=(', ', ': ') if indent is not None else (',', ':'))
 
     def as_ndst(self, indent: Optional[int] = 2) -> str:
@@ -3455,7 +3461,7 @@ def next_path(path: Path) -> Optional[Path]:
     """Returns the path of the successor of the last node in the
     path. The successor is the sibling of the same parent Node
     succeeding the node, or if it already is the last sibling, the
-    parent's sibling succeeding the parent, or grand parent's sibling and
+    parent's sibling succeeding the parent, or grandparent's sibling and
     so on. In case no successor is found when the first ancestor has been
     reached, `None` is returned.
     """
@@ -3594,7 +3600,7 @@ def pick_path_if(start_path: Path,
                  match_func: PathMatchFunction,
                  include_root: bool = False,
                  reverse: bool = False,
-                 skip_subtree: PathSelector = NO_PATH) -> Optional[Path]:
+                 skip_func: PathMatchFunc = NO_PATH) -> Optional[Path]:
     """
     Returns the first path for which match_func becomes True. If no
     path in the given direction (forward by default or reverse,
@@ -3603,7 +3609,7 @@ def pick_path_if(start_path: Path,
     try:
         return next(select_path_if(
             start_path, match_func, include_root=include_root, reverse=reverse,
-            skip_subtree=skip_subtree))
+            skip_func=skip_func))
     except StopIteration:
         return None
 
