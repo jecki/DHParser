@@ -880,7 +880,7 @@ proc violation(catcher: ErrorCatchingParserRef,
     found = if location >= gr.document.len: "EOF" else: fmt"»{snippet}«"
     sym = if isNil(catcher.symbol):  $catcher  else:  catcher.symbol.pname
   var
-    errCode = MandatoryCondinuation
+    errCode = MandatoryContinuation
     message = fmt"{expected} expected by parser {$sym}, but {found} found!"
   # errorNode.pos = location  # if errorNode.sourcePos < 0:
   for (rule, msg) in catcher.errorList:
@@ -1179,11 +1179,11 @@ func rep(s: string | char): Range =
 
 
 func toRange*(r: RuneRange): Range = (r.low.uint32, r.high.uint32)
-func toRunRange*(r: Range): RuneRange = (Rune(r.min), Rune(r.max))
+func toRuneRange*(r: Range): RuneRange = (Rune(r.min), Rune(r.max))
 
 
 func notEmpty(R: seq[RuneRange]): bool =
-  ## Confirms that sequence of ranges is not be empty and that
+  ## Confirms that the sequence of ranges is not be empty and that
   ## for each range low <= high.
   if R.len <= 0: return false
   for r in R:
@@ -1384,7 +1384,7 @@ proc `-`*(A, B: RuneSet): RuneSet =
 
 func inRuneRange*(r: Rune, ranges: seq[RuneRange]): int32 =
   ## Binary search to find out if rune r falls within one of the sorted ranges
-  ## Returns the index of the range of -1, if r does not fall into any range
+  ## Returns the index of the range or -1, if r does not fall into any range
   let
     highest: int32 = ranges.len.int32 - 1'i32
   var
