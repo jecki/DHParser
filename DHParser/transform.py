@@ -33,7 +33,7 @@ import copy
 from functools import partial, singledispatch, reduce
 import inspect
 import operator
-from typing import AbstractSet, ByteString, Callable, cast, Container, Dict, \
+from typing import AbstractSet, Callable, cast, Container, Dict, \
     Tuple, List, Sequence, Union, Optional
 
 try:
@@ -45,7 +45,7 @@ from DHParser.error import ErrorCode, AST_TRANSFORM_CRASH, ERROR
 from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, LEAF_PTYPES, PLACEHOLDER, \
     RootNode, parse_sxpr, flatten_sxpr, Path, pp_path
 from DHParser.toolkit import issubtype, isgenerictype, expand_table, smart_list, re, \
-    deprecation_warning, TypeAlias
+    deprecation_warning, TypeAlias, ByteString
 
 
 __all__ = ('TransformationDict',

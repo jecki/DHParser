@@ -56,9 +56,10 @@ if sys.version_info >= (3, 13, 0):
     Dict: TypeAlias = dict
     List: TypeAlias = list
     Tuple: TypeAlias = tuple
+    ByteString: TypeAlias = Union[bytes, bytearray]
 else:
     from typing import Any, Iterable, Sequence, Set, AbstractSet, Union, Dict, List, Tuple, \
-        FrozenSet, MutableSet, Optional, Type, Callable, Container, Hashable
+        FrozenSet, MutableSet, Optional, Type, Callable, Container, Hashable, ByteString
     try:
         from typing import Protocol
     except ImportError:
@@ -157,6 +158,7 @@ __all__ = ('re',
            'FrozenSet',
            'Callable',
            'Container',
+           'ByteString',
            'Any',
            'Type',
            'Union',
