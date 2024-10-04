@@ -1,6 +1,9 @@
 # adapted from from: https://github.com/PMunch/strslice
 # written by Peter Munch-Elligsen, MIT-Lizense
 
+## String Slices
+## =============
+##
 ## This is an implementation of string slices that works on a common underlying
 ## string shared through a reference instead of copying parts of the string.
 ## This has the benefit of not requiring the time and memory of copying parts
