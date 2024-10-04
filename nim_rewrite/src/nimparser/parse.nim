@@ -1162,22 +1162,6 @@ type
     repetitions: Range
 
 
-func rep(s: string | char): Range =
-  when s is string:
-    if len(s) == 0:
-      return (1'u32, 1'u32)
-    assert len(s) == 1
-    let c: char = s[0]
-  else:
-    let c: char = s
-  case c:
-    of '?': return (0'u32, 1'u32)
-    of '*': return (0'u32, RepLimit)
-    of '+': return (1'u32, RepLimit)
-    else:
-      assert false
-
-
 func toRange*(r: RuneRange): Range = (r.low.uint32, r.high.uint32)
 func toRuneRange*(r: Range): RuneRange = (Rune(r.min), Rune(r.max))
 
@@ -1405,6 +1389,21 @@ func inRuneRange*(r: Rune, ranges: seq[RuneRange]): int32 =
     i = a + (b - a) div 2
   return -1
 
+
+func rep(s: string | char): Range =
+  when s is string:
+    if len(s) == 0:
+      return (1'u32, 1'u32)
+    assert len(s) == 1
+    let c: char = s[0]
+  else:
+    let c: char = s
+  case c:
+    of '?': return (0'u32, 1'u32)
+    of '*': return (0'u32, RepLimit)
+    of '+': return (1'u32, RepLimit)
+    else:
+      assert false
 
 proc init*(charRangeParser: CharRangeRef,
            runes: RuneSet,
