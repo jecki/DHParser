@@ -3,6 +3,7 @@
 
 import std/[unittest, strutils, unicode, algorithm, strformat]
 
+import nimparser/runerange
 
 test "String code for Rune-Ranges (rr and sr)":
   assert (rr"Ä-Ö").toRange() == (196'u32, 214'u32)
