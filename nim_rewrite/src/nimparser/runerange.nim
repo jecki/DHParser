@@ -74,7 +74,7 @@ proc sortAndMerge*(R: var seq[RuneRange]) =
   R.setLen(a + 1)
   # assert isSortedAndMerged(R)
 
-
+# TODO: Rename as basicRuneSet
 proc rs*(rangesStr: string): RuneSet =
   var
     buf: string = ""
