@@ -31,7 +31,6 @@ type
   RuneSet* = tuple[negate: bool, ranges: seq[RuneRange]]
 
 
-
 func toRange*(r: RuneRange): Range = (r.low.uint32, r.high.uint32)
 func toRuneRange*(r: Range): RuneRange = (Rune(r.min), Rune(r.max))
 
@@ -73,80 +72,6 @@ proc sortAndMerge*(R: var seq[RuneRange]) =
 
   R.setLen(a + 1)
   # assert isSortedAndMerged(R)
-
-# TODO: Rename as basicRuneSet
-proc rs*(rangesStr: string): RuneSet =
-  var
-    buf: string = ""
-    bi: int32 = 1
-
-  proc parseRune(s: string, i: var int): Rune =
-    var
-      r: Rune
-      i0, i1: int
-    if bi < buf.len:
-      buf.fastRuneAt(bi, r)
-      return r
-    for t in [r"\x", r"0x", r"\u", r"\U"]:
-      if i+1 < s.len and s[i..i+1] == t:
-        i += 2
-        i0 = i
-        while i < s.len:
-          i1 = i
-          s.fastRuneAt(i, r)
-          if r.toUtf8 notin "0123456789ABCDEFabcdef":
-            i = i1
-            break
-        return Rune(fromHex[int32](s[i0..<i]))
-    s.fastRuneAt(i, r)
-    if r.toUTF8 == r"\":
-      s.fastRuneAt(i, r)
-      case r.toUTF8:
-        of "s":
-          buf = " \t\r\n\f"
-          bi = 0
-          buf.fastRuneAt(bi, r)
-        of "n":  r = "\n".runeAt(0)
-        else:
-          discard
-    return r
-
-  var
-    i = 0
-    i0: int
-    low, high, delimiter: Rune
-    negate = false
-    runeRanges: seq[RuneRange] = @[]
-
-  if rangesStr.len > 0 and rangesStr[0] == '^':
-    negate = true
-    i += 1
-  while i < rangesStr.len or bi < buf.len:
-    low = parseRune(rangesStr, i)
-    if i < rangesStr.len:
-      i0 = i
-      delimiter = parseRune(rangesStr, i)
-      if (i < rangesStr.len or bi < buf.len) and delimiter.toUtf8 == "-":
-        high = parseRune(rangesStr, i)
-        if high <% low:
-          delimiter = low
-          low = high
-          high = delimiter
-      else:
-        i = i0
-        high = low
-    else:
-      high = low
-    runeRanges.add((low, high))
-  assert runeRanges.len >= 1
-  sortAndMerge(runeRanges)
-  return (negate, runeRanges)
-
-proc rr*(rangeStr: string): RuneRange =
-  let runes = rs(rangeStr)
-  assert runes.ranges.len == 1
-  return runes.ranges[0]
-
 
 proc `+`*(A, B: seq[RuneRange]): seq[RuneRange] =
   result = newSeqOfCap[RuneRange](A.len + B.len)
@@ -258,3 +183,141 @@ func inRuneRange*(r: Rune, ranges: seq[RuneRange]): int32 =
     last_i = i
     i = a + (b - a) div 2
   return -1
+
+
+## Rune range and rune set parsers
+
+proc rs0*(rangesStr: string): RuneSet =
+  ## Parses "basic" rune sets. The syntax for rangeStr is more or less the
+  ## syntax you'd use inside rectangular brackets [ ] in regular expressions,
+  ## only that the only allowed backslashed values are \s (whitespace)
+  ## and \n (linefeed).
+  ## Examples: rs0"a-z0-9\xc4-\xd6", rs0"^A-Z"
+  ##
+  ## Hexadecimal codes are allowed. They may be introduced with any of the
+  ## following: "\x", "\u", "\U". Inverse sets are built with a leading "^"
+  var
+    buf: string = ""
+    bi: int32 = 1
+
+  proc parseRune(s: string, i: var int): Rune =
+    var
+      r: Rune
+      i0, i1: int
+    if bi < buf.len:
+      buf.fastRuneAt(bi, r)
+      return r
+    for t in [r"\x", r"\u", r"\U"]:
+      if i+1 < s.len and s[i..i+1] == t:
+        i += 2
+        i0 = i
+        while i < s.len:
+          i1 = i
+          s.fastRuneAt(i, r)
+          if r.toUtf8 notin "0123456789ABCDEFabcdef":
+            i = i1
+            break
+        return Rune(fromHex[int32](s[i0..<i]))
+    s.fastRuneAt(i, r)
+    if r.toUTF8 == r"\":
+      s.fastRuneAt(i, r)
+      case r.toUTF8:
+        of "s":
+          buf = " \t\r\n\f"
+          bi = 0
+          buf.fastRuneAt(bi, r)
+        of "n":  r = "\n".runeAt(0)
+        else:
+          discard
+    return r
+
+  var
+    i = 0
+    i0: int
+    low, high, delimiter: Rune
+    negate = false
+    runeRanges: seq[RuneRange] = @[]
+
+  if rangesStr.len > 0 and rangesStr[0] == '^':
+    negate = true
+    i += 1
+  while i < rangesStr.len or bi < buf.len:
+    low = parseRune(rangesStr, i)
+    if i < rangesStr.len:
+      i0 = i
+      delimiter = parseRune(rangesStr, i)
+      if (i < rangesStr.len or bi < buf.len) and delimiter.toUtf8 == "-":
+        high = parseRune(rangesStr, i)
+        if high <% low:
+          delimiter = low
+          low = high
+          high = delimiter
+      else:
+        i = i0
+        high = low
+    else:
+      high = low
+    runeRanges.add((low, high))
+  assert runeRanges.len >= 1
+  sortAndMerge(runeRanges)
+  return (negate, runeRanges)
+
+
+proc rs(s: string): RuneSet =
+  ## parses "complex" rune sets that may be composed of unions or differences
+  ## of basic rune sets. Examples:
+  ## rs"""[_:]|[A-Z]|[a-z]|[\u00C0-\u00D6]|[\U00010000-\U000EFFFF]"""
+  ## rs"[^<&\"]"
+  ## rs"[\ufeff]|[\ufffe]|[\u0000][\ufeff]|[\ufffe][\u0000]"
+  ## rs"[A-Za-z0-9._\-]"
+  ## rs"A-Za-z"
+  ## rs"^<&'>\s"
+  assert s.len > 0
+  var
+    i = 0
+    repetition = ""
+
+  proc parseRuneSet(): RuneSet =
+    assert i < s.len
+    assert s[i] == '[', $i
+    let k = i + 1
+    while i < s.len and (s[i] != ']' or (i > 0 and s[i-1] == '\\')):  i += 1
+    assert i < s.len
+    result = rs0(s[k ..< i])
+    i += 1
+
+  if s[0] != '[':
+    result = rs0(s)
+  else:
+    result = (false, @[])
+    var sign = ' '
+    while i < s.len:
+      while i < s.len and s[i] in " \n":  i += 1
+      if s[i] == '-':
+        assert sign != '-'
+        sign = '-'
+        i += 1
+      elif s[i] == '|':
+        i += 1
+      elif s[i] != '[':
+        break
+      while i < s.len and s[i] in " \n":  i += 1
+      if sign == '-':
+        result = result - parseRuneSet()
+      else:
+        if result.ranges.len == 0:
+          result = parseRuneSet()
+        else:
+          result = result + parseRuneSet()
+
+
+proc rr*(rangeStr: string): RuneRange =
+  ## Parses a single rune range. Examples: rr"A-Z", rr"[a-z]".
+  ##
+  ## Inverse rune ranges are not possible. Neither are concatenations
+  ## of rune ranges. The rune range may be enclosed by rectangular
+  ## brackets, but does not need to be.
+  let runes = rs(rangeStr)
+  assert runes.ranges.len == 1
+  return runes.ranges[0]
+

@@ -1204,11 +1204,11 @@ proc cr*(s: string): CharRangeRef =
     let k = i + 1
     while i < s.len and (s[i] != ']' or (i > 0 and s[i-1] == '\\')):  i += 1
     assert i < s.len
-    result = rs(s[k ..< i])
+    result = rs0(s[k ..< i])
     i += 1
 
   if s[0] notin "([":
-    runes = rs(s)
+    runes = rs0(s)
     i = s.len
   else:
     if s[0] == '(':
@@ -1217,7 +1217,7 @@ proc cr*(s: string): CharRangeRef =
     if s[i] != '[':
       while i < s.len and s[i] != ')':  i += 1
       assert i < s.len
-      runes = rs(s[1 ..< i])
+      runes = rs0(s[1 ..< i])
       i += 1
     else:
       var sign = ' '
