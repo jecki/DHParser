@@ -92,4 +92,4 @@ test "RuneSet":
   r = rs0(r"\n")
   assert r.ranges.len == 1
 
-test "Serialization":
+# test "Serialization":

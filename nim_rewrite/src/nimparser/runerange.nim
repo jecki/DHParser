@@ -22,13 +22,16 @@
 {.experimental: "strictCaseObjects".}
 
 
-import std/[algorithm, strutils, unicode]
+import std/[algorithm, strformat, strutils, unicode]
 
 
 type
   Range* = tuple[min: uint32, max: uint32]
   RuneRange* = tuple[low: Rune, high: Rune]
   RuneSet* = tuple[negate: bool, ranges: seq[RuneRange]]
+
+const
+  EmptyRuneRange* = (Rune('b'), Rune('a'))
 
 proc `$`*(range: Range): string =
   let
@@ -68,37 +71,39 @@ proc `$`*(rs: RuneSet): string =
       if r.low.uint32 <= r.high.uint32:
         allEmpty = false
         break
-    if allEmptry:
+    if allEmpty:
       return "[EMPTY]"
     return $rs.ranges
   else:
-    var s = "[^" & $(rs.ranges[0])[1 .. ^1]
+    var s = "[^" & ($rs.ranges[0])[1 .. ^1]
     return s & rs.ranges[1 .. ^1].join("-")
 
 func toRange*(r: RuneRange): Range = (r.low.uint32, r.high.uint32)
 func toRuneRange*(r: Range): RuneRange = (Rune(r.min), Rune(r.max))
 
-func notEmpty(R: seq[RuneRange]): bool =
+func isEmpty*(r: RuneRange): bool = r.high <% r.low
+
+func neverEmpty*(rr: seq[RuneRange]): bool =
   ## Confirms that the sequence of ranges is not be empty and that
   ## for each range low <= high.
-  if R.len <= 0: return false
-  for r in R:
+  if rr.len <= 0: return false
+  for r in rr:
     if r.high <% r.low: return false
   return true
 
-func isSortedAndMerged*(R: seq[RuneRange]): bool =
+func isSortedAndMerged*(rr: seq[RuneRange]): bool =
   ## Confirms that the ranges in the sequences are in ascending order
   ## and that there are no overlapping or adjacent ranges.
-  for i in 1 ..< len(R):
-    if R[i].low <=% R[i - 1].high: return false
+  for i in 1 ..< len(rr):
+    if rr[i].low <=% rr[i - 1].high: return false
   return true
 
 func size*(range: Range): uint32 = range.max - range.min + 1
-func size*(rr: RuneRange): uint32 = size(toRange(r))
+func size*(r: RuneRange): uint32 = size(toRange(r))
 func size(R: seq[RuneRange]): uint32 =
   if not isSortedAndMerged(R):
     raise newException(AssertionDefect, "")
-  var sum = 0.u32
+  var sum: uint32 = 0
   for rr in R:
     sum += size(rr)
   return sum
@@ -108,7 +113,7 @@ proc sortAndMerge*(R: var seq[RuneRange]) =
   ## in place so that the ranges are in ascending order,
   ## non-overlapping and non-adjacent. The sequence can be shortened
   ## in the process.
-  assert notEmpty(R)
+  assert neverEmpty(R)
   R.sort(proc (a, b: RuneRange): int =
            if a.low <% b.low: -1 else: 1)
   var
@@ -133,8 +138,8 @@ proc `+`*(A, B: seq[RuneRange]): seq[RuneRange] =
   sortAndMerge(result)
 
 proc `-`*(A, B: seq[RuneRange]): seq[RuneRange] =
-  assert notEmpty(A)
-  assert notEmpty(B)
+  assert neverEmpty(A)
+  assert neverEmpty(B)
   assert isSortedAndMerged(A)
   assert isSortedAndMerged(B)
 
@@ -316,7 +321,7 @@ proc rs0*(rangesStr: string): RuneSet =
   return (negate, runeRanges)
 
 
-proc rs(s: string): RuneSet =
+proc rs*(s: string): RuneSet =
   ## parses "complex" rune sets that may be composed of unions or differences
   ## of basic rune sets. Examples:
   ## rs"""[_:]|[A-Z]|[a-z]|[\u00C0-\u00D6]|[\U00010000-\U000EFFFF]"""
