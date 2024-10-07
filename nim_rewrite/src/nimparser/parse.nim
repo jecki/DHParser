@@ -1173,6 +1173,7 @@ func rep(s: string | char): Range =
     of '?': return (0'u32, 1'u32)
     of '*': return (0'u32, RepLimit)
     of '+': return (1'u32, RepLimit)
+    of ' ': return (1'u32, 1'u32)
     else:
       assert false
 
@@ -1191,57 +1192,80 @@ template CharRange*(runes: RuneSet, repetitions: Range = (1, 1)): CharRangeRef =
 template CharRange*(runes: RuneSet, repetition: string | char): CharRangeRef =
   new(CharRangeRef).init(runes, rep(repetition))
 
+# proc cr*(s: string): CharRangeRef =
+#   assert s.len > 0
+#   var
+#     i = 0
+#     runes: RuneSet = (false, @[])
+#     repetition = ""
+#
+#   proc parseRuneSet(): RuneSet =
+#     assert i < s.len
+#     assert s[i] == '[', $i
+#     let k = i + 1
+#     while i < s.len and (s[i] != ']' or (i > 0 and s[i-1] == '\\')):  i += 1
+#     assert i < s.len
+#     result = rs0(s[k ..< i])
+#     i += 1
+#
+#   if s[0] notin "([":
+#     runes = rs0(s)
+#     i = s.len
+#   else:
+#     if s[0] == '(':
+#       assert s.len > 2
+#       i += 1
+#     if s[i] != '[':
+#       while i < s.len and s[i] != ')':  i += 1
+#       assert i < s.len
+#       runes = rs0(s[1 ..< i])
+#       i += 1
+#     else:
+#       var sign = ' '
+#       while i < s.len and s[i] != ')':
+#         while i < s.len and s[i] in " \n":  i += 1
+#         if s[i] == '-':
+#           assert sign != '-'
+#           sign = '-'
+#           i += 1
+#         elif s[i] == '|':
+#           i += 1
+#         elif s[i] != '[':
+#           break
+#         while i < s.len and s[i] in " \n":  i += 1
+#         if sign == '-':
+#           runes = runes - parseRuneSet()
+#         else:
+#           if runes.ranges.len == 0:
+#             runes = parseRuneSet()
+#           else:
+#             runes = runes + parseRuneSet()
+#       if i < s.len and s[i] == ')': i += 1
+#   if i < s.len: repetition = s[i .. ^1]
+#   CharRange(runes, repetition)
+
+
 proc cr*(s: string): CharRangeRef =
-  assert s.len > 0
   var
-    i = 0
-    runes: RuneSet = (false, @[])
-    repetition = ""
+    repetition = ' '
+    a = 0
+    b = s.len - 1
 
-  proc parseRuneSet(): RuneSet =
-    assert i < s.len
-    assert s[i] == '[', $i
-    let k = i + 1
-    while i < s.len and (s[i] != ']' or (i > 0 and s[i-1] == '\\')):  i += 1
-    assert i < s.len
-    result = rs0(s[k ..< i])
-    i += 1
+  assert b >= 0
+  if s[b] in "?*+":
+    repetition = s[b]
+    b -= 1
+    assert b >= 0
+    assert s[b] == ")" or not '|' in s
+  if s[a] == "(":
+    assert s[b] == ")"
+    a += 1
+    b -= 1
+    assert b >= 0 and b >= a
 
-  if s[0] notin "([":
-    runes = rs0(s)
-    i = s.len
-  else:
-    if s[0] == '(':
-      assert s.len > 2
-      i += 1
-    if s[i] != '[':
-      while i < s.len and s[i] != ')':  i += 1
-      assert i < s.len
-      runes = rs0(s[1 ..< i])
-      i += 1
-    else:
-      var sign = ' '
-      while i < s.len and s[i] != ')':
-        while i < s.len and s[i] in " \n":  i += 1
-        if s[i] == '-':
-          assert sign != '-'
-          sign = '-'
-          i += 1
-        elif s[i] == '|':
-          i += 1
-        elif s[i] != '[':
-          break
-        while i < s.len and s[i] in " \n":  i += 1
-        if sign == '-':
-          runes = runes - parseRuneSet()
-        else:
-          if runes.ranges.len == 0:
-            runes = parseRuneSet()
-          else:
-            runes = runes + parseRuneSet()
-      if i < s.len and s[i] == ')': i += 1
-  if i < s.len: repetition = s[i .. ^1]
+
   CharRange(runes, repetition)
+
 
 method parse*(self: CharRangeRef, location: int32): ParsingResult =
   let

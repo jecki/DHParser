@@ -91,3 +91,5 @@ test "RuneSet":
   assert r.ranges.len == 3  # 9-10, 12-13, 20
   r = rs0(r"\n")
   assert r.ranges.len == 1
+
+test "Serialization":

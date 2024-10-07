@@ -30,10 +30,53 @@ type
   RuneRange* = tuple[low: Rune, high: Rune]
   RuneSet* = tuple[negate: bool, ranges: seq[RuneRange]]
 
+proc `$`*(range: Range): string =
+  let
+    min {.inject.} = range.min
+    max {.inject.} = range.max
+  if min <= max:  fmt"{min}..{max}"  else: "EMPTY"
+
+func hex*(r: Rune): string =
+  let n = r.uint32
+  if n < 256: r"\x" & toHex(n, 2)
+  elif n < 65536: r"\u" & toHex(n, 4)
+  else: r"\U" & toHex(n, 8)
+
+proc `$`*(r: RuneRange): string =
+  let
+    min = r.low.uint32
+    max = r.high.uint32
+  if min > max:
+    "[EMPTY]"
+  elif min == max:
+    let val = if min < 256: $chr(min) else: hex(r.low)
+    fmt"[{val}]"
+  else:
+    let
+      low = if min < 256: $chr(min) else: hex(r.low)
+      high = if max < 256: $chr(max) else: hex(r.high)
+    fmt"[{low}-{high}]"
+
+proc `$`*(rr: seq[RuneRange]): string = rr.join("|")
+
+proc `$`*(rs: RuneSet): string =
+  if not rs.negate:
+    if rs.ranges.len == 0:
+      return "[EMPTY]"
+    var allEmpty = true
+    for r in rs.ranges:
+      if r.low.uint32 <= r.high.uint32:
+        allEmpty = false
+        break
+    if allEmptry:
+      return "[EMPTY]"
+    return $rs.ranges
+  else:
+    var s = "[^" & $(rs.ranges[0])[1 .. ^1]
+    return s & rs.ranges[1 .. ^1].join("-")
 
 func toRange*(r: RuneRange): Range = (r.low.uint32, r.high.uint32)
 func toRuneRange*(r: Range): RuneRange = (Rune(r.min), Rune(r.max))
-
 
 func notEmpty(R: seq[RuneRange]): bool =
   ## Confirms that the sequence of ranges is not be empty and that
@@ -49,6 +92,16 @@ func isSortedAndMerged*(R: seq[RuneRange]): bool =
   for i in 1 ..< len(R):
     if R[i].low <=% R[i - 1].high: return false
   return true
+
+func size*(range: Range): uint32 = range.max - range.min + 1
+func size*(rr: RuneRange): uint32 = size(toRange(r))
+func size(R: seq[RuneRange]): uint32 =
+  if not isSortedAndMerged(R):
+    raise newException(AssertionDefect, "")
+  var sum = 0.u32
+  for rr in R:
+    sum += size(rr)
+  return sum
 
 proc sortAndMerge*(R: var seq[RuneRange]) =
   ## Sorts the sequence of ranges and merges overlapping regions
