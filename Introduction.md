@@ -45,7 +45,7 @@ a few drawbacks to this approach:
 
 - The syntax is cumbersome and the encoding not very legible to humans
   working with it. (And this is not even
-  [TEI-XML](https://www.tei-c.org/index.xml), yet...)
+  [TEI-XML](https://www.tei-c.org/index.en.html), yet...)
   Editing and revising XML-encoded text is tedious.
 
 - The XML encoding, especially TEI-XML, is often not intuitive. Only
@@ -65,7 +65,7 @@ a few drawbacks to this approach:
 
 On the other hand, there are good reasons why XML is used in the
 humanities: Important encoding standards like
-[TEI-XML](https://www.tei-c.org/index.xml) are defined in XML. Its strict
+[TEI-XML](https://www.tei-c.org/index.en.html) are defined in XML. Its strict
 syntax and the possibility to check data against a schema help to detect
 and avoiding encoding errors. If the schema is well-defined, it is
 unambiguous, and it is easy to parse for a computer. Most of these
