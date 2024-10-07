@@ -1219,7 +1219,6 @@ proc cr*(s: string): CharRangeRef =
     raise newException(AssertionDefect, fmt(missingBrackets))
   CharRange(rangeSet, repetition)
 
-
 method parse*(self: CharRangeRef, location: int32): ParsingResult =
   let
     document = self.grammar.document
@@ -1247,45 +1246,13 @@ method parse*(self: CharRangeRef, location: int32): ParsingResult =
   return (newNode(self.nodeName, document.cut(location ..< lastPos)), lastPos)
 
 method `$`*(self: CharRangeRef): string =
-  proc hexlen(r: Rune): (int8, string) =
-    let i = r.int32
-    if i < 1 shl 8: return (2, r"\x")
-    elif i < 1 shl 16:  return (4, r"\u")
-    else: return (8, r"\U")
-
-  proc isAlphaNum(rr: RuneRange): bool =
-    proc isIn(a, b, x, y: int32): bool =
-      a >= x and a <= y and b >= x and b <= y
-    let
-      a = rr.low.int32
-      b = rr.high.int32
-    isIn(a, b, 48, 57) or isIn(a, b, 65, 90) or isIn(a, b, 97, 122)
-
-  var s: seq[string] = newSeqOfCap[string](len(self.runes.ranges) + 2)
-  s.add("[")
-  if self.runes.negate:
-    s.add("^")
-  for rr in self.runes.ranges:
-    if isAlphaNum(rr):
-      let low = chr(rr.low.int8)
-      if rr.low == rr.high:
-        s.add(fmt"{low}")
-      else:
-        let high = chr(rr.high.int8)
-        s.add(fmt"{low}-{high}")
-    else:
-      let (l, marker) = hexlen(rr.high)
-      if rr.low == rr.high:
-        s.add(marker & toHex(rr.low.int32, l))
-      else:
-        s.add(marker & toHex(rr.low.int32, l) & "-" & marker & toHex(rr.high.int32, l))
-  s.add("]")
+  var s: seq[string] = @[$self.runes, ""]
   let rp = self.repetitions
-  s.add(if rp == (0'u32, 1'u32): "?"
-        elif rp == (0'u32, RepLimit): "*"
-        elif rp == (1'u32, RepLimit): "+"
-        elif rp == (1'u32, 1'u32): ""
-        else: fmt("({rp.min},{rp.max})"))
+  s[1] = if rp == (0'u32, 1'u32): "?"
+         elif rp == (0'u32, RepLimit): "*"
+         elif rp == (1'u32, RepLimit): "+"
+         elif rp == (1'u32, 1'u32): ""
+         else: fmt("({rp.min},{rp.max})")
   return s.join("")
 
 

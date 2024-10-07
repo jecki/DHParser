@@ -39,49 +39,48 @@ proc `$`*(range: Range): string =
     max {.inject.} = range.max
   if min <= max:  fmt"{min}..{max}"  else: "EMPTY"
 
-func hex*(r: Rune): string =
-  let n = r.uint32
-  if n < 256: r"\x" & toHex(n, 2)
-  elif n < 65536: r"\u" & toHex(n, 4)
-  else: r"\U" & toHex(n, 8)
-
-proc `$`*(r: RuneRange): string =
-  let
-    min = r.low.uint32
-    max = r.high.uint32
-  if min > max:
-    "[EMPTY]"
-  elif min == max:
-    let val = if min < 256: $chr(min) else: hex(r.low)
-    fmt"[{val}]"
-  else:
-    let
-      low = if min < 256: $chr(min) else: hex(r.low)
-      high = if max < 256: $chr(max) else: hex(r.high)
-    fmt"[{low}-{high}]"
-
-proc `$`*(rr: seq[RuneRange]): string = rr.join("|")
-
 proc `$`*(rs: RuneSet): string =
-  if not rs.negate:
-    if rs.ranges.len == 0:
-      return "[EMPTY]"
-    var allEmpty = true
-    for r in rs.ranges:
-      if r.low.uint32 <= r.high.uint32:
-        allEmpty = false
-        break
-    if allEmpty:
-      return "[EMPTY]"
-    return $rs.ranges
-  else:
-    var s = "[^" & ($rs.ranges[0])[1 .. ^1]
-    return s & rs.ranges[1 .. ^1].join("-")
+  proc hexlen(r: Rune): (int8, string) =
+    let i = r.int32
+    if i < 1 shl 8: return (2, r"\x")
+    elif i < 1 shl 16:  return (4, r"\u")
+    else: return (8, r"\U")
+
+  proc isAlphaNum(rr: RuneRange): bool =
+    proc isIn(a, b, x, y: int32): bool =
+      a >= x and a <= y and b >= x and b <= y
+    let
+      a = rr.low.int32
+      b = rr.high.int32
+    isIn(a, b, 48, 57) or isIn(a, b, 65, 90) or isIn(a, b, 97, 122)
+
+  var s: seq[string] = newSeqOfCap[string](len(rs.ranges) + 2)
+  s.add("[")
+  if rs.negate:
+    s.add("^")
+  for rr in rs.ranges:
+    if isAlphaNum(rr):
+      let low = chr(rr.low.int8)
+      if rr.low == rr.high:
+        s.add(fmt"{low}")
+      else:
+        let high = chr(rr.high.int8)
+        s.add(fmt"{low}-{high}")
+    else:
+      let (l, marker) = hexlen(rr.high)
+      if rr.low == rr.high:
+        s.add(marker & toHex(rr.low.int32, l))
+      else:
+        s.add(marker & toHex(rr.low.int32, l) & "-" & marker & toHex(rr.high.int32, l))
+    if rr.high <% rr.low:  s.add("!")
+  s.add("]")
+  return s.join("")
+
+proc `$`*(rr: seq[RuneRange]): string = $(false, rr)
+proc `$`*(rr: RuneRange): string = $(@[rr])
 
 func toRange*(r: RuneRange): Range = (r.low.uint32, r.high.uint32)
 func toRuneRange*(r: Range): RuneRange = (Rune(r.min), Rune(r.max))
-
-func isEmpty*(r: RuneRange): bool = r.high <% r.low
 
 func neverEmpty*(rr: seq[RuneRange]): bool =
   ## Confirms that the sequence of ranges is not be empty and that
@@ -102,7 +101,8 @@ func size*(range: Range): uint32 = range.max - range.min + 1
 func size*(r: RuneRange): uint32 = size(toRange(r))
 func size(R: seq[RuneRange]): uint32 =
   if not isSortedAndMerged(R):
-    raise newException(AssertionDefect, "")
+    raise newException(AssertionDefect,
+      fmt"Cannot determine size of unmerged and unsorted rune range: {R}")
   var sum: uint32 = 0
   for rr in R:
     sum += size(rr)
