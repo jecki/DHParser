@@ -4270,11 +4270,11 @@ class Series(ErrorCatchingNary):
     def __init__(self, *parsers: Parser,
                  mandatory: int = NO_MANDATORY) -> None:
         super().__init__(*parsers, mandatory=mandatory)
-        if mandatory >= NO_MANDATORY:
+        if mandatory >= len(self.parsers):
             self._parse_proxy = self._quick_parse
 
     def set_proxy(self, proxy: Optional[ParseFunc]):
-        if self.mandatory >= NO_MANDATORY and proxy is None:
+        if self.mandatory >= len(self.parsers) and proxy is None:
             self._parse_proxy = self._quick_parse
         else:
             if self._parse_proxy == self._quick_parse:
