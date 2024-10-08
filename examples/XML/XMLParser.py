@@ -107,7 +107,7 @@ class XMLGrammar(Grammar):
     element = Forward()
     source_hash__ = "3eb01c361433c7623edc7e5b55633066"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:prolog$|CData$|Misc$|Reference$|tagContent$|NameChars$|NameStartChar$|BOM$|PubidCharsSingleQuoted$|EOF$|VersionNum$|CommentChars$|EncName$|PubidChars$)')
+    disposable__ = re.compile('(?:NameStartChar$|VersionNum$|Misc$|EncName$|EOF$|tagContent$|prolog$|PubidChars$|PubidCharsSingleQuoted$|CommentChars$|BOM$|Reference$|NameChars$|CData$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'tagContent': [('', "syntax error in tag-name of opening or empty tag:  {1}")],
@@ -177,7 +177,7 @@ class XMLGrammar(Grammar):
                       'ETag': [re.compile(r'(?=>)')],
                       'Attribute': [re.compile(r'(?=>|/>)')]}
     root__ = document
-        
+    
 parsing: PseudoJunction = create_parser_junction(XMLGrammar)
 get_grammar = parsing.factory # for backwards compatibility, only
 

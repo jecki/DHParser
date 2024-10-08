@@ -86,7 +86,7 @@ class FixedEBNFGrammar(Grammar):
     element = Forward()
     expression = Forward()
     source_hash__ = "c8717d2da53f2a4daa056a91cc620009"
-    disposable__ = re.compile('(?:countable$|component$|EOF$|ANY_SUFFIX$|FOLLOW_UP$|is_mdef$|MOD_SYM$|MOD_SEP$|no_range$|pure_elem$)')
+    disposable__ = re.compile('(?:is_mdef$|FOLLOW_UP$|no_range$|EOF$|pure_elem$|component$|countable$|ANY_SUFFIX$|MOD_SYM$|MOD_SEP$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
@@ -170,7 +170,7 @@ class FixedEBNFGrammar(Grammar):
     resume_rules__ = {'definition': [re.compile(r'\n\s*(?=@|\w+\w*\s*=)')],
                       'directive': [re.compile(r'\n\s*(?=@|\w+\w*\s*=)')]}
     root__ = syntax
-        
+    
 parsing: PseudoJunction = create_parser_junction(FixedEBNFGrammar)
 get_grammar = parsing.factory # for backwards compatibility, only
 

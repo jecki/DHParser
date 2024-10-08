@@ -205,7 +205,7 @@ class XML_W3C_SPECGrammar(Grammar):
     extSubsetDecl.set(ZeroOrMore(Alternative(markupdecl, conditionalSect, DeclSep)))
     document = Series(prolog, element, ZeroOrMore(Misc))
     root__ = document
-        
+    
 parsing: PseudoJunction = create_parser_junction(XML_W3C_SPECGrammar)
 get_grammar = parsing.factory # for backwards compatibility, only
 

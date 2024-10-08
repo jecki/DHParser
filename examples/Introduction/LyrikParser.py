@@ -111,7 +111,7 @@ class LyrikGrammar(Grammar):
     r"""Parser for a Lyrik source file.
     """
     source_hash__ = "4d9ad39018dfb4dc053059c099f229fe"
-    disposable__ = re.compile('(?:LEERRAUM$|JAHRESZAHL$|wortfolge$|ziel$|ENDE$|ZEICHENFOLGE$)')
+    disposable__ = re.compile('(?:ZEICHENFOLGE$|ENDE$|LEERRAUM$|JAHRESZAHL$|ziel$|wortfolge$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -151,7 +151,7 @@ class LyrikGrammar(Grammar):
     bibliographisches = Series(autor, Series(Drop(Text(",")), dwsp__), Option(Series(ZW, dwsp__)), werk, Series(Drop(Text(",")), dwsp__), Option(Series(ZW, dwsp__)), ort, Series(Drop(Text(",")), dwsp__), Option(Series(ZW, dwsp__)), jahr, Series(Drop(Text(".")), dwsp__), mandatory=1)
     Dokument = Series(Option(LEERRAUM), bibliographisches, LEERZEILEN, Option(serie), OneOrMore(Series(LEERZEILEN, gedicht)), Option(LEERRAUM), ENDE, mandatory=1)
     root__ = Dokument
-        
+    
 parsing: PseudoJunction = create_parser_junction(LyrikGrammar)
 get_grammar = parsing.factory # for backwards compatibility, only
 

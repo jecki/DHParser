@@ -138,7 +138,7 @@ class miniXMLGrammar(Grammar):
     skip_rules__ = {'STag': [STag_skip_1__],
                     'ETag': [ETag_skip_1__]}
     root__ = document
-        
+    
 parsing: PseudoJunction = create_parser_junction(miniXMLGrammar)
 get_grammar = parsing.factory # for backwards compatibility, only
 

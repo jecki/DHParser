@@ -75,7 +75,7 @@ if __name__ == '__main__':
         'or a given test - after (re-)creating the parser script if necessary.')
     parser.add_argument('files', nargs='*')
     parser.add_argument('-n', '--nohistory', action='store_const', const='nohistory',
-                        help="Don't log parsing history of failed tests.")
+                        help="Deprecated argument")
     parser.add_argument('-d', '--debug', action='store_const', const='debug',
                         help='Deprecated argument.')
     parser.add_argument('-s', '--scripts', action='store_const', const='scripts',
@@ -86,7 +86,10 @@ if __name__ == '__main__':
 
     if args.debug is not None:
         print('Argument -d or --debug is deprecated! Parsing-histories of failed tests will '
-              'be logged per default. This can be turned off with -n or --nohistory .')
+              'be logged per default.')
+    if args.nohistory is not None:
+        print('Argument -n or --nohistory is deprecated! Only parsing-histories of failed '
+              'tests will be logged adn these will always be logged.')
 
     config_test_parallelization = get_config_value('test_parallelization')
     access_presets()
@@ -95,7 +98,7 @@ if __name__ == '__main__':
     elif not config_test_parallelization:
         print('Tests will be run in a single-thread, because test-multiprocessing '
               'has been turned off in configuration file.')
-    set_preset_value('history_tracking', not args.nohistory)
+    # set_preset_value('history_tracking', not args.nohistory)
     finalize_presets()
 
     if args.scripts:

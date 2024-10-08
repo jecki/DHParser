@@ -103,7 +103,7 @@ class readme_exampleGrammar(Grammar):
     entry = Series(key, Series(Drop(Text("=")), dwsp__), value)
     key_store = Series(dwsp__, ZeroOrMore(entry))
     root__ = key_store
-        
+    
 parsing: PseudoJunction = create_parser_junction(readme_exampleGrammar)
 get_grammar = parsing.factory # for backwards compatibility, only
 

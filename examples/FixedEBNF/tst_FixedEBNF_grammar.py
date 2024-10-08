@@ -78,13 +78,9 @@ if __name__ == '__main__':
         profile = True
     except ValueError:
         profile = False
-    if len(argv) > 1 and sys.argv[1] == "--debug":
-        DEBUG = True
-        del argv[1]
 
     access_presets()
-    # set_preset_value('test_parallelization', True)
-    if DEBUG:  set_preset_value('history_tracking', True)
+    set_preset_value('test_parallelization', True)
     finalize_presets()
 
     if (len(argv) >= 2 and (argv[1].endswith('.ebnf') or

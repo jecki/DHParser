@@ -80,7 +80,7 @@ class XMLGrammar(Grammar):
     element = Forward()
     source_hash__ = "759025274905f347b3c99c7196d7ee97"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:NameChars$|NameStartChar$|VersionNum$|Reference$|PubidCharsSingleQuoted$|Misc$|CData$|EncName$|CommentChars$|EOF$|PubidChars$)')
+    disposable__ = re.compile('(?:EOF$|CommentChars$|PubidChars$|CData$|Reference$|Misc$|PubidCharsSingleQuoted$|NameStartChar$|EncName$|NameChars$|VersionNum$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -142,7 +142,7 @@ class XMLGrammar(Grammar):
     element.set(Alternative(emptyElement, Series(STag, content, ETag, mandatory=1)))
     document = Series(prolog, element, Option(Misc), EOF)
     root__ = document
-        
+    
 parsing: PseudoJunction = create_parser_junction(XMLGrammar)
 get_grammar = parsing.factory # for backwards compatibility, only
 
