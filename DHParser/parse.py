@@ -4267,6 +4267,35 @@ class Series(ErrorCatchingNary):
     """
     # RX_ARGUMENT = re.compile(r'\s(\S)')
 
+    def __init__(self, *parsers: Parser,
+                 mandatory: int = NO_MANDATORY) -> None:
+        super().__init__(*parsers, mandatory=mandatory)
+        if mandatory >= NO_MANDATORY:
+            self._parse_proxy = self._quick_parse
+
+    def set_proxy(self, proxy: Optional[ParseFunc]):
+        if self.mandatory >= NO_MANDATORY and proxy is None:
+            self._parse_proxy = self._quick_parse
+        else:
+            if self._parse_proxy == self._quick_parse:
+                self._parse_proxy = self._parse  # to avoid assertion error in the super()-call
+            super().set_proxy(proxy)
+
+    @cython.locals(location_=cython.int)
+    def _quick_parse(self, location: cython.int) -> ParsingResult:
+        """faster Series-parsing-method if mandatory marker is not used."""
+        results = []  # type: List[Node]
+        location_ = location
+        for parser in self.parsers:
+            node, location_ = parser(location_)
+            if node is None:
+                return None, location
+            if node._result or not node.name[0] == ':':  # node.anonymous:  # drop anonymous empty nodes
+                results.append(node)
+        # assert len(results) <= len(self.parsers) \
+        #        or len(self.parsers) >= len([p for p in results if p.name != ZOMBIE_TAG])
+        return self._return_values(tuple(results)), location_
+
     @cython.locals(location_=cython.int, pos=cython.int, reloc=cython.int, mandatory=cython.int)
     def _parse(self, location: cython.int) -> ParsingResult:
         results = []  # type: List[Node]
