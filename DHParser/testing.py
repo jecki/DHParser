@@ -587,13 +587,11 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 set_config_value(key, eval(value))
             continue
 
+        track_history = False
         try:
             if has_lookahead(parser_name):
                 set_tracer(parser[parser_name].descendants(), trace_history)
                 track_history = True
-            else:
-                set_tracer(parser[parser_name].descendants(), None)
-                track_history = False
         except AttributeError:
             pass
 
@@ -866,6 +864,9 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
             if verbose:
                 infostr = '    fail-test  "' + test_name + '" ... '
                 write(infostr + ("OK" if len(errata) == errflag else "FAIL"))
+
+        if track_history:
+            set_tracer(parser[parser_name].descendants(), None)
 
     # remove tracers, in case there are any:
     set_tracer(parser.root_parser__.descendants(), None)
