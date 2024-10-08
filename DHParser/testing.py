@@ -43,6 +43,8 @@ import traceback
 import time
 from typing import Dict, List, Union, Deque, Optional, cast
 
+from DHParser import RESUME_NOTICE
+
 if sys.version_info >= (3, 6, 0):
     OrderedDict = dict
 else:
@@ -429,6 +431,7 @@ def get_report(test_unit, serializations: Dict[str, List[str]] = dict()) -> str:
 
 
 POSSIBLE_ARTIFACTS = frozenset((
+    RESUME_NOTICE,
     PARSER_LOOKAHEAD_MATCH_ONLY,
     PARSER_LOOKAHEAD_FAILURE_ONLY,
     MANDATORY_CONTINUATION_AT_EOF_NON_ROOT,
@@ -507,6 +510,8 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
     if verbose:
         write("\nGRAMMAR TEST UNIT: " + unit_name)
     errata = []
+    config_history_tracking = get_config_value('history_tracking')
+    config_resume_notices = get_config_value('resume_notices')
     parser = parser_factory()
     transform = transformer_factory()
 
@@ -578,6 +583,26 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                     return ""
         return compare or ""
 
+    def log_history(parser_name, test_code, test_name, test_type, track_history):
+        nonlocal parser, config_history_tracking
+        if not track_history:
+            set_tracer(parser[parser_name].descendants(), trace_history)
+            try:
+                _ = parser(test_code, parser_name)
+            except AttributeError:
+                pass
+            except KeyboardInterrupt as ctrlC:
+                with local_log_dir('./LOGS'):
+                    log_parsing_history(parser, "interrupted_%s_%s_%s.log" %
+                                        (test_type, parser_name, clean_test_name))
+                raise ctrlC
+            finally:
+                set_tracer(parser[parser_name].descendants(), None)
+                parser.history_tracking__ = config_history_tracking
+        with local_log_dir('./LOGS'):
+            tname = test_name.replace('*', '')
+            log_parsing_history(parser, f"{test_type}_{parser_name}_{tname}.log")
+
     saved_config_values = dict()
     for parser_name, tests in test_unit.items():
         if parser_name[-2:] == '__':
@@ -587,9 +612,9 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 set_config_value(key, eval(value))
             continue
 
-        track_history = False
+        track_history = config_history_tracking
         try:
-            if has_lookahead(parser_name):
+            if has_lookahead(parser_name) or track_history:
                 set_tracer(parser[parser_name].descendants(), trace_history)
                 track_history = True
         except AttributeError:
@@ -787,26 +812,11 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                                   + f'{stage}-test "' + test_name + '" ... '
                         write(infostr + ("OK" if len(errata) == errflag else "FAIL"))
 
-            if len(errata) > errflag:
-                tests.setdefault('__err__', {})[test_name] = errata[-1]
-                # write parsing-history log only in case of failure!
+            if len(errata) > errflag or config_history_tracking:
+                if len(errata) > errflag:
+                    tests.setdefault('__err__', {})[test_name] = errata[-1]
                 if is_logging():
-                    if not track_history:
-                        set_tracer(parser[parser_name].descendants(), trace_history)
-                        try:
-                            _ = parser(test_code, parser_name)
-                        except AttributeError:
-                            pass
-                        except KeyboardInterrupt as ctrlC:
-                            with local_log_dir('./LOGS'):
-                                log_parsing_history(parser, "interrupted_match_%s_%s.log" %
-                                                    (parser_name, clean_test_name))
-                            raise ctrlC
-                        finally:
-                            set_tracer(parser[parser_name].descendants(), None)
-                    with local_log_dir('./LOGS'):
-                        log_parsing_history(parser, "match_%s_%s.log" %
-                                            (parser_name, clean_test_name))
+                    log_history(parser_name, test_code, clean_test_name, 'match', track_history)
 
         if verbose and 'fail' in tests:
             write('  Fail-Tests for parser "' + parser_name + '"')
@@ -826,38 +836,15 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
             if 'AST' in tests or report:
                 traverse(cst, {'*': remove_children({TEST_ARTIFACT})})
                 transform(cst)
+            store_fail_log = config_history_tracking
             if not (is_error(cst.error_flag) and not lookahead_artifact(cst)):
-                # if cst.name != ZOMBIE_TAG:  # # not cst.pick(ZOMBIE_TAG, include_root=True):
-                #     # add syntax tree, if it is useful
-                #     try:
-                #         stage = cst.stage
-                #     except AttributeError:
-                #         stage = 'CST'
-                #     treestr = f'\n{indent(stage.upper() + ": " + cst.serialize(stage))}'
-                # else:
-                #     treestr = "\n    (AST not shown, because it is just a testing stub!)"
                 treestr = ''
                 errata.append(f'Fail test "{test_name}" for parser "{parser_name}" '
                               f'yields match instead of expected failure!' + treestr)
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
-                # write parsing-history log only in case of test-failure
-                if is_logging():
-                    if not track_history:
-                        set_tracer(parser[parser_name].descendants(), trace_history)
-                        try:
-                            _ = parser(test_code, parser_name)
-                        except AttributeError:
-                            pass
-                        except KeyboardInterrupt as ctrlC:
-                            with local_log_dir('./LOGS'):
-                                log_parsing_history(parser, "interrupted_match_%s_%s.log" %
-                                                    (parser_name, clean_test_name))
-                            raise ctrlC
-                        finally:
-                            set_tracer(parser[parser_name].descendants(), None)
-                    with local_log_dir('./LOGS'):
-                        tname = test_name.replace('*', '')
-                        log_parsing_history(parser, f"fail_{parser_name}_{tname}.log")
+                store_fail_log = True
+            if is_logging() and store_fail_log:
+                log_history(parser_name, test_code, test_name, 'fail', track_history)
             if cst.error_flag:
                 tests.setdefault('__msg__', {})[test_name] = \
                     "\n".join(str(e) for e in cst.errors)
@@ -865,11 +852,10 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 infostr = '    fail-test  "' + test_name + '" ... '
                 write(infostr + ("OK" if len(errata) == errflag else "FAIL"))
 
-        if track_history:
+        if track_history and not config_history_tracking:
             set_tracer(parser[parser_name].descendants(), None)
-
-    # remove tracers, in case there are any:
-    set_tracer(parser.root_parser__.descendants(), None)
+            parser.history_tracking__ = False
+        parser.resume_notices__ = config_resume_notices
 
     # write test-report
     if report:

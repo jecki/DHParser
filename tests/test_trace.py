@@ -23,6 +23,7 @@ import os
 import re
 import sys
 
+from DHParser import ERROR
 
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
@@ -162,7 +163,7 @@ class TestTrace:
         assert cst.content == content, cst.as_sxpr()
         assert cst.pick('alpha').content.startswith('ALPHA')
         # because of resuming, there should be only one error message
-        assert len(cst.errors_sorted) == 1
+        assert len([e for e in cst.errors_sorted if e.code >= ERROR]) == 1
 
         # test resume notice
         resume_notices_on(gr)

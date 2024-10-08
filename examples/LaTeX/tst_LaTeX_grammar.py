@@ -62,7 +62,7 @@ if __name__ == '__main__':
     access_presets()
     # set_preset_value('AST_serialization', 'XML')
     set_preset_value('test_parallelization', False)
-    # set_preset_value('history_tracking', True)
+    set_preset_value('history_tracking', True)
     finalize_presets()
     if arg.endswith('.ebnf'):
         recompile_grammar(arg, force=True)

@@ -86,6 +86,7 @@ def set_tracer(parsers: Union[Grammar, Parser, Iterable[Parser]], tracer: Option
         assert all(pivot._grammar == parser._grammar for parser in parsers)
         if tracer is not None:
             pivot._grammar.history_tracking__ = True
+            pivot._grammar.resume_notices__ = True
         for parser in parsers:
             if parser.ptype != ':Forward':
                 parser.set_proxy(tracer)
