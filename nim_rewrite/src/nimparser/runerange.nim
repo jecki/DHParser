@@ -39,7 +39,9 @@ proc `$`*(range: Range): string =
     max {.inject.} = range.max
   if min <= max:  fmt"{min}..{max}"  else: "EMPTY"
 
-proc `$`*(rs: RuneSet): string =
+proc `$`*(rs: RuneSet, verbose: bool = false): string =
+  ## Serializes rune set. Use "runeset $ true" for a more
+  ## verbose and easier to read serialization.
   proc hexlen(r: Rune): (int8, string) =
     let i = r.int32
     if i < 1 shl 8: return (2, r"\x")
@@ -55,9 +57,9 @@ proc `$`*(rs: RuneSet): string =
     isIn(a, b, 48, 57) or isIn(a, b, 65, 90) or isIn(a, b, 97, 122)
 
   var s: seq[string] = newSeqOfCap[string](len(rs.ranges) + 2)
-  s.add("[")
-  if rs.negate:
-    s.add("^")
+  if not verbose:
+    s.add("[")
+    if rs.negate: s.add("^")
   for rr in rs.ranges:
     if isAlphaNum(rr):
       let low = chr(rr.low.int8)
@@ -73,10 +75,14 @@ proc `$`*(rs: RuneSet): string =
       else:
         s.add(marker & toHex(rr.low.int32, l) & "-" & marker & toHex(rr.high.int32, l))
     if rr.high <% rr.low:  s.add("!")
-  s.add("]")
-  return s.join("")
+  if not verbose: s.add("]")
+  if verbose:
+    (if rs.negate: @["[^", s.join("]-["), "]"] 
+             else: @["[", s.join("]|["), "]"]).join("")
+  else:
+    return s.join("")
 
-proc `$`*(rr: seq[RuneRange]): string = $(false, rr)
+proc `$`*(rr: seq[RuneRange], verbose=false): string = (false, rr) $ verbose
 proc `$`*(rr: RuneRange): string = $(@[rr])
 
 func toRange*(r: RuneRange): Range = (r.low.uint32, r.high.uint32)
@@ -265,11 +271,11 @@ proc rs0*(rangesStr: string): RuneSet =
     if bi < buf.len:
       buf.fastRuneAt(bi, r)
       return r
-    for t in [r"\x", r"\u", r"\U"]:
+    for (t, n) in [(r"\x", 2), (r"\u", 4), (r"\U", 8)]:
       if i+1 < s.len and s[i..i+1] == t:
         i += 2
         i0 = i
-        while i < s.len:
+        while i < s.len and i - i0 < n:
           i1 = i
           s.fastRuneAt(i, r)
           if r.toUtf8 notin "0123456789ABCDEFabcdef":
@@ -331,9 +337,7 @@ proc rs*(s: string): RuneSet =
   ## rs"A-Za-z"
   ## rs"^<&'>\s"
   assert s.len > 0
-  var
-    i = 0
-    repetition = ""
+  var i = 0
 
   proc parseRuneSet(): RuneSet =
     assert i < s.len
@@ -352,20 +356,23 @@ proc rs*(s: string): RuneSet =
     while i < s.len:
       while i < s.len and s[i] in " \n":  i += 1
       if s[i] == '-':
-        assert sign != '-'
+        assert sign != '-', s[0..i]
         sign = '-'
         i += 1
       elif s[i] == '|':
         i += 1
+        sign = '|'
       elif s[i] != '[':
         break
       while i < s.len and s[i] in " \n":  i += 1
       if sign == '-':
         result = result - parseRuneSet()
+        sign = ' '
       else:
         if result.ranges.len == 0:
           result = parseRuneSet()
         else:
+          assert sign == '|', s[0..i]
           result = result + parseRuneSet()
 
 
@@ -379,3 +386,26 @@ proc rr*(rangeStr: string): RuneRange =
   assert runes.ranges.len == 1
   return runes.ranges[0]
 
+
+when isMainModule:
+  let rs1 = rs"""[_]|[:]|[A-Z]|[a-z]
+                |[\u00C0-\u00D6]|[\u00D8-\u00F6]|[\u00F8-\u02FF]
+                |[\u0370-\u037D]|[\u037F-\u1FFF]|[\u200C-\u200D]
+                |[\u2070-\u218F]|[\u2C00-\u2FEF]|[\u3001-\uD7FF]
+                |[\uF900-\uFDCF]|[\uFDF0-\uFFFD]
+                |[\U00010000-\U000EFFFF]"""
+  let rs2 = rs"[ace\sD-G]"
+  let rs3 = rs"[a-f]|[^c-z0-9]|[24]"
+  echo $rs1
+  echo $rs($rs1)
+  echo $rs(rs1 $ true)
+  echo rs1 $ true
+  echo $rs2
+  echo $rs($rs2)
+  echo $rs(rs2 $ true)
+  echo rs2 $ true  
+  echo $rs3
+  echo $rs($rs3)
+  echo rs3 $ true
+  echo $rs(rs3 $ true)
+  echo rs3 $ true

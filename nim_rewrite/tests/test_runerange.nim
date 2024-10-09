@@ -92,4 +92,21 @@ test "RuneSet":
   r = rs0(r"\n")
   assert r.ranges.len == 1
 
-# test "Serialization":
+test "Serialization":
+  let rs1 = rs"""[_]|[:]|[A-Z]|[a-z]
+                |[\u00C0-\u00D6]|[\u00D8-\u00F6]|[\u00F8-\u02FF]
+                |[\u0370-\u037D]|[\u037F-\u1FFF]|[\u200C-\u200D]
+                |[\u2070-\u218F]|[\u2C00-\u2FEF]|[\u3001-\uD7FF]
+                |[\uF900-\uFDCF]|[\uFDF0-\uFFFD]
+                |[\U00010000-\U000EFFFF]"""
+  let rs2 = rs"[ace\sD-G]"
+  let rs3 = rs"[a-f]|[^c-z0-9]|[24]"
+  assert rs1 == rs($rs1)
+  assert rs2 == rs($rs2)
+  assert rs3 == rs($rs3)  
+  assert $rs1 == $rs($rs1)
+  assert $rs2 == $rs($rs2)
+  assert $rs3 == $rs($rs3)  
+  assert $rs1 == $rs(rs1 $ true)
+  assert $rs2 == $rs(rs2 $ true)
+  assert $rs3 == $rs(rs3 $ true)

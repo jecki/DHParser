@@ -1,0 +1,43 @@
+probably arm
+418512
+---
+(document
+  (__ZOMBIE "")
+  (element
+    (:Series
+      (__ZOMBIE "<html>")
+      (Content
+        (__ZOMBIE "
+
+")
+        (:ZeroOrMore
+          (:Series
+            (:Alternative
+              (element
+                (:Series
+                  (__ZOMBIE "<head>")
+                  (Content
+                    (__ZOMBIE "
+")
+                    (:ZeroOrMore
+                      (__ZOMBIE
+                        "<meta http-equiv=Content-Type content=\"text/html; charset=ut")
+                      (:Series
+                        (:Alternative
+                          (element
+                            (:Series
+                              (STag
+                                (tagContent
+                                  (Name
+                                    (NameStartChar "s")
+                                    (NameChars "tyle"))))
+                              (Content
+                                (CharData "
+"))
+                              (__ZOMBIE "")))))))))))))))
+  (__ZOMBIE ""))
+---
+?:150:1010:ETag expected by parser element, but »<!--\n /* F« found!
+
+?:150:1040:Parser document stopped before end at »<!--\n /* F«
+
