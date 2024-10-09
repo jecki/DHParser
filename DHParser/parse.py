@@ -4279,7 +4279,7 @@ class Series(ErrorCatchingNary):
         else:
             if self._parse_proxy == self._quick_parse:
                 self._parse_proxy = self._parse  # to avoid assertion error in the super()-call
-            super().set_proxy(proxy)
+            super(Series, self).set_proxy(proxy)
 
     @cython.locals(location_=cython.int)
     def _quick_parse(self, location: cython.int) -> ParsingResult:

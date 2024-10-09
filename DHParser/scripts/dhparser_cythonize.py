@@ -6,6 +6,9 @@ import os
 import sys
 from setuptools import setup
 
+os.environ['CC'] = 'clang'
+os.environ['CXX'] = 'clang++'
+os.environ['LDSHARED'] = 'clang -shared'
 
 try:
     from Cython.Build import cythonize
