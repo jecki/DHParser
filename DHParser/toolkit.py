@@ -118,6 +118,7 @@ __all__ = ('re',
            'first',
            'last',
            'NOPE',
+           'INFINITE',
            'matching_brackets',
            'linebreaks',
            'line_col',
@@ -775,6 +776,7 @@ def as_identifier(s: str, replacement: str = "_") -> str:
 
 
 NOPE = []  # a list that is empty and is supposed to remain empty
+INFINITE = 2**30  # a practically infinite value
 
 _RX_CHARSET = None
 _RX_ESCAPED_ROUND_BRACKET = None
@@ -1613,4 +1615,5 @@ try:
 except AttributeError:
     # somebody has already taken care of this !?
     pass
-INFINITE = 2**30
+
+

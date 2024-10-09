@@ -159,7 +159,7 @@ def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], c
             raise pe
         return node, location
 
-    if location < 0:  # a negative location signals a memo-hit
+    if location < 0:  # a negative location signals a memo-hit. see parse.Parser.__call__() !!!
         if location <= -INFINITE:  location = 0
         location = -location
         grammar.call_stack__.append(call_item(self, location, "RECALL: "))

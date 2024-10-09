@@ -710,6 +710,10 @@ def get_ebnf_grammar() -> Grammar:
         # configure grammar on each request of the grammar object
         update_scanner(grammar, get_config_value('delimiter_set'))
     grammar.mode__ = mode
+    # We assume our EBNF-Grammars are well tested and never need the following
+    # which would only slow compiling EBNF-code down.
+    grammar.history_tracking__ = False
+    grammar.resume_notices__ = False
     return grammar
 
 

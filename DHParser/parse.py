@@ -731,10 +731,10 @@ class Parser:
             # if location has already been visited by the current parser, return saved result
             visited = self.visited  # using local variable for better performance
             if location in visited:
-                if grammar.history_tracking__ and self._parse_proxy != self._parse:
+                if grammar.history_tracking__  and self._parse_proxy.__name__ == 'trace_history' \
+                        and self._parse_proxy.__module__ == 'DHParser.trace':
                     return self._parse_proxy(-location or -INFINITE)  # a negative location signals a memo-hit
-                else:
-                    return visited[location]
+                return visited[location]
 
             save_suspend_memoization = grammar.suspend_memoization__
             grammar.suspend_memoization__ = False
@@ -4292,8 +4292,6 @@ class Series(ErrorCatchingNary):
                 return None, location
             if node._result or not node.name[0] == ':':  # node.anonymous:  # drop anonymous empty nodes
                 results.append(node)
-        # assert len(results) <= len(self.parsers) \
-        #        or len(self.parsers) >= len([p for p in results if p.name != ZOMBIE_TAG])
         return self._return_values(tuple(results)), location_
 
     @cython.locals(location_=cython.int, pos=cython.int, reloc=cython.int, mandatory=cython.int)
