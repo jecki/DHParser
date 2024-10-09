@@ -1741,7 +1741,7 @@ class TestSmartRE:
     def test_SmartRE(self):
         # check for uninitialized position values
         punkt = Text(".").name("punk")
-        nom_klasse = Series(SmartRE(f'(?P<:Text>unbestimmt)(?P<:Whitespace>\s*)|(?P<:Text>bestimmt)(?P<:Whitespace>\s*)'),
+        nom_klasse = Series(SmartRE(fr'(?P<:Text>unbestimmt)(?P<:Whitespace>\s*)|(?P<:Text>bestimmt)(?P<:Whitespace>\s*)'),
                      Option(punkt)).name("doc")
         doc = Series(nom_klasse, Option(punkt))
         parser = Grammar(doc)
