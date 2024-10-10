@@ -17,6 +17,13 @@ DHParser Version 1.8.0
   with the "--history" (or "-p") option to record detailed logs for all
   tests, not only those tests that have failed. (So, it is easier to
   study what a particular parser actually does.)
+- functions added: nodetree.drop_leaf() and transform.pull_up()
+- changes: parse.py: removed memoization equivalence classes to
+  simplify code (speed up was very neglible, anyway)
+  parse.py: Regular expressions of RegExp-parsers are now evaluated
+  lazily to keep startup times in check
+- nim-rewrite of parser core under way, e.g. run-ranges added as
+  first step to get rid of regular epressions.
 
 
 DHParser Version 1.7.2 (22.2.2024)
