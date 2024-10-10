@@ -19,7 +19,7 @@
 {.experimental: "strictDefs".}
 {.experimental: "strictCaseObjects".}
 
-import std/[strutils, strformat]
+import std/[strutils]
 
 when defined(js):
   import std/jsre

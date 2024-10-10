@@ -25,6 +25,10 @@
 import std/[algorithm, strformat, strutils, unicode]
 
 
+proc nilRefError(fieldName: string): ref AssertionDefect =
+  newException(AssertionDefect, fmt"{fieldName} unexpectedly nil!")
+
+
 type
   Range* = tuple[min: uint32, max: uint32]
   RuneRange* = tuple[low: Rune, high: Rune]

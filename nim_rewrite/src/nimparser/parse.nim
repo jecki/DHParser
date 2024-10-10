@@ -7,7 +7,7 @@
 
 
 import std/[enumerate, math, options, sets, strformat, strutils, unicode,
-            sugar, algorithm, tables, sequtils]
+            sugar, tables]
 
 import strslice
 import runerange
@@ -35,7 +35,7 @@ proc `$`*(rxInfo: RegExpInfo): string = rxInfo.reStr
 proc `==`*(a: RegExpInfo, b: RegExpInfo): bool {.inline.} = a.reStr == b.reStr
 
 let
-  RxNeverMatch: RegExpInfo  = (NeverMatchPattern, ure(NeverMatchPattern))
+  RxNeverMatch: RegExpInfo  = (NeverMatchPattern, NeverMatchRegex)
 
 ## Parser Base and Grammar
 ## -----------------------
@@ -530,7 +530,6 @@ proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
 proc handle_error(parser: Parser, pe: ParsingException, location: int32): ParsingResult =
   assert pe.node_orig_len >= 0, $pe
   assert pe.location >= 0, $pe
-
   let
     grammar = pe.origin.grammar
     gap = pe.location - location
@@ -758,11 +757,11 @@ proc returnSeqMergeTreetops(parser: Parser, nodes: sink seq[Node]): Node =
 
 proc returnItemPlaceholder(parser: Parser, node: NodeOrNil): Node =
   result = EmptyNode
-  raise newException(AssertionDefect, "returnItem called on GrammaPlacholder")
+  raise newException(AssertionDefect, "returnItem called on GrammarPlacholder")
 
 proc returnSeqPlaceholder(parser: Parser, nodes: sink seq[Node]): Node =
   result = EmptyNode
-  raise newException(AssertionDefect, "returnItem called on GrammaPlacholder")
+  raise newException(AssertionDefect, "returnItem called on GrammarPlacholder")
 
 
 ## ErrorCatchingParser
@@ -870,14 +869,14 @@ proc violation(catcher: ErrorCatchingParserRef,
       of mkParser:
         let parser = rule.consumeParser
         try:
-          let (node, pos) = parser(location)
+          let (node, _) = parser(location)
           return not isNil(node)
-        except ParsingException as pe:
+        except ParsingException:  # as pe:
           let msg = "Error while picking error message with: " & $parser
           let error = Error(msg, location, ErrorWhileRecovering)
           parser.grammar.errors.add(error)
 
-  let
+  let 
     gr = catcher.grammar
     snippet = $gr.document.cut(location..location + 9).replace(ure"\n", r"\n")
     found = if location >= gr.document.len: "EOF" else: fmt"»{snippet}«"
@@ -938,12 +937,11 @@ proc setMatcherList[T: AnyMatcher](errorCatcher: Parser, list: sink seq[T], list
               matcher.consumeParser.grammar = errorCatcher.grammar
             else: discard
     elif T is ErrorMatcher:
-      if listName == "errors":
-        assert catcher.errorList.len == 0, $catcher & ": skipList cannot be set twice!"
-        catcher.errorList = list
-      else:
-        raise newException(AssertionDefect, "For type T = Matcher, " &
-          "listName must be \"errors\", but not \"" & listName & "\"!")
+      doAssert listName == "errors", "For type T = Matcher, listName " &
+          "must be \"errors\", but not \"" & listName & "\"!"
+      doAssert catcher.errorList.len == 0, 
+               $catcher & ": skipList cannot be set twice!"
+      catcher.errorList = list
       if errorCatcher.grammarVar != GrammarPlaceholder:
         for em in list:
           let matcher = em.matcher
@@ -975,17 +973,16 @@ proc attachMatchers(parser: Parser, list: seq[AnyMatcher], listName: string,
         fmt"{lname} could be attached!")
     var ambiguityFlag: bool = false
     parser.forEach(p, anonSubs):
-      if isErrorCatching in p.flags and ErrorCatchingParserRef(p).isActive:
-        if ambiguityFlag:
-          raise newException(AssertionDefect, ambigErr)
+      assert not isNil(p)
+      if not isNil(p) and isErrorCatching in p.flags and 
+          ErrorCatchingParserRef(p).isActive:
+        doAssert not ambiguityFlag, ambigErr
         p.setMatcherList(list, listName)
         ErrorCatchingParserRef(p).referredParsers.setLen(0)
         if not failIfAmbiguous:
           break
         ambiguityFlag = true
-    if not ambiguityFLag:
-      echo $parser.subParsers[0].name
-      raise newException(AssertionDefect, notAcatcherErr)
+    doAssert ambiguityFLag, notAcatcherErr  # echo $parser.subParsers[0].name
 
 
 proc errors*(parser: Parser, errors: seq[ErrorMatcher], unambig: bool = true) =
@@ -1202,21 +1199,20 @@ proc cr*(s: string): CharRangeRef =
     repetition = ' '
     a = 0
     b = s.len - 1
-    
-  if b < 0: raise newException(AssertionDefect, missingContent)
+
+  doAssert b >= 0, missingContent
   if s[b] in "?*+":
     repetition = s[b]
     b -= 1
-    if b < 0: raise newException(AssertionDefect, missingContent)
+    doAssert b >= 0, missingContent
   if s[a] == '(':
-    if s[b] != ')': 
-      raise newException(AssertionDefect, "cr(): syntax error: missing ')'")
+    doAssert s[b] == ')', "cr(): syntax error: missing ')'"
     a += 1
     b -= 1
-    if b < 0 or b < a: raise newException(AssertionDefect,  missingContent)
+    doAssert b >= 0 and b >= a, missingContent
   let rangeSet = rs(s[a..b])
-  if repetition != ' ' and rangeSet.ranges.len > 1 and s[0] notin "([":
-    raise newException(AssertionDefect, fmt(missingBrackets))
+  doAssert repetition == ' ' or rangeSet.ranges.len <= 1 or
+           s[0] in "([", fmt(missingBrackets)
   CharRange(rangeSet, repetition)
 
 method parse*(self: CharRangeRef, location: int32): ParsingResult =
@@ -1820,6 +1816,39 @@ method `$`*(self: LookaheadRef): string =
 ## TODO: Synonym
 ## ^^^^^^^^^^^^^
 
+type
+  SynonymRef = ref SynonymObj not nil
+  SynonymObj = object of ParserObj
+
+proc init*(synonym: SynonymRef, parser: Parser): SynonymRef =
+  discard Parser(synonym).init(SynonymName)
+  synonym.subParsers = @[parser]
+  return synonym
+
+template Synonym*(parser: Parser): SynonymRef =
+  new(SynonymRef).init(parser)
+    
+method parse*(self: SynonymRef, location: int32): ParsingResult =
+  let (node, loc) = self.subParsers[0](location)
+  if not isNil(node):
+    if dropContent in self.flags:
+      return (EmptyNode, loc)
+    if not (isDisposable in self.flags):
+      if node == EmptyNode:
+        return (newNode(self.node_name, ""), loc)
+      if node.isAnonymous:
+        node.name = self.node_name
+      else:
+        return (newNode(self.node_name, @[Node(node)]), loc)
+  return (node, loc)
+
+method `$`*(self: SynonymRef): string =
+  if self.pname.len > 0: 
+    self.pname & " = " & $self.subParsers[0]
+  else:
+    $self.subParsers[0]
+
+
 ## Forward
 ## ^^^^^^^
 
@@ -1953,114 +1982,4 @@ when isMainModule:
   let cst = doc("X")
   echo $cst
   echo Text("A")("A").root.asSxpr
-  doAssert Text("A")("A").root.asSxpr == "(:Text \"A\")"
-  echo RegExp(rx"\w+")("ABC").root.asSxpr
-  doAssert RegExp(rx"\w+")("ABC").root.asSxpr == "(:RegExp \"ABC\")"
-  echo Whitespace(r"\s+", r"#.*")("   # comment").root.asSxpr
-  doAssert Whitespace(r"\s+", r"#.*")("   # comment").root.asSxpr == "(:Whitespace \"   # comment\")"
-  echo Repeat(Text("A"), (1u32, 3u32))("AAAA").root.asSxpr
-  echo ("r".assignName Repeat(Text("A"), (1u32, 3u32)))("AA").root.asSxpr
-  echo Series(Text("A"), Text("B"), Text("C"), mandatory=1u32)("ABC").root.asSxpr
-  try:
-    echo Series(Text("A"), Text("B"), Text("C"), mandatory=1u32)("ABX").root.asSxpr
-  except ParsingException:
-    echo "Expected Exception"
-  echo Alternative(Text("A"), Text("B"))("B").root.asSxpr
-  doAssert Alternative(Text("A"), Text("B"))("B").root.asSxpr == "(:Text \"B\")"
-  doAssert $Alternative(Text("A"), Text("B")) == "\"A\"|\"B\""
-  doAssert $Series(Text("A"), Text("B"), Text("C"), mandatory=1u32) == "\"A\" §\"B\" \"C\""
-  echo $((Text("A")|Text("B"))|(Text("C")|Text("D")|Text("E")))
 
-  let root = "root".assign Forward()
-  let t = "t".assign Text("A") & root
-  let s = "s".assign root & t & t
-  root.set(s)
-  echo $root
-  echo $t
-  echo $root.subParsers[0].subparsers.len
-  echo $s
-  echo $t.type
-  echo " "
-  root.grammar = Grammar("adhoc1")
-
-  let WS = "WS" ::=                 DROP(rxp"\s*")
-  let NUMBER = ":NUMBER" ::=        (rxp"(?:0|(?:[1-9]\d*))(?:\.\d+)?" & WS)
-  let sign = "sign" ::=             ((txt"+" | txt"-") & WS)
-  let expression = "expression" ::= Forward()
-  let group = "group" ::=           (txt"(" & WS & § expression & txt")" & WS)
-  let factor = "factor" ::=         (?(sign) & (NUMBER | group))
-  let term = "term" ::=             (factor & *((txt"*" | txt"/") & WS & § factor))
-  expression.set                    (term & *((txt"+" | txt"-") & WS & § term))
-  expression.grammar = Grammar("Arithmetic")
-
-  expression.error((anyPassage, "Zahl oder Ausdruck erwartet, aber nicht {1}"))
-  # term.errors(@[(anyPassage, "Zahl oder Ausdruck (in Klammern) erwartet, aber nicht {1}")])
-  # group.errors(@[(anyPassage, "Schließende Klammer erwartet, aber nicht {1}")])
-  #
-  # expression.resume(atRe"(?=\d|\(|\)|$)")
-  # term.resume(atRe"(?=\d|\(|$)")
-  # group.resume(atRe"(?=\)|$)")
-  #
-  # echo $expression.ptype
-  #
-  # var tree = expression("1 + 1").root
-  # echo tree.asSxpr()
-  # tree = expression("(3 + 4) * 2").root
-  # echo tree.asSxpr()
-  # try:
-  #   tree = expression("(3 + ) * 2").root
-  # except ParsingException as pe:
-  #   echo $pe
-  # try:
-  #   tree = expression("(3 + * 2").root
-  #   echo $expression.grammar.errors
-  # except ParsingException as pe:
-  #   echo $pe
-  # try:
-  #   tree = expression("(3 + 4 * 2").root
-  # except ParsingException as pe:
-  #   echo $pe
-  #
-  # let gap = ":gap".assign(rxp"[^\d()]*(?=[\d(])")
-  # expression.skipUntil(after(gap))
-  #
-  # try:
-  #   tree = expression("3 + * 2").root
-  #   echo ">> " & $expression.grammar.errors
-  # except ParsingException as pe:
-  #   echo $pe
-  #
-  #
-  # echo "descendants-iterator"
-  # for p in descendants(expression):
-  #   echo if p.name.len > 0:  $p.name & " := " & $p  else:  $p
-  # expression.resetTraversalTracker()
-  #
-  # # echo "apply-callback"
-  # # proc visitor(p: Parser): bool =
-  # #   echo if p.name.len > 0:  $p.name & " := " & $p  else:  $p
-  # #   return false
-  # #
-  # # discard expression.apply(visitor)
-  #
-  # echo "---"
-  # expression.subParsers[0].forEach(p, anonSubs):
-  #   echo $p
-  #
-  # echo "---"
-  # let series1 = txt"A" & txt"B" & § txt"C" & txt"D"
-  # echo $series1
-  # assert series1.mandatory == 2
-  #
-  # echo IgnoreCase("äö")("Äö").root.asSxpr()
-  # echo IgnoreCase("aB")("Ab").root.asSxpr()
-  # echo IgnoreCase("ao")("Aö").root.asSxpr()
-  #
-  # let R = rxp("[^<&\"]+")
-  # echo $R
-  #
-  # let number = "number".assign RegExp(rx"\d+")
-  # let ws = "ws".assign RegExp(rx"\s*")
-  # let text = toStringSlice("1")
-  # assert number(text, 0).root.asSxpr == "(number \"1\")"
-  # echo $ws(text, 1).root.asSxpr # == "(ws \"\")"
