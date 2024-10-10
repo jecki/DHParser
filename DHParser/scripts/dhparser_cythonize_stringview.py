@@ -2,13 +2,16 @@
 # build.py - support for building cython extensions with poetry
 
 
+import platform
 import os
 import sys
 from setuptools import setup
 
-os.environ['CC'] = 'clang'
-os.environ['CXX'] = 'clang++'
-os.environ['LDSHARED'] = 'clang -shared'
+
+if platform.system().lower() == "linux":
+    os.environ['CC'] = 'clang'
+    os.environ['CXX'] = 'clang++'
+    os.environ['LDSHARED'] = 'clang -shared'
 
 try:
     from Cython.Build import cythonize

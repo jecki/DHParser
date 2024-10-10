@@ -48,7 +48,7 @@ try:
 except ImportError:
     import re
 
-if sys.version_info >= (3, 13, 0):
+if sys.version_info >= (3, 12, 0):
     from collections.abc import Iterable, Sequence, Set, MutableSet, Callable, Container, Hashable
     from typing import Any, AbstractSet, FrozenSet, Type, Union, Optional, TypeAlias, Protocol
     AbstractSet: TypeAlias = Set
