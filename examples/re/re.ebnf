@@ -1,0 +1,54 @@
+# re-grammar
+
+#######################################################################
+#
+#  EBNF-Directives
+#
+#######################################################################
+
+# Regular expression for implicit whitespace or one of: horizontal, linefeed, vertical
+# Implicit whitespace is denoted by the tilde-character: ~
+@ whitespace  = vertical
+
+# Implicit whitespace adjacent to literals: left, right, both, none
+# E.g. if @literalws = right then ")" means the same as `)`~
+@ literalws   = none
+
+# Regular expression for comments, e.g. /#.*(?:\n|$)/
+# Use: /(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)/ for C++-style comments: /* ... */ or // to EOL
+@ comment     = /#.*/
+
+# Case-sensitivity: True, False
+@ ignorecase  = False
+
+# Tree-simplification while parsing:  none, flatten, merge_treetops, merge
+@ reduction   = flatten         # anonymous nodes are being reduced where possible
+
+# Tags that may be replaced with their content while parsing
+@ disposable  = EOF
+
+# Tags that will be dropped with all their content while parsing or any of
+# the special values: strings, backticked, whitespace, regexps
+# Here, EOF and insignificant whitespace (tilde) will be dropped
+@ drop        = EOF, whitespace
+
+
+#######################################################################
+#
+#:  Regular Expressions
+#
+#######################################################################
+
+regex     = [flags] sequence { `|` sequence }
+sequence  = { item [repetition] }
+item      = special | character | escape | charset | group
+
+special   = any | start | end
+character = !special /./
+
+#######################################################################
+#
+#:  Special Sequences
+#
+#######################################################################
+

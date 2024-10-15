@@ -217,6 +217,15 @@ iterator items*(a: StringSlice): char =
 
 # TODO: Add function to join string-slices
 
+
+
+#######################################################################
+#
+# Regular Expressions working on string-slices
+#
+#######################################################################
+
+
 when defined(js):
   type Regex* = tuple[sticky: Regexp, nonSticky: Regexp]
   let PCREFlag = newRegexp(r"\(\*\w+\)", "g")
@@ -362,6 +371,14 @@ else:
 
   func replace*(slice: StringSlice, pattern: Regex, replacement: string): string =
     replace($slice, pattern, replacement)
+
+
+
+#######################################################################
+#
+# Main: Test-Code
+#
+#######################################################################
 
 
 when isMainModule:
