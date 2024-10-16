@@ -25,7 +25,7 @@
 @ reduction   = flatten         # anonymous nodes are being reduced where possible
 
 # Tags that may be replaced with their content while parsing
-@ disposable  = EOF
+@ disposable  = EOF, _number
 
 # Tags that will be dropped with all their content while parsing or any of
 # the special values: strings, backticked, whitespace, regexps
@@ -33,22 +33,68 @@
 @ drop        = EOF, whitespace
 
 
-#######################################################################
-#
-#:  Regular Expressions
-#
-#######################################################################
+#: Regular Expressions
 
-regex     = [flags] sequence { `|` sequence }
-sequence  = { item [repetition] }
-item      = special | character | escape | charset | group
+regex      = [flags] sequence { `|` sequence } EOF
+sequence   = { item [repetition] }
+item       = special | escape | charset | lookaround | group | character
 
-special   = any | start | end
-character = !special /./
+flags      = { `(?` /[aiLmsux]+/ [`-` /[imsx]+/] § `)` }+
 
-#######################################################################
-#
-#:  Special Sequences
-#
-#######################################################################
 
+#: repetition
+
+repetition = repeater [ notGreedy | noBacktracking ]
+  repeater = zeroOrOne | zeroOrMore | oneOrMore | range
+    zeroOrOne  = `?`
+    zeroOrMore = `*`
+    oneOrMore  = `+`
+    range      = `{` min [`,` max] `}`
+      min      = _number
+      max      = _number
+      _number  = /[0-9]+/
+  notGreedy      = `?`
+  noBacktracking = `+`
+
+
+#: special
+
+special    = any | start | end
+  any      = `.`
+  start    = `^`
+  end      = `$`
+character  = /.|\n/
+
+
+#: escape
+
+escape     = `\` ( reEsc | chEsc | chCode | chName | groupRef | error | character )
+  reExc    = /[AbBZ]/
+  chEsc    = /[abdDfnrsStvwW\\]/
+  chCode   = `x` § hex*2 | `u` § hex*4 | `U` § hex*8 | octal
+     hex   = /[0-9a-fA-F]
+     octal = `0` oct{0,3} | oct*3
+     oct   = /[0-7]/
+  chName   = `N` § `{` /[\w ]+/ `}`
+  groupRef = /\d\d?/
+  error    = /[a-zA-Z]/
+
+#: charset
+
+charset    = `[` { chRange | escapedSet | escapedCh | ch }+ `]`
+  chRange    = (escapedCh | ch) `-` (escapedCh | ch)
+  escapedSet = `\` /[dDsSwW]
+  escapedCh  = `\` /[abfnrtv\\]/
+  ch         = `\` error | !`]` [`\`] character
+
+#: lookaround
+
+lookaround =
+
+#: group
+
+group     =
+
+#: misc
+
+EOF = !/./
