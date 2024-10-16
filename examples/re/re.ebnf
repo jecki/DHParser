@@ -25,7 +25,7 @@
 @ reduction   = flatten         # anonymous nodes are being reduced where possible
 
 # Tags that may be replaced with their content while parsing
-@ disposable  = EOF, _number
+@ disposable  = EOF, _number, _illegal
 
 # Tags that will be dropped with all their content while parsing or any of
 # the special values: strings, backticked, whitespace, regexps
@@ -35,12 +35,13 @@
 
 #: Regular Expressions
 
-regex      = [flags] sequence { `|` sequence } EOF
-sequence   = { item [repetition] }
-item       = special | escape | charset | lookaround | group | character
+regular_expression = [flagGroups] (regex | `)`) EOF
+regex      = pattern { `|` pattern }
+pattern    = { item [repetition] }
+item       = special | escape | charset | group | characters
 
-flags      = { `(?` /[aiLmsux]+/ [`-` /[imsx]+/] § `)` }+
-
+flagGroups = { `(?` flags § `)` }+
+flags      = /[aiLmsux]+/ [`-` /[imsx]+/]
 
 #: repetition
 
@@ -63,12 +64,13 @@ special    = any | start | end
   any      = `.`
   start    = `^`
   end      = `$`
+characters = { !(special | escape | charset | group) character }+
 character  = /.|\n/
 
 
 #: escape
 
-escape     = `\` ( reEsc | chEsc | chCode | chName | groupRef | error | character )
+escape     = `\` ( reEsc | chEsc | chCode | chName | groupId | error | character )
   reExc    = /[AbBZ]/
   chEsc    = /[abdDfnrsStvwW\\]/
   chCode   = `x` § hex*2 | `u` § hex*4 | `U` § hex*8 | octal
@@ -76,8 +78,9 @@ escape     = `\` ( reEsc | chEsc | chCode | chName | groupRef | error | characte
      octal = `0` oct{0,3} | oct*3
      oct   = /[0-7]/
   chName   = `N` § `{` /[\w ]+/ `}`
-  groupRef = /\d\d?/
-  error    = /[a-zA-Z]/
+  groupId = /\d\d?/
+  error    = &_illegal @Error("Unknown escape sequence") _illegal
+    _illegal = /[a-zA-Z]/
 
 #: charset
 
@@ -87,13 +90,24 @@ charset    = `[` { chRange | escapedSet | escapedCh | ch }+ `]`
   escapedCh  = `\` /[abfnrtv\\]/
   ch         = `\` error | !`]` [`\`] character
 
-#: lookaround
-
-lookaround =
 
 #: group
 
-group     =
+group     = `(` § (extension | regex) `)`
+extension = `?` § ( nonCapturing | subRegex | namedGroup | backRef
+                  | comment | lookaround | bifurcation)
+
+nonCapturing = [flags] `:` § regex
+subRegex   = `>` § regex
+namedGroup = `P<` § groupName `>` regex
+backRef    = `P=` § groupName
+comment    = `#` /(?:[\\])|[^)\\]+)+/
+
+
+lookaround = lrtype § regex
+  lrtype   = `=` | `!` | `<=` | `<!`
+
+bifurcation = `(` § groupId | groupName `)` pattern `|` pattern
 
 #: misc
 
