@@ -70,25 +70,26 @@ character  = /.|\n/
 
 #: escape
 
-escape     = `\` ( reEsc | chEsc | chCode | chName | groupId | error | character )
-  reExc    = /[AbBZ]/
-  chEsc    = /[abdDfnrsStvwW\\]/
-  chCode   = `x` § hex*2 | `u` § hex*4 | `U` § hex*8 | octal
-     hex   = /[0-9a-fA-F]
-     octal = `0` oct{0,3} | oct*3
-     oct   = /[0-7]/
-  chName   = `N` § `{` /[\w ]+/ `}`
-  groupId = /\d\d?/
-  error    = &_illegal @Error("Unknown escape sequence") _illegal
+escape       = BS ( reEsc | chEsc | chCode | chName | groupId | error | character )
+  reEsc      = /[AbBZ]/
+  chEsc      = /[abdDfnrsStvwW\\]/
+  chCode     = `x` hex*2 | `u` hex*4 | `U` hex*8 | octal
+     hex     = /[0-9a-fA-F]/
+     octal   = `0` oct{0,3} | oct*3
+     oct     = /[0-7]/
+  chName     = `N` § `{` /[\w ]+/ `}`
+  groupId    = /\d\d?/
+  groupName  = /(?!\d)\w+/
+  error      = &_illegal @Error("Unknown escape sequence") _illegal
     _illegal = /[a-zA-Z]/
 
 #: charset
 
 charset    = `[` { chRange | escapedSet | escapedCh | ch }+ `]`
   chRange    = (escapedCh | ch) `-` (escapedCh | ch)
-  escapedSet = `\` /[dDsSwW]
-  escapedCh  = `\` /[abfnrtv\\]/
-  ch         = `\` error | !`]` [`\`] character
+  escapedSet = BS /[dDsSwW]/
+  escapedCh  = BS /[abfnrtv\\]/
+  ch         = BS error | !`]` [BS] character
 
 
 #: group
@@ -101,7 +102,7 @@ nonCapturing = [flags] `:` § regex
 subRegex   = `>` § regex
 namedGroup = `P<` § groupName `>` regex
 backRef    = `P=` § groupName
-comment    = `#` /(?:[\\])|[^)\\]+)+/
+comment    = `#` /(?:[\\]\)|[^)\\]+)+/
 
 
 lookaround = lrtype § regex
@@ -111,4 +112,5 @@ bifurcation = `(` § groupId | groupName `)` pattern `|` pattern
 
 #: misc
 
+BS  = /\\/   # a single backslash
 EOF = !/./

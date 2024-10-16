@@ -111,7 +111,7 @@ counted    = countable range | countable TIMES~ multiplier | multiplier TIMES~ Â
 
 range      = RNG_OPEN~ multiplier [ RNG_DELIM~ multiplier ] RNG_CLOSE~
 no_range   = !multiplier | &multiplier TIMES   # should that be &(multiplier TIMES)??
-multiplier = /[1-9]\d*/~
+multiplier = /\d+/~
 
 
 #: leaf-elements

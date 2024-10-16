@@ -212,7 +212,7 @@ class HeuristicEBNFGrammar(Grammar):
 
         range      = RNG_BRACE~ multiplier [ :RNG_DELIM~ multiplier ] ::RNG_BRACE~
         no_range   = !multiplier | &multiplier :TIMES
-        multiplier = /[1-9]\d*/~
+        multiplier = /\d+/~
 
 
         #: leaf-elements
@@ -361,7 +361,7 @@ class HeuristicEBNFGrammar(Grammar):
                       Option(Pop(RE_LEADOUT, match_func=optional_last_value))))
     name = Synonym(SYM_REGEX)
     placeholder = Series(Series(Text("$"), dwsp__), name, NegativeLookahead(Text("(")), dwsp__)
-    multiplier = SmartRE(f'([1-9]\\d*)(?:{WSP_RE__})', '/[1-9]\\d*/ ~')
+    multiplier = SmartRE(f'(\\d+)(?:{WSP_RE__})', '/\\d+/ ~')
     whitespace = SmartRE(f'(~)(?:{WSP_RE__})', '/~/ ~')
     any_char = Series(Text("."), dwsp__)
     free_char = SmartRE(f'([^\\n\\[\\]\\\\]|\\\\[nrtfv`´\'"(){{}}\\[\\]/\\\\])',

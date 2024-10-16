@@ -952,11 +952,11 @@ class TestInterleave:
 
     def test_illegal_multiplier(self):
         lang = '@literalws=right\ndoc = "a" * 3'
-        st = parse_ebnf(lang)
-        assert not st.errors
+        result, errors, _ = compile_ebnf(lang)
+        assert not errors
         lang_wrong = 'doc = "a" * 0'
-        st = parse_ebnf(lang_wrong)
-        assert st.errors
+        result, errors, _ = compile_ebnf(lang_wrong)
+        assert errors
 
     def test_all(self):
         ebnf = 'prefix = "A" ° "B"'

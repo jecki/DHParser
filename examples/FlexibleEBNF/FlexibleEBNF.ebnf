@@ -128,7 +128,7 @@ counted    = countable range | countable :TIMES~ multiplier | multiplier :TIMES~
 
 range      = RNG_BRACE~ multiplier [ :RNG_DELIM~ multiplier ] ::RNG_BRACE~
 no_range   = !multiplier | &multiplier :TIMES
-multiplier = /[1-9]\d*/~
+multiplier = /\d+/~
 
 
 #: leaf-elements

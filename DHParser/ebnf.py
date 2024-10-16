@@ -443,7 +443,7 @@ class ConfigurableEBNFGrammar(Grammar):
 
         range      = RNG_OPEN~ multiplier [ RNG_DELIM~ multiplier ] RNG_CLOSE~
         no_range   = !multiplier | &multiplier TIMES   # should that be &(multiplier TIMES)??
-        multiplier = /[1-9]\d*/~
+        multiplier = /\d+/~
 
 
         #: leaf-elements
@@ -546,7 +546,7 @@ class ConfigurableEBNFGrammar(Grammar):
     EOF = Drop(SmartRE(f'(?!.)', '!/./'))
     name = Synonym(SYM_REGEX)
     placeholder = Series(Series(Text("$"), dwsp__), name, NegativeLookahead(Text("(")), dwsp__)
-    multiplier = SmartRE(f'([1-9]\\d*)(?:{WSP_RE__})', '/[1-9]\\d*/ ~')
+    multiplier = SmartRE(f'(\\d+)(?:{WSP_RE__})', '/\\d+/ ~')
     whitespace = SmartRE(f'(~)(?:{WSP_RE__})', '/~/ ~')
     any_char = Series(Text("."), dwsp__)
     free_char = SmartRE(f'([^\\n\\[\\]\\\\]|\\\\[nrtfv`´\'"(){{}}\\[\\]/\\\\])',
@@ -3130,13 +3130,17 @@ class EBNFCompiler(Compiler):
         assert all(child.name == 'multiplier' for child in node.children)
         if len(node.children) == 2:
             r = (int(node.children[0].content), int(node.children[1].content))
+            if r[1] == 0: self.tree.new_error(node, "Range must not be (0, 0)")
             if r[0] > r[1]:
                 self.tree.new_error(
-                    node, "Upper bound %i of range is greater than lower bound %i!" % r)
+                    node, "Lower bound %i of range is greater than upper bound %i!" % r)
                 return r[1], r[0]
             return r
         else:
             assert len(node.children) == 1
+            m = int(node.children[0].content)
+            if m <= 0:
+                self.tree.new_error(node, "Range must not be (0, 0)")
             return int(node.children[0].content), int(node.children[0].content)
 
 
@@ -3177,6 +3181,7 @@ class EBNFCompiler(Compiler):
                 r = (0, INFINITE)
             else:
                 r = (m, m)
+            if m <= 0: self.tree.new_error(node, "Multiplier must not be zero!")
         return what, r
 
 
