@@ -126,11 +126,11 @@ type
     farthestFail: int32
     farthestParser: ParserOrNil
 
-when defined(js):
-  # nim's javascript-target does not allow closure iterators
-  type ParserIterator = proc(parser: Parser): seq[Parser]
-else:
+when (compiles do:
+        iterator jsCheck(): int {.closure.} = yield 1):
   type ParserIterator = iterator(parser: Parser): Parser
+else:  # nim's javascript-target does not allow closure iterators before nim version 2.2.0
+  type ParserIterator = proc(parser: Parser): seq[Parser]
 
 const
   # RecursionLimit = 1536
@@ -325,8 +325,31 @@ proc getSubParsers*(parser: Parser): seq[Parser] =
   collect(newSeqOfCap(parser.subParsers.len)):
     for p in parser.subParsers:  p
 
-when defined(js):
-  # nim's javascript-target does not allow closure iterators
+when (compiles do:
+        iterator jsCheck(): int {.closure.} = yield 1):
+  iterator subs*(parser: Parser): Parser {.closure.} =
+    for p in parser.subParsers:
+      yield p
+
+  iterator refdSubs*(parser: Parser): Parser {.closure.} =
+    for p in parser.refdParsers:
+      yield p
+
+  iterator anonSubs*(parser: Parser): Parser {.closure.} =
+    for p in parser.subParsers:
+      if p.name.len == 0 or isForward in parser.flags:
+        yield p
+
+  iterator descendants(parser: Parser, selector: ParserIterator = refdSubs): Parser {.closure.} =
+    assert isForward notin parser.flags or parser.subParsers.len > 0
+    if traversalTracker notin parser.flags:
+      parser.flags.incl traversalTracker
+      yield parser
+      let subIter = selector
+      for p in subIter(parser):
+        for q in p.descendants(selector):  yield q
+
+else:  # nim's javascript-target does not allow closure iterators before nim version 2.2.0
   proc subs*(parser: Parser): seq[Parser] = parser.subParsers
 
   proc refdSubs*(parser: Parser): seq[Parser] = parser.refdParsers
@@ -351,29 +374,6 @@ when defined(js):
     var descs: seq[Parser] = @[]
     collect_descendants(parser, selector, descs)
     return descs
-
-else:
-  iterator subs*(parser: Parser): Parser {.closure.} =
-    for p in parser.subParsers:
-      yield p
-
-  iterator refdSubs*(parser: Parser): Parser {.closure.} =
-    for p in parser.refdParsers:
-      yield p
-
-  iterator anonSubs*(parser: Parser): Parser {.closure.} =
-    for p in parser.subParsers:
-      if p.name.len == 0 or isForward in parser.flags:
-        yield p
-
-  iterator descendants(parser: Parser, selector: ParserIterator = refdSubs): Parser {.closure.} =
-    assert isForward notin parser.flags or parser.subParsers.len > 0
-    if traversalTracker notin parser.flags:
-      parser.flags.incl traversalTracker
-      yield parser
-      let subIter = selector
-      for p in subIter(parser):
-        for q in p.descendants(selector):  yield q
 
 proc resetTraversalTracker*(parser: Parser) =
   if traversalTracker in parser.flags:
