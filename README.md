@@ -263,6 +263,8 @@ DHParser includes the following third-party-software:
   the documentation look better than the built-in 
   [sphinx](https://www.sphinx-doc.org)-themes. License: 
   [BSD 3-clause license](https://github.com/executablebooks/sphinx-book-theme/blob/master/LICENSE)
+  This includes the [pydata sphinx theme](https://github.com/pydata/pydata-sphinx-theme)
+  with also licensed under the BSD 3-clause license
 
 Optional Post-Installation
 --------------------------
