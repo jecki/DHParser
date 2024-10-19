@@ -2155,30 +2155,30 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             unist_obj['position'] = {'start': start, 'end': end}
         return unist_obj
 
-    def as_xast(self, indent: Optional[int] = 2, include_pos: bool=True) -> str:
+    def as_xast(self, src: Optional[str] = '', indent: Optional[int] = 2) -> str:
         """Serializes the tree as XML-Abstract-Syntax-Tree following the
         `xast <https://github.com/syntax-tree/xast>`_ -Specification.
 
         :param indent: number of spaces for indentation
         """
-        if include_pos and hasattr(self, 'source'):
-            lbreaks = linebreaks(self.source)
+        if isinstance(self, RootNode) and (src == '' or src == self.source):
+            lbreaks = self.lbreaks
         else:
-            lbreaks = []
+            lbreaks = [] if src is None else linebreaks(src)
         xast_obj = self.as_unist_obj(flavor='xast', lbreaks=lbreaks)
         return json.dumps(xast_obj, indent=indent,
                           separators=(', ', ': ') if indent is not None else (',', ':'))
 
-    def as_ndst(self, indent: Optional[int] = 2, include_pos: bool=True) -> str:
+    def as_ndst(self, src: Optional[str] = '', indent: Optional[int] = 2) -> str:
         """Serializes the tree as Abstract-Syntax-Tree following the
         `unist <https://github.com/syntax-tree/unist>`_ -Specification.
 
         :param indent: number of spaces for indentation
         """
-        if include_pos and hasattr(self, 'source'):
-            lbreaks = linebreaks(self.source)
+        if isinstance(self, RootNode) and (src == '' or src == self.source):
+            lbreaks = self.lbreaks
         else:
-            lbreaks = []
+            lbreaks = [] if src is None else linebreaks(src)
         xast_obj = self.as_unist_obj(flavor='ndst', lbreaks=lbreaks)
         return json.dumps(xast_obj, indent=indent,
                           separators=(', ', ': ') if indent is not None else (',', ':'))
