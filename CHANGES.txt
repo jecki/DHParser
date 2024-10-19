@@ -1,4 +1,4 @@
-DHParser Version 1.8.0 (19.10.2024)
+DHParser Version 1.8.1 (19.10.2024)
 ...................................
 
 - optional speed optimizations (experimental!) that work by compiling
@@ -24,6 +24,7 @@ DHParser Version 1.8.0 (19.10.2024)
   lazily to keep startup times in check
 - nim-rewrite of parser core under way, e.g. run-ranges added as
   first step to get rid of regular epressions.
+- lsp-module removed from documentation to avoid index-clutter
 
 
 DHParser Version 1.7.2 (22.2.2024)
