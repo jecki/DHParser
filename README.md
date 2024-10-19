@@ -259,6 +259,8 @@ DHParser includes the following third-party-software:
   when cython is not installed on the system using DHParser.
   License: [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0)
 
+The following are only needed for building the documentation:
+
 * [Sphinx book theme](https://sphinx-book-theme.readthedocs.io): Makes
   the documentation look better than the built-in 
   [sphinx](https://www.sphinx-doc.org)-themes. License: 
@@ -270,6 +272,8 @@ DHParser includes the following third-party-software:
 * [beautifulsoup4](https://www.crummy.com/software/BeautifulSoup/): Needed by
   by pydata_sphinx_theme, licensed unter the [MIT-License](https://mit-license.org/) 
 
+* [soupsive](https://github.com/facelessuser/soupsieve): Needed by Beautifulsoup,
+  licensed unter the [MIT-License](https://github.com/facelessuser/soupsieve/blob/main/LICENSE.md)
 
 Optional Post-Installation
 --------------------------
