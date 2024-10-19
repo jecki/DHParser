@@ -18,10 +18,13 @@ import sys
 
 package_path = os.path.abspath('../')
 dhparser_path = os.path.abspath('../DHParser')
+doc_path = os.path.abspath('.')
 if package_path not in sys.path:
     sys.path.insert(0, package_path)
 if dhparser_path not in sys.path:
     sys.path.insert(0, dhparser_path)
+if doc_path not in sys.path:
+    sys.path.insert(0, doc_path)
 # sys.path.insert(0, os.path.abspath('../DHParser/scripts'))
 
 
@@ -57,7 +60,8 @@ extensions = [
     'sphinx.ext.ifconfig',
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
-    'sphinx.ext.napoleon'
+    'sphinx.ext.napoleon',
+    'sphinx_book_theme',
     # 'sphinx_autodoc_typehints'
 ]
 
@@ -97,9 +101,12 @@ add_module_names = False
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'book'  # 'sphinx_book_theme'  # 'sphinxdoc'  # 'alabaster'  # 'sphinx_rtd_theme'
-html_theme_path = ['.']
-
+html_theme = 'sphinx_book_theme'  # 'sphinxdoc'  # 'alabaster'  # 'sphinx_rtd_theme'
+html_theme_path = ['sphinx_book_theme/theme/sphinx_book_theme']
+html_theme_options = {
+  "repository_url": "https://gitlab.lrz.de/badw-it/DHParser",
+  "use_repository_button": True
+}
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
@@ -111,10 +118,11 @@ html_theme_path = ['.']
 #     'code_font_size': '0.70em'
 # }
 
+
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['html_assets']
+html_static_path = ['sphinx_book_theme/assets']
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.

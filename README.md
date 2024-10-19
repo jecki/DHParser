@@ -7,7 +7,8 @@ DHParser
 ![](https://img.shields.io/pypi/pyversions/DHParser)
 
 DHParser - Rapid prototyping of formal grammars and 
-domain specific languages (DSL) in the Digital Humanities
+domain specific languages (DSL) in the Digital Humanities.
+See https://dhparser.readthedocs.io/en/latest/
 
 This software is open source software under the Apache 2.0-License (see section License, below).
 
@@ -17,7 +18,8 @@ Copyright 2016-2024  Eckhart Arnold, Bavarian Academy of Sciences and Humanities
 Purpose
 -------
 
-DHParser has been developed with three main purposes in mind:
+DHParser is a parser development-framwork that has been developed 
+with three main purposes in mind:
 
 1. Developing parsers for domain specific languages and notations, either existing
    notations, like, LaTeX, or newly created DSLs, like the
@@ -241,6 +243,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
+
+Third-Party-Software
+--------------------
+
+DHParser includes the following third-party-software:
+
+* [typing_extensions](https://pypi.org/project/typing-extensions/): 
+  needed for backwards compatibility with older Python versions.
+  Licensed under the 
+  [Python Software Foundation License](https://docs.python.org/3/license.html#psf-license)
+
+* shadow_cython: a single module from [Cython](https://cython.org/) to
+  avoid error-messages resulting from the use of the cython-decorators 
+  when cython is not installed on the system using DHParser.
+  License: [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0)
+
+* [Sphinx book theme](https://sphinx-book-theme.readthedocs.io): Makes
+  the documentation look better than the built-in 
+  [sphinx](https://www.sphinx-doc.org)-themes. License: 
+  [BSD 3-clause license](https://github.com/executablebooks/sphinx-book-theme/blob/master/LICENSE)
 
 Optional Post-Installation
 --------------------------
