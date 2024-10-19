@@ -33,7 +33,7 @@ author = 'Eckhart Arnold'
 
 # The short X.Y version
 from DHParser import __version__
-version = re.match('\d+\.\d+(?:\.\d+)?', __version__).group(0)
+version = re.match(r'\d+\.\d+(?:\.\d+)?', __version__).group(0)
 # The full version, including alpha/beta/rc tags
 release = __version__
 
@@ -83,7 +83,7 @@ language = 'en'
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path .
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'lsp.py']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
@@ -97,7 +97,7 @@ add_module_names = False
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'sphinxdoc'  # 'alabaster'  # 'sphinx_rtd_theme'
+html_theme = 'sphinx_book_theme'  # 'sphinxdoc'  # 'alabaster'  # 'sphinx_rtd_theme'
 html_theme_path = ['.']
 
 # Theme options are theme-specific and customize the look and feel of a theme

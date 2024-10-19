@@ -126,7 +126,7 @@ editing via the `language server protocol`_.
     just-in-time compiler `pypy`_ using the -Server.py script allows for
     a significant speed-up.
 
-:py:mod:`lsp`
+lsp
     (as of now, this is just a stub!) provides data classes that
     resemble the typescript-interfaces of the `language server protocol specification`_.
 
@@ -229,12 +229,6 @@ Module ``server``
 -----------------
 
 .. automodule:: server
-   :members:
-
-Module ``lsp``
---------------
-
-.. automodule:: lsp
    :members:
 
 Module ``stringview``

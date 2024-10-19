@@ -1,5 +1,5 @@
-DHParser Version 1.8.0
-......................
+DHParser Version 1.8.0 (19.10.2024)
+...................................
 
 - optional speed optimizations (experimental!) that work by compiling
   certain parts of the grammar to regular expressions. See config value
