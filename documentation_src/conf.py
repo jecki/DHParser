@@ -28,6 +28,7 @@ if doc_path not in sys.path:
 # sys.path.insert(0, os.path.abspath('../DHParser/scripts'))
 
 
+
 # -- Project information -----------------------------------------------------
 
 project = 'DHParser'
@@ -61,6 +62,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
     'sphinx.ext.napoleon',
+    'pydata_sphinx_theme',
     'sphinx_book_theme',
     # 'sphinx_autodoc_typehints'
 ]
@@ -102,7 +104,8 @@ add_module_names = False
 # a list of builtin themes.
 #
 html_theme = 'sphinx_book_theme'  # 'sphinxdoc'  # 'alabaster'  # 'sphinx_rtd_theme'
-html_theme_path = ['sphinx_book_theme/theme/sphinx_book_theme']
+html_theme_path = ['pydata_sphinx_theme/theme/pydata_sphinx_theme',
+                   'sphinx_book_theme/theme/sphinx_book_theme']
 html_theme_options = {
   "repository_url": "https://gitlab.lrz.de/badw-it/DHParser",
   "use_repository_button": True
