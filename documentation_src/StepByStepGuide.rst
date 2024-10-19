@@ -30,11 +30,11 @@ DHParser runs on Linux, MacOS and Windows. The following step by step
 guide assumes that you already have a Python-interpreter installed on
 your system and added the ``python``-command to your PATH-variable. (The
 latter is usually done automatically when installing Python.)
-Furthermore, DHParser only works with Python Version 3.5.3 and above. In
+Furthermore, DHParser only works with Python Version 3.7 and above. In
 order to verify this, open a shell or command line and type::
 
     $ python --version
-    Python 3.7.7
+    Python 3.12.7
 
 If ``Python`` plus a version number greater or equal 3.7 does not appear, you'll
 need to install Python from `python.org <https://python.org>`_.
