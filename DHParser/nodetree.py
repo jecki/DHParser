@@ -2124,11 +2124,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """Returns tree as JSON-Object conforming to the
         `xast <https://github.com/syntax-tree/xast>`_-Specifictaion.
         In order to get the actual xast, the returned JSON-object
-        needs to be serialized."""
-
-        if self._pos >= 0 and not lbreaks:
-            lbreaks = linebreaks(self.content)
-
+        needs to be serialized.
+        """
         if flavor == 'xast':
             unist_obj: Dict[str, Any] = {'type': 'root' if isinstance(self, RootNode)
                                                         else 'element',
@@ -2136,45 +2133,53 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         else:
             assert flavor == "ndst"
             unist_obj = {'type': self.name}
-        if self._pos >= 0:
+        if lbreaks and self._pos >= 0:
             l, c = line_col(lbreaks, self.pos)
             start = {'line': l, 'column': c, 'offset': self.pos}
         if self.has_attr():
             unist_obj['attributes'] = {k: str(v) for k, v in self.attr}
         if self.children:
             unist_obj['children'] = [child.as_unist_obj(flavor, lbreaks) for child in self.children]
-            if self._pos >= 0:
+            if lbreaks and self._pos >= 0:
                 end = unist_obj['children'][-1]['position']['end']
         else:
             if flavor == 'xast':
                 unist_obj['children'] = [{'type': 'text', 'value': self.content}]
             else:
                 unist_obj['value'] = self.content
-            if self._pos >= 0:
+            if lbreaks and self._pos >= 0:
                 offset = self.pos + self.strlen()
                 l, c = line_col(lbreaks, offset)
                 end = {'line': l, 'column': c, 'offset': offset}
-        if self._pos >= 0:
+        if lbreaks and self._pos >= 0:
             unist_obj['position'] = {'start': start, 'end': end}
         return unist_obj
 
-    def as_xast(self, indent: Optional[int] = 2) -> str:
+    def as_xast(self, indent: Optional[int] = 2, include_pos: bool=True) -> str:
         """Serializes the tree as XML-Abstract-Syntax-Tree following the
         `xast <https://github.com/syntax-tree/xast>`_ -Specification.
 
         :param indent: number of spaces for indentation
         """
-        xast_obj = self.as_unist_obj(flavor='xast')
+        if include_pos and hasattr(self, 'source'):
+            lbreaks = linebreaks(self.source)
+        else:
+            lbreaks = []
+        xast_obj = self.as_unist_obj(flavor='xast', lbreaks=lbreaks)
         return json.dumps(xast_obj, indent=indent,
                           separators=(', ', ': ') if indent is not None else (',', ':'))
 
-    def as_ndst(self, indent: Optional[int] = 2) -> str:
+    def as_ndst(self, indent: Optional[int] = 2, include_pos: bool=True) -> str:
         """Serializes the tree as Abstract-Syntax-Tree following the
         `unist <https://github.com/syntax-tree/unist>`_ -Specification.
 
         :param indent: number of spaces for indentation
         """
-        xast_obj = self.as_unist_obj(flavor='ndst')
+        if include_pos and hasattr(self, 'source'):
+            lbreaks = linebreaks(self.source)
+        else:
+            lbreaks = []
+        xast_obj = self.as_unist_obj(flavor='ndst', lbreaks=lbreaks)
         return json.dumps(xast_obj, indent=indent,
                           separators=(', ', ': ') if indent is not None else (',', ':'))
 
@@ -2642,7 +2647,9 @@ class RootNode(Node):
         It is possible to add errors to a RootNode object, before it
         has actually swallowed the root of the node-tree.
         """
-        if source and source != self.source:
+        if not source:
+            source = node.content
+        if source != self.source:
             self.source = source
             self.lbreaks = linebreaks(source)
         self.source_mapping: SourceMapFunc = gen_neutral_srcmap_func(source) \

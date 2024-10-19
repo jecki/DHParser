@@ -20,6 +20,7 @@ limitations under the License.
 """
 
 import copy
+from functools import partial
 import json
 import os
 import sys
@@ -34,15 +35,18 @@ from DHParser.nodetree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxp
     select_path_if, select_path, create_path_match_function, pick_path, \
     LEAF_PATH, TOKEN_PTYPE, insert_node, content_of, strlen_of, gen_chain_ID, \
     parse_sxml, LEAF_PTYPES
+from DHParser.pipeline import create_parser_junction, Junction, PseudoJunction
 from DHParser.preprocess import gen_neutral_srcmap_func
-from DHParser.transform import traverse, reduce_single_child, \
-    replace_by_single_child, flatten, remove_empty, remove_whitespace
+from DHParser.transform import traverse, reduce_single_child, remove_brackets, \
+    replace_by_single_child, flatten, remove_empty, remove_whitespace, TransformerFunc, \
+    transformer
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.error import ERROR
 from DHParser.dsl import grammar_provider, create_parser
 from DHParser.error import Error
-from DHParser.parse import RE, Grammar
-from DHParser.toolkit import re
+from DHParser.parse import RE, Grammar, Forward, Whitespace, Drop, SmartRE, RegExp, Series, \
+    ZeroOrMore, Alternative, Option, Text, mixin_comment
+from DHParser.toolkit import re, ThreadLocalSingletonFactory
 
 
 class TestParseSxpression:
@@ -121,14 +125,14 @@ class TestParseSxpression:
         tree.new_error(tree, 'Fehler, "mein Herr"!', ERROR)
         assert tree.equals(parse_sxpr('(u "XXX")'))
         sxpr = tree.as_sxpr()
-        assert sxpr == r'''(u `(err "Error (1000): Fehler, \"mein Herr\"!") "XXX")''', sxpr
+        assert sxpr == r'''(u `(err "1:1: Error (1000): Fehler, \"mein Herr\"!") "XXX")''', sxpr
         tree2 = parse_sxpr(sxpr)
-        assert tree2.as_sxpr() == r'''(u `(err "Error (1000): Fehler, \"mein Herr\"!") "XXX")'''
+        assert tree2.as_sxpr() == r'''(u `(err "1:1: Error (1000): Fehler, \"mein Herr\"!") "XXX")'''
         # When backparsing s-expression-serialized trees, errors are parsed as attributes
         # but not turned into errors in the error-list of the root-node again:
         assert not tree2.equals(tree)
         assert not tree.has_attr()
-        assert tree2.attr['err'] == r'''Error (1000): Fehler, \"mein Herr\"!'''
+        assert tree2.attr['err'] == r'''1:1: Error (1000): Fehler, \"mein Herr\"!'''
         assert not tree2.errors
 
 XML_EXAMPLE = '''<?xml version="1.0" encoding="UTF-8"?>
@@ -810,6 +814,81 @@ class TestNodeFind:
             pass
 
 
+class JSONGrammar(Grammar):
+    r"""Parser for a JSON source file.
+    """
+    _element = Forward()
+    source_hash__ = "78e2453ffb76bd945ed675adecc5045b"
+    disposable__ = re.compile('_\\w+')
+    static_analysis_pending__ = []  # type: List[bool]
+    parser_initialization__ = ["upon instantiation"]
+    COMMENT__ = r'(?://.*)|(?:/\*(?:.|\n)*?\*/)'
+    comment_rx__ = re.compile(COMMENT__)
+    WHITESPACE__ = r'\s*'
+    WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
+    wsp__ = Whitespace(WSP_RE__)
+    dwsp__ = Drop(Whitespace(WSP_RE__))
+    _EOF = SmartRE(f'(?!.)', '!/./')
+    EXP = SmartRE(f'(?P<:Text>E|e)(?:(?P<:Text>\\+|\\-)?)([0-9]+)', '`E`|`e` [`+`|`-`] /[0-9]+/')
+    FRAC = SmartRE(f'(?P<:Text>\\.)([0-9]+)', '`.` /[0-9]+/')
+    INT = SmartRE(f'(?:(?P<:Text>\\-)?)([1-9][0-9]+|[0-9])', '[`-`] /[1-9][0-9]+/|/[0-9]/')
+    HEX = RegExp('[0-9a-fA-F][0-9a-fA-F]')
+    UNICODE = Series(Series(Drop(Text("\\u")), dwsp__), HEX, HEX)
+    ESCAPE = RegExp('\\\\[/bnrt\\\\"]')
+    PLAIN = RegExp('[^"\\\\]+')
+    _CHARACTERS = ZeroOrMore(Alternative(PLAIN, ESCAPE, UNICODE))
+    null = Series(Text("null"), dwsp__)
+    false = SmartRE(f'(?P<:Text>false)(?:{WSP_RE__})', '`false` ~')
+    true = SmartRE(f'(?P<:Text>true)(?:{WSP_RE__})', '`true` ~')
+    _bool = Alternative(true, false)
+    number = Series(INT, Option(FRAC), Option(EXP), dwsp__)
+    string = Series(Text('"'), _CHARACTERS, Text('"'), dwsp__, mandatory=1)
+    array = Series(Series(Drop(Text("[")), dwsp__),
+                   Option(Series(_element, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), _element)))),
+                   Series(Drop(Text("]")), dwsp__), mandatory=2)
+    member = Series(string, Series(Drop(Text(":")), dwsp__), _element, mandatory=1)
+    object = Series(Series(Drop(Text("{")), dwsp__), member,
+                    ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), member, mandatory=1)),
+                    Series(Drop(Text("}")), dwsp__), mandatory=3)
+    _element.set(Alternative(object, array, string, number, _bool, null))
+    json = Series(dwsp__, _element, _EOF)
+    root__ = json
+
+JSONParsing: PseudoJunction = create_parser_junction(JSONGrammar)
+
+JSON_AST_transformation_table = {
+    "json": [],
+    "_element": [],
+    "object": [],
+    "member": [],
+    "array": [],
+    "string": [remove_brackets],
+    "number": [],
+    "_bool": [],
+    "true": [],
+    "false": [],
+    "null": [],
+    "_CHARACTERS": [],
+    "PLAIN": [],
+    "ESCAPE": [],
+    "UNICODE": [],
+    "HEX": [],
+    "INT": [],
+    "NEG": [],
+    "FRAC": [],
+    "DOT": [],
+    "EXP": [],
+    "_EOF": [],
+}
+
+def JSONTransformer() -> TransformerFunc:
+    return partial(transformer, transformation_table=JSON_AST_transformation_table.copy(),
+                   src_stage='CST', dst_stage='AST')
+
+JSONTransformation: Junction = Junction(
+    'CST', ThreadLocalSingletonFactory(JSONTransformer), 'AST')
+
+
 class TestSerialization:
     def test_sxpr_roundtrip(self):
         sxpr = ('(BelegText (Anker "interdico_1") (BelegLemma "inter.|ticente") (TEXT ", (") '
@@ -951,6 +1030,12 @@ class TestSerialization:
         assert obj['children'][0]['value'] == "interdico_1"
         assert list(obj['position']['start'].values()) == [1, 1, 0]
         assert list(obj['position']['end'].values()) == [1, 68, 67]
+
+    def test_as_unist2(self):
+        tree = JSONParsing.factory()('{ "one": 1, "two": 2 }')
+        tree = JSONTransformation.factory()(tree)
+        xast = tree.as_xast()
+        ndst = tree.as_ndst()
 
 
 

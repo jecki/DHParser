@@ -107,9 +107,9 @@ class HTMLGrammar(Grammar):
     r"""Parser for a HTML source file.
     """
     element = Forward()
-    source_hash__ = "ca0c8d1ccce2f4772f7adbd3ac6807a8"
+    source_hash__ = "7eef2901d28bfe0e37355542c76663f4"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:VersionNum$|Misc$|EncName$|EOF$|Reference$|PubidCharsSingleQuoted$|BOM$|PubidChars$|NameChars$|NameStartChar$|CommentChars$|tagContent$|CData$|prolog$)')
+    disposable__ = re.compile('(?:PubidCharsSingleQuoted$|Misc$|CommentChars$|tagContent$|NameStartChar$|prolog$|Reference$|BOM$|EOF$|CData$|VersionNum$|NameChars$|PubidChars$|EncName$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'tagContent': [('', "syntax error in tag-name of opening or empty tag:  {1}")],

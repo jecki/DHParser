@@ -555,7 +555,14 @@ syntax-trees in either a nicely formatted or compact form.
           number
             INT "2"
 
-All but the last serialization-formats can be de-serialized into a tree
+5. `unist`_ and `xast`_::
+
+    >>> print(syntax_tree.as_ndst(indent=None, include_pos=False))
+    {"type":"json","children":[{"type":"object","children":[{"type":"member","children":[{"type":"string","children":[{"type":"PLAIN","value":"one"}]},{"type":"number","children":[{"type":"INT","value":"1"}]}]},{"type":"member","children":[{"type":"string","children":[{"type":"PLAIN","value":"two"}]},{"type":"number","children":[{"type":"INT","value":"2"}]}]}]}]}
+    >>> print(syntax_tree.as_xast(indent=None, include_pos=False))
+    {"type":"root","name":"json","children":[{"type":"element","name":"object","children":[{"type":"element","name":"member","children":[{"type":"element","name":"string","children":[{"type":"element","name":"PLAIN","children":[{"type":"text","value":"one"}]}]},{"type":"element","name":"number","children":[{"type":"element","name":"INT","children":[{"type":"text","value":"1"}]}]}]},{"type":"element","name":"member","children":[{"type":"element","name":"string","children":[{"type":"element","name":"PLAIN","children":[{"type":"text","value":"two"}]}]},{"type":"element","name":"number","children":[{"type":"element","name":"INT","children":[{"type":"text","value":"2"}]}]}]}]}]}
+
+The first three serialization-formats can be de-serialized into a tree
 of nodes with the functions: :py:func:`~nodetree.parse_sxpr`,
 :py:func:`~nodetree.parse_xml`, :py:func:`~nodetree.parse_json`. The
 :py:func:`~nodetree.parse_xml` is not restricted to de-serialization but
@@ -1424,3 +1431,5 @@ engines or un-cached recursive-descent-parsers.
 .. _`nim`: https://nim-lang.org/
 .. _`Cython`: https://cython.org/
 .. _`pyinstaller`: https://pyinstaller.org/en/stable/
+.. _`unist`: https://github.com/syntax-tree/unist
+.. _`xast`: https://github.com/syntax-tree/xast
