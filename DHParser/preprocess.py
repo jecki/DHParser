@@ -253,7 +253,8 @@ def strip_tokens(tokenized: str) -> str:
 def gen_neutral_srcmap_func(original_text: Union[StringView, str], original_name: str = '') -> SourceMapFunc:
     """Generates a source map function that maps positions to itself."""
     if not original_name:  original_name = 'UNKNOWN_FILE'
-    return lambda pos: SourceLocation(original_name, original_text, pos)
+    # return lambda pos: SourceLocation(original_name, original_text, pos)
+    return functools.partial(SourceLocation, original_name, original_text)
 
 
 def tokenized_to_original_mapping(tokenized_text: str,
