@@ -28,9 +28,11 @@ editor-independent the `language server-protocol
 adding editor support for you own DSL easy - no matter which editor is
 your (or your user's) favorite one.
 
+Automatic Parser-Generation
+---------------------------
 
-Generating a parser from a Grammar
-----------------------------------
+Generating a parser from a grammar
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Generating a parser does not requires more than writing your grammar in
 EBNF and compiling it with the "dhparser"-command into a readily usable
@@ -134,7 +136,7 @@ error occurred::
 
 
 Creating parsers within a Python-script
----------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In case you just need a parser for some very simple DSL, you can
 directly add a string with the EBNF-grammar of that DSL to you python
@@ -259,7 +261,7 @@ within the Python-script.
 .. _full_scale_DSLs:
 
 Full scale DSLs
----------------
+^^^^^^^^^^^^^^^
 
 Larger and more complex DSL-projects can easily be set up by calling the
 "dhparser"-script with a name of a project-directory that will then be created
@@ -924,8 +926,8 @@ Now let's try this on our example above::
             (line "More text.")))))
 
 
-Compiling DSLs
---------------
+Processing-Pipelines
+--------------------
 
 The auto-generated parser-script
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1278,8 +1280,8 @@ In case you make use of the auto-generated Server-script (see below),
 you should also adjust any import-statements that refer to the
 parser-script, so that they refer to the compile-script instead.
 
-Language Servers
-----------------
+Language Server Support
+-----------------------
 
 DHParser supports running parsers as local servers and includes
 boilerplate code for building editor support for your domain specific
@@ -1345,9 +1347,11 @@ respects from the popular `pygls`_-module:
 But, of course `pygls`_ can also be used together with DHParser, if you prefer
 `pygls`_ or already have some experience with this module.
 
+And more...
+-----------
 
 Parser-GUI
-----------
+^^^^^^^^^^
 
 Along with the "...Server.py"-script the test runner also creates and
 "...App.py" script (DHParser versions >= 1.4.0, only!). The latter is a
@@ -1365,7 +1369,7 @@ script "tst\_...\_grammar.py" with the "--scripts"-option.
 
 
 Performance optimization
-------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 The most important design goals of DHParser have been reliability,
 flexibility and testability. There are some performance optimizations,
