@@ -1813,8 +1813,8 @@ method `$`*(self: LookaheadRef): string =
 ## Aliasing-Parsers
 ## ----------------
 
-## TODO: Synonym
-## ^^^^^^^^^^^^^
+## Synonym
+## ^^^^^^^
 
 type
   SynonymRef = ref SynonymObj not nil

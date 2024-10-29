@@ -5,8 +5,8 @@ At the core of DHParser lies a parser generator for parsing expression
 grammars. As a parser generator it offers similar functionality as
 pyparsing_ or lark_. But it goes far beyond a mere parser generator by
 offering rich support of the testing an debugging of grammars,
-tree-processing (always needed in the XML-prone Digital Humanities ;-)
-), fail-tolerant grammars and some (as of now, experimental) support for
+tree-processing (always needed in the XML-prone Digital Humanities ;-), 
+fail-tolerant grammars and some (as of now, experimental) support for
 editing via the `language server protocol`_.
 
 
