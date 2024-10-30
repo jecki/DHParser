@@ -38,10 +38,12 @@
 regular_expression = [flagGroups] (regex | `)`) EOF
 regex      = pattern { `|` pattern }
 pattern    = { item [repetition] }
-item       = special | escape | charset | group | characters
+item       = entity  | allChars
+entity     = special | escape | charset | group
 
 flagGroups = { `(?` flags § `)` }+
 flags      = /[aiLmsux]+/ [`-` /[imsx]+/]
+
 
 #: repetition
 
@@ -64,13 +66,10 @@ special    = any | start | end
   any      = `.`
   start    = `^`
   end      = `$`
-characters = { !(special | escape | charset | group) character }+
-character  = /.|\n/
-
 
 #: escape
 
-escape       = BS ( reEsc | chEsc | chCode | chName | groupId | error | character )
+escape       = BS ( reEsc | chEsc | chCode | chName | groupId | error | anyChar )
   reEsc      = /[AbBZ]/
   chEsc      = /[abdDfnrsStvwW\\]/
   chCode     = `x` hex*2 | `u` hex*4 | `U` hex*8 | octal
@@ -88,29 +87,37 @@ escape       = BS ( reEsc | chEsc | chCode | chName | groupId | error | characte
 charset    = `[` { chRange | escapedSet | escapedCh | ch }+ `]`
   chRange    = (escapedCh | ch) `-` (escapedCh | ch)
   escapedSet = BS /[dDsSwW]/
-  escapedCh  = BS /[abfnrtv\\]/
-  ch         = BS error | !`]` [BS] character
+  escapedCh  = BS (chCode | /[abfnrtv\\]/)
+  ch         = BS error | !`]` [BS] anyChar
 
 
 #: group
 
-group     = `(` § (extension | regex) `)`
+group     = `(` § (extension | grpRegex) `)`
 extension = `?` § ( nonCapturing | subRegex | namedGroup | backRef
                   | comment | lookaround | bifurcation)
 
-nonCapturing = [flags] `:` § regex
-subRegex   = `>` § regex
-namedGroup = `P<` § groupName `>` regex
+nonCapturing = [flags] `:` § grpRegex
+subRegex   = `>` § grpRegex
+namedGroup = `P<` § groupName `>` grpRegex
 backRef    = `P=` § groupName
 comment    = `#` /(?:[\\]\)|[^)\\]+)+/
 
-
-lookaround = lrtype § regex
+lookaround = lrtype § grpRegex
   lrtype   = `=` | `!` | `<=` | `<!`
 
-bifurcation = `(` § groupId | groupName `)` pattern `|` pattern
+bifurcation = `(` § (groupId | groupName) `)` pattern `|` grpPattern
+
+grpRegex   = grpPattern { `|` grpPattern }
+grpPattern = { grpItem [repetition] }
+grpItem    = entity  | characters
 
 #: misc
+
+characters = { !entity character }+
+character  = /[^)]/
+allChars   = { !entity anyChar }+
+anyChar    = /.|\n/
 
 BS  = /\\/   # a single backslash
 EOF = !/./
