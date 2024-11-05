@@ -11,7 +11,7 @@
 @ whitespace  = vertical
 
 # Implicit whitespace adjacent to literals: left, right, both, none
-# E.g. if @literalws = right then ")" means the same as `)`~
+# E.g. if @literalws = right then ")" means the same as ")"~
 @ literalws   = none
 
 # Regular expression for comments, e.g. /#.*(?:\n|$)/
@@ -22,61 +22,67 @@
 @ ignorecase  = False
 
 # Tree-simplification while parsing:  none, flatten, merge_treetops, merge
-@ reduction   = flatten         # anonymous nodes are being reduced where possible
+@ reduction   = merge         # anonymous nodes are being reduced where possible
 
 # Tags that may be replaced with their content while parsing
-@ disposable  = EOF, _number, _illegal
+@ disposable  = EOF, BS, _number, _illegal, _entity, _escape, _special, _item,
+                _grpItem, _extension, _repeater, _anyChar, _character, _octal,
+                _nibble
 
 # Tags that will be dropped with all their content while parsing or any of
 # the special values: strings, backticked, whitespace, regexps
 # Here, EOF and insignificant whitespace (tilde) will be dropped
-@ drop        = EOF, whitespace
+@ drop        = EOF, BS, whitespace, strings
 
 
 #: Regular Expressions
 
-regular_expression = [flagGroups] (regex | `)`) EOF
-regex      = pattern { `|` pattern }
-pattern    = { item [repetition] }
-item       = entity  | allChars
-entity     = special | escape | charset | group
+regular_expression = [flagGroups] (regex | ")") EOF
+regex      = pattern { "|" pattern }
+pattern    = { repetition | _item }
+_item      = _entity  | charSeq
+_entity    = _special | _escape | charset | group
 
-flagGroups = { `(?` flags § `)` }+
-flags      = /[aiLmsux]+/ [`-` /[imsx]+/]
+flagGroups = { "(?" flags § ")" }+
+flags      = /[aiLmsux]+/ ["-" /[imsx]+/]
 
 
 #: repetition
 
-repetition = repeater [ notGreedy | noBacktracking ]
-  repeater = zeroOrOne | zeroOrMore | oneOrMore | range
-    zeroOrOne  = `?`
-    zeroOrMore = `*`
-    oneOrMore  = `+`
-    range      = `{` min [`,` max] `}`
+repetition = _item _repeater [ notGreedy | noBacktracking ]
+  _repeater = zeroOrOne | zeroOrMore | oneOrMore | range
+    zeroOrOne  = "?"
+    zeroOrMore = "*"
+    oneOrMore  = "+"
+    range      = "{" min ["," max] "}"
       min      = _number
       max      = _number
       _number  = /[0-9]+/
-  notGreedy      = `?`
-  noBacktracking = `+`
+  notGreedy      = "?"
+  noBacktracking = "+"
 
 
 #: special
 
-special    = any | start | end
-  any      = `.`
-  start    = `^`
-  end      = `$`
+_special   = any | start | end
+  any      = "."
+  start    = "^"
+  end      = "$"
 
 #: escape
 
-escape       = BS ( reEsc | chEsc | chCode | chName | groupId | error | anyChar )
+_escape      = BS ( reEsc | specialEsc | chCode | chName | groupId | error | escCh )
   reEsc      = /[AbBZ]/
-  chEsc      = /[abdDfnrsStvwW\\]/
-  chCode     = `x` hex*2 | `u` hex*4 | `U` hex*8 | octal
-     hex     = /[0-9a-fA-F]/
-     octal   = `0` oct{0,3} | oct*3
-     oct     = /[0-7]/
-  chName     = `N` § `{` /[\w ]+/ `}`
+  specialEsc = /[abdDfnrsStvwW\\]/
+  chCode     = "x" hex2 | "u" hex4 | "U" hex8 | oct
+    hex2     = _nibble*2
+    hex4     = _nibble*4
+    hex8     = _nibble*8
+    _nibble  = /[0-9a-fA-F]/
+    oct      = "0" _octal{0,3} | _octal*3
+    _octal   = /[0-7]/
+  chName     = "N" § "{" /[\w ]+/ "}"
+  escCh      = _anyChar | /[)|+*?]/
   groupId    = /\d\d?/
   groupName  = /(?!\d)\w+/
   error      = &_illegal @Error("Unknown escape sequence") _illegal
@@ -84,40 +90,41 @@ escape       = BS ( reEsc | chEsc | chCode | chName | groupId | error | anyChar 
 
 #: charset
 
-charset    = `[` { chRange | escapedSet | escapedCh | ch }+ `]`
-  chRange    = (escapedCh | ch) `-` (escapedCh | ch)
+charset    = "[" { chRange | escapedSet | escapedCh | ch }+ "]"
+  chRange    = (escapedCh | ch) "-" (escapedCh | ch)
   escapedSet = BS /[dDsSwW]/
   escapedCh  = BS (chCode | /[abfnrtv\\]/)
-  ch         = BS error | !`]` [BS] anyChar
+  ch         = BS error | !"]" [BS] _anyChar
 
 
 #: group
 
-group     = `(` § (extension | grpRegex) `)`
-extension = `?` § ( nonCapturing | subRegex | namedGroup | backRef
+group     = "(" § (_extension | grpRegex) ")"
+_extension = "?" § ( nonCapturing | subRegex | namedGroup | backRef
                   | comment | lookaround | bifurcation)
 
-nonCapturing = [flags] `:` § grpRegex
-subRegex   = `>` § grpRegex
-namedGroup = `P<` § groupName `>` grpRegex
-backRef    = `P=` § groupName
-comment    = `#` /(?:[\\]\)|[^)\\]+)+/
+nonCapturing = [flags] ":" § grpRegex
+subRegex   = ">" § grpRegex
+namedGroup = "P<" § groupName ">" grpRegex
+backRef    = "P=" § groupName
+comment    = "#" /(?:[\\]\)|[^)\\]+)+/
 
 lookaround = lrtype § grpRegex
   lrtype   = `=` | `!` | `<=` | `<!`
 
-bifurcation = `(` § (groupId | groupName) `)` pattern `|` grpPattern
+bifurcation = "(" § (groupId | groupName) ")" pattern "|" grpPattern
 
-grpRegex   = grpPattern { `|` grpPattern }
-grpPattern = { grpItem [repetition] }
-grpItem    = entity  | characters
+grpRegex   = grpPattern { "|" grpPattern }
+grpPattern = { grpRepetition | _grpItem }
+grpRepetition = _grpItem _repeater [ notGreedy | noBacktracking ]
+_grpItem   = _entity  | characters
 
 #: misc
 
-characters = { !entity character }+
-character  = /[^)]/
-allChars   = { !entity anyChar }+
-anyChar    = /.|\n/
+characters = { !_entity _character }+
+_character = /[^)|+*?]/
+charSeq    = { !_entity _anyChar }+
+_anyChar   = /[^|+*?]/
 
 BS  = /\\/   # a single backslash
 EOF = !/./
