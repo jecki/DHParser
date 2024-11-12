@@ -8,7 +8,8 @@
 
 # Regular expression for implicit whitespace or one of: horizontal, linefeed, vertical
 # Implicit whitespace is denoted by the tilde-character: ~
-@ whitespace  = vertical
+@ whitespace  = //  # never match any whitespace, but match empty string
+# @ whitespace  = /\s*(?:#.*)?\s*/  # match whitespace and comments
 
 # Implicit whitespace adjacent to literals: left, right, both, none
 # E.g. if @literalws = right then ")" means the same as ")"~
@@ -16,7 +17,7 @@
 
 # Regular expression for comments, e.g. /#.*(?:\n|$)/
 # Use: /(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)/ for C++-style comments: /* ... */ or // to EOL
-@ comment     = /#.*/
+@ comment     = //
 
 # Case-sensitivity: True, False
 @ ignorecase  = False
@@ -37,10 +38,10 @@
 
 #: Regular Expressions
 
-regular_expression = [flagGroups] (regex | ")") EOF
+regular_expression = ~ [flagGroups] ~ (regex | ")") EOF
 regex      = pattern { "|" pattern }
 pattern    = { repetition | _item }
-_item      = _entity  | charSeq
+_item      = (_entity | charSeq) ~
 _entity    = _special | _escape | charset | group
 
 flagGroups = { "(?" flags § ")" }+
@@ -49,7 +50,7 @@ flags      = /[aiLmsux]+/ ["-" /[imsx]+/]
 
 #: repetition
 
-repetition = _item _repeater [ notGreedy | noBacktracking ]
+repetition = _item _repeater [ notGreedy | noBacktracking ] ~
   _repeater = zeroOrOne | zeroOrMore | oneOrMore | range
     zeroOrOne  = "?"
     zeroOrMore = "*"
@@ -90,12 +91,13 @@ _escape      = BS ( reEsc | bs | specialEsc | chCode | chName | groupId | error 
 
 #: charset
 
-charset    = "[" { chRange | escapedSet | _escapedCh | ch }+ "]"
+charset    = "[" [complement] { chRange | escapedSet | _escapedCh | BS error | ch }+ "]"
+  complement = "^"
   chRange    = (_escapedCh | ch) "-" (_escapedCh | ch)
   escapedSet = BS /[dDsSwW]/
   _escapedCh = BS (chCode | chSpecial)
   chSpecial  = /[abfnrtv]/
-  ch         = BS error | !"]" [BS] _anyChar
+  ch         = !"]" [BS] _anyChar
 
 
 #: group
@@ -117,8 +119,8 @@ bifurcation = "(" § (groupId | groupName) ")" pattern "|" grpPattern
 
 grpRegex   = grpPattern { "|" grpPattern }
 grpPattern = { grpRepetition | _grpItem }
-grpRepetition = _grpItem _repeater [ notGreedy | noBacktracking ]
-_grpItem   = _entity  | characters
+grpRepetition = _grpItem _repeater [ notGreedy | noBacktracking ] ~
+_grpItem   = (_entity  | characters) ~
 
 #: misc
 
