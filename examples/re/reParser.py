@@ -113,14 +113,14 @@ class reGrammar(Grammar):
     _entity = Forward()
     _item = Forward()
     pattern = Forward()
-    source_hash__ = "28db1e2c2ec7d91a720ad68bfc070db0"
+    source_hash__ = "ee3fe953d536673f9d58266ad950b396"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:_character$|_item$|_grpItem$|BS$|_extension$|_number$|_escape$|_repeater$|_octal$|_nibble$|_escapedCh$|_special$|_illegal$|EOF$|_entity$|_anyChar$)')
+    disposable__ = re.compile('(?:_character$|_illegal$|_escapedCh$|_grpItem$|EOF$|_number$|_entity$|_item$|_repeater$|BS$|_special$|_anyChar$|_extension$|_octal$|_nibble$|_escape$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
     comment_rx__ = RX_NEVER_MATCH
-    WHITESPACE__ = r'\s*(?:#.*(?=\n|$))?\s*'
+    WHITESPACE__ = r''
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
