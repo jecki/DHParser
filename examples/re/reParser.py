@@ -113,14 +113,14 @@ class reGrammar(Grammar):
     _entity = Forward()
     _item = Forward()
     pattern = Forward()
-    source_hash__ = "a280e5b66bba49dc6ed2e06fafca6697"
+    source_hash__ = "28db1e2c2ec7d91a720ad68bfc070db0"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:_special$|_entity$|_item$|_octal$|_extension$|BS$|_illegal$|_anyChar$|_escapedCh$|EOF$|_repeater$|_escape$|_character$|_grpItem$|_number$|_nibble$)')
+    disposable__ = re.compile('(?:_character$|_item$|_grpItem$|BS$|_extension$|_number$|_escape$|_repeater$|_octal$|_nibble$|_escapedCh$|_special$|_illegal$|EOF$|_entity$|_anyChar$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
-    COMMENT__ = r'#.*'
-    comment_rx__ = re.compile(COMMENT__)
-    WHITESPACE__ = r'\s*'
+    COMMENT__ = r''
+    comment_rx__ = RX_NEVER_MATCH
+    WHITESPACE__ = r'\s*(?:#.*(?=\n|$))?\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
@@ -128,10 +128,10 @@ class reGrammar(Grammar):
     bs = RegExp('\\\\')
     BS = Drop(Synonym(bs))
     _anyChar = RegExp('[^|+*?]')
-    charSeq = OneOrMore(Series(NegativeLookahead(_entity), _anyChar))
+    charSeq = OneOrMore(Series(NegativeLookahead(_entity), _anyChar, dwsp__))
     _character = RegExp('[^)|+*?]')
-    characters = OneOrMore(Series(NegativeLookahead(_entity), _character))
-    _grpItem = Alternative(_entity, characters)
+    characters = OneOrMore(Series(NegativeLookahead(_entity), _character, dwsp__))
+    _grpItem = Series(Alternative(_entity, characters), dwsp__)
     zeroOrOne = Text("?")
     zeroOrMore = Text("*")
     _number = RegExp('[0-9]+')
@@ -145,14 +145,15 @@ class reGrammar(Grammar):
     flags = Series(RegExp('[aiLmsux]+'), Option(Series(Drop(Text("-")), RegExp('[imsx]+'))))
     range = Series(Drop(Text("{")), min, Option(Series(Drop(Text(",")), max)), Drop(Text("}")))
     _repeater = Alternative(zeroOrOne, zeroOrMore, oneOrMore, range)
-    _illegal = RegExp('[a-zA-Z]')
+    ch = Series(NegativeLookahead(Drop(Text("]"))), Option(BS), _anyChar)
     chSpecial = RegExp('[abfnrtv]')
     _nibble = RegExp('[0-9a-fA-F]')
     escapedSet = Series(BS, RegExp('[dDsSwW]'))
     hex2 = Counted(_nibble, repetitions=(2, 2))
+    complement = Text("^")
     hex8 = Counted(_nibble, repetitions=(8, 8))
+    _illegal = RegExp('[a-zA-Z]')
     error = Series(Lookahead(_illegal), Custom(ERR("Unknown escape sequence")), _illegal)
-    ch = Alternative(Series(BS, error), Series(NegativeLookahead(Drop(Text("]"))), Option(BS), _anyChar))
     backRef = Series(Drop(Text("P=")), groupName, mandatory=1)
     groupId = RegExp('\\d\\d?')
     escCh = Alternative(_anyChar, RegExp('[)|+*?]'))
@@ -163,7 +164,7 @@ class reGrammar(Grammar):
     chCode = Alternative(Series(Drop(Text("x")), hex2), Series(Drop(Text("u")), hex4), Series(Drop(Text("U")), hex8), oct)
     _escapedCh = Series(BS, Alternative(chCode, chSpecial))
     chRange = Series(Alternative(_escapedCh, ch), Drop(Text("-")), Alternative(_escapedCh, ch))
-    charset = Series(Drop(Text("[")), OneOrMore(Alternative(chRange, escapedSet, _escapedCh, ch)), Drop(Text("]")))
+    charset = Series(Drop(Text("[")), Option(complement), OneOrMore(Alternative(chRange, escapedSet, _escapedCh, Series(BS, error), ch)), Drop(Text("]")))
     specialEsc = RegExp('[abdDfnrsStvwW]')
     reEsc = RegExp('[AbBZ]')
     _escape = Series(BS, Alternative(reEsc, bs, specialEsc, chCode, chName, groupId, error, escCh))
@@ -172,23 +173,23 @@ class reGrammar(Grammar):
     any = Text(".")
     _special = Alternative(any, start, end)
     noBacktracking = Text("+")
-    grpRepetition = Series(_grpItem, _repeater, Option(Alternative(notGreedy, noBacktracking)))
+    grpRepetition = Series(_grpItem, _repeater, Option(Alternative(notGreedy, noBacktracking)), dwsp__)
     grpPattern = ZeroOrMore(Alternative(grpRepetition, _grpItem))
-    grpRegex = Series(grpPattern, ZeroOrMore(Series(Drop(Text("|")), grpPattern)))
+    grpRegex = Series(dwsp__, grpPattern, ZeroOrMore(Series(Drop(Text("|")), dwsp__, grpPattern)))
     lookaround = Series(lrtype, grpRegex, mandatory=1)
     namedGroup = Series(Drop(Text("P<")), groupName, Drop(Text(">")), grpRegex, mandatory=1)
     subRegex = Series(Drop(Text(">")), grpRegex, mandatory=1)
     nonCapturing = Series(Option(flags), Drop(Text(":")), grpRegex, mandatory=2)
     bifurcation = Series(Drop(Text("(")), Alternative(groupId, groupName), Drop(Text(")")), pattern, Drop(Text("|")), grpPattern, mandatory=1)
     _extension = Series(Drop(Text("?")), Alternative(nonCapturing, subRegex, namedGroup, backRef, comment, lookaround, bifurcation), mandatory=1)
-    repetition = Series(_item, _repeater, Option(Alternative(notGreedy, noBacktracking)))
+    repetition = Series(_item, _repeater, Option(Alternative(notGreedy, noBacktracking)), dwsp__)
     group = Series(Drop(Text("(")), Alternative(_extension, grpRegex), Drop(Text(")")), mandatory=1)
     flagGroups = OneOrMore(Series(Drop(Text("(?")), flags, Drop(Text(")")), mandatory=2))
-    regex = Series(pattern, ZeroOrMore(Series(Drop(Text("|")), pattern)))
+    regex = Series(dwsp__, pattern, ZeroOrMore(Series(Drop(Text("|")), dwsp__, pattern)))
     _entity.set(Alternative(_special, _escape, charset, group))
-    _item.set(Alternative(_entity, charSeq))
+    _item.set(Series(Alternative(_entity, charSeq), dwsp__))
     pattern.set(ZeroOrMore(Alternative(repetition, _item)))
-    regular_expression = Series(Option(flagGroups), Alternative(regex, Drop(Text(")"))), EOF)
+    regular_expression = Series(dwsp__, Option(flagGroups), Alternative(regex, Drop(Text(")"))), EOF)
     root__ = regular_expression
     
 parsing: PseudoJunction = create_parser_junction(reGrammar)
@@ -200,6 +201,11 @@ get_grammar = parsing.factory # for backwards compatibility, only
 # AST SECTION - Can be edited. Changes will be preserved.
 #
 #######################################################################
+
+
+# def contains_linefeed(path: Path) -> bool:
+#     return path[-1].content.find('\n') >= 0
+
 
 re_AST_transformation_table = {
     # AST Transformations for the re-grammar
