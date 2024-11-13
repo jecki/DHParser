@@ -132,3 +132,5 @@ _anyChar   = /[^|+*?]/
 BS  = bs
 bs  = /\\/   # a single backslash
 EOF = !/./
+
+VERBOSE_WHITESPACE = /\s*(?:#.*(?=\n|$))?\s*/  # whitespace (including comments) in verbose mode

@@ -2467,7 +2467,7 @@ def tree_sanity_check(tree: Node) -> bool:
 ## RootNode - manage global properties of trees, like error messages ##
 
 
-EMPTY_SET_SENTINEL = frozenset()  # needed by RootNode.as_xml()
+EMPTY_SET_SENTINEL = {""}  # needed by RootNode.as_xml()
 
 
 def default_divisible() -> AbstractSet[str]:

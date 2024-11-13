@@ -38,7 +38,7 @@ import copy
 from functools import lru_cache
 from typing import Callable, cast, Collection, DefaultDict, Sequence, Union, Optional, Iterator
 
-from DHParser.configuration import get_config_value
+from DHParser.configuration import get_config_value, NEVER_MATCH_PATTERN
 from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
     UNDEFINED_RETRIEVE, PARSER_LOOKAHEAD_FAILURE_ONLY, CUSTOM_PARSER_FAILURE, \
     PARSER_LOOKAHEAD_MATCH_ONLY, PARSER_STOPPED_BEFORE_END, PARSER_NEVER_TOUCHES_DOCUMENT, \
@@ -1201,7 +1201,7 @@ def mixin_comment(whitespace: str, comment: str, always_match: bool = True) -> s
     else:
         whitespace = '(?:' + whitespace + (')?' if always_match else ')')
 
-    if comment:
+    if comment and comment != NEVER_MATCH_PATTERN:
         comment = '(?:' + comment + ')'
         return '(?:' + whitespace + '(?:' + comment + whitespace + ')*)'
     return whitespace

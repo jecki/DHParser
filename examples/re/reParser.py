@@ -113,9 +113,9 @@ class reGrammar(Grammar):
     _entity = Forward()
     _item = Forward()
     pattern = Forward()
-    source_hash__ = "ee3fe953d536673f9d58266ad950b396"
+    source_hash__ = "5aa52e4ffbb4ed1a03bc0c12f2ea3005"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:_character$|_illegal$|_escapedCh$|_grpItem$|EOF$|_number$|_entity$|_item$|_repeater$|BS$|_special$|_anyChar$|_extension$|_octal$|_nibble$|_escape$)')
+    disposable__ = re.compile('(?:_anyChar$|_grpItem$|_item$|_escape$|_nibble$|_number$|BS$|_illegal$|_escapedCh$|_octal$|_entity$|EOF$|_character$|_extension$|_special$|_repeater$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -124,6 +124,7 @@ class reGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
+    VERBOSE_WHITESPACE = RegExp('\\s*(?:#.*(?=\\n|$))?\\s*')
     EOF = Drop(NegativeLookahead(RegExp('.')))
     bs = RegExp('\\\\')
     BS = Drop(Synonym(bs))
