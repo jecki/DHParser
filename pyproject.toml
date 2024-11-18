@@ -62,7 +62,7 @@ packages = [
 [tool.poetry.dependencies]
 python = "^3.7"
 regex = { version = "*", optional = true }
-# cython = { version = "^0.30", optional = true }
+# cython = { version = "^3.0", optional = true }
 
 
 [tool.poetry.dev-dependencies]
