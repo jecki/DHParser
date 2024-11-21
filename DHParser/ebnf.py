@@ -1613,11 +1613,12 @@ class EBNFCompiler(Compiler):
         if self.directives.comment:
             symbols.add('comment__')
         messages = []
-        for entry in table_entries:
-            if entry not in symbols and not entry[:1] == ":":
-                messages.append(Error(('Symbol "%s" is not defined in grammar %s but appears in '
-                                       'the transformation table!') % (entry, self.grammar_name),
-                                      0, UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING))
+        # # commented out, because warning is confusing for beginners
+        # for entry in table_entries:
+        #     if entry not in symbols and not entry[:1] == ":":
+        #         messages.append(Error(('Symbol "%s" is not defined in grammar %s but appears in '
+        #                                'the transformation table!') % (entry, self.grammar_name),
+        #                               0, UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING))
         return messages
 
     # def verify_compiler(self, compiler):

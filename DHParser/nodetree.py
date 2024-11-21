@@ -4667,7 +4667,7 @@ class ContentMapping:
         :param index_out: the index of the path in the content mapping's path-list
             will be appended to index_out (optional parameter!)
 
-        :returns:   tuple (path, offset, path_index) where the offset is the position
+        :returns:   tuple (path, offset) where the offset is the position
             of ``pos`` relative to the actual position of the last node in the path.
         :raises:    IndexError if not 0 <= position < length of document
         """
