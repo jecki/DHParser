@@ -7,7 +7,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+    https://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -68,7 +68,7 @@ __url__ = 'https://gitlab.lrz.de/badw-it/DHParser'
 __uri__ = __url__
 __author__ = "Eckhart Arnold"
 __email__ = "eckhart.arnold@posteo.de"
-__license__ = "http://www.apache.org/licenses/LICENSE-2.0"
+__license__ = "https://www.apache.org/licenses/LICENSE-2.0"
 __copyright__ = "Copyright (c) 2016-2021 Eckhart Arnold"
 # __all__ = ['toolkit', 'stringview', 'error', 'nodetree', 'preprocess', 'parse',
 # 'transform', 'ebnf', 'dsl', 'testing', 'versionnumber', 'configuration']
