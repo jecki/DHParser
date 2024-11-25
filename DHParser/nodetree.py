@@ -159,6 +159,7 @@ __all__ = ('WHITESPACE_PTYPE',
            'has_class',
            'add_class',
            'remove_class',
+           'path_names',
            'path_str',
            'match_path_str',
            'pred_siblings',
@@ -3374,6 +3375,9 @@ remove_class = functools.partial(remove_token_from_attr, attribute='class')
 
 # path strings ########################################################
 
+def path_names(path: Path) -> Iterator[str]:
+    return (nd.name for nd in path)
+
 ### EXPERIMENTAL
 
 def path_str(path: Path) -> str:
@@ -4561,6 +4565,7 @@ class ContentMapping:
         self.content: str = content
         self._pos_list: List[int] = pos_list
         self._path_list: List[Path] = path_list
+        self._path_str_cache: Dict[int, str] = dict()
 
     def _generate_mapping(self, origin, stump: Path = []) \
             -> Tuple[str, List[int], List[Path]]:
@@ -4613,6 +4618,18 @@ class ContentMapping:
     @property
     def pos_list(self) -> List[int]:
         return self._pos_list
+
+    def path(self, path_index: int) -> Path:
+        return self._path_list[path_index]
+
+    def pos(self, path_index: int) -> int:
+        return self._pos_list[path_index]
+
+    def path_str(self, path_index: int) -> str:
+        return self._path_str_cache.setdefault(path_index, path_str(self._path_list[path_index]))
+
+    def path_names(self, path_index: int) -> Iterator[str]:
+        return (nd.name for nd in self._path_list[path_index])
 
     @cython.locals(path_index=cython.int, last=cython.int)
     def get_path_index(self, pos: cython.int, left_biased: bool = False) -> int:
@@ -4849,9 +4866,9 @@ class ContentMapping:
     @cython.locals(i=cython.int, start_pos=cython.int, end_pos=cython.int, offset=cython.int)
     def rebuild_mapping_slice(self, first_index: cython.int, last_index: cython.int):
         """Reconstructs a particular section of the context mapping after the
-        underlying tree has been restructured. Ohter than
+        underlying tree has been restructured. Other than
         :py:meth:`ContentMappin.rebuild_mapping`, the section that needs repairing
-        if here defined by the path indices and not the string positions.
+        is defined by the path indices and not the string positions.
 
         :param first_index: The index (not the position within the string-content!)
             of the first path that has been affected by restruturing of the tree.
@@ -4965,6 +4982,9 @@ class ContentMapping:
         self._path_list.extend(path_head)
         self._path_list.extend(paths)
         self._path_list.extend(path_tail)
+
+        self._path_str_cache = dict()  # clear path-string-cache
+
 
     def rebuild_mapping(self, start_pos: int, end_pos: int):
         """Reconstructs a particular section of the context mapping after the
