@@ -55,6 +55,7 @@ docs/*
 *.py.cfg
 examples/LaTeX/testdata/*.xml
 venv/*
+.venv/*
 *.sxpr
 **/htmldocs/
 experimental
