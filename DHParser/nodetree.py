@@ -122,6 +122,7 @@ __all__ = ('WHITESPACE_PTYPE',
            'CHAR_REF_PTYPE',
            'ENTITY_REF_PTYPE',
            'LEAF_PTYPES',
+           'DIVISIBLES',
            'HTML_EMPTY_TAGS',
            'ZOMBIE_TAG',
            'PLACEHOLDER',
@@ -233,6 +234,8 @@ CHAR_REF_PTYPE = ':CharRef'
 ENTITY_REF_PTYPE = ':EntityRef'
 LEAF_PTYPES = frozenset({WHITESPACE_PTYPE, TOKEN_PTYPE, MIXED_CONTENT_TEXT_PTYPE,
                          REGEXP_PTYPE, EMPTY_PTYPE, CHAR_REF_PTYPE, ENTITY_REF_PTYPE})
+DIVISIBLES = frozenset({WHITESPACE_PTYPE, TOKEN_PTYPE, MIXED_CONTENT_TEXT_PTYPE,
+                        REGEXP_PTYPE, EMPTY_PTYPE})
 
 HTML_EMPTY_TAGS = frozenset(
     {'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
@@ -2471,10 +2474,6 @@ def tree_sanity_check(tree: Node) -> bool:
 EMPTY_SET_SENTINEL = {""}  # needed by RootNode.as_xml()
 
 
-def default_divisible() -> AbstractSet[str]:
-    return LEAF_PTYPES
-
-
 class RootNode(Node):
     """The root node for the node-tree is a special kind of node that keeps
     and manages global properties of the tree as a whole. These are first and
@@ -3846,7 +3845,7 @@ def path_sanity_check(path: Path) -> bool:
 #######################################################################
 
 def insert_node(leaf_path: Path, rel_pos: int, node: Node,
-                divisible_leaves: Container = LEAF_PTYPES) -> Node:
+                divisible_leaves: Container = DIVISIBLES) -> Node:
     """Inserts a node at a specific position into the last or
     eventually second but last node in the path. The path must be
     a "leaf"-path, i.e. a path that ends in a leaf. Returns the
@@ -4125,7 +4124,7 @@ def deep_split(path: Path, i: cython.int, left_biased: bool=True,
 def can_split(t: Path, i: cython.int, left_biased: bool = True, greedy: bool = True,
               match_func: PathMatchFunction = ANY_PATH,
               skip_func: PathMatchFunction = NO_PATH,
-              divisible: Container[str] = LEAF_PTYPES) -> int:
+              divisible: Container[str] = DIVISIBLES) -> int:
     """Returns the negative index of the first node in the path, from which
     on all nodes can be split or do not need to be split, because the
     split-index lies to the left or right of the node.
@@ -4210,7 +4209,7 @@ def markup_right(path: Path, i: cython.int, name: str, attr_dict: Dict[str, Any]
                  greedy: bool = True,
                  match_func: PathMatchFunction = ANY_PATH,
                  skip_func: PathMatchFunction = NO_PATH,
-                 divisible: Container[str] = LEAF_PTYPES,
+                 divisible: Container[str] = DIVISIBLES,
                  chain_attr_name: str = ''):
     """Markup the content from string position i within the last node of
     the path up to the very end of the content of the first node of the
@@ -4316,7 +4315,7 @@ def markup_left(path: Path, i: cython.int, name: str, attr_dict: Dict[str, Any],
                 greedy: bool = True,
                 match_func: PathMatchFunction = ANY_PATH,
                 skip_func: PathMatchFunction = NO_PATH,
-                divisible: Container[str] = LEAF_PTYPES,
+                divisible: Container[str] = DIVISIBLES,
                 chain_attr_name: str = ''):
     """Markup the content from string position i within the last node of
     the path up to the very end of the content of the first node of the
@@ -4536,7 +4535,7 @@ class ContentMapping:
                  select: PathSelector = LEAF_PATH,
                  ignore: PathSelector = NO_PATH,
                  greedy: bool = True,
-                 divisibility: Union[Dict[str, Container], Container, str] = LEAF_PTYPES,
+                 divisibility: Union[Dict[str, Container], Container, str] = DIVISIBLES,
                  chain_attr_name: str = '',
                  auto_cleanup: bool = True):
         self.origin: Node = origin
@@ -5138,13 +5137,13 @@ class ContentMapping:
         if not common_ancestor._children:
             attr_dict.pop(self.chain_attr_name, None)
             markup_leaf(common_ancestor, pos_A, pos_B, name, attr_dict)
-            if (not self.greedy or common_ancestor.name[0:1] == ":") and i != 0 \
-                    and (common_ancestor.name in divisible or common_ancestor.anonymous):
+            if ((not self.greedy or common_ancestor.name[0:1] == ":") and i != 0
+                     and (common_ancestor.name in divisible or common_ancestor.anonymous)):
                 for child in common_ancestor.children:
                     if child.name == TOKEN_PTYPE:
                         child.name = common_ancestor.name
                         child.with_attr(common_ancestor.attr)
-                    else:
+                    elif not common_ancestor.anonymous:
                         assert child.name == name
                         assert not child._children
                         child.result = Node(common_ancestor.name, child.result).with_attr(common_ancestor.attr)
@@ -5229,7 +5228,7 @@ class LocalContentMapping(ContentMapping):
                  select: PathSelector = LEAF_PATH,
                  ignore: PathSelector = NO_PATH,
                  greedy: bool = True,
-                 divisibility: Union[Dict[str, Container], Container, str] = LEAF_PTYPES,
+                 divisibility: Union[Dict[str, Container], Container, str] = DIVISIBLES,
                  chain_attr_name: str = '',
                  auto_cleanup: bool = True):
         ancestor, index = find_common_ancestor(start_path, end_path)

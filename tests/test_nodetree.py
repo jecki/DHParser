@@ -34,7 +34,7 @@ from DHParser.nodetree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxp
     prev_path, pick_from_path, pp_path, ContentMapping, leaf_paths, NO_PATH, \
     select_path_if, select_path, create_path_match_function, pick_path, \
     LEAF_PATH, TOKEN_PTYPE, insert_node, content_of, strlen_of, gen_chain_ID, \
-    parse_sxml, LEAF_PTYPES
+    parse_sxml, LEAF_PTYPES, DIVISIBLES
 from DHParser.pipeline import create_parser_junction, Junction, PseudoJunction
 from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.transform import traverse, reduce_single_child, remove_brackets, \
@@ -1493,33 +1493,45 @@ class TestMarkupInsertion:
         tree = parse_sxpr('''(p (b "I") (:Text " ") (i "gener.:") (:Text "[MFSP]") (b "A"))''')
 
         t = copy.deepcopy(tree)
-        cm = ContentMapping(t, divisibility=LEAF_PTYPES | {'i', 'span'})
+        cm = ContentMapping(t, divisibility=DIVISIBLES | {'i', 'span'})
         cm.greedy = True
         cm.markup(2, 8, "Klassifikation")
         assert t.as_sxpr() == \
             '(p (b "I") (:Text " ") (i (Klassifikation "gener.") (:Text ":")) ' \
             '(:Text "[MFSP]") (b "A"))'
         t = copy.deepcopy(tree)
-        cm = cm = ContentMapping(t, divisibility=LEAF_PTYPES)
+        cm = cm = ContentMapping(t, divisibility=DIVISIBLES)
         cm.markup(2, 8, "Klassifikation")
         assert t.as_sxpr() == \
             '(p (b "I") (:Text " ") (i (Klassifikation "gener.") (:Text ":")) ' \
             '(:Text "[MFSP]") (b "A"))'
 
         t = copy.deepcopy(tree)
-        cm = ContentMapping(t, divisibility=LEAF_PTYPES | {'i', 'span'})
+        cm = ContentMapping(t, divisibility=DIVISIBLES | {'i', 'span'})
         cm.greedy = False
         cm.markup(2, 8, "Klassifikation")
         assert t.as_sxpr() == \
                '(p (b "I") (:Text " ") (Klassifikation (i "gener.")) ' \
                '(i ":") (:Text "[MFSP]") (b "A"))'
         t = copy.deepcopy(tree)
-        cm = cm = ContentMapping(t, divisibility=LEAF_PTYPES)
+        cm = cm = ContentMapping(t, divisibility=DIVISIBLES)
         cm.markup(2, 8, "Klassifikation")
         assert t.as_sxpr() == \
                '(p (b "I") (:Text " ") (i (Klassifikation "gener.") ' \
                '(:Text ":")) (:Text "[MFSP]") (b "A"))'
 
+    def test_markup_10(self):
+        tree = parse_sxpr('(p `(class "MsoNormal") `(style "text-indent:6.5pt;line-height:normal")'
+                          '(i "deceptio, dolus, fallacia, insidiae, calumnia – Täuschung, (Be‑)Trug,'
+                          '(Hinter‑)List, Tücke, Arg(list):"))''')
+        t = copy.deepcopy(tree)
+        cm = ContentMapping(t)
+        print()
+        print(t.as_sxpr()); print()
+        cm.markup(48, 100, "Deutsch")
+        print(t.as_sxpr()); print()
+        cm.markup(0, 45, "Lateinisch")
+        print(t.as_sxpr()); print()
 
 
 if __name__ == "__main__":
