@@ -1,3 +1,13 @@
+DHParser Version 1.8.2
+......................
+
+- bugfixes for xast and nast-serializations
+- removed warnings about unused symbols in the AST-table to avoid,
+  because it is too confusing for newcomers.
+- updates to nodetree.ContentMapping: methods path(), pos() and path_str()
+  added; markup() now avoids the generation of single anynomous leaves.
+
+
 DHParser Version 1.8.1 (19.10.2024)
 ...................................
 

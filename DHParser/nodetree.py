@@ -1837,7 +1837,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 which otherwise is not supported by the Node object, because it
                 requires its content to be either a tuple of children or string content.
         :param empty_tags: A set of tags which shall be rendered as empty elements, e.g.
-                "<empty/>" instead of "<empty><empty>".
+                "<empty/>" instead of "<empty></empty>".
         :param strict_mode: If True, violation of stylistic or interoperability rules
                 raises a ValueError.
         :returns: The XML-string representing the tree originating in `self`
@@ -4473,6 +4473,7 @@ def leaf_paths(criterion: PathSelector) -> PathMatchFunction:
 DEFAULT_START_INDEX_SENTINEL = -2 ** 30
 
 class ContentMapping:
+
     """
     ContentMapping represents a path-mapping of the string-content of all or a
     specific selection of the leave-nodes of a tree. A content-mapping is an ordered
