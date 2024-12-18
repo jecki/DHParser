@@ -4506,7 +4506,7 @@ class ContentMapping:
         select-criterion must only accept leaf-paths. Otherwise, a ValueError will
         be raised.
     :ivar ignore_func: The ignore function derives from the ignore-parameter of
-        the ``__init__()``-construcotr of class ContentMapping.
+        the ``__init__()``-constructor of class ContentMapping.
     :ivar content: The string content of the selected parts of the tree.
 
     Markup-related instance variables:
