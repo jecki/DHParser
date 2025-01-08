@@ -203,6 +203,14 @@ get_grammar = parsing.factory # for backwards compatibility, only
 #
 #######################################################################
 
+# TODO: Rewrite non-greedy:
+# item* tail -> (!tail item)* tail
+# item+ tail -> item (!tail item)* tail
+# TODO: Rewrite greedy:
+# item* tail -> ((!tail item)* tail)*
+# item+ tail -> item ((!tail item)* tail)*
+# noBacktracking is default with PEGs, no rewriting necessary!
+
 
 # def contains_linefeed(path: Path) -> bool:
 #     return path[-1].content.find('\n') >= 0
@@ -216,6 +224,7 @@ re_AST_transformation_table = {
     "regular_expression": [],
     "regex, grpRegex": [change_name('regex'), replace_by_single_child],
     "pattern, grpPattern": [change_name('pattern'), merge_adjacent(is_one_of('characters')), replace_by_single_child],
+    "grpRepetition": [change_name('repetition')],
     "hex2, hex4, hex8": [change_name('hex')],
     "escCh, charSeq, bs": [change_name('characters')],
 }
