@@ -499,6 +499,8 @@ ChildrenType: TypeAlias = Tuple['Node', ...]
 StrictResultType: TypeAlias = Union[ChildrenType, StringView, str]
 ResultType: TypeAlias = Union[StrictResultType, 'Node']
 
+NO_MAPPING_SENTINEL = {"dont return": "a position mapping for the serialization"}
+
 
 class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibility
     """
@@ -1637,7 +1639,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     @cython.locals(i=cython.int, k=cython.int, N=cython.int)
     def _tree_repr(self, tab, open_fn, close_fn, data_fn=lambda i: i,
                    density=0, inline=False, inline_fn=lambda node: False,
-                   allow_omissions=False) -> List[str]:
+                   allow_omissions=False,
+                   mapping = NO_MAPPING_SENTINEL) -> List[str]:
         """
         Generates a tree representation of this node and its children
         in string from.
@@ -1660,16 +1663,25 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         head = open_fn(self)
         tail = close_fn(self)
 
+        def update_mapping(content):
+            lh, lt = len(head), len(tail)
+            if len(content) == 0:
+                mapping[self] = (lh, 0, lt)
+            if len(content) == 1:
+                mapping[self] = (lh, len(content[0]) - lh - lt, lt)
+            else:
+                mapping[self] = [lh, [len(line) for line in content], lt]
+
         if not self.result:
+            if mapping is not NO_MAPPING_SENTINEL:  update_mapping([])
             return [head + tail]
 
         inline = inline or inline_fn(self)
         if inline:
-            usetab, sep = '', ''
+            usetab = ''
             hlf, tlf = '', ''
         else:
             usetab = tab if head else ''    # no indentation if tag is already omitted
-            sep = '\n'
             hlf = '\n'
             tlf = '\n' if density == 0 or (tail[0:1] == '<') else ''
 
@@ -1677,13 +1689,15 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             content = [head]
             for child in self._children:
                 subtree = child._tree_repr(tab, open_fn, close_fn, data_fn,
-                                           density, inline, inline_fn, allow_omissions)
+                                           density, inline, inline_fn, allow_omissions, mapping)
                 if subtree:
                     if inline:
                         content.append('\n'.join(subtree))
-                    else:
+                    elif usetab:
                         for item in subtree:
                             content.append(usetab + item)
+                    else:
+                        content.extend(subtree)
             if inline:
                 content.append(tail)
                 content = [''.join(content)]
@@ -1691,6 +1705,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 content.append(tail)
             else:
                 content[-1] += tail
+            if mapping is not NO_MAPPING_SENTINEL: update_mapping(content)
             return content
 
         res = self.content
@@ -1703,7 +1718,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     and (head[-1:] != '>' and head != '<!--'):
                 gap = ' '
             else:  gap = ''
-            return [''.join((head, gap, data_fn(res), tail))]
+            content = [''.join((head, gap, data_fn(res), tail))]
         else:
             lines = [data_fn(s) for s in res.split('\n')]
             N = len(lines)
@@ -1724,13 +1739,30 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 content.append(tail)
             else:
                 content[-1] += tail
-            return content
+        if mapping is not NO_MAPPING_SENTINEL:  update_mapping(content)
+        return content
+
+    def _finalize_mapping(self, mapping, indentation: int):
+        def update_children(children: Tuple[Node], indent: int):
+            for child in children:
+                if isinstance(mapping[child], list):
+                    content = mapping[child][1]
+                    for i in range(len(content)):
+                        content[i] += indent
+                    mapping[child][1] = sum(content) + len(content) - 1
+                    mapping[child] = tuple(mapping[child])
+                update_children(child.children, indent + indentation)
+        if self.children:
+            update_children(self.children, indentation)
+            mapping[self][1] = sum(mapping[self][1]) + len(mapping[self][1]) - 1
+            mapping[self] = tuple(mapping[self])
 
     def as_sxpr(self, src: Optional[str] = None,
                 indentation: int = 2,
                 compact: bool = True,
                 flatten_threshold: int = 92,
-                sxml: int = 0) -> str:
+                sxml: int = 0,
+                mapping = NO_MAPPING_SENTINEL) -> str:
         """
         Serializes the tree as S-expression, i.e. in lisp-like form. If this
         method is called on a RootNode-object, error strings will be displayed
@@ -1803,24 +1835,30 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 else '"%s"' % strg.replace('"', r'\"')
 
         assert 0 <= sxml <= 2
-        sxpr = '\n'.join(self._tree_repr(' ' * indentation, opening, closing, pretty, density=density))
+        sxpr = '\n'.join(self._tree_repr(' ' * indentation, opening, closing, pretty,
+                                         density=density, mapping=mapping))
+        if mapping is not NO_MAPPING_SENTINEL:
+            self._finalize_mapping(mapping, indentation)
         return flatten_sxpr(sxpr, flatten_threshold)
 
     def as_sxml(self, src: Optional[str] = None,
                 indentation: int = 2,
                 compact: bool = True,
                 flatten_threshold: int = 92,
-                normal_form: int = 1) -> str:
+                normal_form: int = 1,
+                mapping = NO_MAPPING_SENTINEL) -> str:
         """Serializes the tree as `SXML <https://okmij.org/ftp/Scheme/SXML.html>`_"""
         assert 1 <= normal_form <= 2, "Presently, only sxml normal forms 1 and 2 are supported"
-        return self.as_sxpr(src, indentation, compact, flatten_threshold, sxml=normal_form)
+        return self.as_sxpr(src, indentation, compact, flatten_threshold, sxml=normal_form,
+                            mapping=mapping)
 
     def as_xml(self, src: Optional[str] = None,
                indentation: int = 2,
                inline_tags: AbstractSet[str] = frozenset(),
                string_tags: AbstractSet[str] = LEAF_PTYPES,
                empty_tags: AbstractSet[str] = frozenset(),
-               strict_mode: bool = True) -> str:
+               strict_mode: bool = True,
+               mapping = NO_MAPPING_SENTINEL) -> str:
         """Serializes the tree of nodes as XML.
 
         :param src: The source text or `None`. In case the source text is
@@ -1919,9 +1957,12 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     # or (node.name in string_tags and not node.children)
 
         line_breaks = linebreaks(src) if src else []
-        return '\n'.join(self._tree_repr(
+        xml = '\n'.join(self._tree_repr(
             ' ' * indentation, opening, closing, sanitizer, density=1, inline_fn=inlining,
-            allow_omissions=bool(string_tags)))
+            allow_omissions=bool(string_tags), mapping=mapping))
+        if mapping is not NO_MAPPING_SENTINEL:
+            self._finalize_mapping(mapping, indentation)
+        return xml
 
     def as_html(self, css: str='', head: str='', lang: str='en', **kwargs) -> str:
         """Serialize as HTML-page. See :py:meth:`Node.as_xml` for the further
@@ -2830,13 +2871,14 @@ class RootNode(Node):
                inline_tags: AbstractSet[str] = EMPTY_SET_SENTINEL,
                string_tags: AbstractSet[str] = EMPTY_SET_SENTINEL,
                empty_tags: AbstractSet[str] = EMPTY_SET_SENTINEL,
-               strict_mode: bool=True) -> str:
+               strict_mode: bool=True,
+               mapping = NO_MAPPING_SENTINEL) -> str:
         return super().as_xml(
             src, indentation,
             inline_tags=self.inline_tags if inline_tags is EMPTY_SET_SENTINEL else inline_tags,
             string_tags=self.string_tags if string_tags is EMPTY_SET_SENTINEL else string_tags,
             empty_tags=self.empty_tags if empty_tags is EMPTY_SET_SENTINEL else empty_tags,
-            strict_mode=strict_mode)
+            strict_mode=strict_mode, mapping=mapping)
 
     def serialize(self, how: str = '') -> str:
         if not how:

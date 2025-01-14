@@ -889,43 +889,7 @@ JSONTransformation: Junction = Junction(
     'CST', ThreadLocalSingletonFactory(JSONTransformer), 'AST')
 
 
-JSONGrammar = r"""
-        @literalws  = right
-        @drop       = whitespace, strings
-        @hide       = /_\w+/
-
-        json        = ~ _element _EOF
-        _element    = object | array | string | number | _bool | null
-        object      = "{" member { "," §member } §"}"
-        member      = string §":" _element
-        array       = "[" [ _element { "," _element } ] §"]"
-        string      = `"` §_CHARACTERS `"` ~
-        number      = INT [ FRAC ] [ EXP ] ~
-        _bool       = true | false
-        true        = `true` ~
-        false       = `false` ~
-        null        = "null"
-
-        _CHARACTERS = { PLAIN | ESCAPE }
-        PLAIN       = /[^"\\]+/
-        ESCAPE      = /\\[\/bnrt\\]/ | UNICODE
-        UNICODE     = "\u" HEX HEX
-        HEX         = /[0-9a-fA-F][0-9a-fA-F]/
-
-        INT         = [`-`] ( /[1-9][0-9]+/ | /[0-9]/ )
-        FRAC        = `.` /[0-9]+/
-        EXP         = (`E`|`e`) [`+`|`-`] /[0-9]+/
-
-        _EOF        =  !/./"""
-
-JSON_CST = parse_ebnf(JSONGrammar)
-
 class TestSerialization:
-    def test_as_sxpr(self):
-        for i in range(5_000):
-            s = JSON_CST.as_xml()
-
-
     def test_sxpr_roundtrip(self):
         sxpr = ('(BelegText (Anker "interdico_1") (BelegLemma "inter.|ticente") (TEXT ", (") '
                 '(Anker "interdico_2") (BelegLemma "inter.|titente") (L " ") (Zusatz "var. l.") '
@@ -1556,19 +1520,43 @@ class TestMarkupInsertion:
                '(p (b "I") (:Text " ") (i (Klassifikation "gener.") ' \
                '(:Text ":")) (:Text "[MFSP]") (b "A"))'
 
-    def test_markup_10(self):
-        tree = parse_sxpr('(p `(class "MsoNormal") `(style "text-indent:6.5pt;line-height:normal")'
-                          '(i "deceptio, dolus, fallacia, insidiae, calumnia – Täuschung, (Be‑)Trug,'
-                          '(Hinter‑)List, Tücke, Arg(list):"))''')
-        t = copy.deepcopy(tree)
-        cm = ContentMapping(t)
-        print()
-        print(t.as_sxpr()); print()
-        cm.markup(48, 100, "Deutsch")
-        print(t.as_sxpr()); print()
-        cm.markup(0, 45, "Lateinisch")
-        print(t.as_sxpr()); print()
+    # def test_markup_10(self):
+    #     tree = parse_sxpr('(p `(class "MsoNormal") `(style "text-indent:6.5pt;line-height:normal")'
+    #                       '(i "deceptio, dolus, fallacia, insidiae, calumnia – Täuschung, (Be‑)Trug,'
+    #                       '(Hinter‑)List, Tücke, Arg(list):"))''')
+    #     t = copy.deepcopy(tree)
+    #     cm = ContentMapping(t)
+    #     print()
+    #     print(t.as_sxpr()); print()
+    #     cm.markup(48, 100, "Deutsch")
+    #     print(t.as_sxpr()); print()
+    #     cm.markup(0, 45, "Lateinisch")
+    #     print(t.as_sxpr()); print()
 
+class TestMapping:
+    def test_mapping1(self):
+        s = """(BedeutungsPosition `(unterbedeutungstiefe "0")
+                 (Bedeutung
+                   (Beleg
+                     (Quellenangabe (Quelle (Autor "LIUTPR.") (L " ") (Werk "leg.")) (L " ")
+                       (BelegStelle (Stellenangabe (Stelle "21")) (L " ")
+                         (BelegText (TEXT "...")))))))"""
+        tree = parse_sxpr(s)
+        mapping = {}
+        sxpr = tree.as_sxpr(mapping=mapping)
+        print(sxpr)
+        for k, v in mapping.items():
+            print(k.name, v)
+        print(len(sxpr))
+        assert len(sxpr) == mapping[tree][1]
+
+        mapping = {}
+        xml = tree.as_xml(mapping=mapping)
+        print(xml)
+        for k, v in mapping.items():
+            print(k.name, v)
+        print(len(xml))
+        assert len(xml) == mapping[tree][1]
 
 if __name__ == "__main__":
     from DHParser.testing import runner
