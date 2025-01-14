@@ -1747,14 +1747,13 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             for child in children:
                 if isinstance(mapping[child], list):
                     content = mapping[child][1]
-                    for i in range(len(content)):
-                        content[i] += indent
-                    mapping[child][1] = sum(content) + len(content) - 1
+                    mapping[child][1] = sum(content) + (len(content) - 1) * (indent + 1)
                     mapping[child] = tuple(mapping[child])
                 update_children(child.children, indent + indentation)
         if self.children:
             update_children(self.children, indentation)
-            mapping[self][1] = sum(mapping[self][1]) + len(mapping[self][1]) - 1
+            content = mapping[self][1]
+            mapping[self][1] = sum(content) + len(content) - 1
             mapping[self] = tuple(mapping[self])
 
     def as_sxpr(self, src: Optional[str] = None,
