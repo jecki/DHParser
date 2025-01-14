@@ -1386,7 +1386,7 @@ DHParser is slower but more powerful than LALR-parsers and about as fast
 as the about equally powerful Earley-parsers.
 
 If you feel that DHParser's performance is too slow, you can increase
-the roughly a factor of 2 by compiling with `Cython`_. In order to do so
+the spped roughly a factor of 2 by compiling it with `Cython`_. In order to do so
 you need to have a c-compiler installed on your system (gcc, clang on
 Linux or MacOs and msvc on Windows will all do.  Since Version 1.3
 DHParser requires at least Cython Version 3 alpha 11, which cannot be
@@ -1405,18 +1405,17 @@ DHParsers-installation-directory::
 DHParser can also be run with any recent version of `pypy3`_. However,
 my own experience so far has been that while running DHParser with pypy
 with one and the same dataset over and over again produces a most
-impressive speedup, in real-world applications of DHParser (I ran a
-whole fascicle of different medieval latin dictionary articles through
-DHParser in batch-mode), pypy is a even quite a bit slower than the
+impressive speedup, in real-world applications of DHParser,
+pypy is a even quite a bit slower than the
 python-interpreter. (Compiling one fascicle of the medieval latin
 dictionary in batch mode with multiprocessing takes about three times
 as long with pypy3!) So, presently, I'd recommend
 staying with `Cython`_ when trying to speed-up DHParser.
 
-DHParser uses a variant of a recursive descent parser, a so called
+DHParser uses a variant of a recursive descent parser, a so-called
 "pack-rat-parser", which means that it employs memoizing to cache
 results. It has been proven that this kind of parser runs in linear
-time, although I am not sure if the proof also accounts for the "seed
+time, although I am not sure if this result is still valid with the "seed
 and grow"-algorithm that has been implemented to support left-recursive
 grammars. Other than that, you can rest assured that there will be no
 nasty runtime surprises as they can happen with regular-expression
