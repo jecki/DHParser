@@ -1675,20 +1675,19 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         if self._children:
             content = [head]
-            # first_child = self._children[0]
             for child in self._children:
                 subtree = child._tree_repr(tab, open_fn, close_fn, data_fn,
                                            density, inline, inline_fn, allow_omissions)
                 if subtree:
                     if inline:
-                        content[-1] += '\n'.join(subtree)
+                        content.append('\n'.join(subtree))
                     else:
-                        if sep:
-                            for item in subtree:
-                                content.append(usetab + item)
-                        else:
-                            content[-1] += ''.join(subtree)
-            if tlf:
+                        for item in subtree:
+                            content.append(usetab + item)
+            if inline:
+                content.append(tail)
+                content = [''.join(content)]
+            elif tlf:
                 content.append(tail)
             else:
                 content[-1] += tail

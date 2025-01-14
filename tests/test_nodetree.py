@@ -40,7 +40,7 @@ from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.transform import traverse, reduce_single_child, remove_brackets, \
     replace_by_single_child, flatten, remove_empty, remove_whitespace, TransformerFunc, \
     transformer
-from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
+from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, parse_ebnf
 from DHParser.error import ERROR
 from DHParser.dsl import grammar_provider, create_parser
 from DHParser.error import Error
@@ -889,7 +889,43 @@ JSONTransformation: Junction = Junction(
     'CST', ThreadLocalSingletonFactory(JSONTransformer), 'AST')
 
 
+JSONGrammar = r"""
+        @literalws  = right
+        @drop       = whitespace, strings
+        @hide       = /_\w+/
+
+        json        = ~ _element _EOF
+        _element    = object | array | string | number | _bool | null
+        object      = "{" member { "," §member } §"}"
+        member      = string §":" _element
+        array       = "[" [ _element { "," _element } ] §"]"
+        string      = `"` §_CHARACTERS `"` ~
+        number      = INT [ FRAC ] [ EXP ] ~
+        _bool       = true | false
+        true        = `true` ~
+        false       = `false` ~
+        null        = "null"
+
+        _CHARACTERS = { PLAIN | ESCAPE }
+        PLAIN       = /[^"\\]+/
+        ESCAPE      = /\\[\/bnrt\\]/ | UNICODE
+        UNICODE     = "\u" HEX HEX
+        HEX         = /[0-9a-fA-F][0-9a-fA-F]/
+
+        INT         = [`-`] ( /[1-9][0-9]+/ | /[0-9]/ )
+        FRAC        = `.` /[0-9]+/
+        EXP         = (`E`|`e`) [`+`|`-`] /[0-9]+/
+
+        _EOF        =  !/./"""
+
+JSON_CST = parse_ebnf(JSONGrammar)
+
 class TestSerialization:
+    def test_as_sxpr(self):
+        for i in range(5_000):
+            s = JSON_CST.as_xml()
+
+
     def test_sxpr_roundtrip(self):
         sxpr = ('(BelegText (Anker "interdico_1") (BelegLemma "inter.|ticente") (TEXT ", (") '
                 '(Anker "interdico_2") (BelegLemma "inter.|titente") (L " ") (Zusatz "var. l.") '
