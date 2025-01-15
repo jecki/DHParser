@@ -1742,21 +1742,24 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return content
 
     def _finalize_mapping(self, mapping, indentation: int):
-        def update_children(node: Node, indent: int):
+        def update_children(node: Node, indent: int, closing: int):
             for child in node.children:
-                update_children(child, indent + indentation)
+                update_children(child, indent + indentation, closing)
                 if isinstance(mapping[node][1], list):
                     mapping[child][0] += indent + 1
-                    if mapping[node][1][-1] == mapping[node][2]:
-                        mapping[child][2] += 1
-                        mapping[node][1][-1] += 1
+                    mapping[child][2] += closing
                 if isinstance(mapping[child][1], list):
                     content = mapping[child][1]
-                    mapping[child][1] = sum(content) + len(content) * (indent + 1)
+                    mapping[child][1] = sum(content) + len(content) * (indent + 1) + closing
                 else:
                     mapping[child][1] = sum(mapping[child])
         if self.children:
-            update_children(self, indentation)
+            if isinstance(mapping[self][1], list) \
+                    and mapping[self][1][-1] == mapping[self][2]:
+                closing = 1
+            else:
+                closing = 0
+            update_children(self, indentation, closing)
             content = mapping[self][1]
             mapping[self][1] = sum(content) + len(content) - 1
             mapping[self] = tuple(mapping[self])
