@@ -1549,6 +1549,11 @@ class TestMapping:
             print(k.name, v)
         print(len(sxpr))
         assert len(sxpr) == mapping[tree][1]
+        for nd in tree.select(ANY_NODE, include_root=True):
+            if nd.children:
+                inner_size = mapping[nd][1] - mapping[nd][0] - mapping[nd][2]
+                overall_size = sum(mapping[child][1] for child in nd.children)
+                assert inner_size == overall_size, nd.as_sxpr()
 
         mapping = {}
         xml = tree.as_xml(mapping=mapping)
@@ -1557,6 +1562,11 @@ class TestMapping:
             print(k.name, v)
         print(len(xml))
         assert len(xml) == mapping[tree][1]
+        for nd in tree.select(ANY_NODE, include_root=True):
+            if nd.children:
+                inner_size = mapping[nd][1] - mapping[nd][0] - mapping[nd][2]
+                overall_size = sum(mapping[child][1] for child in nd.children)
+                assert inner_size == overall_size, nd.as_xml()
 
 if __name__ == "__main__":
     from DHParser.testing import runner

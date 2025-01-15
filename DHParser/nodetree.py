@@ -1666,9 +1666,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         def update_mapping(content):
             lh, lt = len(head), len(tail)
             if len(content) == 0:
-                mapping[self] = (lh, 0, lt)
+                mapping[self] = [lh, 0, lt]
             if len(content) == 1:
-                mapping[self] = (lh, len(content[0]) - lh - lt, lt)
+                mapping[self] = [lh, len(content[0]) - lh - lt, lt]
             else:
                 mapping[self] = [lh, [len(line) for line in content], lt]
 
@@ -1678,8 +1678,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         inline = inline or inline_fn(self)
         if inline:
-            usetab = ''
-            hlf, tlf = '', ''
+            usetab, hlf, tlf = '', '', ''
         else:
             usetab = tab if head else ''    # no indentation if tag is already omitted
             hlf = '\n'
@@ -1743,15 +1742,21 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return content
 
     def _finalize_mapping(self, mapping, indentation: int):
-        def update_children(children: Tuple[Node], indent: int):
-            for child in children:
-                if isinstance(mapping[child], list):
+        def update_children(node: Node, indent: int):
+            for child in node.children:
+                update_children(child, indent + indentation)
+                if isinstance(mapping[node][1], list):
+                    mapping[child][0] += indent + 1
+                    if mapping[node][1][-1] == mapping[node][2]:
+                        mapping[child][2] += 1
+                        mapping[node][1][-1] += 1
+                if isinstance(mapping[child][1], list):
                     content = mapping[child][1]
-                    mapping[child][1] = sum(content) + (len(content) - 1) * (indent + 1)
-                    mapping[child] = tuple(mapping[child])
-                update_children(child.children, indent + indentation)
+                    mapping[child][1] = sum(content) + len(content) * (indent + 1)
+                else:
+                    mapping[child][1] = sum(mapping[child])
         if self.children:
-            update_children(self.children, indentation)
+            update_children(self, indentation)
             content = mapping[self][1]
             mapping[self][1] = sum(content) + len(content) - 1
             mapping[self] = tuple(mapping[self])
