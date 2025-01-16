@@ -1745,12 +1745,13 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         def update_children(node: Node, indent: int, closing: int):
             for child in node.children:
                 update_children(child, indent + indentation, closing)
+                cl = closing + closing * (max(0, indent-indentation))
                 if isinstance(mapping[node][1], list):
                     mapping[child][0] += indent + 1
-                    mapping[child][2] += closing
+                    mapping[child][2] += cl
                 if isinstance(mapping[child][1], list):
                     content = mapping[child][1]
-                    mapping[child][1] = sum(content) + len(content) * (indent + 1) + closing
+                    mapping[child][1] = sum(content) + len(content) * (indent + 1) + cl
                 else:
                     mapping[child][1] = sum(mapping[child])
         if self.children:
