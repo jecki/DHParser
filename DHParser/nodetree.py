@@ -1743,17 +1743,21 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def _finalize_mapping(self, mapping, indentation: int):
         def update_children(node: Node, indent: int, closing: int):
+            child = None
+            not_inline = isinstance(mapping[node][1], list)
             for child in node.children:
                 update_children(child, indent + indentation, closing)
-                cl = closing + closing * (max(0, indent-indentation))
-                if isinstance(mapping[node][1], list):
+                if not_inline:
                     mapping[child][0] += indent + 1
-                    mapping[child][2] += cl
                 if isinstance(mapping[child][1], list):
                     content = mapping[child][1]
-                    mapping[child][1] = sum(content) + len(content) * (indent + 1) + cl
+                    mapping[child][1] = sum(content) + len(content) * (indent + 1)
                 else:
                     mapping[child][1] = sum(mapping[child])
+            if child is not None and not_inline and closing:
+                cl = closing + closing * (max(0, indent - indentation))
+                mapping[child][2] += cl
+                mapping[child][1] += cl
         if self.children:
             if isinstance(mapping[self][1], list) \
                     and mapping[self][1][-1] == mapping[self][2]:
