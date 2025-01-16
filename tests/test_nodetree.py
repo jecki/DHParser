@@ -1544,10 +1544,10 @@ class TestMapping:
         tree = parse_sxpr(s)
         mapping = {}
         sxpr = tree.as_sxpr(mapping=mapping)
-        print(sxpr)
-        for k, v in mapping.items():
-            print(k.name, v)
-        print(len(sxpr))
+        # print(sxpr)
+        # for k, v in mapping.items():
+        #     print(k.name, v)
+        # print(len(sxpr))
         assert len(sxpr) == mapping[tree][1]
         for nd in tree.select(ANY_NODE, include_root=True):
             if nd.children:
