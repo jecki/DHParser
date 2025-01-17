@@ -1765,9 +1765,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             else:
                 closing = 0
             update_children(self, indentation, closing)
-            content = mapping[self][1]
-            mapping[self][1] = sum(content) + len(content) - 1
-            mapping[self] = tuple(mapping[self])
+            if isinstance(mapping[self][1], list):
+                content = mapping[self][1]
+                mapping[self][1] = sum(content) + len(content) - 1
+            else:
+                mapping[self][1] = sum(mapping[self])
 
     def as_sxpr(self, src: Optional[str] = None,
                 indentation: int = 2,
@@ -1794,9 +1796,14 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         :param sxml:  If >= 1, attributes are rendered according to the
             `SXML <https://okmij.org/ftp/Scheme/SXML.html>`_ -conventions,
             e.g. `` (@ (attr "value")`` instead of `` `(attr "value") ``
-            if 2, the attribute node (@) will always be present, even is empty.
+            if 2, the attribute node (@) will always be present, even if empty.
         :returns: A string containing the S-expression serialization of the tree.
         """
+        if not (0 <= sxml <= 2): raise ValueError(f"sxml must be 0 <= sxml <= 2, but not {sxml}")
+        if mapping and mapping is not NO_MAPPING_SENTINEL:
+            raise ValueError(f"Parameter 'mapping' must either be empty or "
+                             f"DHParser.nodetree.NO_MAPPING_SENTINEL, but not: {mapping}")
+
         left_bracket, right_bracket, density = ('(', ')', 1) if compact else ('(', ')', 0)
         lbreaks = linebreaks(src) if src else []  # type: List[int]
         root = cast(RootNode, self) if isinstance(self, RootNode) \
@@ -1846,12 +1853,22 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 else "'%s'" % strg if strg.find("'") < 0 \
                 else '"%s"' % strg.replace('"', r'\"')
 
-        assert 0 <= sxml <= 2
-        sxpr = '\n'.join(self._tree_repr(' ' * indentation, opening, closing, pretty,
-                                         density=density, mapping=mapping))
+        if flatten_threshold >= INFINITE:  indentation = 0
+        sxpr_0 = '\n'.join(self._tree_repr(' ' * indentation, opening, closing, pretty,
+                                           density=density, mapping=mapping))
+        sxpr = flatten_sxpr(sxpr_0, flatten_threshold)
         if mapping is not NO_MAPPING_SENTINEL:
+            if len(sxpr) != len(sxpr_0) and indentation != 0:
+                # a hack to ensure that the mapping is correct in case the
+                # serialized has unforeseeably been flattened
+                indentation = 0
+                for k in tuple(mapping.keys()):  del mapping[k]
+                sxpr = flatten_sxpr('\n'.join(self._tree_repr('', opening, closing, pretty,
+                                    density=density, mapping=mapping)), INFINITE)
             self._finalize_mapping(mapping, indentation)
-        return flatten_sxpr(sxpr, flatten_threshold)
+        else:
+            sxpr = flatten_sxpr(sxpr, flatten_threshold)
+        return sxpr
 
     def as_sxml(self, src: Optional[str] = None,
                 indentation: int = 2,
@@ -1891,6 +1908,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 raises a ValueError.
         :returns: The XML-string representing the tree originating in `self`
         """
+        if mapping and mapping is not NO_MAPPING_SENTINEL:
+            raise ValueError("Parameter 'mapping' must either be empty or "
+                             "DHParser.nodetree.NO_MAPPING_SENTINEL, but not: " + str(mapping))
+
         root = cast(RootNode, self) if isinstance(self, RootNode) \
             else None  # type: Optional[RootNode]
 

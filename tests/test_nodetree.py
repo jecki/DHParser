@@ -46,7 +46,7 @@ from DHParser.dsl import grammar_provider, create_parser
 from DHParser.error import Error
 from DHParser.parse import RE, Grammar, Forward, Whitespace, Drop, SmartRE, RegExp, Series, \
     ZeroOrMore, Alternative, Option, Text, mixin_comment
-from DHParser.toolkit import re, ThreadLocalSingletonFactory
+from DHParser.toolkit import re, ThreadLocalSingletonFactory, INFINITE
 
 
 class TestParseSxpression:
@@ -1544,10 +1544,15 @@ class TestMapping:
         tree = parse_sxpr(s)
         mapping = {}
         sxpr = tree.as_sxpr(mapping=mapping)
-        # print(sxpr)
-        # for k, v in mapping.items():
-        #     print(k.name, v)
-        # print(len(sxpr))
+        assert len(sxpr) == mapping[tree][1]
+        for nd in tree.select(ANY_NODE, include_root=True):
+            if nd.children:
+                inner_size = mapping[nd][1] - mapping[nd][0] - mapping[nd][2]
+                overall_size = sum(mapping[child][1] for child in nd.children)
+                assert inner_size == overall_size, nd.as_sxpr()
+
+        mapping = {}
+        sxpr = tree.as_sxpr(flatten_threshold=10_000, mapping=mapping)
         assert len(sxpr) == mapping[tree][1]
         for nd in tree.select(ANY_NODE, include_root=True):
             if nd.children:
@@ -1557,16 +1562,35 @@ class TestMapping:
 
         mapping = {}
         xml = tree.as_xml(mapping=mapping)
-        print(xml)
-        for k, v in mapping.items():
-            print(k.name, v)
-        print(len(xml))
+        # print(xml)
+        # for k, v in mapping.items():
+        #     print(k.name, v)
+        # print(len(xml))
         assert len(xml) == mapping[tree][1]
         for nd in tree.select(ANY_NODE, include_root=True):
             if nd.children:
                 inner_size = mapping[nd][1] - mapping[nd][0] - mapping[nd][2]
                 overall_size = sum(mapping[child][1] for child in nd.children)
                 assert inner_size == overall_size, nd.as_xml()
+
+        mapping = {}
+        xml = tree.as_xml(inline_tags={'Quelle', 'BelegText'}, mapping=mapping)
+        assert len(xml) == mapping[tree][1]
+        for nd in tree.select(ANY_NODE, include_root=True):
+            if nd.children:
+                inner_size = mapping[nd][1] - mapping[nd][0] - mapping[nd][2]
+                overall_size = sum(mapping[child][1] for child in nd.children)
+                assert inner_size == overall_size, nd.as_xml()
+
+        mapping = {}
+        xml = tree.as_xml(inline_tags={'BedeutungsPosition'}, mapping=mapping)
+        assert len(xml) == mapping[tree][1]
+        for nd in tree.select(ANY_NODE, include_root=True):
+            if nd.children:
+                inner_size = mapping[nd][1] - mapping[nd][0] - mapping[nd][2]
+                overall_size = sum(mapping[child][1] for child in nd.children)
+                assert inner_size == overall_size, nd.as_xml()
+
 
 if __name__ == "__main__":
     from DHParser.testing import runner
