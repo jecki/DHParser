@@ -3079,7 +3079,7 @@ def parse_sxml(sxml: Union[str, StringView]) -> RootNode:
     """Generates a tree of nodes from `SXML <https://okmij.org/ftp/Scheme/SXML.html>`_.
     Example::
 
-        >>> sxml = '(employee(@ (branch "Secret Service") (id "007")) "James Bond")'
+        >>> sxml = '(employee (@ (branch "Secret Service") (id "007")) "James Bond")'
         >>> tree = parse_sxml(sxml)
         >>> print(tree.as_xml())
         <employee branch="Secret Service" id="007">James Bond</employee>
