@@ -59,7 +59,7 @@ from DHParser.nodetree import ChildrenType, Node, RootNode, WHITESPACE_PTYPE, \
     EMPTY_PTYPE, ResultType, LEAF_NODE
 from DHParser.toolkit import sane_parser_name, escape_ctrl_chars, re, matching_brackets, \
     abbreviate_middle, RX_NEVER_MATCH, RxPatternType, linebreaks, line_col, TypeAlias, \
-    List, Tuple, Set, MutableSet, AbstractSet, FrozenSet, Dict, INFINITE
+    List, Tuple, Set, MutableSet, AbstractSet, FrozenSet, Dict, INFINITE, LazyRE
 
 try:
     import cython
@@ -3219,7 +3219,7 @@ def TreeReduction(root_or_parserlist: Union[Parser, Collection[Parser]],
 
 
 KEEP_COMMENTS_NAME = KEEP_COMMENTS_PTYPE[1:] + '__'
-RX_NAMED_GROUPS = re.compile(r'\(\?P<(:?\w+)>')
+RX_NAMED_GROUPS = LazyRE(r'\(\?P<(:?\w+)>')
 
 
 def _with_pos(nd: Node, pos: int) -> Node:

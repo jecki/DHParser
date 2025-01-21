@@ -265,7 +265,7 @@ from DHParser.toolkit import load_if_file, wrap_str_literal, escape_ctrl_chars, 
     sane_parser_name, re, expand_table, unrepr, compile_python_object, \
     ThreadLocalSingletonFactory, Any, Iterable, Sequence, Set, AbstractSet, Union, Dict, List, \
     Tuple, FrozenSet, MutableSet, Optional, Type, Callable, Container, TypeAlias, \
-    matching_brackets, INFINITE
+    matching_brackets, INFINITE, LazyRE
 from DHParser.transform import TransformerFunc, transformer, remove_brackets, change_name, \
     reduce_single_child, replace_by_single_child, is_empty, remove_children, add_error, \
     remove_tokens, remove_anonymous_tokens, flatten, forbid, assert_content, remove_children_if, \
@@ -522,7 +522,7 @@ class ConfigurableEBNFGrammar(Grammar):
     error_messages__ = {'definition': [(re.compile(r','),
                                         'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
     COMMENT__ = r'(?!#x[A-Fa-f0-9])#.*(?:\n|$)|/\*(?:.|\n)*?\*/|\(\*(?:.|\n)*?\*\)'
-    comment_rx__ = re.compile(COMMENT__)
+    comment_rx__ = LazyRE(COMMENT__)
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
@@ -636,8 +636,8 @@ class ConfigurableEBNFGrammar(Grammar):
     countable.set(Alternative(option, oneormore, element))
     expression.set(Series(sequence, ZeroOrMore(Series(OR, dwsp__, sequence))))
     syntax = Series(dwsp__, ZeroOrMore(Alternative(definition, directive, macrodef)), EOF)
-    resume_rules__ = {'definition': [re.compile(r'\n\s*(?=@|\w+\w*\s*=)')],
-                      'directive': [re.compile(r'\n\s*(?=@|\w+\w*\s*=)')]}
+    resume_rules__ = {'definition': [LazyRE(r'\n\s*(?=@|\w+\w*\s*=)')],
+                      'directive': [LazyRE(r'\n\s*(?=@|\w+\w*\s*=)')]}
     root__ = syntax
 
     def __init__(self, root: Optional[Parser] = None, static_analysis: Optional[bool] = None) -> None:

@@ -91,6 +91,7 @@ __all__ = ('re',
            'identity',
            # 'gen_id',
            'ThreadLocalSingletonFactory',
+           'LazyRE',
            'RX_NEVER_MATCH',
            'RX_ENTITY',
            'RX_NON_ASCII',
@@ -509,13 +510,14 @@ class LazyRE:
     >>> rx.match('!?')
     """
 
-    def __init__(self, regexp: str):
+    def __init__(self, regexp: str, flags = 0):
         self.regexp = regexp
+        self.re_flags = flags
         self.rx = None
 
     def compile_me(self):
         if self.rx is None:
-            self.rx = re.compile(self.regexp)
+            self.rx = re.compile(self.regexp, self.re_flags)
             self.search = self.rx.search
             self.match = self.rx.match
             self.fullmatch = self.rx.fullmatch
@@ -588,7 +590,7 @@ class LazyRE:
         return self.rx.subn(*args, **kwargs)
 
 
-RX_NEVER_MATCH = re.compile(NEVER_MATCH_PATTERN)
+RX_NEVER_MATCH = LazyRE(NEVER_MATCH_PATTERN)
 try:
     RxPatternType = re.Pattern
 except AttributeError:
@@ -836,8 +838,8 @@ def escape_formatstr(s: str) -> str:
     return s
 
 
-RX_IDENTIFIER = re.compile(r'\w+')
-RX_NON_IDENTIFIER = re.compile(r'\W+')
+RX_IDENTIFIER = LazyRE(r'\w+')
+RX_NON_IDENTIFIER = LazyRE(r'\W+')
 
 
 @cython.locals(i=cython.int, delta=cython.int)
@@ -970,14 +972,14 @@ def matching_brackets(text: str,
 
 
 # see definition of EntityRef in: XML-grammar: XML-grammar, see https://www.w3.org/TR/xml/
-RX_ENTITY = re.compile(r'&(?:_|:|[A-Z]|[a-z]|[\u00C0-\u00D6]|[\u00D8-\u00F6]|[\u00F8-\u02FF]'
-                       r'|[\u0370-\u037D]|[\u037F-\u1FFF]|[\u200C-\u200D]|[\u2070-\u218F]'
-                       r'|[\u2C00-\u2FEF]|[\u3001-\uD7FF]|[\uF900-\uFDCF]|[\uFDF0-\uFFFD]'
-                       r'|[\U00010000-\U000EFFFF])(?:_|:|-|\.|[A-Z]|[a-z]|[0-9]|\u00B7'
-                       r'|[\u0300-\u036F]|[\u203F-\u2040]|[\u00C0-\u00D6]|[\u00D8-\u00F6]'
-                       r'|[\u00F8-\u02FF]|[\u0370-\u037D]|[\u037F-\u1FFF]|[\u200C-\u200D]'
-                       r'|[\u2070-\u218F]|[\u2C00-\u2FEF]|[\u3001-\uD7FF]|[\uF900-\uFDCF]'
-                       r'|[\uFDF0-\uFFFD]|[\U00010000-\U000EFFFF])*;')
+RX_ENTITY = LazyRE(r'&(?:_|:|[A-Z]|[a-z]|[\u00C0-\u00D6]|[\u00D8-\u00F6]|[\u00F8-\u02FF]'
+                   r'|[\u0370-\u037D]|[\u037F-\u1FFF]|[\u200C-\u200D]|[\u2070-\u218F]'
+                   r'|[\u2C00-\u2FEF]|[\u3001-\uD7FF]|[\uF900-\uFDCF]|[\uFDF0-\uFFFD]'
+                   r'|[\U00010000-\U000EFFFF])(?:_|:|-|\.|[A-Z]|[a-z]|[0-9]|\u00B7'
+                   r'|[\u0300-\u036F]|[\u203F-\u2040]|[\u00C0-\u00D6]|[\u00D8-\u00F6]'
+                   r'|[\u00F8-\u02FF]|[\u0370-\u037D]|[\u037F-\u1FFF]|[\u200C-\u200D]'
+                   r'|[\u2070-\u218F]|[\u2C00-\u2FEF]|[\u3001-\uD7FF]|[\uF900-\uFDCF]'
+                   r'|[\uFDF0-\uFFFD]|[\U00010000-\U000EFFFF])*;')
 
 
 def validate_XML_attribute_value(value: Any) -> str:
@@ -1024,7 +1026,7 @@ def fix_XML_attribute_value(value: Any) -> str:
     return value
 
 
-RX_NON_ASCII = re.compile(r'[^\U00000000-\U000000FF]')
+RX_NON_ASCII = LazyRE(r'[^\U00000000-\U000000FF]')
 
 
 def lxml_XML_attribute_value(value: Any) -> str:
@@ -1092,7 +1094,7 @@ def isgenerictype(t):
 #######################################################################
 
 
-RX_FILEPATH = re.compile(r'[^ \t][^\n\t?*=]+(?<![ \t])')  # r'[\w/:. \\]+'
+RX_FILEPATH = LazyRE(r'[^ \t][^\n\t?*=]+(?<![ \t])')  # r'[\w/:. \\]+'
 
 
 def load_if_file(text_or_file) -> str:
@@ -1391,7 +1393,7 @@ class JSONnull:
 
 # the following string-escaping tables and procedures have been
 # copy-pasted and slightly adapted from the std-library
-ESCAPE = re.compile(r'[\x00-\x1f\\"\b\f\n\r\t]')
+ESCAPE = LazyRE(r'[\x00-\x1f\\"\b\f\n\r\t]')
 ESCAPE_DCT = {'\\': '\\\\', '"': '\\"', '\x08': '\\b', '\x0c': '\\f', '\n': '\\n', '\r': '\\r',
               '\t': '\\t', '\x00': '\\u0000', '\x01': '\\u0001', '\x02': '\\u0002',
               '\x03': '\\u0003', '\x04': '\\u0004', '\x05': '\\u0005', '\x06': '\\u0006',

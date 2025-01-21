@@ -105,7 +105,7 @@ from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, linebreaks, line_col, JSONnull, JSON_Type, JSON_Dict, \
     validate_XML_attribute_value, fix_XML_attribute_value, lxml_XML_attribute_value, \
-    abbreviate_middle, TypeAlias, deprecated, RxPatternType, INFINITE
+    abbreviate_middle, TypeAlias, deprecated, RxPatternType, INFINITE, LazyRE
 
 try:
     import cython
@@ -459,7 +459,7 @@ def flatten_xml(xml: str) -> str:
     return re.sub(r'\s+(?=<[\w:])', '', re.sub(r'(?P<closing_tag></:?\w+>)\s+', tag_only, xml))
 
 
-RX_AMPERSAND = re.compile(r'&(?!\w+;)')
+RX_AMPERSAND = LazyRE(r'&(?!\w+;)')
 
 
 def xml_tag_name(tag_name: str) -> str:
@@ -2924,8 +2924,8 @@ class RootNode(Node):
 
 ## reflow-support #####################################################
 
-RE_ANY_WHITESPACE = r'\s+'
-RE_KEEP_PARAGRAPHS = r'[ \t]+(?:\n[ \t]*(?![ \t]*\n))?|\n(?![ \t]*\n)'
+RE_ANY_WHITESPACE = re.compile(r'\s+')
+RE_KEEP_PARAGRAPHS = LazyRE(r'[ \t]+(?:\n[ \t]*(?![ \t]*\n))?|\n(?![ \t]*\n)')
 
 def reflow_as_oneliner(tree: Node,
                        leaf_criterion: NodeSelector = LEAF_NODE,
@@ -2946,9 +2946,9 @@ def reflow_as_oneliner(tree: Node,
 ## S-expression- and XML-parsers and JSON-reader ######################
 
 
-RX_SXPR_INNER_PARSER = re.compile(r'[\w:]+')
-RX_SXPR_NOTEXT = re.compile(r'(?:(?!\)).)*', re.DOTALL)
-RX_SXPR_TEXT = {qtmark: re.compile(qtmark + r'.*?' + qtmark, re.DOTALL)
+RX_SXPR_INNER_PARSER = LazyRE(r'[\w:]+')
+RX_SXPR_NOTEXT = LazyRE(r'(?:(?!\)).)*', re.DOTALL)
+RX_SXPR_TEXT = {qtmark: LazyRE(qtmark + r'.*?' + qtmark, re.DOTALL)
                 for qtmark in ['"""', "'''", '"', "'"]}
 
 
@@ -3112,10 +3112,10 @@ def parse_sxml(sxml: Union[str, StringView]) -> RootNode:
 
 
 RX_WHITESPACE_TAIL = re.compile(r'\s*$')
-RX_XML_ATTRIBUTES = re.compile(r'\s*(?P<attr>[\w:_.-]+)\s*=\s*"(?P<value>.*?)"\s*')
+RX_XML_ATTRIBUTES = LazyRE(r'\s*(?P<attr>[\w:_.-]+)\s*=\s*"(?P<value>.*?)"\s*')
 RX_XML_SPECIAL_TAG = re.compile(r'<(?![?!])')
-RX_XML_OPENING_TAG = re.compile(r'<\s*(?P<tagname>[\w:_.-]+)\s*')
-RX_XML_CLOSING_TAG = re.compile(r'</\s*(?P<tagname>[\w:_.-]+)\s*>')
+RX_XML_OPENING_TAG = LazyRE(r'<\s*(?P<tagname>[\w:_.-]+)\s*')
+RX_XML_CLOSING_TAG = LazyRE(r'</\s*(?P<tagname>[\w:_.-]+)\s*>')
 RX_XML_HEADER = re.compile(r'<(?![?!])')
 
 

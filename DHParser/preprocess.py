@@ -38,7 +38,7 @@ from typing import Union, Optional, Callable, Tuple, List, Any
 from DHParser.error import Error, SourceMap, SourceLocation, SourceMapFunc, \
     add_source_locations
 from DHParser.stringview import StringView
-from DHParser.toolkit import re, TypeAlias
+from DHParser.toolkit import re, TypeAlias, LazyRE
 
 
 __all__ = ('RX_TOKEN_NAME',
@@ -78,7 +78,7 @@ RESERVED_TOKEN_CHARS = BEGIN_TOKEN + TOKEN_DELIMITER + END_TOKEN
 
 RX_TOKEN_NAME = re.compile(r'\w+')
 RX_TOKEN_ARGUMENT = re.compile(r'[^\x1b\x1c\x1d]*')
-RX_TOKEN = re.compile(r'\x1b(?P<name>\w+)\x1c(?P<argument>[^\x1b\x1c\x1d]*)\x1d')
+RX_TOKEN = LazyRE(r'\x1b(?P<name>\w+)\x1c(?P<argument>[^\x1b\x1c\x1d]*)\x1d')
 
 
 # class IncludeInfo(NamedTuple):

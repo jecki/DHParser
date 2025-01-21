@@ -48,7 +48,7 @@ from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, \
     PreprocessorFactory
 from DHParser.transform import TransformerFunc, TransformationDict, TransformerFactory
 from DHParser.toolkit import DHPARSER_DIR, load_if_file, is_python_code, is_filename, \
-    compile_python_object, re, as_identifier, cpu_count, \
+    compile_python_object, re, as_identifier, cpu_count, LazyRE, \
     deprecated, instantiate_executor
 from DHParser.versionnumber import __version__, __version_info__
 
@@ -89,7 +89,7 @@ SECTION_MARKER = """\n
 #######################################################################
 \n"""
 
-RX_SECTION_MARKER = re.compile(SECTION_MARKER.format(marker=r'.*?SECTION.*?'))
+RX_SECTION_MARKER = LazyRE(SECTION_MARKER.format(marker=r'.*?SECTION.*?'))
 RX_WHITESPACE = re.compile(r'\s*')
 
 SYMBOLS_SECTION = "SYMBOLS SECTION - Can be edited. Changes will be preserved."
