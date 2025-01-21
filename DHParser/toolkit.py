@@ -497,6 +497,97 @@ def normalize_circular_path(path: Union[Tuple[str, ...], AbstractSet[Tuple[str, 
 #######################################################################
 
 
+class LazyRE:
+    """
+    A lazily-evaluating regular expression. This allows to define as many
+    regular expressions on the top-level as you like without wasting
+    startup-time.
+
+    >>> rx = LazyRE(r'\\w+')
+    >>> rx.match('abc').group(0)
+    'abc'
+    >>> rx.match('!?')
+    """
+
+    def __init__(self, regexp: str):
+        self.regexp = regexp
+        self.rx = None
+
+    def compile_me(self):
+        if self.rx is None:
+            self.rx = re.compile(self.regexp)
+            self.search = self.rx.search
+            self.match = self.rx.match
+            self.fullmatch = self.rx.fullmatch
+            self.split = self.rx.split
+            self.findall = self.rx.findall
+            self.finditer = self.rx.finditer
+            self.sub = self.rx.sub
+            self.subn = self.rx.subn
+
+    @property
+    def Pattern(self):
+        if self.rx is None:
+            self.rx = re.compile(self.regexp)
+        return self.rx
+
+    @property
+    def pattern(self):
+        if self.rx is None:
+            self.rx = re.compile(self.regexp)
+        return self.rx.pattern
+
+    @property
+    def flags(self):
+        if self.rx is None:
+            self.rx = re.compile(self.regexp)
+        return self.rx.flags
+
+    @property
+    def groups(self):
+        if self.rx is None:
+            self.rx = re.compile(self.regexp)
+        return self.rx.groups
+
+    @property
+    def groupindex(self):
+        if self.rx is None:
+            self.rx = re.compile(self.regexp)
+        return self.rx.groupindex
+
+    def search(self, *args, **kwargs):
+        self.compile_me()
+        return self.rx.search(*args, **kwargs)
+
+    def match(self, *args, **kwargs):
+        self.compile_me()
+        return self.rx.match(*args, **kwargs)
+
+    def fullmatch(self, *args, **kwargs):
+        self.compile_me()
+        return self.rx.fullmatch(*args, **kwargs)
+
+    def split(self, *args, **kwargs):
+        self.compile_me()
+        return self.rx.split(*args, **kwargs)
+
+    def findall(self, *args, **kwargs):
+        self.compile_me()
+        return self.rx.findall(*args, **kwargs)
+
+    def finditer(self, *args, **kwargs):
+        self.compile_me()
+        return self.rx.finditer(*args, **kwargs)
+
+    def sub(self, *args, **kwargs):
+        self.compile_me()
+        return self.rx.sub(*args, **kwargs)
+
+    def subn(self, *args, **kwargs):
+        self.compile_me()
+        return self.rx.subn(*args, **kwargs)
+
+
 RX_NEVER_MATCH = re.compile(NEVER_MATCH_PATTERN)
 try:
     RxPatternType = re.Pattern

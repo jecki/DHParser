@@ -34,7 +34,7 @@ from DHParser.nodetree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxp
     prev_path, pick_from_path, pp_path, ContentMapping, leaf_paths, NO_PATH, \
     select_path_if, select_path, create_path_match_function, pick_path, \
     LEAF_PATH, TOKEN_PTYPE, insert_node, content_of, strlen_of, gen_chain_ID, \
-    parse_sxml, LEAF_PTYPES, DIVISIBLES
+    parse_sxml, LEAF_PTYPES, DIVISIBLES, reflow_as_oneliner, RE_KEEP_PARAGRAPHS
 from DHParser.pipeline import create_parser_junction, Junction, PseudoJunction
 from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.transform import traverse, reduce_single_child, remove_brackets, \
@@ -1533,7 +1533,7 @@ class TestMarkupInsertion:
     #     cm.markup(0, 45, "Lateinisch")
     #     print(t.as_sxpr()); print()
 
-class TestMapping:
+class TestSerializationMapping:
     def test_mapping1(self):
         s = """(BedeutungsPosition `(unterbedeutungstiefe "0")
                  (Bedeutung
@@ -1590,6 +1590,26 @@ class TestMapping:
                 inner_size = mapping[nd][1] - mapping[nd][0] - mapping[nd][2]
                 overall_size = sum(mapping[child][1] for child in nd.children)
                 assert inner_size == overall_size, nd.as_xml()
+
+
+class TestReflow:
+    def test_reflow1(self):
+        xml = """
+            <body>            
+               <p>Es ist nur meiner entschiedenen Ueberzeugung gemäß, wenn ich ausspreche, daß keine
+               Philosophie bis jetzt an die <hi rend="g">Sache selbst</hi> gekommen, d. h. <hi rend="g">wirkliche</hi> Wissenschaft geworden, sondern stets nur in den
+               
+               
+               Präliminarien zu derselben stecken geblieben ist. Besonders gleicht die deutsche
+               Philosophie der neueren Zeit einer Vorrede ohne Ende, zu der noch immer das Buch
+               vergeblich erwartet wird.</p>
+            </body>"""
+        tree = parse_xml(xml)
+        for p in tree.select('p'):
+            reflow_as_oneliner(p, whitespace_re=RE_KEEP_PARAGRAPHS)
+        print(tree.as_xml(inline_tags={'p'}))
+
+
 
 
 if __name__ == "__main__":

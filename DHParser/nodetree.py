@@ -206,6 +206,9 @@ __all__ = ('WHITESPACE_PTYPE',
            'tree_sanity_check',
            'RootNode',
            'DHParser_JSONEncoder',
+           'RE_ANY_WHITESPACE',
+           'RE_KEEP_PARAGRAPHS',
+           'reflow_as_oneliner',
            'parse_sxpr',
            'parse_sxml',
            'parse_xml',
@@ -2919,6 +2922,27 @@ class RootNode(Node):
         return super().serialize(how)
 
 
+## reflow-support #####################################################
+
+RE_ANY_WHITESPACE = r'\s+'
+RE_KEEP_PARAGRAPHS = r'[ \t]+(?:\n[ \t]*(?![ \t]*\n))?|\n(?![ \t]*\n)'
+
+def reflow_as_oneliner(tree: Node,
+                       leaf_criterion: NodeSelector = LEAF_NODE,
+                       whitespace_re = RE_ANY_WHITESPACE):
+    """Removes all line-breaks and indentations in the content of leaf-nodes
+    selected by the leaf_criterion. (If any of these nodes
+    has children, a TypeError will be raised.) 'whitespace_re' is the regular
+    expression that is used to capture whitespace.
+    """
+    wsrx = re.compile(whitespace_re) if isinstance(whitespace_re, str) else whitespace_re
+    for nd in tree.select(leaf_criterion, include_root=True):
+        if nd._children:
+            raise TypeError(f'Can only reflow content of leaf-nodes, but node {nd.name}'
+                            f' has children: {nd.as_sxpr(flatten_threshold=INFINITE)}')
+        nd.result = wsrx.sub(' ', nd.content)
+
+
 ## S-expression- and XML-parsers and JSON-reader ######################
 
 
@@ -3224,7 +3248,8 @@ def parse_xml(xml: Union[str, StringView],
                 if strict_mode and tagname not in dual_use_notified:
                     print(get_pos_str(substring) +
                         f' "{tagname}" is used as empty as well as non-empty element!'
-                        f' This can cause errors when re-serializing data as XML!')
+                        f' Avoid listing these tags in the empty_tags-parameter of the '
+                        f' Node.as_xml()-function or serialization will fail.')
                     dual_use_notified.add(tagname)
                     # raise ValueError(get_pos_str(substring) +
                     #     f' "{tagname}" is used as empty as well as non-empty element!'
