@@ -1677,8 +1677,12 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if not self.result:
             if mapping is not NO_MAPPING_SENTINEL:  update_mapping([])
             return [head + tail]
+        if not inline:
+            reflow = inline_fn(self)
+            inline = reflow
+        else:
+            reflow = False
 
-        inline = inline or inline_fn(self)
         if inline:
             usetab, hlf, tlf = '', '', ''
         else:
@@ -1707,6 +1711,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             else:
                 content[-1] += tail
             if mapping is not NO_MAPPING_SENTINEL: update_mapping(content)
+            # process reflow here
             return content
 
         res = self.content
