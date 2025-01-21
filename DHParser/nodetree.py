@@ -207,7 +207,6 @@ __all__ = ('WHITESPACE_PTYPE',
            'RootNode',
            'DHParser_JSONEncoder',
            'RE_ANY_WHITESPACE',
-           'RE_KEEP_PARAGRAPHS',
            'reflow_as_oneliner',
            'parse_sxpr',
            'parse_sxml',
@@ -2925,7 +2924,6 @@ class RootNode(Node):
 ## reflow-support #####################################################
 
 RE_ANY_WHITESPACE = re.compile(r'\s+')
-RE_KEEP_PARAGRAPHS = LazyRE(r'[ \t]+(?:\n[ \t]*(?![ \t]*\n))?|\n(?![ \t]*\n)')
 
 def reflow_as_oneliner(tree: Node,
                        leaf_criterion: NodeSelector = LEAF_NODE,
