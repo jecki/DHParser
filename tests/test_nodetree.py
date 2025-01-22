@@ -1607,14 +1607,14 @@ class TestReflow:
             reflow_as_oneliner(p)
         xml_s = tree.as_xml(inline_tags={'p'})
         assert xml_s.count('\n') == 2
-        parse_xml(xml_s)
+        tree = parse_xml(xml_s)
         for p in tree.select('p'):
             reflow_as_oneliner(p)
         xml_t = tree.as_xml(inline_tags={'p'})
         assert xml_t == xml_s
-
-
-
+        # print(tree.as_xml())
+        # print(tree.as_sxpr(compact=True))
+        # print(tree.as_sxml())
 
 
 if __name__ == "__main__":
