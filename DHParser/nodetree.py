@@ -1641,7 +1641,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     @cython.locals(i=cython.int, k=cython.int, N=cython.int)
     def _tree_repr(self, tab, open_fn, close_fn, data_fn=lambda i: i,
                    density=0, inline=False, inline_fn=lambda node: False,
-                   allow_omissions=False,
+                   allow_omissions=False, xml_reflow = 0,  # reflow column
                    mapping = NO_MAPPING_SENTINEL, depth=0) -> List[str]:
         """
         Generates a tree representation of this node and its children
@@ -1696,8 +1696,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if self._children:
             content = [usetab + head]
             for child in self._children:
-                subtree = child._tree_repr(tab, open_fn, close_fn, data_fn,
-                        density, inline, inline_fn, allow_omissions, mapping, depth + 1)
+                subtree = child._tree_repr(tab, open_fn, close_fn, data_fn, density,
+                        inline, inline_fn, allow_omissions, xml_reflow, mapping, depth + 1)
                 if subtree:
                     if inline:
                         content.append('\n'.join(subtree))
@@ -1711,7 +1711,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             else:
                 content[-1] += tail
             if mapping is not NO_MAPPING_SENTINEL: update_mapping(content)
-            # process reflow here
+            if reflow and xml_reflow:
+                # TODO:  process reflow here
+                pass
             return content
 
         res = self.content
