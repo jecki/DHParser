@@ -1641,7 +1641,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     @cython.locals(i=cython.int, k=cython.int, N=cython.int)
     def _tree_repr(self, tab, open_fn, close_fn, data_fn=lambda i: i,
                    density=0, inline=False, inline_fn=lambda node: False,
-                   allow_omissions=False, xml_reflow = 0,  # reflow column
+                   allow_omissions=False, reflow_fn=lambda tab, content: content,
                    mapping = NO_MAPPING_SENTINEL, depth=0) -> List[str]:
         """
         Generates a tree representation of this node and its children
@@ -1697,7 +1697,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             content = [usetab + head]
             for child in self._children:
                 subtree = child._tree_repr(tab, open_fn, close_fn, data_fn, density,
-                        inline, inline_fn, allow_omissions, xml_reflow, mapping, depth + 1)
+                        inline, inline_fn, allow_omissions, reflow_fn, mapping, depth + 1)
                 if subtree:
                     if inline:
                         content.append('\n'.join(subtree))
@@ -1710,10 +1710,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 content.append(usetab + tail)
             else:
                 content[-1] += tail
+            if reflow and len(content) == 1:
+                content = [reflow_fn(tab, content[0])]
+            else: assert not reflow or len(content) == 1, f"Reflow but len(content) == {len(content)} > 1 !?"
             if mapping is not NO_MAPPING_SENTINEL: update_mapping(content)
-            if reflow and xml_reflow:
-                # TODO:  process reflow here
-                pass
             return content
 
         res = self.content
@@ -1896,7 +1896,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                inline_tags: AbstractSet[str] = frozenset(),
                string_tags: AbstractSet[str] = LEAF_PTYPES,
                empty_tags: AbstractSet[str] = frozenset(),
-               strict_mode: bool = True,
+               strict_mode: bool = True, reflow_col: int = 0,  # example: 80
                mapping = NO_MAPPING_SENTINEL) -> str:
         """Serializes the tree of nodes as XML.
 
@@ -1996,13 +1996,17 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             printed on several lines to avoid unwanted gaps in the output.
             """
             return node.name in inline_tags \
-                   or (node.has_attr() and node.attr.get('xml:space', 'default') == 'preserve')
+                   or (node.get_attr('xml:space', 'default') == 'preserve')
                     # or (node.name in string_tags and not node.children)
+
+        def reflow(tab: str, content: str) -> str:
+            # print(content)
+            return content
 
         line_breaks = linebreaks(src) if src else []
         xml = '\n'.join(self._tree_repr(
             ' ' * indentation, opening, closing, sanitizer, density=1, inline_fn=inlining,
-            allow_omissions=bool(string_tags), mapping=mapping))
+            allow_omissions=bool(string_tags), reflow_fn=reflow, mapping=mapping))
         if mapping is not NO_MAPPING_SENTINEL:
             self._finalize_mapping(mapping)
         return xml

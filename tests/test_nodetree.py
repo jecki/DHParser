@@ -1612,9 +1612,9 @@ class TestReflow:
             reflow_as_oneliner(p)
         xml_t = tree.as_xml(inline_tags={'p'})
         assert xml_t == xml_s
-        # print(tree.as_xml())
-        # print(tree.as_sxpr(compact=True))
-        # print(tree.as_sxml())
+        print(tree.as_xml())
+        print(tree.as_sxpr(compact=True))
+        print(tree.as_sxml())
 
 
 if __name__ == "__main__":
