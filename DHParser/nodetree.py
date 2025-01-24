@@ -1642,7 +1642,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def _tree_repr(self, tab, open_fn, close_fn, data_fn=lambda i: i,
                    density=0, inline=False, inline_fn=lambda node: False,
                    allow_omissions=False,
-                   mapping = NO_MAPPING_SENTINEL) -> List[str]:
+                   mapping = NO_MAPPING_SENTINEL, depth=0) -> List[str]:
         """
         Generates a tree representation of this node and its children
         in string from.
@@ -1665,8 +1665,23 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         head = open_fn(self)
         tail = close_fn(self)
 
+        if not inline:
+            reflow = inline_fn(self)
+            inline = reflow
+        else:
+            reflow = False
+
+        if inline:
+            usetab = (tab * depth) if reflow else ''
+            hlf, tlf = '', ''
+        else:
+            usetab = (tab * depth)
+            hlf = '\n'
+            tlf = '\n' if density == 0 or (tail[0:1] == '<') else ''
+
         def update_mapping(content):
-            lh, lt = len(head), len(tail)
+            lh = len(head) + len(usetab)
+            lt = len(tail) + (len(usetab) if tlf else 0)
             if len(content) == 0:
                 mapping[self] = [lh, 0, lt]
             if len(content) == 1:
@@ -1676,38 +1691,23 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         if not self.result:
             if mapping is not NO_MAPPING_SENTINEL:  update_mapping([])
-            return [head + tail]
-        if not inline:
-            reflow = inline_fn(self)
-            inline = reflow
-        else:
-            reflow = False
-
-        if inline:
-            usetab, hlf, tlf = '', '', ''
-        else:
-            usetab = tab if head else ''    # no indentation if tag is already omitted
-            hlf = '\n'
-            tlf = '\n' if density == 0 or (tail[0:1] == '<') else ''
+            return [usetab + head + tail]
 
         if self._children:
-            content = [head]
+            content = [usetab + head]
             for child in self._children:
                 subtree = child._tree_repr(tab, open_fn, close_fn, data_fn,
-                                           density, inline, inline_fn, allow_omissions, mapping)
+                        density, inline, inline_fn, allow_omissions, mapping, depth + 1)
                 if subtree:
                     if inline:
                         content.append('\n'.join(subtree))
-                    elif usetab:
-                        for item in subtree:
-                            content.append(usetab + item)
                     else:
                         content.extend(subtree)
             if inline:
                 content.append(tail)
                 content = [''.join(content)]
             elif tlf:
-                content.append(tail)
+                content.append(usetab + tail)
             else:
                 content[-1] += tail
             if mapping is not NO_MAPPING_SENTINEL: update_mapping(content)
@@ -1724,7 +1724,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     and (head[-1:] != '>' and head != '<!--'):
                 gap = ' '
             else:  gap = ''
-            content = [''.join((head, gap, data_fn(res), tail))]
+            content = [''.join((usetab, head, gap, data_fn(res), tail))]
         else:
             lines = [data_fn(s) for s in res.split('\n')]
             N = len(lines)
@@ -1736,42 +1736,43 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     i += 1
                 while k >= 0 and not lines[k]:
                     k -= 1
-            content = [head, usetab] if hlf else [head + usetab]
+            tb = usetab + (tab if reflow or not inline else '')
+            content = [usetab + head, tb] if hlf else [usetab + head + tb]
             for line in lines[i:k]:
                 content[-1] += line
-                content.append(usetab)
+                content.append(tb)
             content[-1] += lines[k]
             if tlf:
-                content.append(tail)
+                content.append(usetab + tail)
             else:
                 content[-1] += tail
         if mapping is not NO_MAPPING_SENTINEL:  update_mapping(content)
         return content
 
-    def _finalize_mapping(self, mapping, indentation: int):
-        def update_children(node: Node, indent: int, closing: int):
+    def _finalize_mapping(self, mapping):
+        def update_children(node: Node, closing: int):
             child = None
             not_inline = isinstance(mapping[node][1], list)
             for child in node.children:
-                update_children(child, indent + indentation, closing)
+                update_children(child, closing)
                 if not_inline:
-                    mapping[child][0] += indent + 1
+                   mapping[child][0] += 1
                 if isinstance(mapping[child][1], list):
                     content = mapping[child][1]
-                    mapping[child][1] = sum(content) + len(content) * (indent + 1)
+                    mapping[child][1] = sum(content) + len(content)
                 else:
                     mapping[child][1] = sum(mapping[child])
             if child is not None and not_inline and closing:
-                cl = closing + closing * (max(0, indent - indentation))
-                mapping[child][2] += cl
-                mapping[child][1] += cl
+                # cl = closing + closing * (max(0, indent - indentation))
+                mapping[child][2] += closing
+                mapping[child][1] += closing
         if self.children:
             if isinstance(mapping[self][1], list) \
                     and mapping[self][1][-1] == mapping[self][2]:
                 closing = 1
             else:
                 closing = 0
-            update_children(self, indentation, closing)
+            update_children(self, closing)
             if isinstance(mapping[self][1], list):
                 content = mapping[self][1]
                 mapping[self][1] = sum(content) + len(content) - 1
@@ -1872,7 +1873,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 for k in tuple(mapping.keys()):  del mapping[k]
                 sxpr = flatten_sxpr('\n'.join(self._tree_repr('', opening, closing, pretty,
                                     density=density, mapping=mapping)), INFINITE)
-            self._finalize_mapping(mapping, indentation)
+            self._finalize_mapping(mapping)
         else:
             sxpr = flatten_sxpr(sxpr, flatten_threshold)
         return sxpr
@@ -2001,7 +2002,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             ' ' * indentation, opening, closing, sanitizer, density=1, inline_fn=inlining,
             allow_omissions=bool(string_tags), mapping=mapping))
         if mapping is not NO_MAPPING_SENTINEL:
-            self._finalize_mapping(mapping, indentation)
+            self._finalize_mapping(mapping)
         return xml
 
     def as_html(self, css: str='', head: str='', lang: str='en', **kwargs) -> str:

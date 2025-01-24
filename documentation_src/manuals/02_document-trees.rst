@@ -679,7 +679,7 @@ string-content of the entire tree yields::
 Although, the string locations in a context mappings that has been
 restricted to certain parts of the tree have shifted with respect to the
 string locations in the full document tree, there is no need to worry
-that the mapped location within the tree had changed::
+that the mapped locations within the tree have changed::
 
     >>> tree_pos = tree.content.find('Hofbräuhaus')
     >>> print(tree_pos)

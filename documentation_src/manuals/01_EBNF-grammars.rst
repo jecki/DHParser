@@ -2831,7 +2831,7 @@ function - as in the example above.
     the list or arguments in a single string and decode this string in
     your Python code.
 
-This also works for parsing functions without arguments, of course::
+This also works for factory functions without arguments, of course::
 
     >>> word_parser_factory = r"""
     ... def parse_word() -> CustomParseFunc:

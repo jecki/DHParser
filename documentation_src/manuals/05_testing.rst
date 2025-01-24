@@ -1574,8 +1574,8 @@ errors in case something goes wrong.
     are easily distinguished by the context) to denote either:
 
     1. the data-stage which denotes the state the data is in at a specific
-        point in the processing pipeline, e.g. source document,
-        preprocessed source documtnet, AST, CST, etc.
+       point in the processing pipeline, e.g. source document,
+       preprocessed source documtnet, AST, CST, etc.
 
     2. the "processing-" or "transformation-stage" which denotes a
        transformation-function from one data-stage to the next.

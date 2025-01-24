@@ -627,7 +627,7 @@ the data is passed through many different tree-processing stages, before
 it is transformed into a form that is not a tree, any more. And it is
 not at all uncommon that this processing pipeline is bifurcated as the
 following schema, taken from the `Medieval Latin dictionary
-<https://mlw.badw.de>`_ or the `Bavarian Academy of Sciences and
+<https://mlw.badw.de>`_ of the `Bavarian Academy of Sciences and
 Humanities <https://www.badw.de>`_, shows::
 
     ----------------

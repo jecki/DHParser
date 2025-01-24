@@ -1549,7 +1549,7 @@ class TestSerializationMapping:
             if nd.children:
                 inner_size = mapping[nd][1] - mapping[nd][0] - mapping[nd][2]
                 overall_size = sum(mapping[child][1] for child in nd.children)
-                assert inner_size == overall_size, nd.as_sxpr()
+                assert inner_size == overall_size, str(mapping[nd])
 
         mapping = {}
         sxpr = tree.as_sxpr(flatten_threshold=10_000, mapping=mapping)
