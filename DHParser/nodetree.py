@@ -2000,13 +2000,40 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     # or (node.name in string_tags and not node.children)
 
         def reflow(tab: str, content: str) -> str:
-            # print(content)
+            # print(len(tab), '#'+content+'#')
+            # return content
+            inner = content.strip()
+            i = content.find(inner)
+            assert i >= 0
+            k = len(content) - len(inner) - i
+            words = inner.split(' ')
+            indent = i + len(tab)
+            indent_str = '\n' + (' ' * i) + tab
+            wrapped = [content[:i]]
+            c = len(wrapped[0])
+            l = len(wrapped)
+            for w in words:
+                if c + len(w) >= reflow_col and len(wrapped) > l:
+                    blank = wrapped.pop()
+                    assert blank == ' '
+                    wrapped.append(indent_str)
+                    c = indent
+                    l = len(wrapped)
+                wrapped.append(w)
+                wrapped.append(' ')
+                c += len(w) + 1
+            if k > 0:
+                wrapped[-1] = content[-k:]
+            else:
+                wrapped.pop()
+            content = ''.join(wrapped)
             return content
 
         line_breaks = linebreaks(src) if src else []
+        reflow_fn = reflow if reflow_col > 0 else lambda tab, content: content
         xml = '\n'.join(self._tree_repr(
             ' ' * indentation, opening, closing, sanitizer, density=1, inline_fn=inlining,
-            allow_omissions=bool(string_tags), reflow_fn=reflow, mapping=mapping))
+            allow_omissions=bool(string_tags), reflow_fn=reflow_fn, mapping=mapping))
         if mapping is not NO_MAPPING_SENTINEL:
             self._finalize_mapping(mapping)
         return xml
@@ -2918,14 +2945,14 @@ class RootNode(Node):
                inline_tags: AbstractSet[str] = EMPTY_SET_SENTINEL,
                string_tags: AbstractSet[str] = EMPTY_SET_SENTINEL,
                empty_tags: AbstractSet[str] = EMPTY_SET_SENTINEL,
-               strict_mode: bool=True,
+               strict_mode: bool=True, reflow_col: int = 0,
                mapping = NO_MAPPING_SENTINEL) -> str:
         return super().as_xml(
             src, indentation,
             inline_tags=self.inline_tags if inline_tags is EMPTY_SET_SENTINEL else inline_tags,
             string_tags=self.string_tags if string_tags is EMPTY_SET_SENTINEL else string_tags,
             empty_tags=self.empty_tags if empty_tags is EMPTY_SET_SENTINEL else empty_tags,
-            strict_mode=strict_mode, mapping=mapping)
+            strict_mode=strict_mode, reflow_col=reflow_col, mapping=mapping)
 
     def serialize(self, how: str = '') -> str:
         if not how:

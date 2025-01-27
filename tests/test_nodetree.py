@@ -1612,9 +1612,17 @@ class TestReflow:
             reflow_as_oneliner(p)
         xml_t = tree.as_xml(inline_tags={'p'})
         assert xml_t == xml_s
-        print(tree.as_xml())
-        print(tree.as_sxpr(compact=True))
-        print(tree.as_sxml())
+        assert tree.as_xml(inline_tags={'p'}, reflow_col=80) == (
+            "<body>\n"
+            "  <p>Es ist nur meiner entschiedenen Ueberzeugung gemäß, wenn ich ausspreche,\n"
+            '    daß keine Philosophie bis jetzt an die <hi rend="g">Sache selbst</hi>\n'
+            '    gekommen, d. h. <hi rend="g">wirkliche</hi> Wissenschaft geworden, sondern\n'
+            "    stets nur in den Präliminarien zu derselben stecken geblieben ist.\n"
+            "    Besonders gleicht die deutsche Philosophie der neueren Zeit einer Vorrede\n"
+            "    ohne Ende, zu der noch immer das Buch vergeblich erwartet wird.</p>\n"
+            "</body>")
+        # print(tree.as_sxpr(compact=True))
+        # print(tree.as_sxml())
 
 
 if __name__ == "__main__":
