@@ -1644,7 +1644,7 @@ class TestReflow:
         # print(leaf_tree.as_xml())
         leaf_xml = leaf_tree.as_xml(inline_tags={'inner'}, reflow_col=80)
         # print(leaf_xml)
-        # print(tree.as_sxpr(reflow_col=80))
+        print(tree.as_sxpr(reflow_col=80))
 
 
 

@@ -1721,6 +1721,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 if not inline and head and head not in ("&", "&#x") \
                         and (head[-1:] != '>' and head != '<!--'):
                     gap = ' '
+                elif inline and head[:1] == '(':  gap = ' '
                 else:  gap = ''
                 content = [''.join((usetab, head, gap, data_fn(res), tail))]
             else:
@@ -1868,11 +1869,15 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             print('#'+content+'#')
             return content
 
+        def inline(nd: Node) -> bool:
+            return not nd._children
+
         if flatten_threshold >= INFINITE:  indentation = 0
-        reflow_fn = reflow  # reflow if reflow_col > 0 else lambda tab, content: content
+        reflow_fn = reflow if reflow_col > 0 else lambda tab, content: content
+        inline_fn = inline if reflow_col > 0 else lambda nd: False
         sxpr_0 = '\n'.join(self._tree_repr(
-            ' ' * indentation, opening, closing, pretty, density=density,
-            reflow_fn=reflow_fn, mapping=mapping))
+            ' ' * indentation, opening, closing, pretty, inline_fn=inline_fn,
+            density=density, reflow_fn=reflow_fn, mapping=mapping))
         sxpr = flatten_sxpr(sxpr_0, flatten_threshold)
         if mapping is not NO_MAPPING_SENTINEL:
             if len(sxpr) != len(sxpr_0) and indentation != 0:
@@ -1881,8 +1886,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 indentation = 0
                 for k in tuple(mapping.keys()):  del mapping[k]
                 sxpr = flatten_sxpr('\n'.join(
-                    self._tree_repr('', opening, closing, pretty, density=density,
-                                    reflow_fn=reflow_fn, mapping=mapping)), INFINITE)
+                    self._tree_repr(
+                        '', opening, closing, pretty, inline_fn=inline_fn,
+                        density=density, reflow_fn=reflow_fn, mapping=mapping)), INFINITE)
             self._finalize_mapping(mapping)
         else:
             sxpr = flatten_sxpr(sxpr, flatten_threshold)
