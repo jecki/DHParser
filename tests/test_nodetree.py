@@ -1612,7 +1612,8 @@ class TestReflow:
             reflow_as_oneliner(p)
         xml_t = tree.as_xml(inline_tags={'p'})
         assert xml_t == xml_s
-        assert tree.as_xml(inline_tags={'p'}, reflow_col=80) == (
+        xml_r = tree.as_xml(inline_tags={'p'}, reflow_col=80)
+        assert xml_r == (
             "<body>\n"
             "  <p>Es ist nur meiner entschiedenen Ueberzeugung gemäß, wenn ich ausspreche,\n"
             '    daß keine Philosophie bis jetzt an die <hi rend="g">Sache selbst</hi>\n'
