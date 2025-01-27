@@ -1595,13 +1595,13 @@ class TestSerializationMapping:
 class TestReflow:
     def test_reflow1(self):
         xml = """
-            <body>            
+            <article>            
                <p>Es ist nur meiner entschiedenen Ueberzeugung gemäß, wenn ich ausspreche, daß keine
                Philosophie bis jetzt an die <hi rend="g">Sache selbst</hi> gekommen, d. h. <hi rend="g">wirkliche</hi> Wissenschaft geworden, sondern stets nur in den
                Präliminarien zu derselben stecken geblieben ist. Besonders gleicht die deutsche
                Philosophie der neueren Zeit einer Vorrede ohne Ende, zu der noch immer das Buch
                vergeblich erwartet wird.</p>
-            </body>"""
+            </article>"""
         tree = parse_xml(xml)
         for p in tree.select('p'):
             reflow_as_oneliner(p)
@@ -1612,18 +1612,40 @@ class TestReflow:
             reflow_as_oneliner(p)
         xml_t = tree.as_xml(inline_tags={'p'})
         assert xml_t == xml_s
-        xml_r = tree.as_xml(inline_tags={'p'}, reflow_col=80)
+        xml_r = tree.as_xml(inline_tags={'p', ':Text'}, reflow_col=80)
         assert xml_r == (
-            "<body>\n"
+            "<article>\n"
             "  <p>Es ist nur meiner entschiedenen Ueberzeugung gemäß, wenn ich ausspreche,\n"
             '    daß keine Philosophie bis jetzt an die <hi rend="g">Sache selbst</hi>\n'
             '    gekommen, d. h. <hi rend="g">wirkliche</hi> Wissenschaft geworden, sondern\n'
             "    stets nur in den Präliminarien zu derselben stecken geblieben ist.\n"
             "    Besonders gleicht die deutsche Philosophie der neueren Zeit einer Vorrede\n"
             "    ohne Ende, zu der noch immer das Buch vergeblich erwartet wird.</p>\n"
-            "</body>")
-        # print(tree.as_sxpr(compact=True))
-        # print(tree.as_sxml())
+            "</article>")
+        for line in xml_r.splitlines():
+            assert len(line) <= 80
+        tree_r = parse_xml(xml_r)
+        for p in tree_r.select('p'):
+            reflow_as_oneliner(p)
+        assert tree_r.equals(tree)
+        html_r = tree.as_html(inline_tags={'p'}, reflow_col=80)
+        for line in html_r.splitlines():
+            assert len(line) <= 80
+
+        leaf_tree = parse_xml("""<outer><inner>Es ist nur meiner entschiedenen Ueberzeugung gemäß, 
+               wenn ich ausspreche, daß keine
+               Philosophie bis jetzt an die Sache selbst gekommen, d. h. 
+               irkliche Wissenschaft geworden, sondern stets nur in den
+               Präliminarien zu derselben stecken geblieben ist. Besonders gleicht die deutsche
+               Philosophie der neueren Zeit einer Vorrede ohne Ende, zu der noch immer das Buch
+               vergeblich erwartet wird.</inner></outer>""")
+        for inner in leaf_tree.select('inner'):
+            reflow_as_oneliner(inner)
+        # print(leaf_tree.as_xml())
+        leaf_xml = leaf_tree.as_xml(inline_tags={'inner'}, reflow_col=80)
+        # print(leaf_xml)
+        # print(tree.as_sxpr(reflow_col=80))
+
 
 
 if __name__ == "__main__":

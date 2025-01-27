@@ -108,7 +108,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     param_block = Forward()
     tabular_config = Forward()
-    source_hash__ = "650eeb09b9231091b2666f6091f8e243"
+    source_hash__ = "0da600c0d512916c0a1a89c49253c837"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
     disposable__ = re.compile('_\\w+')
     static_analysis_pending__ = []  # type: List[bool]
@@ -126,7 +126,8 @@ class LaTeXGrammar(Grammar):
     EOF = RegExp('(?!.)')
     _BACKSLASH = Drop(RegExp('[\\\\]'))
     _LB = Drop(RegExp('\\s*?\\n|$'))
-    NEW_LINE = Series(Drop(RegExp('[ \\t]*')), Option(comment__), Drop(RegExp('\\n')))
+    NEW_LINE = Series(Drop(RegExp('[ \\t]*')), Option(comment__), Drop(RegExp('[ \\t]*\\n')))
+    _WS = OneOrMore(NEW_LINE)
     _GAP = Drop(Series(RegExp('[ \\t]*(?:\\n[ \\t]*)+\\n'), dwsp__))
     _WSPC = Drop(OneOrMore(Alternative(comment__, Drop(RegExp('\\s+')))))
     _PARSEP = Drop(Series(ZeroOrMore(Series(whitespace__, comment__)), _GAP, Option(_WSPC)))
@@ -170,7 +171,7 @@ class LaTeXGrammar(Grammar):
     flag = Alternative(_QUALIFIED, magnitude)
     association = Series(key, dwsp__, Series(Drop(Text("=")), dwsp__), value, dwsp__)
     parameters = Series(Alternative(association, flag), ZeroOrMore(Series(NegativeLookbehind(_BACKSLASH), Series(Drop(Text(",")), dwsp__), Alternative(association, flag))), Option(WARN_Komma))
-    sequence = Series(Option(_WSPC), OneOrMore(Series(Alternative(paragraph, _block_environment), Option(Alternative(_PARSEP, S)))))
+    sequence = Series(Option(_WS), OneOrMore(Series(Alternative(paragraph, _block_environment), Option(Alternative(_PARSEP, S)))))
     block_of_paragraphs = Series(Series(Drop(Text("{")), dwsp__), Option(sequence), Series(Drop(Text("}")), dwsp__), mandatory=2)
     special = Alternative(Drop(Text("\\-")), Series(Drop(RegExp('\\\\')), esc_char), UMLAUT, QUOTEMARK)
     _item_name = Text("item")
@@ -246,7 +247,7 @@ class LaTeXGrammar(Grammar):
     displaymath = Alternative(_dmath_long_form, _dmath_short_form)
     verbatim_text = RegExp('(?:(?!\\\\end{verbatim})[\\\\]?[^\\\\]*)*')
     verbatim = Series(Series(Drop(Text("\\begin{verbatim}")), dwsp__), verbatim_text, Series(Drop(Text("\\end{verbatim}")), dwsp__), mandatory=2)
-    quotation = Alternative(Series(Series(Drop(Text("\\begin{quotation}")), dwsp__), sequence, Series(Drop(Text("\\end{quotation}")), dwsp__), mandatory=2), Series(Series(Drop(Text("\\begin{quote}")), dwsp__), sequence, Series(Drop(Text("\\end{quote}")), dwsp__), mandatory=2))
+    quotation = Alternative(Series(Drop(Text("\\begin{quotation}")), sequence, Series(Drop(Text("\\end{quotation}")), dwsp__), mandatory=2), Series(Drop(Text("\\begin{quote}")), sequence, Series(Drop(Text("\\end{quote}")), dwsp__), mandatory=2))
     figure = Series(Series(Drop(Text("\\begin{figure}")), dwsp__), sequence, Series(Drop(Text("\\end{figure}")), dwsp__), mandatory=2)
     Paragraphs = OneOrMore(Series(Option(_WSPC), Paragraph))
     _itemsequence = Series(Option(_WSPC), ZeroOrMore(Series(Alternative(item, _command), Option(_WSPC))))

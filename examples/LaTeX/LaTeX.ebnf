@@ -93,8 +93,8 @@ description         = "\begin{description}" _itemsequence §"\end{description}"
 item                = "\item" [config] § sequence
 
 figure              = "\begin{figure}" sequence §"\end{figure}"
-quotation           = ("\begin{quotation}" sequence §"\end{quotation}")
-                    | ("\begin{quote}" sequence §"\end{quote}")
+quotation           = (`\begin{quotation}` sequence §"\end{quotation}")
+                    | (`\begin{quote}` sequence §"\end{quote}")
 verbatim            = "\begin{verbatim}" verbatim_text §"\end{verbatim}"
   verbatim_text     = /(?:(?!\\end{verbatim})[\\]?[^\\]*)*/
 
@@ -122,7 +122,7 @@ tabular_config      = "{" { cfg_celltype [cfg_unit] | cfg_separator | / +/ }+ §
 #### paragraphs and sequences of paragraphs ####
 
 block_of_paragraphs = "{" [sequence] §"}"
-sequence            = [_WSPC] { (paragraph | _block_environment) [_PARSEP|S] }+
+sequence            = [_WS] { (paragraph | _block_environment) [_PARSEP|S] }+
 paragraph           = { !blockcmd _text_element [S] }+
 _text_element       = _line_element | LINEFEED
 _line_element       = text | _inline_environment | _command | block
@@ -282,7 +282,9 @@ _PARSEP    = { WHITESPACE__ COMMENT__ } _GAP [_WSPC] # paragraph separator
 _WSPC      = { COMMENT__ | /\s+/ }+         # arbitrary horizontal or vertical whitespace
 _GAP       = /[ \t]*(?:\n[ \t]*)+\n/~       # at least one empty line, i.e.
                                             # [whitespace] linefeed [whitespace] linefeed
-NEW_LINE   = /[ \t]*/ [COMMENT__] /\n/
+NEW_LINE   = /[ \t]*/ [COMMENT__] /[ \t]*\n/
+_WS        = { NEW_LINE }+                  # horizontal or vertical whitespace w/o last line start
+
 _LB        = /\s*?\n|$/                     # backwards line break for Lookbehind-Operator
                                             # beginning of text marker '$' added for test code
 _BACKSLASH  = /[\\]/

@@ -1710,45 +1710,46 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 content.append(usetab + tail)
             else:
                 content[-1] += tail
-            if reflow and len(content) == 1:
-                content = [reflow_fn(tab, content[0])]
-            else: assert not reflow or len(content) == 1, f"Reflow but len(content) == {len(content)} > 1 !?"
-            if mapping is not NO_MAPPING_SENTINEL: update_mapping(content)
-            return content
 
-        res = self.content
-        if not inline and not head and allow_omissions:
-            # strip whitespace for omitted non-inline node, e.g. CharData in mixed elements
-            res = res.strip()  # WARNING: This changes the data in subtle ways
-        if density & 1 and res.find('\n') < 0:
-            # except for XML, add a gap between opening statement and content
-            if not inline and head and head not in ("&", "&#x") \
-                    and (head[-1:] != '>' and head != '<!--'):
-                gap = ' '
-            else:  gap = ''
-            content = [''.join((usetab, head, gap, data_fn(res), tail))]
         else:
-            lines = [data_fn(s) for s in res.split('\n')]
-            N = len(lines)
-            i, k = 0, N - 1
-            if not inline and allow_omissions:
-                # Strip preceding and succeeding whitespace.
-                # WARNING: This changes the data in subtle ways
-                while i < N and not lines[i]:
-                    i += 1
-                while k >= 0 and not lines[k]:
-                    k -= 1
-            tb = usetab + (tab if reflow or not inline else '')
-            content = [usetab + head, tb] if hlf else [usetab + head + tb]
-            for line in lines[i:k]:
-                content[-1] += line
-                content.append(tb)
-            content[-1] += lines[k]
-            if tlf:
-                content.append(usetab + tail)
+            res = self.content
+            if not inline and not head and allow_omissions:
+                # strip whitespace for omitted non-inline node, e.g. CharData in mixed elements
+                res = res.strip()  # WARNING: This changes the data in subtle ways
+            if density & 1 and res.find('\n') < 0:
+                # except for XML, add a gap between opening statement and content
+                if not inline and head and head not in ("&", "&#x") \
+                        and (head[-1:] != '>' and head != '<!--'):
+                    gap = ' '
+                else:  gap = ''
+                content = [''.join((usetab, head, gap, data_fn(res), tail))]
             else:
-                content[-1] += tail
-        if mapping is not NO_MAPPING_SENTINEL:  update_mapping(content)
+                lines = [data_fn(s) for s in res.split('\n')]
+                N = len(lines)
+                i, k = 0, N - 1
+                if not inline and allow_omissions:
+                    # Strip preceding and succeeding whitespace.
+                    # WARNING: This changes the data in subtle ways
+                    while i < N and not lines[i]:
+                        i += 1
+                    while k >= 0 and not lines[k]:
+                        k -= 1
+                tb = usetab + (tab if reflow or not inline else '')
+                content = [usetab + head, tb] if hlf else [usetab + head + tb]
+                for line in lines[i:k]:
+                    content[-1] += line
+                    content.append(tb)
+                content[-1] += lines[k]
+                if tlf:
+                    content.append(usetab + tail)
+                else:
+                    content[-1] += tail
+
+        if reflow and len(content) == 1:
+            content = [reflow_fn(tab, content[0])]
+        else:
+            assert not reflow or len(content) == 1, f"Reflow but len(content) == {len(content)} > 1 !?"
+        if mapping is not NO_MAPPING_SENTINEL: update_mapping(content)
         return content
 
     def _finalize_mapping(self, mapping):
@@ -1785,7 +1786,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 indentation: int = 2,
                 compact: bool = True,
                 flatten_threshold: int = 92,
-                sxml: int = 0,
+                sxml: int = 0, reflow_col: int = 0,  # example: 80
                 mapping = NO_MAPPING_SENTINEL) -> str:
         """
         Serializes the tree as S-expression, i.e. in lisp-like form. If this
@@ -1863,9 +1864,15 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 else "'%s'" % strg if strg.find("'") < 0 \
                 else '"%s"' % strg.replace('"', r'\"')
 
+        def reflow(tab: str, content: str) -> str:
+            print('#'+content+'#')
+            return content
+
         if flatten_threshold >= INFINITE:  indentation = 0
-        sxpr_0 = '\n'.join(self._tree_repr(' ' * indentation, opening, closing, pretty,
-                                           density=density, mapping=mapping))
+        reflow_fn = reflow  # reflow if reflow_col > 0 else lambda tab, content: content
+        sxpr_0 = '\n'.join(self._tree_repr(
+            ' ' * indentation, opening, closing, pretty, density=density,
+            reflow_fn=reflow_fn, mapping=mapping))
         sxpr = flatten_sxpr(sxpr_0, flatten_threshold)
         if mapping is not NO_MAPPING_SENTINEL:
             if len(sxpr) != len(sxpr_0) and indentation != 0:
@@ -1873,8 +1880,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 # serialized has unforeseeably been flattened
                 indentation = 0
                 for k in tuple(mapping.keys()):  del mapping[k]
-                sxpr = flatten_sxpr('\n'.join(self._tree_repr('', opening, closing, pretty,
-                                    density=density, mapping=mapping)), INFINITE)
+                sxpr = flatten_sxpr('\n'.join(
+                    self._tree_repr('', opening, closing, pretty, density=density,
+                                    reflow_fn=reflow_fn, mapping=mapping)), INFINITE)
             self._finalize_mapping(mapping)
         else:
             sxpr = flatten_sxpr(sxpr, flatten_threshold)
@@ -2026,8 +2034,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 wrapped[-1] = content[-k:]
             else:
                 wrapped.pop()
-            content = ''.join(wrapped)
-            return content
+            return ''.join(wrapped)
 
         line_breaks = linebreaks(src) if src else []
         reflow_fn = reflow if reflow_col > 0 else lambda tab, content: content
