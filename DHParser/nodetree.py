@@ -2999,18 +2999,31 @@ RE_ANY_WHITESPACE = re.compile(r'\s+')
 
 def reflow_as_oneliner(tree: Node,
                        leaf_criterion: NodeSelector = LEAF_NODE,
-                       whitespace_re = RE_ANY_WHITESPACE):
+                       whitespace_re = RE_ANY_WHITESPACE,
+                       check_xml_space: bool = False) -> None:
     """Removes all line-breaks and indentations in the content of leaf-nodes
     selected by the leaf_criterion. (If any of these nodes
     has children, a TypeError will be raised.) 'whitespace_re' is the regular
     expression that is used to capture whitespace.
     """
     wsrx = re.compile(whitespace_re) if isinstance(whitespace_re, str) else whitespace_re
-    for nd in tree.select(leaf_criterion, include_root=True):
-        if nd._children:
-            raise TypeError(f'Can only reflow content of leaf-nodes, but node {nd.name}'
-                            f' has children: {nd.as_sxpr(flatten_threshold=INFINITE)}')
-        nd.result = wsrx.sub(' ', nd.content)
+    if check_xml_space:
+        for path in tree.select_path(leaf_criterion, include_root=True):
+            nd = path[-1]
+            if nd._children:
+                raise TypeError(f'Can only reflow content of leaf-nodes, but node {nd.name}'
+                                f' has children: {nd.as_sxpr(flatten_threshold=INFINITE)}')
+            for ancestor in path:
+                if nd.get_attr('xml:space', 'default') == 'preserve':
+                    raise ValueError("Reflow of element {nd.name} not possible, because "
+                                     "xml:space='preserve' is set:\n{ancestor.as_xml()}")
+            nd.result = wsrx.sub(' ', nd.content)
+    else:
+        for nd in tree.select(leaf_criterion, include_root=True):
+            if nd._children:
+                raise TypeError(f'Can only reflow content of leaf-nodes, but node {nd.name}'
+                                f' has children: {nd.as_sxpr(flatten_threshold=INFINITE)}')
+            nd.result = wsrx.sub(' ', nd.content)
 
 
 ## S-expression- and XML-parsers and JSON-reader ######################

@@ -6,6 +6,8 @@ DHParser Version 1.8.2
   because it is too confusing for newcomers.
 - updates to nodetree.ContentMapping: methods path(), pos() and path_str()
   added; markup() now avoids the generation of single anynomous leaves.
+- xml and S-expression-serialization not allows word wrapping
+- script XMLreflow.py added to reflow XML-files
 
 
 DHParser Version 1.8.1 (19.10.2024)

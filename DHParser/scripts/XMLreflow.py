@@ -38,14 +38,14 @@ def process_file(filename, tags, column, output, verbose):
     extension = ext.lower()
     if extension in ('.sxml', '.sxpr'):
         tree = parse_sxpr(xml)
-        reflow_as_oneliner(tree)
+        reflow_as_oneliner(tree, check_xml_space=True)
         if extension == '.sxml':
             xml = tree.as_sxml(flatten_threshold=0, reflow_col=column)
         else:
             xml = tree.as_sxpr(flatten_threshold=0, reflow_col=column)
     elif extension == '.xml':
         tree = parse_XML(xml)
-        reflow_as_oneliner(tree)
+        reflow_as_oneliner(tree, check_xml_space=True)
         xml = tree.as_xml(inline_tags=set(tags), reflow_col=column)
     else:
         a = xml.find('<head>')
@@ -64,7 +64,7 @@ def process_file(filename, tags, column, output, verbose):
                 r = xml.find('"', l+1, b)
                 lang = xml[l+1:r]
         tree = parse_HTML(xml)
-        reflow_as_oneliner(tree)
+        reflow_as_oneliner(tree, check_xml_space=True)
         xml = tree.as_html(head=head, lang=lang, inline_tags=set(tags),
                            reflow_col=column)
     if output is None:
