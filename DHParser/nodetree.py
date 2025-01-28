@@ -1783,6 +1783,33 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             else:
                 mapping[self][1] = sum(mapping[self])
 
+    def _reflow(self, tab: str, content: str, reflow_col: int) -> str:
+        stripped = content.strip()
+        i = content.find(stripped)
+        assert i >= 0
+        k = len(content) - len(stripped) - i
+        words = stripped.split(' ')
+        indent = i + len(tab)
+        indent_str = '\n' + (' ' * i) + tab
+        wrapped = [content[:i]]
+        c = len(wrapped[0])
+        l = len(wrapped)
+        for w in words:
+            if c + len(w) >= reflow_col and len(wrapped) > l:
+                blank = wrapped.pop()
+                assert blank == ' '
+                wrapped.append(indent_str)
+                c = indent
+                l = len(wrapped)
+            wrapped.append(w)
+            wrapped.append(' ')
+            c += len(w) + 1
+        if k > 0:
+            wrapped[-1] = content[-k:]
+        else:
+            wrapped.pop()
+        return ''.join(wrapped)
+
     def as_sxpr(self, src: Optional[str] = None,
                 indentation: int = 2,
                 compact: bool = True,
@@ -1820,6 +1847,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         lbreaks = linebreaks(src) if src else []  # type: List[int]
         root = cast(RootNode, self) if isinstance(self, RootNode) \
             else None  # type: Optional[RootNode]
+        inner_content: str = ""
 
         def attr(name: str, value: str):
             if sxml:  return f' ({name} "{value}")'
@@ -1866,11 +1894,29 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 else '"%s"' % strg.replace('"', r'\"')
 
         def reflow(tab: str, content: str) -> str:
-            print('#'+content+'#')
-            return content
+            if len(content) < reflow_col:
+                return content
+            nonlocal inner_content
+            t = content.find(inner_content)
+            assert t > 0
+            a = t - 1
+            b = t+len(inner_content)
+            q = content[a]
+            assert q == content[b]
+            # stripped = content.strip()
+            # i = content.find(stripped)
+            # lead_in = ''.join(['\n', i * ' ', tab, q*2])
+            content = ''.join([content[:a], q*2, content[a:b], q*2, content[b:]])
+            return self._reflow(tab, content, reflow_col)
 
         def inline(nd: Node) -> bool:
-            return not nd._children
+            nonlocal inner_content
+            if nd._children:
+                inner_content = ""
+                return False
+            else:
+                inner_content = nd.content
+                return True
 
         if flatten_threshold >= INFINITE:  indentation = 0
         reflow_fn = reflow if reflow_col > 0 else lambda tab, content: content
@@ -1898,12 +1944,12 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 indentation: int = 2,
                 compact: bool = True,
                 flatten_threshold: int = 92,
-                normal_form: int = 1,
+                normal_form: int = 1, reflow_col: int = 0,
                 mapping = NO_MAPPING_SENTINEL) -> str:
         """Serializes the tree as `SXML <https://okmij.org/ftp/Scheme/SXML.html>`_"""
         assert 1 <= normal_form <= 2, "Presently, only sxml normal forms 1 and 2 are supported"
         return self.as_sxpr(src, indentation, compact, flatten_threshold, sxml=normal_form,
-                            mapping=mapping)
+                            reflow_col=reflow_col, mapping=mapping)
 
     def as_xml(self, src: Optional[str] = None,
                indentation: int = 2,
@@ -2014,33 +2060,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     # or (node.name in string_tags and not node.children)
 
         def reflow(tab: str, content: str) -> str:
-            # print(len(tab), '#'+content+'#')
-            # return content
-            inner = content.strip()
-            i = content.find(inner)
-            assert i >= 0
-            k = len(content) - len(inner) - i
-            words = inner.split(' ')
-            indent = i + len(tab)
-            indent_str = '\n' + (' ' * i) + tab
-            wrapped = [content[:i]]
-            c = len(wrapped[0])
-            l = len(wrapped)
-            for w in words:
-                if c + len(w) >= reflow_col and len(wrapped) > l:
-                    blank = wrapped.pop()
-                    assert blank == ' '
-                    wrapped.append(indent_str)
-                    c = indent
-                    l = len(wrapped)
-                wrapped.append(w)
-                wrapped.append(' ')
-                c += len(w) + 1
-            if k > 0:
-                wrapped[-1] = content[-k:]
-            else:
-                wrapped.pop()
-            return ''.join(wrapped)
+            return self._reflow(tab, content, reflow_col)
 
         line_breaks = linebreaks(src) if src else []
         reflow_fn = reflow if reflow_col > 0 else lambda tab, content: content

@@ -1641,10 +1641,41 @@ class TestReflow:
                vergeblich erwartet wird.</inner></outer>""")
         for inner in leaf_tree.select('inner'):
             reflow_as_oneliner(inner)
-        # print(leaf_tree.as_xml())
         leaf_xml = leaf_tree.as_xml(inline_tags={'inner'}, reflow_col=80)
-        # print(leaf_xml)
-        print(tree.as_sxpr(reflow_col=80))
+        for line in leaf_xml.splitlines():
+            assert len(line) <= 80
+        sxpr = tree.as_sxpr(reflow_col=80)
+        assert sxpr == '''(article
+  (p
+    (:Text """Es ist nur meiner entschiedenen Ueberzeugung gemäß, wenn ich
+      ausspreche, daß keine Philosophie bis jetzt an die """)
+    (hi `(rend "g") "Sache selbst")
+    (:Text " gekommen, d. h. ")
+    (hi `(rend "g") "wirkliche")
+    (:Text """ Wissenschaft geworden, sondern stets nur in den Präliminarien zu
+      derselben stecken geblieben ist. Besonders gleicht die deutsche
+      Philosophie der neueren Zeit einer Vorrede ohne Ende, zu der noch immer
+      das Buch vergeblich erwartet wird.""")))'''
+        sxml = tree.as_sxml(reflow_col=80)
+        assert sxml == '''(article
+  (p
+    (:Text """Es ist nur meiner entschiedenen Ueberzeugung gemäß, wenn ich
+      ausspreche, daß keine Philosophie bis jetzt an die """)
+    (hi (@ (rend "g")) "Sache selbst")
+    (:Text " gekommen, d. h. ")
+    (hi (@ (rend "g")) "wirkliche")
+    (:Text """ Wissenschaft geworden, sondern stets nur in den Präliminarien zu
+      derselben stecken geblieben ist. Besonders gleicht die deutsche
+      Philosophie der neueren Zeit einer Vorrede ohne Ende, zu der noch immer
+      das Buch vergeblich erwartet wird.""")))'''
+        leaf_tree_sxpr = leaf_tree.as_sxpr(reflow_col=80)
+        assert leaf_tree_sxpr == '''(outer
+  (inner """Es ist nur meiner entschiedenen Ueberzeugung gemäß, wenn ich
+    ausspreche, daß keine Philosophie bis jetzt an die Sache selbst gekommen,
+    d. h. irkliche Wissenschaft geworden, sondern stets nur in den
+    Präliminarien zu derselben stecken geblieben ist. Besonders gleicht die
+    deutsche Philosophie der neueren Zeit einer Vorrede ohne Ende, zu der noch
+    immer das Buch vergeblich erwartet wird."""))'''
 
 
 
