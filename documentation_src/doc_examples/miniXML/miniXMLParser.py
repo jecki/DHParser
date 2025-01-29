@@ -97,7 +97,7 @@ class miniXMLGrammar(Grammar):
     r"""Parser for a miniXML source file.
     """
     element = Forward()
-    source_hash__ = "1d3066e3eb0204564e007439bd85d82b"
+    source_hash__ = "b4b157bb523e9cb97f5ea6edb0b47bb6"
     disposable__ = re.compile('(?:EOF$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -107,7 +107,7 @@ class miniXMLGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    EOF = Drop(SmartRE(f'(?!.)', '!/./'))
+    EOF = Drop(NegativeLookahead(RegExp('.')))
     CharData = RegExp('(?:(?!\\]\\]>)[^<&])+')
     TagName = RegExp('\\w+')
     content = Series(Option(CharData), ZeroOrMore(Series(element, Option(CharData))))
@@ -116,7 +116,7 @@ class miniXMLGrammar(Grammar):
     element.set(Series(STag, content, ETag, mandatory=1))
     document = Series(dwsp__, element, dwsp__, EOF, mandatory=3)
     root__ = document
-        
+    
 parsing: PseudoJunction = create_parser_junction(miniXMLGrammar)
 get_grammar = parsing.factory # for backwards compatibility, only
 
@@ -324,7 +324,7 @@ def batch_process(file_names: List[str], out_dir: str,
 
 def main():
     # recompile grammar if needed
-    script_path = os.path.abspath(__file__)
+    script_path = os.path.abspath(os.path.realpath(__file__))
     if script_path.endswith('Parser.py'):
         grammar_path = script_path.replace('Parser.py', '.ebnf')
     else:

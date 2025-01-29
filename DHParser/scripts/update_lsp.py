@@ -3,7 +3,7 @@
 
 import sys, os, re
 
-scriptdir = os.path.dirname(os.path.abspath(__file__))
+scriptdir = os.path.dirname(os.path.abspath(os.path.realpath(__file__)))
 destfile = os.path.abspath(os.path.join(scriptdir, '..', 'lsp.py'))
 
 

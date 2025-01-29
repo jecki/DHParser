@@ -40,7 +40,7 @@ def build(setup_kwargs={}):
     if has_cython:
 
         # find path of DHParser-module
-        scriptdir = os.path.dirname(os.path.abspath(__file__))
+        scriptdir = os.path.dirname(os.path.abspath(os.path.realpath(__file__)))
         i = scriptdir.find('DHParser')
         k = len('DHParser-submodule') if scriptdir[i:].startswith('DHParser-submodule') \
             else len('DHParser')

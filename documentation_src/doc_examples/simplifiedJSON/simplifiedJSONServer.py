@@ -265,7 +265,7 @@ def run_server(host, port, log_path=None):
     if sys.platform.lower().startswith('linux') :  set_start_method('forkserver')
     else:  set_start_method('spawn')
 
-    grammar_src = os.path.abspath(__file__).replace('Server.py', '.ebnf')
+    grammar_src = os.path.abspath(os.path.realpath(__file__)).replace('Server.py', '.ebnf')
     if scriptpath not in sys.path:
         sys.path.append(scriptpath)
     from DHParser.dsl import recompile_grammar

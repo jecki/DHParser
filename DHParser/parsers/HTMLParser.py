@@ -532,7 +532,7 @@ def batch_process(file_names: List[str], out_dir: str, cfg: Dict={},
 
 if __name__ == "__main__":
     # recompile grammar if needed
-    script_path = os.path.abspath(__file__)
+    script_path = os.path.abspath(os.path.realpath(__file__))
     if script_path.endswith('Parser.py'):
         grammar_path = script_path.replace('Parser.py', '.ebnf')
     else:

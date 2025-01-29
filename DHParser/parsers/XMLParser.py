@@ -42,7 +42,7 @@ from DHParser.error import ErrorCode, Error, canonical_error_strings, has_errors
     WARNING, ERROR, FATAL
 from DHParser.log import start_logging, suspend_logging, resume_logging
 from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode, ZOMBIE_TAG, \
-    CHAR_REF_PTYPE, ENTITY_REF_PTYPE
+    CHAR_REF_PTYPE, ENTITY_REF_PTYPE, LEAF_PTYPES
 from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar, Parser, \
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, ERR, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \
@@ -526,7 +526,7 @@ def batch_process(file_names: List[str], out_dir: str, cfg: Dict={},
 
 if __name__ == "__main__":
     # recompile grammar if needed
-    script_path = os.path.abspath(__file__)
+    script_path = os.path.abspath(os.path.realpath(__file__))
     if script_path.endswith('Parser.py'):
         grammar_path = script_path.replace('Parser.py', '.ebnf')
     else:

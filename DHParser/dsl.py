@@ -916,7 +916,6 @@ def create_compiler_transition(*args, **kwargs):
             "because it does not work with lambdas as transformer functions!")
 def create_transtable_junction(table, src_stage, dst_stage):
     # This does not work if table contains functions that cannot be pickled (i.e. lambda-functions)!
-    from DHParser import pipeline
     return create_transtable_transition(table, src_stage, dst_stage)
 
 @deprecated('The name "create_transtable_transition()" is deprecated. Use "DHParser.pipeline.create_transtable_junction()" instead.')

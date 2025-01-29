@@ -23,7 +23,7 @@ import os
 import sys
 from typing import cast
 
-scriptdir = os.path.dirname(os.path.abspath(__file__))
+scriptdir = os.path.dirname(os.path.abspath(os.path.realpath(__file__)))
 dhparserdir = os.path.abspath(os.path.join(scriptdir, os.pardir, os.pardir))
 if dhparserdir not in sys.path:
     sys.path.append(dhparserdir)

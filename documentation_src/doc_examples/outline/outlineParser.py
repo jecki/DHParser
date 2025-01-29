@@ -113,9 +113,9 @@ class outlineGrammar(Grammar):
     section = Forward()
     subsection = Forward()
     subsubsection = Forward()
-    source_hash__ = "f738ab844f7b1731820e76cf6f86b323"
+    source_hash__ = "9b4c686f40f1a74d6dc76bd2637d83b3"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:L$|EOF$|GAP$|LINE$|TEXT$|ESCAPED$|WS$|inner_emph$|LLF$|blocks$|CHARS$|inner_bold$)')
+    disposable__ = re.compile('(?:L$|ESCAPED$|inner_emph$|GAP$|blocks$|LLF$|inner_bold$|EOF$|TEXT$|LINE$|WS$|CHARS$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'document': [(re.compile(r'(?=)'), "End of file expected!")],
@@ -176,7 +176,7 @@ class outlineGrammar(Grammar):
                     'subsubsection': [subsubsection_skip_1__],
                     's5section': [s5section_skip_1__]}
     root__ = document
-        
+    
 parsing: PseudoJunction = create_parser_junction(outlineGrammar)
 get_grammar = parsing.factory # for backwards compatibility, only
 
@@ -413,7 +413,7 @@ def batch_process(file_names: List[str], out_dir: str,
 
 def main(called_from_app=False) -> bool:
     # recompile grammar if needed
-    scriptpath = os.path.abspath(__file__)
+    scriptpath = os.path.abspath(os.path.realpath(__file__))
     if scriptpath.endswith('Parser.py'):
         grammar_path = scriptpath.replace('Parser.py', '.ebnf')
     else:

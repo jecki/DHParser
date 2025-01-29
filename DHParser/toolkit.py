@@ -448,7 +448,7 @@ def deprecated(message: str) -> Callable:
 #######################################################################
 
 
-DHPARSER_DIR = os.path.dirname(os.path.abspath(__file__))
+DHPARSER_DIR = os.path.dirname(os.path.abspath(os.path.realpath(__file__)))
 # DHPARSER_PARENTDIR = os.path.dirname(DHPARSER_DIR.rstrip('/').rstrip('\\'))
 
 

@@ -22,16 +22,19 @@ import argparse
 import os.path
 import sys
 
-scriptdir = os.path.dirname(os.path.abspath(__file__))
+
+scriptdir = os.path.dirname(os.path.abspath(os.path.realpath(__file__)))
 dhparserdir = os.path.abspath(os.path.join(scriptdir, os.pardir, os.pardir))
 if dhparserdir not in sys.path:
     sys.path.append(dhparserdir)
 
 from DHParser.nodetree import parse_sxpr, reflow_as_oneliner
 from DHParser.parsers import parse_XML, parse_HTML
+from DHParser.toolkit import AbstractSet
 
 
-def process_file(filename, tags, column, output, verbose):
+def reflow(filename: str, tags: AbstractSet, column: int,
+           output: str, verbose: bool):
     with open(filename, 'r', encoding='utf-8') as f:
         xml = f.read()
     rump, ext = os.path.splitext(filename)
@@ -44,6 +47,7 @@ def process_file(filename, tags, column, output, verbose):
         else:
             xml = tree.as_sxpr(flatten_threshold=0, reflow_col=column)
     elif extension == '.xml':
+        from DHParser import parse_xml as parse_XML
         tree = parse_XML(xml)
         reflow_as_oneliner(tree, check_xml_space=True)
         xml = tree.as_xml(inline_tags=set(tags), reflow_col=column)
@@ -80,7 +84,7 @@ def main():
                                                  " files.")
     parser.add_argument('filenames', nargs='+',
                         help='One or more file- or directory-names to process')
-    parser.add_argument('--tags', '-t', nargs='+',
+    parser.add_argument('--tags', '-t', nargs='+', default=['p'],
                         help='The outermost tags the content of which '
                              'shall be rewrapped')
     parser.add_argument('--column', '-c', type=int, default=80,
@@ -133,12 +137,12 @@ def main():
                     if (lfn[-4:] in ('.xml', '.htm')
                             or lfn[-5:] in ('.sxml', '.sxpr', '.html')):
                         name = os.path.join(root, file)
-                        process_file(name, tags, column, output, verbose)
+                        reflow(name, tags, column, output, verbose)
         else:
             extension = os.path.splitext(name)[1].lower()
             if extension not in ('.xml', '.htm', '.sxml', '.sxpr', '.html'):
                 parser.error(f"The file '{name}' is not an XML or SXML file.")
-            process_file(name, tags, column, output, verbose)
+            reflow(name, tags, column, output, verbose)
 
 
 if __name__ == "__main__":

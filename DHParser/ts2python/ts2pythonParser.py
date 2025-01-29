@@ -1442,7 +1442,7 @@ def inspect(test_file_path: str):
 
 def main():
     # recompile grammar if needed
-    script_path = os.path.abspath(__file__)
+    script_path = os.path.abspath(os.path.realpath(__file__))
     script_name = os.path.basename(script_path)
     if script_name.endswith('Parser.py'):
         base_path = script_path[:-9]

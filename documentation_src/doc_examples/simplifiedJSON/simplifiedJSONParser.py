@@ -97,7 +97,7 @@ class simplifiedJSONGrammar(Grammar):
     r"""Parser for a simplifiedJSON source file.
     """
     _element = Forward()
-    source_hash__ = "36c6051aca4d32e237a2c7a35af08c99"
+    source_hash__ = "32c94bd22f445026abf16e6c8983e234"
     disposable__ = re.compile('_\\w+')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -107,8 +107,8 @@ class simplifiedJSONGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    _EOF = SmartRE(f'(?!.)', '!/./')
-    other_literal = SmartRE(f'([\\w\\d.+-]+)(?:{WSP_RE__})', '/[\\w\\d.+-]+/ ~')
+    _EOF = NegativeLookahead(RegExp('.'))
+    other_literal = Series(RegExp('[\\w\\d.+-]+'), dwsp__)
     string = Series(Text('"'), RegExp('[^"]+'), Text('"'), dwsp__, mandatory=1)
     array = Series(Series(Drop(Text("[")), dwsp__), Option(Series(_element, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), _element)))), Series(Drop(Text("]")), dwsp__), mandatory=2)
     member = Series(string, Series(Drop(Text(":")), dwsp__), _element, mandatory=1)
@@ -116,7 +116,7 @@ class simplifiedJSONGrammar(Grammar):
     _element.set(Alternative(object, array, string, other_literal))
     json = Series(dwsp__, _element, _EOF)
     root__ = json
-        
+    
 parsing: PseudoJunction = create_parser_junction(simplifiedJSONGrammar)
 get_grammar = parsing.factory # for backwards compatibility, only
 
@@ -306,7 +306,7 @@ def batch_process(file_names: List[str], out_dir: str,
 
 def main():
     # recompile grammar if needed
-    script_path = os.path.abspath(__file__)
+    script_path = os.path.abspath(os.path.realpath(__file__))
     if script_path.endswith('Parser.py'):
         grammar_path = script_path.replace('Parser.py', '.ebnf')
     else:
