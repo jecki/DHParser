@@ -33,8 +33,8 @@ from DHParser.parsers import parse_XML, parse_HTML
 from DHParser.toolkit import AbstractSet
 
 
-def reflow(filename: str, tags: AbstractSet, column: int,
-           output: str, verbose: bool):
+def process_file(filename: str, tags: AbstractSet, column: int,
+                 output: str, verbose: bool):
     with open(filename, 'r', encoding='utf-8') as f:
         xml = f.read()
     rump, ext = os.path.splitext(filename)
@@ -47,8 +47,9 @@ def reflow(filename: str, tags: AbstractSet, column: int,
         else:
             xml = tree.as_sxpr(flatten_threshold=0, reflow_col=column)
     elif extension == '.xml':
-        from DHParser import parse_xml as parse_XML
+        # from DHParser import parse_xml as parse_XML
         tree = parse_XML(xml)
+        print(tree.as_sxpr())
         reflow_as_oneliner(tree, check_xml_space=True)
         xml = tree.as_xml(inline_tags=set(tags), reflow_col=column)
     else:
@@ -137,12 +138,12 @@ def main():
                     if (lfn[-4:] in ('.xml', '.htm')
                             or lfn[-5:] in ('.sxml', '.sxpr', '.html')):
                         name = os.path.join(root, file)
-                        reflow(name, tags, column, output, verbose)
+                        process_file(name, tags, column, output, verbose)
         else:
             extension = os.path.splitext(name)[1].lower()
             if extension not in ('.xml', '.htm', '.sxml', '.sxpr', '.html'):
                 parser.error(f"The file '{name}' is not an XML or SXML file.")
-            reflow(name, tags, column, output, verbose)
+            process_file(name, tags, column, output, verbose)
 
 
 if __name__ == "__main__":

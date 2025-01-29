@@ -303,9 +303,9 @@ class HTMLTransformer(Compiler):
         node.name = '?xml'  # node.parser = self.get_parser('?xml')
         return node
 
-    def on_content(self, node) -> Union[Tuple[Node], str]:
-        xml_content = []
-        preserve_ws = self.preserve_whitespace or not self.preserve_whitespace
+    def on_content(self, node) -> Union[Tuple[Node, ...], str]:
+        xml_content: List[Node] = []
+        preserve_ws = self.preserve_whitespace
         for nd in node.children:
             if nd.name in self.expendables:  continue
             child = self.compile(nd)

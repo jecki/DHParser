@@ -230,7 +230,7 @@ class XMLTransformer(Compiler):
     def __init__(self):
         super().__init__()
         self.cleanup_whitespace = not get_config_value("XML.preserve_whitespace", False)  # remove empty CharData from mixed elements
-        self.expendables = {'PI', 'CDSect', 'doctypedecl'}
+        self.expendables = set()  # {'PI', 'CDSect', 'doctypedecl'}
 
     def reset(self):
         super().reset()
@@ -297,9 +297,9 @@ class XMLTransformer(Compiler):
         node.name = '?xml'  # node.parser = self.get_parser('?xml')
         return node
 
-    def on_content(self, node) -> Union[Tuple[Node], str]:
-        xml_content = []
-        preserve_ws = self.preserve_whitespace or not self.preserve_whitespace
+    def on_content(self, node) -> Union[Tuple[Node, ...], str]:
+        xml_content: List[Node] = []
+        preserve_ws = self.preserve_whitespace
         for nd in node.children:
             if nd.name in self.expendables:  continue
             child = self.compile(nd)
