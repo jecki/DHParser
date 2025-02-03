@@ -182,7 +182,7 @@ Misc            = { Comment | PI | S }+
 Comment         = '<!--' { CommentChars | /-(?!-)/ } '-->'
 # Comment         = '<!--' ((Char - '-') | ('-' (Char - '-')))* '-->'
 PI              = '<?' PITarget [~ PIChars] '?>'
-PITarget        = !/X|xM|mL|l/ Name
+PITarget        = !/[Xx][Mm][Ll]/ Name
 CDSect          = '<![CDATA[' CData ']]>'
 
 

@@ -1599,27 +1599,27 @@ class EBNFCompiler(Compiler):
         compiler += [COMPILER_FACTORY.format(NAME=self.grammar_name)]
         return '\n'.join(compiler)
 
-    def verify_transformation_table(self, transtable):
-        """
-        Checks for symbols that occur in the transformation-table but have
-        never been defined in the grammar. Usually, this kind of
-        inconsistency results from an error like a typo in the transformation
-        table.
-        """
-        assert self._dirty_flag
-        table_entries = set(expand_table(transtable).keys()) - {'*', '<', '>', '~', '<<<', '>>>'}
-        symbols = set(self.rules.keys()) | set(self.macros.keys())
-        symbols.add('ZOMBIE__')
-        if self.directives.comment:
-            symbols.add('comment__')
-        messages = []
-        # # commented out, because warning is confusing for beginners
-        # for entry in table_entries:
-        #     if entry not in symbols and not entry[:1] == ":":
-        #         messages.append(Error(('Symbol "%s" is not defined in grammar %s but appears in '
-        #                                'the transformation table!') % (entry, self.grammar_name),
-        #                               0, UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING))
-        return messages
+    # def verify_transformation_table(self, transtable):
+    #     """
+    #     Checks for symbols that occur in the transformation-table but have
+    #     never been defined in the grammar. Usually, this kind of
+    #     inconsistency results from an error like a typo in the transformation
+    #     table.
+    #     """
+    #     assert self._dirty_flag
+    #     table_entries = set(expand_table(transtable).keys()) - {'*', '<', '>', '~', '<<<', '>>>'}
+    #     symbols = set(self.rules.keys()) | set(self.macros.keys())
+    #     symbols.add('ZOMBIE__')
+    #     if self.directives.comment:
+    #         symbols.add('comment__')
+    #     messages = []
+    #     # # commented out, because warning is confusing for beginners
+    #     # for entry in table_entries:
+    #     #     if entry not in symbols and not entry[:1] == ":":
+    #     #         messages.append(Error(('Symbol "%s" is not defined in grammar %s but appears in '
+    #     #                                'the transformation table!') % (entry, self.grammar_name),
+    #     #                               0, UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING))
+    #     return messages
 
     # def verify_compiler(self, compiler):
     #     """

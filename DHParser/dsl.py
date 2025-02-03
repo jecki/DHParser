@@ -502,30 +502,30 @@ def compile_on_disk(source_file: str,
             sections = split_source(parser_name, source)
             intro, imports, preprocessor, _, ast, compiler, outro = sections
             if imports[-1:] != '\n':  imports += "\n\n"
-            ast_trans_python_src = imports + ast
-            ast_trans_table = dict()  # type: TransformationDict
-            try:
-                ast_trans_table = compile_python_object(ast_trans_python_src,
-                                                        r'(?:\w+_)?AST_transformation_table$')
-            except Exception as e:
-                if isinstance(e, NameError):
-                    err_str = 'NameError "{}" while compiling AST-Transformation. ' \
-                              'Possibly due to a forgotten import at the beginning ' \
-                              'of the AST-Block (!)'.format(str(e))
-                elif isinstance(e, ValueError):
-                    err_str = f'Exception {type(e)}: "{e}" while compiling AST-Transformation. ' \
-                              f'This warning can safely be ignored, if a different method ' \
-                              f'without a transformation-table or no AST-transformation at ' \
-                              f'all is used for "{os.path.basename(rootname)}".'
-                else:
-                    err_str = 'Exception {} while compiling AST-Transformation: {}' \
-                              .format(str(type(e)), str(e))
-                messages.append(Error(err_str, 0, CANNOT_VERIFY_TRANSTABLE_WARNING))
-                if is_logging():
-                    with open(os.path.join(log_dir(), rootname + '_AST_src.py'), 'w',
-                              encoding='utf-8') as f:
-                        f.write(ast_trans_python_src)
-            messages.extend(ebnf_compiler.verify_transformation_table(ast_trans_table))
+            # ast_trans_python_src = imports + ast
+            # ast_trans_table = dict()  # type: TransformationDict
+            # try:
+            #     ast_trans_table = compile_python_object(ast_trans_python_src,
+            #                                             r'(?:\w+_)?AST_transformation_table$')
+            # except Exception as e:
+            #     if isinstance(e, NameError):
+            #         err_str = 'NameError "{}" while compiling AST-Transformation. ' \
+            #                   'Possibly due to a forgotten import at the beginning ' \
+            #                   'of the AST-Block (!)'.format(str(e))
+            #     elif isinstance(e, ValueError):
+            #         err_str = f'Exception {type(e)}: "{e}" while compiling AST-Transformation. ' \
+            #                   f'This warning can safely be ignored, if a different method ' \
+            #                   f'without a transformation-table or no AST-transformation at ' \
+            #                   f'all is used for "{os.path.basename(rootname)}".'
+            #     else:
+            #         err_str = 'Exception {} while compiling AST-Transformation: {}' \
+            #                   .format(str(type(e)), str(e))
+            #     messages.append(Error(err_str, 0, CANNOT_VERIFY_TRANSTABLE_WARNING))
+            #     if is_logging():
+            #         with open(os.path.join(log_dir(), rootname + '_AST_src.py'), 'w',
+            #                   encoding='utf-8') as f:
+            #             f.write(ast_trans_python_src)
+            # messages.extend(ebnf_compiler.verify_transformation_table(ast_trans_table))
             # TODO: Verify compiler
         except (PermissionError, FileNotFoundError, IOError):
             intro, imports, preprocessor, _, ast, compiler, outro = '', '', '', '', '', '', ''

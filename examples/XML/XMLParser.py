@@ -105,9 +105,9 @@ class XMLGrammar(Grammar):
     r"""Parser for a XML source file.
     """
     element = Forward()
-    source_hash__ = "49930bfc57e9883d2744f8dc9bbe5a38"
+    source_hash__ = "11e47c6c11828b928bc577b5a554f9cf"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:EncName$|CommentChars$|Reference$|Misc$|NameStartChar$|PubidCharsSingleQuoted$|VersionNum$|tagContent$|EOF$|BOM$|PubidChars$|NameChars$|CData$|prolog$)')
+    disposable__ = re.compile('(?:PubidChars$|EncName$|Misc$|NameChars$|tagContent$|PubidCharsSingleQuoted$|NameStartChar$|Reference$|CData$|EOF$|prolog$|BOM$|CommentChars$|VersionNum$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'tagContent': [('', "syntax error in tag-name of opening or empty tag:  {1}")],
@@ -147,7 +147,7 @@ class XMLGrammar(Grammar):
                           '|[\\U00010000-\\U000EFFFF])+')
     Comment = Series(Drop(Text('<!--')), ZeroOrMore(Alternative(CommentChars, RegExp('-(?!-)'))), dwsp__, Drop(Text('-->')))
     Name = Series(NameStartChar, Option(NameChars))
-    PITarget = Series(SmartRE(f'(?!X|xM|mL|l)', '!/X|xM|mL|l/'), Name)
+    PITarget = Series(SmartRE(f'(?![Xx][Mm][Ll])', '!/[Xx][Mm][Ll]/'), Name)
     PI = Series(Drop(Text('<?')), PITarget, Option(Series(dwsp__, PIChars)), Drop(Text('?>')))
     Misc = OneOrMore(Alternative(Comment, PI, S))
     EntityRef = Series(Drop(Text('&')), Name, Drop(Text(';')))

@@ -130,7 +130,7 @@ NameChars       = /(?:_|:|-|\.|[A-Z]|[a-z]|[0-9]
 Misc            = { Comment | PI | S }+
 Comment         = '<!--' { CommentChars | /-(?!-)/ } ~ '-->'
 PI              = '<?' PITarget [~ PIChars] '?>'
-PITarget        = !/X|xM|mL|l/ Name
+PITarget        = !/[Xx][Mm][Ll]/ Name
 CDSect          = '<![CDATA[' CData ']]>'
 
 #######################################################################
