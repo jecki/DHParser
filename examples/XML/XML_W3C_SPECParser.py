@@ -116,7 +116,7 @@ class XML_W3C_SPECGrammar(Grammar):
     element = Forward()
     extSubsetDecl = Forward()
     ignoreSectContents = Forward()
-    source_hash__ = "868769b6f2083352fc2fe476bf36dd6e"
+    source_hash__ = "c700b76cba378c59ec31b2d351586f08"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -186,9 +186,15 @@ class XML_W3C_SPECGrammar(Grammar):
     CData = Series(NegativeLookahead(Series(ZeroOrMore(Char), Text(']]>'), ZeroOrMore(Char))), ZeroOrMore(Char))
     CDStart = Text('<![CDATA[')
     CDSect = Series(CDStart, CData, CDEnd)
+    PredefEntityRef = Alternative(Text("&amp;"), Text("&lt;"), Text("&gt;"), Text("&quot;"), Text("&apos;"))
+    PseudoAttValue = Alternative(Series(Text('"'), ZeroOrMore(Alternative(RegExp('[^"<&]'), CharRef, PredefEntityRef)), Text('"')), Series(Text("\'"), ZeroOrMore(Alternative(RegExp('[^\'<&]'), CharRef, PredefEntityRef)), Text("\'")))
+    PseudoAtt = Series(Name, Option(S), Text("="), Option(S), PseudoAttValue)
+    PseudoAtts = Series(Option(PseudoAtt), ZeroOrMore(Series(S, PseudoAtt)), Option(S))
+    XmlModelPI = Series(Text("<?xml-model"), Series(NegativeLookahead(Series(ZeroOrMore(Char), Text("?>"), ZeroOrMore(Char))), Option(Series(S, PseudoAtts))), Text("?>"))
+    StyleSheetPI = Series(Text("<?xml-stylesheet"), Series(NegativeLookahead(Series(ZeroOrMore(Char), Text("?>"), ZeroOrMore(Char))), Option(Series(S, PseudoAtts))), Text("?>"))
     PITarget = Series(NegativeLookahead(Series(Alternative(Text('X'), Text('x')), Alternative(Text('M'), Text('m')), Alternative(Text('L'), Text('l')))), Name)
     PI = Series(Text('<?'), PITarget, Option(Series(S, Series(NegativeLookahead(Series(ZeroOrMore(Char), Text('?>'), ZeroOrMore(Char))), ZeroOrMore(Char)))), Text('?>'))
-    Misc = Alternative(Comment, PI, S)
+    Misc = Alternative(Comment, PI, StyleSheetPI, XmlModelPI, S)
     CharData = Series(NegativeLookahead(Series(ZeroOrMore(RegExp('[^<&]')), Text(']]>'), ZeroOrMore(RegExp('[^<&]')))), ZeroOrMore(RegExp('[^<&]')))
     EntityDecl = Alternative(GEDecl, PEDecl)
     markupdecl = Alternative(elementdecl, AttlistDecl, EntityDecl, NotationDecl, PI, Comment)

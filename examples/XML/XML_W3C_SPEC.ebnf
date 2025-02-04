@@ -30,6 +30,14 @@ Comment	       ::= '<!--' ((Char - '-') | ('-' (Char - '-')))* '-->'
 PI	           ::= '<?' PITarget (S (Char* - (Char* '?>' Char*)))? '?>'
 PITarget	   ::= Name - (('X' | 'x') ('M' | 'm') ('L' | 'l'))
 
+StyleSheetPI   ::= "<?xml-stylesheet" ( (S PseudoAtts)? - (Char* "?>" Char*) ) "?>"
+XmlModelPI	   ::= "<?xml-model" (S PseudoAtts)? - (Char* "?>" Char*) "?>"
+
+PseudoAtts	   ::= PseudoAtt? (S PseudoAtt)* S?
+PseudoAtt	   ::= Name S? "=" S? PseudoAttValue
+PseudoAttValue ::= ('"' ([^"<&] | CharRef | PredefEntityRef)* '"' | "'" ([^'<&] | CharRef | PredefEntityRef)* "'")
+PredefEntityRef	::= "&amp;" | "&lt;" | "&gt;" | "&quot;" | "&apos;"
+
 CDSect	       ::= CDStart CData CDEnd
 CDStart	       ::= '<![CDATA['
 CData	       ::= (Char* - (Char* ']]>' Char*))
@@ -40,7 +48,7 @@ XMLDecl	       ::= '<?xml' VersionInfo EncodingDecl? SDDecl? S? '?>'
 VersionInfo    ::= S 'version' Eq ("'" VersionNum "'" | '"' VersionNum '"')
 Eq	           ::= S? '=' S?
 VersionNum	   ::= '1.' [0-9]+
-Misc	       ::= Comment | PI | S
+Misc	       ::= Comment | PI | StyleSheetPI | XmlModelPI | S
 
 doctypedecl	   ::= '<!DOCTYPE' S Name (S ExternalID)? S? ('[' intSubset ']' S?)? '>'
 DeclSep	       ::= PEReference | S

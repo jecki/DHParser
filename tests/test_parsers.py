@@ -20,7 +20,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from DHParser.parsers import parse_HTML
+from DHParser.parsers import parse_HTML, parse_XML
 
 class TestHTMLParser:
     def test_CharRef(self):
@@ -34,6 +34,68 @@ class TestHTMLParser:
         tree = parse_HTML("<p><span>68</span><i>&nbsp;</i><b>&#68;</b><span>Δ</span></p>")
         assert tree.as_xml(inline_tags={'p'}) == "<p><span>68</span><i>&nbsp;</i><b>&#x68;</b><span>Δ</span></p>"
         assert tree.as_sxpr() == '(p (span "68") (i (:EntityRef "nbsp")) (b (:CharRef "68")) (span "Δ"))'
+
+
+class TestXMLParser:
+    def test_PI_with_whitespace(self):
+        xml = """<?xml version="1.0" encoding="UTF-8"?>
+    <?xml-model href="http://www.tei-c.org/release/xml/tei/custom/schema/relaxng/tei_all.rng"?>
+    <?xml-model href="xhtml-strict-additional-constraints.sch"
+        group="Strict"
+        title="Check against strict document type complex constraints"?>
+    <?xml-stylesheet href="common.css"?>
+    <?xml-stylesheet href="default.css" title="Default style"?>
+    <?xml-stylesheet alternate="yes" href="alt.css" title="Alternative style"?>
+    <?xml-stylesheet href="single-col.css" media="all and (max-width: 30em)"?>
+    <?xml-unknown href="nixda" ?>
+    <?PI instruction #?>
+    <TEI xmlns="http://www.tei-c.org/ns/1.0">
+        <info>
+            Eine wichtige Information
+            für alle Leute!
+        </info>
+    </TEI>"""
+        tree = parse_XML(xml)
+        assert tree.as_sxpr() == """(:XML
+  (?xml `(version "1.0") `(encoding "UTF-8"))
+  (?xml-model `(href "http://www.tei-c.org/release/xml/tei/custom/schema/relaxng/tei_all.rng"))
+  (?xml-model `(href "xhtml-strict-additional-constraints.sch") `(group "Strict") `(title "Check against strict document type complex constraints"))
+  (?xml-stylesheet `(href "common.css"))
+  (?xml-stylesheet `(href "default.css") `(title "Default style"))
+  (?xml-stylesheet `(alternate "yes") `(href "alt.css") `(title "Alternative style"))
+  (?xml-stylesheet `(href "single-col.css") `(media "all and (max-width: 30em)"))
+  (?xml-unknown `(href "nixda"))
+  (?PI "instruction #")
+  (TEI `(xmlns "http://www.tei-c.org/ns/1.0")
+    (info
+      ""
+      "            Eine wichtige Information"
+      "            für alle Leute!"
+      "        ")))"""
+        assert tree.as_html() == """<!DOCTYPE html>
+<html lang="en" xml:lang="en">
+<head>
+<meta charset="UTF-8" />
+</head>
+<body>
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-model href="http://www.tei-c.org/release/xml/tei/custom/schema/relaxng/tei_all.rng"?>
+<?xml-model href="xhtml-strict-additional-constraints.sch" group="Strict" title="Check against strict document type complex constraints"?>
+<?xml-stylesheet href="common.css"?>
+<?xml-stylesheet href="default.css" title="Default style"?>
+<?xml-stylesheet alternate="yes" href="alt.css" title="Alternative style"?>
+<?xml-stylesheet href="single-col.css" media="all and (max-width: 30em)"?>
+<?xml-unknown href="nixda"?>
+<?PI pichars="instruction #"></?PI>
+<TEI xmlns="http://www.tei-c.org/ns/1.0">
+  <info>
+                Eine wichtige Information
+                für alle Leute!
+            
+  </info>
+</TEI>
+</body>
+</html>"""
 
 
 if __name__ == "__main__":

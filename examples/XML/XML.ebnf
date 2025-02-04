@@ -12,7 +12,7 @@
 @ comment     = //                   # no implicit comments
 @ ignorecase  = False                # literals and regular expressions are case-sensitive
 @ reduction   = merge_treetops       # merge anonymous leaf-nodes
-@ disposable  = BOM, Misc, NameStartChar, NameChars, CommentChars, PubidChars, prolog,
+@ disposable  = BOM, Misc, NameStartChar, NameChars, CommentChars, PubidChars, prolog, XmlPIAtts,
                 PubidCharsSingleQuoted, VersionNum, EncName, Reference, CData, EOF, tagContent
 @ drop        = strings, whitespace, BOM, EOF  # drop anonymous tokens, whitespace, EOF and BOM
 
@@ -23,9 +23,9 @@
 #
 #######################################################################
 
-document        = [BOM] prolog §element [Misc] EOF
+document        = [BOM] prolog §element [Misc] ~ EOF
 BOM             = /[\ufeff]|[\ufffe]|[\u0000feff]|[\ufffe0000]/  # byte-order-mark
-prolog          = [ ~ XMLDecl ] [Misc] [doctypedecl [Misc]]
+prolog          = [ ~ XMLDecl ] [Misc] ~ [doctypedecl [Misc] ~]
 XMLDecl         = '<?xml' §VersionInfo [EncodingDecl] [SDDecl] ~ '?>'
 
 VersionInfo     = ~ 'version' ~ '=' ~ ("'" VersionNum "'" | '"' VersionNum '"')
@@ -70,6 +70,7 @@ tagContent      = !/[\/!?]/ §Name { ~ Attribute } ~ &('>'|'/>')
 ETag            = '</' §Name ~ '>'
 
 Attribute       = Name ~ §'=' ~ AttValue
+PseudoAtt	    = Name ~ §"=" ~ PseudoAttValue
 
 content         = [ CharData ]
                   { (element | Reference | CDSect | PI | Comment)
@@ -87,6 +88,10 @@ AttValue        = '"' { /[^<&"]+/ | Reference } '"'
 SystemLiteral   = '"' /[^"]*/ '"' | "'" /[^']*/ "'"
 PubidLiteral    = '"' [PubidChars] '"'
                 | "'" [PubidCharsSingleQuoted] "'"
+
+PseudoAttValue  = '"' { /[^"<&]+/ | CharRef | PredefEntityRef } '"'
+                | "'" (/[^'<&]+/ | CharRef | PredefEntityRef)* "'"
+PredefEntityRef	= "&amp;" | "&lt;" | "&gt;" | "&quot;" | "&apos;"
 
 
 #######################################################################
@@ -127,10 +132,14 @@ NameChars       = /(?:_|:|-|\.|[A-Z]|[a-z]|[0-9]
 #
 #######################################################################
 
-Misc            = { Comment | PI | S }+
+Misc            = ~ { Comment ~ | StyleSheetPI ~ | XmlModelPI ~ | UnknownXmlPI ~ | PI ~ }+
 Comment         = '<!--' { CommentChars | /-(?!-)/ } ~ '-->'
-PI              = '<?' PITarget [~ PIChars] '?>'
+PI              = '<?' §PITarget [~ PIChars] '?>'
 PITarget        = !/[Xx][Mm][Ll]/ Name
+StyleSheetPI    = "<?xml-stylesheet" §XmlPIAtts "?>"
+XmlModelPI	    = "<?xml-model" §XmlPIAtts "?>"
+UnknownXmlPI    = "<?" /[Xx][Mm][Ll]-?/->DROP Name §XmlPIAtts "?>"
+XmlPIAtts       = !([Char]"?>" [Char]) { ~ PseudoAtt } ~
 CDSect          = '<![CDATA[' CData ']]>'
 
 #######################################################################
@@ -148,5 +157,6 @@ CData           = /(?:(?!\]\]>)(?:\x09|\x0A|\x0D|[\u0020-\uD7FF]|[\uE000-\uFFFD]
 PIChars         = /(?:(?!\?>)(?:\x09|\x0A|\x0D|[\u0020-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF]))+/
 CommentChars    = /(?:(?!-)(?:\x09|\x0A|\x0D|[\u0020-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF]))+/
 CharRef         = ('&#' /[0-9]+/ ';') | ('&#x' /[0-9a-fA-F]+/ ';')
+Char            = /(?:\x09|\x0A|\x0D|[\u0020-\uD7FF]|[\uE000-\uFFFD]|[\U00010000-\U0010FFFF])+/
 S               = /\s+/
 EOF             = !/./          # no more characters ahead, end of file reached

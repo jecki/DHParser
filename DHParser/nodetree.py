@@ -1694,7 +1694,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return [usetab + head + tail]
 
         if self._children:
-            content = [usetab + head]
+            content = [usetab + head] if head else []
             for child in self._children:
                 subtree = child._tree_repr(tab, open_fn, close_fn, data_fn, density,
                         inline, inline_fn, allow_omissions, reflow_fn, mapping, depth + 1)
@@ -1984,6 +1984,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         root = cast(RootNode, self) if isinstance(self, RootNode) \
             else None  # type: Optional[RootNode]
+        line_breaks = linebreaks(src) if src else []
 
         def attr_err_ignore(value: str) -> str:
             return ("'%s'" % value) if value.find('"') >= 0 else '"%s"' % value
@@ -2002,7 +2003,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         def opening(node: Node) -> str:
             """Returns the opening string for the representation of `node`."""
-            nonlocal attr_filter, empty_tags
+            nonlocal attr_filter, empty_tags, line_breaks
             if node.name in string_tags and not node.has_attr():
                 if node.name == CHAR_REF_PTYPE and node.content.isalnum(): return "&#x"
                 elif node.name == ENTITY_REF_PTYPE: return "&"
@@ -2017,6 +2018,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             if root and id(node) in root.error_nodes and not node.has_attr('err'):
                 txt.append(' err=' + attr_filter(''.join(str(err).replace('&', '')
                                                          for err in root.node_errors(node))))
+            if node.name[0:1] == '?' and not node.result:
+                empty_tags.add(node.name)
             if node.name in empty_tags:
                 if node.name[0:1] != '?' and node.result:
                     if strict_mode:
@@ -2024,7 +2027,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                             f'Empty element "{node.name}" with content: '
                             f'"{abbreviate_middle(str(node.result), 40)}" !? '
                             f'Use Node.as_xml(..., strict_mode=False) to suppress this error!')
-                if node.name[0] == '?':  ending = '?>'
+                if node.name[0:1] == '?':  ending = '?>'
                 elif node.result:  ending = '>'
                 else:  ending = '/>'
             elif node.name == '!--':
@@ -2062,11 +2065,13 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         def reflow(tab: str, content: str) -> str:
             return self._reflow(tab, content, reflow_col)
 
-        line_breaks = linebreaks(src) if src else []
+        string_tags = frozenset(string_tags) | frozenset({':XML'})
+        empty_tags = set(frozenset(empty_tags))
+        d = -1 if self.name == ":XML" else 0
         reflow_fn = reflow if reflow_col > 0 else lambda tab, content: content
         xml = '\n'.join(self._tree_repr(
             ' ' * indentation, opening, closing, sanitizer, density=1, inline_fn=inlining,
-            allow_omissions=bool(string_tags), reflow_fn=reflow_fn, mapping=mapping))
+            allow_omissions=bool(string_tags), reflow_fn=reflow_fn, mapping=mapping, depth=d))
         if mapping is not NO_MAPPING_SENTINEL:
             self._finalize_mapping(mapping)
         return xml
@@ -3029,7 +3034,7 @@ def reflow_as_oneliner(tree: Node,
 ## S-expression- and XML-parsers and JSON-reader ######################
 
 
-RX_SXPR_INNER_PARSER = LazyRE(r'[\w:]+')
+RX_SXPR_INNER_PARSER = LazyRE(r'[?]?[\w.:-]+')
 RX_SXPR_NOTEXT = LazyRE(r'(?:(?!\)).)*', re.DOTALL)
 RX_SXPR_TEXT = {qtmark: LazyRE(qtmark + r'.*?' + qtmark, re.DOTALL)
                 for qtmark in ['"""', "'''", '"', "'"]}
@@ -3195,10 +3200,10 @@ def parse_sxml(sxml: Union[str, StringView]) -> RootNode:
 
 
 RX_WHITESPACE_TAIL = re.compile(r'\s*$')
-RX_XML_ATTRIBUTES = LazyRE(r'\s*(?P<attr>[\w:_.-]+)\s*=\s*"(?P<value>.*?)"\s*')
+RX_XML_ATTRIBUTES = LazyRE(r'\s*(?P<attr>[\w:.-]+)\s*=\s*"(?P<value>.*?)"\s*')
 RX_XML_SPECIAL_TAG = re.compile(r'<(?![?!])')
-RX_XML_OPENING_TAG = LazyRE(r'<\s*(?P<tagname>[\w:_.-]+)\s*')
-RX_XML_CLOSING_TAG = LazyRE(r'</\s*(?P<tagname>[\w:_.-]+)\s*>')
+RX_XML_OPENING_TAG = LazyRE(r'<\s*(?P<tagname>[\w:.-]+)\s*')
+RX_XML_CLOSING_TAG = LazyRE(r'</\s*(?P<tagname>[\w:.-]+)\s*>')
 RX_XML_HEADER = re.compile(r'<(?![?!])')
 
 

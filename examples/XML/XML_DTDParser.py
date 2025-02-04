@@ -98,7 +98,7 @@ class XML_DTDGrammar(Grammar):
     element = Forward()
     extSubsetDecl = Forward()
     ignoreSectContents = Forward()
-    source_hash__ = "acd083ac2ca508047c7147444a45e00d"
+    source_hash__ = "a45746385c173913a5972e3ea4c31ffc"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -142,8 +142,8 @@ class XML_DTDGrammar(Grammar):
                           '|[\\U00010000-\\U000EFFFF])+')
     Comment = Series(Drop(Text('<!--')), ZeroOrMore(Alternative(CommentChars, RegExp('-(?!-)'))), Drop(Text('-->')))
     Name = Series(NameStartChar, Option(NameChars))
-    PITarget = Series(NegativeLookahead(RegExp('X|xM|mL|l')), Name)
-    PI = Series(Drop(Text('<?')), PITarget, Option(Series(dwsp__, PIChars)), Drop(Text('?>')))
+    PITarget = Series(NegativeLookahead(RegExp('[Xx][Mm][Ll]')), Name)
+    PI = Series(Drop(Text('<?')), PITarget, RegExp('[~ PIChars]'), Drop(Text('?>')))
     Misc = OneOrMore(Alternative(Comment, PI, S))
     Names = Series(Name, ZeroOrMore(Series(RegExp(' '), Name)))
     Nmtoken = Synonym(NameChars)
@@ -210,7 +210,7 @@ class XML_DTDGrammar(Grammar):
     markupdecl = Alternative(elementdecl, AttlistDecl, EntityDecl, NotationDecl, PI, Comment)
     DeclSep = Alternative(PEReference, S)
     intSubset = ZeroOrMore(Alternative(markupdecl, DeclSep))
-    doctypedecl = Series(Drop(Text('<!DOCTYPE')), dwsp__, Name, Option(Series(dwsp__, ExternalID)), dwsp__, Option(Series(Drop(Text('[')), intSubset, Drop(Text(']')), dwsp__)), Drop(Text('>')), mandatory=2)
+    doctypedecl = Series(Drop(Text('<!DOCTYPE')), dwsp__, Name, RegExp('[~ ExternalID]'), dwsp__, Option(Series(Drop(Text('[')), intSubset, Drop(Text(']')), dwsp__)), Drop(Text('>')), mandatory=2)
     XMLDecl = Series(Drop(Text('<?xml')), VersionInfo, Option(EncodingDecl), Option(SDDecl), dwsp__, Drop(Text('?>')))
     prolog = Series(Option(Series(dwsp__, XMLDecl)), Option(Misc), Option(Series(doctypedecl, Option(Misc))))
     element.set(Alternative(emptyElement, Series(STag, content, ETag, mandatory=1)))
