@@ -235,7 +235,7 @@ class HTMLTransformer(Compiler):
     def __init__(self):
         super().__init__()
         self.cleanup_whitespace = not get_config_value("HTML.preserve_whitespace", False)  # remove empty CharData from mixed elements
-        self.expendables = {'PI', 'CDSect', 'doctypedecl'}
+        self.expendables = {'CDSect', 'doctypedecl', 'XmlModelPI', 'StyleSheetPI', 'UnknownXmlPI', 'PI'}
 
     def reset(self):
         super().reset()

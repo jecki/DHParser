@@ -65,7 +65,7 @@ class TestXMLParser:
   (?xml-stylesheet `(alternate "yes") `(href "alt.css") `(title "Alternative style"))
   (?xml-stylesheet `(href "single-col.css") `(media "all and (max-width: 30em)"))
   (?xml-unknown `(href "nixda"))
-  (?PI "instruction #")
+  (?PI `(instructions__ "instruction #"))
   (TEI `(xmlns "http://www.tei-c.org/ns/1.0")
     (info
       ""
@@ -86,7 +86,7 @@ class TestXMLParser:
 <?xml-stylesheet alternate="yes" href="alt.css" title="Alternative style"?>
 <?xml-stylesheet href="single-col.css" media="all and (max-width: 30em)"?>
 <?xml-unknown href="nixda"?>
-<?PI pichars="instruction #"></?PI>
+<?PI instruction #?>
 <TEI xmlns="http://www.tei-c.org/ns/1.0">
   <info>
                 Eine wichtige Information

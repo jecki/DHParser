@@ -2010,7 +2010,12 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 else: return ''
             txt = ['<', xml_tag_name(node.name)]
             if node.has_attr():
-                txt.extend(' %s=%s' % (k, attr_filter(str(v))) for k, v in node.attr.items())
+                if node.name[0:1] == '?' and node.name[1:4].lower() != 'xml' \
+                        and node.has_attr('instructions__'):
+                    assert len(node.attr) == 1
+                    txt.append(' ' + node.attr['instructions__'])
+                else:
+                    txt.extend(' %s=%s' % (k, attr_filter(str(v))) for k, v in node.attr.items())
             if src and not (node.has_attr('line') or node.has_attr('col')):
                 txt.append(' line="%i" col="%i"' % line_col(line_breaks, node._pos))
             if src == '' and not (node.has_attr() and '_pos' in node.attr) and node._pos >= 0:

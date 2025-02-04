@@ -312,9 +312,12 @@ class XMLTransformer(Compiler):
         return node
 
     def on_PI(self, node) -> Node:
-        pi_target = node['PITarget']
-        node.name = f'?{pi_target.content}'
-        node.result = node.get('PIChars', EMPTY_NODE).content
+        target = node['PITarget'].content
+        instructions = node.get('PIChars', EMPTY_NODE).content
+        node.name = f'?{target}'
+        if instructions:
+            node.attr['instructions__'] = instructions
+        node.result = ''
         return node
 
     def on_doctypedecl(self, node) -> Node:
