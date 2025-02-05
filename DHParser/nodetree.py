@@ -1672,10 +1672,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         :param allow_omissions:  If True, the serialization algorithm may
             drop whitespace at certain points. This is useful (only)
             when serializing a tree as XML with mixed-mode nodes.
-        :param reflow_fn:  A hook function ((str, str) -> str) that can reflow
-            the serialized form of the current node (self) to a given column
-            width, if inline_fn(self) yields true, but the parameter inline
-            was False.
+        :param reflow_fn:  A hook function ((str, str, int) -> str) that can
+            reflow the serialized form of the current node (self) to a given
+            column width, if inline_fn(self) yields true, but the parameter
+            inline was False.
         :param mapping:  A dictionary that will be filled with the
             serialization mapping that maps each passed node to a tuple of
             three integers that represent that the length of the opening tag,
@@ -1772,7 +1772,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     content[-1] += tail
 
         if reflow and len(content) == 1:
-            content = [reflow_fn(tab, content[0])]
+            content = [reflow_fn(tab, content[0], depth)]
         else:
             assert not reflow or len(content) == 1, f"Reflow but len(content) == {len(content)} > 1 !?"
         if mapping is not NO_MAPPING_SENTINEL: update_mapping(content)
@@ -1928,7 +1928,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 else "'%s'" % strg if strg.find("'") < 0 \
                 else '"%s"' % strg.replace('"', r'\"')
 
-        def reflow(tab: str, content: str) -> str:
+        def reflow(tab: str, content: str, depth: int) -> str:
             if len(content) < reflow_col:
                 return content
             nonlocal inner_content
@@ -1954,7 +1954,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 return True
 
         if flatten_threshold >= INFINITE:  indentation = 0
-        reflow_fn = reflow if reflow_col > 0 else lambda tab, content: content
+        reflow_fn = reflow if reflow_col > 0 else lambda tab, content, depth: content
         inline_fn = inline if reflow_col > 0 else lambda nd: False
         sxpr_0 = '\n'.join(self._tree_repr(
             ' ' * indentation, opening, closing, pretty, inline_fn=inline_fn,
@@ -2096,7 +2096,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             content = content.replace('<', '&lt;').replace('>', '&gt;')
             return content
 
-        def inlining(node: Node):
+        def inlining(node: Node) -> bool:
             """Returns True, if `node`'s tag name is contained in `inline_tags`,
             thereby signalling that the children of this node shall not be
             printed on several lines to avoid unwanted gaps in the output.
@@ -2105,15 +2105,19 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                    or (node.get_attr('xml:space', 'default') == 'preserve')
                    # or (node.name in string_tags and not node.children)
 
-        def reflow(tab: str, content: str) -> str:
+        def reflow(tab: str, content: str, depth: int) -> str:
+            lstripped = content.lstrip()
+            if lstripped[0:1] != '<':
+                content = tab * depth + lstripped
+                tab = ''
             return self._reflow(tab, content, reflow_col)
 
         string_tags = frozenset(string_tags) | frozenset({':XML'})
-        # if reflow_col > 0:
-        #    inline_tags = frozenset(inline_tags) | string_tags
+        if reflow_col > 0:
+           inline_tags = frozenset(inline_tags) | string_tags
         empty_tags = set(frozenset(empty_tags))
         d = -1 if self.name == ":XML" else 0
-        reflow_fn = reflow if reflow_col > 0 else lambda tab, content: content
+        reflow_fn = reflow if reflow_col > 0 else lambda tab, content, depth: content
         xml = '\n'.join(self._tree_repr(
             ' ' * indentation, opening, closing, sanitizer, density=1, inline_fn=inlining,
             allow_omissions=bool(string_tags), reflow_fn=reflow_fn, mapping=mapping, depth=d))
