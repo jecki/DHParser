@@ -501,7 +501,8 @@ ChildrenType: TypeAlias = Tuple['Node', ...]
 StrictResultType: TypeAlias = Union[ChildrenType, StringView, str]
 ResultType: TypeAlias = Union[StrictResultType, 'Node']
 
-NO_MAPPING_SENTINEL = {"dont return": "a position mapping for the serialization"}
+RawMappingType: TypeAlias = Dict['Node', Sequence[int]]
+NO_MAPPING_SENTINEL: RawMappingType = {"don't generate a serialization mapping ": (-1, -1, -1)}
 
 
 class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibility
@@ -1642,7 +1643,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def _tree_repr(self, tab, open_fn, close_fn, data_fn=lambda i: i,
                    density=0, inline=False, inline_fn=lambda node: False,
                    allow_omissions=False, reflow_fn=lambda tab, content: content,
-                   mapping = NO_MAPPING_SENTINEL, depth=0) -> List[str]:
+                   mapping: RawMappingType = NO_MAPPING_SENTINEL, depth=0) -> List[str]:
         """
         Generates a tree representation of this node and its children
         in string from.
@@ -1658,6 +1659,30 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             string (e.g. an XML-name) for a given node.
         :param data_fn:  A function (str -> str) that filters the data
             string before printing, e.g. to add quotation marks
+        :param density:  Either 0 or 1, where 1 produces a more dense
+            strings representation (i.e. less line breaks)
+        :param inline:  If True, the tree will be represented in a single.
+            Line brakes will occur only if they occur in the data, but
+            neither line brakes nor spaces will be added by the
+            serialization algorithm.
+        :param inline_fn:  A function (Node -> bool) that determines whether
+            a node (and if so all its child nodes as well) shall be serialized
+            inline. If parameter inline is True this will always be the case,
+            no matter what inline_fn() returns
+        :param allow_omissions:  If True, the serialization algorithm may
+            drop whitespace at certain points. This is useful (only)
+            when serializing a tree as XML with mixed-mode nodes.
+        :param reflow_fn:  A hook function ((str, str) -> str) that can reflow
+            the serialized form of the current node (self) to a given column
+            width, if inline_fn(self) yields true, but the parameter inline
+            was False.
+        :param mapping:  A dictionary that will be filled with the
+            serialization mapping that maps each passed node to a tuple of
+            three integers that represent that the length of the opening tag,
+            the overall length of ther serialized from of the node, and
+            the length of the closing tag,
+            e.g.  "<name>Fritz</name>" -> (6, 18, 7)"
+        :param depth:  The current depth of the node in the tree.
 
         :returns:  A list of strings that, if concatenated, yield a
             serialized tree representation of the node and its children.
@@ -1782,6 +1807,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 mapping[self][1] = sum(content) + len(content) - 1
             else:
                 mapping[self][1] = sum(mapping[self])
+        else:
+            mapping[self][1] = sum(mapping[self])
+
 
     def _reflow(self, tab: str, content: str, reflow_col: int) -> str:
         stripped = content.strip()
@@ -1815,7 +1843,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 compact: bool = True,
                 flatten_threshold: int = 92,
                 sxml: int = 0, reflow_col: int = 0,  # example: 80
-                mapping = NO_MAPPING_SENTINEL) -> str:
+                mapping: RawMappingType = NO_MAPPING_SENTINEL) -> str:
         """
         Serializes the tree as S-expression, i.e. in lisp-like form. If this
         method is called on a RootNode-object, error strings will be displayed
@@ -1836,6 +1864,13 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             `SXML <https://okmij.org/ftp/Scheme/SXML.html>`_ -conventions,
             e.g. `` (@ (attr "value")`` instead of `` `(attr "value") ``
             if 2, the attribute node (@) will always be present, even if empty.
+        :param reflow_col:  If > 0, the serialized form of the tree will be
+            reflowed to the given column width.
+        :param mapping:  If not NO_MAPPING_SENTINEL, a the passed dictionary
+            will be filled with a mapping of the nodes to the length of their
+            opening, overall length and closing, respectively, e.g.
+            '(name "Fritz")' -> (5, 14, 1)
+
         :returns: A string containing the S-expression serialization of the tree.
         """
         if not (0 <= sxml <= 2): raise ValueError(f"sxml must be 0 <= sxml <= 2, but not {sxml}")
@@ -1945,8 +1980,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 compact: bool = True,
                 flatten_threshold: int = 92,
                 normal_form: int = 1, reflow_col: int = 0,
-                mapping = NO_MAPPING_SENTINEL) -> str:
-        """Serializes the tree as `SXML <https://okmij.org/ftp/Scheme/SXML.html>`_"""
+                mapping: RawMappingType = NO_MAPPING_SENTINEL) -> str:
+        """Serializes the tree as `SXML <https://okmij.org/ftp/Scheme/SXML.html>`_.
+        See :py:func:`~nodetree.as_sxpr` for a description of the parameters."""
         assert 1 <= normal_form <= 2, "Presently, only sxml normal forms 1 and 2 are supported"
         return self.as_sxpr(src, indentation, compact, flatten_threshold, sxml=normal_form,
                             reflow_col=reflow_col, mapping=mapping)
@@ -1957,7 +1993,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                string_tags: AbstractSet[str] = LEAF_PTYPES,
                empty_tags: AbstractSet[str] = frozenset(),
                strict_mode: bool = True, reflow_col: int = 0,  # example: 80
-               mapping = NO_MAPPING_SENTINEL) -> str:
+               mapping: RawMappingType = NO_MAPPING_SENTINEL) -> str:
         """Serializes the tree of nodes as XML.
 
         :param src: The source text or `None`. In case the source text is
@@ -1976,6 +2012,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 "<empty/>" instead of "<empty></empty>".
         :param strict_mode: If True, violation of stylistic or interoperability rules
                 raises a ValueError.
+        :param reflow_col: If > 0, the serialized form of the tree will be
+            reflown to the given column width. This is useful for pretty-printing
         :returns: The XML-string representing the tree originating in `self`
         """
         if mapping and mapping is not NO_MAPPING_SENTINEL:
@@ -2065,12 +2103,14 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             """
             return node.name in inline_tags \
                    or (node.get_attr('xml:space', 'default') == 'preserve')
-                    # or (node.name in string_tags and not node.children)
+                   # or (node.name in string_tags and not node.children)
 
         def reflow(tab: str, content: str) -> str:
             return self._reflow(tab, content, reflow_col)
 
         string_tags = frozenset(string_tags) | frozenset({':XML'})
+        # if reflow_col > 0:
+        #    inline_tags = frozenset(inline_tags) | string_tags
         empty_tags = set(frozenset(empty_tags))
         d = -1 if self.name == ":XML" else 0
         reflow_fn = reflow if reflow_col > 0 else lambda tab, content: content
@@ -3221,7 +3261,18 @@ def parse_xml(xml: Union[str, StringView],
               out_empty_tags: Set[str] = EMPTY_TAGS_SENTINEL,
               strict_mode: bool = True) -> RootNode:
     """
-    Generates a tree of nodes from a (Pseudo-)XML-source.
+    Generates a tree of nodes from a (Pseudo-)XML-source. T
+
+    his simplified XML-parser only parses the XML-content, processing
+    instructions, document-type definitions etc. will be ignored.
+    The source-document should not contain embedded DTDs or CData-sections,
+    as the outcome is undefined, i.e. either an error will be raised or the
+    returned tree will contain (possibly inconclusive) fragments of these
+    parts.
+
+    For a more precise XML-parser, that confoms to the
+    `W3C-XML-specification <https://www.w3.org/TR/xml/>`_, use
+    :py:func:`~parsers.parse_XML` or :py:func:`~parsers.parse_HTML`.
 
     :param xml: The XML-string to be parsed into a tree of Nodes
     :param string_tag: A tag-name that will be used for
@@ -5494,6 +5545,12 @@ class LocalContentMapping(ContentMapping):
                *attr_dict, **attributes) -> Tuple[Node, int]:
         return super().markup(start_pos + self.pos_offset, end_pos + self.pos_offset, name,
                               *attr_dict, **attributes)
+
+
+class SerializationMapping:
+    def __init__(self, tree: Node, serialization: str, raw_mapping):
+        pass
+
 
 
 # if __name__ == "__main__":

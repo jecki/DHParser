@@ -21,6 +21,8 @@ limitations under the License.
 """
 
 from DHParser.parsers import parse_HTML, parse_XML
+from DHParser import nodetree
+
 
 class TestHTMLParser:
     def test_CharRef(self):
@@ -96,6 +98,15 @@ class TestXMLParser:
 </TEI>
 </body>
 </html>"""
+        tree = nodetree.parse_xml(xml)
+        assert tree.as_xml() == """<TEI xmlns="http://www.tei-c.org/ns/1.0">
+  <info>
+                Eine wichtige Information
+                für alle Leute!
+            
+  </info>
+</TEI>"""
+
 
 
 if __name__ == "__main__":

@@ -1534,6 +1534,17 @@ class TestMarkupInsertion:
     #     print(t.as_sxpr()); print()
 
 class TestSerializationMapping:
+    def test_mapping_trivial(self):
+        s = '(name "Fritz")'
+        tree = parse_sxpr(s)
+        mapping = {}
+        sxpr = tree.as_sxpr(mapping=mapping)
+        assert mapping[tree] == [5, 14, 1]
+        mapping = {}
+        xml = tree.as_xml(mapping=mapping)
+        assert mapping[tree] == [6, 18, 7]
+
+
     def test_mapping1(self):
         s = """(BedeutungsPosition `(unterbedeutungstiefe "0")
                  (Bedeutung
@@ -1613,6 +1624,7 @@ class TestReflow:
         xml_t = tree.as_xml(inline_tags={'p'})
         assert xml_t == xml_s
         xml_r = tree.as_xml(inline_tags={'p', ':Text'}, reflow_col=80)
+        # TODO: print(tree.as_xml(reflow_col=80))
         assert xml_r == (
             "<article>\n"
             "  <p>Es ist nur meiner entschiedenen Ueberzeugung gemäß, wenn ich ausspreche,\n"

@@ -42,12 +42,22 @@ def parse_template(src: str,
 
 
 def parse_HTML(html: str, preserve_whitespace: bool=False) -> Node:
+    """Parses an HTML document and returns the root node of the resulting
+    DOM-tree."""
     from DHParser.parsers import HTMLParser
     return parse_template(html, HTMLParser.compile_src, "HTML",
                           {"HTML.preserve_whitespace": preserve_whitespace})
 
 
 def parse_XML(xml: str, preserve_whitespace: bool=False) -> Node:
+    """Parses an XML document and returns the root node of the resulting
+    DOM-tree. This parser is more exact, but slower than
+    :py:func:`~nodetree.parse_xml`. The differences are: Inclusion of
+    processing instructions and comments in the DOM-tree and better
+    conformance to the `XML standard <https://www.w3.org/TR/xml/>`_.
+    The parser is also more robust if the source-data contains structural
+    errors.
+    """
     from DHParser.parsers import XMLParser
     return parse_template(xml, XMLParser.compile_src, "XML",
                           {"XML.preserve_whitespace": preserve_whitespace})
