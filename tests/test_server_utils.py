@@ -30,7 +30,7 @@ import os
 import sys
 import traceback
 
-scriptpath = os.path.dirname(__file__) or '.'
+scriptpath = os.path.normpath(os.path.dirname(__file__)) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.server import pp_json, ExecutionEnvironment, asyncio_run, Server,\
@@ -195,7 +195,7 @@ class TestUtils:
             '  "    raise AssertionError()"\n' \
             '  "    ^^^^^^^^^^^^^^^^^^^^^^"\n' \
             '  "AssertionError"\n  ""}'.\
-            replace('$SCRIPTPATH', scriptpath.replace('\\', '/'), 1).replace('./', '')            
+            replace('$SCRIPTPATH', scriptpath.replace('\\', '/'), 1).replace('./', '')
         # print(ppjsn)
         # print(expected)
         assert ppjsn == expected or ppjsn == expected_py311, '\n\n' + ppjsn + '\n\n' + expected
