@@ -1602,6 +1602,37 @@ class TestSerializationMapping:
                 overall_size = sum(mapping[child][1] for child in nd.children)
                 assert inner_size == overall_size, nd.as_xml()
 
+    def test_xml_mapping(self):
+        from DHParser.nodetree import SerializationMapping
+        dom = parse_xml('<text>Kommt ein <i><b>Vogel</b></i> geflogen</text>')
+        raw_mapping = {}
+        ser = dom.as_xml(inline_tags={dom.name}, mapping=raw_mapping)
+        sm = SerializationMapping(dom, ser, raw_mapping)
+        i = ser.find('</text>')
+        path, ser_pos, part = sm.get_path(i, left_biased=True)
+        assert (path[-1].name, ser_pos, part) == (TOKEN_PTYPE, 35, 1)
+        i = ser.find('</text>')
+        path, ser_pos, part = sm.get_path(i, left_biased=False)
+        assert (path[-1].name, ser_pos, part) == ('text', 0, 1)
+        i = ser.find('<i><b>')
+        path, ser_pos, part = sm.get_path(i, left_biased=False)
+        assert (path[-1].name, ser_pos, part) == ('i', 16, -1)
+        i = ser.find('Vogel')
+        path, ser_pos, part = sm.get_path(i, left_biased=False)
+        assert (path[-1].name, ser_pos, part) == ('b', 19, 0)
+        i = ser.find('ein')
+        path, ser_pos, part = sm.get_path(i, left_biased=False)
+        assert (path[-1].name, ser_pos, part) == (TOKEN_PTYPE, 6, 0)
+
+        # print(pp_path(path, 1, ', '))
+        # print(ser_pos, i - ser_pos)
+        # print(part)
+
+        k = sm.content_index(path[-1], ser_pos, i - ser_pos, part)
+        assert k == 6
+
+
+
 
 class TestReflow:
     def test_reflow1(self):

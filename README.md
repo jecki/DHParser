@@ -361,7 +361,7 @@ If you use DHParser for Scientific Work, then please cite it as:
 
 DHParser. A Parser-Generator for Digital-Humanities-Applications,  
 Division for Digital Humanities Research & Development, Bavarian Academy of Science and Technology, 
-Munich Germany 2017, https://gitlab.lrz.de/badw-it/dhparser
+Munich Germany 2017-2025, https://gitlab.lrz.de/badw-it/dhparser
 
 References and Acknowledgement
 ------------------------------

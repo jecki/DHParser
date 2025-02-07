@@ -201,6 +201,7 @@ __all__ = ('WHITESPACE_PTYPE',
            'reset_chain_ID',
            'DEFAULT_START_INDEX_SENTINEL',
            'ContentMapping',
+           'SerializationMapping',
            'FrozenNode',
            'EMPTY_NODE',
            'tree_sanity_check',
@@ -3059,6 +3060,8 @@ def reflow_as_oneliner(tree: Node,
     selected by the leaf_criterion. (If any of these nodes
     has children, a TypeError will be raised.) 'whitespace_re' is the regular
     expression that is used to capture whitespace.
+
+    One use case of this function is to normalize XML-code.
     """
     wsrx = re.compile(whitespace_re) if isinstance(whitespace_re, str) else whitespace_re
     if check_xml_space:
@@ -4894,12 +4897,12 @@ class ContentMapping:
 
         Example::
 
-            >>> tree = parse_sxpr('(a (b "123") (c (d "45") (e "67")))')
+            >>> tree = parse_sxpr('(a (b "012") (c (d "34") (e "56")))')
             >>> cm = ContentMapping(tree)
             >>> i = cm.get_path_index(4)
             >>> path = cm.path_list[i]
             >>> print(pp_path(path, 1, ', '))
-            a, c, d "45"
+            a, c, d "34"
         """
         errmsg = lambda i: f'Illegal position value {i}. ' \
                            f'Must be 0 <= position < length of text!'
@@ -4920,11 +4923,11 @@ class ContentMapping:
 
     def get_path_and_offset(self, pos: int, left_biased: bool = False,
                             index_out: Optional[List[int]] = None) -> Tuple[Path, int]:
-        """Returns the path and relative position for the absolute
-        position ``pos``.
+        """Returns the path and relative position within the leaf-node of
+        the path.
 
-        :param pos:   a position in the content of the tree for which the
-            path mapping ``cm`` was generated
+        :param pos: the position in the string-content for which the path and
+            offset should be determined.
         :param left_biased: yields the location after the end of the previous
             path rather than the location at the very beginning of the
             next path. Default value is "False".
@@ -4980,7 +4983,7 @@ class ContentMapping:
     def get_node_position(self, node: Node, reverse: bool=False) -> int:
         """Returns the string-position of first or last + 1 (if reverse
         is True) character of the first or last occurrence of node
-        within the mapping. If node is not contained  in any path of
+        within the mapping. If node is not contained in any path of
         the mapping, -1 will be returned. If node is a leaf node it
         occurs only once (if at all) in the mapping. Otherwise, it
         occurs (if at all) more often than once if it or any of its
@@ -5525,7 +5528,7 @@ class LocalContentMapping(ContentMapping):
 
     def get_path_and_offset(self, pos: int, left_biased: bool = False,
                             index_out: Optional[List[int]] = None) -> Tuple[Path, int]:
-        pth, off = super().get_path_and_offset(pos + self.pos_offset, left_biased)
+        pth, off = super().get_path_and_offset(pos + self.pos_offset, left_biased, index_out)
         return pth, off - self.pos_offset
 
     def iterate_paths(self, start_pos: int, end_pos: int, left_biased: bool = False) \
@@ -5552,8 +5555,110 @@ class LocalContentMapping(ContentMapping):
 
 
 class SerializationMapping:
-    def __init__(self, tree: Node, serialization: str, raw_mapping):
-        pass
+    "Maps serializations (e.g. XML, SXML, S-Expression) to paths. EXPERIMENTAL!!!"
+
+    def __init__(self, tree: Node, serialization: str, raw_mapping: RawMappingType):
+        assert serialization[0:1] in ('(', '<'), "XML- or S-Expression-serialization expected!"
+        self.tree = tree
+        self.serialization = serialization
+        self.ser_type = "XML" if serialization[0:1] == '<' else "S-Expression"
+        self.raw_mapping = raw_mapping
+        self._cook()
+
+    def _cook(self):
+        self._path: Dict[Node, Path] = {}
+        self._node_list: List[Node] = []
+        self._pos_list: List[int] = []
+        self._node_pos: Dict[Node, int] = {}
+
+        def cook(path: Path, pos: int) -> int:
+            _begin = pos
+            node = path[-1]
+            self._node_list.append(node)
+            self._node_pos[node] = pos
+            self._pos_list.append(pos)
+            self._path[node] = path.copy()
+            pos += self.raw_mapping[node][0]  # add head-length to pos
+            if node.children:
+                for child in node.children:
+                    path.append(child)
+                    pos = cook(path, pos)
+                    path.pop()
+            else:
+                pos += self.raw_mapping[node][1] - self.raw_mapping[node][0] - self.raw_mapping[node][2]
+            self._node_list.append(node)
+            self._pos_list.append(pos)
+            pos += self.raw_mapping[node][2]
+            assert _begin + self.raw_mapping[node][1] == pos, \
+                f'{_begin}, {pos}, {self.raw_mapping[node]}, {node.as_sxpr()}'
+            return pos
+
+        cook([self.tree], 0)
+
+    def get_path(self, pos: int, left_biased: bool = False) -> Tuple[Path, int, int]:
+        """Returns the path of the innermost node which covers the character
+        at position ``pos`` in the serialization. The second return value is
+        the position of the node within the serialization. The
+        third return value is -1 if the character is part of the opening tag,
+        0 if it is part of the data, and 1 if it is part of the closing tag.
+
+        The offset of `pos` within the node's serialization can easily be
+        dtermined by subtracting from pos the returned serialization-position
+        of the node at the end of the returned path."""
+        errmsg = lambda i: f'Illegal position value {i}. Must be ' \
+            f'0 <= position < length of serialization ({len(self.serialization)})!'
+        if pos < 0:  raise IndexError(errmsg(pos))
+        try:
+            index = bisect.bisect_right(self._pos_list, pos) - 1
+            if left_biased:
+                while index > 0 and pos - self._pos_list[index] == 0:
+                    index -= 1
+            else:
+                last = len(self._pos_list) - 1
+                pivot = self._pos_list[index]
+                while index < last and self._pos_list[index + 1] == pivot:
+                    index += 1
+        except IndexError:
+            raise IndexError(errmsg(pos))
+        node = self._node_list[index]
+        ser_pos = self._node_pos[node]
+        offset = pos - ser_pos
+        assert 0 <= offset <= self.raw_mapping[node][1]
+        part = -1 if offset < self.raw_mapping[node][0] else \
+                1 if offset >= self.raw_mapping[node][1] - self.raw_mapping[node][2] else \
+                0
+        return self._path[self._node_list[index]], ser_pos, part
+
+    def content_index(self, node: Node, ser_pos: int, offset: int, part: int = 0) -> int:
+        assert not node._children
+        if part < 0: return 0
+        if part > 0: return node.strlen()
+        mapping = self.raw_mapping[node]
+        head, overall, tail = mapping
+        offset = offset - head
+        if offset < 0: return 0
+        if offset >= overall - tail:
+            return node.strlen()
+        ser_len = overall - head - tail
+        if self.ser_type == "XML":
+            if ser_len != node.strlen():
+                raise ValueError('Content Index cannot be determined for formatted serialization!'
+                                 ' Use root.as_xml(inline_tags=={root.name}) for an '
+                                 'unformatted XML serialization!')
+            return offset
+        else:  # self.ser_type == "S-Expression"
+            ser_content = self.serialization[ser_pos: ser_pos + overall]
+            stripped = ser_content.lstrip()   # remove leading blanks
+            stripped = stripped.lstrip(stripped[0])  # remove leading quotation marks
+            if stripped.startswith(node.content):
+                return offset
+            else:
+                raise ValueError('Content Index cannot be determined for formatted serialization '
+                                 'or for serializations that happen to contain escaped quotation '
+                                 'marks. Try a flatten_sxpr(tree.as_sxpr()) to exclude th first '
+                                 'cause!')
+
+
 
 
 
