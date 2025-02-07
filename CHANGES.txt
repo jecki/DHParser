@@ -1,5 +1,5 @@
-DHParser Version 1.8.2
-......................
+DHParser Version 1.8.2 (6.2.2024)
+.................................
 
 - bugfixes for xast and nast-serializations
 - removed warnings about unused symbols in the AST-table to avoid,
@@ -7,7 +7,7 @@ DHParser Version 1.8.2
 - updates to nodetree.ContentMapping: methods path(), pos() and path_str()
   added; markup() now avoids the generation of single anynomous leaves.
 - xml and S-expression-serialization now allows word wrapping
-- script XMLreflow.py added to reflow XML-files
+- script XMLreflow.py added to reflow XML-files (experimental)
 - experimental nodetree.SerializationMapping added (not yet documented,
   see tests in test_nodetree for now...)
 

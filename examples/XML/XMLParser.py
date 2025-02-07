@@ -102,12 +102,12 @@ def preprocess_XML(source):
 #######################################################################
 
 class XMLGrammar(Grammar):
-    r"""Parser for an XML source file.
+    r"""Parser for a XML source file.
     """
     element = Forward()
     source_hash__ = "44aaa6af7a9e915d4166bf64e3810265"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:PubidCharsSingleQuoted$|Misc$|VersionNum$|PubidChars$|EncName$|EOF$|tagContent$|XmlPIAtts$|BOM$|NameChars$|Reference$|NameStartChar$|CData$|prolog$|CommentChars$)')
+    disposable__ = re.compile('(?:PubidCharsSingleQuoted$|CommentChars$|PubidChars$|NameChars$|VersionNum$|tagContent$|Reference$|XmlPIAtts$|BOM$|Misc$|prolog$|EncName$|EOF$|CData$|NameStartChar$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'tagContent': [('', "syntax error in tag-name of opening or empty tag:  {1}")],
