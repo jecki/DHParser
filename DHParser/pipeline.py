@@ -36,21 +36,20 @@ from __future__ import annotations
 import copy
 import functools
 
-from collections import namedtuple
 from functools import partial
-from typing import Set, Union, Any, Dict, List, Tuple, Iterable, Callable, Sequence
+from typing import Set, Union, Any, Dict, List, Tuple, Iterable, Callable, Sequence, NamedTuple
 
-from DHParser.compile import compile_source, process_tree
+from DHParser.compile import compile_source, process_tree, CompilerFactory
 from DHParser.configuration import get_config_value
 from DHParser.error import Error, has_errors, FATAL
 from DHParser.nodetree import RootNode, Node
-from DHParser.parse import Grammar, ParserFactory
+from DHParser.parse import Grammar, ParserFactory, ParserFactory
 from DHParser.preprocess import PreprocessorFactory, PreprocessorFunc, Tokenizer, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors, \
-    ReadIncludeClass, DeriveFileNameFunc
+    DeriveFileNameFunc
 from DHParser.toolkit import ThreadLocalSingletonFactory, deprecation_warning, deprecated
 from DHParser.trace import resume_notices_on, set_tracer, trace_history
-from DHParser.transform import TransformerFunc, transformer, TransformationDict
+from DHParser.transform import TransformerFunc, TransformerFactory, transformer, TransformationDict
 
 __all__ = ('Junction',
            'PipelineResult',
@@ -65,11 +64,16 @@ __all__ = ('Junction',
            'create_evaluation_junction',
            'create_junction')
 
-Junction = namedtuple('Junction',
-    ['src',                ## type: string
-     'factory',            ## type: CompilerFactory
-     'dst'],               ## type: string
-    module=__name__)
+
+class Junction(NamedTuple):
+    """A junction is a triple of the name of the source-stage,
+    a factory-function that returns the actual transformation
+    function and the name of the destination-stage."""
+    src: str
+    factory: Union[ParserFactory, CompilerFactory, TransformerFactory]
+    dst: str
+    __module__ = __name__  # needed for cython compatibility
+
 
 # compilation and postprocessing result:
 # Dict: target-stage-name -> (result, errors)
@@ -249,10 +253,9 @@ def full_pipeline(source: str,
 # def _preprocess(source, factory) -> Union[str, StringView]:
 #     return factory()(source)
 
-PseudoJunction = namedtuple('PseudoJunction',
-                            ['factory'],  # get thread safe preprocessing function
-                            # 'process'], # preprocess thread-safely
-                            module=__name__)
+class PseudoJunction(NamedTuple):
+    factory: PreprocessorFactory  #  Callable  # get thread safe preprocessing function
+    __module__ = __name__  # needed for cython compatibility
 
 
 def _preprocessor_factory(tokenizer: Tokenizer,

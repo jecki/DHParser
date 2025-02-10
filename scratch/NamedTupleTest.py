@@ -2,15 +2,25 @@
 
 # compile with:
 
-# cython3 --embed -o NamedTupleTest.c NamedTupleTest.py
+# $ cython3 --embed -o NamedTupleTest.c NamedTupleTest.py
 # $ gcc -Os -I /usr/include/python3.13 -o NamedTupleTest NamedTupleTest.c -lpython3.13 -lpthread -lm -lutil -ldl
+# alternative include path (MacOS): /opt/homebrew/Frameworks/Python.framework/Headers/
+# $ gcc -v -Os -I /opt/homebrew/Frameworks/Python.framework/Headers/ -o NamedTupleTest NamedTupleTest.c -L /opt/homebrew/Frameworks/Python.framework/Versions/Current/lib -lpython3.13 -lpthread -lm -lutil -ldl
 
 
 from collections import namedtuple
 from typing import NamedTuple
 
-PersonTyping = NamedTuple('PersonTyping', [('firstname',str),('lastname',str)])
-PersonCollections = namedtuple('PersonCollections', ['firstname','lastname'], module=__name__)
+# PersonTyping = NamedTuple('PersonTyping', [('firstname',str),('lastname',str)])
+class PersonTyping(NamedTuple):
+    firstname: str
+    lastname: str
+    __module__ = "NamedTupleTest"
+# PersonCollections = namedtuple('PersonCollections', ['firstname','lastname'], module="NamedTupleTest")
+class PersonCollections(NamedTuple):
+    firstname: str
+    lastname: str
+    __module__ = "NamedTupleTest"
 
 pt = PersonTyping("John","Smith")
 pc = PersonCollections("John","Smith")

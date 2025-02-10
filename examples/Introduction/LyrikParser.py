@@ -110,8 +110,8 @@ preprocessing: PseudoJunction = create_preprocess_junction(
 class LyrikGrammar(Grammar):
     r"""Parser for a Lyrik source file.
     """
-    source_hash__ = "60e097d5658eeca34ff534ada1412aa4"
-    disposable__ = re.compile('(?:wortfolge$|ENDE$|ZEICHENFOLGE$|LEERRAUM$|ziel$|JAHRESZAHL$)')
+    source_hash__ = "c577cafc1fafbe248c133e19d8ac332e"
+    disposable__ = re.compile('(?:ZEICHENFOLGE$|ENDE$|wortfolge$|ziel$|JAHRESZAHL$|LEERRAUM$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''

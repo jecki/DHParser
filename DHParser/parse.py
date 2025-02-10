@@ -33,10 +33,11 @@ from __future__ import annotations
 
 import functools
 from bisect import bisect_left
-from collections import defaultdict, namedtuple
+from collections import defaultdict
 import copy
 from functools import lru_cache
-from typing import Callable, cast, Collection, DefaultDict, Sequence, Union, Optional, Iterator
+from typing import Callable, cast, Collection, DefaultDict, Sequence, Union, Optional, Iterator, \
+    NamedTuple
 
 from DHParser.configuration import get_config_value, NEVER_MATCH_PATTERN
 from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
@@ -1238,18 +1239,11 @@ def mixin_nonempty(whitespace: str) -> str:
     return whitespace
 
 
-# # AnalysisError = Tuple[str, Parser, Error]      # pname, parser, error
-# class AnalysisError(NamedTuple):
-#     symbol: str
-#     parser: Parser
-#     error: Error
-
-# collections.namedtuple needed for Cython compatibility
-AnalysisError = namedtuple('AnalysisError',
-    ['symbol',  ## type: str
-     'parser',  ## type: Parser
-     'error'    ## type: Error
-    ], module=__name__)
+class AnalysisError(NamedTuple):
+    symbol: str
+    parser: Parser
+    error: Error
+    __module__ = __name__  # required for cython compatibility
 
 
 class GrammarError(Exception):

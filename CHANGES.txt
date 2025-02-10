@@ -1,3 +1,9 @@
+DHParser Verions 1.8.3
+......................
+
+- collections.namedtuple replaced by typing.NamedTuple-class
+
+
 DHParser Version 1.8.2 (6.2.2024)
 .................................
 

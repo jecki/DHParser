@@ -881,7 +881,7 @@ def batch_process(file_names: List[str], out_dir: str,
 
 # moved or deprecated functions
 
-PseudoJunction = namedtuple('PseudoJunction', ['factory'], module=__name__)
+PseudoJunction = namedtuple('PseudoJunction', ['factory'], module=__name__)  # DEPRECATED: Use pipeline.PseudoJunction
 
 @deprecated('create_preprocess_junction() has moved to the pipeline-module! Use "from DHParser.pipeline import create_preprocess_junction"')
 def create_preprocess_junction(tokenizer, include_regex, comment_regex,

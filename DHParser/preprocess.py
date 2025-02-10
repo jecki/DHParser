@@ -30,7 +30,6 @@ cannot completely be described entirely with context-free grammars.
 from __future__ import annotations
 
 import bisect
-from collections import namedtuple
 import functools
 import os
 from typing import Union, Optional, Callable, Tuple, List, Any, NamedTuple
@@ -81,36 +80,23 @@ RX_TOKEN_ARGUMENT = re.compile(r'[^\x1b\x1c\x1d]*')
 RX_TOKEN = LazyRE(r'\x1b(?P<name>\w+)\x1c(?P<argument>[^\x1b\x1c\x1d]*)\x1d')
 
 
-# class IncludeInfo(NamedTuple):
-#     begin: int
-#     length: int
-#     file_name: str
-
-# collections.namedtuple needed for pickleability in combination with cython
-IncludeInfo = namedtuple('IncludeInfo',
-    ['begin',       ## type: int
-     'length',      ## type: int
-     'file_name'],  ## type: str
-    module=__name__)
+class IncludeInfo(NamedTuple):
+    begin: int
+    length: int
+    file_name: str
+    __module__ = __name__  # required for cython compatibility
 
 
 def has_includes(sm: SourceMap) -> bool:
     return any(fname != sm.original_name for fname in sm.file_names)
 
 
-# class PreprocessorResult(NamedTuple):
-#     original_text: Union[str, StringView]
-#     preprocessed_text: Union[str, StringView]
-#     back_mapping: SourceMapFunc
-#     errors: List[Error]
-
-# collections.namedtuple needed for pickleability in combination with cython
-PreprocessorResult = namedtuple('PreprocessorResult',
-    ['original_text',      ## type: Union[str, StringView]
-     'preprocessed_text',  ## type: Union[str, StringView]
-     'back_mapping',       ## type: SourceMapFunc
-     'errors'],            ## type: List[Error]
-    module=__name__)
+class PreprocessorResult(NamedTuple):
+    original_text: Union[str, StringView]
+    preprocessed_text: Union[str, StringView]
+    back_mapping: SourceMapFunc
+    errors: List[Error]
+    __module__ = __name__  # required for cython compatibility
 
 
 FindIncludeFunc: TypeAlias = Union[Callable[[str, int], IncludeInfo],   # (document: str,  start: int)

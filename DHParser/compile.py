@@ -40,7 +40,7 @@ from collections import namedtuple
 import copy
 import functools
 import os
-from typing import Any, Optional, Tuple, List, Set, Dict, Union, Callable
+from typing import Any, Optional, Tuple, List, Set, Dict, Union, Callable, NamedTuple
 
 from DHParser.configuration import get_config_value
 from DHParser.preprocess import PreprocessorFunc
@@ -386,11 +386,11 @@ def logfile_basename(filename_or_text, function_or_class_or_instance) -> str:
 CompilerFunc: TypeAlias = Union[Compiler, Callable[[RootNode], Any], functools.partial]
 CompilerFactory: TypeAlias = Union[Callable[[], CompilerFunc], functools.partial]
 
-CompilationResult = namedtuple('CompilationResult',
-    ['result',      ## type: Optional[Any]
-     'messages',    ## type: List[Error]
-     'AST'],        ## type: Optional[RootNode]
-    module=__name__)
+class CompilationResult(NamedTuple):
+    result: Optional[Any]
+    messages: List[Error]
+    AST: Optional[RootNode]
+    __module__ = __name__  # needed for cython compatibility
 
 
 def NoTransformation(root: RootNode) -> RootNode:
