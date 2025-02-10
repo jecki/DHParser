@@ -60,7 +60,7 @@ The source code of module ``nodetree`` consists of four main sections:
        and :py:mod:`compile`.)
 
     g. Functions for serialization and deserialization as XML, S-Expression,
-       JSON as well as conversion to and from ElemenTree/LXML-representations.
+       JSON as well as conversion to and from ElementTree/LXML-representations.
 
     h. Class :py:class:`RootNode` serving as both root-node of the tree and a hub
        for storing data for the tree as a whole (as, for example, the
