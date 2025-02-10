@@ -138,7 +138,8 @@ def main():
                     if (lfn[-4:] in ('.xml', '.htm')
                             or lfn[-5:] in ('.sxml', '.sxpr', '.html')):
                         name = os.path.join(root, file)
-                        process_file(name, tags, column, output, verbose)
+                        outfile = os.path.join(outdir, name)
+                        process_file(name, tags, column, outfile, verbose)
         else:
             extension = os.path.splitext(name)[1].lower()
             if extension not in ('.xml', '.htm', '.sxml', '.sxpr', '.html'):

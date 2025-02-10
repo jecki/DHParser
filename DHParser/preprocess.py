@@ -33,7 +33,7 @@ import bisect
 from collections import namedtuple
 import functools
 import os
-from typing import Union, Optional, Callable, Tuple, List, Any
+from typing import Union, Optional, Callable, Tuple, List, Any, NamedTuple
 
 from DHParser.error import Error, SourceMap, SourceLocation, SourceMapFunc, \
     add_source_locations
@@ -86,7 +86,7 @@ RX_TOKEN = LazyRE(r'\x1b(?P<name>\w+)\x1c(?P<argument>[^\x1b\x1c\x1d]*)\x1d')
 #     length: int
 #     file_name: str
 
-# collections.namedtuple needed for Cython 2 compatbility
+# collections.namedtuple needed for pickleability in combination with cython
 IncludeInfo = namedtuple('IncludeInfo',
     ['begin',       ## type: int
      'length',      ## type: int
@@ -104,7 +104,7 @@ def has_includes(sm: SourceMap) -> bool:
 #     back_mapping: SourceMapFunc
 #     errors: List[Error]
 
-# collections.namedtuple needed for Cython 2 compatbility
+# collections.namedtuple needed for pickleability in combination with cython
 PreprocessorResult = namedtuple('PreprocessorResult',
     ['original_text',      ## type: Union[str, StringView]
      'preprocessed_text',  ## type: Union[str, StringView]
