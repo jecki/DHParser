@@ -1129,7 +1129,7 @@ VALID_DIRECTIVES = {
     '[tree_]reduction': 'Reduction level for simplifying the tree while parsing.'
                         'Possible levels: none, flatten, merge_treetops, merge',
     '$SYMBOL_filer': 'Function that transforms captured values of the given symbol on retrieval',
-    '$SYMBOL_error': 'Pair of regular expression an custom error message if regex matches',
+    '$SYMBOL_error': 'Pair of regular expression and custom error message if regex matches',
     '$SYMBOL_skip': 'List of regexes or functions to find reentry point after an error',
     '$SYMBOL_resume': 'List or regexes or functions to find reentry point for parent parser',
     'optimizations': 'Optimization level: none, some, all',
