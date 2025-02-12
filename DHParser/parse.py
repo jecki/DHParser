@@ -3222,7 +3222,7 @@ def _with_pos(nd: Node, pos: int) -> Node:
     return nd
 
 
-class SmartRE(CombinedParser):  # TODO: turn this into a CombinedParser
+class SmartRE(CombinedParser):
     r"""
     Regular expression parser that returns a tree with a node for every
     captured group (named as the group or as the number of the group,
@@ -5041,13 +5041,13 @@ class Forward(UnaryParser):
         handling. In order to do so it (unfortunately) has to duplicate some code
         from :py:meth:`Parser.__call__`.
 
-        The algorithm roughly follows:
+        The algorithm for avoiding infinite loops in left-recursive grammars roughly follows:
         https://medium.com/@gvanrossum_83706/left-recursive-peg-grammars-65dab3c580e1
         See also:
         https://tinlizzie.org/VPRIPapers/tr2007002_packrat.pdf
         """
         grammar = self._grammar
-        if not grammar.left_recursion__:  # TODO: add a static check and flag: self.left_recursive__!
+        if not grammar.left_recursion__:
             return self.parser(location)
 
         # rollback variable changing operation if parser backtracks

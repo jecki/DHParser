@@ -1,11 +1,119 @@
 Reference
 =========
 
+.. _directives_reference:
+
+EBNF-Directives
+---------------
+
+The following is a table of DHParser's EBNF-directives.
+EBNF-Directives control how the grammar is interpreted and processed by DHParser.
+They also influence the verbostiy or sparseness of the concrete-syntax-tree
+that the parser yields.
+
+EBNF-Directives always have the form::
+
+    @[DIRECTIVE] = [VALUES]
+
+============== ========================================================================================================================
+Directive      purpose and possible values
+============== ========================================================================================================================
+@comment       Regular expression for comments, e.g. /#.*(?:\n|$)/
+@whitspace     Regular expression for whitespace or one of the predifined values: horizontal, linefeed, linestart, vertical
+@literalws     Implicitly assume insignificant whitespace adjacent to string-literals: left, right, both or none
+@ignorecase    Global case-sensitivity: True or False
+@include       include other EBNF files
+@tokens        List of names of all valid preprocessor-tokens
+@hide          List of symbols that shall produce anonymous nodes instead of nodes named by the symbol
+@drop          List of symbols that shall be dropped entirely from the tree
+@reduction     Reduction level for simplifying trees while parsing: none, flatten, merge_treetops, merge
+@[SYM]_filter  Name of a Python function that yields a counterpart of the captured symbols, e.g. ")" for "("
+@[SYM]_error   A regular expression followed by an error message that is produced if the expression matches at the error-location
+@[SYM]_skip    List of regular expressions or grammar symbols or function names to find a reentry point after an error
+@[SYM]_resume  Same as above, only this time the parent parser rather than the failing parser continues at the reentry point
+@optimizations Optimization level for speeding up the parsing-process: none, some, all
+@Error(...)    Attach a parsing-error to the syntax-tree if the parser reaches this point
+@flavor        The syntax for the EBNF-grammar: dhparser (strict) or heuristic (tolerant with respect to variants of EBNF, but slower)
+============== =======================================================================================================================
 
 
+Examples 1: :ref:`Comments and Whitespace <comments_and_whitespace>`::
 
-Module-Reference
-----------------
+    @comment = /#.*(?:\n|$)/     # form the first `#` everything until
+                                 # the end of the line or file is a comment
+
+    @whitespace = /[ \t\n]*/     # insignificant whitespace consists of blanks, tabs or linefeeds
+                                 # Note: Insignificant whitespace should always be defined in such
+                                 #       a way that the empty string is also always matched!
+
+    @literalws  = right          # If a string literal is defined in the grammar it is always assumed
+                                 # to be succeeded by insignificant whitespace, i.e. you can
+                                 # write "+" instead of "+"~ in your grammar to make it easier to read
+
+Examples 2: ref:`Merge, hide and drop <simplifying_syntax_trees>` parts of the concrete syntax tree::
+
+    @hide = /_\w+/               # Let all symbols starting with an underscore produce anonymous Nodes.
+                                 # Symbol names with an underscore can then be used for symbols are
+                                 # merely introduced for structuring the grammar.
+
+    @hide = INT, FRAC, EXP       # Capture parts of a number, e.g. 1.5E+10 but the
+    or @disposable (deprecated!) # division into parts is not needed, anymore, after it's been captured
+
+    # Instead of using a directive, "HIDE:" can be written in front of the symbols, e.g.
+    HIDE:INT = [`-`] ( /[1-9][0-9]+/ | /[0-9]/ )
+
+    @hide = comma, full_stop     # Drop the delimiters comma and full_stop entirely. Note: Only
+    @drop = comma, full_stop     # hidden symbols can be dropped! This @drop can only be used in
+                                 # combination with hide if used as a directive
+
+    # Instead of using a directive, "DROP:" can be written in front of the symbols to be dropped, e.g.
+    DROP:comma = ","
+
+    # There is also an inline version of DROP, e.g.
+    list = word { ("," -> DROP) word }
+
+    @reduction = merge           # reduce and merge anonymous nodes whereever possible
+                                 # in the concrete syntax tree
+
+
+Example 3: :ref:`Error Handling <error_catching>` and :ref:`Fail-tolerant parsing <fail_tolerant_parsing>`::
+
+    # Attach an error to the syntax-tree if an illegal character follows a backspace
+    escape = backspace ("n" | "s" | "t" | @Error("1001:Unknown escpae sequence") /./)
+
+    @street_error = /(?!\d)/, "1001:House number expected!"
+    @street_error = '', "1002:House number too high!"
+    @street_skip  = /\d+/  # in case "street" fails, skip behind the next sequence of digits
+    @street_resume = /\n/  # if that does not work, resume street's parent parser with the next line
+    street = /\w+/~ § /\d\d?/ !/\d/
+
+Examples 4: Other directives::
+
+    @include = "numbers.ebnf"    # insert the content of "numbers.ebf" here
+
+    @tokens = BEGIN_INDENTATION, END_INDENTATION  # names of preprocessor tokens. These should match
+    or @preprocessor_tokens = ...                 # the names in the Python code for the preprocessor
+
+    @bracket_filter = matching_bracket  # matching_bracket = lambda s: {"(": ")", "[": "]"}[s]
+    remark = bracket text ::bracket     # a remark is a text block enclosed by either (...) or [...]
+    bracket = "(" | "["
+
+    @flavor = heuristic          # try to auto-detect the EBNF-style used (e.g ISO, PEG, etc.)
+
+    @ignorecase = True           # Capital and small letters do not make a difference when caputing a
+                                 # document. Note: Usually it is better not to set this globally, but
+                                 # to specify it locally with the I-Flag within the regular expressions
+                                 # that capture the "atomic" parts, e.g. word = /(?i)[a-z]/
+
+    @optimizations = all         # make the parser a little faster by using regular expressions for
+                                 # some non-recursive parts of the grammar
+
+
+.. _modules_reference:
+
+
+Modules
+-------
 
 
 :py:mod:`ebnf`
