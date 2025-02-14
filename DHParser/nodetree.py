@@ -80,18 +80,26 @@ The source code of module ``nodetree`` consists of four main sections:
     relating the flat string-content of a document-tree to its
     structure. This allows using the string-content for searching in the
     document and then switching to the tree-structure to manipulate it.
+
+    An (experimental) special case are serialization-mappings that
+    map positions within a serialized version of the syntax-tree
+    (XML, S-Expression or SXML) to locations within the tree
+    (Node, Node-position within the serialization, offset and
+     a flag indicating whether the position falls into the opening-tag,
+     cosing-tag or content of the Node.)
+
 """
 
 from __future__ import annotations
 
 import bisect
 import copy
+from enum import IntEnum
 import functools
 import json
-import random
 import sys
 from typing import Callable, cast, Iterator, Sequence, List, Set, AbstractSet, \
-    Union, Tuple, Container, Optional, Dict, Any
+    Union, Tuple, Container, Optional, Dict, Any, NamedTuple
 
 if sys.version_info >= (3, 6, 0):
     OrderedDict = dict
@@ -4720,6 +4728,27 @@ def leaf_paths(criterion: PathSelector) -> PathMatchFunction:
     return leaf_match_func
 
 
+class ContentLocation(NamedTuple):
+    """A location within in a context mapping"""
+    path: Path
+    offset: int
+    __module__ = __name__  # required for cython/pickle compatibility
+
+
+# class StrictNodeLocation(NamedTuple):
+#     "Location of a node within the context mapping."
+#     node: Node
+#     path_index: int
+#     __module__ = __name__
+
+
+class NodeLocation(NamedTuple):
+    "Location (possibly void) of a node within the context mapping."
+    node: Optional[Node]
+    path_index: int
+    __moddule__ = __name__
+
+
 DEFAULT_START_INDEX_SENTINEL = -2 ** 30
 
 class ContentMapping:
@@ -4922,7 +4951,7 @@ class ContentMapping:
         return path_index
 
     def get_path_and_offset(self, pos: int, left_biased: bool = False,
-                            index_out: Optional[List[int]] = None) -> Tuple[Path, int]:
+                            index_out: Optional[List[int]] = None) -> ContentLocation:
         """Returns the path and relative position within the leaf-node of
         the path.
 
@@ -4940,7 +4969,7 @@ class ContentMapping:
         """
         path_index = self.get_path_index(pos, left_biased)
         if index_out is not None:  index_out.append(path_index)
-        return self._path_list[path_index], pos - self._pos_list[path_index]
+        return ContentLocation(self._path_list[path_index], pos - self._pos_list[path_index])
 
     def get_node_index(self, node: Node, reverse: bool=False) -> int:
         """Returns the index in the path_list of the first or last
@@ -5042,7 +5071,7 @@ class ContentMapping:
 
     def select_if(self, match_func: NodeMatchFunction,
                   start_from: int = DEFAULT_START_INDEX_SENTINEL,
-                  reverse: bool = False) -> Iterator[Tuple[Node, int]]:
+                  reverse: bool = False) -> Iterator[NodeLocation]:
         """Yields the node and its path-index for all nodes that are matched
         by the match function. Searching starts from the path with the index
         ``start_from``. Searching within a path starts from the end
@@ -5084,19 +5113,19 @@ class ContentMapping:
             for k in range(len(path) - 1, -1, -1):
                 node = path[k]
                 if match_func(node):
-                    yield node, i
+                    yield NodeLocation(node, i)
                     break
             else:
                 node = None
 
     def pick_if(self, match_func: NodeMatchFunction,
                 start_from: int = DEFAULT_START_INDEX_SENTINEL,
-                reverse: bool = False) -> Tuple[Optional[Node], int]:
+                reverse: bool = False) -> NodeLocation:
         return next(self.select_if(match_func, start_from, reverse), (None, -1))
 
     def select(self, criterion: NodeSelector,
                start_from: int = DEFAULT_START_INDEX_SENTINEL,
-               reverse: bool = False) -> Iterator[Tuple[Node, int]]:
+               reverse: bool = False) -> Iterator[NodeLocation]:
         """See :py:meth:`ContentMapping.select_if`
 
         Example:.
@@ -5110,7 +5139,7 @@ class ContentMapping:
 
     def pick(self, criterion: NodeSelector,
              start_from: int = DEFAULT_START_INDEX_SENTINEL,
-             reverse: bool = False) -> Tuple[Optional[Node], int]:
+             reverse: bool = False) -> NodeLocation:
         return next(self.select(criterion, start_from, reverse), (None, -1))
 
     @cython.locals(i=cython.int, start_pos=cython.int, end_pos=cython.int, offset=cython.int)
@@ -5248,7 +5277,7 @@ class ContentMapping:
         last_index = self.get_path_index(end_pos)
         self.rebuild_mapping_slice(first_index, last_index)
 
-    def insert_node(self, pos: int, node: Node) -> Tuple[Node, int]:
+    def insert_node(self, pos: int, node: Node) -> NodeLocation:
         """Inserts a node at a specific position into the last or
         eventually second but last node in the path from the context mapping
         that covers this position. Returns the parent of the newly inserted
@@ -5258,12 +5287,12 @@ class ContentMapping:
         rel_pos = pos - self._pos_list[index]
         parent = insert_node(path, rel_pos, node)
         self.rebuild_mapping_slice(index, index)
-        return parent, index
+        return NodeLocation(parent, index)
 
 
     @cython.locals(i=cython.int, k=cython.int, q=cython.int, r=cython.int, t=cython.int, u=cython.int, L=cython.int)
     def markup(self, start_pos: cython.int, end_pos: cython.int, name: str,
-               *attr_dict, **attributes) -> Tuple[Node, int]:
+               *attr_dict, **attributes) -> NodeLocation:
         """ Marks the span [start_pos, end_pos[ up by adding one or more Node's
         with ``name``, eventually cutting through ``divisible`` nodes. Returns the
         nearest common ancestor of ``start_pos`` and ``end_pos``.
@@ -5367,7 +5396,7 @@ class ContentMapping:
         if start_pos == end_pos:
             milestone = Node(name, '').with_attr(attr_dict)
             common_ancestor, path_index = self.insert_node(start_pos, milestone)
-            return common_ancestor, path_index
+            return NodeLocation(common_ancestor, path_index)
 
         bag = []
         path_A, pos_A = self.get_path_and_offset(start_pos, index_out=bag)
@@ -5406,7 +5435,7 @@ class ContentMapping:
             if self.auto_cleanup:
                 self.rebuild_mapping_slice(self.get_path_index(start_pos),
                                            self.get_path_index(end_pos, left_biased=True))
-            return common_ancestor, path_index
+            return NodeLocation(common_ancestor, path_index)
 
         stump_A = path_A[i:]
         stump_B = path_B[i:]
@@ -5465,7 +5494,7 @@ class ContentMapping:
                                        self.get_path_index(end_pos, left_biased=True))
         assert not common_ancestor.pick_if(lambda nd: nd.name == ':Text' and bool(nd.children),
             include_root=True), common_ancestor.as_sxpr()
-        return common_ancestor, path_index
+        return NodeLocation(common_ancestor, path_index)
 
 
 class LocalContentMapping(ContentMapping):
@@ -5527,9 +5556,9 @@ class LocalContentMapping(ContentMapping):
         return super().get_path_index(pos + self.pos_offset, left_biased) - self.first_index
 
     def get_path_and_offset(self, pos: int, left_biased: bool = False,
-                            index_out: Optional[List[int]] = None) -> Tuple[Path, int]:
+                            index_out: Optional[List[int]] = None) -> ContentLocation:
         pth, off = super().get_path_and_offset(pos + self.pos_offset, left_biased, index_out)
-        return pth, off - self.pos_offset
+        return ContentLocation(pth, off - self.pos_offset)
 
     def iterate_paths(self, start_pos: int, end_pos: int, left_biased: bool = False) \
             -> Iterator[Path]:
@@ -5545,13 +5574,27 @@ class LocalContentMapping(ContentMapping):
     def rebuild_mapping(self, start_pos: int, end_pos: int):
         super().rebuild_mapping(start_pos + self.pos_offset, end_pos + self.pos_offset)
 
-    def insert_node(self, pos: int, node: Node) -> Tuple[Node, int]:
+    def insert_node(self, pos: int, node: Node) -> NodeLocation:
         return super().insert_node(pos + self.pos_offset, node)
 
     def markup(self, start_pos: int, end_pos: int, name: str,
-               *attr_dict, **attributes) -> Tuple[Node, int]:
+               *attr_dict, **attributes) -> NodeLocation:
         return super().markup(start_pos + self.pos_offset, end_pos + self.pos_offset, name,
                               *attr_dict, **attributes)
+
+
+class SerPart(IntEnum):
+    OPENING_TAG = -1
+    INSIDE = 0
+    CLOSING_TAG = 1
+
+
+class SerLocation(NamedTuple):
+    """A location within a serialized version of the tree (XML, S-expression, SXML)."""
+    path: Path
+    ser_pos: int
+    offset: int
+    part: SerPart
 
 
 class SerializationMapping:
@@ -5595,7 +5638,7 @@ class SerializationMapping:
 
         cook([self.tree], 0)
 
-    def get_path(self, pos: int, left_biased: bool = False) -> Tuple[Path, int, int]:
+    def get_path(self, pos: int, left_biased: bool = False) -> SerLocation:
         """Returns the path of the innermost node which covers the character
         at position ``pos`` in the serialization. The second return value is
         the position of the node within the serialization. The
@@ -5627,9 +5670,11 @@ class SerializationMapping:
         part = -1 if offset < self.raw_mapping[node][0] else \
                 1 if offset >= self.raw_mapping[node][1] - self.raw_mapping[node][2] else \
                 0
-        return self._path[self._node_list[index]], ser_pos, part
+        return SerLocation(self._path[self._node_list[index]], ser_pos, offset, SerPart(part))
 
-    def content_index(self, node: Node, ser_pos: int, offset: int, part: int = 0) -> int:
+    def content_pos(self, node: Node, ser_pos: int, offset: int, part: int = 0) -> int:
+        """Returns the corresponding position within the pure string content
+        of the tree."""
         assert not node._children
         if part < 0: return 0
         if part > 0: return node.strlen()
@@ -5642,9 +5687,10 @@ class SerializationMapping:
         ser_len = overall - head - tail
         if self.ser_type == "XML":
             if ser_len != node.strlen():
-                raise ValueError('Content Index cannot be determined for formatted serialization!'
-                                 ' Use root.as_xml(inline_tags=={root.name}) for an '
-                                 'unformatted XML serialization!')
+                raise ValueError(
+                    'Position within the (pure) string-content cannot be determined for '
+                    'formatted serialization! Use root.as_xml(inline_tags=={root.name}) '
+                    'for an unformatted XML serialization!')
             return offset
         else:  # self.ser_type == "S-Expression"
             ser_content = self.serialization[ser_pos: ser_pos + overall]
@@ -5653,10 +5699,11 @@ class SerializationMapping:
             if stripped.startswith(node.content):
                 return offset
             else:
-                raise ValueError('Content Index cannot be determined for formatted serialization '
-                                 'or for serializations that happen to contain escaped quotation '
-                                 'marks. Try a flatten_sxpr(tree.as_sxpr()) to exclude th first '
-                                 'cause!')
+                raise ValueError(
+                    'Position within the (pure) string-content cannot be determined for '
+                    'formatted serialization or for serializations that happen to contain '
+                    'escaped quotation marks. Try a flatten_sxpr(tree.as_sxpr()) '
+                    'to rule out the first cause!')
 
 
 

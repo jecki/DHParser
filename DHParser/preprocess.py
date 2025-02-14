@@ -84,7 +84,7 @@ class IncludeInfo(NamedTuple):
     begin: int
     length: int
     file_name: str
-    __module__ = __name__  # required for cython compatibility
+    __module__ = __name__  # required for cython/pickle compatibility
 
 
 def has_includes(sm: SourceMap) -> bool:
@@ -96,7 +96,7 @@ class PreprocessorResult(NamedTuple):
     preprocessed_text: Union[str, StringView]
     back_mapping: SourceMapFunc
     errors: List[Error]
-    __module__ = __name__  # required for cython compatibility
+    __module__ = __name__  # required for cython/pickle compatibility
 
 
 FindIncludeFunc: TypeAlias = Union[Callable[[str, int], IncludeInfo],   # (document: str,  start: int)

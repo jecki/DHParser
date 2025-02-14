@@ -1609,26 +1609,26 @@ class TestSerializationMapping:
         ser = dom.as_xml(inline_tags={dom.name}, mapping=raw_mapping)
         sm = SerializationMapping(dom, ser, raw_mapping)
         i = ser.find('</text>')
-        path, ser_pos, part = sm.get_path(i, left_biased=True)
+        path, ser_pos, offset, part = sm.get_path(i, left_biased=True)
         assert (path[-1].name, ser_pos, part) == (TOKEN_PTYPE, 35, 1)
         i = ser.find('</text>')
-        path, ser_pos, part = sm.get_path(i, left_biased=False)
+        path, ser_pos, offset, part = sm.get_path(i, left_biased=False)
         assert (path[-1].name, ser_pos, part) == ('text', 0, 1)
         i = ser.find('<i><b>')
-        path, ser_pos, part = sm.get_path(i, left_biased=False)
+        path, ser_pos, offset, part = sm.get_path(i, left_biased=False)
         assert (path[-1].name, ser_pos, part) == ('i', 16, -1)
         i = ser.find('Vogel')
-        path, ser_pos, part = sm.get_path(i, left_biased=False)
+        path, ser_pos, offset, part = sm.get_path(i, left_biased=False)
         assert (path[-1].name, ser_pos, part) == ('b', 19, 0)
         i = ser.find('ein')
-        path, ser_pos, part = sm.get_path(i, left_biased=False)
+        path, ser_pos, offset, part = sm.get_path(i, left_biased=False)
         assert (path[-1].name, ser_pos, part) == (TOKEN_PTYPE, 6, 0)
 
         # print(pp_path(path, 1, ', '))
         # print(ser_pos, i - ser_pos)
         # print(part)
 
-        k = sm.content_index(path[-1], ser_pos, i - ser_pos, part)
+        k = sm.content_pos(path[-1], ser_pos, i - ser_pos, part)
         assert k == 6
 
 

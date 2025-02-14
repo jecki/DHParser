@@ -18,58 +18,58 @@ A grammar consists of a sequence of definitions (also known as "productions")
 of the form: *symbol* **=** *rule*. A rule is always a sequence of literals
 and operators. DHParser supports the following literals and operators:
 
-==========================  ====================  ================
-literals and operators      classical syntax      regex-like
-==========================  ====================  ================
+===========================  ====================  ================
+literals and operators       classical syntax      regex-like
+===========================  ====================  ================
 *literals*
---------------------------  --------------------  ----------------
-insignificant whitespace¹⁾  ~                     ~
-string literal              "..." or \`...\`      "..." or \`...\`
-regular expr.               /.../                 /.../
---------------------------  --------------------  ----------------
+---------------------------  --------------------  ----------------
+insignificant whitespace¹⁾   ~                     ~
+string literal               "..." or \`...\`      "..." or \`...\`
+regular expr.                /.../                 /.../
+---------------------------  --------------------  ----------------
 *operators*
---------------------------  --------------------  ----------------
-sequences                   A B C                 A B C
-alternatives                A | B | C             A | B | C
-interleave ²⁾               A ° B                 A ° B
-grouping                    (...)                 (...)
-options                     [ ... ]               ...?
-repetitions                 { ... }               ...*
-one or more                 { ... }+              ...+
-repetition range            ...(i, k)             ...{i, k}
---------------------------  --------------------  ----------------
+---------------------------  --------------------  ----------------
+sequences                    A B C                 A B C
+alternatives                 A | B | C             A | B | C
+interleave ²⁾                A ° B ° C             A ° B ° C
+grouping                     (...)                 (...)
+options                      [ ... ]               ...?
+repetitions                  { ... }               ...*
+one or more                  { ... }+              ...+
+repetition range             ...(i, k)             ...{i, k}
+---------------------------  --------------------  ----------------
 *lookahead assertions*
---------------------------  --------------------  ----------------
-positive lookahead          & ...                 & ...
-negative lookahead          ! ...                 ! ...
---------------------------  --------------------  ----------------
-*lookbehind assertions*³⁾
---------------------------  --------------------  ----------------
-positive lookbehind         <-& ...               <-& ...
-negative lookahead          <-! ...               <-! ...
---------------------------  --------------------  ----------------
+---------------------------  --------------------  ----------------
+positive lookahead           & ...                 & ...
+negative lookahead           ! ...                 ! ...
+---------------------------  --------------------  ----------------
+*lookbehind assertions* ³⁾
+---------------------------  --------------------  ----------------
+positive lookbehind          <-& ...               <-& ...
+negative lookahead           <-! ...               <-! ...
+---------------------------  --------------------  ----------------
 *error raising* ⁴⁾
---------------------------  --------------------  ----------------
-mandatory-marker            § ...                 § ...
-error-message               @Error("...")         @Error("...")
---------------------------  --------------------  ----------------
+---------------------------  --------------------  ----------------
+mandatory-marker             § ...                 § ...
+error-message                @Error("...")         @Error("...")
+---------------------------  --------------------  ----------------
 *macros* ⁵⁾
---------------------------  --------------------  ----------------
-macro definition            $macro($p1, ...) =    same
-macro usage                 $macro(expr, ...)     same
---------------------------  --------------------  ----------------
+---------------------------  --------------------  ----------------
+macro definition             $macro($p1, ...) =    same
+macro usage                  $macro(expr, ...)     same
+---------------------------  --------------------  ----------------
 *custom parsers* ⁶⁾
---------------------------  --------------------  ----------------
-custom parser               @Custom(parse_func)   same
-parser factory              @factory_func("...")  same
---------------------------  --------------------  ----------------
-*context sensitive ops.*⁷⁾
---------------------------  --------------------  ----------------
-pop and match               :: ...                :: ...
-retrieve and match          : ...                 : ...
-pop and always match        :? ...                :? ...
-filter-definition           @SYM_filter = func()  same
-==========================  ====================  ================
+---------------------------  --------------------  ----------------
+custom parser                @Custom(parse_func)   same
+parser factory               @factory_func("...")  same
+---------------------------  --------------------  ----------------
+*context sensitive ops.* ⁷⁾
+---------------------------  --------------------  ----------------
+pop and match                :: ...                :: ...
+retrieve and match           : ...                 : ...
+pop and always match         :? ...                :? ...
+filter-definition            @SYM_filter = func()  same
+===========================  ====================  ================
 
 
 ¹⁾ :ref:`Insignificant whitespace <insignificant_whitespace>` is whitespace
@@ -198,9 +198,9 @@ EBNF-Directives always have the form::
 
     @[DIRECTIVE] = [VALUES]
 
-============== ========================================================================================================================
+============== =======================================================================================================================
 Directive      purpose and possible values
-============== ========================================================================================================================
+============== =======================================================================================================================
 @comment       Regular expression for comments, e.g. /#.*(?:\n|$)/
 @whitspace     Regular expression for whitespace or one of the predifined values: horizontal, linefeed, linestart, vertical
 @literalws     Implicitly assume insignificant whitespace adjacent to string-literals: left, right, both or none
