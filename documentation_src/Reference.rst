@@ -1,10 +1,193 @@
 Reference
 =========
 
+EBNF-Reference
+--------------
+
+.. _ebnf_syntax:
+
+Syntax
+^^^^^^
+
+DHParser supports two different variants of the EBNF-snytax, called classical
+and regular-expression-like (or "regex-like"). The former resembles the
+ISO-standard for EBNF, the latter is more akin to the commonly used EBNF-syntax
+for parsing expression grammars.
+
+A grammar consists of a sequence of definitions (also known as "productions")
+of the form: *symbol* **=** *rule*. A rule is always a sequence of literals
+and operators. DHParser supports the following literals and operators:
+
+==========================  ====================  ================
+literals and operators      classical syntax      regex-like
+==========================  ====================  ================
+*literals*
+--------------------------  --------------------  ----------------
+insignificant whitespace¹⁾  ~                     ~
+string literal              "..." or \`...\`      "..." or \`...\`
+regular expr.               /.../                 /.../
+--------------------------  --------------------  ----------------
+*operators*
+--------------------------  --------------------  ----------------
+sequences                   A B C                 A B C
+alternatives                A | B | C             A | B | C
+interleave ²⁾               A ° B                 A ° B
+grouping                    (...)                 (...)
+options                     [ ... ]               ...?
+repetitions                 { ... }               ...*
+one or more                 { ... }+              ...+
+repetition range            ...(i, k)             ...{i, k}
+--------------------------  --------------------  ----------------
+*lookahead assertions*
+--------------------------  --------------------  ----------------
+positive lookahead          & ...                 & ...
+negative lookahead          ! ...                 ! ...
+--------------------------  --------------------  ----------------
+*lookbehind assertions*³⁾
+--------------------------  --------------------  ----------------
+positive lookbehind         <-& ...               <-& ...
+negative lookahead          <-! ...               <-! ...
+--------------------------  --------------------  ----------------
+*error raising* ⁴⁾
+--------------------------  --------------------  ----------------
+mandatory-marker            § ...                 § ...
+error-message               @Error("...")         @Error("...")
+--------------------------  --------------------  ----------------
+*macros* ⁵⁾
+--------------------------  --------------------  ----------------
+macro definition            $macro($p1, ...) =    same
+macro usage                 $macro(expr, ...)     same
+--------------------------  --------------------  ----------------
+*custom parsers* ⁶⁾
+--------------------------  --------------------  ----------------
+custom parser               @Custom(parse_func)   same
+parser factory              @factory_func("...")  same
+--------------------------  --------------------  ----------------
+*context sensitive ops.*⁷⁾
+--------------------------  --------------------  ----------------
+pop and match               :: ...                :: ...
+retrieve and match          : ...                 : ...
+pop and always match        :? ...                :? ...
+filter-definition           @SYM_filter = func()  same
+==========================  ====================  ================
+
+
+¹⁾ :ref:`Insignificant whitespace <insignificant_whitespace>` is whitespace
+   that neither carries any syntactic significance (say, as a delimiter) nor
+   has any semantic relevance (say as part of the data).
+
+²⁾ Interleave means that the following elements must appear (like in a
+   sequence), but it does not matter in which order.
+
+³⁾ In DHParser :ref:`lookbehind-assertions <lookaraound_operators>` always
+   operate on the reverse input string! This allows to exploit the full
+   capabilities of regular expressions without need to worry about
+   regex-engines supporting only constant-length look-behinds etc.
+   Keep in mind that looking back for the keyword "BEGIN" then means
+   that you have to check for "NIGEB", e.g. "<-& /\s*NIGEB/" means
+   that the prvious token read "BEGIN".
+
+⁴⁾ :ref:`Mandatory markers <mandatory_items>` express expectations about
+   the following items in a document. If a sequences has matched up to the
+   marker but then fails to match an element after the marker, this is
+   mot just a non-match, but an error that will be reported.
+   ref:`Error messages <grammar_code_for_errors>` should be added to
+   paths in the grammar that should never be reached if the parsed
+   document is correct.
+
+⁵⁾ See the :ref:`Marcros-section <macro_system>` in the manual for a detailed
+   explanation how macros work in DHParser.
+
+⁶⁾ :ref:`Custom parsers <custom_parsers>` are parsers that are defined
+   as Python-functions which will be called from the generated Python-parser
+   during parsing.
+
+⁷⁾ :ref:`Constext sensitive parsers <context_sensitive_parsers>` break with
+   the paradigm of context-free-grammars and may slow down the parsing
+   process. In connections with filter-functions they provide next to custom
+   parsers another means of realizing semantic actions.
+
+
+Example
+^^^^^^^
+
+Here is an example for the **classical-syntax**::
+
+    # Arithmetic-grammar
+
+    # directives
+
+    @ whitespace  = vertical             # implicit whitespace, denoted by ~, includes any number of line feeds
+    @ literalws   = right                # literals have implicit whitespace on the right hand side
+    @ comment     = /#.*/                # comments range from a '#'-character to the end of the line
+    @ ignorecase  = False                # literals and regular expressions are case-sensitive
+    @ drop        = whitespace, strings  # drop anonymous whitespace and (anonymous) string literals
+
+    # grammar
+
+    expression = term  { (PLUS | MINUS) term }
+    term       = factor { (DIV | MUL) factor }
+    factor     = [sign] (NUMBER | VARIABLE | group) { VARIABLE | group }
+    sign       = POSITIVE | NEGATIVE
+    group      = "(" expression ")"
+
+    PLUS       = "+"
+    MINUS      = "-"
+    MUL        = "*"
+    DIV        = "/"
+
+    POSITIVE   = /[+]/      # no implicit whitespace after signs!
+    NEGATIVE   = /[-]/
+
+    NUMBER     = /(?:0|(?:[1-9]\d*))(?:\.\d+)?/~
+    VARIABLE   = /[A-Za-z]/~
+
+In **regex-like syntax** the first part of the grammar for arithmetical expressions
+would read like this::
+
+    expression = term  ( (PLUS | MINUS) term )*
+    term       = factor { (DIV | MUL) factor }
+    factor     = sign? (NUMBER | VARIABLE | group) (VARIABLE | group )*
+    sign       = POSITIVE | NEGATIVE
+    group      = "(" expression ")"
+
+DHParser has a heuristic-mode that allows to write grammars using other characters
+as delimiters. For example, the same passage in strict ISO-style would look like::
+
+    @flavor = heuristic
+
+    expression ::= term  { (PLUS | MINUS) term };
+    term       ::= factor { (DIV | MUL) factor };
+    factor     ::= [sign] (NUMBER | VARIABLE | group) { VARIABLE | group };
+    sign       ::= POSITIVE | NEGATIVE;
+    group      ::= "(" expression ")";
+
+Or, in the more recent parsing expression grammar (PEG)-style::
+
+    @flavor = heuristic
+
+    expression = term  ( (PLUS / MINUS) term )*
+    term       = factor { (DIV / MUL) factor }
+    factor     = sign? (NUMBER / VARIABLE / group) (VARIABLE / group )*
+    sign       = POSITIVE / NEGATIVE
+    group      = "(" expression ")"
+
+Mind that in PEG-style it can be difficult to avoid ambiguities when using
+regular expressions to define the atomic-expressions. This can lead to unexpected
+parser-errors. Therefore it is better to use the `|`-sign for denoting alternatives,
+rather than a slash `/`. The meaning is in any case the same, namely, that of
+PEG-grammars where the first alternative that matches is used rather than checking
+all alternatives (as Earley-parsers would do).
+
+Note that despite of being based on parsing expression grammars DHParser fully
+supports direct and indirect left recursion in the grammar-definition. In order
+to avoid endless-loops it employs the seed-and grow-algorithm.
+
+
 .. _directives_reference:
 
-EBNF-Directives
----------------
+Directives
+^^^^^^^^^^
 
 The following is a table of DHParser's EBNF-directives.
 EBNF-Directives control how the grammar is interpreted and processed by DHParser.

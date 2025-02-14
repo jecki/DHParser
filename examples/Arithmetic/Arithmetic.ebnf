@@ -6,11 +6,11 @@
 #
 #######################################################################
 
-@ whitespace  = vertical             # implicit whitespace, includes any number of line feeds
+@ whitespace  = vertical             # implicit whitespace, denoted by ~, includes any number of line feeds
 @ literalws   = right                # literals have implicit whitespace on the right hand side
 @ comment     = /#.*/                # comments range from a '#'-character to the end of the line
 @ ignorecase  = False                # literals and regular expressions are case-sensitive
-@ drop        = whitespace, strings  # drop anonymous whitespace
+@ drop        = whitespace, strings  # drop anonymous whitespace and (anonymous) string literals
 
 #######################################################################
 #
@@ -18,8 +18,8 @@
 #
 #######################################################################
 
-expression = term  { (PLUS | MINUS) term}
-term       = factor { (DIV | MUL) factor}
+expression = term  { (PLUS | MINUS) term }
+term       = factor { (DIV | MUL) factor }
 factor     = [sign] (NUMBER | VARIABLE | group) { VARIABLE | group }
 sign       = POSITIVE | NEGATIVE
 group      = "(" expression ")"

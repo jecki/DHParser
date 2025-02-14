@@ -50,7 +50,7 @@ of these with four different operators: 1. sequences
 elements are denoted in classical and regex-like EBNF-syntax:
 
 ========================  ==================  ================
-element                   classical EBNF      regex-like
+literals and operators    classical EBNF      regex-like
 ========================  ==================  ================
 insignificant whitespace  ~                   ~
 string literal            "..." or \`...\`    "..." or \`...\`
@@ -1144,6 +1144,8 @@ within the grammar via the name ``WHITESPACE__``. Other than the tilde-sign
 this name refers to the pure whitespace that is not intermingles with
 comments. Similarly, comments defined by the ``@comment``-directive can
 be accessed via the symbol ``COMMENT__``.
+
+.. _lookaraound_operators:
 
 Lookahead and Lookbehind
 ------------------------
@@ -2666,6 +2668,8 @@ different errors. In this particular case of an XML-parser, the best way
 out might be not to use context-sensitive parsers at all and check the
 matching XML-tags at a later processing stage.
 
+
+.. _custom_parsers:
 
 Custom Parsers
 --------------
