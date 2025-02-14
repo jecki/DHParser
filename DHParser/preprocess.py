@@ -35,7 +35,7 @@ import os
 from typing import Union, Optional, Callable, Tuple, List, Any, NamedTuple
 
 from DHParser.error import Error, SourceMap, SourceLocation, SourceMapFunc, \
-    add_source_locations
+    add_source_locations, gen_neutral_srcmap_func, source_map, apply_src_mappings
 from DHParser.stringview import StringView
 from DHParser.toolkit import re, TypeAlias, LazyRE
 
@@ -46,6 +46,7 @@ __all__ = ('RX_TOKEN_NAME',
            'END_TOKEN',
            'IncludeInfo',
            'FindIncludeFunc',
+           'IncludeReaderFunc',
            'PreprocessorFunc',
            'PreprocessorFactory',
            'PreprocessorResult',
@@ -55,7 +56,6 @@ __all__ = ('RX_TOKEN_NAME',
            'nil_preprocessor',
            'chain_preprocessors',
            'prettyprint_tokenized',
-           'gen_neutral_srcmap_func',
            'tokenized_to_original_mapping',
            'make_preprocessor',
            'gen_find_include_func',
@@ -101,14 +101,14 @@ class PreprocessorResult(NamedTuple):
 
 FindIncludeFunc: TypeAlias = Union[Callable[[str, int], IncludeInfo],   # (document: str,  start: int)
                                    functools.partial]
+IncludeReaderFunc = Callable[[str], str]
+IncludeReaderFactory = Callable[[], IncludeReaderFunc]
 DeriveFileNameFunc: TypeAlias = Union[Callable[[str], str], functools.partial]  # include name -> file name
 PreprocessorFunc: TypeAlias = Union[Callable[[str, str], PreprocessorResult],  # text: str, filename: str
                                     functools.partial]
 PreprocessorFactory: TypeAlias = Callable[[], PreprocessorFunc]
 Tokenizer: TypeAlias = Union[Callable[[str], Tuple[str, List[Error]]],
                              functools.partial]
-
-# a functions that merely adds preprocessor tokens to a source text
 
 
 #######################################################################
@@ -126,20 +126,6 @@ def nil_preprocessor(original_text: str, original_name: str) -> PreprocessorResu
                               original_text,
                               lambda i: SourceLocation(original_name, original_text, i),
                               [])
-
-
-def _apply_mappings(position: int, mappings: List[SourceMapFunc]) -> SourceLocation:
-    """
-    Sequentially apply a number of mapping functions to a source position.
-    In the context of source mapping, the source position usually is a
-    position within a preprocessed source text and mappings should therefore
-    be a list of reverse-mappings in reversed order.
-    """
-    assert mappings
-    filename, text = '', ''
-    for mapping in mappings:
-        filename, text, position = mapping(position)
-    return SourceLocation(filename, text, position)
 
 
 def _apply_preprocessors(original_text: str, original_name: str,
@@ -162,13 +148,13 @@ def _apply_preprocessors(original_text: str, original_name: str,
                 chain.reverse()
             else:
                 chain = [gen_neutral_srcmap_func(original_text, original_name)]
-            add_source_locations(errors, functools.partial(_apply_mappings, mappings=chain))
+            add_source_locations(errors, functools.partial(apply_src_mappings, mappings=chain))
         mapping_chain.append(mapping_func)
         error_list.extend(errors)
     mapping_chain.reverse()
     return PreprocessorResult(
         original_text, processed,
-        functools.partial(_apply_mappings, mappings=mapping_chain),
+        functools.partial(apply_src_mappings, mappings=mapping_chain),
         error_list)
 
 
@@ -236,13 +222,6 @@ def strip_tokens(tokenized: str) -> str:
 #######################################################################
 
 
-def gen_neutral_srcmap_func(original_text: Union[StringView, str], original_name: str = '') -> SourceMapFunc:
-    """Generates a source map function that maps positions to itself."""
-    if not original_name:  original_name = 'UNKNOWN_FILE'
-    # return lambda pos: SourceLocation(original_name, original_text, pos)
-    return functools.partial(SourceLocation, original_name, original_text)
-
-
 def tokenized_to_original_mapping(tokenized_text: str,
                                   original_text: str,
                                   original_name: str = 'UNKNOWN_FILE') -> SourceMap:
@@ -286,26 +265,6 @@ def tokenized_to_original_mapping(tokenized_text: str,
     L = len(positions)
     return SourceMap(
         original_name, positions, offsets, [original_name] * L, {original_name: original_text})
-
-
-def source_map(position: int, srcmap: SourceMap) -> SourceLocation:
-    """
-    Maps a position in a (pre-)processed text to its corresponding
-    position in the original document according to the given source map.
-
-    :param  position: the position in the processed text
-    :param  srcmap:  the source map, i.e. a mapping of locations to offset values
-        and source texts.
-    :returns:  the mapped position
-    """
-    i = bisect.bisect_right(srcmap.positions, position)
-    if i:
-        original_name = srcmap.file_names[i - 1]
-        return SourceLocation(
-            original_name,
-            srcmap.originals_dict[original_name],
-            min(position + srcmap.offsets[i - 1], srcmap.positions[i] + srcmap.offsets[i]))
-    raise ValueError
 
 
 def make_preprocessor(tokenizer: Tokenizer) -> PreprocessorFunc:
@@ -396,7 +355,7 @@ class ReadIncludeOnce(ReadIncludeClass):
 def generate_include_map(original_name: str,
                          original_text: str,
                          find_next_include: FindIncludeFunc,
-                         include_reader: ReadIncludeClass=ReadIncludeClass) \
+                         include_reader: IncludeReaderFactory = ReadIncludeClass) \
                          -> Tuple[SourceMap, str]:
     file_names: set = set()
 
@@ -475,8 +434,18 @@ def srcmap_includes(position: int, inclmap: SourceMap) -> SourceLocation:
 def preprocess_includes(original_text: Optional[str],
                         original_name: str,
                         find_next_include: FindIncludeFunc,
-                        include_reader: ReadIncludeClass=ReadIncludeClass) \
+                        include_reader: IncludeReaderFactory=ReadIncludeClass) \
                         -> PreprocessorResult:
+    """Preprocesses include statements in a file.
+
+    :param original_text: The original source file (if already read from disk)
+    :param original_name: The file-name of the original source
+    :param find_next_include: The function to find the next include-statement
+    :param include_reader: A factory that returns a function that retrieves the
+        content from an included file.
+    :return: the result of the preprocessing: (original document,
+        processed document, source mapping, (possibly empty) list of errors)
+    """
     if not original_text:
         with open(original_name, 'r', encoding='utf-8') as f:
             original_text = f.read()

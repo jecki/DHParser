@@ -36,7 +36,7 @@ from DHParser.log import is_logging, log_ST, log_parsing_history, start_logging,
 from DHParser.error import Error, is_error, add_source_locations, MANDATORY_CONTINUATION, \
     MALFORMED_ERROR_STRING, MANDATORY_CONTINUATION_AT_EOF, RESUME_NOTICE, PARSER_STOPPED_BEFORE_END, \
     PARSER_NEVER_TOUCHES_DOCUMENT, CAPTURE_DROPPED_CONTENT_WARNING, ERROR, \
-    MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, INFINITE_LOOP_WARNING, ErrorCode
+    MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, INFINITE_LOOP_WARNING, ErrorCode, gen_neutral_srcmap_func
 from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, ParserFactory, \
     Interleave, CombinedParser, Text, EMPTY_NODE, Capture, Drop, Whitespace, Grammar, \
@@ -44,7 +44,7 @@ from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMor
 from DHParser import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
     parse_ebnf, get_ebnf_preprocessor, DHPARSER_IMPORTS, compile_ebnf
-from DHParser.preprocess import gen_neutral_srcmap_func, PreprocessorFunc
+from DHParser.preprocess import PreprocessorFunc
 from DHParser.nodetree import Node, parse_sxpr
 from DHParser.stringview import StringView
 from DHParser.trace import set_tracer, trace_history, resume_notices_on

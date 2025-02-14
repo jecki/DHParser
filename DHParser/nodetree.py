@@ -108,8 +108,7 @@ else:
 
 from DHParser.configuration import get_config_value, ALLOWED_PRESET_VALUES
 from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END, \
-    add_source_locations, SourceMapFunc, has_errors, only_errors
-from DHParser.preprocess import gen_neutral_srcmap_func
+    add_source_locations, SourceMapFunc, has_errors, only_errors, gen_neutral_srcmap_func
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, linebreaks, line_col, JSONnull, JSON_Type, JSON_Dict, \
     validate_XML_attribute_value, fix_XML_attribute_value, lxml_XML_attribute_value, \

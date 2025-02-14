@@ -34,7 +34,7 @@ the string representations of the error objects. For example::
         else:
             print("There have been warnings, but no errors.")
 
-The central class of module DHParser's ``error``  is the ``Error``-class.
+The central class of module DHParser.error is the ``Error``-class.
 The easiest way to create an error object is by instantiating
 the Error class with an error message and a source position::
 
@@ -42,13 +42,19 @@ the Error class with an error message and a source position::
     >>> print(error)
     Error (1000): Something went wrong
 
-However, in order to report errors, usually at least a line and
-column-number
+Without a line and column where the error occurred, error-messages are
+not very useful. In particular, it is required that the line and
+column-locations are those of the original source-file before any
+preprocessing (like inserting included files or stripping front-matter
+or meta-data sections). For this purpose module error also provides
+"source-mapping" facilities, in particular the types functions
+:py:func:`add_source_locations`, py:
 
 """
 
 from __future__ import annotations
 
+import bisect
 import functools
 import os
 from typing import Iterable, Iterator, Union, Dict, List, Sequence, Callable, NamedTuple
@@ -60,6 +66,8 @@ from DHParser.toolkit import linebreaks, line_col, is_filename, TypeAlias
 __all__ = ('SourceMap',
            'SourceLocation',
            'SourceMapFunc',
+           'gen_neutral_srcmap_func',
+           'source_map',
            'ErrorCode',
            'Error',
            'is_fatal',
@@ -67,6 +75,7 @@ __all__ = ('SourceMap',
            'is_warning',
            'has_errors',
            'only_errors',
+           'apply_src_mappings',
            'add_source_locations',
            'canonical_error_strings',
            'NO_ERROR',
@@ -132,32 +141,6 @@ __all__ = ('SourceMap',
            'COMPILER_CRASH',
            'AST_TRANSFORM_CRASH',
            'RECURSION_DEPTH_LIMIT_HIT')
-
-
-#######################################################################
-#
-#  source mapping
-#
-#######################################################################
-
-
-class SourceMap(NamedTuple):
-    original_name: str          # nome or path or uri of the original source file
-    positions: List[int]        # a list of locations
-    offsets: List[int]          # the corresponding offsets to be added from these locations onward
-    file_names: List[str]       # list of file_names to which the source locations relate
-    originals_dict: Dict[str, Union[str, StringView]]  # File names => (included) source texts
-    __module__ = __name__       # needed for cython compatibility
-
-
-class SourceLocation(NamedTuple):
-    original_name: str          # the file name (or path or uri) of the source code
-    original_text: Union[str, StringView]  # the source code itself
-    pos: int                    # a position within the code
-    __module__ = __name__       # needed for cython compatibility
-
-
-SourceMapFunc: TypeAlias = Union[Callable[[int], SourceLocation], functools.partial]
 
 
 #######################################################################
@@ -495,6 +478,74 @@ def only_errors(messages: Iterable[Error], level: ErrorCode = ERROR) -> Iterator
 
 #######################################################################
 #
+# Source Maps - mapping source code positions between different
+#               transformations of the source text
+#
+#######################################################################
+
+
+class SourceMap(NamedTuple):
+    original_name: str          # nome or path or uri of the original source file
+    positions: List[int]        # a list of locations
+    offsets: List[int]          # the corresponding offsets to be added from these locations onward
+    file_names: List[str]       # list of file_names to which the source locations relate
+    originals_dict: Dict[str, Union[str, StringView]]  # File names => (included) source texts
+    __module__ = __name__       # needed for cython compatibility
+
+
+class SourceLocation(NamedTuple):
+    original_name: str          # the file name (or path or uri) of the source code
+    original_text: Union[str, StringView]  # the source code itself
+    pos: int                    # a position within the code
+    __module__ = __name__       # needed for cython compatibility
+
+
+SourceMapFunc: TypeAlias = Union[Callable[[int], SourceLocation], functools.partial]
+
+
+def gen_neutral_srcmap_func(original_text: Union[StringView, str], original_name: str = '') -> SourceMapFunc:
+    """Generates a source map function that maps positions to itself."""
+    if not original_name:  original_name = 'UNKNOWN_FILE'
+    # return lambda pos: SourceLocation(original_name, original_text, pos)
+    return functools.partial(SourceLocation, original_name, original_text)
+
+
+def source_map(position: int, srcmap: SourceMap) -> SourceLocation:
+    """
+    Maps a position in a (pre-)processed text to its corresponding
+    position in the original document according to the given source map.
+
+    :param  position: the position in the processed text
+    :param  srcmap:  the source map, i.e. a mapping of locations to offset values
+        and source texts.
+    :returns:  the mapped position
+    """
+    i = bisect.bisect_right(srcmap.positions, position)
+    if i:
+        original_name = srcmap.file_names[i - 1]
+        return SourceLocation(
+            original_name,
+            srcmap.originals_dict[original_name],
+            min(position + srcmap.offsets[i - 1], srcmap.positions[i] + srcmap.offsets[i]))
+    raise ValueError
+
+
+def apply_src_mappings(position: int, mappings: List[SourceMapFunc]) -> SourceLocation:
+    """
+    Sequentially apply a number of mapping functions to a source position.
+    In the context of source mapping, the source position usually is a
+    position within a preprocessed source text and mappings should therefore
+    be a list of reverse-mappings in reversed order.
+    """
+    assert mappings
+    filename, text = '', ''
+    for mapping in mappings:
+        filename, text, position = mapping(position)
+    return SourceLocation(filename, text, position)
+
+
+#######################################################################
+#
 # support for canonical representation, i.e.
 # filename:line:column:severity (code):error string
 #
@@ -545,3 +596,4 @@ def canonical_error_strings(errors: List[Error]) -> List[str]:
     else:
         error_strings = []
     return error_strings
+
