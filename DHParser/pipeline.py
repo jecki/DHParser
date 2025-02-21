@@ -33,7 +33,6 @@ algorithmically.
 
 from __future__ import annotations
 
-import copy
 import functools
 
 from functools import partial
@@ -111,6 +110,8 @@ def run_pipeline(junctions: Set[Junction],
 
     TODO: Parallelize processing of junctions? Requires copying a lot ot tree-data!?
     """
+    import copy
+
     def cmp_junctions(a, b) -> int:
         if a[-1] == b[0]:
             return -1

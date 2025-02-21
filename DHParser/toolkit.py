@@ -26,19 +26,13 @@ functions that are very generic.
 
 from __future__ import annotations
 
-import ast
-import bisect
 import concurrent.futures
 import functools
-import hashlib
 import io
 import json
-import multiprocessing
 import os
 import sys
-import threading
-import traceback
-import typing
+
 
 try:
     if sys.version.find('PyPy') >= 0:
@@ -230,6 +224,7 @@ class ThreadLocalSingletonFactory:
         name = name or getattr(class_or_factory, '__name__', '') or class_or_factory.func.__name__
         if not uniqueID:
             if not hasattr(self.__class__, 'lock'):
+                import threading
                 self.__class__.lock = threading.Lock()
             with self.__class__.lock:
                 uniqueID = gen_id()
@@ -302,6 +297,7 @@ def concurrent_ident() -> str:
     """
     Returns an identificator for the current process and thread
     """
+    import multiprocessing, threading
     if sys.version_info >= (3, 8, 0):
         return multiprocessing.current_process().name + '_' + str(threading.get_native_id())
     else:
@@ -410,6 +406,7 @@ def deprecation_warning(message: str):
                 deprecation_policy = 'warn'
                 print(e)
             if deprecation_policy == 'warn':
+                import traceback
                 stacktrace = traceback.format_exc()
                 print(stacktrace)
             else:
@@ -1131,6 +1128,7 @@ def is_python_code(text_or_file: str) -> bool:
     if is_filename(text_or_file):
         return text_or_file[-3:].lower() == '.py'
     try:
+        import ast
         ast.parse(text_or_file)
         return True
     except (SyntaxError, ValueError, OverflowError):
@@ -1175,7 +1173,7 @@ def md5(*txt):
     Returns the md5-checksum for `txt`. This can be used to test if
     some piece of text, for example a grammar source file, has changed.
     """
-
+    import hashlib
     md5_hash = hashlib.md5()
     for t in txt:
         md5_hash.update(t.encode('utf8'))
@@ -1244,6 +1242,7 @@ def line_col(lbreaks: List[int], pos: cython.int) -> Tuple[cython.int, cython.in
         return 0, pos
     if pos < 0 or pos > lbreaks[-1]:  # one character behind EOF is still an allowed position!
         raise ValueError('Position %i outside text of length %s !' % (pos, lbreaks[-1]))
+    import bisect
     line = bisect.bisect_left(lbreaks, pos)
     column = pos - lbreaks[line - 1]
     return line, column
@@ -1701,7 +1700,7 @@ def cpu_count() -> int:
 
 
 try:
-    if sys.stdout.encoding.upper() != "UTF-8":  # and  platform.system() == "Windows":
+    if sys.stdout.encoding.lower() != "utf-8":  # and  platform.system() == "Windows":
         # make sure that `print()` does not raise an error on
         # non-ASCII characters:
         # sys.stdout = cast(io.TextIOWrapper, codecs.getwriter("utf-8")(cast(

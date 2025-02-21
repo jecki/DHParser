@@ -20,7 +20,6 @@ limitations under the License.
 """
 
 import os
-import platform
 import shutil
 import subprocess
 import sys
@@ -38,7 +37,7 @@ from DHParser.preprocess import make_token, tokenized_to_original_mapping, BEGIN
     strip_tokens, gen_find_include_func, preprocess_includes, IncludeInfo, make_preprocessor, \
     ReadIncludeClass, ReadIncludeOnce
 from DHParser.error import SourceMap, Error, source_map
-from DHParser.toolkit import normalize_docstring, typing, re
+from DHParser.toolkit import normalize_docstring, re
 from DHParser.testing import unique_name
 from typing import Tuple, Dict, List
 

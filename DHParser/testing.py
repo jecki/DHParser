@@ -33,13 +33,11 @@ from collections.abc import Set
 import concurrent.futures
 import copy
 import fnmatch
-import inspect
 import json
 import os
 import random
 import sys
 import threading
-import traceback
 import time
 from typing import Dict, List, Union, Deque, Optional, cast
 
@@ -709,6 +707,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                     targets = run_pipeline(junctions, {'AST': copy.deepcopy(ast)},
                                            transformation_stages | show)
                 except Exception as e:  # at least: (ValueError, IndexError)
+                    import traceback
                     # raise SyntaxError(f'Compilation-Test {test_name} of parser {parser_name} '
                     #                   f'failed with:\n{str(e)}\n{traceback.format_exc()}')
                     err = Error(f'Python Error in compilation-test {test_name} of parser '
@@ -1217,6 +1216,7 @@ def runner(tests, namespace, profile=False):
         if not tests:
             tests = [name for name in namespace.keys() if name.lower().startswith('test')]
 
+    import inspect
     for name in tests:
         func_or_class, method = (name.split('.') + [''])[:2]
         if inspect.isclass(namespace[func_or_class]):

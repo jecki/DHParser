@@ -63,17 +63,14 @@ except ImportError:
         pass
 from datetime import datetime
 from functools import partial
-import inspect
 import io
 import json
 from multiprocessing import Process, Value, Array, Manager
 import os
-import subprocess
 import sys
 import threading
 from threading import Thread
 import time
-import traceback
 from typing import Callable, Coroutine, Awaitable, Optional, Union, Dict, List, Tuple, Sequence, \
     Set, Any, cast, Type, TypeVar
 
@@ -254,6 +251,7 @@ def GMT_timestamp() -> str:
 def _func_info(name: str, func: Callable, html: bool) -> List[str]:
     """Internal function to extract signature and docstring from
     a function."""
+    import inspect
     info = []
     if not name:  name = func.__name__
     info.append(name + str(inspect.signature(func)))
@@ -456,6 +454,8 @@ class ExecutionEnvironment:
         zero, i.e. no error. If `executor` is `None` the method will be called
         directly instead of deferring it to an executor.
         """
+        import traceback
+
         if self._closed:
             return None, (-32000,
                           "Server Error: Execution environment has already been shut down! "
@@ -2106,6 +2106,8 @@ def detach_server(host: str = USE_DEFAULT_HOST,
     Start DHParser-Server in a separate process and return. The process remains
     active even after the parent process is closed. Useful for writing test code.
     """
+    import subprocess
+
     async def wait_for_connection(host, port):
         _, writer = await asyncio_connect(host, port)  # wait until server online
         writer.close()

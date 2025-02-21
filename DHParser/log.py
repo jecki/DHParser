@@ -55,7 +55,6 @@ from __future__ import annotations
 
 import collections
 import contextlib
-import html
 import os
 from typing import List, Tuple, Union, Optional, Sequence
 
@@ -399,6 +398,7 @@ class HistoryRecord:
         """
         Returns history record formatted as an html table row.
         """
+        import html
         stack = html.escape(self.stack).replace(
             '-&gt;', '<span>&shy;-&gt;</span>').replace('<-', '&lt;-')
         status = html.escape(self.status)

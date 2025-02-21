@@ -23,12 +23,8 @@ of domain specific languages based on an EBNF-grammar.
 from __future__ import annotations
 
 from collections import namedtuple
-import concurrent.futures
 from functools import lru_cache
-import inspect
 import os
-import platform
-import stat
 import sys
 from typing import Any, cast, List, Tuple, Union, Iterator, Iterable, Optional, \
     Callable, Sequence, Dict, Set
@@ -40,8 +36,8 @@ from DHParser.configuration import get_config_value, set_config_value
 from DHParser.ebnf import EBNFCompiler, grammar_changed, DHPARSER_IMPORTS, \
     get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.error import Error, is_error, has_errors, only_errors, canonical_error_strings, \
-    CANNOT_VERIFY_TRANSTABLE_WARNING, ErrorCode, ERROR
-from DHParser.log import suspend_logging, resume_logging, is_logging, log_dir, append_log
+    ErrorCode, ERROR
+from DHParser.log import suspend_logging, resume_logging, is_logging, append_log
 from DHParser.nodetree import Node
 from DHParser.parse import Grammar, ParserFactory
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, \
@@ -178,6 +174,7 @@ def grammar_instance(grammar_representation) -> Tuple[Grammar, str]:
             raise DefinitionError(only_errors(messages), grammar_src)
         imports = DHPARSER_IMPORTS
         grammar_class = compile_python_object(imports + parser_py, r'\w+Grammar$')
+        import inspect
         if inspect.isclass(grammar_class) and issubclass(grammar_class, Grammar):
             parser_root = grammar_class()
         else:
@@ -574,6 +571,7 @@ def compile_on_disk(source_file: str,
             if f:
                 f.close()
 
+        import platform, stat
         if platform.system() != "Windows":
             # set file permissions so that the parser_name can be executed
             st = os.stat(parser_name)
@@ -720,6 +718,7 @@ def create_scripts(ebnf_filename: str,
         template = read_template(template_name)
         with open(script_name, 'w', encoding='utf-8') as f:
             f.write(template.replace('DSL', name))
+        import platform, stat
         if platform.system() != "Windows":
             # set file permissions so that the server-script can be executed
             st = os.stat(script_name)
@@ -859,6 +858,7 @@ def batch_process(file_names: List[str], out_dir: str,
             if cancel_func(): return error_list
         return error_list
 
+    import concurrent.futures
     if submit_func is None:
         pool = instantiate_executor(get_config_value('batch_processing_parallelization'),
                                     concurrent.futures.ProcessPoolExecutor)

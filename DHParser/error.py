@@ -54,7 +54,6 @@ or meta-data sections). For this purpose module error also provides
 
 from __future__ import annotations
 
-import bisect
 import functools
 import os
 from typing import Iterable, Iterator, Union, Dict, List, Sequence, Callable, NamedTuple
@@ -520,6 +519,7 @@ def source_map(position: int, srcmap: SourceMap) -> SourceLocation:
         and source texts.
     :returns:  the mapped position
     """
+    import bisect
     i = bisect.bisect_right(srcmap.positions, position)
     if i:
         original_name = srcmap.file_names[i - 1]

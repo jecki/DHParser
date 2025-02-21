@@ -25,12 +25,13 @@ import collections.abc
 import json
 import os
 import sys
+import typing
 
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.toolkit import has_fenced_code, load_if_file, re, normalize_docstring, \
-    issubtype, typing, concurrent_ident, JSONstr, JSONnull, json_dumps, json_rpc, \
+    issubtype, concurrent_ident, JSONstr, JSONnull, json_dumps, json_rpc, \
     matching_brackets, RX_ENTITY, validate_XML_attribute_value, fix_XML_attribute_value
 from DHParser.log import log_dir, start_logging, is_logging, suspend_logging, resume_logging
 

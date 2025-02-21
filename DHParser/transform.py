@@ -29,9 +29,7 @@ for CST -> AST transformations.
 from __future__ import annotations
 
 import collections.abc
-import copy
 from functools import partial, singledispatch, reduce
-import inspect
 import operator
 from typing import AbstractSet, Callable, cast, Container, Dict, \
     Tuple, List, Sequence, Union, Optional
@@ -250,6 +248,7 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
 
     def decorator(f):
         nonlocal t1
+        import inspect
         sig = inspect.signature(f)
         params = list(sig.parameters.values())[1:]
         if len(params) == 0:

@@ -92,7 +92,6 @@ The source code of module ``nodetree`` consists of four main sections:
 
 from __future__ import annotations
 
-import bisect
 import copy
 from enum import IntEnum
 import functools
@@ -2918,6 +2917,7 @@ class RootNode(Node):
                     node = self
                 else:
                     node_list.append(nd)
+                    import bisect
                     i = bisect.bisect(pos_list, error.pos)
                     node = node_list[i]
         else:
@@ -4935,6 +4935,7 @@ class ContentMapping:
         errmsg = lambda i: f'Illegal position value {i}. ' \
                            f'Must be 0 <= position < length of text!'
         if pos < 0:  raise IndexError(errmsg(pos))
+        import bisect
         try:
             path_index = bisect.bisect_right(self._pos_list, pos) - 1
             if left_biased:
@@ -5650,6 +5651,7 @@ class SerializationMapping:
         errmsg = lambda i: f'Illegal position value {i}. Must be ' \
             f'0 <= position < length of serialization ({len(self.serialization)})!'
         if pos < 0:  raise IndexError(errmsg(pos))
+        import bisect
         try:
             index = bisect.bisect_right(self._pos_list, pos) - 1
             if left_biased:

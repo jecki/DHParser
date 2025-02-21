@@ -32,7 +32,6 @@ program and before any DHParser-function is invoked.
 from __future__ import annotations
 
 import sys
-import threading
 from typing import Dict, Any, Container
 
 __all__ = ('ALLOWED_PRESET_VALUES',
@@ -69,7 +68,18 @@ ALLOWED_PRESET_VALUES = dict()  # Dict[str, Union[Set, Tuple[int, int]]
 # dictionary that maps config variables to a set or range of allowed values
 
 
-access_lock = threading.Lock()
+access_lock = None  # = threading.Lock()
+
+
+def get_access_lock():  # -> threading.Lock()
+    """Return a global threading.Lock, create it upon first usage."""
+    global access_lock
+    if access_lock is None:
+        import threading
+        lock = threading.Lock()
+        if access_lock is None:
+            access_lock = lock
+    return access_lock
 
 
 def validate_value(key: str, value: Any):
@@ -296,6 +306,7 @@ def access_thread_locals() -> Any:
     """
     global THREAD_LOCALS
     if THREAD_LOCALS is None:
+        import threading
         THREAD_LOCALS = threading.local()
     return THREAD_LOCALS
 
@@ -319,7 +330,7 @@ def get_config_value(key: str, default: Any = NO_DEFAULT) -> Any:
         exists for the key.
     :return:     the value
     """
-    with access_lock:
+    with get_access_lock():
         cfg = _config_dict()
         try:
             return cfg[key]
@@ -338,7 +349,7 @@ def get_config_values(key_pattern: str = "*") -> Dict:
     presets = get_preset_values(key_pattern)
     finalize_presets()
     import fnmatch
-    with access_lock:
+    with get_access_lock():
         cfg = _config_dict()
         if key_pattern == "*":
             cfg_values = cfg
@@ -359,7 +370,7 @@ def set_config_value(key: str, value: Any, allow_new_key: bool = False):
     :param key:    the key (an immutable, usually a string)
     :param value:  the value
     """
-    with access_lock:
+    with get_access_lock():
         cfg = _config_dict()
         if not allow_new_key:
             oldkey = key
@@ -379,7 +390,7 @@ def add_config_values(configuration: dict):
     Adds (or overwrites) new configuration values.
     :param configuration: additional configuration values
     """
-    with access_lock:
+    with get_access_lock():
         cfg = _config_dict()
         cfg.update(configuration)
 

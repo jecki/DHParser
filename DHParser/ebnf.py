@@ -227,7 +227,6 @@ from __future__ import annotations
 
 import copy
 from functools import partial
-import keyword
 import os
 import sys
 
@@ -2218,6 +2217,8 @@ class EBNFCompiler(Compiler):
 
     def on_definition(self, node: Node) -> Tuple[str, str]:
         # process modifiers
+        import keyword
+
         drop_flag = False
         if node[0].name == "modifier":
             assert node[1].name == "symbol"

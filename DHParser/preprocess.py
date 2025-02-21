@@ -29,7 +29,6 @@ cannot completely be described entirely with context-free grammars.
 
 from __future__ import annotations
 
-import bisect
 import functools
 import os
 from typing import Union, Optional, Callable, Tuple, List, Any, NamedTuple
@@ -421,6 +420,7 @@ def generate_include_map(original_name: str,
 
 
 def srcmap_includes(position: int, inclmap: SourceMap) -> SourceLocation:
+    import bisect
     i = bisect.bisect_right(inclmap.positions, position)
     if i:
         source_name = inclmap.file_names[i - 1]

@@ -32,7 +32,6 @@ for an example.
 from __future__ import annotations
 
 import functools
-from bisect import bisect_left
 from collections import defaultdict
 import copy
 from functools import lru_cache
@@ -4007,7 +4006,8 @@ def longest_match(strings: List[str], text: Union[StringView, str], n: int = 1) 
         return strings[0] if text.startswith(strings[0]) else ''
     head = str(text[:n])
     if not head:  return ''
-    i = bisect_left(strings, head)
+    import bisect
+    i = bisect.bisect_left(strings, head)
     if i >= len(strings) or (i == 0 and not strings[0].startswith(head)):
         return ''
     match = longest_match(strings[i:], text, n + 1)

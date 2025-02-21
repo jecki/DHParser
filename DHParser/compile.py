@@ -36,8 +36,6 @@ compiler object.
 
 from __future__ import annotations
 
-from collections import namedtuple
-import copy
 import functools
 import os
 from typing import Any, Optional, Tuple, List, Set, Dict, Union, Callable, NamedTuple
@@ -505,6 +503,7 @@ def compile_source(source: str,
 
         if not is_fatal(syntax_tree.error_flag):
             if preserve_AST:
+                import copy
                 ast = copy.deepcopy(syntax_tree)
                 ast.stage = ''  # turn stage-verification off on copied ast as default
 
@@ -587,7 +586,13 @@ def process_tree(tp: CompilerFunc, tree: RootNode) -> Any:
 #       of trees
 
 
-Junction = namedtuple('Junction', ['src', 'factory', 'dst'], module=__name__)  # DEPRECATED, use: pipeline.Junction
+# Junction = namedtuple('Junction', ['src', 'factory', 'dst'], module=__name__)
+class Junction(NamedTuple):
+    """DEPRECATED, use: pipeline.Junction"""
+    src: str
+    factory: Union[CompilerFactory, Any]
+    dst: str
+    __module__ = __name__
 FullCompilationResult = Dict[str, Tuple[Any, List[Error]]]  # DEPRECATED, use pipeline.PipelineResult
 
 

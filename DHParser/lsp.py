@@ -24,7 +24,6 @@ EXPERIMENTAL!!!
 
 from __future__ import annotations
 
-import bisect
 from enum import Enum, IntEnum
 import sys
 
@@ -159,6 +158,7 @@ def shortlist(long_list: List[str], typed: str, lo: int = 0, hi: int = -1) -> Tu
         return 0, 0
     if hi < 0:
         hi = len(long_list)
+    import bisect
     a = bisect.bisect_left(long_list, typed, lo, hi)
     b = bisect.bisect_left(long_list, typed[:-1] + chr(ord(typed[-1]) + 1), lo, hi)
     return a, b
