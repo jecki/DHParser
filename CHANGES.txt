@@ -1,6 +1,7 @@
 DHParser Verions 1.8.3
 ......................
 
+- nodetree.py: experimental split-method added to Node-class
 - collections.namedtuple replaced by typing.NamedTuple-class
 
 

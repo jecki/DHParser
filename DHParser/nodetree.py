@@ -52,8 +52,8 @@ The source code of module ``nodetree`` consists of four main sections:
     d. Tree-traversal, in particular node- and path-selection based
        on arbitrary criteria (passed as match-node or match-path-function)
 
-    e. Experimental (XML-)milestone-support: :py:meth:`Node.milestone_segment`.
-       See also: :py:class:`ContextMapping`
+    e. Experimental (XML-)milestone-support: :py:meth:`Node.milestone_segment`
+       and :py:meth:`Node.split`. See also: :py:class:`ContextMapping`
 
     f. A very simple method for tree-"evaluation":  (More elaborate
        scaffolding for evaluation tree are found in :py:mod:`~traverse`
@@ -202,6 +202,7 @@ __all__ = ('WHITESPACE_PTYPE',
            'split',
            'split_node',
            'deep_split',
+           'full_split',
            'can_split',
            'leaf_paths',
            'reset_chain_ID',
@@ -1594,6 +1595,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         the milestone-function yield True. The last node in the path for which
         the milestone-function yields True, will be removed from the tree.
         Thus, split_if() resembles the split-method of the Python-string-object.
+
+        EXPERIMENTAL!
         """
         result = []
         tail = self
@@ -1619,6 +1622,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         the milestone-selector yield True. The last node in the path for which
         the milestone-selector yields True, will be removed from the tree.
         Thus, split_if() resembles the split-method of the Python-string-object.
+
+        EXPERIMENTAL!
 
         :param milestone: The criterion for a milestone-path
         :param skip_subtree: The criterion for subtrees (identified by their path)
