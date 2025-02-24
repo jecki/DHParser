@@ -25,6 +25,8 @@ import json
 import os
 import sys
 
+from DHParser import deep_split
+
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
@@ -1267,6 +1269,51 @@ class TestEvaluation:
 
 #class TestStrLenPos:
 
+class TestSplitMethod:
+    def test_split(self):
+        urtree = parse_sxpr('(A (B (C "123") (M) (D "456")) (E "789") (M) (F "000"))')
+        tree = copy.deepcopy(urtree)
+        parts = tree.split("M")
+        assert len(parts) == 3
+        assert parts[0].as_sxpr() == '(A (B (C "123")))'
+        assert parts[1].as_sxpr() == '(A (B (D "456")) (E "789"))'
+        assert parts[2].as_sxpr() == '(A (F "000"))'
+
+        tree = copy.deepcopy(urtree)
+        parts = tree.split("M", "B")
+        assert len(parts) == 2
+        assert parts[0].as_sxpr() == '(A (B (C "123") (M) (D "456")) (E "789"))'
+        assert parts[1].as_sxpr() == '(A (F "000"))'
+
+    def test_split_edge_cases(self):
+        urtree = parse_sxpr('(A (L) (B (C "123") (M) (M) (D "456")) (E "789") (N))')
+        tree = copy.deepcopy(urtree)
+        parts = tree.split('X')
+        assert len(parts) == 1
+        assert parts[0] == tree
+
+        tree = copy.deepcopy(urtree)
+        parts = tree.split('L')
+        assert len(parts) == 2
+        assert parts[0] == tree
+        assert parts[0].as_sxpr() == '(A)'
+        assert parts[1].as_sxpr() == '(A (B (C "123") (M) (M) (D "456")) (E "789") (N))'
+
+        tree = copy.deepcopy(urtree)
+        parts = tree.split('N')
+        assert len(parts) == 2
+        assert parts[0] == tree
+        assert parts[0].as_sxpr() == '(A (L) (B (C "123") (M) (M) (D "456")) (E "789"))'
+        assert parts[1].as_sxpr() == '(A)'
+
+        tree = copy.deepcopy(urtree)
+        parts = tree.split('M')
+        assert len(parts) == 3
+        assert parts[0] == tree
+        assert parts[0].as_sxpr() == '(A (L) (B (C "123")))'
+        assert parts[1].as_sxpr() == '(A)'
+        assert parts[2].as_sxpr() == '(A (B (D "456")) (E "789") (N))'
+
 
 
 class TestMarkupInsertion:
@@ -1519,18 +1566,51 @@ class TestMarkupInsertion:
                '(p (b "I") (:Text " ") (i (Klassifikation "gener.") ' \
                '(:Text ":")) (:Text "[MFSP]") (b "A"))'
 
-    # def test_markup_10(self):
-    #     tree = parse_sxpr('(p `(class "MsoNormal") `(style "text-indent:6.5pt;line-height:normal")'
-    #                       '(i "deceptio, dolus, fallacia, insidiae, calumnia – Täuschung, (Be‑)Trug,'
-    #                       '(Hinter‑)List, Tücke, Arg(list):"))''')
-    #     t = copy.deepcopy(tree)
-    #     cm = ContentMapping(t)
-    #     print()
-    #     print(t.as_sxpr()); print()
-    #     cm.markup(48, 100, "Deutsch")
-    #     print(t.as_sxpr()); print()
-    #     cm.markup(0, 45, "Lateinisch")
-    #     print(t.as_sxpr()); print()
+    def test_deep_split(self):
+        print()
+        urtree = tree = parse_sxpr(
+            '(X (s) (A (u) (C "One, ") (D "two, ")) (B (E "three, ") (F "four!") (t)))')
+        tree = copy.deepcopy(urtree)
+        path = tree.pick_path('C')
+        assert deep_split(path, 0, left_biased=True, greedy=True) == 1
+        assert tree.equals(urtree)
+
+        tree = copy.deepcopy(urtree)
+        path = tree.pick_path('C')
+        assert deep_split(path, 0, left_biased=False, greedy=True) == 2
+        assert tree.as_sxpr() == '(X (s) (A (u)) (A (C "One, ") (D "two, ")) (B (E "three, ") (F "four!") (t)))'
+
+        tree = copy.deepcopy(urtree)
+        path = tree.pick_path('C')
+        assert deep_split(path, 0, left_biased=True, greedy=False) == 2
+        assert tree.as_sxpr() == '(X (s) (A (u)) (A (C "One, ") (D "two, ")) (B (E "three, ") (F "four!") (t)))'
+
+        tree = copy.deepcopy(urtree)
+        path = tree.pick_path('C')
+        assert deep_split(path, 0, left_biased=False, greedy=False) == 2
+        assert tree.as_sxpr() == '(X (s) (A (u)) (A (C "One, ") (D "two, ")) (B (E "three, ") (F "four!") (t)))'
+
+        urtree = parse_sxpr('(X (A (B "123") (N) (M) (C "456")) (D "789"))')
+        tree = copy.deepcopy(urtree)
+        path = tree.pick_path('M')
+        assert deep_split(path, i=0, left_biased=True, greedy=True) == 1
+        assert tree.as_sxpr() == '(X (A (B "123") (N)) (A (M) (C "456")) (D "789"))'
+
+        tree = copy.deepcopy(urtree)
+        path = tree.pick_path('M')
+        assert deep_split(path, i=0, left_biased=False, greedy=True) == 1
+        assert tree.as_sxpr() == '(X (A (B "123") (N) (M)) (A (C "456")) (D "789"))'
+
+        tree = copy.deepcopy(urtree)
+        path = tree.pick_path('M')
+        assert deep_split(path, i=0, left_biased=True, greedy=False) == 1
+        assert tree.as_sxpr() == '(X (A (B "123") (N)) (A (M) (C "456")) (D "789"))'
+
+        tree = copy.deepcopy(urtree)
+        path = tree.pick_path('M')
+        assert deep_split(path, i=0, left_biased=False, greedy=False) == 1
+        assert tree.as_sxpr() == '(X (A (B "123") (N) (M)) (A (C "456")) (D "789"))'
+
 
 class TestSerializationMapping:
     def test_mapping_trivial(self):

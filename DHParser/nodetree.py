@@ -361,7 +361,7 @@ def create_path_match_function(criterion: PathSelector) -> PathMatchFunction:
     criterion that returns True, if the last node in the path passed
     to the function matches the criterion.
 
-    See :py:func:`create_match_function()` for a description of the possible
+    See :py:func:`create_match_function` for a description of the possible
     criteria and their meaning.
 
     :param criterion: Either a node, the id of a node, a frozen node,
@@ -1144,7 +1144,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def __contains__(self, selector: NodeSelector) -> bool:
         """
         Returns true if at least one child that matches the given criterion
-        exists. See :py:func:`create_match_function()` for a catalogue of
+        exists. See :py:func:`create_match_function` for a catalogue of
         possible criteria.
 
         :param selector: a criterion that describes the child-node
@@ -1250,7 +1250,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                skip_subtree: NodeSelector = NO_NODE) -> Iterator[Node]:
         """
         Generates an iterator over all nodes in the tree that fulfill the
-        given criterion. See :py:func:`create_match_function()` for a
+        given criterion. See :py:func:`create_match_function` for a
         catalogue of possible criteria.
 
         :param criteria: The criteria for selecting nodes.
@@ -1317,7 +1317,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
              skip_subtree: NodeSelector = NO_NODE) -> Optional[Node]:
         """
         Picks the first (or last if run in reverse mode) descendant that
-        fulfils the given criterion. See :py:func:`create_match_function()`
+        fulfils the given criterion. See :py:func:`create_match_function`
         for a catalogue of possible criteria.
 
         This function is syntactic sugar for `next(node.select(criterion, ...))`.
@@ -1333,7 +1333,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             -> Optional[Node]:
         """
         Picks the first child (or last if run in reverse mode) descendant
-        that fulfils the given criterion. See :py:func:`create_match_function()`
+        that fulfils the given criterion. See :py:func:`create_match_function`
         for a catalogue of possible criteria.
 
         This function is syntactic sugar for
@@ -1400,7 +1400,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                        reverse: bool = False,
                        skip_func: PathMatchFunction = NO_PATH) -> Iterator[Path]:
         """
-        Like :py:func:`Node.select_if()` but yields the entire path (i.e. list
+        Like :py:func:`Node.select_if` but yields the entire path (i.e. list
         of descendants, the last one being the matching node) instead of just
         the matching nodes. NOTE: In contrast to `select_if()`, `match_function`
         receives the complete path as argument, rather than just the last node!
@@ -1587,6 +1587,46 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if common_ancestor.has_attr():
             new_ca.attr = common_ancestor.attr
         return new_ca
+
+    def split_if(self, milestone: PathMatchFunction,
+                 skip_func: PathMatchFunction = NO_PATH) -> Tuple[Node, ...]:
+        """Splits the entire tree into several trees at every Path for which
+        the milestone-function yield True. The last node in the path for which
+        the milestone-function yields True, will be removed from the tree.
+        Thus, split_if() resembles the split-method of the Python-string-object.
+        """
+        result = []
+        tail = self
+        msp = self.pick_path_if(milestone, include_root=True, reverse=False, skip_func=skip_func)
+        while msp:
+            if len(msp) < 2:
+                return tuple()
+            i = msp[-2].index(msp[-1])
+            del msp[-2][i]
+            head, tail = full_split(msp[:-1], i)
+            result.append(head)
+            if tail.result:
+                msp = tail.pick_path_if(milestone, include_root=True, reverse=False,
+                                        skip_func=skip_func)
+            else:
+                msp = []
+        result.append(tail)
+        return tuple(result)
+
+    def split(self, milestone: PathSelector,
+              skip_subtree: PathSelector = NO_PATH) -> Tuple[Node, ...]:
+        """Splits the entire tree into several trees at every Path for which
+        the milestone-selector yield True. The last node in the path for which
+        the milestone-selector yields True, will be removed from the tree.
+        Thus, split_if() resembles the split-method of the Python-string-object.
+
+        :param milestone: The criterion for a milestone-path
+        :param skip_subtree: The criterion for subtrees (identified by their path)
+            within which no milestones will be searched. (Default: all subtrees
+            will be searched).
+        """
+        return self.split_if(create_path_match_function(milestone),
+                             create_path_match_function(skip_subtree))
 
     # evaluation ##############################################################
 
@@ -2604,9 +2644,9 @@ class FrozenNode(Node):
     Frozen nodes must only be used temporarily during parsing or
     tree-transformation and should not occur in the product of the
     transformation anymore. This can be verified with
-    :py:func:`tree_sanity_check()`. Or, as comparison criterion for
+    :py:func:`tree_sanity_check`. Or, as comparison criterion for
     content equality when picking or selecting nodes or paths from
-    a tree (see :py:func:`create_match_function()`).
+    a tree (see :py:func:`create_match_function`).
     """
 
     def __init__(self, name: str, result: ResultType, leafhint: bool = True) -> None:
@@ -4111,7 +4151,9 @@ def insert_node(leaf_path: Path, rel_pos: int, node: Node,
     leaf = leaf_path[-1]
     leaf_len = leaf.strlen()
     assert not leaf.children
-    assert rel_pos <= leaf_len
+    if rel_pos > leaf_len:
+        raise ValueError(f'Relative position {rel_pos} > '
+                         f'length of leaf element in the path {leaf_len} !')
     if len(leaf_path) >= 2:
         parent = leaf_path[-2]
         i = parent.index(leaf)
@@ -4196,10 +4238,10 @@ def split_node(node: Node, parent: Node, i: cython.int, left_biased: bool = True
     """Splits a node at the given index (in case of a branch-node) or
     string-position (in case of a leaf-node). Returns the index of the
     right part within the parent node after the split. (This means
-    that with ``node.insert(index, nd)`` nd will be inserted (exactly at
+    that with ``node.insert(index, nd)`` nd will be inserted exactly at
     the split location.)
 
-    Non-anonymous nodes that have been split will be marked by updateing
+    Non-anonymous nodes that have been split will be marked by updating
     their attribute-dictionary with the chain_attr-dictionary if given.
 
     :param node: the node to be split
@@ -4301,7 +4343,8 @@ def split_node(node: Node, parent: Node, i: cython.int, left_biased: bool = True
 
 
 @cython.locals(L=cython.int)
-def deep_split(path: Path, i: cython.int, left_biased: bool=True,
+def deep_split(path: Path, i: cython.int,
+               left_biased: bool=True,
                greedy: bool=True,
                match_func: PathMatchFunction = ANY_PATH,
                skip_func: PathMatchFunction = NO_PATH,
@@ -4375,6 +4418,29 @@ def deep_split(path: Path, i: cython.int, left_biased: bool=True,
                 L = len(parent.children)
                 if i < L and _strlen_of(parent.children[i:], match_func, skip_func) == 0:  i = L
     return i
+
+
+def full_split(path: Path, i: cython.int,
+               left_biased: bool=True,
+               greedy: bool=True,
+               match_func: PathMatchFunction = ANY_PATH,
+               skip_func: PathMatchFunction = NO_PATH,
+               chain_attr_name: str = '') -> Tuple[Node, Node]:
+    """Like :py:func:`deep_split`, but splits the first node in the path,
+    and returns two trees one to the left of the split, one to the right.
+    As an edge case either tree can be an empty node.
+    Note that the type RootNode will only be preserved for the first
+    returned Node. The second Node will always be an ordinary node.
+    Also, no attributes will be transferred to the second Node from the
+    root of the path, nor will its pos-value be initialized.
+    (Instantiate a new RootNode-object and use :py:meth:`RootNode.swallow`
+    to turn it into a RootNode-object.)
+    """
+    i = deep_split(path, i, left_biased, greedy, match_func, skip_func, chain_attr_name)
+    root = path[0]
+    tail = Node(root.name, root.result[i:])
+    root.result = root.result[:i]
+    return root, tail
 
 
 @cython.locals(L=cython.int)   # k=cython.int does not work!!!
@@ -5128,7 +5194,7 @@ class ContentMapping:
                reverse: bool = False) -> Iterator[NodeLocation]:
         """See :py:meth:`ContentMapping.select_if`
 
-        Example:.
+        Example::
 
             >>> tree = parse_sxpr('(A (B (x "1") (y "2")) (B "!") (C (z "3")))')
             >>> cm = ContentMapping(tree)
@@ -5276,6 +5342,7 @@ class ContentMapping:
         first_index = self.get_path_index(start_pos)
         last_index = self.get_path_index(end_pos)
         self.rebuild_mapping_slice(first_index, last_index)
+
 
     def insert_node(self, pos: int, node: Node) -> NodeLocation:
         """Inserts a node at a specific position into the last or
@@ -5598,7 +5665,7 @@ class SerLocation(NamedTuple):
 
 
 class SerializationMapping:
-    "Maps serializations (e.g. XML, SXML, S-Expression) to paths. EXPERIMENTAL!!!"
+    "Maps serializations (e.g. XML, SXML, S-Expression) to paths. EXPERIMENTAL AND UNTESTED!!!"
 
     def __init__(self, tree: Node, serialization: str, raw_mapping: RawMappingType):
         assert serialization[0:1] in ('(', '<'), "XML- or S-Expression-serialization expected!"
