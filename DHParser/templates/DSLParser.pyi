@@ -144,6 +144,9 @@ def main(called_from_app=False) -> bool:
     args = parser.parse_args()
     file_names, out, log_dir = args.files, args.out[0], ''
 
+    # from DHParser.configuration import read_local_config
+    # read_local_config(os.path.join(scriptpath, '{NAME}Config.ini'))
+
     if args.serialize:
         serializations['*'] = args.serialize
         access_presets()
