@@ -147,24 +147,31 @@ class TestLocalConfig:
         save = os.getcwd()
         os.chdir(self.dirname)
         result = read_local_config(old_path)
+        assert result == ['test.ini']
         access_presets()
         assert get_preset_value('project_specific.custom_1') == 'test2'
         assert get_preset_value('delimiter_set')['DEF'] == '='
         finalize_presets()
         os.chdir(save)
         os.remove(ini_path)
+        ini_path_1 = os.path.join(self.dirname, 'test.ini')
+        with open(ini_path_1, 'w', encoding='utf-8') as f:
+            f.write(TEST_CFG)
         ini_path = 'test.ini' if os.getcwd().endswith(scriptpath) \
             else os.path.join(scriptpath, 'test.ini')
-        with open(ini_path, 'w', encoding='utf-8') as f:
-            f.write(TEST_CFG)
-        result = read_local_config(ini_path)
+        test_cfg = TEST_CFG.replace('3.1415', '2.7183')
+        with open(os.path.basename(ini_path), 'w', encoding='utf-8') as f:
+            f.write(test_cfg)
+        result = read_local_config(ini_path_1)
+        assert len(result) == 2
         access_presets()
         assert get_preset_value('project_specific.custom_1') == 'test1'
         assert get_preset_value('delimiter_set')['DEF'] == ':='
         finalize_presets()
+        os.remove(ini_path_1)
         os.remove(ini_path)
         custom_cfg = get_config_values('project_specific.*')
-        assert list(custom_cfg.values()) == ['test1', -1, 3.1415, [1, 2, 3], False]
+        assert list(custom_cfg.values()) == ['test1', -1, 2.7183, [1, 2, 3], False]
 
 
 if __name__ == "__main__":

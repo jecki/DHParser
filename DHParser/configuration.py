@@ -32,7 +32,7 @@ program and before any DHParser-function is invoked.
 from __future__ import annotations
 
 import sys
-from typing import Dict, Any, Container
+from typing import Dict, Any, Container, List
 
 __all__ = ('ALLOWED_PRESET_VALUES',
            'validate_value',
@@ -212,12 +212,19 @@ def set_preset_value(key: str, value: Any, allow_new_key: bool=False):
     PRESETS_CHANGED = True
 
 
-def read_local_config(ini_filename: str) -> str:
-    """Reads a local config file and updates the presets
-    accordingly. If the file is not found at the given path,
-    the same base name will be tried in the current working
-    directory, then in the applications config-directory and,
-    ultimately, in the calling script's directory.
+def read_local_config(ini_filename: str) -> List[str]:
+    """Reads a local config file(s) and updates the presets
+    accordingly. All config-files with the same basename as
+    "ini_filename" will subsequently be read from these
+    directories and be processed in the same order which
+    means config-values in files processed later will
+    overwrite config-values from earlier processed files:
+
+    1. script-directory
+    2. exact path of "ini_filename"
+    3. User's config-file directory, e.g. ~/.config/basename/
+    4. current working directory
+
     This configuration file must be in the .ini-file format
     so that it can be parsed with "configparser" from the
     Python standard library. Any key,value-pair under the
@@ -232,7 +239,7 @@ def read_local_config(ini_filename: str) -> str:
 
     :param ini_filename: the file path and name of the configuration
         file.
-    :returns:  the file path of the actually read .ini-file
+    :returns:  the file paths of the actually read .ini-files
         or the empty string if no .ini-file with the given
         name could be found either at the given path, in
         the current working directory or in the calling
@@ -240,25 +247,35 @@ def read_local_config(ini_filename: str) -> str:
     """
     import configparser
     import os
+    # collect config files
+    cfg_files = []
+    basename = os.path.basename(ini_filename)
+    # first, add path in the script-directory
+    script_path = os.path.abspath(sys.modules['__main__'].__file__ or '.')
+    cfg_filename = os.path.join(os.path.dirname(script_path), basename)
+    if os.path.isfile(cfg_filename): cfg_files.append(cfg_filename)
+    # then, add given path
+    if ini_filename not in cfg_files and os.path.isfile(ini_filename):
+        cfg_files.append(ini_filename)
+    # then, add cfg-file from the user's config directory
+    appname = os.path.splitext(basename)[0]
+    cfg_filename = os.path.join(os.path.expanduser('~'), '.config', appname, 'config.ini')
+    if os.path.isfile(cfg_filename):
+        if cfg_filename not in cfg_files:
+            cfg_files.append(cfg_filename)
+    else:
+        cfg_filename = os.path.join(os.path.expanduser('~'), '.config', appname, basename)
+        if cfg_filename not in cfg_files and os.path.isfile(cfg_filename):
+            cfg_files.append(cfg_filename)
+    # finally, add cfg-file from the current working directory
+    if basename not in cfg_files and os.path.isfile(basename):
+        cfg_files.append(basename)
+
+    # Now, read and process all config files in this order
     config = configparser.RawConfigParser()
     config.optionxform = lambda optionstr: optionstr
-    basename = os.path.basename(ini_filename)
-    if not os.path.exists(ini_filename):
-        # try cfg-file in current working directory next
-        ini_filename = basename
-    if not os.path.exists(ini_filename):
-        # try cfg-file in the applications' config-directory
-        dirname = os.path.splitext(basename)[0]
-        cfg_filename = os.path.join(os.path.expanduser('~'), '.config', dirname, 'config.ini')
-        if os.path.exists(cfg_filename):
-            ini_filename = cfg_filename
-        else:
-            ini_filename = os.path.join(os.path.expanduser('~'), '.config', dirname, basename)
-    if not os.path.exists(ini_filename):
-        # try cfg-file in script-directory next
-        script_path = os.path.abspath(sys.modules['__main__'].__file__ or '.')
-        ini_filename = os.path.join(os.path.dirname(script_path), basename)
-    if os.path.exists(ini_filename) and config.read(ini_filename):
+    successfully_read = config.read(cfg_files, encoding='utf-8')
+    if successfully_read:
         access_presets()
         for section in config.sections():
             if section.lower() == "dhparser":
@@ -269,8 +286,7 @@ def read_local_config(ini_filename: str) -> str:
                     set_preset_value(f"{section}.{variable}", eval(value),
                                      allow_new_key=True)
         finalize_presets()
-        return ini_filename
-    return ''
+    return successfully_read
 
 
 class NoDefault:
