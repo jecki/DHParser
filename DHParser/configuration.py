@@ -808,7 +808,7 @@ CONFIG_PRESET['test_suppress_lookahead_failures'] = True
 
 ########################################################################
 #
-# decprecation warnings
+# deprecation warnings
 #
 ########################################################################
 
