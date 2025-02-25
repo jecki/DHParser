@@ -323,7 +323,7 @@ def access_thread_locals() -> Any:
     global THREAD_LOCALS
     if THREAD_LOCALS is None:
         import threading
-        THREAD_LOCALS = threading.local()
+        THREAD_LOCALS = threading.local()  # TODO: Use ContextVars, here!!!
     return THREAD_LOCALS
 
 
