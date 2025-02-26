@@ -31,8 +31,9 @@ import functools
 import io
 import json
 import os
+import shutil
 import sys
-
+from turtledemo.bytedesign import Designer
 
 try:
     if sys.version.find('PyPy') >= 0:
@@ -44,7 +45,7 @@ except ImportError:
 
 if sys.version_info >= (3, 12, 0):
     from collections.abc import Iterable, Sequence, Set, MutableSet, Callable, Container, Hashable
-    from typing import Any, AbstractSet, FrozenSet, Type, Union, Optional, TypeAlias, Protocol
+    from typing import Any, Type, Union, Optional, TypeAlias, Protocol
     AbstractSet: TypeAlias = Set
     FrozenSet: TypeAlias = frozenset
     Dict: TypeAlias = dict
@@ -121,6 +122,9 @@ __all__ = ('re',
            'normalize_docstring',
            'issubtype',
            'isgenerictype',
+           'DeserializeFunc',
+           'cached_load',
+           'clear_from_cache',
            'load_if_file',
            'is_python_code',
            'md5',
@@ -1118,6 +1122,74 @@ def load_if_file(text_or_file) -> str:
                 return text_or_file
     else:
         return text_or_file
+
+
+DeserializeFunc: TypeAlias = Union[Callable[[str], Any], functools.partial]
+
+
+def cached_load(file_name: str, deserialize: DeserializeFunc, cachedir: str = "~/.cache") -> Any:
+    """
+    Loads and deserializes as file into a python-object. The Python-object will
+    be pickled and written to "cachedir". If a pickled version already exists,
+    the same file will not be deserialized again, but the pickled version will be loaded.
+    If cachedir == "", the pickled version will always be preferred, even if the
+    original file has been updated. In this case, in order to invalidate the cache,
+    the pickled version must be deleted manually.
+    Otherwise, and this includes the case cachedir == ".", a hash value is used
+    to check whether the original file has been updated, in which case, the
+    source-file will be loaded and deserialized anew.
+
+    :param file_name: The name of the file to load.
+    :param deserialize: The function to deserialize the content of the file.
+    :param cachedir: The directory to cache the pickled version in.
+    :returns: The deserialized python object.
+    """
+    import pickle, typing
+    if os.path.sep == "/": cachedir = cachedir.replace('\\', os.path.sep)
+    else: cachedir = cachedir.replace('/', os.path.sep)
+    cachedir = os.path.realpath(os.path.expanduser(cachedir))
+    if cachedir:
+        appname = os.path.splitext(os.path.basename(sys.argv[0]))[0]
+        cachedir = os.path.join(cachedir, appname)
+        os.makedirs(cachedir, exist_ok=True)
+    name = os.path.splitext(os.path.basename(file_name))[0]
+    cache_name = os.path.join(cachedir, name + '.pickled')
+    source: Optional[str] = None
+    if os.path.isfile(cache_name):
+        with open(cache_name, 'rb') as f:
+            hash_data, data = pickle.load(f)
+        if cachedir:
+            with open(file_name, 'r', encoding='utf-8') as f:
+                source = f.read()
+            if hash_data == hash(source):
+                return data
+        else:
+            return data
+    if source is None:
+        with open(file_name, 'r', encoding='utf-8') as f:
+            source = f.read()
+    data = deserialize(typing.cast(str, source))
+    with open(cache_name, 'wb') as f:
+        pickle.dump((hash(source), data), f)
+    return data
+
+
+def clear_from_cache(file_name: str, cachedir: str = "~/.cache"):
+    """Removes the cached version of `file_name` from the cache.
+    (See :py:func:`cached_load`)
+    """
+    if os.path.sep == "/": cachedir = cachedir.replace('\\', os.path.sep)
+    else: cachedir = cachedir.replace('/', os.path.sep)
+    cachedir = os.path.realpath(os.path.expanduser(cachedir))
+    appname = ""
+    if cachedir:
+        appname = os.path.splitext(os.path.basename(sys.argv[0]))[0]
+        cachedir = os.path.join(cachedir, appname)
+    name = os.path.splitext(os.path.basename(file_name))[0]
+    cache_name = os.path.join(cachedir, name + '.pickled')
+    os.remove(cache_name)
+    if appname and not os.listdir(cachedir):
+        os.rmdir(cachedir)
 
 
 def is_python_code(text_or_file: str) -> bool:
