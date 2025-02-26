@@ -22,17 +22,24 @@ limitations under the License.
 
 import concurrent.futures
 import collections.abc
+import random
 import json
 import os
+import platform
+import shutil
 import sys
+import time
 import typing
 
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
+from DHParser.nodetree import parse_sxpr
+from DHParser.testing import unique_name
 from DHParser.toolkit import has_fenced_code, load_if_file, re, normalize_docstring, \
     issubtype, concurrent_ident, JSONstr, JSONnull, json_dumps, json_rpc, \
-    matching_brackets, RX_ENTITY, validate_XML_attribute_value, fix_XML_attribute_value
+    matching_brackets, RX_ENTITY, validate_XML_attribute_value, fix_XML_attribute_value, \
+    cached_load, clear_from_cache
 from DHParser.log import log_dir, start_logging, is_logging, suspend_logging, resume_logging
 
 
@@ -349,6 +356,53 @@ class TestMisc:
         rxp = r'(?P<:Text>\()'
         mb = matching_brackets(rxp, '(', ')', is_regex=True)
         assert (0, len(rxp) - 1) in mb
+
+
+class TestCachedDeserialization:
+    def setup_class(self):
+        self.cwd = os.getcwd()
+        os.chdir(scriptpath)
+        # avoid race-condition
+        counter = 10
+        while counter > 0:
+            try:
+                self.dirname = unique_name('test_dhparser_data')
+                os.mkdir(self.dirname)
+                counter = 0
+            except FileExistsError:
+                self.dirname = ''
+                time.sleep(random.random())
+                counter -= 1
+        assert self.dirname
+
+    def teardown_class(self):
+        shutil.rmtree(self.dirname)
+
+    def test_cached_deserialization(self):
+        flag = True
+        def deserialize_flag(s):
+            nonlocal flag
+            data = parse_sxpr(s)
+            flag = not flag
+            return data
+        file_name = os.path.join(self.dirname, "tree.sxpr")
+        with open(os.path.join(self.dirname, "tree.sxpr"), 'w', encoding="UTF-8") as f:
+            f.write('(A (B "1") (C "2"))')
+        dom = cached_load(file_name, deserialize_flag, cachedir=self.dirname)
+        assert not flag  # flag has changed
+        dom2 = cached_load(file_name, deserialize_flag, cachedir=self.dirname)
+        assert not flag  # flag has not changed, i.e. is still the same
+        assert dom2.equals(dom)
+        with open(os.path.join(self.dirname, "tree.sxpr"), 'w', encoding="UTF-8") as f:
+            f.write('(A (B "1") (C "2") (D "3"))')
+        dom3 = cached_load(file_name, deserialize_flag, cachedir=self.dirname)
+        assert flag
+        assert not dom3.equals(dom)
+        before = os.listdir(self.dirname)
+        clear_from_cache(file_name, self.dirname)
+        after = os.listdir(self.dirname)
+        assert before != after
+
 
 if __name__ == "__main__":
     from DHParser.testing import runner
