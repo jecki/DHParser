@@ -1155,15 +1155,19 @@ def cached_load(file_name: str, deserialize: DeserializeFunc, cachedir: str = "~
     cache_name = os.path.join(cachedir, name + '.pickled')
     source: Optional[str] = None
     if os.path.isfile(cache_name):
-        with open(cache_name, 'rb') as f:
-            hash_data, data = pickle.load(f)
-        if cachedir:
-            with open(file_name, 'r', encoding='utf-8') as f:
-                source = f.read()
-            if hash_data == hash(source):
+        try:
+            with open(cache_name, 'rb') as f:
+                hash_data, data = pickle.load(f)
+            if cachedir:
+                with open(file_name, 'r', encoding='utf-8') as f:
+                    source = f.read()
+                if hash_data == hash(source):
+                    return data
+            else:
                 return data
-        else:
-            return data
+        except UnpicklingError as e:
+            print(f'{e} encountered while loading data from cache "{cache_name}"!' 
+                  f'If this error persists, then delete the cache file "{cache_name}" manually.')
     if source is None:
         with open(file_name, 'r', encoding='utf-8') as f:
             source = f.read()
