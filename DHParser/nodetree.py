@@ -3320,16 +3320,15 @@ def parse_xml(xml: Union[str, StringView],
               out_empty_tags: Set[str] = EMPTY_TAGS_SENTINEL,
               strict_mode: bool = True) -> RootNode:
     """
-    Generates a tree of nodes from a (Pseudo-)XML-source. T
-
-    his simplified XML-parser only parses the XML-content, processing
+    Generates a tree of nodes from a (Pseudo-)XML-source. This
+    simplified XML-parser only parses the XML-content, processing
     instructions, document-type definitions etc. will be ignored.
     The source-document should not contain embedded DTDs or CData-sections,
     as the outcome is undefined, i.e. either an error will be raised or the
     returned tree will contain (possibly inconclusive) fragments of these
     parts.
 
-    For a more precise XML-parser, that confoms to the
+    For a more precise XML-parser, that conforms to the
     `W3C-XML-specification <https://www.w3.org/TR/xml/>`_, use
     :py:func:`~parsers.parse_XML` or :py:func:`~parsers.parse_HTML`.
 
@@ -4151,7 +4150,48 @@ def insert_node(leaf_path: Path, rel_pos: int, node: Node,
     """Inserts a node at a specific position into the last or
     eventually second but last node in the path. The path must be
     a "leaf"-path, i.e. a path that ends in a leaf. Returns the
-    parent of the newly inserted node."""
+    parent of the newly inserted node.
+
+    This is the a convenient function for inserting milestons into
+    a tree-strcutured document.
+
+    Examples::
+
+        >>> tree = parse_sxpr('(A "Guten Morgen!")')
+        >>> _ = insert_node([tree], 6, Node('M', ''), divisible_leaves={'A'})
+        >>> print(tree.as_sxpr())
+        (A (A "Guten ") (M) (A "Morgen!"))
+        >>> tree = parse_sxpr('(A (B "Guten") (S " ") (C "Morgen"))')
+        >>> path = [tree, tree['S']]
+        >>> _ = insert_node(path, 0, Node('M', ''), divisible_leaves={'B', 'S', 'C'})
+        >>> print(tree.as_sxpr())
+        (A (B "Guten") (M) (S " ") (C "Morgen"))
+        >>> del tree['M']
+        >>> _ = insert_node(path, 1, Node('M', ''), divisible_leaves={'B', 'S', 'C'})
+        >>> print(tree.as_sxpr())
+        (A (B "Guten") (S " ") (M) (C "Morgen"))
+        >>> del tree['M']
+        >>> path = [tree, tree['B']]
+        >>> _ = insert_node(path, 2, Node('Hicks!', ''), divisible_leaves={'B', 'S', 'C'})
+        >>> print(tree.as_sxpr())
+        (A (B "Gu") (Hicks!) (B "ten") (S " ") (C "Morgen"))
+        >>> tree = parse_sxpr('(A (B "Guten") (S " ") (C "Morgen"))')
+        >>> path = [tree['B']]  # same tree, but path is confined to the leaf node!
+        >>> _ = insert_node(path, 2, Node('Hicks!', ''), divisible_leaves={'B', 'S', 'C'})
+        >>> print(tree.as_sxpr())
+        (A (B (B "Gu") (Hicks!) (B "ten")) (S " ") (C "Morgen"))
+    """
+    def split_leaf(leaf, node) -> Tuple[Node]:
+        content = leaf.content
+        if leaf._pos >= 0:
+            node._pos = leaf._pos + rel_pos
+            pred = Node(leaf.name, content[:rel_pos]).with_pos(leaf._pos)
+            succ = Node(leaf.name, content[rel_pos:]).with_pos(node._pos + node.strlen())
+        else:
+            pred = Node(leaf.name, content[:rel_pos])
+            succ = Node(leaf.name, content[rel_pos:])
+        return (pred, node, succ)
+
     assert leaf_path
     leaf = leaf_path[-1]
     leaf_len = leaf.strlen()
@@ -4159,6 +4199,7 @@ def insert_node(leaf_path: Path, rel_pos: int, node: Node,
     if rel_pos > leaf_len:
         raise ValueError(f'Relative position {rel_pos} > '
                          f'length of leaf element in the path {leaf_len} !')
+
     if len(leaf_path) >= 2:
         parent = leaf_path[-2]
         i = parent.index(leaf)
@@ -4168,22 +4209,22 @@ def insert_node(leaf_path: Path, rel_pos: int, node: Node,
         if rel_pos == leaf_len:
             parent.insert(i + 1, node)
             return parent
-        if leaf.name in divisible_leaves:
-            content = leaf.content
-            parent.result = parent.children[:i] + \
-                            (Node(leaf.name, content[:rel_pos]), node,
-                             Node(leaf.name, content[rel_pos:])) + \
-                            parent.children[i + 1:]
-            return parent
-    if rel_pos == 0:
-        leaf.result = (node, Node(leaf.name, leaf.content))
-    elif rel_pos == leaf_len:
-        leaf.result = (Node(leaf.name, leaf.content), node)
+        if leaf.name not in divisible_leaves:
+            raise ValueError(f'Node "{leaf.name}" is not divisible!')
+        parent.result = parent.children[:i] + split_leaf(leaf, node) + parent.children[i + 1:]
+        return parent
     else:
-        content = leaf.content
-        leaf.result = (Node(leaf.name, content[:rel_pos]), node,
-                       Node(leaf.name, content[rel_pos:]))
-    return leaf
+        if rel_pos == 0:
+            node._pos = leaf._pos
+            leaf.result = (node, Node(leaf.name, leaf.content))
+        elif rel_pos == leaf_len:
+            if leaf._pos >= 0:  node._pos = leaf._pos + leaf_len
+            leaf.result = (Node(leaf.name, leaf.content), node)
+        else:
+            if leaf.name not in divisible_leaves:
+                raise ValueError(f'Node "{leaf.name}" is not divisible!')
+            leaf.result = split_leaf(leaf, node)
+        return leaf
 
 
 chain_id = 4231
