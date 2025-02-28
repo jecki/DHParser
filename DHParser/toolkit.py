@@ -93,7 +93,6 @@ __all__ = ('re',
            'fix_XML_attribute_value',
            'lxml_XML_attribute_value',
            'RxPatternType',
-           're_find',
            'escape_re',
            'escape_ctrl_chars',
            'is_filename',
@@ -597,13 +596,10 @@ except AttributeError:
     RxPatternType = Any
 
 
+
+@deprecated('find_re() is deprecated. Use re.search() from the Python-Standard-Library, instead!')
 def re_find(s, r, pos=0, endpos=9223372036854775807):
-    """
-    Returns the match of the first occurrence of the regular expression
-    `r` in string (or byte-sequence) `s`. This is essentially a wrapper
-    for `re.finditer()` to avoid a try-catch StopIteration block.
-    If `r` cannot be found, `None` will be returned.
-    """
+    """DEPRECATED! Use re.search() from the Python-Standard-Library!"""
     if isinstance(r, (str, bytes)):
         if (pos, endpos) != (0, 9223372036854775807):
             r = re.compile(r)

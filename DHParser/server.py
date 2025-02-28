@@ -77,7 +77,7 @@ from typing import Callable, Coroutine, Awaitable, Optional, Union, Dict, List, 
 from DHParser.configuration import access_thread_locals, get_config_value
 from DHParser.nodetree import DHParser_JSONEncoder
 from DHParser.log import create_log, append_log, is_logging, log_dir
-from DHParser.toolkit import re, re_find, JSON_Type, JSON_Dict, JSONstr, JSONnull, \
+from DHParser.toolkit import re, JSON_Type, JSON_Dict, JSONstr, JSONnull, \
     json_encode_string, json_rpc, json_dumps, pp_json, pp_json_str, identify_python, \
     normalize_docstring, md5, is_html_name, TypeAlias
 from DHParser.versionnumber import __version__
@@ -316,7 +316,7 @@ def http_response(html: Union[str, bytes], mime_type: str = 'text/html') -> byte
 def incomplete_header(data: BytesType) -> bool:
     """Returns `True` if data appears to represent an incomplete header."""
     return b'Content-Length'.startswith(data) or \
-           (data.startswith(b'Content-Length') and not re_find(data, RE_DATA_START))
+           (data.startswith(b'Content-Length') and not re.search(RE_DATA_START, data))
 
 
 def split_header(data: BytesType) -> Tuple[BytesType, BytesType, BytesType]:
@@ -329,7 +329,7 @@ def split_header(data: BytesType) -> Tuple[BytesType, BytesType, BytesType]:
     m = RX_CONTENT_LENGTH.match(data, i, i + 100) if i >= 0 else None
     if m:
         content_length = int(m.group(1))
-        m2 = re_find(data, RE_DATA_START)
+        m2 = re.search(RE_DATA_START, data)
         if m2:
             header_size = m2.end()
             if len(data) >= header_size + content_length:
@@ -681,10 +681,10 @@ async def read_full_block(reader: StreamReaderType) -> Tuple[int, bytes, bytes]:
         m = RX_CONTENT_LENGTH.match(data, i, i + 100) if i >= 0 else None
     if m:
         content_length = int(m.group(1))
-        m2 = re_find(data, RE_DATA_START)
+        m2 = re.search(RE_DATA_START, data)
         while not m2 and not reader.at_eof():
             data += await reader.read()
-            m2 = re_find(data, RE_DATA_START)
+            m2 = re.search(RE_DATA_START, data)
         if m2:
             header_size = m2.end()
             missing = header_size + content_length - len(data)
@@ -1658,7 +1658,7 @@ class Server:
                     m = RX_CONTENT_LENGTH.match(data, i, i + 100) if i >= 0 else None
                     if m:
                         content_length = int(m.group(1))
-                        m2 = re_find(data, RE_DATA_START)
+                        m2 = re.search(RE_DATA_START, data)
                         if m2:
                             k = m2.end()
                             if len(data) > k + content_length:

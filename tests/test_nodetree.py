@@ -1408,7 +1408,7 @@ class TestMarkupInsertion:
     def test_insert_milestone_2(self):
         empty_tags = set()
         tree = parse_xml(self.testdata_2, string_tag=TOKEN_PTYPE, out_empty_tags=empty_tags)
-        m = next(re.finditer(r'silvae,?\s*glandiferae', tree.content))
+        m = re.search(r'silvae,?\s*glandiferae', tree.content)
         milestone = Node("ref", "").with_attr(type="subj", target="silva_glandifera_S01229")
         empty_tags.add("ref")
         tm = ContentMapping(tree)
@@ -1436,7 +1436,7 @@ class TestMarkupInsertion:
     def test_insert_markup_2(self):
         empty_tags = set()
         tree = parse_xml(self.testdata_2, string_tag=TOKEN_PTYPE, out_empty_tags=empty_tags)
-        m = next(re.finditer(r'silvae,?\s*glandiferae', tree.content))
+        m = re.search(r'silvae,?\s*glandiferae', tree.content)
         tm = ContentMapping(tree)
         tm.markup(m.start(), m.end(), "ref", {'type': "subj", 'target': "silva_glandifera_S01229"})
         xml = tree.as_xml(inline_tags={"document"}, string_tags={TOKEN_PTYPE},
@@ -1448,14 +1448,14 @@ class TestMarkupInsertion:
     def test_insert_markup_3(self):
         empty_tags = set()
         tree = parse_xml(self.testdata_3, string_tag=TOKEN_PTYPE, out_empty_tags=empty_tags)
-        m = next(re.finditer(r'Anfang war das Wort', tree.content))
+        m = re.search(r'Anfang war das Wort', tree.content)
         cm = ContentMapping(tree)
         cm.markup(m.start(), m.end(), "a")
         assert tree.as_xml(inline_tags={'doc'}, string_tags={':Text'}) == \
             '<doc>Am <outer><a><inner>Anfang</inner> war das Wort</a></outer>.</doc>'
         empty_tags = set()
         tree = parse_xml(self.testdata_3, string_tag=TOKEN_PTYPE, out_empty_tags=empty_tags)
-        m = next(re.finditer(r'Am Anfang war', tree.content))
+        m = re.search(r'Am Anfang war', tree.content)
         cm = ContentMapping(tree)
         cm.markup(m.start(), m.end(), "a")
         assert tree.as_xml(inline_tags={'doc'}, string_tags={':Text'}) == \
@@ -1464,7 +1464,7 @@ class TestMarkupInsertion:
     def test_insert_markup_4(self):
         empty_tags = set()
         tree = parse_xml(self.testdata_3, string_tag=TOKEN_PTYPE, out_empty_tags=empty_tags)
-        m = next(re.finditer(r'Am Anfang war', tree.content))
+        m = re.search(r'Am Anfang war', tree.content)
         cm = ContentMapping(tree, chain_attr_name='_chain')
         cm.markup(m.start(), m.end(), "a")
         I = tree.pick('a').attr['_chain']

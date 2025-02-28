@@ -3240,7 +3240,7 @@ class EBNFCompiler(Compiler):
         REClass = "SmartRE" if pattern.find('(?P<') >= 0 else "RegExp"
         pattern = repr(pattern)
         if pattern.find('(?x)') >= 0:
-            m = next(re.finditer(r'\\n[ \t]*', pattern))
+            m = re.search(r'\\n[ \t]*', pattern)
             indent = len(m.group(0)) - 2
             pattern = re.sub(r'\\n[ \t]*', '\\\\n\n', pattern)
             parts = pattern.split('\n')

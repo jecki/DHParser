@@ -22,6 +22,7 @@ limitations under the License.
 import asyncio
 import collections
 import os
+import re
 import sys
 import time
 import threading
@@ -34,7 +35,6 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.server import RX_CONTENT_LENGTH, RE_DATA_START, JSONRPC_HEADER_BYTES, \
     StreamReaderProxy, StreamWriterProxy
-from DHParser.toolkit import re_find
 
 
 __all__ = ('read_full_content', 'add_header', 'stdio', 'MockStream')
@@ -49,7 +49,7 @@ async def read_full_content(reader) -> bytes:
         m = RX_CONTENT_LENGTH.match(data, i, i + 100) if i >= 0 else None
         if m:
             content_length = int(m.group(1))
-            m2 = re_find(data, RE_DATA_START)
+            m2 = re.search(RE_DATA_START, data)
             if m2:
                 header_size = m2.end()
                 if len(data) < header_size + content_length:
