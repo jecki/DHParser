@@ -466,7 +466,7 @@ def flatten_xml(xml: str) -> str:
     return re.sub(r'\s+(?=<[\w:])', '', re.sub(r'(?P<closing_tag></:?\w+>)\s+', tag_only, xml))
 
 
-RX_AMPERSAND = LazyRE(r'&(?!\w+;)')
+RX_AMPERSAND = LazyRE(r'&(?!#?\w+;)')
 
 
 def xml_tag_name(tag_name: str) -> str:
@@ -2440,6 +2440,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return json.dumps(xast_obj, indent=indent,
                           separators=(', ', ': ') if indent is not None else (',', ':'))
 
+    def as_unist(self, src: Optional[str] = '', indent: Optional[int] = 2) -> str:
+        """Just for lost souls. Everybody else uses :py:meth:`Node.as_ndst`"""
+        return self.as_ndst(src=src, indent=indent)
+
 
     # serialization meta-method ###
 
@@ -3110,7 +3114,7 @@ def reflow_as_oneliner(tree: Node,
                        check_xml_space: bool = False) -> None:
     """Removes all line-breaks and indentations in the content of leaf-nodes
     selected by the leaf_criterion. (If any of these nodes
-    has children, a TypeError will be raised.) 'whitespace_re' is the regular
+    have children, a TypeError will be raised.) 'whitespace_re' is the regular
     expression that is used to capture whitespace.
 
     One use case of this function is to normalize XML-code.
@@ -4862,8 +4866,8 @@ class NodeLocation(NamedTuple):
 
 DEFAULT_START_INDEX_SENTINEL = -2 ** 30
 
-class ContentMapping:
 
+class ContentMapping:
     """
     ContentMapping represents a path-mapping of the string-content of all or a
     specific selection of the leave-nodes of a tree. A content-mapping is an ordered

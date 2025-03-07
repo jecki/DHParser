@@ -212,15 +212,19 @@ Serialization
 -------------
 
 Syntax trees can be serialized as S-expressions, XML, JSON and indented text.
-Module 'nodetree' also contains a few simple parsers
-(:py:func:`~nodetree.parse_sxpr()`, :py:func:`~nodetree.parse_xml()`) or
-:py:func:`~nodetree.parse_json()` to convert XML-snippets, S-expressions or
-json objects into trees composed of Node-objects. 
+As a special cases of S-expressions and JSON also `SXML`_ and `unist`_
+are supported. Module 'nodetree' also contains a few simple parsers
+(:py:func:`~nodetree.parse_sxpr`, :py:func:`~nodetree.parse_sxml`,
+:py:func:`~nodetree.parse_xml`, :py:func:`~nodetree.parse_json()`)
+to convert XML-snippets, S-expressions or
+json objects into trees composed of Node-objects.
 
-.. note: Only :py:func:`~nodetree.parse_xml()` can deserialize any XML-file. The other two
-    functions can parse only the restricted subset of S-expressions or JSON into
-    Node-trees that is used when serializing into these formats. There is no
-    function to deserialize indented text.
+.. note: Function :py:func:`~nodetree.parse_xml` can deserialize *any* XML-file
+    and function :py:func:`~nodetree.parse.sxml` can deserialize *any* SXML*.
+    The other parsing functions, however, can parse only the restricted
+    subset of S-expressions or JSON into Node-trees that is used when serializing
+    into these formats. There are no functions to deserialize indented text or
+    `unist`_-JSON.
 
 In order to make it easier to parameterize serialization, the Node-class also
 defines a generic :py:meth:`~nodetree.Node.serialize()`-method next to the more
@@ -267,10 +271,10 @@ However, mixed-content can be simulated with `string_tags`-parameter of the
     >>> print(sentence.as_xml(inline_tags={'sentence'}, string_tags={'word', 'blank'}))
     <sentence>This is <phrase>Buckingham Palace</phrase></sentence>
 
-The `inline_tags`-parameter ensures that all listed tags and contained
-tags will be printed on a single line. This is helpful when opening the
-XML-serialization in an internet-browser in order to avoid spurious
-blanks when a line-break occurs in the HTML/XML-source.
+The `inline_tags`-parameter ensures that all listed tags as well as
+any tag containd in a listed tag will be printed on a single line.
+This is helpful when opening the XML-serialization in an internet-browser
+in order to avoid spurious blanks when a line-break occurs in the HTML/XML-source.
 
 Finally, empty tags that do not have a closing tag (e.g. <br />) can be
 declared as such with the `empty_tags`-parameter.
@@ -1329,3 +1333,5 @@ class ContentMapping
 
 .. _ElementTree: https://docs.python.org/3/library/xml.etree.elementtree.html
 .. _mixed content: https://www.w3.org/TR/xml/#sec-mixed-content
+.. _unist: https://github.com/syntax-tree/unist
+.. _SXML: https://okmij.org/ftp/Scheme/SXML.html
