@@ -78,12 +78,12 @@ proc `$`*(rs: RuneSet, verbose: bool = false): string =
         s.add(marker & toHex(rr.low.int32, l))
       else:
         s.add(marker & toHex(rr.low.int32, l) & "-" & marker & toHex(rr.high.int32, l))
-    if rr.high <% rr.low:  s.add("!")
-  if not verbose: s.add("]")
+    if rr.high <% rr.low:  s.add("!") 
   if verbose:
     (if rs.negate: @["[^", s.join("]-["), "]"] 
              else: @["[", s.join("]|["), "]"]).join("")
   else:
+    s.add("]")
     return s.join("")
 
 proc `$`*(rr: seq[RuneRange], verbose=false): string = (false, rr) $ verbose
@@ -232,6 +232,7 @@ proc `-`*(A, B: RuneSet): RuneSet =
 func inRuneRange*(r: Rune, ranges: seq[RuneRange]): int32 =
   ## Binary search to find out if rune r falls within one of the sorted ranges
   ## Returns the index of the range or -1, if r does not fall into any range
+  ## It is assumed that the ranges are sorted and doe not overlap.
   let
     highest: int32 = ranges.len.int32 - 1'i32
   var

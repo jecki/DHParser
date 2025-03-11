@@ -29,5 +29,8 @@
         "plaintext",
         "restructuredtext",
         "markdown"
-    ]
+    ],
+    "cSpell.enabledFileTypes": {
+        "nim": false
+    }
 }
