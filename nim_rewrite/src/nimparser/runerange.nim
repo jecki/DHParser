@@ -232,7 +232,7 @@ proc `-`*(A, B: RuneSet): RuneSet =
 func inRuneRange*(r: Rune, ranges: seq[RuneRange]): int32 =
   ## Binary search to find out if rune r falls within one of the sorted ranges
   ## Returns the index of the range or -1, if r does not fall into any range
-  ## It is assumed that the ranges are sorted and doe not overlap.
+  ## It is assumed that the ranges are sorted and do not overlap.
   let
     highest: int32 = ranges.len.int32 - 1'i32
   var
@@ -342,7 +342,10 @@ proc rs*(s: string): RuneSet =
   ## rs"A-Za-z"
   ## rs"^<&'>\s"
   assert s.len > 0
-  var i = 0
+  var 
+    i = 0
+    k = 0
+    sign = ' '
 
   proc parseRuneSet(): RuneSet =
     assert i < s.len
@@ -353,32 +356,36 @@ proc rs*(s: string): RuneSet =
     result = rs0(s[k ..< i])
     i += 1
 
-  if s[0] != '[':
-    result = rs0(s)
-  else:
-    result = (false, @[])
-    var sign = ' '
-    while i < s.len:
-      while i < s.len and s[i] in " \n":  i += 1
-      if s[i] == '-':
-        assert sign != '-', s[0..i]
-        sign = '-'
-        i += 1
-      elif s[i] == '|':
-        i += 1
-        sign = '|'
-      elif s[i] != '[':
-        break
-      while i < s.len and s[i] in " \n":  i += 1
+  template addOrSubtract(nextRS: RuneSet) = 
       if sign == '-':
-        result = result - parseRuneSet()
-        sign = ' '
+        result = result - nextRS
       else:
         if result.ranges.len == 0:
-          result = parseRuneSet()
+          result = nextRS
         else:
           assert sign == '|', s[0..i]
-          result = result + parseRuneSet()
+          result = result + nextRS    
+      sign = ' '
+
+  result = (false, @[])
+  while i < s.len:
+    while i < s.len and s[i] in " \n":  i += 1
+    if s[i] == '-':
+      assert sign != '-', s[0..i]
+      sign = '-'
+      i += 1
+    elif s[i] == '|':
+      i += 1
+      sign = '|'
+    elif s[i] != '[':
+      k = i      
+      while i < s.len and not (s[i] in " \n|"):  i += 1
+      # TODO: Ensure that rs0(s[k ..< i]) is a single character 
+      addOrSubtract(rs0(s[k ..< i]))
+    else: 
+      while i < s.len and s[i] in " \n":  i += 1
+      addOrSubtract(parseRuneSet())
+
 
 
 proc rr*(rangeStr: string): RuneRange =
