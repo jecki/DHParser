@@ -380,8 +380,9 @@ proc rs*(s: string): RuneSet =
     elif s[i] != '[':
       k = i      
       while i < s.len and not (s[i] in " \n|"):  i += 1
-      # TODO: Ensure that rs0(s[k ..< i]) is a single character 
-      addOrSubtract(rs0(s[k ..< i]))
+      let nextRS = rs0(s[k ..< i])
+      assert nextRS.ranges.len == 1
+      addOrSubtract(nextRS)
     else: 
       while i < s.len and s[i] in " \n":  i += 1
       addOrSubtract(parseRuneSet())
