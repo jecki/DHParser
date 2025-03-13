@@ -503,11 +503,11 @@ CONFIG_PRESET['infinite_loop_warning'] = False
 _serializations = frozenset({'XML', 'HTML', 'json', 'dict.json', 'indented', 'tree',
                              'S-expression', 'sxpr', 'SXML', 'SXML1', 'SXML2',
                              'xast', 'ndst'})
-CONFIG_PRESET['CST_serialization'] = 'sxpr'
-CONFIG_PRESET['AST_serialization'] = 'sxpr'
+CONFIG_PRESET['CST_serialization'] = ''
+CONFIG_PRESET['AST_serialization'] = ''
 CONFIG_PRESET['default_serialization'] = 'sxpr'
-ALLOWED_PRESET_VALUES['CST_serialization'] = _serializations
-ALLOWED_PRESET_VALUES['AST_serialization'] = _serializations
+ALLOWED_PRESET_VALUES['CST_serialization'] = _serializations | {''}
+ALLOWED_PRESET_VALUES['AST_serialization'] = _serializations | {''}
 ALLOWED_PRESET_VALUES['default_serialization'] = _serializations
 
 # Defines the maximum line length for flattened S-expressions.

@@ -119,16 +119,16 @@ class DSLApp(tkinter.Tk):
                 with self.lock:  self.cancel_flag = False
             else:
                 self.result.insert(tkinter.END, "Compilation finished.\n")
-                out_dir = os.path.join(os.path.dirname(self.names[0]), 'out', self.target)
+                self.result.insert(tkinter.END, f"Results written to {self.outdir}.\n")
                 if self.target == 'html':
                     html_name = os.path.splitext(os.path.basename(self.names[0]))[0] + '.html'
-                    html_name = os.path.join(out_dir, html_name)
+                    html_name = os.path.join(self.outdir, html_name)
                     self.result.insert(tkinter.END, html_name + "\n")
                     webbrowser.open('file://' + os.path.abspath(html_name)
                                     if sys.platform == "darwin" else html_name)
                 else:
-                    webbrowser.open('file://' + os.path.abspath(out_dir)
-                                    if sys.platform == "darwin" else out_dir)
+                    webbrowser.open('file://' + os.path.abspath(self.outdir)
+                                    if sys.platform == "darwin" else self.outdir)
             self.worker = None
 
     def on_pick_src(self):

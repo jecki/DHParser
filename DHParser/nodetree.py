@@ -1619,7 +1619,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def split(self, milestone: PathSelector,
               skip_subtree: PathSelector = NO_PATH) -> Tuple[Node, ...]:
         """Splits the entire tree into several trees at every Path for which
-        the milestone-selector yield True. The last node in the path for which
+        the milestone-selector yields True. The last node in the path for which
         the milestone-selector yields True, will be removed from the tree.
         Thus, split_if() resembles the split-method of the Python-string-object.
 
@@ -2470,13 +2470,15 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             return False
 
         switch = how.lower()
-
+        default = get_config_value('default_serialization').lower()
         if switch == 'ast':
             switch = get_config_value('AST_serialization').lower()
+            if not switch:  switch = default
         elif switch == 'cst':
             switch = get_config_value('CST_serialization').lower()
+            if not switch:  switch = default
         elif switch == 'default':
-            switch = get_config_value('default_serialization').lower()
+            switch = default
 
         # flatten_threshold = get_config_value('flatten_sxpr_threshold')
         compact_threshold = get_config_value('compact_sxpr_threshold')
