@@ -36,7 +36,7 @@ from DHParser.nodetree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxp
     prev_path, pick_from_path, pp_path, ContentMapping, leaf_paths, NO_PATH, \
     select_path_if, select_path, create_path_match_function, pick_path, \
     LEAF_PATH, TOKEN_PTYPE, insert_node, content_of, strlen_of, gen_chain_ID, \
-    parse_sxml, LEAF_PTYPES, DIVISIBLES, reflow_as_oneliner
+    parse_sxml, LEAF_PTYPES, DIVISIBLES, reflow_as_oneliner, has_token, eq_tokens
 from DHParser.pipeline import create_parser_junction, Junction, PseudoJunction
 from DHParser.transform import traverse, reduce_single_child, remove_brackets, \
     replace_by_single_child, flatten, remove_empty, remove_whitespace, TransformerFunc, \
@@ -1267,6 +1267,13 @@ class TestEvaluation:
         assert tree.evaluate(actions) == -13
 
 
+class TestAttributeHandling:
+    def test_uncommonly_formatted_attributes(self):
+        assert has_token('bold italic', ' italic  bold\n')
+        assert has_token('bold italic', ' italic\nbold ')
+        assert eq_tokens('bold italic', ' italic  bold\n')
+        assert eq_tokens('bold italic', ' italic\nbold ')
+
 #class TestStrLenPos:
 
 class TestSplitMethod:
@@ -1810,6 +1817,33 @@ class TestReflow:
     Präliminarien zu derselben stecken geblieben ist. Besonders gleicht die
     deutsche Philosophie der neueren Zeit einer Vorrede ohne Ende, zu der noch
     immer das Buch vergeblich erwartet wird."""))'''
+
+    def test_reflow2(self):
+        tree = parse_xml("""<body><div><p>Kein Begriff liegt seit längerer Zeit in so großer Geringschätzung, als eben der der Zeit, wie es bemerkenswerth ist, daß eben in der gewaltigsten Zeit 
+            die schwächsten Begriffe von der Zeit aufgekommen. Schon immer war sie gleichsam das böse Gewissen der Philosophen. Aber ohne Aufhellung dieses Begriffs 
+            wird sich nie eine verständliche Entwickelung der Wissenschaft denken lassen, und es liegt der Grund des allgemeinen Mißverstehens und der in allen Begriffen 
+            fühlbaren Stockung eben in nichts anderem, als in den ungewissen, zweifelhaften oder völlig unwahren Begriffen von der Zeit. Auch die Wissenschaft kann die 
+            freye Bewegung  nicht wiederfinden, ehe die Pulse der Zeit wieder lebendig schlagen.</p></div></body>""")
+        xml = tree.as_xml(inline_tags={'p'})
+        # no assertion error should occur, if reflow_col is not given!
+        for p in tree.select('p'):
+            reflow_as_oneliner(p)
+        xml = tree.as_xml(inline_tags={'p'}, reflow_col=80)
+        assert xml == """<body>
+  <div>
+    <p>Kein Begriff liegt seit längerer Zeit in so großer Geringschätzung, als
+      eben der der Zeit, wie es bemerkenswerth ist, daß eben in der
+      gewaltigsten Zeit die schwächsten Begriffe von der Zeit aufgekommen.
+      Schon immer war sie gleichsam das böse Gewissen der Philosophen. Aber
+      ohne Aufhellung dieses Begriffs wird sich nie eine verständliche
+      Entwickelung der Wissenschaft denken lassen, und es liegt der Grund des
+      allgemeinen Mißverstehens und der in allen Begriffen fühlbaren Stockung
+      eben in nichts anderem, als in den ungewissen, zweifelhaften oder völlig
+      unwahren Begriffen von der Zeit. Auch die Wissenschaft kann die freye
+      Bewegung nicht wiederfinden, ehe die Pulse der Zeit wieder lebendig
+      schlagen.</p>
+  </div>
+</body>"""
 
 
 

@@ -156,6 +156,7 @@ __all__ = ('WHITESPACE_PTYPE',
            'content_of',
            'strlen_of',
            'validate_token_sequence',
+           'normalize_token_sequence',
            'has_token',
            'add_token',
            'remove_token',
@@ -214,7 +215,6 @@ __all__ = ('WHITESPACE_PTYPE',
            'tree_sanity_check',
            'RootNode',
            'DHParser_JSONEncoder',
-           'RE_ANY_WHITESPACE',
            'reflow_as_oneliner',
            'parse_sxpr',
            'parse_sxml',
@@ -511,6 +511,7 @@ ResultType: TypeAlias = Union[StrictResultType, 'Node']
 
 RawMappingType: TypeAlias = Dict['Node', Sequence[int]]
 NO_MAPPING_SENTINEL: RawMappingType = {"don't generate a serialization mapping ": (-1, -1, -1)}
+NO_REFLOW = lambda tab, content, depth: content
 
 
 class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibility
@@ -1694,7 +1695,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     @cython.locals(i=cython.int, k=cython.int, N=cython.int)
     def _tree_repr(self, tab, open_fn, close_fn, data_fn=lambda i: i,
                    density=0, inline=False, inline_fn=lambda node: False,
-                   allow_omissions=False, reflow_fn=lambda tab, content: content,
+                   allow_omissions=False, reflow_fn=NO_REFLOW,
                    mapping: RawMappingType = NO_MAPPING_SENTINEL, depth=0) -> List[str]:
         """
         Generates a tree representation of this node and its children
@@ -1743,7 +1744,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         tail = close_fn(self)
 
         if not inline:
-            reflow = inline_fn(self)
+            reflow = inline_fn(self)    # reflow starts is done on the first inlined element
             inline = reflow
         else:
             reflow = False
@@ -1813,7 +1814,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     while k >= 0 and not lines[k]:
                         k -= 1
                 tb = usetab + (tab if reflow or not inline else '')
-                content = [usetab + head, tb] if hlf else [usetab + head + tb]
+                content = [usetab + head, tb] if hlf else [usetab + head]  # + tb?
                 for line in lines[i:k]:
                     content[-1] += line
                     content.append(tb)
@@ -1826,7 +1827,12 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if reflow and len(content) == 1:
             content = [reflow_fn(tab, content[0], depth)]
         else:
-            assert not reflow or len(content) == 1, f"Reflow but len(content) == {len(content)} > 1 !?"
+            assert reflow_fn is NO_REFLOW or not reflow or len(content) == 1, \
+                f"Reflow but len(content) == {len(content)} > 1 !? Apply reflow_as_oneliner() " \
+                "to all inline-tags, before calling Node.as_xml(..., reflow_col=N), N > 0.\n" \
+                "    for inner in tree.select(inline_tags):" \
+                "        reflow_as_oneliner(inner)" \
+                f"Error occured in this tag:\n{self.as_sxpr()}"
         if mapping is not NO_MAPPING_SENTINEL: update_mapping(content)
         return content
 
@@ -2006,7 +2012,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 return True
 
         if flatten_threshold >= INFINITE:  indentation = 0
-        reflow_fn = reflow if reflow_col > 0 else lambda tab, content, depth: content
+        reflow_fn = reflow if reflow_col > 0 else NO_REFLOW
         inline_fn = inline if reflow_col > 0 else lambda nd: False
         sxpr_0 = '\n'.join(self._tree_repr(
             ' ' * indentation, opening, closing, pretty, inline_fn=inline_fn,
@@ -2169,7 +2175,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
            inline_tags = frozenset(inline_tags) | string_tags
         empty_tags = set(frozenset(empty_tags))
         d = -1 if self.name == ":XML" else 0
-        reflow_fn = reflow if reflow_col > 0 else lambda tab, content, depth: content
+        reflow_fn = reflow if reflow_col > 0 else NO_REFLOW
         xml = '\n'.join(self._tree_repr(
             ' ' * indentation, opening, closing, sanitizer, density=1, inline_fn=inlining,
             allow_omissions=bool(string_tags), reflow_fn=reflow_fn, mapping=mapping, depth=d))
@@ -3108,11 +3114,12 @@ class RootNode(Node):
 
 ## reflow-support #####################################################
 
-RE_ANY_WHITESPACE = re.compile(r'\s+')
+RX_WHITESPACE = re.compile(r'\s+')
+
 
 def reflow_as_oneliner(tree: Node,
                        leaf_criterion: NodeSelector = LEAF_NODE,
-                       whitespace_re = RE_ANY_WHITESPACE,
+                       whitespace_re = RX_WHITESPACE,
                        check_xml_space: bool = False) -> None:
     """Removes all line-breaks and indentations in the content of leaf-nodes
     selected by the leaf_criterion. (If any of these nodes
@@ -3575,13 +3582,20 @@ def deserialize(xml_sxpr_or_json: str) -> Optional[Node]:
 
 
 def validate_token_sequence(token_sequence: str) -> bool:
-    """Returns True, if `token_sequence` is properly formed.
+    """Returns True, if `token_sequence` is properly formed, i.e. normalized.
 
     Token sequences are strings or words which are separated by
     single blanks with no leading or trailing blank.
     """
     return token_sequence[:1] != ' ' and token_sequence[-1:] != ' ' \
-        and token_sequence.find('  ') < 0
+        and token_sequence.find('  ') < 0 and token_sequence.find('\n') < 0
+
+
+def normalize_token_sequence(token_sequence: str) -> str:
+    """Normalizeses the token sequence, i.e. whitespace at the beginning
+    and the end will be stripped, any other whitespace will be replaced
+    by a single blank."""
+    return RX_WHITESPACE.sub(' ', token_sequence.strip())
 
 
 def has_token(token_sequence: str, tokens: str) -> bool:
@@ -3601,6 +3615,8 @@ def has_token(token_sequence: str, tokens: str) -> bool:
     """
     # assert validate_token_sequence(token_sequence)
     # assert validate_token_sequence(token)
+    token_sequence = RX_WHITESPACE.sub(' ', token_sequence.strip())
+    tokens = RX_WHITESPACE.sub(' ', tokens.strip())
     return not tokens or set(tokens.split(' ')) <= set(token_sequence.split(' '))
 
 
@@ -3648,6 +3664,8 @@ def eq_tokens(token_sequence1: str, token_sequence2: str) -> bool:
         >>> eq_tokens('red thin', 'thin blue')
         False
     """
+    token_sequence1 = RX_WHITESPACE.sub(' ', token_sequence1.strip())
+    token_sequence2 = RX_WHITESPACE.sub(' ', token_sequence2.strip())
     return set(token_sequence1.split(' ')) - {''} == set(token_sequence2.split(' ')) - {''}
 
 
