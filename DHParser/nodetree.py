@@ -2104,7 +2104,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         def opening(node: Node) -> str:
             """Returns the opening string for the representation of `node`."""
-            nonlocal attr_filter, empty_tags, line_breaks
+            nonlocal self, attr_filter, empty_tags, line_breaks
+            if node is self and node.name == ':XML':  return ''
             if node.name in string_tags and not node.has_attr():
                 if node.name == CHAR_REF_PTYPE and node.content.isalnum(): return "&#x"
                 elif node.name == ENTITY_REF_PTYPE: return "&"
@@ -2122,8 +2123,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             if src == '' and not (node.has_attr() and '_pos' in node.attr) and node._pos >= 0:
                 txt.append(' _pos="%i"' % node._pos)
             if root and id(node) in root.error_nodes and not node.has_attr('err'):
-                txt.append(' err=' + attr_filter(''.join(str(err).replace('&', '')
-                                                         for err in root.node_errors(node))))
+                txt.append(' err=' + fix_XML_attribute_value(
+                    ''.join(str(err) for err in root.node_errors(node))))
             if node.name[0:1] == '?' and not node.result:
                 empty_tags.add(node.name)
             if node.name in empty_tags:
@@ -2144,6 +2145,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         def closing(node: Node):
             """Returns the closing string for the representation of `node`."""
+            nonlocal self
+            if node is self and node.name == ':XML':  return ''
             if (node.name in empty_tags and not node.result) \
                     or (node.name in string_tags and not node.has_attr()):
                 if node.name == CHAR_REF_PTYPE and node.content.isalnum(): return ";"
@@ -2175,7 +2178,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 tab = ''
             return self._reflow(tab, content, reflow_col)
 
-        string_tags = frozenset(string_tags) | frozenset({':XML'})
+        # string_tags = frozenset(string_tags)
         if reflow_col > 0:
            inline_tags = frozenset(inline_tags) | string_tags
         empty_tags = set(frozenset(empty_tags))

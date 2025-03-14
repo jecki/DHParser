@@ -21,14 +21,14 @@ permissions and limitations under the License.
 import argparse
 import os.path
 import sys
-
+from typing import cast
 
 scriptdir = os.path.dirname(os.path.abspath(os.path.realpath(__file__)))
 dhparserdir = os.path.abspath(os.path.join(scriptdir, os.pardir, os.pardir))
 if dhparserdir not in sys.path:
     sys.path.append(dhparserdir)
 
-from DHParser.nodetree import parse_sxpr, reflow_as_oneliner
+from DHParser.nodetree import parse_sxpr, RootNode
 from DHParser.parsers import parse_XML, parse_HTML
 from DHParser.toolkit import AbstractSet
 
@@ -41,7 +41,6 @@ def process_file(filename: str, tags: AbstractSet, column: int,
     extension = ext.lower()
     if extension in ('.sxml', '.sxpr'):
         tree = parse_sxpr(xml)
-        reflow_as_oneliner(tree, check_xml_space=True)
         if extension == '.sxml':
             xml = tree.as_sxml(flatten_threshold=0, reflow_col=column)
         else:
@@ -49,9 +48,8 @@ def process_file(filename: str, tags: AbstractSet, column: int,
     elif extension == '.xml':
         # from DHParser import parse_xml as parse_XML
         tree = parse_XML(xml)
-        print(tree.as_sxpr())
-        reflow_as_oneliner(tree, check_xml_space=True)
-        xml = tree.as_xml(inline_tags=set(tags), reflow_col=column)
+        for e in cast(RootNode, tree.errors_sorted):  print(e)
+        xml = tree.as_xml(inline_tags=set(tags), strict_mode=False, reflow_col=column)
     else:
         a = xml.find('<head>')
         if a < 0:  a = xml.find('<HEAD>')
@@ -69,7 +67,6 @@ def process_file(filename: str, tags: AbstractSet, column: int,
                 r = xml.find('"', l+1, b)
                 lang = xml[l+1:r]
         tree = parse_HTML(xml)
-        reflow_as_oneliner(tree, check_xml_space=True)
         xml = tree.as_html(head=head, lang=lang, inline_tags=set(tags),
                            reflow_col=column)
     if output is None:
@@ -88,8 +85,8 @@ def main():
     parser.add_argument('--tags', '-t', nargs='+', default=['p'],
                         help='The outermost tags the content of which '
                              'shall be rewrapped')
-    parser.add_argument('--column', '-c', type=int, default=80,
-                        help='The column at which to wrap text (default:80)')
+    parser.add_argument('--column', '-c', type=int, default=100,
+                        help='The column at which to wrap text (default:100)')
     parser.add_argument('--output', '-o', type=str,
                         help='The output filename')
     parser.add_argument('--verbose', '-v', action='store_true',

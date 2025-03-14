@@ -285,7 +285,6 @@ class XMLTransformer(Compiler):
         if attributes:
             node.attr.update(attributes)
         node.result = ''
-        # self.tree.empty_tags.add('?xml')
         node.name = '?xml'  # node.parser = self.get_parser('?xml')
         return node
 

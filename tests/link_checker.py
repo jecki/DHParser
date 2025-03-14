@@ -50,7 +50,10 @@ def check_link(url):
     except urllib.error.HTTPError as e:
         return str(e)
     except urllib.error.URLError as e:
-        return str(e)
+        s = str(e)
+        if s.find('SSL: CERTIFICATE_VERIFY_FAILED') > 0:
+            return "ok?"
+        return s
     if handle:
         handle.close()
     return "ok"
@@ -63,7 +66,7 @@ def check_urls(urls, indent=4, cache=None):
     errors = 0
     for url in urls:
         result = cache.setdefault(url, check_link(url))
-        if result != 'ok':
+        if result not in ('ok', 'ok?'):
             errors += 1
         output = [tab, url, " ", result]
         print(''.join(output))
@@ -79,6 +82,9 @@ def check_links_in_docs():
         if urls:
             print(path)
             errors += check_urls(urls, cache=cache)
+    print('\n"ok?" means that the certificate could not be verified, but most '
+          'likely\nthis error will not occur when the URL is opened in an '
+          'internet browser.\n')
     print(f'{errors} errors were found.')
 
 
