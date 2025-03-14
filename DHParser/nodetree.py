@@ -209,12 +209,15 @@ __all__ = ('WHITESPACE_PTYPE',
            'reset_chain_ID',
            'DEFAULT_START_INDEX_SENTINEL',
            'ContentMapping',
+           'SerPart',
+           'SerLocation',
            'SerializationMapping',
            'FrozenNode',
            'EMPTY_NODE',
            'tree_sanity_check',
            'RootNode',
            'DHParser_JSONEncoder',
+           'XMLSpacePolicy',
            'reflow_as_oneliner',
            'parse_sxpr',
            'parse_sxml',
@@ -1744,8 +1747,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         tail = close_fn(self)
 
         if not inline:
-            reflow = inline_fn(self)    # reflow starts is done on the first inlined element
+            reflow = inline_fn(self)    # reflow is done on the first inlined element
             inline = reflow
+            if reflow and reflow_fn is not NO_REFLOW:
+                reflow_as_oneliner(self, xml_space_policy=XMLSpacePolicy.RESPECT)
         else:
             reflow = False
 
@@ -1794,7 +1799,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             if not inline and not head and allow_omissions:
                 # strip whitespace for omitted non-inline node, e.g. CharData in mixed elements
                 res = res.strip()  # WARNING: This changes the data in subtle ways
-            if density & 1 and res.find('\n') < 0:
+            if density & 1 and (res.find('\n') < 0 or reflow_fn is not NO_REFLOW):
                 # except for XML, add a gap between opening statement and content
                 if not inline and head and head not in ("&", "&#x") \
                         and (head[-1:] != '>' and head != '<!--'):
@@ -1832,7 +1837,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 "to all inline-tags, before calling Node.as_xml(..., reflow_col=N), N > 0.\n" \
                 "    for inner in tree.select(inline_tags):" \
                 "        reflow_as_oneliner(inner)" \
-                f"Error occured in this tag:\n{self.as_sxpr()}"
+                f"Error occurred in this tag:\n{self.as_sxpr()}"
         if mapping is not NO_MAPPING_SENTINEL: update_mapping(content)
         return content
 
@@ -3116,11 +3121,29 @@ class RootNode(Node):
 
 RX_WHITESPACE = re.compile(r'\s+')
 
+class XMLSpacePolicy(IntEnum):
+    """Policy for treating the xml:space Attribute when reformating XML.
+
+    FAIL
+        an error will be raised when trying to reformat XML-code
+        inside a tag with xml:space Attribute.
+
+    IGNORE
+        the xml.space-Attribute will simply be ignored
+
+    RESPECT
+        no reflow inside of tags that are "protected" by the
+        xml:space-Attribute
+    """
+    FAIL = -1
+    IGNORE = 0
+    RESPECT = 1
+
 
 def reflow_as_oneliner(tree: Node,
                        leaf_criterion: NodeSelector = LEAF_NODE,
                        whitespace_re = RX_WHITESPACE,
-                       check_xml_space: bool = False) -> None:
+                       xml_space_policy: XMLSpacePolicy = XMLSpacePolicy.IGNORE) -> None:
     """Removes all line-breaks and indentations in the content of leaf-nodes
     selected by the leaf_criterion. (If any of these nodes
     have children, a TypeError will be raised.) 'whitespace_re' is the regular
@@ -3129,17 +3152,21 @@ def reflow_as_oneliner(tree: Node,
     One use case of this function is to normalize XML-code.
     """
     wsrx = re.compile(whitespace_re) if isinstance(whitespace_re, str) else whitespace_re
-    if check_xml_space:
+    if xml_space_policy != XMLSpacePolicy.IGNORE:
         for path in tree.select_path(leaf_criterion, include_root=True):
             nd = path[-1]
             if nd._children:
                 raise TypeError(f'Can only reflow content of leaf-nodes, but node {nd.name}'
                                 f' has children: {nd.as_sxpr(flatten_threshold=INFINITE)}')
             for ancestor in path:
-                if nd.get_attr('xml:space', 'default') == 'preserve':
-                    raise ValueError("Reflow of element {nd.name} not possible, because "
-                                     "xml:space='preserve' is set:\n{ancestor.as_xml()}")
-            nd.result = wsrx.sub(' ', nd.content)
+                if ancestor.get_attr('xml:space', 'default') == 'preserve':
+                    if xml_space_policy == XMLSpacePolicy.RESPECT:
+                        break
+                    else:
+                        raise ValueError("Reflow of element {nd.name} not possible, because "
+                                         "xml:space='preserve' is set:\n{ancestor.as_xml()}")
+            else:
+                nd.result = wsrx.sub(' ', nd.content)
     else:
         for nd in tree.select(leaf_criterion, include_root=True):
             if nd._children:

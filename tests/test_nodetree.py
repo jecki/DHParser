@@ -1780,8 +1780,6 @@ class TestReflow:
                Präliminarien zu derselben stecken geblieben ist. Besonders gleicht die deutsche
                Philosophie der neueren Zeit einer Vorrede ohne Ende, zu der noch immer das Buch
                vergeblich erwartet wird.</inner></outer>""")
-        for inner in leaf_tree.select('inner'):
-            reflow_as_oneliner(inner)
         leaf_xml = leaf_tree.as_xml(inline_tags={'inner'}, reflow_col=80)
         for line in leaf_xml.splitlines():
             assert len(line) <= 80
@@ -1826,8 +1824,6 @@ class TestReflow:
             freye Bewegung  nicht wiederfinden, ehe die Pulse der Zeit wieder lebendig schlagen.</p></div></body>""")
         xml = tree.as_xml(inline_tags={'p'})
         # no assertion error should occur, if reflow_col is not given!
-        for p in tree.select('p'):
-            reflow_as_oneliner(p)
         xml = tree.as_xml(inline_tags={'p'}, reflow_col=80)
         assert xml == """<body>
   <div>

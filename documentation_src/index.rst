@@ -49,6 +49,34 @@ Install DHParser
 
     $ python -m pip install --user DHParser
 
+In order to use DHParser directly from the git-repository, the best way is to make
+a shallow clone of the repository and then add a symlink to the DHParser-subdirectory
+inside the DHParser-repository in your project's directory. For setting up an entirely
+new project with DHParser without using "pip install", the commands are the following:
+
+.. code:: bash
+
+   $ git clone --depth=1 https://gitlab.lrz.de/badw-it/DHParser
+   $ python3 DHParser/DHParser/scripts/dhparser.py MyNewParserProject
+   $ ln -s ../DHParser/DHParser MyNewParserProject/DHParser
+
+In case you would like to use latest bugfixes from the development-branch the first command
+should be exchanged with:
+
+.. code:: bash
+
+   $ git clone --depth=1 --single-branch --branch development https://gitlab.lrz.de/badw-it/DHParser
+
+In order to verify that your local clone of the DHParser-repository has been
+correctly linked to your project's directory, type:
+
+.. code:: bash
+
+    $ cd MyNewParserProject
+    $ python3 tst_MyNewParserProect_grammar.py
+
+
+
 Documentation
 -------------
 

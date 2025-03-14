@@ -212,6 +212,21 @@ def set_preset_value(key: str, value: Any, allow_new_key: bool=False):
     PRESETS_CHANGED = True
 
 
+def ingest_config_data(config):
+    """Ingests configuration-data from a Python-STL
+    configparser.RawConfigParser-object."""
+    access_presets()
+    for section in config.sections():
+        if section.lower() == "dhparser":
+            for variable, value in config[section].items():
+                set_preset_value(f"{variable}", eval(value))
+        else:
+            for variable, value in config[section].items():
+                set_preset_value(f"{section}.{variable}", eval(value),
+                                 allow_new_key=True)
+    finalize_presets()
+
+
 def read_local_config(ini_filename: str) -> List[str]:
     """Reads a local config file(s) and updates the presets
     accordingly. All config-files with the same basename as
@@ -276,17 +291,18 @@ def read_local_config(ini_filename: str) -> List[str]:
     config.optionxform = lambda optionstr: optionstr
     successfully_read = config.read(cfg_files, encoding='utf-8')
     if successfully_read:
-        access_presets()
-        for section in config.sections():
-            if section.lower() == "dhparser":
-                for variable, value in config[section].items():
-                    set_preset_value(f"{variable}", eval(value))
-            else:
-                for variable, value in config[section].items():
-                    set_preset_value(f"{section}.{variable}", eval(value),
-                                     allow_new_key=True)
-        finalize_presets()
+        ingest_config_data(config)
     return successfully_read
+
+
+def read_config_string(ini_string: str):
+    """Reads configuration data in the .ini-file format from
+    a string. See :py:func:`read_local_config` for more details."""
+    import configparser
+    config = configparser.RawConfigParser()
+    config.optionxform = lambda optionstr: optionstr
+    config.read_string(ini_string)
+    ingest_config_data(config)
 
 
 class NoDefault:
