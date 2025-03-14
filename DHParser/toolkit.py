@@ -214,7 +214,6 @@ class ThreadLocalSingletonFactory:
     not unique but generic. See source code of
     :py:func:`DHParser.dsl.create_transtable_junction`
     """
-
     def __init__(self, class_or_factory, name: str = "", *,
                  uniqueID: Union[str, int] = 0,
                  ident=None):
@@ -1162,7 +1161,7 @@ def cached_load(file_name: str, deserialize: DeserializeFunc, cachedir: str = "~
             else:
                 return data
         except UnpicklingError as e:
-            print(f'{e} encountered while loading data from cache "{cache_name}"!' 
+            print(f'{e} encountered while loading data from cache "{cache_name}"!'
                   f'If this error persists, then delete the cache file "{cache_name}" manually.')
     if source is None:
         with open(file_name, 'r', encoding='utf-8') as f:
@@ -1780,5 +1779,3 @@ try:
 except AttributeError:
     # somebody has already taken care of this !?
     pass
-
-

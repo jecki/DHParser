@@ -35,7 +35,7 @@ import functools
 from collections import defaultdict
 import copy
 from functools import lru_cache
-from typing import Callable, cast, Collection, DefaultDict, Sequence, Union, Optional, Iterator, \
+from typing import Callable, cast, Collection, DefaultDict, Sequence, Union, Optional, \
     NamedTuple
 
 from DHParser.configuration import get_config_value, NEVER_MATCH_PATTERN
@@ -54,12 +54,12 @@ from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
 from DHParser.log import CallItem, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
-from DHParser.nodetree import ChildrenType, Node, RootNode, WHITESPACE_PTYPE, \
+from DHParser.nodetree import Node, RootNode, WHITESPACE_PTYPE, \
     KEEP_COMMENTS_PTYPE, TOKEN_PTYPE, MIXED_CONTENT_TEXT_PTYPE, ZOMBIE_TAG, EMPTY_NODE, \
-    EMPTY_PTYPE, ResultType, LEAF_NODE
+    EMPTY_PTYPE, LEAF_NODE
 from DHParser.toolkit import sane_parser_name, escape_ctrl_chars, re, matching_brackets, \
     abbreviate_middle, RX_NEVER_MATCH, RxPatternType, linebreaks, line_col, TypeAlias, \
-    List, Tuple, Set, MutableSet, AbstractSet, FrozenSet, Dict, INFINITE, LazyRE
+    List, Tuple, MutableSet, AbstractSet, FrozenSet, Dict, INFINITE, LazyRE
 
 try:
     import cython
