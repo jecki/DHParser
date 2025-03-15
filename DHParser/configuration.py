@@ -110,7 +110,8 @@ def get_forkserver_pid():
     import multiprocessing, os
     ctx = multiprocessing.get_context('forkserver')
     with ctx.Pool(1) as pool:
-        return pool.apply(os.getppid)
+        forkserver_pid = pool.apply(os.getppid)
+        return forkserver_pid
 
 
 def get_syncfile_path(pid: int) -> str:
