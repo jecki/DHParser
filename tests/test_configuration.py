@@ -35,14 +35,14 @@ from DHParser.testing import unique_name
 
 
 def evaluate_presets(flag):
-    print(multiprocessing)
+    print(os.getppid())
     access_presets()
     if get_preset_value('test', 'failure') != 'failure' and \
             get_preset_value('test2', 'failure') != 'failure':
         flag.value = 1
     else:
         flag.value = 0
-    finalize_presets()
+    # finalize_presets()
 
 
 class TestConfigMultiprocessing:
@@ -60,7 +60,7 @@ class TestConfigMultiprocessing:
             finalize_presets()
             flag = multiprocessing.Value('b', 0)
             # ctx_in_main = multiprocessing.get_context('forkserver')
-            print(multiprocessing)
+            print(os.getppid())
             multiprocessing.set_forkserver_preload(['DHParser.configuration'])
             p = multiprocessing.Process(target=evaluate_presets, args=(flag,))
             p.start()

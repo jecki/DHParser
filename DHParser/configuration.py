@@ -133,7 +133,7 @@ def access_presets():
         import pickle
         syncfile_path = get_syncfile_path(os.getppid())  # assume this is a spawned process
         if not os.path.exists(syncfile_path):
-            syncfile_path = get_syncfile_path(os.getpid())  # assume this is the root process
+            syncfile_path = get_syncfile_path(os.getppid())  # assume this is the root process
         f = None
         try:
             f = open(syncfile_path, 'rb')
@@ -170,7 +170,7 @@ def finalize_presets(fail_on_error: bool=False):
             import atexit
             import os
             import pickle
-            syncfile_path = get_syncfile_path(os.getpid())
+            syncfile_path = get_syncfile_path(os.getppid())
             existing_syncfile = CONFIG_PRESET['syncfile_path']
             if fail_on_error:
                 assert ((not existing_syncfile or existing_syncfile == syncfile_path)
