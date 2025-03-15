@@ -107,7 +107,8 @@ def validate_value(key: str, value: Any):
 
 
 def get_forkserver_pid():
-    ctx = mp.get_context('forkserver')
+    import multiprocessing, os
+    ctx = multiprocessing.get_context('forkserver')
     with ctx.Pool(1) as pool:
         return pool.apply(os.getppid)
 
@@ -126,21 +127,23 @@ def access_presets():
     changed preset-values to spawned processes. For an explanation why,
     see: https://docs.python.org/3/library/multiprocessing.html#the-spawn-and-forkserver-start-methods
     """
-    global ACCESSING_PRESETS
+    global ACCESSING_PRESETS, CONFIG_PRESET
     if ACCESSING_PRESETS:
         raise AssertionError('Presets are already being accessed! '
                              'Calls to access_presets() cannot be nested.')
     ACCESSING_PRESETS = True
     import multiprocessing
-    global CONFIG_PRESET
-    if not CONFIG_PRESET['syncfile_path'] \
-            and multiprocessing.get_start_method() not in ('fork', 'forkserver'):
+    mp_method = multiprocessing.get_start_method()
+    if mp_method != 'fork':
         import os
         import pickle
-        syncfile_path = get_syncfile_path(os.getppid())  # assume this is a spawned process
-        if not os.path.exists(syncfile_path):
-            syncfile_path = get_syncfile_path(os.getppid())  # assume this is the root process
-        f = None
+        syncfile_path = CONFIG_PRESET['syncfile_path']
+        if not syncfile_path:
+            ppid = get_forkserver_pid() if mp_method == 'forkserver' else os.getppid()
+            syncfile_path = get_syncfile_path(ppid)
+            if not os.path.exists(syncfile_path):
+                syncfile_path = get_syncfile_path(ppid)
+            f = None
         try:
             f = open(syncfile_path, 'rb')
             preset = pickle.load(f)
@@ -172,17 +175,21 @@ def finalize_presets(fail_on_error: bool=False):
         raise AssertionError('Presets are not being accessed and therefore cannot be finalized!')
     if PRESETS_CHANGED:
         import multiprocessing
-        if multiprocessing.get_start_method() not in ('fork', 'forkserver'):
+        mp_method = multiprocessing.get_start_method()
+        if mp_method != 'fork':
             import atexit
             import os
             import pickle
-            syncfile_path = get_syncfile_path(os.getppid())
-            existing_syncfile = CONFIG_PRESET['syncfile_path']
+            syncfile_path = CONFIG_PRESET['syncfile_path']
+            if not syncfile_path:
+                ppid = get_forkserver_pid() if mp_method == 'forkserver' else os.getppid()
+                syncfile_path = get_syncfile_path(ppid)
             if fail_on_error:
-                assert ((not existing_syncfile or existing_syncfile == syncfile_path)
-                        and (not os.path.exists((get_syncfile_path(os.getppid()))))), \
-                    "finalize_presets() can only be called from the main process!"
+                    if not os.path.exists(syncfile_path):
+                        raise AssertionError(
+                            "finalize_presets() can only be called from the main process!")
             with open(syncfile_path, 'wb') as f:
+                existing_syncfile = CONFIG_PRESET['syncfile_path']
                 CONFIG_PRESET['syncfile_path'] = syncfile_path
                 if existing_syncfile != syncfile_path:
                     atexit.register(remove_cfg_tempfile, syncfile_path)

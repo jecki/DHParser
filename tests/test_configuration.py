@@ -58,8 +58,6 @@ class TestConfigMultiprocessing:
             set_preset_value('test2', 'multiprocessing presets test2', allow_new_key=True)
             finalize_presets()
             flag = multiprocessing.Value('b', 0)
-            # ctx_in_main = multiprocessing.get_context('forkserver')
-            multiprocessing.set_forkserver_preload(['DHParser.configuration'])
             p = multiprocessing.Process(target=evaluate_presets, args=(flag,))
             p.start()
             p.join()
