@@ -2,6 +2,7 @@
 
 """DSLApp.py - a simple GUI for the compilation of DSL-files"""
 
+import multiprocessing
 import sys
 import os
 import threading
@@ -185,6 +186,8 @@ class DSLApp(tkinter.Tk):
 
 
 if __name__ == '__main__':
+    multiprocessing.freeze_support()
+
     # # Uncomment the following 3 lines before bundling this script with pyinstaller
     # access_presets()
     # set_preset_value('batch_processing_parallelization', False)

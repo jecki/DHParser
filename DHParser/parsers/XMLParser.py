@@ -306,7 +306,7 @@ class XMLTransformer(Compiler):
         return node
 
     def on_UnknownXmlPI(self, node) -> Node:
-        node.name = f'?xml-{node['Name'].content}'
+        node.name = f"?xml-{node['Name'].content}"
         node = self.XmlPI(node)
         return node
 

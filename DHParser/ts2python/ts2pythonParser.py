@@ -279,9 +279,9 @@ ts2python_AST_transformation_table = {
 def ts2pythonTransformer() -> TransformerCallable:
     """Creates a transformation function that does not share state with other
     threads or processes."""
-    return partial(transformer,
-                   transformation_table=ts2python_AST_transformation_table.copy(),
-                   src_stage='cst', dst_stage='ast')
+    return staticmethod(partial(transformer,
+        transformation_table=ts2python_AST_transformation_table.copy(),
+        src_stage='cst', dst_stage='ast'))
 
 ASTTransformation: Junction = Junction(
     'cst', ThreadLocalSingletonFactory(ts2pythonTransformer), 'ast')

@@ -349,8 +349,8 @@ def create_compiler_junction(compile_class: type,
 # 2. tree-processing with transformation-table
 
 def _make_transformer(src_stage, dst_stage, table) -> TransformerFunc:
-    return partial(transformer, transformation_table=table.copy(),
-                   src_stage=src_stage, dst_stage=dst_stage)
+    return staticmethod(partial(transformer, transformation_table=table.copy(),
+                                src_stage=src_stage, dst_stage=dst_stage))
 
 
 @deprecated("DHParser.pipeline.create_transtable_transition() is deprecated, "

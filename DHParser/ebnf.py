@@ -935,9 +935,9 @@ EBNF_AST_transformation_table = {
 
 
 def EBNFTransform() -> TransformerFunc:
-    return partial(transformer,
-                   transformation_table=EBNF_AST_transformation_table.copy(),
-                   src_stage='CST', dst_stage='AST')
+    return staticmethod(partial(transformer,
+                        transformation_table=EBNF_AST_transformation_table.copy(),
+                        src_stage='CST', dst_stage='AST'))
 
 
 def get_ebnf_transformer() -> TransformerFunc:
@@ -1085,8 +1085,11 @@ TRANSFORMER_FACTORY = '''
 #     {NAME}_AST_transformation_table, "CST", "AST", "transtable")
 
 def {NAME}Transformer() -> TransformerFunc:
-    return partial(transformer, transformation_table={NAME}_AST_transformation_table.copy(),
-                   src_stage='CST', dst_stage='AST')
+    return staticmethod(partial(
+        transformer, 
+        transformation_table={NAME}_AST_transformation_table.copy(),
+        src_stage='CST', 
+        dst_stage='AST'))
 
 ASTTransformation: Junction = Junction(
     'CST', ThreadLocalSingletonFactory({NAME}Transformer), 'AST')

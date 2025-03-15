@@ -35,6 +35,7 @@ from DHParser.testing import unique_name
 
 
 def evaluate_presets(flag):
+    print(multiprocessing)
     access_presets()
     if get_preset_value('test', 'failure') != 'failure' and \
             get_preset_value('test2', 'failure') != 'failure':
@@ -58,6 +59,9 @@ class TestConfigMultiprocessing:
             set_preset_value('test2', 'multiprocessing presets test2', allow_new_key=True)
             finalize_presets()
             flag = multiprocessing.Value('b', 0)
+            # ctx_in_main = multiprocessing.get_context('forkserver')
+            print(multiprocessing)
+            multiprocessing.set_forkserver_preload(['DHParser.configuration'])
             p = multiprocessing.Process(target=evaluate_presets, args=(flag,))
             p.start()
             p.join()
@@ -147,7 +151,7 @@ class TestLocalConfig:
         save = os.getcwd()
         os.chdir(self.dirname)
         result = read_local_config(old_path)
-        assert result == ['test.ini']
+        assert result == ['test.ini'], str(result)
         access_presets()
         assert get_preset_value('project_specific.custom_1') == 'test2'
         assert get_preset_value('delimiter_set')['DEF'] == '='

@@ -128,7 +128,7 @@ def access_presets():
     import multiprocessing
     global CONFIG_PRESET
     if not CONFIG_PRESET['syncfile_path'] \
-            and multiprocessing.get_start_method() != 'fork':
+            and multiprocessing.get_start_method() not in ('fork', 'forkserver'):
         import os
         import pickle
         syncfile_path = get_syncfile_path(os.getppid())  # assume this is a spawned process
@@ -166,7 +166,7 @@ def finalize_presets(fail_on_error: bool=False):
         raise AssertionError('Presets are not being accessed and therefore cannot be finalized!')
     if PRESETS_CHANGED:
         import multiprocessing
-        if multiprocessing.get_start_method() != 'fork':
+        if multiprocessing.get_start_method() not in ('fork', 'forkserver'):
             import atexit
             import os
             import pickle
