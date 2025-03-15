@@ -108,10 +108,14 @@ def validate_value(key: str, value: Any):
 
 def get_forkserver_pid():
     import multiprocessing, os
-    ctx = multiprocessing.get_context('forkserver')
-    with ctx.Pool(1) as pool:
-        forkserver_pid = pool.apply(os.getppid)
-        return forkserver_pid
+    process = multiprocessing.current_process()
+    if process.daemon:
+        return os.getppid()
+    else:
+        ctx = multiprocessing.get_context('forkserver')
+        with ctx.Pool(1) as pool:
+            forkserver_pid = pool.apply(os.getppid)
+            return forkserver_pid
 
 
 def get_syncfile_path(pid: int) -> str:
