@@ -105,8 +105,14 @@ def validate_value(key: str, value: Any):
                 raise ValueError('Value %s is not one of the allowed values: %s'
                                  % (str(value), str(allowed)))
 
+import multiprocessing, os
+multiprocessing.set_forkserver_preload(['DHParser.configuration'])
+print('preload ' + str(os.getpid()))
+ctx = multiprocessing.get_context('forkserver')
+print(dir(ctx))
 
 def get_forkserver_pid():
+    print('get_forkserver_pid')
     import multiprocessing, os
     process = multiprocessing.current_process()
     if process.daemon or getattr(process, '_inheriting', False):
