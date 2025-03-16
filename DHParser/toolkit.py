@@ -51,6 +51,7 @@ if sys.version_info >= (3, 12, 0):
     List = list
     Tuple = tuple
     ByteString: TypeAlias = Union[bytes, bytearray]
+    static = staticmethod
 else:
     from typing import Any, Iterable, Sequence, Set, AbstractSet, Union, Dict, List, Tuple, \
         FrozenSet, MutableSet, Optional, Type, Callable, Container, Hashable, ByteString
@@ -63,6 +64,10 @@ else:
         from typing import TypeAlias
     except ImportError:
         from DHParser.externallibs.typing_extensions import TypeAlias
+    if sys.version_info >= (3, 10, 0):
+        static = staticmethod
+    else:
+        static = lambda f: f
 
 try:
     import cython
@@ -165,7 +170,8 @@ __all__ = ('re',
            'Protocol',
            'Dict',
            'List',
-           'Tuple')
+           'Tuple',
+           'static')
 
 
 #######################################################################

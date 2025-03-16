@@ -264,7 +264,7 @@ from DHParser.toolkit import load_if_file, wrap_str_literal, escape_ctrl_chars, 
     sane_parser_name, re, expand_table, unrepr, compile_python_object, \
     ThreadLocalSingletonFactory, Any, Iterable, Sequence, Set, AbstractSet, Union, Dict, List, \
     Tuple, FrozenSet, MutableSet, Optional, Type, Callable, Container, TypeAlias, \
-    matching_brackets, INFINITE, LazyRE
+    matching_brackets, INFINITE, LazyRE, static
 from DHParser.transform import TransformerFunc, transformer, remove_brackets, change_name, \
     reduce_single_child, replace_by_single_child, is_empty, remove_children, add_error, \
     remove_tokens, remove_anonymous_tokens, flatten, forbid, assert_content, remove_children_if, \
@@ -935,9 +935,9 @@ EBNF_AST_transformation_table = {
 
 
 def EBNFTransform() -> TransformerFunc:
-    return staticmethod(partial(transformer,
-                        transformation_table=EBNF_AST_transformation_table.copy(),
-                        src_stage='CST', dst_stage='AST'))
+    return static(partial(transformer,
+                  transformation_table=EBNF_AST_transformation_table.copy(),
+                  src_stage='CST', dst_stage='AST'))
 
 
 def get_ebnf_transformer() -> TransformerFunc:
@@ -1016,7 +1016,7 @@ from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, Preprocessor
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.stringview import StringView
 from DHParser.toolkit import is_filename, load_if_file, cpu_count, RX_NEVER_MATCH, \\
-    ThreadLocalSingletonFactory, expand_table
+    ThreadLocalSingletonFactory, expand_table, static
 from DHParser.trace import set_tracer, resume_notices_on, trace_history
 from DHParser.transform import is_empty, remove_if, TransformationDict, TransformerFunc, \\
     transformation_factory, remove_children_if, move_fringes, normalize_whitespace, \\
@@ -1085,7 +1085,7 @@ TRANSFORMER_FACTORY = '''
 #     {NAME}_AST_transformation_table, "CST", "AST", "transtable")
 
 def {NAME}Transformer() -> TransformerFunc:
-    return staticmethod(partial(
+    return static(partial(
         transformer, 
         transformation_table={NAME}_AST_transformation_table.copy(),
         src_stage='CST', 

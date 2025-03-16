@@ -5,7 +5,10 @@ DHParser Verions 1.8.3
 - collections.namedtuple replaced by typing.NamedTuple-class
 - configuration.py: read_local_config() now reads and processes
   all config files from scriptdir, user's config dir and
-  current directory in this order
+  current directory in that order
+- multiprocessing code now works with 'forkserver' as well
+- Python3.14 compatibility (forkserver,
+  staticmethod(functools.partial(...) where required)
 
 
 DHParser Version 1.8.2 (6.2.2024)

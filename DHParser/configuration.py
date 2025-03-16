@@ -105,29 +105,19 @@ def validate_value(key: str, value: Any):
                 raise ValueError('Value %s is not one of the allowed values: %s'
                                  % (str(value), str(allowed)))
 
-import multiprocessing, os
-multiprocessing.set_forkserver_preload(['DHParser.configuration'])
-print('preload ' + str(os.getpid()))
-ctx = multiprocessing.get_context('forkserver')
-print(dir(ctx))
 
 def get_forkserver_pid():
-    print('get_forkserver_pid')
     import multiprocessing, os
     process = multiprocessing.current_process()
     if process.daemon or getattr(process, '_inheriting', False):
         forkserver_pid = os.getppid()
     else:
         ctx = multiprocessing.get_context('forkserver')
-        print('Y ', os.getppid())
-        with ctx.Pool(1) as pool:
-            forkserver_pid = pool.apply(os.getppid)
-            print('B ', forkserver_pid)
+        # with ctx.Pool(1) as pool:
+        #     forkserver_pid = pool.apply(os.getppid)
         import concurrent.futures
         with concurrent.futures.ProcessPoolExecutor() as ex:
             forkserver_pid = ex.submit(os.getppid).result()
-            print('C ', forkserver_pid)
-    print(forkserver_pid)
     return forkserver_pid
 
 
@@ -157,9 +147,10 @@ def access_presets():
         import pickle
         syncfile_path = CONFIG_PRESET['syncfile_path']
         if not syncfile_path:
-            ppid = get_forkserver_pid() if mp_method == 'forkserver' else os.getppid()
-            syncfile_path = get_syncfile_path(ppid)
-            f = None
+            syncfile_path = get_syncfile_path(os.getppid())
+            if mp_method == 'forkserver' and not os.path.exists(syncfile_path):
+                syncfile_path = get_syncfile_path(get_forkserver_pid())
+        f = None
         try:
             f = open(syncfile_path, 'rb')
             preset = pickle.load(f)
@@ -198,8 +189,9 @@ def finalize_presets(fail_on_error: bool=False):
             import pickle
             syncfile_path = CONFIG_PRESET['syncfile_path']
             if not syncfile_path:
-                ppid = get_forkserver_pid() if mp_method == 'forkserver' else os.getppid()
-                syncfile_path = get_syncfile_path(ppid)
+                syncfile_path = get_syncfile_path(os.getppid())
+                if mp_method == 'forkserver' and not os.path.exists(syncfile_path):
+                    syncfile_path = get_syncfile_path(get_forkserver_pid())
             if fail_on_error:
                     if not os.path.exists(syncfile_path):
                         raise AssertionError(
