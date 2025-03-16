@@ -38,12 +38,11 @@ def evaluate_presets():
     access_presets()
     if get_preset_value('test', 'failure') != 'failure' and \
             get_preset_value('test2', 'failure') != 'failure':
-        # flag.value = 1
-        return 1
+        result = True
     else:
-        # flag.value = 0
-        return 0
+        result = False
     finalize_presets()
+    return result
 
 
 class TestConfigMultiprocessing:
@@ -59,13 +58,8 @@ class TestConfigMultiprocessing:
             access_presets()
             set_preset_value('test2', 'multiprocessing presets test2', allow_new_key=True)
             finalize_presets()
-            flag = multiprocessing.Value('b', 0)
-            # p = multiprocessing.Process(target=evaluate_presets, args=(flag,))
-            # p.start()
-            # p.join()
             with multiprocessing.Pool(1) as pool:
-                flag.value = pool.apply(evaluate_presets)
-            assert flag.value == 1
+                assert pool.apply(evaluate_presets)
         except ImportError:
             print('Skipping Test, because libffi has wrong version or does not exist!')
 

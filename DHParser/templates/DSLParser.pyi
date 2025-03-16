@@ -67,7 +67,7 @@ def process_file(source: str, out_dir: str = '') -> str:
     string, if no errors or warnings occurred.
     """
     global serializations
-    serializations = get_config_value('{NAME}_serializations', serializations)
+    # serializations = get_config_value('{NAME}_serializations', serializations)
     return dsl.process_file(source, out_dir, preprocessing.factory, parsing.factory,
                             junctions, targets, serializations)
 

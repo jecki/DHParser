@@ -109,13 +109,20 @@ def validate_value(key: str, value: Any):
 def get_forkserver_pid():
     import multiprocessing, os
     process = multiprocessing.current_process()
-    if process.daemon:
-        return os.getppid()
+    if process.daemon or getattr(process, '_inheriting', False):
+        forkserver_pid = os.getppid()
     else:
         ctx = multiprocessing.get_context('forkserver')
+        print('Y ', os.getppid())
         with ctx.Pool(1) as pool:
             forkserver_pid = pool.apply(os.getppid)
-            return forkserver_pid
+            print('B ', forkserver_pid)
+        import concurrent.futures
+        with concurrent.futures.ProcessPoolExecutor() as ex:
+            forkserver_pid = ex.submit(os.getppid).result()
+            print('C ', forkserver_pid)
+    print(forkserver_pid)
+    return forkserver_pid
 
 
 def get_syncfile_path(pid: int) -> str:
@@ -146,8 +153,6 @@ def access_presets():
         if not syncfile_path:
             ppid = get_forkserver_pid() if mp_method == 'forkserver' else os.getppid()
             syncfile_path = get_syncfile_path(ppid)
-            if not os.path.exists(syncfile_path):
-                syncfile_path = get_syncfile_path(ppid)
             f = None
         try:
             f = open(syncfile_path, 'rb')
@@ -227,6 +232,7 @@ def set_preset_value(key: str, value: Any, allow_new_key: bool=False):
             print(f'Deprecation Warning: Key {oldkey} has been renamed to {key}!')
     validate_value(key, value)
     CONFIG_PRESET[key] = value
+    set_config_value(key, value)
     PRESETS_CHANGED = True
 
 
@@ -386,7 +392,9 @@ def get_config_value(key: str, default: Any = NO_DEFAULT) -> Any:
             return cfg[key]
         except KeyError:
             access_presets()
-            value = get_preset_value(key, default)
+            # value = get_preset_value(key, default)
+            cfg.update(CONFIG_PRESET)
+            value = CONFIG_PRESET.get(key, default)
             finalize_presets()
             cfg[key] = value
             return value
