@@ -39,11 +39,6 @@ from typing import Callable, Union
 if __name__ == "__main__":
     import multiprocessing
     multiprocessing.freeze_support()
-    if sys.platform.lower().startswith('win'):
-        multiprocessing.set_start_method('spawn')
-    # else:
-    #     multiprocessing.set_start_method('forkserver')
-
 
 scriptpath = os.path.abspath(os.path.dirname(__file__) or '.')
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))

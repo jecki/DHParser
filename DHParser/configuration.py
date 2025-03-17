@@ -391,10 +391,11 @@ def get_config_value(key: str, default: Any = NO_DEFAULT) -> Any:
         except KeyError:
             access_presets()
             # value = get_preset_value(key, default)
-            cfg.update(CONFIG_PRESET)
-            value = CONFIG_PRESET.get(key, default)
+            for k, v in CONFIG_PRESET.items():
+                if k not in cfg:
+                    cfg[k] = v
             finalize_presets()
-            cfg[key] = value
+            value = cfg[key]
             return value
 
 

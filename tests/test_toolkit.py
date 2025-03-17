@@ -149,9 +149,7 @@ class TestLoggingAndLoading:
         return True
 
     def test_logging_multiprocessing(self):
-        print('a')
         start_logging(self.LOGDIR)
-        print('b')
         with concurrent.futures.ProcessPoolExecutor() as ex:
             f1 = ex.submit(self.logging_task)
             f2 = ex.submit(self.logging_task)
