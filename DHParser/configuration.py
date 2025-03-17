@@ -149,7 +149,8 @@ def access_presets():
         if not syncfile_path:
             syncfile_path = get_syncfile_path(os.getppid())
             if not os.path.exists(syncfile_path):
-                syncfile_path = get_syncfile_path(get_forkserver_pid())
+                pid = get_forkserver_pid() if mp_method == "forkserver" else os.getpid()
+                syncfile_path = get_syncfile_path(pid)
         f = None
         try:
             f = open(syncfile_path, 'rb')
@@ -191,7 +192,8 @@ def finalize_presets(fail_on_error: bool=False):
             if not syncfile_path:
                 syncfile_path = get_syncfile_path(os.getpid())
                 if not os.path.exists(syncfile_path):
-                    syncfile_path = get_syncfile_path(get_forkserver_pid())
+                    pid = get_forkserver_pid() if mp_method == "forkserver" else os.getpid()
+                    syncfile_path = get_syncfile_path(pid)
             if fail_on_error:
                     if not os.path.exists(syncfile_path):
                         raise AssertionError(
