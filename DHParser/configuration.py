@@ -148,7 +148,7 @@ def access_presets():
         syncfile_path = CONFIG_PRESET['syncfile_path']
         if not syncfile_path:
             syncfile_path = get_syncfile_path(os.getppid())
-            if mp_method == 'forkserver' and not os.path.exists(syncfile_path):
+            if not os.path.exists(syncfile_path):
                 syncfile_path = get_syncfile_path(get_forkserver_pid())
         f = None
         try:
@@ -189,8 +189,8 @@ def finalize_presets(fail_on_error: bool=False):
             import pickle
             syncfile_path = CONFIG_PRESET['syncfile_path']
             if not syncfile_path:
-                syncfile_path = get_syncfile_path(os.getppid())
-                if mp_method == 'forkserver' and not os.path.exists(syncfile_path):
+                syncfile_path = get_syncfile_path(os.getpid())
+                if not os.path.exists(syncfile_path):
                     syncfile_path = get_syncfile_path(get_forkserver_pid())
             if fail_on_error:
                     if not os.path.exists(syncfile_path):
