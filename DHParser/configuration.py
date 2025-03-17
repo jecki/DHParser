@@ -112,11 +112,11 @@ def get_forkserver_pid():
     if process.daemon or getattr(process, '_inheriting', False):
         forkserver_pid = os.getppid()
     else:
-        ctx = multiprocessing.get_context('forkserver')
+        # ctx = multiprocessing.get_context('forkserver')
         # with ctx.Pool(1) as pool:
         #     forkserver_pid = pool.apply(os.getppid)
         import concurrent.futures
-        with concurrent.futures.ProcessPoolExecutor() as ex:
+        with concurrent.futures.ProcessPoolExecutor(1) as ex:
             forkserver_pid = ex.submit(os.getppid).result()
     return forkserver_pid
 

@@ -30,11 +30,14 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.configuration import access_presets, finalize_presets, \
     set_preset_value, get_preset_value, get_config_value, read_local_config, \
-    get_config_values, set_config_value, CONFIG_PRESET
+    get_config_values, set_config_value, get_forkserver_pid
 from DHParser.testing import unique_name
 
 
 class TestConfigGetAndSet:
+    def test_get_forkserver_pid(self):
+        _ = get_forkserver_pid()
+
     def test_get_config_value(self):
         v = get_config_value('default_serialization')
         try:
