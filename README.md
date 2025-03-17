@@ -210,10 +210,10 @@ Alternatively, you can clone the latest version from
 And these are the steps, if you want set up a DHParser-Project with the latest 
 DHParser-development version:
 
-   $ git clone --depth=1 --branch development https://gitlab.lrz.de/badw-it/DHParser
-   $ python3 DHParser/DHParser/scripts/dhparser.py MyNewParserProject
-   $ ln -s ../DHParser/DHParser MyNewParserProject/DHParser
-   $ cd MyNewParserProject
+    $ git clone --depth=1 --branch development https://gitlab.lrz.de/badw-it/DHParser
+    $ python3 DHParser/DHParser/scripts/dhparser.py MyNewParserProject
+    $ ln -s ../DHParser/DHParser MyNewParserProject/DHParser
+    $ cd MyNewParserProject
 
 
 Getting Started

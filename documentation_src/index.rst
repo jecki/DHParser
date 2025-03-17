@@ -56,9 +56,9 @@ new project with DHParser without using "pip install", the commands are the foll
 
 .. code:: bash
 
-   $ git clone --depth=1 https://gitlab.lrz.de/badw-it/DHParser
-   $ python3 DHParser/DHParser/scripts/dhparser.py MyNewParserProject
-   $ ln -s ../DHParser/DHParser MyNewParserProject/DHParser
+    $ git clone --depth=1 https://gitlab.lrz.de/badw-it/DHParser
+    $ python3 DHParser/DHParser/scripts/dhparser.py MyNewParserProject
+    $ ln -s ../DHParser/DHParser MyNewParserProject/DHParser
 
 In case you would like to use latest bugfixes from the development-branch the first command
 should be exchanged with:
