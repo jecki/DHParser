@@ -30,8 +30,26 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.configuration import access_presets, finalize_presets, \
     set_preset_value, get_preset_value, get_config_value, read_local_config, \
-    get_config_values, set_config_value
+    get_config_values, set_config_value, CONFIG_PRESET
 from DHParser.testing import unique_name
+
+
+class TestConfigGetAndSet:
+    def test_get_config_value(self):
+        v = get_config_value('default_serialization')
+        try:
+            v = get_config_value('non_existent')
+            assert False, "KeyError expected"
+        except KeyError:
+            pass
+        v = get_config_value('non_existent', 'nothing')
+        assert v == 'nothing'
+        # check that "nothing" has not mistakenly been added to configuration
+        try:
+            v = get_config_value('non_existent')
+            assert False, "KeyError expected"
+        except KeyError:
+            pass
 
 
 def evaluate_presets():

@@ -395,7 +395,10 @@ def get_config_value(key: str, default: Any = NO_DEFAULT) -> Any:
                 if k not in cfg:
                     cfg[k] = v
             finalize_presets()
-            value = cfg[key]
+            if default is NO_DEFAULT:
+                value = cfg[key]
+            else:
+                value = cfg.get(key, default)
             return value
 
 
