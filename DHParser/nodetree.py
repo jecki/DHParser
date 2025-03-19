@@ -321,7 +321,7 @@ def create_match_function(criterion: NodeSelector) -> NodeMatchFunction:
     tag name (str)       equality of tag name only
     multiple tag names   equality of tag name with one of the given names
     pattern (re.Pattern) full match of content with pattern
-    match function       function returns `True`
+    match-function       function returns `True`
     ==================== ===================================================
 
     :param criterion: Either a node, the id of a node, a frozen node,
@@ -2292,7 +2292,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 # that each child node's name is unique
                 jo: JSON_Dict = {node.name: {nd.name: dict_flavor(nd)[nd.name]
                                              for nd in node._children}
-                                            if node._children else node._result}
+                                            if node._children else str(node._result)}
             additional = {}
             if include_pos:
                 pos = node._pos
@@ -2307,7 +2307,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     else:
                         jo[node.name].extend(additional.items())
                 else:
-                    d = {'content__': node._result}
+                    d = {'content__': str(node._result)}
                     d.update(additional)
                     jo[node.name] = d
             return jo

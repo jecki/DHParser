@@ -620,10 +620,10 @@ is useful in cases where this annotation does not work for
 technical reasons.
 
 
-.. hint:: Transformation functions usually either assume that the
-   path on which they are called ends with e leaf-node or with
-   a branch-node but do not make much sense in the other case.
-   It is therefore good practice to check this as a pre-condition
+.. hint:: Transformation functions typically either assume that the
+   path on which they are called either ends with a leaf-node or with
+   a branch-node.
+   It is good practice to ensure this pre-condition
    with an if-clause (see function ``remove_children_if`` above)
    or an assert-statement::
 
@@ -638,9 +638,10 @@ technical reasons.
 Debugging the transformation-table
 ----------------------------------
 
-Complex transformations can become hard to follow and to debug. The
+Complex transformations can be hard to follow and to debug. The
 transformation-module provides a simple "printf-style" debugging
-facility in form of the peek-function to help spotting mistakes.
+facility in form of the :py:func:`DHParser.transform.peek`-function
+to help spotting mistakes.
 Additionally, the :py:mod:`DHParser.testing`-module provides
 unit-testing-facilities that also cover the AST-transformation-step.
 
