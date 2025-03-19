@@ -624,7 +624,7 @@ technical reasons.
    path on which they are called either ends with a leaf-node or with
    a branch-node.
    It is good practice to ensure this pre-condition
-   with an if-clause (see function ``remove_children_if`` above)
+   with an if-clause (e.g. :py:func:`DHParser.transform.apply_if`)
    or an assert-statement::
 
        >>> def normalize_whitespace(path):

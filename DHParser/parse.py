@@ -1057,7 +1057,7 @@ class NoMemoizationParser(LeafParser):
         self.visited: MemoizationDict = BLACKHOLE_SINGLETON
 
     def reset(self):
-        # no need to initialize self.visited, it's always the BLACKHOLE_SINLGETON
+        # no need to initialize self.visited, it's always the BLACKHOLE_SINGLETON
         pass
 
     @cython.locals(next_location=cython.int, gap=cython.int, i=cython.int, save_suspend_memoization=cython.bint)
