@@ -1940,7 +1940,13 @@ class Grammar:
         self.start_parser__ = parser
         assert isinstance(document, str)
         # eliminate BOM (byte order mark) https://en.wikipedia.org/wiki/Byte_order_mark
-        self.text__ = document[1:] if document[0:1] == '\ufeff' else document
+        if document[0:1] in ('\ufeff', '\uffef'):
+            self.text__ = document[1:]
+        elif document[0:3] in ('\xef\xbb\xbf', '\x00\x00\ufeff', '\x00\x00\ufffe'):
+            self.text__ = document[3:]
+        else:
+            self.text__ = document
+        self.text__ = document[1:] if document[0:1] in ('\ufeff', '\uffef') else document
         self.document__ = StringView(self.text__)
         self.document_length__ = len(self.document__)
         self._document_lbreaks__ = linebreaks(self.text__) if self.history_tracking__ else []

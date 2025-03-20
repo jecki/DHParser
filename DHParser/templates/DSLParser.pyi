@@ -63,7 +63,8 @@ def compile_snippet(source_code: str, target: str = "{NAME}") -> Tuple[Any, List
     parameter source_code is always understood as a piece of source-code and never
     as a filename, not even if it is a one-liner that could also be a file-name.
     """
-    if source_code[0:1] not in ('\ufeff', '\ufffe'):
+    if source_code[0:1] not in ('\ufeff', '\ufffe') and \
+            source_code[0:3] not in ('\xef\xbb\xbf', '\x00\x00\ufeff', '\x00\x00\ufffe'):
         source_code = '\ufeff' + source_code  # add a byteorder-mark for disambiguation
     return compile_src(source_code)
 

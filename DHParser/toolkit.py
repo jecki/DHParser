@@ -266,6 +266,7 @@ def is_filename(strg: str) -> bool:
     will be stripped by the DHParser's parser, anyway!
     """
     return strg and strg[0:1] not in ('\ufeff', '\ufffe') \
+        and strg[0:3] not in ('\xef\xbb\xbf', '\x00\x00\ufeff', '\x00\x00\ufffe') \
         and strg.find('\n') < 0 \
         and strg[:1] != " " and strg[-1:] != " " \
         and all(strg.find(ch) < 0 for ch in '*?"<>|')
