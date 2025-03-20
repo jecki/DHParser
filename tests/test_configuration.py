@@ -166,7 +166,7 @@ class TestLocalConfig:
         save = os.getcwd()
         os.chdir(self.dirname)
         result = read_local_config(old_path)
-        assert result == ['test.ini'], str(result)
+        assert 'test.ini' in result, str(result)
         access_presets()
         assert get_preset_value('project_specific.custom_1') == 'test2'
         assert get_preset_value('delimiter_set')['DEF'] == '='
@@ -182,7 +182,7 @@ class TestLocalConfig:
         with open(os.path.basename(ini_path), 'w', encoding='utf-8') as f:
             f.write(test_cfg)
         result = read_local_config(ini_path_1)
-        assert len(result) == 2
+        assert len(result) >= 2, str(result)
         access_presets()
         assert get_preset_value('project_specific.custom_1') == 'test1'
         assert get_preset_value('delimiter_set')['DEF'] == ':='

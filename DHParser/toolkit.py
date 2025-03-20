@@ -252,14 +252,14 @@ class ThreadLocalSingletonFactory:
 
 @functools.lru_cache()
 def is_filename(strg: str) -> bool:
-    """
+    r"""
     Tries to guess whether the given string is a file name. It is
     assumed that it is NOT a filename if any of the following
     conditions is true:
 
     - it starts with a byte-order mark, i.e. '\ufffe' or '\ufeff'
     - it starts or ends with a blank, i.e. " "
-    - it contains any of teh characters in the set [*?"<>|]
+    - it contains any of the characters in the set [\*?"<>|]
 
     For disambiguation of non-filenames it is best to add a
     byteorder-mark to the beginning of the string, because this

@@ -85,8 +85,8 @@ The source code of module ``nodetree`` consists of four main sections:
     map positions within a serialized version of the syntax-tree
     (XML, S-Expression or SXML) to locations within the tree
     (Node, Node-position within the serialization, offset and
-     a flag indicating whether the position falls into the opening-tag,
-     cosing-tag or content of the Node.)
+    a flag indicating whether the position falls into the opening-tag,
+    cosing-tag or content of the Node.)
 
 """
 

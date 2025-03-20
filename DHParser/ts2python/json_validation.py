@@ -74,8 +74,9 @@ def resolve_forward_refs(T: type, Ur_T: type = None,) -> type:
         return T
     elif str(T).find('ForwardRef') >= 0:
         if Ur_T is None:  Ur_T = T
-        T.__args__ = tuple(resolve_forward_refs(arg, Ur_T)
-                           for arg in get_args(T))
+        if sys.version_info < (3, 14, 0):
+            T.__args__ = tuple(resolve_forward_refs(arg, Ur_T)
+                               for arg in get_args(T))
     return T
 
 

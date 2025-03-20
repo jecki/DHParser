@@ -121,6 +121,10 @@ def gather_interpreters():
         found.append('python3.13 ')
     elif run_cmd(['~/.local/bin/python3.13', '-V']):
         found.append('~/.local/bin/python3.13 ')
+    if run_cmd(['python3.14', '-V']):
+        found.append('python3.14 ')
+    elif run_cmd(['~/.local/bin/python3.14', '-V']):
+        found.append('~/.local/bin/python3.14 ')
     print('Interpreters found: ' + ''.join(found))
 
     arguments = [arg for arg in sys.argv[1:] if arg[:1] != '-']
