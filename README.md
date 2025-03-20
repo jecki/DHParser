@@ -12,7 +12,7 @@ See https://dhparser.readthedocs.io/en/latest/
 
 This software is open source software under the Apache 2.0-License (see section License, below).
 
-Copyright 2016-2024  Eckhart Arnold, Bavarian Academy of Sciences and Humanities
+Copyright 2016-2025  Eckhart Arnold, Bavarian Academy of Sciences and Humanities
 
 
 Purpose
