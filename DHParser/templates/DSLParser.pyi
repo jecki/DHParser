@@ -58,6 +58,16 @@ def compile_src(source: str, target: str = "{NAME}") -> Tuple[Any, List[Error]]:
     return full_compilation_result[target]
 
 
+def compile_snippet(source_code: str, target: str = "{NAME}") -> Tuple[Any, List[Error]]:
+    """Compiles a piece of source_code. In contrast to :py:func:`compile_src` the
+    parameter source_code is always understood as a piece of source-code and never
+    as a filename, not even if it is a one-liner that could also be a file-name.
+    """
+    if source_code[0:1] not in ('\ufeff', '\ufffe'):
+        source_code = '\ufeff' + source_code  # add a byteorder-mark for disambiguation
+    return compile_src(source_code)
+
+
 def process_file(source: str, out_dir: str = '') -> str:
     """Compiles the source and writes the serialized results back to disk,
     unless any fatal errors have occurred. Error and Warning messages are

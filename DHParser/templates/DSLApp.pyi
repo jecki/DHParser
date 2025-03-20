@@ -188,7 +188,9 @@ class DSLApp(tkinter.Tk):
 if __name__ == '__main__':
     multiprocessing.freeze_support()
 
-    # # Uncomment the following 3 lines before bundling this script with pyinstaller
+    # # Uncomment the following 3 lines, if App freezes despite
+    # # multiprocessing.freeze_support() when bundling this script
+    # # with pyinstaller:
     # access_presets()
     # set_preset_value('batch_processing_parallelization', False)
     # finalize_presets()

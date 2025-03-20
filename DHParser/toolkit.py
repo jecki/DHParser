@@ -253,11 +253,22 @@ class ThreadLocalSingletonFactory:
 @functools.lru_cache()
 def is_filename(strg: str) -> bool:
     """
-    Tries to guess whether string ``strg`` is a file name.
+    Tries to guess whether the given string is a file name. It is
+    assumed that it is NOT a filename if any of the following
+    conditions is true:
+
+    - it starts with a byte-order mark, i.e. '\ufffe' or '\ufeff'
+    - it starts or ends with a blank, i.e. " "
+    - it contains any of teh characters in the set [*?"<>|]
+
+    For disambiguation of non-filenames it is best to add a
+    byteorder-mark to the beginning of the string, because this
+    will be stripped by the DHParser's parser, anyway!
     """
-    return strg.find('\n') < 0 and strg[:1] != " " and strg[-1:] != " " \
+    return strg and strg[0:1] not in ('\ufeff', '\ufffe') \
+        and strg.find('\n') < 0 \
+        and strg[:1] != " " and strg[-1:] != " " \
         and all(strg.find(ch) < 0 for ch in '*?"<>|')
-    #   and strg.select_if('*') < 0 and strg.select_if('?') < 0
 
 
 def is_html_name(url: str) -> bool:
@@ -1108,8 +1119,9 @@ def load_if_file(text_or_file) -> str:
             if RX_FILEPATH.fullmatch(text_or_file):
                 raise FileNotFoundError(
                     'File not found or not a valid filepath or URL: "%s".\n'
-                    '(If "%s" was not meant to be a file name then, please, add '
-                    'an empty line to distinguish source data from a file name.)'
+                    '(If "%s" was NOT meant to be a file name then, add a byte-order mark '
+                    r'to the beginning of the string "\ufeff" for disambiguation, e.g. '
+                    r'source_snippet = "\ufeff" + source_snippet)'
                     % (text_or_file, text_or_file))
             else:
                 return text_or_file
