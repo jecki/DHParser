@@ -52,6 +52,17 @@ def compile_src(source: str, target: str = "{NAME}") -> Tuple[Any, List[Error]]:
     """Compiles the source to a single target and returns the result of the compilation
     as well as a (possibly empty) list or errors or warnings that have occurred in the
     process.
+
+    :param source: Either a file name or a source text. Anything that is not a valid
+        file name is assumed to be a source text. Add a byte-order mark ("\ufeff")
+        at the beginning of short, i.e. one-line source texts, to avoid these being
+        misinterpreted as filenames.
+    :param target: the name of the target stage up to which the processing pipeline
+        will be proceeded.
+
+    :returns: a tuple (data, list of errors) of the data in the format of the
+        target-stage selected by parameter "target" and of the potentially
+        empty list of errors.
     """
     full_compilation_result = full_pipeline(
         source, preprocessing.factory, parsing.factory, junctions, set([target]))
