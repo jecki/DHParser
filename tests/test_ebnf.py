@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-"""test_ebnf.py - tests of the ebnf module of DHParser 
-                             
+"""test_ebnf.py - tests of the ebnf module of DHParser
+
 
 Author: Eckhart Arnold <arnold@badw.de>
 
@@ -29,23 +29,23 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 scriptpath = os.path.abspath(scriptpath)
 
 from DHParser.toolkit import compile_python_object, re, \
-    normalize_circular_path, INFINITE
+    normalize_circular_paths, INFINITE
 from DHParser.preprocess import nil_preprocessor
 from DHParser.compile import compile_source
 from DHParser.configuration import get_config_value, set_config_value
-from DHParser.ebnf_flavors.heuristic import HeuristicEBNFGrammar
+# from DHParser.ebnf_flavors.heuristic import HeuristicEBNFGrammar
 from DHParser.error import has_errors, MANDATORY_CONTINUATION, PARSER_STOPPED_BEFORE_END, \
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, AMBIGUOUS_ERROR_HANDLING, \
     REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES, UNCONNECTED_SYMBOL_WARNING, \
     PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS, ERROR, WARNING, UNDEFINED_MACRO, \
     UNKNOWN_MACRO_ARGUMENT, UNUSED_MACRO_ARGUMENTS_WARNING, \
-    ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING, SYMBOL_NAME_IS_PYTHON_KEYWORD, canonical_error_strings
-from DHParser.nodetree import WHITESPACE_PTYPE, flatten_sxpr, parse_sxpr, ANY_NODE
-from DHParser.parse import PARSER_PLACEHOLDER, Interleave
+    ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING, SYMBOL_NAME_IS_PYTHON_KEYWORD
+from DHParser.nodetree import WHITESPACE_PTYPE, flatten_sxpr, parse_sxpr
+from DHParser.parse import Interleave
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
-    EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS, parse_ebnf, \
-    transform_ebnf, ConfigurableEBNFGrammar, WHITESPACE_TYPES
-from DHParser.dsl import CompilationError, compileDSL, create_parser, grammar_provider, raw_compileEBNF
+    EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS, \
+    WHITESPACE_TYPES
+from DHParser.dsl import CompilationError, compileDSL, create_parser, grammar_provider
 from DHParser.testing import grammar_unit, clean_report, unique_name
 from DHParser.trace import set_tracer, trace_history
 
@@ -57,7 +57,7 @@ class TestDirectives:
         term       =  factor  { ("*" | "/") factor }
         factor     =  constant | "("  expression  ")"
         constant   =  digit { digit } [ ~ ]
-        digit      = /0/ | /1/ | /2/ | /3/ | /4/ | /5/ | /6/ | /7/ | /8/ | /9/ 
+        digit      = /0/ | /1/ | /2/ | /3/ | /4/ | /5/ | /6/ | /7/ | /8/ | /9/
         """
 
     def test_EBNFDirectives_object(self):
@@ -73,7 +73,7 @@ class TestDirectives:
 
     def test_EBNF_doubleDirectives(self):
         lang = """
-        @ 
+        @
         """
 
     def test_whitespace_linefeed(self):
@@ -149,7 +149,7 @@ class TestDirectives:
             @ comment     = //              # no implicit comments
             @ ignorecase  = False           # literals and regular expressions are case-sensitive
             @ drop        = strings, whitespace
-            
+
             document      = ` ` " " ' ' / /
         """
         parser = create_parser(lang)
@@ -246,7 +246,7 @@ class TestReservedSymbols:
         lang = r"""
         @whitespace = /\s*/
         document = WSP_RE__ { word WSP_RE__ }
-        word = /\w+/ 
+        word = /\w+/
         """
         parser = grammar_provider(lang)()
 
@@ -255,7 +255,7 @@ class TestReservedSymbols:
         @comment = /#.*(?:\n|$)/
         @whitespace = /\s*/
         document = WSP_RE__ { word WSP_RE__ }
-        word = /\w+/ 
+        word = /\w+/
         """
         parser = grammar_provider(lang)()
         result = parser("test # kommentar")
@@ -440,7 +440,7 @@ class TestModifiers:
         lang = r'''
         @reduction = merge
         doc = ~ $phrase(`,`) { `,`~ $phrase(`,`) }
-        $phrase($separator) = (/[^.,;]*/ { !$separator /[.,;]/ /[^,.;]/ }) -> HIDE        
+        $phrase($separator) = (/[^.,;]*/ { !$separator /[.,;]/ /[^,.;]/ }) -> HIDE
         '''
         parser = create_parser(lang)
         a = parser.python_src__.find('doc =')
@@ -719,7 +719,7 @@ whitespace = /~/~                               # insignificant whitespace
 
 RE_LEADIN  = `/`
 RE_LEADOUT = `/`
-RE_CORE    = /(?:(?<!\\)\\(?:\/)|[^\/])*/ 
+RE_CORE    = /(?:(?<!\\)\\(?:\/)|[^\/])*/
 
 EOF = !/./
 """
@@ -833,7 +833,7 @@ class TestSynonymDetection:
 class TestFlowControlOperators:
     def setup_class(self):
         self.t1 = """
-        All work and no play 
+        All work and no play
         makes Jack a dull boy
         END
         """
@@ -841,9 +841,9 @@ class TestFlowControlOperators:
 
     def test_lookbehind_indirect(self):
         lang = r"""
-            document = ws sequence doc_end ws         
+            document = ws sequence doc_end ws
             sequence = { !end word ws }+
-            doc_end  = <-&SUCC_LB end        
+            doc_end  = <-&SUCC_LB end
             ws       = /\s*/
             end      = /END/
             word     = /\w+/
@@ -1163,7 +1163,7 @@ class TestErrorCustomizationErrors:
     def test_erreneous_skip_definitions(self):
         lang = """
             document = series selies
-            @selies_error = '', "Error in the series" 
+            @selies_error = '', "Error in the series"
             series = "A" §"B" "C" "D" "E" "F" "G"
             """
         result, messages, ast = compile_ebnf(lang)
@@ -1175,7 +1175,7 @@ class TestErrorCustomizationErrors:
     def test_long_error_message(self):
         lang = """
             document = series
-            @series_error = 'an error message that spreads\n over ' 
+            @series_error = 'an error message that spreads\n over '
                             'several strings'
             series = "A" § "B" "C"
             """
@@ -1389,7 +1389,7 @@ class TestCustomizedResumeParsing_with_autogenerated_Parsers:
     list     = "[" [_items] § "]"
     @_items_skip = /(?=,)/, /(?=])/, /$/
     _items   = _item { "," §_item }
-    _item    = number | list    
+    _item    = number | list
     number   = `0` | /[1-9][0-9]*/
     _EOF     =  !/./
     """
@@ -1417,7 +1417,7 @@ class TestCustomizedResumeParsing_with_autogenerated_Parsers:
         @ whitespace  = /\s*/
         @ disposable  = EOF
         @ drop        = EOF, whitespace, strings
-        
+
         document = ~ element ~ §EOF
         element  = STag content ETag
         STag     = '<' TagName §'>'
@@ -1425,7 +1425,7 @@ class TestCustomizedResumeParsing_with_autogenerated_Parsers:
         ETag     = '</' §::TagName '>'
         TagName  = /\w+/
         content  = [CharData] { (element | COMMENT__) [CharData] }
-        
+
         CharData = /(?:(?!\]\]>)[^<&])+/
         EOF      =  !/./
         '''
@@ -1494,7 +1494,7 @@ class TestInterleaveResume:
         document = allof
         @ allof_error = '{} erwartet, {} gefunden :-('
         @ allof_skip = "D", "E", "F", "G"
-        allof = "A" ° "B" ° §"C" ° "D" ° "E" ° "F" ° "G" 
+        allof = "A" ° "B" ° §"C" ° "D" ° "E" ° "F" ° "G"
     """
     gr = grammar_provider(lang)()
 
@@ -1720,9 +1720,9 @@ class TestSyntaxExtensions:
         set_config_value('syntax_variant', 'heuristic')
         lang = """
             Identifier <- IdentStart IdentCont* Spacing
-            IdentCont  <- IdentStart / [0-9] 
+            IdentCont  <- IdentStart / [0-9]
             IdentStart <- [a-zA-Z_]
-            Spacing    <- (´ ´ / ´\t´ / ´\n´)*      
+            Spacing    <- (´ ´ / ´\t´ / ´\n´)*
             """
         parser = create_parser(lang)
         st = parser('marke_8')
@@ -1737,9 +1737,9 @@ class TestSyntaxExtensions:
         set_config_value('syntax_variant', 'heuristic')
         lang = """
             identifier  <- ident-start ident-cont* spacing
-            ident-cont  <- ident-start / [0-9] 
+            ident-cont  <- ident-start / [0-9]
             ident-start <- [a-zA-Z_]
-            spacing     <- (` ` / ´\t´ / ´\n´)*           
+            spacing     <- (` ` / ´\t´ / ´\n´)*
         """
         parser = create_parser(lang)
         assert parser.python_src__.find('ident-cond') < 0
@@ -1903,7 +1903,7 @@ class TestTreeOptimization:
     def test_tree_reduction(self):
         lang = """@reduction = none
            root = 'A' 'B' (important | 'D')
-           important = 'C' 
+           important = 'C'
         """
         parser = create_parser(lang)
         st = parser('ABC')
@@ -2043,7 +2043,7 @@ class TestRuleOrder:
             return ebnf_compiler
 
         def all_paths(compiler_obj):
-            paths = [normalize_circular_path(compiler_obj.recursive_paths(sym))
+            paths = [normalize_circular_paths(compiler_obj.recursive_paths(sym))
                      for sym in compiler_obj.forward]
             for i in range(len(paths)):
                 for k in range(i + 1, len(paths)):
@@ -2107,30 +2107,30 @@ class TestInclude:
     NEG         = `-`
     FRAC        = DOT /[0-9]+/
     DOT         = `.`
-    EXP         = (`E`|`e`) [`+`|`-`] /[0-9]+/    
+    EXP         = (`E`|`e`) [`+`|`-`] /[0-9]+/
     '''
 
     arithmetic_ebnf = '''
-    @ whitespace  = vertical             
-    @ literalws   = right                
-    @ comment     = /#.*/                
-    @ ignorecase  = False     
-    @ reduction   = merge_treetops           
-    @ drop        = whitespace, strings    
-    
+    @ whitespace  = vertical
+    @ literalws   = right
+    @ comment     = /#.*/
+    @ ignorecase  = False
+    @ reduction   = merge_treetops
+    @ drop        = whitespace, strings
+
     expression = term  { (add | sub) term}
     term       = factor { (div | mul) factor}
     factor     = [NEG] (number | group)
     group      = "(" expression ")"
-    
+
     add        = "+"
     sub        = "-"
     mul        = "*"
     div        = "/"
-    
+
     number     = NUMBER ~
-    
-    @ include = "number.ebnf"    
+
+    @ include = "number.ebnf"
     '''
 
     def setup_class(self):
@@ -2155,14 +2155,14 @@ class TestInclude:
 
 class TestCustomParsers:
     arithmetic_ebnf = r'''
-    @ whitespace  = vertical             
-    @ literalws   = right                
-    @ comment     = /#.*/                
-    @ ignorecase  = False     
-    @ reduction   = merge_treetops           
-    @ drop        = whitespace, strings    
+    @ whitespace  = vertical
+    @ literalws   = right
+    @ comment     = /#.*/
+    @ ignorecase  = False
+    @ reduction   = merge_treetops
+    @ drop        = whitespace, strings
 
-    expression = term  { (add | sub) term} 
+    expression = term  { (add | sub) term}
     term       = factor { (div | mul) factor}
     factor     = [NEG] (number | group)
         NEG    = `-`
@@ -2174,13 +2174,13 @@ class TestCustomParsers:
     div        = "/"
 
     number     = @Custom(parse_number) ~
-    
+
     number_rx  = /\d+/~
     EOF        = !/./ '''
     py_parse_number = r'''
 def parse_number(s):
     try:
-        i = min(k for k in (s.find(' '), s.find('\n'), s.find('('), s.find(')'), 
+        i = min(k for k in (s.find(' '), s.find('\n'), s.find('('), s.find(')'),
                             s.find('*'), s.find('/'), len(s))
                 if k >= 0)
         if i < 0:  i = len(s)
@@ -2194,21 +2194,21 @@ class ParserNumber(Parser):
     def _parse(self, location):
         s = self.grammar.document__[location:]
         try:
-            i = min(k for k in (s.find(' '), s.find('\n'), s.find('('), s.find(')'), 
+            i = min(k for k in (s.find(' '), s.find('\n'), s.find('('), s.find(')'),
                                 s.find('*'), s.find('/'), len(s))
                     if k >= 0)
             if i < 0:  i = len(s)
             float(str(s[:i]))
         except ValueError:
             return None, location
-        return Node(self.node_name, s[:i]), location + i        
+        return Node(self.node_name, s[:i]), location + i
     '''
     py_parse_factory_func = r'''
 def parse_number(base_as_str: str):
     base = int(base_as_str)
     def parse_number_func(s):
         try:
-            i = min(k for k in (s.find(' '), s.find('\n'), s.find('('), s.find(')'), 
+            i = min(k for k in (s.find(' '), s.find('\n'), s.find('('), s.find(')'),
                                 s.find('*'), s.find('/'), len(s))
                     if k >= 0)
             if i < 0:  i = len(s)
@@ -2225,7 +2225,7 @@ class ParserNumber(LateBindingUnary):
         assert self.parser is not PARSER_PLACEHOLDER
         parser = self.parser
         result, location_ = parser(location)
-        return result, location_  
+        return result, location_
         '''
 
     def test_custom_parser_func(self):
@@ -2298,7 +2298,7 @@ class TestNameConflicts:
     def test_symbol_shadows_parser_name(self):
         gr = r'''
         doc = Text | Literal
-        Literal = `abc` 
+        Literal = `abc`
         Text = /\w+/
         '''
         # should run without causig an exception
@@ -2309,8 +2309,8 @@ class TestNameConflicts:
 class TestMacros:
     def test_simple_macros(self):
         lang = '''@reduction = merge
-        doc = ~ $phrase(`,`) { `,`~ $phrase(`,`) } 
-        $phrase($separator) = /[^.,;]+/ { !$separator /[.,;]/ /[^,.;]/+ }   
+        doc = ~ $phrase(`,`) { `,`~ $phrase(`,`) }
+        $phrase($separator) = /[^.,;]+/ { !$separator /[.,;]/ /[^,.;]/+ }
         '''
         parser = create_parser(lang)
         tree = parser('1; 2, 3; 4')
@@ -2341,15 +2341,15 @@ class TestMacros:
     def test_macro_errors(self):
         import sys
         lang = '''@reduction = merge
-        doc = ~ $undefined(`,`) { `,`~ $phrase(`,`) } 
-        $phrase($separator) = /[^.,;]+/ { !$separator /[.,;]/ /[^,.;]/+ }   
+        doc = ~ $undefined(`,`) { `,`~ $phrase(`,`) }
+        $phrase($separator) = /[^.,;]+/ { !$separator /[.,;]/ /[^,.;]/+ }
         '''
         src, errors, ast = compile_ebnf(lang)
         assert errors[0].code == UNDEFINED_MACRO
 
         lang = '''@reduction = merge
-        doc = ~ $phrase(`,`) { `,`~ $phrase(`,`) } 
-        $phrase($separator) = /[^.,;]+/ { !$unknown /[.,;]/ /[^,.;]/+ }   
+        doc = ~ $phrase(`,`) { `,`~ $phrase(`,`) }
+        $phrase($separator) = /[^.,;]+/ { !$unknown /[.,;]/ /[^,.;]/+ }
         '''
         src, errors, ast = compile_ebnf(lang)
         assert len(errors) == 2
@@ -2362,8 +2362,8 @@ class TestMacros:
     def test_nested_macros(self):
         lang = '''@reduction = merge
         doc = ~ $phrase_list(`,`)
-        $phrase_list($sep) = $phrase($sep) { $sep~ $phrase($sep) } 
-        $phrase($separator) = /[^.,;]+/ { !$separator /[.,;]/ /[^,.;]/+ }   
+        $phrase_list($sep) = $phrase($sep) { $sep~ $phrase($sep) }
+        $phrase($separator) = /[^.,;]+/ { !$separator /[.,;]/ /[^,.;]/+ }
         '''
         parser = create_parser(lang)
         tree = parser('1; 2, 3; 4')
@@ -2380,10 +2380,10 @@ class TestMacros:
         lang = '''@reduction = merge
         @disposable = $phrase_list, $chars, _neutral_chars
         doc = ~ $phrase_list(`,`)
-        $phrase_list($sep) = $phrase($sep) { $sep~ $phrase($sep) } 
+        $phrase_list($sep) = $phrase($sep) { $sep~ $phrase($sep) }
         $phrase($separator) = _neutral_chars $chars
-        $chars = { !$separator /[.,;]/ _neutral_chars } 
-        _neutral_chars = /[^.,;]+/  
+        $chars = { !$separator /[.,;]/ _neutral_chars }
+        _neutral_chars = /[^.,;]+/
         '''
         parser = create_parser(lang)
         tree = parser('1; 2, 3; 4')
@@ -2392,7 +2392,7 @@ class TestMacros:
 
     def test_macro_complex_case(self):
         lang = r'''@ whitespace  = /[ \t]*/
-        @ reduction   = merge        
+        @ reduction   = merge
         @ disposable  = WS, EOF, LINE, S
         @ drop        = WS, EOF, backticked
         document = main [WS] §EOF
@@ -2473,7 +2473,7 @@ class TestRegexRendering:
             |[\uAB30-\uAB5A]|[\uAB60-\uAB64]|[\uAB66-\uAB67]|[\uFB00-\uFB06]|[\uFF21-\uFF3A]
             |[\uFF41-\uFF5A]|[\U0001F110-\U0001F12C]|[\U0001F130-\U0001F149]
             |[\U0001F150-\U0001F169]|[\U0001F170-\U0001F18A]|\U0001F1A5|[\U0001F520-\U0001F521]
-            |\U0001F524|[\U0001F546-\U0001F547]|[\U000E0041-\U000E005A]|[\U000E0061-\U000E007A]/ 
+            |\U0001F524|[\U0001F546-\U0001F547]|[\U000E0041-\U000E005A]|[\U000E0061-\U000E007A]/
         """
         parser = create_parser(lang)
         expected = r"""LATIN = RegExp('(?x)[\\x41-\\x5A]|[\\x61-\\x7A]|[\\xC0-\\xD6]|[\\xD8-\\xF6]|[\\u00F8-\\u02AF]|[\\u0363-\\u036F]\n'
@@ -2622,11 +2622,11 @@ class TestOptimizations:
     def test_complex_regexes_2(self):
         set_config_value('optimizations', frozenset({'alternative'}))
         lang = r'''
-        literal    = /"(?:(?<!\\)\\"|[^"])*?"/    
-                   | /'(?:(?<!\\)\\'|[^'])*?'/  
+        literal    = /"(?:(?<!\\)\\"|[^"])*?"/
+                   | /'(?:(?<!\\)\\'|[^'])*?'/
                    | /’(?:(?<!\\)\\’|[^’])*?’/
-        plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/    
-                   | /´(?:(?<!\\)\\´|[^´])*?´/        
+        plaintext  = /`(?:(?<!\\)\\`|[^`])*?`/
+                   | /´(?:(?<!\\)\\´|[^´])*?´/
         '''
         parser = create_parser(lang)
         assert parser.python_src__.find('SmartRE(') >= 0
@@ -2668,11 +2668,11 @@ class TestOptimizations:
 
     def test_complex_sequence(self):
         set_config_value('optimizations', frozenset({'sequence', 'alternative'}))
-        lang = r"""@ whitespace  = /\s*/  
-        @ literalws   = none                 
-        @ comment     = //                   
-        @ ignorecase  = False                
-        @ reduction   = merge_treetops       
+        lang = r"""@ whitespace  = /\s*/
+        @ literalws   = none
+        @ comment     = //
+        @ ignorecase  = False
+        @ reduction   = merge_treetops
         @ drop        = strings, whitespace
 
         SDDecl = ~ 'standalone' ~ '=' ~ (("'" (`yes` | `no`) "'") | ('"' (`yes` | `no`) '"'))"""
@@ -2721,7 +2721,7 @@ class TestOptimizations:
             term       =  factor  { ("*" | "/") factor }
             factor     =  constant | "("  expression  ")"
             constant   =  digit { digit } [ ~ ]
-            digit      = /0/ | /1/ | /2/ | /3/ | /4/ | /5/ | /6/ | /7/ | /8/ | /9/ 
+            digit      = /0/ | /1/ | /2/ | /3/ | /4/ | /5/ | /6/ | /7/ | /8/ | /9/
             """
         parser = create_parser(lang)
         assert parser.python_src__.find('SmartRE(') >= 0
@@ -2762,7 +2762,7 @@ class TestOptimizations:
     def test_macro_complex_case(self):
         set_config_value('optimizations', frozenset({'sequence', 'alternative'}))
         lang = r'''@ whitespace  = /[ \t]*/
-        @ reduction   = merge        
+        @ reduction   = merge
         @ disposable  = WS, EOF, LINE, S
         @ drop        = WS, EOF, backticked
         document = main [WS] §EOF
@@ -2806,11 +2806,11 @@ class TestOptimizations:
 
     def test_expression_of_sequences(self):
         set_config_value('optimizations', frozenset({'sequence', 'alternative'}))
-        lang = r"""@ whitespace  = /\s*/            
-        @ literalws   = none                
-        @ comment     = //              
-        @ ignorecase  = True                
-        @ reduction   = merge_treetops      
+        lang = r"""@ whitespace  = /\s*/
+        @ literalws   = none
+        @ comment     = //
+        @ ignorecase  = True
+        @ reduction   = merge_treetops
         @ drop        = strings, whitespace
         SystemLiteral   = '"' /[^"]*/ '"' | "'" /[^']*/ "'" """
         parser = create_parser(lang)
@@ -2821,7 +2821,7 @@ class TestOptimizations:
         save = get_config_value('syntax_variant')
         set_config_value('syntax_variant', 'heuristic')
         lang = r"""
-        Char <- [nrt´"\[\]\\] / !´\\´        
+        Char <- [nrt´"\[\]\\] / !´\\´
         """
         parser = create_parser(lang)
         set_config_value('syntax_variant', save)
@@ -2877,7 +2877,7 @@ class TestOptimizations:
         from DHParser.error import PARSER_LOOKAHEAD_MATCH_ONLY
         set_config_value('optimizations', frozenset({'alternative', 'sequence', 'lookahead'}))
         # set_config_value('optimizations', frozenset())
-        lang = """@literalws = left 
+        lang = """@literalws = left
         doc = "Hallo" & "?" """
         parser = create_parser(lang)
         assert parser.python_src__.find('SmartRE(') >= 0
@@ -2890,8 +2890,8 @@ class TestOptimizations:
         from DHParser.error import PARSER_LOOKAHEAD_MATCH_ONLY
         set_config_value('optimizations', frozenset({'alternative', 'sequence', 'lookahead'}))
         # set_config_value('optimizations', frozenset())
-        lang = """@literalws = left 
-        doc = greeting & (~ "?") 
+        lang = """@literalws = left
+        doc = greeting & (~ "?")
         greeting = "Hallo" """
         parser = create_parser(lang)
         # print(parser.python_src__)
@@ -2908,9 +2908,9 @@ class TestOptimizations:
         @ ignorecase  = False           # literals and regular expressions are case-sensitive
         @ reduction   = merge_treetops  # anonymous nodes are being reduced where possible
         @ drop        = whitespace, no_comments, strings
-        
+
         document = `hallo` ~
-        word     = /\w+/                
+        word     = /\w+/
         """
         parser = create_parser(lang)
         tree = parser('hallo /* Kommentar */ ')

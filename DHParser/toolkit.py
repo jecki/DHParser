@@ -145,6 +145,7 @@ __all__ = ('re',
            'pp_json_str',
            'sane_parser_name',
            'normalize_circular_path',
+           'normalize_circular_paths',
            'DHPARSER_DIR',
            'deprecated',
            'deprecation_warning',
@@ -465,11 +466,9 @@ def sane_parser_name(name) -> bool:
     return name and name[:2] != '__' and name[-2:] != '__'
 
 
-def normalize_circular_path(path: Union[Tuple[str, ...], AbstractSet[Tuple[str, ...]]]) \
-        -> Union[Tuple[str, ...], MutableSet[Tuple[str, ...]], MutableSet]:
+def normalize_circular_path(path: Tuple[str, ...]) -> Tuple[str, ...]:
     """Returns a normalized version of a `circular path` represented as
-    a tuple or - if called with a set of paths instead of a single path
-    - a set of normalized paths.
+    a tuple.
 
     A circular (or "recursive") path is a tuple of items, the order of which
     matters, but not the starting point. This can, for example, be a tuple of
@@ -486,13 +485,21 @@ def normalize_circular_path(path: Union[Tuple[str, ...], AbstractSet[Tuple[str, 
         >>> normalize_circular_path(('term', 'factor', 'expression'))
         ('expression', 'term', 'factor')
     """
+    assert isinstance(path, Tuple)
+    first_sym = min(path)
+    i = path.index(first_sym)
+    return path[i:] + path[:i]
+
+
+def normalize_circular_paths(path: Union[Tuple[str, ...], AbstractSet[Tuple[str, ...]]]) \
+        -> Union[Tuple[str, ...], MutableSet[Tuple[str, ...]], MutableSet]:
+    """Like :py:func:`normalize_circular_path`, but normalizes a whole set of
+    paths at once.
+    """
     if isinstance(path, AbstractSet):
         return {normalize_circular_path(p) for p in path}
     else:
-        assert isinstance(path, Tuple)
-        first_sym = min(path)
-        i = path.index(first_sym)
-        return path[i:] + path[:i]
+        return normalize_circular_path(path)
 
 
 #######################################################################
@@ -596,9 +603,9 @@ class LazyRE:
 
 RX_NEVER_MATCH = LazyRE(NEVER_MATCH_PATTERN)
 try:
-    RxPatternType = re.Pattern
+    RxPatternType: TypeAlias = re.Pattern
 except AttributeError:
-    RxPatternType = Any
+    RxPatternType: TypeAlias = Any
 
 
 
@@ -803,7 +810,6 @@ def wrap_str_nicely(s: str, wrap_column: int = 79, tolerance: int = 24,
             if i - m > tolerance // 2:
                 continue
             k = s.rfind(ch, a, m)
-            probe = s[k + 1]
             while k < i and s[k + 1] in wrap_chars and s[k + 1] != ' ':  k += 1
             if i - k <= tolerance:
                 parts.append(s[a:k + 1])
@@ -872,24 +878,12 @@ def as_identifier(s: str, replacement: str = "_") -> str:
 NOPE = []  # a list that is empty and is supposed to remain empty
 INFINITE = 2**30  # a practically infinite value
 
-_RX_CHARSET = None
-_RX_ESCAPED_ROUND_BRACKET = None
-_RX_ESCAPED_SQUARE_BRACKET = None
+_RX_CHARSET = LazyRE(r'(?<=\[)(?:(?<!\\)(?:\\\\)*\\\]|[^\]])*(?=\])')
+_RX_ESCAPED_ROUND_BRACKET = LazyRE(r'(?<!\\)(?:\\\\)*\\[()]')
+_RX_ESCAPED_SQUARE_BRACKET = LazyRE(r'(?<!\\)(?:\\\\)*\\[\[\]]')
 
 
-def _init_bracket_regexes():
-    global _RX_CHARSET, _RX_ESCAPED_ROUND_BRACKET, _RX_ESCAPED_SQUARE_BRACKET
-    if _RX_CHARSET is None:
-        _RX_CHARSET = re.compile(r'(?<=\[)(?:(?<!\\)(?:\\\\)*\\\]|[^\]])*(?=\])')
-    if _RX_ESCAPED_ROUND_BRACKET is None:
-        _RX_ESCAPED_ROUND_BRACKET = re.compile(r'(?<!\\)(?:\\\\)*\\[()]')
-    if _RX_ESCAPED_SQUARE_BRACKET is None:
-        _RX_ESCAPED_SQUARE_BRACKET = re.compile(r'(?<!\\)(?:\\\\)*\\[\[\]]')
-
-        # >>> _sub_size(_RX_CHARSET, r'([^\d()]*(?=[\d(]))')
-        # '([     ]*(?=[   ]))'
-
-def _sub_size(rx: RxPatternType, text: str, fill_char: str = ' ') -> str:
+def _sub_size(rx: Union[RxPatternType, LazyRE], text: str, fill_char: str = ' ') -> str:
     """Substitutes matches of a regular expression with a fill-string
     of the same size. Example::
 
@@ -939,7 +933,6 @@ def matching_brackets(text: str,
     assert not unmatched, \
         "Please pass an empty list as unmatched flag, not: " + str(unmatched)
     if is_regex:
-        _init_bracket_regexes()
         text = _sub_size(_RX_CHARSET, text)
         text = _sub_size(_RX_ESCAPED_ROUND_BRACKET, text)
         text = _sub_size(_RX_ESCAPED_SQUARE_BRACKET, text)
@@ -1166,7 +1159,7 @@ def cached_load(file_name: str, deserialize: DeserializeFunc, cachedir: str = "~
                     return data
             else:
                 return data
-        except UnpicklingError as e:
+        except pickle.UnpicklingError as e:
             print(f'{e} encountered while loading data from cache "{cache_name}"!'
                   f'If this error persists, then delete the cache file "{cache_name}" manually.')
     if source is None:

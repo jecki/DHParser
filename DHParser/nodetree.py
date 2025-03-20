@@ -109,7 +109,7 @@ from DHParser.configuration import get_config_value, ALLOWED_PRESET_VALUES
 from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END, \
     add_source_locations, SourceMapFunc, has_errors, only_errors, gen_neutral_srcmap_func
 from DHParser.stringview import StringView  # , real_indices
-from DHParser.toolkit import re, linebreaks, line_col, JSONnull, JSON_Type, JSON_Dict, \
+from DHParser.toolkit import re, linebreaks, line_col, JSONnull, JSON_Dict, \
     validate_XML_attribute_value, fix_XML_attribute_value, lxml_XML_attribute_value, \
     abbreviate_middle, TypeAlias, deprecated, RxPatternType, INFINITE, LazyRE
 
@@ -507,12 +507,12 @@ def restore_tag_name(tag_name: str) -> str:
 
 ## Node class #########################################################
 
-
 ChildrenType: TypeAlias = Tuple['Node', ...]
 StrictResultType: TypeAlias = Union[ChildrenType, StringView, str]
 ResultType: TypeAlias = Union[StrictResultType, 'Node']
 
-RawMappingType: TypeAlias = Dict['Node', Sequence[int]]
+# RawMappingType: TypeAlias = Dict['Node', Sequence[Union[int,Sequence[int]]]]
+RawMappingType: TypeAlias = Dict['Node', Tuple[int, Union[int,Sequence[int]], int]]
 NO_MAPPING_SENTINEL: RawMappingType = {"don't generate a serialization mapping ": (-1, -1, -1)}
 NO_REFLOW = lambda tab, content, depth: content
 
@@ -1766,11 +1766,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             lh = len(head) + len(usetab)
             lt = len(tail) + (len(usetab) if tlf else 0)
             if len(content) == 0:
-                mapping[self] = [lh, 0, lt]
+                mapping[self] = (lh, 0, lt)
             if len(content) == 1:
-                mapping[self] = [lh, len(content[0]) - lh - lt, lt]
+                mapping[self] = (lh, len(content[0]) - lh - lt, lt)
             else:
-                mapping[self] = [lh, [len(line) for line in content], lt]
+                mapping[self] = (lh, [len(line) for line in content], lt)
 
         if not self.result:
             if mapping is not NO_MAPPING_SENTINEL:  update_mapping([])
@@ -1841,37 +1841,39 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if mapping is not NO_MAPPING_SENTINEL: update_mapping(content)
         return content
 
-    def _finalize_mapping(self, mapping):
+    def _finalize_mapping(self, mapping: RawMappingType):
         def update_children(node: Node, closing: int):
             child = None
-            not_inline = isinstance(mapping[node][1], list)
+            not_inline = isinstance(mapping[node][1], Sequence)
             for child in node.children:
                 update_children(child, closing)
+                mp_child_0, mp_child_1, mp_child_2 = mapping[child]
                 if not_inline:
-                   mapping[child][0] += 1
-                if isinstance(mapping[child][1], list):
+                   mp_child_0 += 1
+                if isinstance(mp_child_1, Sequence):
                     content = mapping[child][1]
-                    mapping[child][1] = sum(content) + len(content)
+                    mp_child_1 = sum(mp_child_1) + len(mp_child_1)
                 else:
-                    mapping[child][1] = sum(mapping[child])
+                    mp_child_1 = mp_child_0 + mp_child_1 + mp_child_2
+                mapping[child] = (mp_child_0, mp_child_1, mp_child_2)
             if child is not None and not_inline and closing:
                 # cl = closing + closing * (max(0, indent - indentation))
-                mapping[child][2] += closing
-                mapping[child][1] += closing
+                mapping[child] = (mp_child_0, mp_child_1 + closing, mp_child_2 + closing)
+
+        mp_self = mapping[self]
         if self.children:
-            if isinstance(mapping[self][1], list) \
-                    and mapping[self][1][-1] == mapping[self][2]:
+            if isinstance(mp_self[1], Sequence) \
+                    and mp_self[1][-1] == mp_self[2]:
                 closing = 1
             else:
                 closing = 0
             update_children(self, closing)
-            if isinstance(mapping[self][1], list):
-                content = mapping[self][1]
-                mapping[self][1] = sum(content) + len(content) - 1
+            if isinstance(mp_self[1], Sequence):
+                mapping[self] = (mp_self[0], sum(mp_self[1]) + len(mp_self[1]) - 1, mp_self[2])
             else:
-                mapping[self][1] = sum(mapping[self])
+                mapping[self] = (mp_self[0], mp_self[0] + mp_self[1] + mp_self[2], mp_self[2])
         else:
-            mapping[self][1] = sum(mapping[self])
+            mapping[self] = (mp_self[0], mp_self[0] + cast(int, mp_self[1]) + mp_self[2], mp_self[2])
 
 
     def _reflow(self, tab: str, content: str, reflow_col: int) -> str:
@@ -2086,6 +2088,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         root = cast(RootNode, self) if isinstance(self, RootNode) \
             else None  # type: Optional[RootNode]
         line_breaks = linebreaks(src) if src else []
+        _empty_tags = set(empty_tags)  # make a copy, so elements can be added to _empty_Set, safely
 
         def attr_err_ignore(value: str) -> str:
             return ("'%s'" % value) if value.find('"') >= 0 else '"%s"' % value
@@ -2104,7 +2107,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         def opening(node: Node) -> str:
             """Returns the opening string for the representation of `node`."""
-            nonlocal self, attr_filter, empty_tags, line_breaks
+            nonlocal self, attr_filter, _empty_tags, line_breaks
             if node is self and node.name == ':XML':  return ''
             if node.name in string_tags and not node.has_attr():
                 if node.name == CHAR_REF_PTYPE and node.content.isalnum(): return "&#x"
@@ -2126,8 +2129,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 txt.append(' err=' + fix_XML_attribute_value(
                     ''.join(str(err) for err in root.node_errors(node))))
             if node.name[0:1] == '?' and not node.result:
-                empty_tags.add(node.name)
-            if node.name in empty_tags:
+                _empty_tags.add(node.name)
+            if node.name in _empty_tags:
                 if node.name[0:1] != '?' and node.result:
                     if strict_mode:
                         raise ValueError(
@@ -2147,7 +2150,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             """Returns the closing string for the representation of `node`."""
             nonlocal self
             if node is self and node.name == ':XML':  return ''
-            if (node.name in empty_tags and not node.result) \
+            if (node.name in _empty_tags and not node.result) \
                     or (node.name in string_tags and not node.has_attr()):
                 if node.name == CHAR_REF_PTYPE and node.content.isalnum(): return ";"
                 elif node.name == ENTITY_REF_PTYPE: return ";"
@@ -2181,7 +2184,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         # string_tags = frozenset(string_tags)
         if reflow_col > 0:
            inline_tags = frozenset(inline_tags) | string_tags
-        empty_tags = set(frozenset(empty_tags))
         d = -1 if self.name == ":XML" else 0
         reflow_fn = reflow if reflow_col > 0 else NO_REFLOW
         xml = '\n'.join(self._tree_repr(
@@ -2194,7 +2196,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def as_html(self, css: str='', head: str='', lang: str='en', **kwargs) -> str:
         """Serialize as HTML-page. See :py:meth:`Node.as_xml` for the further
         keyword-arguments."""
-        kwargs['empty_tags'] = kwargs.get('empty_tags', set())
+        kwargs['empty_tags'] = set(kwargs.get('empty_tags', set()))
         kwargs['empty_tags'].update(HTML_EMPTY_TAGS)
         xhtml = self.as_xml(**kwargs)
         css_snippet = '\n'.join(['<style type="text/css">', css, '</style>'])
@@ -2302,10 +2304,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 additional['attributes__'] = node.attr
             if additional:
                 if node._children:
-                    if isinstance(jo[node.name], dict):
-                        jo[node.name].update(additional)
+                    node_jo = jo[node.name]
+                    if isinstance(node_jo, dict):
+                        node_jo.update(additional)
                     else:
-                        jo[node.name].extend(additional.items())
+                        cast(list, node_jo).extend(additional.items())
                 else:
                     d = {'content__': str(node._result)}
                     d.update(additional)
@@ -4235,7 +4238,7 @@ def insert_node(leaf_path: Path, rel_pos: int, node: Node,
         >>> print(tree.as_sxpr())
         (A (B (B "Gu") (Hicks!) (B "ten")) (S " ") (C "Morgen"))
     """
-    def split_leaf(leaf, node) -> Tuple[Node]:
+    def split_leaf(leaf, node) -> Tuple[Node, Node, Node]:
         content = leaf.content
         if leaf._pos >= 0:
             node._pos = leaf._pos + rel_pos
@@ -4431,14 +4434,14 @@ def split_node(node: Node, parent: Node, i: cython.int, left_biased: bool = True
         if i == 0:  return k - 1
     right = Node(node.name, node._result[i:])
     if node.has_attr():  right.with_attr(node.attr)
-    if  right._children:  right._pos = right._result[0]._pos
+    if  right._children:  right._pos = right.children[0]._pos
     elif node._pos >= 0:  right._pos = node._pos + i
     node.result = node._result[:i]
     # if chain_attr and not node.anonymous:
     if chain_attr and not node.anonymous:
         node.attr.update(chain_attr)
         right.attr.update(chain_attr)
-    parent.result = parent._result[:k] + (right,) + parent.result[k:]
+    parent.result = parent.children[:k] + (right,) + parent.children[k:]
     return k
 
 
@@ -4587,7 +4590,7 @@ def can_split(t: Path, i: cython.int, left_biased: bool = True, greedy: bool = T
     # make a shallow copy of the path's nodes, first.
     t2 = [copy.copy(nd) for nd in t]
     for k in range(1, len(t2)):
-        t2[k - 1].result = tuple((t2[k] if nd == t[k] else nd) for nd in t2[k - 1].result)
+        t2[k - 1].result = tuple((t2[k] if nd == t[k] else nd) for nd in t2[k - 1].children)
     t = t2
 
     k = 0
@@ -4713,8 +4716,8 @@ def markup_right(path: Path, i: cython.int, name: str, attr_dict: Dict[str, Any]
 
     nd = Node(name, path[k]._result[i:]).with_attr(attr_dict)
     if nd._children:
-        nd._pos = path[k]._result[i]._pos
-        path[k].result = path[k]._result[:i] + (nd,)
+        nd._pos = path[k].children[i]._pos
+        path[k].result = path[k].children[:i] + (nd,)
     elif nd._result:
         nd._pos = path[k]._pos + i if path[k]._pos >= 0 else -1
         text_node = Node(TOKEN_PTYPE, path[k]._result[:i])
@@ -4726,8 +4729,8 @@ def markup_right(path: Path, i: cython.int, name: str, attr_dict: Dict[str, Any]
         i = path[k].index(path[k + 1]) + 1
         if i < len(path[k]._result):
             nd = Node(name, path[k]._result[i:]).with_attr(attr_dict)
-            nd._pos = path[k]._result[i]._pos
-            path[k].result = path[k]._result[:i] + (nd,)
+            nd._pos = path[k].children[i]._pos
+            path[k].result = path[k].children[:i] + (nd,)
         k -= 1
 
     assert not any(nd.name == ':Text' and nd.children for nd in path)
@@ -4819,7 +4822,7 @@ def markup_left(path: Path, i: cython.int, name: str, attr_dict: Dict[str, Any],
     nd = Node(name, path[k]._result[:i]).with_attr(attr_dict)
     nd._pos = path[k]._pos
     if nd._children:
-        path[k].result = (nd,) + path[k]._result[i:]
+        path[k].result = (nd,) + path[k].children[i:]
     elif nd._result:
         text_node = Node(TOKEN_PTYPE, path[k]._result[i:])
         text_node._pos = path[k]._pos + i if path[k]._pos >= 0 else -1
@@ -4831,7 +4834,7 @@ def markup_left(path: Path, i: cython.int, name: str, attr_dict: Dict[str, Any],
         if i > 0:
             nd = Node(name, path[k]._result[:i]).with_attr(attr_dict)
             nd._pos = path[k]._pos
-            path[k].result = (nd,) + path[k]._result[i:]
+            path[k].result = (nd,) + path[k].children[i:]
         k -= 1
 
     assert not any(nd.name == ':Text' and nd.children for nd in path)
@@ -5286,7 +5289,7 @@ class ContentMapping:
 
     def pick_if(self, match_func: NodeMatchFunction,
                 start_from: int = DEFAULT_START_INDEX_SENTINEL,
-                reverse: bool = False) -> NodeLocation:
+                reverse: bool = False) -> Union[NodeLocation, Tuple[None, int]]:
         return next(self.select_if(match_func, start_from, reverse), (None, -1))
 
     def select(self, criterion: NodeSelector,
@@ -5305,7 +5308,7 @@ class ContentMapping:
 
     def pick(self, criterion: NodeSelector,
              start_from: int = DEFAULT_START_INDEX_SENTINEL,
-             reverse: bool = False) -> NodeLocation:
+             reverse: bool = False) -> Union[NodeLocation, Tuple[None, int]]:
         return next(self.select(criterion, start_from, reverse), (None, -1))
 
     @cython.locals(i=cython.int, start_pos=cython.int, end_pos=cython.int, offset=cython.int)
@@ -5795,11 +5798,13 @@ class SerializationMapping:
                     pos = cook(path, pos)
                     path.pop()
             else:
-                pos += self.raw_mapping[node][1] - self.raw_mapping[node][0] - self.raw_mapping[node][2]
+                pos += (cast(int, self.raw_mapping[node][1])
+                        - self.raw_mapping[node][0]
+                        - self.raw_mapping[node][2])
             self._node_list.append(node)
             self._pos_list.append(pos)
             pos += self.raw_mapping[node][2]
-            assert _begin + self.raw_mapping[node][1] == pos, \
+            assert _begin + cast(int, self.raw_mapping[node][1]) == pos, \
                 f'{_begin}, {pos}, {self.raw_mapping[node]}, {node.as_sxpr()}'
             return pos
 
@@ -5834,9 +5839,10 @@ class SerializationMapping:
         node = self._node_list[index]
         ser_pos = self._node_pos[node]
         offset = pos - ser_pos
-        assert 0 <= offset <= self.raw_mapping[node][1]
+        rm_node_1 = cast(int, self.raw_mapping[node][1])
+        assert 0 <= offset <= rm_node_1
         part = -1 if offset < self.raw_mapping[node][0] else \
-                1 if offset >= self.raw_mapping[node][1] - self.raw_mapping[node][2] else \
+                1 if offset >= rm_node_1 - self.raw_mapping[node][2] else \
                 0
         return SerLocation(self._path[self._node_list[index]], ser_pos, offset, SerPart(part))
 
@@ -5847,7 +5853,7 @@ class SerializationMapping:
         if part < 0: return 0
         if part > 0: return node.strlen()
         mapping = self.raw_mapping[node]
-        head, overall, tail = mapping
+        head, overall, tail = mapping[0], cast(int, mapping[1]), mapping[2]
         offset = offset - head
         if offset < 0: return 0
         if offset >= overall - tail:
@@ -5872,8 +5878,6 @@ class SerializationMapping:
                     'formatted serialization or for serializations that happen to contain '
                     'escaped quotation marks. Try a flatten_sxpr(tree.as_sxpr()) '
                     'to rule out the first cause!')
-
-
 
 
 

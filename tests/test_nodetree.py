@@ -1625,10 +1625,10 @@ class TestSerializationMapping:
         tree = parse_sxpr(s)
         mapping = {}
         sxpr = tree.as_sxpr(mapping=mapping)
-        assert mapping[tree] == [5, 14, 1]
+        assert mapping[tree] == (5, 14, 1)
         mapping = {}
         xml = tree.as_xml(mapping=mapping)
-        assert mapping[tree] == [6, 18, 7]
+        assert mapping[tree] == (6, 18, 7)
 
 
     def test_mapping1(self):
