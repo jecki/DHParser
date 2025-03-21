@@ -948,7 +948,7 @@ function reprDiscriminant(e_p0, typ_p1) {
 
   var result_33557651 = [];
 
-  var F = {procname: "system.reprDiscriminant", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/repr_impl.nim", line: 0};
+  var F = {procname: "system.reprDiscriminant", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/repr_impl.nim", line: 0};
   framePtr = F;
     F.line = 12;
     F.filename = "repr_impl.nim";
@@ -1044,151 +1044,151 @@ function divInt64(a_p0, b_p1) {
 
   
 }
-var F = {procname: "module macros", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/core/macros.nim", line: 0};
+var F = {procname: "module macros", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/core/macros.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module macros", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/core/macros.nim", line: 0};
+var F = {procname: "module macros", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/core/macros.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module enumerate", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/std/enumerate.nim", line: 0};
+var F = {procname: "module enumerate", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/std/enumerate.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module enumerate", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/std/enumerate.nim", line: 0};
+var F = {procname: "module enumerate", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/std/enumerate.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module bitops_utils", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/std/private/bitops_utils.nim", line: 0};
+var F = {procname: "module bitops_utils", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/std/private/bitops_utils.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module bitops_utils", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/std/private/bitops_utils.nim", line: 0};
+var F = {procname: "module bitops_utils", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/std/private/bitops_utils.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module countbits_impl", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/countbits_impl.nim", line: 0};
+var F = {procname: "module countbits_impl", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/countbits_impl.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module countbits_impl", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/countbits_impl.nim", line: 0};
+var F = {procname: "module countbits_impl", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/countbits_impl.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module bitops", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/bitops.nim", line: 0};
+var F = {procname: "module bitops", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/bitops.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module bitops", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/bitops.nim", line: 0};
+var F = {procname: "module bitops", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/bitops.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module fenv", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/fenv.nim", line: 0};
+var F = {procname: "module fenv", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/fenv.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module fenv", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/fenv.nim", line: 0};
+var F = {procname: "module fenv", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/fenv.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module math", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/math.nim", line: 0};
+var F = {procname: "module math", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/math.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module math", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/math.nim", line: 0};
+var F = {procname: "module math", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/math.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module typetraits", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/typetraits.nim", line: 0};
+var F = {procname: "module typetraits", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/typetraits.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module typetraits", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/typetraits.nim", line: 0};
+var F = {procname: "module typetraits", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/typetraits.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module options", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/options.nim", line: 0};
+var F = {procname: "module options", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/options.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module options", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/options.nim", line: 0};
+var F = {procname: "module options", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/options.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module hashes", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/hashes.nim", line: 0};
+var F = {procname: "module hashes", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/hashes.nim", line: 0};
 framePtr = F;
 F.line = 218;
 F.filename = "hashes.nim";
 var objectID_855638193 = [0];
 framePtr = F.prev;
-var F = {procname: "module hashes", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/hashes.nim", line: 0};
+var F = {procname: "module hashes", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/hashes.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module outparams", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/std/outparams.nim", line: 0};
+var F = {procname: "module outparams", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/std/outparams.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module outparams", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/std/outparams.nim", line: 0};
+var F = {procname: "module outparams", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/std/outparams.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module sets", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/collections/sets.nim", line: 0};
+var F = {procname: "module sets", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/collections/sets.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module sets", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/collections/sets.nim", line: 0};
+var F = {procname: "module sets", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/collections/sets.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module parseutils", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/parseutils.nim", line: 0};
+var F = {procname: "module parseutils", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/parseutils.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module parseutils", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/parseutils.nim", line: 0};
+var F = {procname: "module parseutils", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/parseutils.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module strbasics", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/std/strbasics.nim", line: 0};
+var F = {procname: "module strbasics", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/std/strbasics.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module strbasics", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/std/strbasics.nim", line: 0};
+var F = {procname: "module strbasics", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/std/strbasics.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module unicode", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/unicode.nim", line: 0};
+var F = {procname: "module unicode", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/unicode.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module unicode", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/unicode.nim", line: 0};
+var F = {procname: "module unicode", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/unicode.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module algorithm", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/algorithm.nim", line: 0};
+var F = {procname: "module algorithm", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/algorithm.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module algorithm", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/algorithm.nim", line: 0};
+var F = {procname: "module algorithm", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/algorithm.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module enumutils", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/std/enumutils.nim", line: 0};
+var F = {procname: "module enumutils", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/std/enumutils.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module enumutils", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/std/enumutils.nim", line: 0};
+var F = {procname: "module enumutils", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/std/enumutils.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module strimpl", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/std/private/strimpl.nim", line: 0};
+var F = {procname: "module strimpl", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/std/private/strimpl.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module strimpl", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/std/private/strimpl.nim", line: 0};
+var F = {procname: "module strimpl", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/std/private/strimpl.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module strutils", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/strutils.nim", line: 0};
+var F = {procname: "module strutils", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/strutils.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module strutils", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/strutils.nim", line: 0};
+var F = {procname: "module strutils", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/strutils.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module strformat", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/strformat.nim", line: 0};
+var F = {procname: "module strformat", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/strformat.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module strformat", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/strformat.nim", line: 0};
+var F = {procname: "module strformat", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/strformat.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module underscored_calls", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/std/private/underscored_calls.nim", line: 0};
+var F = {procname: "module underscored_calls", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/std/private/underscored_calls.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module underscored_calls", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/std/private/underscored_calls.nim", line: 0};
+var F = {procname: "module underscored_calls", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/std/private/underscored_calls.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module sugar", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/sugar.nim", line: 0};
+var F = {procname: "module sugar", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/sugar.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module sugar", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/sugar.nim", line: 0};
+var F = {procname: "module sugar", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/sugar.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module tables", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/collections/tables.nim", line: 0};
+var F = {procname: "module tables", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/collections/tables.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module tables", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/collections/tables.nim", line: 0};
+var F = {procname: "module tables", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/collections/tables.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module jsre", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/js/jsre.nim", line: 0};
+var F = {procname: "module jsre", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/js/jsre.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module jsre", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/js/jsre.nim", line: 0};
+var F = {procname: "module jsre", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/js/jsre.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
 
@@ -1266,7 +1266,7 @@ function raiseIndexError(i_p0, a_p1, b_p2) {
 function addChars__stdZprivateZdigitsutils_u202(result_p0, result_p0_Idx, x_p1, start_p2, n_p3) {
     var Temporary1;
 
-  var F = {procname: "addChars.addChars", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/std/private/digitsutils.nim", line: 0};
+  var F = {procname: "addChars.addChars", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/std/private/digitsutils.nim", line: 0};
   framePtr = F;
     F.line = 44;
     F.filename = "digitsutils.nim";
@@ -1301,7 +1301,7 @@ function addChars__stdZprivateZdigitsutils_u202(result_p0, result_p0_Idx, x_p1, 
 }
 
 function addChars__stdZprivateZdigitsutils_u198(result_p0, result_p0_Idx, x_p1) {
-  var F = {procname: "addChars.addChars", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/std/private/digitsutils.nim", line: 0};
+  var F = {procname: "addChars.addChars", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/std/private/digitsutils.nim", line: 0};
   framePtr = F;
     F.line = 56;
     F.filename = "digitsutils.nim";
@@ -1312,7 +1312,7 @@ function addChars__stdZprivateZdigitsutils_u198(result_p0, result_p0_Idx, x_p1) 
 }
 
 function addInt__stdZprivateZdigitsutils_u223(result_p0, result_p0_Idx, x_p1) {
-  var F = {procname: "digitsutils.addInt", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/std/private/digitsutils.nim", line: 0};
+  var F = {procname: "digitsutils.addInt", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/std/private/digitsutils.nim", line: 0};
   framePtr = F;
     F.line = 112;
     F.filename = "digitsutils.nim";
@@ -1323,7 +1323,7 @@ function addInt__stdZprivateZdigitsutils_u223(result_p0, result_p0_Idx, x_p1) {
 }
 
 function addInt__stdZprivateZdigitsutils_u241(result_p0, result_p0_Idx, x_p1) {
-  var F = {procname: "digitsutils.addInt", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/std/private/digitsutils.nim", line: 0};
+  var F = {procname: "digitsutils.addInt", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/std/private/digitsutils.nim", line: 0};
   framePtr = F;
     F.line = 116;
     F.filename = "digitsutils.nim";
@@ -1336,7 +1336,7 @@ function addInt__stdZprivateZdigitsutils_u241(result_p0, result_p0_Idx, x_p1) {
 function HEX24__systemZdollars_u8(x_p0) {
   var result_369098762 = [[]];
 
-  var F = {procname: "dollars.$", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/dollars.nim", line: 0};
+  var F = {procname: "dollars.$", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/dollars.nim", line: 0};
   framePtr = F;
     F.line = 18;
     F.filename = "dollars.nim";
@@ -1430,7 +1430,7 @@ function rawWriteStackTrace__system_u2181() {
 function newSeq__system_u2508(len_p0) {
   var result_33556944 = [];
 
-  var F = {procname: "newSeq.newSeq", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system.nim", line: 0};
+  var F = {procname: "newSeq.newSeq", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system.nim", line: 0};
   framePtr = F;
     F.line = 635;
     F.filename = "system.nim";
@@ -1483,7 +1483,7 @@ function checkOverflowInt(a_p0) {
 function makeStringSlice__strslice_u15(str_p0) {
   var result_1140850706 = {Field0: [null, 0], Field1: 0, Field2: 0};
 
-  var F = {procname: "makeStringSlice.makeStringSlice", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
+  var F = {procname: "makeStringSlice.makeStringSlice", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
   framePtr = F;
     F.line = 54;
     F.filename = "strslice.nim";
@@ -1500,7 +1500,7 @@ function makeStringSlice__strslice_u15(str_p0) {
   return result_1140850706;
 
 }
-var F = {procname: "module strslice", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
+var F = {procname: "module strslice", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
 framePtr = F;
 F.line = 67;
 F.filename = "strslice.nim";
@@ -1514,38 +1514,38 @@ var whitespace_1140851010 = new RegExp("(?: *\\n *)|(?:^ *)|(?: *$)", "g");
 F.line = 234;
 var slashU_1140851011 = new RegExp("\\\\U([0-9a-fA-F]+)", "g");
 framePtr = F.prev;
-var F = {procname: "module strslice", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
+var F = {procname: "module strslice", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module runerange", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/runerange.nim", line: 0};
+var F = {procname: "module runerange", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/runerange.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module runerange", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/runerange.nim", line: 0};
+var F = {procname: "module runerange", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/runerange.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module sequtils", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/collections/sequtils.nim", line: 0};
+var F = {procname: "module sequtils", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/collections/sequtils.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module sequtils", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/collections/sequtils.nim", line: 0};
+var F = {procname: "module sequtils", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/collections/sequtils.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module nodetree", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
+var F = {procname: "module nodetree", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module nodetree", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
+var F = {procname: "module nodetree", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module error", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/error.nim", line: 0};
+var F = {procname: "module error", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/error.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
-var F = {procname: "module error", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/error.nim", line: 0};
+var F = {procname: "module error", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/error.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
 
 function ure__parse_u49(pattern_p0) {
   var result_520093748 = {Field0: null, Field1: null};
 
-  var F = {procname: "ure.ure", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
+  var F = {procname: "ure.ure", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 237;
@@ -1568,7 +1568,7 @@ function ure__parse_u49(pattern_p0) {
 function toStringSlice__parse_u296(str_p0) {
   var result_520093995 = {Field0: [null, 0], Field1: 0, Field2: 0};
 
-  var F = {procname: "toStringSlice.toStringSlice", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
+  var F = {procname: "toStringSlice.toStringSlice", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
   framePtr = F;
     F.line = 71;
     F.filename = "strslice.nim";
@@ -1582,7 +1582,7 @@ function toStringSlice__parse_u296(str_p0) {
 function init__parse_u282(node_p0, name_p1, data_p2, attributes_p3) {
   var result_520093985 = null;
 
-  var F = {procname: "init.init", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
+  var F = {procname: "init.init", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 30;
@@ -1609,7 +1609,7 @@ function init__parse_u282(node_p0, name_p1, data_p2, attributes_p3) {
 function new__nodetree_u708() {
   var result_1207960263 = null;
 
-  var F = {procname: "new.new", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system.nim", line: 0};
+  var F = {procname: "new.new", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 820;
@@ -1628,7 +1628,7 @@ function new__nodetree_u708() {
 }
 
 function cleanUp__parse_u317(grammar_p0) {
-  var F = {procname: "parse.cleanUp", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.cleanUp", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
     F.line = 179;
     F.filename = "parse.nim";
@@ -1653,7 +1653,7 @@ function cleanUp__parse_u317(grammar_p0) {
 function init__parse_u388(grammar_p0, name_p1, flags_p2, document_p3, returnItem_p4, returnSequence_p5) {
   var result_520094091 = null;
 
-  var F = {procname: "parse.init", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.init", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 192;
@@ -1684,7 +1684,7 @@ function init__parse_u388(grammar_p0, name_p1, flags_p2, document_p3, returnItem
 function new__parse_u462() {
   var result_520094161 = null;
 
-  var F = {procname: "new.new", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system.nim", line: 0};
+  var F = {procname: "new.new", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 820;
@@ -1705,7 +1705,7 @@ function new__parse_u462() {
 function returnItemPlaceholder__parse_u311(parser_p0, node_p1) {
   var result_520097549 = null;
 
-  var F = {procname: "parse.returnItemPlaceholder", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.returnItemPlaceholder", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
     F.line = 759;
     F.filename = "parse.nim";
@@ -1721,7 +1721,7 @@ function returnItemPlaceholder__parse_u311(parser_p0, node_p1) {
 function returnSeqPlaceholder__parse_u314(parser_p0, nodes_p1) {
   var result_520097554 = null;
 
-  var F = {procname: "parse.returnSeqPlaceholder", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.returnSeqPlaceholder", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
     F.line = 763;
     F.filename = "parse.nim";
@@ -1738,7 +1738,7 @@ function newStringRef__parse_u5773(s_p0) {
   var result_520099471 = null;
   var result_520099471_Idx = 0;
 
-  var F = {procname: "parse.newStringRef", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.newStringRef", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
     F.line = 1337;
     F.filename = "parse.nim";
@@ -1756,7 +1756,7 @@ function type__parse_u979(parser_p0) {
 
   var result_520094677 = [];
 
-  var F = {procname: "parse.type", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.type", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
     F.line = 240;
     F.filename = "parse.nim";
@@ -1775,7 +1775,7 @@ function type__parse_u979(parser_p0) {
 }
 
 function sysFatal__stdZassertions_u45(message_p1) {
-  var F = {procname: "sysFatal.sysFatal", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/fatal.nim", line: 0};
+  var F = {procname: "sysFatal.sysFatal", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/fatal.nim", line: 0};
   framePtr = F;
     F.line = 53;
     F.filename = "fatal.nim";
@@ -1786,7 +1786,7 @@ function sysFatal__stdZassertions_u45(message_p1) {
 }
 
 function raiseAssert__stdZassertions_u43(msg_p0) {
-  var F = {procname: "assertions.raiseAssert", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/std/assertions.nim", line: 0};
+  var F = {procname: "assertions.raiseAssert", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/std/assertions.nim", line: 0};
   framePtr = F;
     F.line = 36;
     F.filename = "assertions.nim";
@@ -1797,7 +1797,7 @@ function raiseAssert__stdZassertions_u43(msg_p0) {
 }
 
 function failedAssertImpl__stdZassertions_u85(msg_p0) {
-  var F = {procname: "assertions.failedAssertImpl", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/std/assertions.nim", line: 0};
+  var F = {procname: "assertions.failedAssertImpl", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/std/assertions.nim", line: 0};
   framePtr = F;
     F.line = 41;
     F.filename = "assertions.nim";
@@ -1810,7 +1810,7 @@ function failedAssertImpl__stdZassertions_u85(msg_p0) {
 function HEX5BHEX5D__pureZstrutils_u1307(s_p0, x_p1) {
   var result_1006634272 = [];
 
-  var F = {procname: "[].[]", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/indices.nim", line: 0};
+  var F = {procname: "[].[]", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/indices.nim", line: 0};
   framePtr = F;
     F.line = 83;
     F.filename = "indices.nim";
@@ -1849,7 +1849,7 @@ function HEX5BHEX5D__pureZstrutils_u1307(s_p0, x_p1) {
 function HEX2EHEX2E__stdZenumutils_u105(a_p0, b_p1) {
   var result_1040187504 = ({a: 0, b: 0});
 
-  var F = {procname: ".....", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system.nim", line: 0};
+  var F = {procname: ".....", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system.nim", line: 0};
   framePtr = F;
     F.line = 420;
     F.filename = "system.nim";
@@ -1863,7 +1863,7 @@ function HEX2EHEX2E__stdZenumutils_u105(a_p0, b_p1) {
 function HEX5BHEX5D__pureZstrutils_u1279(s_p0, x_p1) {
   var result_1006634244 = [];
 
-  var F = {procname: "[].[]", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/indices.nim", line: 0};
+  var F = {procname: "[].[]", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/indices.nim", line: 0};
   framePtr = F;
     F.line = 83;
     F.filename = "indices.nim";
@@ -1902,7 +1902,7 @@ function HEX5BHEX5D__pureZstrutils_u1279(s_p0, x_p1) {
 function HEX2EHEX2E__stdZstrbasics_u48(a_p0, b_p1) {
   var result_973078581 = ({a: 0, b: 0});
 
-  var F = {procname: ".....", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system.nim", line: 0};
+  var F = {procname: ".....", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system.nim", line: 0};
   framePtr = F;
     F.line = 420;
     F.filename = "system.nim";
@@ -1914,7 +1914,7 @@ function HEX2EHEX2E__stdZstrbasics_u48(a_p0, b_p1) {
 }
 
 function assignSymbol__parse_u997(parser_p0, symbol_p1) {
-  var F = {procname: "parse.assignSymbol", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.assignSymbol", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
     F.line = 252;
     F.filename = "parse.nim";
@@ -1944,7 +1944,7 @@ function assignSymbol__parse_u997(parser_p0, symbol_p1) {
             i_520104399 += 1;
             if (!(((parser_p0.subParsers).length == L_520104400))) {
             F.line = 254;
-            failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
+            failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
             }
             
           }
@@ -1958,7 +1958,7 @@ function assignSymbol__parse_u997(parser_p0, symbol_p1) {
 function assignName__parse_u1057(name_p0, parser_p1) {
   var result_520094756 = null;
 
-  var F = {procname: "parse.assignName", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.assignName", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     if (eqStrings(type__parse_u979(parser_p1), [58,84,114,97,99,101])) {
@@ -1972,12 +1972,12 @@ function assignName__parse_u1057(name_p0, parser_p1) {
     
     if (!(eqStrings(parser_p1.pname, []))) {
     F.line = 260;
-    failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim(260, 3) `parser.pname == \"\"` "));
+    failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim(260, 3) `parser.pname == \"\"` "));
     }
     
     if (!(!(eqStrings(name_p0, [])))) {
     F.line = 261;
-    failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim(261, 3) `name != \"\"` "));
+    failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim(261, 3) `name != \"\"` "));
     }
     
     if ((name_p0[chckIndx(0, 0, (name_p0).length - 1)] == 58)) {
@@ -1995,7 +1995,7 @@ function assignName__parse_u1057(name_p0, parser_p1) {
     else {
       if (!(eqStrings(HEX5BHEX5D__pureZstrutils_u1279(name_p0, HEX2EHEX2E__stdZstrbasics_u48(0, 3)), [72,73,68,69]))) {
       F.line = 269;
-      failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim(269, 7) `name[0 .. 3] == \"HIDE\"` "));
+      failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim(269, 7) `name[0 .. 3] == \"HIDE\"` "));
       }
       
       F.line = 270;
@@ -2034,13 +2034,13 @@ function assignName__parse_u1057(name_p0, parser_p1) {
 function grammar__parse_u1419(parser_p0) {
   var result_520095117 = null;
 
-  var F = {procname: "parse.grammar", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.grammar", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
     F.line = 416;
     F.filename = "parse.nim";
     if (!(!((parser_p0.grammarVar == GrammarPlaceholder_520094198)))) {
     F.line = 416;
-    failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim(416, 3) `parser.grammarVar != GrammarPlaceholder` "));
+    failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim(416, 3) `parser.grammarVar != GrammarPlaceholder` "));
     }
     
     result_520095117 = parser_p0.grammarVar;
@@ -2053,7 +2053,7 @@ function grammar__parse_u1419(parser_p0) {
 function HEX5BHEX5D__parse_u1965(s_p0, i_p1) {
   var result_520095665 = null;
 
-  var F = {procname: "[].[]", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/indices.nim", line: 0};
+  var F = {procname: "[].[]", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/indices.nim", line: 0};
   framePtr = F;
     F.line = 30;
     F.filename = "indices.nim";
@@ -2067,7 +2067,7 @@ function HEX5BHEX5D__parse_u1965(s_p0, i_p1) {
 function pop__parse_u1990(s_p0, s_p0_Idx) {
   var result_520095689 = {Field0: 0, Field1: null};
 
-  var F = {procname: "pop.pop", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system.nim", line: 0};
+  var F = {procname: "pop.pop", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system.nim", line: 0};
   framePtr = F;
     F.line = 1773;
     F.filename = "system.nim";
@@ -2084,7 +2084,7 @@ function pop__parse_u1990(s_p0, s_p0_Idx) {
 }
 
 function rollback__parse_u1957(grammar_p0, location_p1) {
-  var F = {procname: "parse.rollback", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.rollback", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
     F.line = 595;
     F.filename = "parse.nim";
@@ -2122,7 +2122,7 @@ function hasJsBigInt__stdZprivateZjsutils_u43() {
 function hiXorLoJs__pureZhashes_u85(a_p0, b_p1) {
   var result_855638104 = 0n;
 
-  var F = {procname: "hashes.hiXorLoJs", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/hashes.nim", line: 0};
+  var F = {procname: "hashes.hiXorLoJs", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/hashes.nim", line: 0};
   framePtr = F;
     F.line = 140;
     F.filename = "hashes.nim";
@@ -2140,7 +2140,7 @@ function hiXorLoJs__pureZhashes_u85(a_p0, b_p1) {
 function hashWangYi1__pureZhashes_u193(x_p0) {
   var result_855638212 = 0;
 
-  var F = {procname: "hashWangYi1.hashWangYi1", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/hashes.nim", line: 0};
+  var F = {procname: "hashWangYi1.hashWangYi1", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/hashes.nim", line: 0};
   framePtr = F;
     if (hasJsBigInt__stdZprivateZjsutils_u43()) {
     F.line = 182;
@@ -2169,7 +2169,7 @@ function hashWangYi1__pureZhashes_u193(x_p0) {
 function hash__pureZhashes_u185(x_p0) {
   var result_855638204 = 0;
 
-  var F = {procname: "hash.hash", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/hashes.nim", line: 0};
+  var F = {procname: "hash.hash", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/hashes.nim", line: 0};
   framePtr = F;
     F.line = 214;
     F.filename = "hashes.nim";
@@ -2183,7 +2183,7 @@ function hash__pureZhashes_u185(x_p0) {
 function isFilled__pureZcollectionsZtables_u31(hcode_p0) {
   var result_1107296289 = false;
 
-  var F = {procname: "tables.isFilled", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/collections/hashcommon.nim", line: 0};
+  var F = {procname: "tables.isFilled", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/collections/hashcommon.nim", line: 0};
   framePtr = F;
     F.line = 27;
     F.filename = "hashcommon.nim";
@@ -2197,7 +2197,7 @@ function isFilled__pureZcollectionsZtables_u31(hcode_p0) {
 function nextTry__pureZcollectionsZtables_u34(h_p0, maxHash_p1) {
   var result_1107296293 = 0;
 
-  var F = {procname: "tables.nextTry", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/collections/hashcommon.nim", line: 0};
+  var F = {procname: "tables.nextTry", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/collections/hashcommon.nim", line: 0};
   framePtr = F;
     F.line = 30;
     F.filename = "hashcommon.nim";
@@ -2211,7 +2211,7 @@ function nextTry__pureZcollectionsZtables_u34(h_p0, maxHash_p1) {
 function rawGet__parse_u2124(t_p0, key_p1, hc_p2, hc_p2_Idx) {
   var result_520095826 = 0;
 
-  var F = {procname: "rawGet.rawGet", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/collections/hashcommon.nim", line: 0};
+  var F = {procname: "rawGet.rawGet", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/collections/hashcommon.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 59;
@@ -2256,7 +2256,7 @@ function rawGet__parse_u2124(t_p0, key_p1, hc_p2, hc_p2_Idx) {
 function hasKey__parse_u2117(t_p0, key_p1) {
   var result_520095818 = false;
 
-  var F = {procname: "hasKey.hasKey", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/collections/tables.nim", line: 0};
+  var F = {procname: "hasKey.hasKey", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/collections/tables.nim", line: 0};
   framePtr = F;
     F.line = 370;
     F.filename = "tables.nim";
@@ -2272,7 +2272,7 @@ function hasKey__parse_u2117(t_p0, key_p1) {
 function contains__parse_u2096(t_p0, key_p1) {
   var result_520095797 = false;
 
-  var F = {procname: "contains.contains", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/collections/tables.nim", line: 0};
+  var F = {procname: "contains.contains", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/collections/tables.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 381;
@@ -2287,7 +2287,7 @@ function contains__parse_u2096(t_p0, key_p1) {
 }
 
 function raiseKeyError__parse_u2492(key_p0) {
-  var F = {procname: "raiseKeyError.raiseKeyError", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/collections/tables.nim", line: 0};
+  var F = {procname: "raiseKeyError.raiseKeyError", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/collections/tables.nim", line: 0};
   framePtr = F;
     F.line = 232;
     F.filename = "tables.nim";
@@ -2300,7 +2300,7 @@ function raiseKeyError__parse_u2492(key_p0) {
 function HEX5BHEX5D__parse_u2425(t_p0, key_p1) {
   var result_520096126 = null;
 
-  var F = {procname: "[].[]", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/collections/tables.nim", line: 0};
+  var F = {procname: "[].[]", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/collections/tables.nim", line: 0};
   framePtr = F;
     F.line = 240;
     F.filename = "tables.nim";
@@ -2341,7 +2341,7 @@ function getCurrentException() {
 }
 
 function formatValue__error_u88(result_p0, result_p0_Idx, value_p1) {
-  var F = {procname: "formatValue.formatValue", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/strformat.nim", line: 0};
+  var F = {procname: "formatValue.formatValue", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/strformat.nim", line: 0};
   framePtr = F;
     F.line = 501;
     F.filename = "strformat.nim";
@@ -2354,7 +2354,7 @@ function formatValue__error_u88(result_p0, result_p0_Idx, value_p1) {
 function validateUtf8__pureZunicode_u336(s_p0) {
   var result_956301650 = 0;
 
-  var F = {procname: "unicode.validateUtf8", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/unicode.nim", line: 0};
+  var F = {procname: "unicode.validateUtf8", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/unicode.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 184;
@@ -2436,7 +2436,7 @@ function validateUtf8__pureZunicode_u336(s_p0) {
 function validateUtf8__pureZunicode_u7390(s_p0) {
   var result_956308704 = 0;
 
-  var F = {procname: "unicode.validateUtf8", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/unicode.nim", line: 0};
+  var F = {procname: "unicode.validateUtf8", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/unicode.nim", line: 0};
   framePtr = F;
     F.line = 1191;
     F.filename = "unicode.nim";
@@ -2450,7 +2450,7 @@ function validateUtf8__pureZunicode_u7390(s_p0) {
 function nucruneLen(s_p0) {
   var result_956301341 = 0;
 
-  var F = {procname: "unicode.runeLen", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/unicode.nim", line: 0};
+  var F = {procname: "unicode.runeLen", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/unicode.nim", line: 0};
   framePtr = F;
     F.line = 52;
     F.filename = "unicode.nim";
@@ -2508,7 +2508,7 @@ function nucruneLen(s_p0) {
 function runeLen__pureZunicode_u7218(s_p0) {
   var result_956308532 = 0;
 
-  var F = {procname: "unicode.runeLen", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/unicode.nim", line: 0};
+  var F = {procname: "unicode.runeLen", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/unicode.nim", line: 0};
   framePtr = F;
     F.line = 1158;
     F.filename = "unicode.nim";
@@ -2522,7 +2522,7 @@ function runeLen__pureZunicode_u7218(s_p0) {
 function nsuRepeatChar(c_p0, count_p1) {
   var result_1006634083 = [];
 
-  var F = {procname: "strutils.repeat", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/strutils.nim", line: 0};
+  var F = {procname: "strutils.repeat", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/strutils.nim", line: 0};
   framePtr = F;
     F.line = 1350;
     F.filename = "strutils.nim";
@@ -2571,7 +2571,7 @@ function alignString__pureZstrformat_u20(s_p0, minimumWidth_p1, align_p2, fill_p
 
   var result_922746905 = [];
 
-  var F = {procname: "strformat.alignString", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/strformat.nim", line: 0};
+  var F = {procname: "strformat.alignString", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/strformat.nim", line: 0};
   framePtr = F;
     if ((minimumWidth_p1 == 0)) {
     F.line = 344;
@@ -2620,7 +2620,7 @@ function alignString__pureZstrformat_u20(s_p0, minimumWidth_p1, align_p2, fill_p
 }
 
 function formatValue__runerange_u22(result_p0, result_p0_Idx, value_p1) {
-  var F = {procname: "formatValue.formatValue", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/strformat.nim", line: 0};
+  var F = {procname: "formatValue.formatValue", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/strformat.nim", line: 0};
   framePtr = F;
     F.line = 602;
     F.filename = "strformat.nim";
@@ -2633,7 +2633,7 @@ function formatValue__runerange_u22(result_p0, result_p0_Idx, value_p1) {
 }
 
 function addInt__stdZprivateZdigitsutils_u192(result_p0, result_p0_Idx, x_p1) {
-  var F = {procname: "digitsutils.addInt", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/std/private/digitsutils.nim", line: 0};
+  var F = {procname: "digitsutils.addInt", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/std/private/digitsutils.nim", line: 0};
   framePtr = F;
     F.line = 90;
     F.filename = "digitsutils.nim";
@@ -2646,7 +2646,7 @@ function addInt__stdZprivateZdigitsutils_u192(result_p0, result_p0_Idx, x_p1) {
 function HEX24__systemZdollars_u14(x_p0) {
   var result_369098768 = [[]];
 
-  var F = {procname: "dollars.$", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/dollars.nim", line: 0};
+  var F = {procname: "dollars.$", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/dollars.nim", line: 0};
   framePtr = F;
     F.line = 26;
     F.filename = "dollars.nim";
@@ -2658,7 +2658,7 @@ function HEX24__systemZdollars_u14(x_p0) {
 }
 
 function formatValue__error_u100(result_p0, result_p0_Idx, value_p1) {
-  var F = {procname: "formatValue.formatValue", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/strformat.nim", line: 0};
+  var F = {procname: "formatValue.formatValue", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/strformat.nim", line: 0};
   framePtr = F;
     F.line = 501;
     F.filename = "strformat.nim";
@@ -2673,7 +2673,7 @@ function HEX24__error_u79(error_p0) {
 
   var result_1241514065 = [];
 
-  var F = {procname: "error.$", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/error.nim", line: 0};
+  var F = {procname: "error.$", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/error.nim", line: 0};
   framePtr = F;
     F.line = 61;
     F.filename = "error.nim";
@@ -2746,7 +2746,7 @@ function HEX24__error_u79(error_p0) {
 }
 
 function formatValue__parse_u1238(result_p0, result_p0_Idx, value_p1) {
-  var F = {procname: "formatValue.formatValue", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/strformat.nim", line: 0};
+  var F = {procname: "formatValue.formatValue", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/strformat.nim", line: 0};
   framePtr = F;
     F.line = 635;
     F.filename = "strformat.nim";
@@ -2757,7 +2757,7 @@ function formatValue__parse_u1238(result_p0, result_p0_Idx, value_p1) {
 }
 
 function formatValue__parse_u1249(result_p0, result_p0_Idx, value_p1) {
-  var F = {procname: "formatValue.formatValue", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/strformat.nim", line: 0};
+  var F = {procname: "formatValue.formatValue", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/strformat.nim", line: 0};
   framePtr = F;
     F.line = 635;
     F.filename = "strformat.nim";
@@ -2770,7 +2770,7 @@ function formatValue__parse_u1249(result_p0, result_p0_Idx, value_p1) {
 function HEX24__parse_u1218(pe_p0) {
   var result_520094916 = [];
 
-  var F = {procname: "parse.$", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.$", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
     F.line = 301;
     F.filename = "parse.nim";
@@ -2812,7 +2812,7 @@ function cut__strslice_u155(str_p0, start_p1, stop_p2) {
 
   var result_1140850847 = {Field0: [null, 0], Field1: 0, Field2: 0};
 
-  var F = {procname: "strslice.cut", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
+  var F = {procname: "strslice.cut", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
   framePtr = F;
     F.line = 99;
     F.filename = "strslice.nim";
@@ -2833,7 +2833,7 @@ function cut__strslice_u155(str_p0, start_p1, stop_p2) {
 function index__strslice_u151(str_p0, i_p1) {
   var result_1140850842 = 0;
 
-  var F = {procname: "strslice.index", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
+  var F = {procname: "strslice.index", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
   framePtr = F;
     F.line = 96;
     F.filename = "strslice.nim";
@@ -2847,7 +2847,7 @@ function index__strslice_u151(str_p0, i_p1) {
 function cut__strslice_u160(str_p0, slc_p1) {
   var result_1140850853 = {Field0: [null, 0], Field1: 0, Field2: 0};
 
-  var F = {procname: "strslice.cut", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
+  var F = {procname: "strslice.cut", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
   framePtr = F;
     F.line = 105;
     F.filename = "strslice.nim";
@@ -2861,7 +2861,7 @@ function cut__strslice_u160(str_p0, slc_p1) {
 function HEX2EHEX2E__strslice_u66(a_p0, b_p1) {
   var result_1140850761 = ({a: 0, b: 0});
 
-  var F = {procname: ".....", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system.nim", line: 0};
+  var F = {procname: ".....", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system.nim", line: 0};
   framePtr = F;
     F.line = 420;
     F.filename = "system.nim";
@@ -2875,7 +2875,7 @@ function HEX2EHEX2E__strslice_u66(a_p0, b_p1) {
 function high__strslice_u141(str_p0) {
   var result_1140850831 = 0;
 
-  var F = {procname: "strslice.high", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
+  var F = {procname: "strslice.high", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
   framePtr = F;
     F.line = 87;
     F.filename = "strslice.nim";
@@ -2889,7 +2889,7 @@ function high__strslice_u141(str_p0) {
 function len__strslice_u144(str_p0) {
   var result_1140850834 = 0;
 
-  var F = {procname: "strslice.len", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
+  var F = {procname: "strslice.len", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
   framePtr = F;
     F.line = 91;
     F.filename = "strslice.nim";
@@ -2903,7 +2903,7 @@ function len__strslice_u144(str_p0) {
 function HEX3DHEX3D__parse_u116(a_p0, b_p1) {
   var result_520093815 = false;
 
-  var F = {procname: "parse.==", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.==", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
     F.line = 35;
     F.filename = "parse.nim";
@@ -2917,7 +2917,7 @@ function HEX3DHEX3D__parse_u116(a_p0, b_p1) {
 function reprEnum(e_p0, typ_p1) {
   var result_33557613 = [];
 
-  var F = {procname: "system.reprEnum", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/reprjs.nim", line: 0};
+  var F = {procname: "system.reprEnum", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/reprjs.nim", line: 0};
   framePtr = F;
     F.line = 30;
     F.filename = "reprjs.nim";
@@ -2944,13 +2944,13 @@ function reprEnum(e_p0, typ_p1) {
 function init__error_u24(error_p0, message_p1, pos_p2, code_p3, line_p4, column_p5, length_p6, related_p7, origPos_p8, origDoc_p9) {
   var result_1241514023 = null;
 
-  var F = {procname: "error.init", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/error.nim", line: 0};
+  var F = {procname: "error.init", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/error.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     if (!((0 <= pos_p2))) {
     F.line = 43;
     F.filename = "error.nim";
-    failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/error.nim(43, 5) `pos >= 0` "));
+    failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/error.nim(43, 5) `pos >= 0` "));
     }
     
     F.line = 44;
@@ -2984,7 +2984,7 @@ function init__error_u24(error_p0, message_p1, pos_p2, code_p3, line_p4, column_
 function new__parse_u1537() {
   var result_520095236 = null;
 
-  var F = {procname: "new.new", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system.nim", line: 0};
+  var F = {procname: "new.new", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 820;
@@ -3006,7 +3006,7 @@ function str__strslice_u132(str_p0) {
   var result_1140850822 = null;
   var result_1140850822_Idx = 0;
 
-  var F = {procname: "strslice.str", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
+  var F = {procname: "strslice.str", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
   framePtr = F;
     F.line = 80;
     F.filename = "strslice.nim";
@@ -3022,13 +3022,13 @@ function find__strslice_u337(slice_p0, pattern_p1, start_p2, size_p3) {
 
   var result_1140851032 = {Field0: 0, Field1: 0};
 
-  var F = {procname: "strslice.find", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
+  var F = {procname: "strslice.find", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     if (!(((0 <= start_p2) && (start_p2 <= addInt(subInt(slice_p0.Field2, slice_p0.Field1), 1))))) {
     F.line = 253;
     F.filename = "strslice.nim";
-    failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim(253, 5) `start >= 0 and start <= slice.stop - slice.start + 1` "));
+    failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim(253, 5) `start >= 0 and start <= slice.stop - slice.start + 1` "));
     }
     
     F.line = 254;
@@ -3071,7 +3071,7 @@ function find__strslice_u337(slice_p0, pattern_p1, start_p2, size_p3) {
 function nextComment__parse_u1475() {
   var result_520095174 = {Field0: 0, Field1: 0};
 
-  var F = {procname: "reentry_point.nextComment", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "reentry_point.nextComment", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     if ((this.commentPointer1 < this.upperLimit2)) {
@@ -3119,7 +3119,7 @@ function nsuFindChar(s_p0, sub_p1, start_p2, last_p3) {
 
   var result_1006634663 = 0;
 
-  var F = {procname: "strutils.find", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/strutils.nim", line: 0};
+  var F = {procname: "strutils.find", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/strutils.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 1968;
@@ -3177,7 +3177,7 @@ function nsuFindStrA(a_p0, s_p1, sub_p2, start_p3, last_p4) {
 
   var result_1006634642 = 0;
 
-  var F = {procname: "strutils.find", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/strutils.nim", line: 0};
+  var F = {procname: "strutils.find", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/strutils.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 1928;
@@ -3234,7 +3234,7 @@ function nsuFindStrA(a_p0, s_p1, sub_p2, start_p3, last_p4) {
 }
 
 function fill__pureZstrutils_u1622(a_p0, value_p1) {
-  var F = {procname: "fill.fill", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/algorithm.nim", line: 0};
+  var F = {procname: "fill.fill", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/algorithm.nim", line: 0};
   framePtr = F;
     F.line = 72;
     F.filename = "algorithm.nim";
@@ -3255,7 +3255,7 @@ function fill__pureZstrutils_u1622(a_p0, value_p1) {
 }
 
 function nsuInitSkipTable(a_p0, sub_p1) {
-  var F = {procname: "strutils.initSkipTable", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/strutils.nim", line: 0};
+  var F = {procname: "strutils.initSkipTable", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/strutils.nim", line: 0};
   framePtr = F;
     F.line = 1901;
     F.filename = "strutils.nim";
@@ -3297,7 +3297,7 @@ function nsuInitSkipTable(a_p0, sub_p1) {
 function nsuInitNewSkipTable(sub_p0) {
   var result_1006634635 = [new Int32Array(256)];
 
-  var F = {procname: "strutils.initSkipTable", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/strutils.nim", line: 0};
+  var F = {procname: "strutils.initSkipTable", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/strutils.nim", line: 0};
   framePtr = F;
     F.line = 1914;
     F.filename = "strutils.nim";
@@ -3311,7 +3311,7 @@ function nsuInitNewSkipTable(sub_p0) {
 function nsuFindStr(s_p0, sub_p1, start_p2, last_p3) {
   var result_1006634700 = 0;
 
-  var F = {procname: "strutils.find", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/strutils.nim", line: 0};
+  var F = {procname: "strutils.find", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/strutils.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     if ((subInt((s_p0).length, start_p2) < (sub_p1).length)) {
@@ -3346,7 +3346,7 @@ function searchFunc__parse_u1485(start_p0) {
 
   var result_520095185 = {Field0: 0, Field1: 0};
 
-  var F = {procname: "entry_point.searchFunc", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "entry_point.searchFunc", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
     F.line = 476;
     F.filename = "parse.nim";
@@ -3396,7 +3396,7 @@ function entry_point__parse_u1482(m_p0) {
 
   var result_520095180 = 0;
 
-  var F = {procname: "reentry_point.entry_point", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "reentry_point.entry_point", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 490;
@@ -3481,7 +3481,7 @@ function entry_point__parse_u1482(m_p0) {
 function toStringSlice__nodetree_u766(str_p0) {
   var result_1207960321 = {Field0: [null, 0], Field1: 0, Field2: 0};
 
-  var F = {procname: "toStringSlice.toStringSlice", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
+  var F = {procname: "toStringSlice.toStringSlice", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
   framePtr = F;
     F.line = 71;
     F.filename = "strslice.nim";
@@ -3495,7 +3495,7 @@ function toStringSlice__nodetree_u766(str_p0) {
 function init__parse_u1597(node_p0, name_p1, data_p2, attributes_p3) {
   var result_520095300 = null;
 
-  var F = {procname: "init.init", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
+  var F = {procname: "init.init", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 30;
@@ -3527,7 +3527,7 @@ function reentry_point__parse_u1460(document_p0, location_p1, rules_p2, commentR
 
   var result_520095164 = {Field0: null, Field1: 0};
 
-  var F = {procname: "parse.reentry_point", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.reentry_point", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 455;
@@ -3652,7 +3652,7 @@ function reentry_point__parse_u1460(document_p0, location_p1, rules_p2, commentR
             i_520104586 += 1;
             if (!(((rules_p2).length == L_520104587))) {
             F.line = 254;
-            failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
+            failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
             }
             
           }
@@ -3688,7 +3688,7 @@ function reentry_point__parse_u1460(document_p0, location_p1, rules_p2, commentR
 function HEX3DHEX3D__parse_u1742(str_p0, cmp_p1) {
   var result_520095442 = false;
 
-  var F = {procname: "==.==", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
+  var F = {procname: "==.==", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     if (!((len__strslice_u144(str_p0) == len__strslice_u144(cmp_p1)))) {
@@ -3735,7 +3735,7 @@ function HEX3DHEX3D__parse_u1742(str_p0, cmp_p1) {
 }
 
 function textHEX3D__parse_u1731(node_p0, text_p1) {
-  var F = {procname: "text=.text=", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
+  var F = {procname: "text=.text=", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
   framePtr = F;
     if ((0 < (node_p0.childrenSeq).length)) {
     F.line = 90;
@@ -3760,7 +3760,7 @@ function textHEX3D__parse_u1731(node_p0, text_p1) {
 function last__strslice_u138(str_p0) {
   var result_1140850828 = 0;
 
-  var F = {procname: "strslice.last", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
+  var F = {procname: "strslice.last", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
   framePtr = F;
     F.line = 84;
     F.filename = "strslice.nim";
@@ -3774,7 +3774,7 @@ function last__strslice_u138(str_p0) {
 function first__strslice_u135(str_p0) {
   var result_1140850825 = 0;
 
-  var F = {procname: "strslice.first", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
+  var F = {procname: "strslice.first", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
   framePtr = F;
     F.line = 82;
     F.filename = "strslice.nim";
@@ -3788,7 +3788,7 @@ function first__strslice_u135(str_p0) {
 function runeLenAt__pureZunicode_u94(s_p0, i_p1) {
   var result_956301409 = 0;
 
-  var F = {procname: "unicode.runeLenAt", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/unicode.nim", line: 0};
+  var F = {procname: "unicode.runeLenAt", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/unicode.nim", line: 0};
   framePtr = F;
     if ((s_p0[chckIndx(i_p1, 0, (s_p0).length - 1)] <= 127)) {
     F.line = 74;
@@ -3834,7 +3834,7 @@ function runeLenAt__pureZunicode_u94(s_p0, i_p1) {
 function runeLenAt__pureZunicode_u7221(s_p0, i_p1) {
   var result_956308536 = 0;
 
-  var F = {procname: "unicode.runeLenAt", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/unicode.nim", line: 0};
+  var F = {procname: "unicode.runeLenAt", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/unicode.nim", line: 0};
   framePtr = F;
     F.line = 1166;
     F.filename = "unicode.nim";
@@ -3850,7 +3850,7 @@ function runeLen__nodetree_u560(node_p0) {
 
   var result_1207960114 = 0;
 
-  var F = {procname: "nodetree.runeLen", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
+  var F = {procname: "nodetree.runeLen", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
   framePtr = F;
     F.line = 138;
     F.filename = "nodetree.nim";
@@ -3894,7 +3894,7 @@ function runeLen__nodetree_u560(node_p0) {
               i_520104620 += 1;
               if (!(((node_p0.childrenSeq).length == L_520104621))) {
               F.line = 254;
-              failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
+              failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
               }
               
             }
@@ -3911,13 +3911,13 @@ function runeLen__nodetree_u560(node_p0) {
 function assignSourcePos__nodetree_u628(node_p0, sourcePos_p1) {
   var result_1207960183 = 0;
 
-  var F = {procname: "nodetree.assignSourcePos", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
+  var F = {procname: "nodetree.assignSourcePos", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     if (!((0 <= sourcePos_p1))) {
     F.line = 157;
     F.filename = "nodetree.nim";
-    failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim(157, 3) `sourcePos >= 0` "));
+    failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim(157, 3) `sourcePos >= 0` "));
     }
     
     if (((0 <= node_p0.sourcePos) && !((node_p0.sourcePos == sourcePos_p1)))) {
@@ -3967,7 +3967,7 @@ function assignSourcePos__nodetree_u628(node_p0, sourcePos_p1) {
               i_520104615 += 1;
               if (!(((node_p0.childrenSeq).length == L_520104616))) {
               F.line = 254;
-              failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
+              failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
               }
               
             }
@@ -3989,7 +3989,7 @@ function assignSourcePos__nodetree_u628(node_p0, sourcePos_p1) {
 function init__nodetree_u817(node_p0, name_p1, name_p1_Idx, data_p2, attributes_p3) {
   var result_1207960376 = null;
 
-  var F = {procname: "init.init", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
+  var F = {procname: "init.init", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 28;
@@ -4017,7 +4017,7 @@ function HEX5BHEX5D__parse_u1795(s_p0, i_p1) {
   var result_520095495 = null;
   var result_520095495_Idx = 0;
 
-  var F = {procname: "[].[]", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/indices.nim", line: 0};
+  var F = {procname: "[].[]", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/indices.nim", line: 0};
   framePtr = F;
     F.line = 30;
     F.filename = "indices.nim";
@@ -4033,18 +4033,18 @@ function handle_error__parse_u1668(parser_p0, pe_p1, location_p2) {
 
   var result_520095368 = {Field0: null, Field1: 0};
 
-  var F = {procname: "parse.handle_error", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.handle_error", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     if (!((0 <= pe_p1.node_orig_len))) {
     F.line = 531;
     F.filename = "parse.nim";
-    failedAssertImpl__stdZassertions_u85((makeNimstrLit("/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim(531, 3) `pe.node_orig_len >= 0` ")).concat(HEX24__parse_u1218(pe_p1)));
+    failedAssertImpl__stdZassertions_u85((makeNimstrLit("/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim(531, 3) `pe.node_orig_len >= 0` ")).concat(HEX24__parse_u1218(pe_p1)));
     }
     
     if (!((0 <= pe_p1.location))) {
     F.line = 532;
-    failedAssertImpl__stdZassertions_u85((makeNimstrLit("/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim(532, 3) `pe.location >= 0` ")).concat(HEX24__parse_u1218(pe_p1)));
+    failedAssertImpl__stdZassertions_u85((makeNimstrLit("/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim(532, 3) `pe.location >= 0` ")).concat(HEX24__parse_u1218(pe_p1)));
     }
     
     F.line = 534;
@@ -4102,7 +4102,7 @@ function handle_error__parse_u1668(parser_p0, pe_p1, location_p2) {
             i_520104406 += 1;
             if (!(((pe_p1.node.childrenSeq).length == L_520104407))) {
             F.line = 254;
-            failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
+            failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
             }
             
           }
@@ -4139,7 +4139,7 @@ function handle_error__parse_u1668(parser_p0, pe_p1, location_p2) {
         if (true) {
         F.line = 564;
         F.filename = "parse.nim";
-        failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim(564, 9) `false` Unrechable, theoretically..."));
+        failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim(564, 9) `false` Unrechable, theoretically..."));
         }
         
       }
@@ -4225,7 +4225,7 @@ function nextPowerOfTwo__pureZmath_u274(x_p0) {
 function slotsNeeded__pureZcollectionsZtables_u42(count_p0) {
   var result_1107296300 = 0;
 
-  var F = {procname: "tables.slotsNeeded", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/collections/hashcommon.nim", line: 0};
+  var F = {procname: "tables.slotsNeeded", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/collections/hashcommon.nim", line: 0};
   framePtr = F;
     F.line = 39;
     F.filename = "hashcommon.nim";
@@ -4239,12 +4239,12 @@ function slotsNeeded__pureZcollectionsZtables_u42(count_p0) {
 function mustRehash__parse_u2798(t_p0) {
   var result_520096497 = false;
 
-  var F = {procname: "mustRehash.mustRehash", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/collections/hashcommon.nim", line: 0};
+  var F = {procname: "mustRehash.mustRehash", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/collections/hashcommon.nim", line: 0};
   framePtr = F;
     if (!((t_p0.counter < (t_p0.data).length))) {
     F.line = 34;
     F.filename = "hashcommon.nim";
-    failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/collections/hashcommon.nim(34, 9) `\x0At.counter < t.dataLen` "));
+    failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/collections/hashcommon.nim(34, 9) `\x0At.counter < t.dataLen` "));
     }
     
     F.line = 35;
@@ -4256,7 +4256,7 @@ function mustRehash__parse_u2798(t_p0) {
 }
 
 function rawInsert__parse_u3275(t_p0, data_p1, data_p1_Idx, key_p2, val_p3, hc_p4, h_p5) {
-  var F = {procname: "rawInsert.rawInsert", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/collections/tableimpl.nim", line: 0};
+  var F = {procname: "rawInsert.rawInsert", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/collections/tableimpl.nim", line: 0};
   framePtr = F;
     F.line = 25;
     F.filename = "tableimpl.nim";
@@ -4271,7 +4271,7 @@ function rawInsert__parse_u3275(t_p0, data_p1, data_p1_Idx, key_p2, val_p3, hc_p
 }
 
 function enlarge__parse_u2974(t_p0) {
-  var F = {procname: "enlarge.enlarge", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/collections/tables.nim", line: 0};
+  var F = {procname: "enlarge.enlarge", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/collections/tables.nim", line: 0};
   framePtr = F;
     F.line = 247;
     F.filename = "tables.nim";
@@ -4334,7 +4334,7 @@ function enlarge__parse_u2974(t_p0) {
 function rawGetKnownHC__parse_u3444(t_p0, key_p1, hc_p2) {
   var result_520097146 = 0;
 
-  var F = {procname: "rawGetKnownHC.rawGetKnownHC", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/collections/hashcommon.nim", line: 0};
+  var F = {procname: "rawGetKnownHC.rawGetKnownHC", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/collections/hashcommon.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     if (((t_p0.data).length == 0)) {
@@ -4370,7 +4370,7 @@ function rawGetKnownHC__parse_u3444(t_p0, key_p1, hc_p2) {
 }
 
 function HEX5BHEX5DHEX3D__parse_u2607(t_p0, key_p1, val_p2) {
-  var F = {procname: "[]=.[]=", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/collections/tables.nim", line: 0};
+  var F = {procname: "[]=.[]=", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/collections/tables.nim", line: 0};
   framePtr = F;
     if (((t_p0.data).length == 0)) {
     F.line = 182;
@@ -4421,7 +4421,7 @@ function HEX5BHEX5DHEX3D__parse_u2607(t_p0, key_p1, val_p2) {
 function memoizationWrapper__parse_u503(parser_p0, location_p1) {
   var result_520095741 = {Field0: null, Field1: 0};
 
-  var F = {procname: "parse.memoizationWrapper", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.memoizationWrapper", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 605;
@@ -4500,7 +4500,7 @@ function memoizationWrapper__parse_u503(parser_p0, location_p1) {
 function initTable__parse_u896(initialSize_p0) {
   var result_520094596 = ({data: [], counter: 0});
 
-  var F = {procname: "initTable.initTable", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/collections/tables.nim", line: 0};
+  var F = {procname: "initTable.initTable", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/collections/tables.nim", line: 0};
   framePtr = F;
     F.line = 281;
     F.filename = "tables.nim";
@@ -4520,13 +4520,13 @@ function initTable__parse_u896(initialSize_p0) {
 function init__parse_u872(parser_p0, ptype_p1) {
   var result_520094571 = null;
 
-  var F = {procname: "parse.init", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.init", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     if (!((!(eqStrings(ptype_p1, [])) && (ptype_p1[chckIndx(0, 0, (ptype_p1).length - 1)] == 58)))) {
     F.line = 219;
     F.filename = "parse.nim";
-    failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim(219, 3) `ptype != \"\" and ptype[0] == \':\'` "));
+    failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim(219, 3) `ptype != \"\" and ptype[0] == \':\'` "));
     }
     
     F.line = 220;
@@ -4564,13 +4564,13 @@ function init__parse_u872(parser_p0, ptype_p1) {
 function init__parse_u4606(textParser_p0, text_p1) {
   var result_520098305 = null;
 
-  var F = {procname: "parse.init", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.init", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     if (!(((text_p1).length <= 2147483647))) {
     F.line = 1048;
     F.filename = "parse.nim";
-    failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim(1048, 3) `text.len <= MaxTextLen` "));
+    failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim(1048, 3) `text.len <= MaxTextLen` "));
     }
     
     F.line = 1049;
@@ -4596,7 +4596,7 @@ function init__parse_u4606(textParser_p0, text_p1) {
 function new__parse_u10397() {
   var result_520104096 = null;
 
-  var F = {procname: "new.new", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system.nim", line: 0};
+  var F = {procname: "new.new", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 820;
@@ -4619,7 +4619,7 @@ function name__parse_u986(parser_p0) {
 
   var result_520094684 = [];
 
-  var F = {procname: "parse.name", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.name", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
     F.line = 246;
     F.filename = "parse.nim";
@@ -4640,7 +4640,7 @@ function name__parse_u986(parser_p0) {
 function init__nodetree_u755(node_p0, name_p1, name_p1_Idx, data_p2, attributes_p3) {
   var result_1207960314 = null;
 
-  var F = {procname: "init.init", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
+  var F = {procname: "init.init", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 28;
@@ -4667,7 +4667,7 @@ function clone__nodetree_u867(node_p0, newName_p1, newName_p1_Idx) {
 
   var result_1207960422 = null;
 
-  var F = {procname: "nodetree.clone", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
+  var F = {procname: "nodetree.clone", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
   framePtr = F;
     F.line = 194;
     F.filename = "nodetree.nim";
@@ -4688,7 +4688,7 @@ function clone__nodetree_u867(node_p0, newName_p1, newName_p1_Idx) {
 function init__parse_u3728(node_p0, name_p1, name_p1_Idx, data_p2, attributes_p3) {
   var result_520097431 = null;
 
-  var F = {procname: "init.init", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
+  var F = {procname: "init.init", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 28;
@@ -4720,7 +4720,7 @@ function init__parse_u3728(node_p0, name_p1, name_p1_Idx, data_p2, attributes_p3
 function init__parse_u3754(node_p0, name_p1, name_p1_Idx, data_p2, attributes_p3) {
   var result_520097457 = null;
 
-  var F = {procname: "init.init", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
+  var F = {procname: "init.init", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 28;
@@ -4745,7 +4745,7 @@ function init__parse_u3754(node_p0, name_p1, name_p1_Idx, data_p2, attributes_p3
 function returnItemFlatten__parse_u305(parser_p0, node_p1) {
   var result_520097409 = null;
 
-  var F = {procname: "parse.returnItemFlatten", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.returnItemFlatten", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     if (!((node_p1 == null))) {
@@ -4792,7 +4792,7 @@ function returnItemFlatten__parse_u305(parser_p0, node_p1) {
 function returnSeqFlatten__parse_u308(parser_p0, nodes_p1) {
   var result_520097467 = null;
 
-  var F = {procname: "parse.returnSeqFlatten", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.returnSeqFlatten", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     if ((parser_p0.flags[9] != undefined)) {
@@ -4847,7 +4847,7 @@ function returnSeqFlatten__parse_u308(parser_p0, nodes_p1) {
                     i_520104750 += 1;
                     if (!(((child_520097493.childrenSeq).length == L_520104751))) {
                     F.line = 254;
-                    failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
+                    failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
                     }
                     
                   }
@@ -4866,7 +4866,7 @@ function returnSeqFlatten__parse_u308(parser_p0, nodes_p1) {
             i_520104753 += 1;
             if (!(((nodes_p1).length == L_520104754))) {
             F.line = 254;
-            failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
+            failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
             }
             
           }
@@ -4913,7 +4913,7 @@ function descendants__parse_u1358(parser_p0, selector_p1) {
 
   var result_520095057 = null;
 
-  var F = {procname: "parse.descendants", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.descendants", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 343;
@@ -4924,7 +4924,7 @@ function descendants__parse_u1358(parser_p0, selector_p1) {
           F.line = 343;
           if (          this.HEX3Astate == 0          ){            if (!((!((parser_p0.flags[6] != undefined)) || (0 < (parser_p0.subParsers).length)))) {
             F.line = 344;
-            failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim(344, 5) `isForward notin parser.flags or parser.subParsers.len > 0` "));
+            failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim(344, 5) `isForward notin parser.flags or parser.subParsers.len > 0` "));
             }
             
             if (!((parser_p0.flags[10] != undefined))) {
@@ -5045,7 +5045,7 @@ function descendants__parse_u1358(parser_p0, selector_p1) {
 function refdSubs__parse_u1340(parser_p0) {
   var result_520095038 = null;
 
-  var F = {procname: "parse.refdSubs", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.refdSubs", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 334;
@@ -5100,7 +5100,7 @@ function refdSubs__parse_u1340(parser_p0) {
             this.i3 += 1;
             if (!(((this.HEX3Atmp2).length == this.L4))) {
             F.line = 254;
-            failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
+            failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
             }
             
             F.line = 0;
@@ -5130,7 +5130,7 @@ function refdSubs__parse_u1340(parser_p0) {
 }
 
 function resetTraversalTracker__parse_u1400(parser_p0) {
-  var F = {procname: "parse.resetTraversalTracker", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.resetTraversalTracker", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
     if ((parser_p0.flags[10] != undefined)) {
     F.line = 380;
@@ -5164,7 +5164,7 @@ function resetTraversalTracker__parse_u1400(parser_p0) {
             i_520104758 += 1;
             if (!(((colontmp__520104757).length == L_520104759))) {
             F.line = 254;
-            failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
+            failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
             }
             
           }
@@ -5180,7 +5180,7 @@ function resetTraversalTracker__parse_u1400(parser_p0) {
 function HEX5BHEX5D__strslice_u117(s_p0, x_p1) {
   var result_1140850810 = [];
 
-  var F = {procname: "[].[]", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/indices.nim", line: 0};
+  var F = {procname: "[].[]", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/indices.nim", line: 0};
   framePtr = F;
     F.line = 83;
     F.filename = "indices.nim";
@@ -5219,7 +5219,7 @@ function HEX5BHEX5D__strslice_u117(s_p0, x_p1) {
 function HEX24__strslice_u63(str_p0) {
   var result_1140850753 = [];
 
-  var F = {procname: "strslice.$", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
+  var F = {procname: "strslice.$", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     if ((str_p0.Field2 < 0)) {
@@ -5242,7 +5242,7 @@ function HEX24__strslice_u63(str_p0) {
 function replace__strslice_u397(slice_p0, pattern_p1, replacement_p2) {
   var result_1140851089 = null;
 
-  var F = {procname: "strslice.replace", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
+  var F = {procname: "strslice.replace", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
   framePtr = F;
     F.line = 274;
     F.filename = "strslice.nim";
@@ -5260,7 +5260,7 @@ function HEX28HEX29__parse_u10438(parser_p0, document_p1, location_p2) {
 
   var result_520104139 = {Field0: null, Field1: []};
 
-  var F = {procname: "().()", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "().()", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     if ((parser_p0.grammarVar == GrammarPlaceholder_520094198)) {
@@ -5359,7 +5359,7 @@ function HEX28HEX29__parse_u10438(parser_p0, document_p1, location_p2) {
 function nsuJoinSep(a_p0, sep_p1) {
   var result_1006634541 = [];
 
-  var F = {procname: "strutils.join", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/strutils.nim", line: 0};
+  var F = {procname: "strutils.join", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/strutils.nim", line: 0};
   framePtr = F;
     if ((0 < (a_p0).length)) {
     F.line = 1868;
@@ -5442,7 +5442,7 @@ function nsuJoinSep(a_p0, sep_p1) {
 function newSeq__stdZsyncio_u558(len_p0) {
   var result_503317042 = [];
 
-  var F = {procname: "newSeq.newSeq", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system.nim", line: 0};
+  var F = {procname: "newSeq.newSeq", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system.nim", line: 0};
   framePtr = F;
     F.line = 635;
     F.filename = "system.nim";
@@ -5455,7 +5455,7 @@ function newSeq__stdZsyncio_u558(len_p0) {
 function nsuEndsWith(s_p0, suffix_p1) {
   var result_1006634436 = false;
 
-  var F = {procname: "strutils.endsWith", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/strutils.nim", line: 0};
+  var F = {procname: "strutils.endsWith", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/strutils.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 65;
@@ -5497,7 +5497,7 @@ function nsuEndsWith(s_p0, suffix_p1) {
 function nsuStartsWith(s_p0, prefix_p1) {
   var result_1006634416 = false;
 
-  var F = {procname: "strutils.startsWith", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/strutils.nim", line: 0};
+  var F = {procname: "strutils.startsWith", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/strutils.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 56;
@@ -5536,27 +5536,27 @@ function nsuStartsWith(s_p0, prefix_p1) {
 
 }
 
-function substr__system_u3686(s_p0, first_p1, last_p2) {
-  var result_33558122 = [];
+function substr__system_u3687(s_p0, first_p1, last_p2) {
+  var result_33558123 = [];
 
-  var F = {procname: "system.substr", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system.nim", line: 0};
+  var F = {procname: "system.substr", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system.nim", line: 0};
   framePtr = F;
     F.line = 2779;
     F.filename = "system.nim";
-    var first_33558123 = nimMax(first_p1, 0);
+    var first_33558124 = nimMax(first_p1, 0);
     F.line = 2780;
-    var L_33558124 = nimMax(addInt(subInt(nimMin(last_p2, (s_p0).length - 1), first_33558123), 1), 0);
+    var L_33558125 = nimMax(addInt(subInt(nimMin(last_p2, (s_p0).length - 1), first_33558124), 1), 0);
     F.line = 2781;
-    result_33558122 = nimCopy(null, mnewString(chckRange(L_33558124, 0, 2147483647)), NTI33554449);
+    result_33558123 = nimCopy(null, mnewString(chckRange(L_33558125, 0, 2147483647)), NTI33554449);
     Label1: {
       F.line = 2782;
-      var i_33558129 = 0;
+      var i_33558130 = 0;
       F.line = 81;
       F.filename = "iterators_1.nim";
       var colontmp__520104808 = 0;
       F.line = 2782;
       F.filename = "system.nim";
-      colontmp__520104808 = subInt(L_33558124, 1);
+      colontmp__520104808 = subInt(L_33558125, 1);
       F.line = 96;
       F.filename = "iterators_1.nim";
       var res_520104809 = 0;
@@ -5566,9 +5566,9 @@ function substr__system_u3686(s_p0, first_p1, last_p2) {
           if (!(res_520104809 <= colontmp__520104808)) break Label3;
             F.line = 2782;
             F.filename = "system.nim";
-            i_33558129 = res_520104809;
+            i_33558130 = res_520104809;
             F.line = 2783;
-            result_33558122[chckIndx(i_33558129, 0, (result_33558122).length - 1)] = s_p0[chckIndx(addInt(i_33558129, first_33558123), 0, (s_p0).length - 1)];
+            result_33558123[chckIndx(i_33558130, 0, (result_33558123).length - 1)] = s_p0[chckIndx(addInt(i_33558130, first_33558124), 0, (s_p0).length - 1)];
             F.line = 102;
             F.filename = "iterators_1.nim";
             res_520104809 = addInt(res_520104809, 1);
@@ -5577,7 +5577,7 @@ function substr__system_u3686(s_p0, first_p1, last_p2) {
     };
   framePtr = F.prev;
 
-  return result_33558122;
+  return result_33558123;
 
 }
 
@@ -5586,7 +5586,7 @@ function nsuIndent(s_p0, count_p1, padding_p2) {
 
   var result_1006634191 = [];
 
-  var F = {procname: "strutils.indent", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/strutils.nim", line: 0};
+  var F = {procname: "strutils.indent", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/strutils.nim", line: 0};
   framePtr = F;
     F.line = 1485;
     F.filename = "strutils.nim";
@@ -5642,7 +5642,7 @@ function nsuIndent(s_p0, count_p1, padding_p2) {
             Temporary6 = subInt(eolpos_520104804, 1);
             }
             
-            line_1006634193 = substr__system_u3686(s_p0, first_520104802, Temporary6);
+            line_1006634193 = substr__system_u3687(s_p0, first_520104802, Temporary6);
             if (!((i_1006634192 == 0))) {
             F.line = 1489;
             result_1006634191.push.apply(result_1006634191, [10]);;
@@ -5700,7 +5700,7 @@ function HEX5BHEX5D__nodetree_u1026(s_p0, i_p1) {
   var result_1207960582 = null;
   var result_1207960582_Idx = 0;
 
-  var F = {procname: "[].[]", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/indices.nim", line: 0};
+  var F = {procname: "[].[]", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/indices.nim", line: 0};
   framePtr = F;
     F.line = 30;
     F.filename = "indices.nim";
@@ -5712,7 +5712,7 @@ function HEX5BHEX5D__nodetree_u1026(s_p0, i_p1) {
 }
 
 function delete__nodetree_u1050(x_p0, x_p0_Idx, i_p1) {
-  var F = {procname: "delete.delete", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system.nim", line: 0};
+  var F = {procname: "delete.delete", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system.nim", line: 0};
   framePtr = F;
     if (((x_p0[x_p0_Idx]).length - 1 < i_p1)) {
     F.line = 2014;
@@ -5730,7 +5730,7 @@ function delete__nodetree_u1050(x_p0, x_p0_Idx, i_p1) {
 function concat__nodetree_u1087(seqs_p0) {
   var result_1207960642 = [];
 
-  var F = {procname: "concat.concat", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/collections/sequtils.nim", line: 0};
+  var F = {procname: "concat.concat", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/collections/sequtils.nim", line: 0};
   framePtr = F;
     F.line = 135;
     F.filename = "sequtils.nim";
@@ -5797,7 +5797,7 @@ function concat__nodetree_u1087(seqs_p0) {
                     i_520104823 += 1;
                     if (!(((s_1207960674).length == L_520104824))) {
                     F.line = 254;
-                    failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
+                    failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
                     }
                     
                   }
@@ -5823,7 +5823,7 @@ function serialize__nodetree_u895(node_p0, opening_p1, closing_p2, leafdata_p3, 
 
   var result_1207960457 = [];
 
-  var F = {procname: "nodetree.serialize", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
+  var F = {procname: "nodetree.serialize", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
   framePtr = F;
     F.line = 204;
     F.filename = "nodetree.nim";
@@ -5946,7 +5946,7 @@ function serialize__nodetree_u895(node_p0, opening_p1, closing_p2, leafdata_p3, 
               i_520104790 += 1;
               if (!(((node_p0.childrenSeq).length == L_520104791))) {
               F.line = 254;
-              failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
+              failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
               }
               
             }
@@ -5984,7 +5984,7 @@ function serialize__nodetree_u895(node_p0, opening_p1, closing_p2, leafdata_p3, 
 function len__nodetree_u1354(t_p0) {
   var result_1207960910 = 0;
 
-  var F = {procname: "len.len", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/collections/tables.nim", line: 0};
+  var F = {procname: "len.len", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/collections/tables.nim", line: 0};
   framePtr = F;
     F.line = 1550;
     F.filename = "tables.nim";
@@ -5998,7 +5998,7 @@ function len__nodetree_u1354(t_p0) {
 function attr__nodetree_u190(node_p0) {
   var result_1207959744 = ({data: [], counter: 0, first: 0, last: 0});
 
-  var F = {procname: "nodetree.attr", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
+  var F = {procname: "nodetree.attr", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     if ((node_p0.attributesRef == null)) {
@@ -6020,7 +6020,7 @@ function attr__nodetree_u190(node_p0) {
 function renderAttrs__nodetree_u1299(node_p0) {
   var result_1207960853 = [];
 
-  var F = {procname: "asSxpr.renderAttrs", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
+  var F = {procname: "asSxpr.renderAttrs", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
   framePtr = F;
     F.line = 247;
     F.filename = "nodetree.nim";
@@ -6079,7 +6079,7 @@ function renderAttrs__nodetree_u1299(node_p0) {
               if (!((len__nodetree_u1354(colontmp__520104770) == L_520104772))) {
               F.line = 1762;
               F.filename = "tables.nim";
-              failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/collections/tables.nim(1762, 11) `len(t) == L` the length of the table changed while iterating over it"));
+              failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/collections/tables.nim(1762, 11) `len(t) == L` the length of the table changed while iterating over it"));
               }
               
               }
@@ -6105,7 +6105,7 @@ function opening__nodetree_u1721(node_p0) {
 
   var result_1207961275 = [];
 
-  var F = {procname: "asSxpr.opening", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
+  var F = {procname: "asSxpr.opening", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
   framePtr = F;
     F.line = 253;
     F.filename = "nodetree.nim";
@@ -6170,7 +6170,7 @@ function opening__nodetree_u1721(node_p0) {
 function closing__nodetree_u1806(node_p0) {
   var result_1207961360 = [];
 
-  var F = {procname: "asSxpr.closing", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
+  var F = {procname: "asSxpr.closing", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
   framePtr = F;
     F.line = 261;
     F.filename = "nodetree.nim";
@@ -6184,7 +6184,7 @@ function closing__nodetree_u1806(node_p0) {
 function content__nodetree_u64(node_p0) {
   var result_1207959618 = [];
 
-  var F = {procname: "nodetree.content", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
+  var F = {procname: "nodetree.content", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     if (((node_p0.childrenSeq).length == 0)) {
@@ -6218,7 +6218,7 @@ function content__nodetree_u64(node_p0) {
               i_520104829 += 1;
               if (!(((node_p0.childrenSeq).length == L_520104830))) {
               F.line = 254;
-              failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
+              failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
               }
               
             }
@@ -6236,7 +6236,7 @@ function content__nodetree_u64(node_p0) {
 function runeOffset__pureZunicode_u718(s_p0, pos_p1, start_p2) {
   var result_956302034 = 0;
 
-  var F = {procname: "unicode.runeOffset", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/unicode.nim", line: 0};
+  var F = {procname: "unicode.runeOffset", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/unicode.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 331;
@@ -6273,7 +6273,7 @@ function runeOffset__pureZunicode_u718(s_p0, pos_p1, start_p2) {
 function runeOffset__pureZunicode_u7393(s_p0, pos_p1, start_p2) {
   var result_956308709 = 0;
 
-  var F = {procname: "unicode.runeOffset", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/unicode.nim", line: 0};
+  var F = {procname: "unicode.runeOffset", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/unicode.nim", line: 0};
   framePtr = F;
     F.line = 1201;
     F.filename = "unicode.nim";
@@ -6284,24 +6284,24 @@ function runeOffset__pureZunicode_u7393(s_p0, pos_p1, start_p2) {
 
 }
 
-function substr__system_u3698(s_p0, first_p1) {
-  var result_33558133 = [];
+function substr__system_u3699(s_p0, first_p1) {
+  var result_33558134 = [];
 
-  var F = {procname: "system.substr", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system.nim", line: 0};
+  var F = {procname: "system.substr", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system.nim", line: 0};
   framePtr = F;
     F.line = 2786;
     F.filename = "system.nim";
-    result_33558133 = nimCopy(null, substr__system_u3686(s_p0, first_p1, (s_p0).length - 1), NTI33554449);
+    result_33558134 = nimCopy(null, substr__system_u3687(s_p0, first_p1, (s_p0).length - 1), NTI33554449);
   framePtr = F.prev;
 
-  return result_33558133;
+  return result_33558134;
 
 }
 
 function nsuReplaceStr(s_p0, sub_p1, by_p2) {
   var result_1006634850 = [];
 
-  var F = {procname: "strutils.replace", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/strutils.nim", line: 0};
+  var F = {procname: "strutils.replace", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/strutils.nim", line: 0};
   framePtr = F;
     F.line = 2203;
     F.filename = "strutils.nim";
@@ -6332,7 +6332,7 @@ function nsuReplaceStr(s_p0, sub_p1, by_p2) {
           }
           
           F.line = 2216;
-          result_1006634850.push.apply(result_1006634850, substr__system_u3686(s_p0, i_1006634854, subInt(j_1006634855, 1)));;
+          result_1006634850.push.apply(result_1006634850, substr__system_u3687(s_p0, i_1006634854, subInt(j_1006634855, 1)));;
           F.line = 2217;
           result_1006634850.push.apply(result_1006634850, by_p2);;
           F.line = 2218;
@@ -6340,7 +6340,7 @@ function nsuReplaceStr(s_p0, sub_p1, by_p2) {
         }
     };
     F.line = 2220;
-    result_1006634850.push.apply(result_1006634850, substr__system_u3698(s_p0, i_1006634854));;
+    result_1006634850.push.apply(result_1006634850, substr__system_u3699(s_p0, i_1006634854));;
     }
     else {
       F.line = 2222;
@@ -6361,7 +6361,7 @@ function nsuReplaceStr(s_p0, sub_p1, by_p2) {
             }
             
             F.line = 2228;
-            result_1006634850.push.apply(result_1006634850, substr__system_u3686(s_p0, i_1006634858, subInt(j_1006634859, 1)));;
+            result_1006634850.push.apply(result_1006634850, substr__system_u3687(s_p0, i_1006634858, subInt(j_1006634859, 1)));;
             F.line = 2229;
             result_1006634850.push.apply(result_1006634850, by_p2);;
             F.line = 2230;
@@ -6369,7 +6369,7 @@ function nsuReplaceStr(s_p0, sub_p1, by_p2) {
           }
       };
       F.line = 2232;
-      result_1006634850.push.apply(result_1006634850, substr__system_u3698(s_p0, i_1006634858));;
+      result_1006634850.push.apply(result_1006634850, substr__system_u3699(s_p0, i_1006634858));;
     }
     }
   framePtr = F.prev;
@@ -6381,7 +6381,7 @@ function nsuReplaceStr(s_p0, sub_p1, by_p2) {
 function esc__nodetree_u1812(s_p0) {
   var result_1207961366 = [];
 
-  var F = {procname: "leafdata.esc", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
+  var F = {procname: "leafdata.esc", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
   framePtr = F;
     F.line = 265;
     F.filename = "nodetree.nim";
@@ -6397,13 +6397,13 @@ function leafdata__nodetree_u1809(node_p0) {
 
   var result_1207961363 = [];
 
-  var F = {procname: "asSxpr.leafdata", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
+  var F = {procname: "asSxpr.leafdata", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     if (!(((node_p0.childrenSeq).length == 0))) {
     F.line = 267;
     F.filename = "nodetree.nim";
-    failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim(267, 5) `node.isLeaf` "));
+    failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim(267, 5) `node.isLeaf` "));
     }
     
     F.line = 268;
@@ -6467,7 +6467,7 @@ function asSxpr__nodetree_u586(node_p0) {
 
   var result_1207960850 = [];
 
-  var F = {procname: "nodetree.asSxpr", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
+  var F = {procname: "nodetree.asSxpr", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     if ((node_p0 == null)) {
@@ -6495,7 +6495,7 @@ function asSxpr__nodetree_u586(node_p0) {
 function HEX24__nodetree_u1933(node_p0) {
   var result_1207961487 = [];
 
-  var F = {procname: "nodetree.$", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
+  var F = {procname: "nodetree.$", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/nodetree.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 292;
@@ -6510,7 +6510,7 @@ function HEX24__nodetree_u1933(node_p0) {
 }
 
 function addQuoted__parse_u10549(s_p0, s_p0_Idx, x_p1) {
-  var F = {procname: "addQuoted.addQuoted", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system.nim", line: 0};
+  var F = {procname: "addQuoted.addQuoted", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system.nim", line: 0};
   framePtr = F;
     F.line = 2642;
     F.filename = "system.nim";
@@ -6521,7 +6521,7 @@ function addQuoted__parse_u10549(s_p0, s_p0_Idx, x_p1) {
 }
 
 function addQuoted__parse_u10679(s_p0, s_p0_Idx, x_p1) {
-  var F = {procname: "addQuoted.addQuoted", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system.nim", line: 0};
+  var F = {procname: "addQuoted.addQuoted", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system.nim", line: 0};
   framePtr = F;
     F.line = 2642;
     F.filename = "system.nim";
@@ -6534,7 +6534,7 @@ function addQuoted__parse_u10679(s_p0, s_p0_Idx, x_p1) {
 function collectionToString__parse_u10639(x_p0, prefix_p1, separator_p2, suffix_p3) {
   var result_520104341 = [[]];
 
-  var F = {procname: "collectionToString.collectionToString", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/dollars.nim", line: 0};
+  var F = {procname: "collectionToString.collectionToString", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/dollars.nim", line: 0};
   framePtr = F;
     F.line = 91;
     F.filename = "dollars.nim";
@@ -6579,7 +6579,7 @@ function collectionToString__parse_u10639(x_p0, prefix_p1, separator_p2, suffix_
             i_520104837 += 1;
             if (!(((x_p0).length == L_520104838))) {
             F.line = 254;
-            failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
+            failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
             }
             
           }
@@ -6597,7 +6597,7 @@ function collectionToString__parse_u10639(x_p0, prefix_p1, separator_p2, suffix_
 function HEX24__parse_u10635(x_p0) {
   var result_520104334 = [];
 
-  var F = {procname: "$.$", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/dollars.nim", line: 0};
+  var F = {procname: "$.$", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/dollars.nim", line: 0};
   framePtr = F;
     F.line = 118;
     F.filename = "dollars.nim";
@@ -6609,7 +6609,7 @@ function HEX24__parse_u10635(x_p0) {
 }
 
 function addQuoted__parse_u10629(s_p0, s_p0_Idx, x_p1) {
-  var F = {procname: "addQuoted.addQuoted", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system.nim", line: 0};
+  var F = {procname: "addQuoted.addQuoted", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system.nim", line: 0};
   framePtr = F;
     F.line = 2642;
     F.filename = "system.nim";
@@ -6622,7 +6622,7 @@ function addQuoted__parse_u10629(s_p0, s_p0_Idx, x_p1) {
 function HEX24__parse_u10517(x_p0) {
   var result_520104216 = [[]];
 
-  var F = {procname: "$.$", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/dollars.nim", line: 0};
+  var F = {procname: "$.$", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/dollars.nim", line: 0};
   framePtr = F;
     F.line = 19;
     F.filename = "miscdollars.nim";
@@ -6670,7 +6670,7 @@ function HEX24__parse_u10517(x_p0) {
 
 }
 var Temporary2;
-var F = {procname: "module parse", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+var F = {procname: "module parse", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
 framePtr = F;
 F.line = 23;
 F.filename = "parse.nim";
@@ -6694,12 +6694,12 @@ rawEcho(HEX24__parse_u10517(cst_520104212));
 F.line = 1984;
 rawEcho(asSxpr__nodetree_u586(HEX28HEX29__parse_u10438(init__parse_u4606(new__parse_u10397(), [65]), [65], 0).Field0));
 framePtr = F.prev;
-var F = {procname: "module parse", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+var F = {procname: "module parse", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
 framePtr = F;
 framePtr = F.prev;
 
 function sysFatal__system_u2720(message_p1) {
-  var F = {procname: "sysFatal.sysFatal", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/fatal.nim", line: 0};
+  var F = {procname: "sysFatal.sysFatal", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/fatal.nim", line: 0};
   framePtr = F;
     F.line = 53;
     F.filename = "fatal.nim";
@@ -6719,7 +6719,7 @@ function chckNilDisp(p_p0) {
 }
 
 function reset__parse_u778(obj_p0, obj_p0_Idx) {
-  var F = {procname: "reset.reset", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system.nim", line: 0};
+  var F = {procname: "reset.reset", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system.nim", line: 0};
   framePtr = F;
     F.line = 925;
     F.filename = "system.nim";
@@ -6730,7 +6730,7 @@ function reset__parse_u778(obj_p0, obj_p0_Idx) {
 }
 
 function reset__parse_u842(obj_p0) {
-  var F = {procname: "reset.reset", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system.nim", line: 0};
+  var F = {procname: "reset.reset", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system.nim", line: 0};
   framePtr = F;
     F.line = 925;
     F.filename = "system.nim";
@@ -6741,7 +6741,7 @@ function reset__parse_u842(obj_p0) {
 }
 
 function clear__parse_u555(t_p0) {
-  var F = {procname: "clear.clear", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/collections/tables.nim", line: 0};
+  var F = {procname: "clear.clear", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/collections/tables.nim", line: 0};
   framePtr = F;
     Label1: {
       F.line = 166;
@@ -6784,7 +6784,7 @@ function clear__parse_u555(t_p0) {
 }
 
 function cleanUp__parse_u506(self_p0) {
-  var F = {procname: "parse.cleanUp", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.cleanUp", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
     F.line = 216;
     F.filename = "parse.nim";
@@ -6795,7 +6795,7 @@ function cleanUp__parse_u506(self_p0) {
 }
 
 function cleanUp__parse_u9621(self_p0) {
-  var F = {procname: "parse.cleanUp", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.cleanUp", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
     F.line = 1965;
     F.filename = "parse.nim";
@@ -6806,7 +6806,7 @@ function cleanUp__parse_u9621(self_p0) {
 }
 
 function reset__parse_u9442(obj_p0, obj_p0_Idx) {
-  var F = {procname: "reset.reset", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system.nim", line: 0};
+  var F = {procname: "reset.reset", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system.nim", line: 0};
   framePtr = F;
     F.line = 925;
     F.filename = "system.nim";
@@ -6817,7 +6817,7 @@ function reset__parse_u9442(obj_p0, obj_p0_Idx) {
 }
 
 function clear__parse_u9220(t_p0) {
-  var F = {procname: "clear.clear", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/collections/tables.nim", line: 0};
+  var F = {procname: "clear.clear", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/collections/tables.nim", line: 0};
   framePtr = F;
     Label1: {
       F.line = 166;
@@ -6860,7 +6860,7 @@ function clear__parse_u9220(t_p0) {
 }
 
 function cleanUp__parse_u9171(self_p0) {
-  var F = {procname: "parse.cleanUp", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.cleanUp", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
     F.line = 1910;
     F.filename = "parse.nim";
@@ -6873,7 +6873,7 @@ function cleanUp__parse_u9171(self_p0) {
 }
 
 function cleanUp__parse_u871(self_p0) {
-  var F = {procname: "parse.cleanUp", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.cleanUp", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
     F.line = 515;
     F.filename = "jssys.nim";
@@ -6902,7 +6902,7 @@ function cleanUp__parse_u871(self_p0) {
 function isIn__runerange_u110(a_p0, b_p1, x_p2, y_p3) {
   var result_1174405235 = false;
 
-  var F = {procname: "isAlphaNum.isIn", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/runerange.nim", line: 0};
+  var F = {procname: "isAlphaNum.isIn", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/runerange.nim", line: 0};
   framePtr = F;
     F.line = 57;
     F.filename = "runerange.nim";
@@ -6916,7 +6916,7 @@ function isIn__runerange_u110(a_p0, b_p1, x_p2, y_p3) {
 function isAlphaNum__runerange_u107(rr_p0) {
   var result_1174405229 = false;
 
-  var F = {procname: "$.isAlphaNum", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/runerange.nim", line: 0};
+  var F = {procname: "$.isAlphaNum", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/runerange.nim", line: 0};
   framePtr = F;
     F.line = 56;
     F.filename = "runerange.nim";
@@ -6934,7 +6934,7 @@ function isAlphaNum__runerange_u107(rr_p0) {
 function HEX3DHEX3D__pureZunicode_u1024(a_p0, b_p1) {
   var result_956302339 = false;
 
-  var F = {procname: "unicode.==", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/unicode.nim", line: 0};
+  var F = {procname: "unicode.==", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/unicode.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 462;
@@ -6951,7 +6951,7 @@ function HEX3DHEX3D__pureZunicode_u1024(a_p0, b_p1) {
 function hexlen__runerange_u78(r_p0) {
   var result_1174405200 = {Field0: 0, Field1: []};
 
-  var F = {procname: "$.hexlen", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/runerange.nim", line: 0};
+  var F = {procname: "$.hexlen", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/runerange.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 50;
@@ -6996,7 +6996,7 @@ function hexlen__runerange_u78(r_p0) {
 function toHexImpl__pureZstrutils_u776(x_p0, len_p1, handleNegative_p2) {
   var result_1006633740 = [];
 
-  var F = {procname: "strutils.toHexImpl", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/strutils.nim", line: 0};
+  var F = {procname: "strutils.toHexImpl", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/strutils.nim", line: 0};
   framePtr = F;
     F.line = 979;
     F.filename = "strutils.nim";
@@ -7046,7 +7046,7 @@ function toHexImpl__pureZstrutils_u776(x_p0, len_p1, handleNegative_p2) {
 function toHex__runerange_u189(x_p0, len_p1) {
   var result_1174405313 = [];
 
-  var F = {procname: "toHex.toHex", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/strutils.nim", line: 0};
+  var F = {procname: "toHex.toHex", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/strutils.nim", line: 0};
   framePtr = F;
     F.line = 988;
     F.filename = "strutils.nim";
@@ -7060,7 +7060,7 @@ function toHex__runerange_u189(x_p0, len_p1) {
 function HEX3CHEX25__system_u1080(x_p0, y_p1) {
   var result_33555515 = false;
 
-  var F = {procname: "system.<%", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/comparisons.nim", line: 0};
+  var F = {procname: "system.<%", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/comparisons.nim", line: 0};
   framePtr = F;
     F.line = 189;
     F.filename = "comparisons.nim";
@@ -7074,7 +7074,7 @@ function HEX3CHEX25__system_u1080(x_p0, y_p1) {
 function HEX3CHEX25__pureZunicode_u1020(a_p0, b_p1) {
   var result_956302335 = false;
 
-  var F = {procname: "unicode.<%", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/unicode.nim", line: 0};
+  var F = {procname: "unicode.<%", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/unicode.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 458;
@@ -7094,7 +7094,7 @@ function HEX24__runerange_u74(rs_p0, verbose_p1) {
 
   var result_1174405197 = [];
 
-  var F = {procname: "runerange.$", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/runerange.nim", line: 0};
+  var F = {procname: "runerange.$", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/runerange.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 47;
@@ -7193,18 +7193,12 @@ function HEX24__runerange_u74(rs_p0, verbose_p1) {
             i_520104859 += 1;
             if (!(((rs_p0.Field1).length == L_520104860))) {
             F.line = 254;
-            failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
+            failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
             }
             
           }
       };
     };
-    if (!(verbose_p1)) {
-    F.line = 82;
-    F.filename = "runerange.nim";
-    s_1174405255.push([93]);;
-    }
-    
     if (verbose_p1) {
     if (rs_p0.Field0) {
     Temporary9 = [[91,94], nsuJoinSep(s_1174405255, [93,45,91]), [93]];
@@ -7216,6 +7210,9 @@ function HEX24__runerange_u74(rs_p0, verbose_p1) {
     Temporary8 = nsuJoinSep(Temporary9, []);
     }
     else {
+      F.line = 86;
+      F.filename = "runerange.nim";
+      s_1174405255.push([93]);;
       F.line = 87;
       result_1174405197 = nimCopy(null, nsuJoinSep(s_1174405255, []), NTI33554449);
       break BeforeRet;
@@ -7232,7 +7229,7 @@ function HEX24__runerange_u74(rs_p0, verbose_p1) {
 function HEX3DHEX3D__parse_u5535(x_p0, y_p1) {
   var result_520099235 = false;
 
-  var F = {procname: "==.==", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system.nim", line: 0};
+  var F = {procname: "==.==", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     if (!((x_p0["Field0"] == y_p1["Field0"]))) {
@@ -7259,7 +7256,7 @@ function HEX3DHEX3D__parse_u5535(x_p0, y_p1) {
 }
 
 function formatValue__runerange_u62(result_p0, result_p0_Idx, value_p1) {
-  var F = {procname: "formatValue.formatValue", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/strformat.nim", line: 0};
+  var F = {procname: "formatValue.formatValue", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/strformat.nim", line: 0};
   framePtr = F;
     F.line = 501;
     F.filename = "strformat.nim";
@@ -7274,7 +7271,7 @@ function HEX24__parse_u5526(self_p0) {
 
   var result_520099224 = [];
 
-  var F = {procname: "parse.$", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.$", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 1245;
@@ -7330,7 +7327,7 @@ function HEX24__parse_u5526(self_p0) {
 function HEX24__parse_u5004(self_p0) {
   var result_520098702 = [];
 
-  var F = {procname: "parse.$", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.$", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
     F.line = 1144;
     F.filename = "parse.nim";
@@ -7344,7 +7341,7 @@ function HEX24__parse_u5004(self_p0) {
 function HEX24__parse_u4658(self_p0) {
   var result_520098356 = [];
 
-  var F = {procname: "parse.$", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.$", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
     F.line = 1076;
     F.filename = "parse.nim";
@@ -7360,7 +7357,7 @@ function HEX24__parse_u6284(self_p0) {
 
   var result_520099982 = [];
 
-  var F = {procname: "parse.$", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.$", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
     F.line = 1587;
     F.filename = "parse.nim";
@@ -7398,7 +7395,7 @@ function HEX24__parse_u6284(self_p0) {
             i_520104867 += 1;
             if (!(((self_p0.subParsers).length == L_520104868))) {
             F.line = 254;
-            failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
+            failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
             }
             
           }
@@ -7415,7 +7412,7 @@ function HEX24__parse_u6284(self_p0) {
 function find__stdZenumutils_u55(a_p0, item_p1) {
   var result_1040187452 = 0;
 
-  var F = {procname: "find.find", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system.nim", line: 0};
+  var F = {procname: "find.find", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 1742;
@@ -7460,7 +7457,7 @@ function find__stdZenumutils_u55(a_p0, item_p1) {
 function contains__stdZenumutils_u50(a_p0, item_p1) {
   var result_1040187446 = false;
 
-  var F = {procname: "contains.contains", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system.nim", line: 0};
+  var F = {procname: "contains.contains", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 1760;
@@ -7485,7 +7482,7 @@ function HEX24__parse_u6146(self_p0) {
 
   var result_520099844 = [];
 
-  var F = {procname: "parse.$", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.$", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
     F.line = 1529;
     F.filename = "parse.nim";
@@ -7577,7 +7574,7 @@ function HEX24__parse_u6146(self_p0) {
 function HEX24__parse_u5950(self_p0) {
   var result_520099648 = [];
 
-  var F = {procname: "parse.$", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.$", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
     F.line = 1397;
     F.filename = "parse.nim";
@@ -7591,7 +7588,7 @@ function HEX24__parse_u5950(self_p0) {
 function HEX24__parse_u5764(self_p0) {
   var result_520099462 = [];
 
-  var F = {procname: "parse.$", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.$", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
     F.line = 1312;
     F.filename = "parse.nim";
@@ -7607,7 +7604,7 @@ function HEX24__parse_u9603(self_p0) {
 
   var result_520103301 = [];
 
-  var F = {procname: "parse.$", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.$", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
     F.line = 1943;
     F.filename = "parse.nim";
@@ -7630,7 +7627,7 @@ function HEX24__parse_u7195(self_p0) {
 
   var result_520100893 = [];
 
-  var F = {procname: "parse.$", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.$", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
     F.line = 1846;
     F.filename = "parse.nim";
@@ -7656,7 +7653,7 @@ function HEX24__parse_u7063(self_p0) {
 
   var result_520100761 = [];
 
-  var F = {procname: "parse.$", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.$", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
     F.line = 1786;
     F.filename = "parse.nim";
@@ -7705,7 +7702,7 @@ function HEX24__parse_u6719(self_p0) {
 
   var result_520100417 = [];
 
-  var F = {procname: "parse.$", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.$", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
     F.line = 1696;
     F.filename = "parse.nim";
@@ -7773,7 +7770,7 @@ function HEX24__parse_u6719(self_p0) {
               i_520104876 += 1;
               if (!(((self_p0.subParsers).length == L_520104877))) {
               F.line = 254;
-              failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
+              failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
               }
               
             }
@@ -7791,7 +7788,7 @@ function HEX24__parse_u6719(self_p0) {
 function HEX24__parse_u1260(self_p0) {
   var result_520094958 = [];
 
-  var F = {procname: "parse.$", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.$", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
     F.line = 306;
     F.filename = "parse.nim";
@@ -7822,7 +7819,7 @@ function HEX24__parse_u1260(self_p0) {
             i_520104880 += 1;
             if (!(((self_p0.subParsers).length == L_520104881))) {
             F.line = 254;
-            failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
+            failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
             }
             
           }
@@ -7838,7 +7835,7 @@ function HEX24__parse_u1260(self_p0) {
 function HEX24__parse_u1306(self_p0) {
   var result_520095003 = [];
 
-  var F = {procname: "parse.$", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.$", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 515;
@@ -7931,7 +7928,7 @@ function refdParsers__parse_u3905(self_p0) {
 
   var result_520097603 = [];
 
-  var F = {procname: "parse.refdParsers", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.refdParsers", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     if (((self_p0.referredParsers).length == 0)) {
@@ -7969,7 +7966,7 @@ function refdParsers__parse_u3905(self_p0) {
             i_520104884 += 1;
             if (!(((self_p0.skipList).length == L_520104885))) {
             F.line = 254;
-            failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
+            failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
             }
             
           }
@@ -8007,7 +8004,7 @@ function refdParsers__parse_u3905(self_p0) {
             i_520104888 += 1;
             if (!(((self_p0.resumeList).length == L_520104889))) {
             F.line = 254;
-            failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
+            failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
             }
             
           }
@@ -8045,7 +8042,7 @@ function refdParsers__parse_u3905(self_p0) {
             i_520104893 += 1;
             if (!(((self_p0.errorList).length == L_520104894))) {
             F.line = 254;
-            failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
+            failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
             }
             
           }
@@ -8056,7 +8053,7 @@ function refdParsers__parse_u3905(self_p0) {
       if (!(((self_p0.subParsers).length <= (self_p0.referredParsers).length))) {
       F.line = 833;
       F.filename = "parse.nim";
-      failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim(833, 5) `self.referredParsers.len >= self.subParsers.len` "));
+      failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim(833, 5) `self.referredParsers.len >= self.subParsers.len` "));
       }
       
     }
@@ -8074,7 +8071,7 @@ function refdParsers__parse_u3905(self_p0) {
 function refdParsers__parse_u1310(self_p0) {
   var result_520095008 = [];
 
-  var F = {procname: "parse.refdParsers", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.refdParsers", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 322;
@@ -8091,7 +8088,7 @@ function refdParsers__parse_u1310(self_p0) {
 function refdParsers__parse_u1329(self_p0) {
   var result_520095026 = [];
 
-  var F = {procname: "parse.refdParsers", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.refdParsers", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 515;
@@ -8121,7 +8118,7 @@ function grammarHEX3D__parse_u1431(self_p0, grammar_p1) {
           var Temporary3;
           var Temporary4;
 
-  var F = {procname: "parse.grammar=", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.grammar=", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
     F.line = 420;
     F.filename = "parse.nim";
@@ -8149,7 +8146,7 @@ function grammarHEX3D__parse_u1431(self_p0, grammar_p1) {
           
           if (!((p_520095131.grammarVar == GrammarPlaceholder_520094198))) {
           F.line = 422;
-          failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim(422, 5) `p.grammarVar == GrammarPlaceholder` "));
+          failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim(422, 5) `p.grammarVar == GrammarPlaceholder` "));
           }
           
           F.line = 423;
@@ -8168,12 +8165,12 @@ function grammarHEX3D__parse_u1431(self_p0, grammar_p1) {
 }
 
 function grammarHEX3D__parse_u5937(self_p0, grammar_p1) {
-  var F = {procname: "parse.grammar=", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.grammar=", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
     if (!((((HEX3DHEX3D__parse_u116(grammar_p1.commentRe, RxNeverMatch_520093816) || HEX3DHEX3D__parse_u116(grammar_p1.commentRe, self_p0.comment)) || HEX3DHEX3D__parse_u116(self_p0.comment, RxNeverMatch_520093816)) || ((self_p0.comment.Field0).length == 0)))) {
     F.line = 1388;
     F.filename = "parse.nim";
-    failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim(1388, 3) `grammar.commentRe == RxNeverMatch or grammar.commentRe == self.comment or\x0A    self.comment == RxNeverMatch or\x0A    self.comment.reStr.len == 0` Multiple definitions of comments or insignificant whitespace not allowed!"));
+    failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim(1388, 3) `grammar.commentRe == RxNeverMatch or grammar.commentRe == self.comment or\x0A    self.comment == RxNeverMatch or\x0A    self.comment.reStr.len == 0` Multiple definitions of comments or insignificant whitespace not allowed!"));
     }
     
     F.line = 1391;
@@ -8181,7 +8178,7 @@ function grammarHEX3D__parse_u5937(self_p0, grammar_p1) {
     if (((0 < (self_p0.comment.Field0).length) && !(HEX3DHEX3D__parse_u116(self_p0.comment, RxNeverMatch_520093816)))) {
     if (!(HEX3DHEX3D__parse_u116(grammar_p1.commentRe, RxNeverMatch_520093816))) {
     F.line = 1393;
-    failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim(1393, 5) `grammar.commentRe == RxNeverMatch` implicit whitespace must only be defined once per grammar!"));
+    failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim(1393, 5) `grammar.commentRe == RxNeverMatch` implicit whitespace must only be defined once per grammar!"));
     }
     
     F.line = 1395;
@@ -8194,7 +8191,7 @@ function grammarHEX3D__parse_u5937(self_p0, grammar_p1) {
 }
 
 function grammarHEX3D__parse_u1449(self_p0, grammar_p1) {
-  var F = {procname: "parse.grammar=", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.grammar=", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
     F.line = 515;
     F.filename = "jssys.nim";
@@ -8218,7 +8215,7 @@ function grammarHEX3D__parse_u1449(self_p0, grammar_p1) {
 function HEX3CHEX3DHEX25__system_u1060(x_p0, y_p1) {
   var result_33555495 = false;
 
-  var F = {procname: "system.<=%", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/comparisons.nim", line: 0};
+  var F = {procname: "system.<=%", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/comparisons.nim", line: 0};
   framePtr = F;
     F.line = 180;
     F.filename = "comparisons.nim";
@@ -8232,7 +8229,7 @@ function HEX3CHEX3DHEX25__system_u1060(x_p0, y_p1) {
 function HEX3CHEX3DHEX25__pureZunicode_u1016(a_p0, b_p1) {
   var result_956302331 = false;
 
-  var F = {procname: "unicode.<=%", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/unicode.nim", line: 0};
+  var F = {procname: "unicode.<=%", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/unicode.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 449;
@@ -8249,48 +8246,48 @@ function HEX3CHEX3DHEX25__pureZunicode_u1016(a_p0, b_p1) {
 function inRuneRange__runerange_u753(r_p0, ranges_p1) {
   var result_1174405876 = 0;
 
-  var F = {procname: "runerange.inRuneRange", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/runerange.nim", line: 0};
+  var F = {procname: "runerange.inRuneRange", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/runerange.nim", line: 0};
   framePtr = F;
   BeforeRet: {
-    F.line = 236;
+    F.line = 237;
     F.filename = "runerange.nim";
     var highest_1174405880 = subInt((((ranges_p1).length) | 0), 1);
-    F.line = 238;
-    var a_1174405881 = 0;
     F.line = 239;
-    var b_1174405882 = highest_1174405880;
+    var a_1174405881 = 0;
     F.line = 240;
-    var last_i_1174405883 = (-1);
+    var b_1174405882 = highest_1174405880;
     F.line = 241;
+    var last_i_1174405883 = (-1);
+    F.line = 242;
     var i_1174405884 = divInt(b_1174405882, 2);
     Label1: {
-      F.line = 243;
+      F.line = 244;
         Label2: while (true) {
         if (!!((i_1174405884 == last_i_1174405883))) break Label2;
           if (HEX3CHEX3DHEX25__pureZunicode_u1016(ranges_p1[chckIndx(i_1174405884, 0, (ranges_p1).length - 1)].Field0, r_p0)) {
           if (HEX3CHEX3DHEX25__pureZunicode_u1016(r_p0, ranges_p1[chckIndx(i_1174405884, 0, (ranges_p1).length - 1)].Field1)) {
-          F.line = 246;
+          F.line = 247;
           result_1174405876 = i_1174405884;
           break BeforeRet;
           }
           else {
-            F.line = 248;
+            F.line = 249;
             a_1174405881 = nimMin(addInt(i_1174405884, 1), highest_1174405880);
           }
           
           }
           else {
-            F.line = 250;
+            F.line = 251;
             b_1174405882 = nimMax(subInt(i_1174405884, 1), 0);
           }
           
-          F.line = 251;
-          last_i_1174405883 = i_1174405884;
           F.line = 252;
+          last_i_1174405883 = i_1174405884;
+          F.line = 253;
           i_1174405884 = addInt(a_1174405881, divInt(subInt(b_1174405882, a_1174405881), 2));
         }
     };
-    F.line = 253;
+    F.line = 254;
     result_1174405876 = (-1);
     break BeforeRet;
   };
@@ -8303,7 +8300,7 @@ function inRuneRange__runerange_u753(r_p0, ranges_p1) {
 function parse__parse_u5050(self_p0, location_p1) {
   var result_520098749 = {Field0: null, Field1: 0};
 
-  var F = {procname: "parse.parse", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.parse", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 1220;
@@ -8602,7 +8599,7 @@ function parse__parse_u4972(self_p0, location_p1) {
 
   var result_520098671 = {Field0: null, Field1: 0};
 
-  var F = {procname: "parse.parse", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.parse", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     if (self_p0.compare((Temporary1 = str__strslice_u132(grammar__parse_u1419(self_p0).document), Temporary1)[0][Temporary1[1]], location_p1, self_p0.text)) {
@@ -8645,7 +8642,7 @@ function parse__parse_u4972(self_p0, location_p1) {
 function nsuContinuesWith(s_p0, substr_p1, start_p2) {
   var result_1006634455 = false;
 
-  var F = {procname: "strutils.continuesWith", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/strutils.nim", line: 0};
+  var F = {procname: "strutils.continuesWith", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/strutils.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 1690;
@@ -8683,7 +8680,7 @@ function parse__parse_u4640(self_p0, location_p1) {
 
   var result_520098339 = {Field0: null, Field1: 0};
 
-  var F = {procname: "parse.parse", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.parse", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     if (nsuContinuesWith((Temporary1 = str__strslice_u132(grammar__parse_u1419(self_p0).document), Temporary1)[0][Temporary1[1]], self_p0.text, chckRange(location_p1, 0, 2147483647))) {
@@ -8724,7 +8721,7 @@ function parse__parse_u4640(self_p0, location_p1) {
 function HEX28HEX29__parse_u3693(parser_p0, location_p1) {
   var result_520097392 = {Field0: null, Field1: 0};
 
-  var F = {procname: "parse.()", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.()", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
     F.line = 646;
     F.filename = "parse.nim";
@@ -8738,7 +8735,7 @@ function HEX28HEX29__parse_u3693(parser_p0, location_p1) {
 function parse__parse_u6268(self_p0, location_p1) {
   var result_520099967 = {Field0: null, Field1: 0};
 
-  var F = {procname: "parse.parse", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.parse", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 1578;
@@ -8782,7 +8779,7 @@ function parse__parse_u6268(self_p0, location_p1) {
             i_520104933 += 1;
             if (!(((self_p0.subParsers).length == L_520104934))) {
             F.line = 254;
-            failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
+            failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
             }
             
           }
@@ -8822,7 +8819,7 @@ function max__parse_u6097(x_p0, y_p1) {
 }
 
 function infiniteLoopWarning__parse_u5953(parser_p0, node_p1, location_p2) {
-  var F = {procname: "parse.infiniteLoopWarning", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.infiniteLoopWarning", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 1407;
@@ -8837,7 +8834,7 @@ function infiniteLoopWarning__parse_u5953(parser_p0, node_p1, location_p2) {
 function parse__parse_u6084(self_p0, location_p1) {
   var result_520099783 = {Field0: null, Field1: 0};
 
-  var F = {procname: "parse.parse", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.parse", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 1502;
@@ -8967,13 +8964,13 @@ function matchLen__strslice_u375(slice_p0, pattern_p1, location_p2) {
 
   var result_1140851067 = 0;
 
-  var F = {procname: "strslice.matchLen", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
+  var F = {procname: "strslice.matchLen", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     if (!(((0 <= location_p2) && (location_p2 <= addInt(subInt(slice_p0.Field2, slice_p0.Field1), 1))))) {
     F.line = 265;
     F.filename = "strslice.nim";
-    failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim(265, 5) `location >= 0 and location <= slice.stop - slice.start + 1` "));
+    failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim(265, 5) `location >= 0 and location <= slice.stop - slice.start + 1` "));
     }
     
     F.line = 266;
@@ -8983,7 +8980,7 @@ function matchLen__strslice_u375(slice_p0, pattern_p1, location_p2) {
     if ((0 < (m_1140851073).length)) {
     if (!(((m_1140851073).length == 1))) {
     F.line = 269;
-    failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim(269, 7) `m.len == 1` "));
+    failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim(269, 7) `m.len == 1` "));
     }
     
     F.line = 270;
@@ -9004,7 +9001,7 @@ function matchLen__strslice_u375(slice_p0, pattern_p1, location_p2) {
 function strip__strslice_u276(s_p0, first_p1, last_p2) {
   var result_1140850968 = {Field0: [null, 0], Field1: 0, Field2: 0};
 
-  var F = {procname: "strslice.strip", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
+  var F = {procname: "strslice.strip", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
   framePtr = F;
     F.line = 202;
     F.filename = "strslice.nim";
@@ -9086,7 +9083,7 @@ function parse__parse_u5880(self_p0, location_p1) {
 
   var result_520099579 = {Field0: null, Field1: 0};
 
-  var F = {procname: "parse.parse", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.parse", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 1372;
@@ -9160,7 +9157,7 @@ function parse__parse_u5880(self_p0, location_p1) {
 function parse__parse_u5729(self_p0, location_p1) {
   var result_520099428 = {Field0: null, Field1: 0};
 
-  var F = {procname: "parse.parse", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.parse", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 1301;
@@ -9215,7 +9212,7 @@ function parse__parse_u5729(self_p0, location_p1) {
 function parse__parse_u9599(self_p0, location_p1) {
   var result_520103298 = {Field0: null, Field1: 0};
 
-  var F = {procname: "parse.parse", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.parse", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 1939;
@@ -9232,7 +9229,7 @@ function parse__parse_u9599(self_p0, location_p1) {
 function parse__parse_u7147(self_p0, location_p1) {
   var result_520100846 = {Field0: null, Field1: 0};
 
-  var F = {procname: "parse.parse", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.parse", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 1832;
@@ -9299,7 +9296,7 @@ function parse__parse_u7147(self_p0, location_p1) {
 function parse__parse_u7039(self_p0, location_p1) {
   var result_520100738 = {Field0: null, Field1: 0};
 
-  var F = {procname: "parse.parse", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.parse", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 1772;
@@ -9351,7 +9348,7 @@ function parse__parse_u7039(self_p0, location_p1) {
 function reentry__parse_u3996(catcher_p0, location_p1) {
   var result_520097697 = {Field0: null, Field1: 0};
 
-  var F = {procname: "parse.reentry", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.reentry", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 842;
@@ -9399,7 +9396,7 @@ function reentry__parse_u3996(catcher_p0, location_p1) {
 function startsWith__parse_u4054(str_p0, sub_p1) {
   var result_520097754 = false;
 
-  var F = {procname: "startsWith.startsWith", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
+  var F = {procname: "startsWith.startsWith", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     if ((len__strslice_u144(str_p0) < (((sub_p1).length) | 0))) {
@@ -9439,7 +9436,7 @@ function startsWith__parse_u4054(str_p0, sub_p1) {
             i_520105011 += 1;
             if (!(((sub_p1).length == L_520105012))) {
             F.line = 206;
-            failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/iterators.nim(206, 11) `len(a) == L` the length of the string changed while iterating over it"));
+            failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/iterators.nim(206, 11) `len(a) == L` the length of the string changed while iterating over it"));
             }
             
           }
@@ -9459,7 +9456,7 @@ function startsWith__parse_u4054(str_p0, sub_p1) {
 function HEX3DHEX3D__parse_u4049(str_p0, cmp_p1) {
   var result_520097749 = false;
 
-  var F = {procname: "==.==", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
+  var F = {procname: "==.==", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/strslice.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     if (!((len__strslice_u144(str_p0) == (((cmp_p1).length) | 0)))) {
@@ -9489,7 +9486,7 @@ function match__parse_u4033(rule_p0, text_p1, location_p2) {
 
   var result_520097733 = false;
 
-  var F = {procname: "violation.match", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "violation.match", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 862;
@@ -9566,7 +9563,7 @@ function match__parse_u4033(rule_p0, text_p1, location_p2) {
 }
 
 function integerOutOfRangeError__pureZparseutils_u325() {
-  var F = {procname: "parseutils.integerOutOfRangeError", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/parseutils.nim", line: 0};
+  var F = {procname: "parseutils.integerOutOfRangeError", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/parseutils.nim", line: 0};
   framePtr = F;
     F.line = 420;
     F.filename = "parseutils.nim";
@@ -9582,7 +9579,7 @@ function rawParseInt__pureZparseutils_u327(s_p0, b_p1, b_p1_Idx) {
 
   var result_939524426 = 0;
 
-  var F = {procname: "parseutils.rawParseInt", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/parseutils.nim", line: 0};
+  var F = {procname: "parseutils.rawParseInt", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/parseutils.nim", line: 0};
   framePtr = F;
     F.line = 428;
     F.filename = "parseutils.nim";
@@ -9656,7 +9653,7 @@ function rawParseInt__pureZparseutils_u327(s_p0, b_p1, b_p1_Idx) {
 function npuParseBiggestInt(s_p0, number_p1, number_p1_Idx) {
   var result_939524487 = 0;
 
-  var F = {procname: "parseutils.parseBiggestInt", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/parseutils.nim", line: 0};
+  var F = {procname: "parseutils.parseBiggestInt", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/parseutils.nim", line: 0};
   framePtr = F;
     F.line = 465;
     F.filename = "parseutils.nim";
@@ -9677,7 +9674,7 @@ function npuParseBiggestInt(s_p0, number_p1, number_p1_Idx) {
 function npuParseInt(s_p0, number_p1, number_p1_Idx) {
   var result_939524492 = 0;
 
-  var F = {procname: "parseutils.parseInt", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/parseutils.nim", line: 0};
+  var F = {procname: "parseutils.parseInt", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/parseutils.nim", line: 0};
   framePtr = F;
     F.line = 481;
     F.filename = "parseutils.nim";
@@ -9703,7 +9700,7 @@ function npuParseInt(s_p0, number_p1, number_p1_Idx) {
 function parseInt__pureZparseutils_u907(s_p0, number_p1, number_p1_Idx, start_p2) {
   var result_939525007 = 0;
 
-  var F = {procname: "parseutils.parseInt", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/parseutils.nim", line: 0};
+  var F = {procname: "parseutils.parseInt", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/parseutils.nim", line: 0};
   framePtr = F;
     F.line = 1002;
     F.filename = "parseutils.nim";
@@ -9717,7 +9714,7 @@ function parseInt__pureZparseutils_u907(s_p0, number_p1, number_p1_Idx, start_p2
 function nsuParseInt(s_p0) {
   var result_1006633818 = [0];
 
-  var F = {procname: "strutils.parseInt", prev: framePtr, filename: "/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/pure/strutils.nim", line: 0};
+  var F = {procname: "strutils.parseInt", prev: framePtr, filename: "/Users/di68kap/Entwicklung/Fremde/Nim/lib/pure/strutils.nim", line: 0};
   framePtr = F;
     F.line = 1156;
     F.filename = "strutils.nim";
@@ -9741,7 +9738,7 @@ function violation__parse_u4023(catcher_p0, location_p1, wasLookAhead_p2, expect
 
   var result_520097728 = {Field0: null, Field1: 0};
 
-  var F = {procname: "parse.violation", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.violation", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 880;
@@ -9855,7 +9852,7 @@ function violation__parse_u4023(catcher_p0, location_p1, wasLookAhead_p2, expect
             i_520105004 += 1;
             if (!(((catcher_p0.errorList).length == L_520105005))) {
             F.line = 254;
-            failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
+            failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
             }
             
           }
@@ -9890,7 +9887,7 @@ function parse__parse_u6620(self_p0, location_p1) {
 
   var result_520100319 = {Field0: null, Field1: 0};
 
-  var F = {procname: "parse.parse", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.parse", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 1662;
@@ -10005,7 +10002,7 @@ function parse__parse_u6620(self_p0, location_p1) {
               i_520104992 += 1;
               if (!(((self_p0.subParsers).length == L_520104993))) {
               F.line = 254;
-              failedAssertImpl__stdZassertions_u85(makeNimstrLit("/home/eckhart/.choosenim/toolchains/nim-2.2.0/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
+              failedAssertImpl__stdZassertions_u85(makeNimstrLit("/Users/di68kap/Entwicklung/Fremde/Nim/lib/system/iterators.nim(254, 11) `len(a) == L` the length of the seq changed while iterating over it"));
               }
               
             }
@@ -10041,7 +10038,7 @@ function parse__parse_u6620(self_p0, location_p1) {
 function parse__parse_u1951(self_p0, location_p1) {
   var result_520095650 = {Field0: null, Field1: 0};
 
-  var F = {procname: "parse.parse", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.parse", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
     F.line = 586;
     F.filename = "parse.nim";
@@ -10061,7 +10058,7 @@ function parse__parse_u1951(self_p0, location_p1) {
 function parse__parse_u1955(self_p0, location_p1) {
   var result_520095652 = {Field0: null, Field1: 0};
 
-  var F = {procname: "parse.parse", prev: framePtr, filename: "/home/eckhart/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
+  var F = {procname: "parse.parse", prev: framePtr, filename: "/Users/di68kap/Entwicklung/DHParser/nim_rewrite/src/nimparser/parse.nim", line: 0};
   framePtr = F;
   BeforeRet: {
     F.line = 515;

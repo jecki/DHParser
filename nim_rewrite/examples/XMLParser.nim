@@ -13,7 +13,7 @@ import "../src/nimparser/parse"
 # document frame and prolog
 
 let document     = "document" ::=     ?(BOM) & prolog & § element & ?(Misc) & EOF
-let BOM          = "BOM" ::=          cr"[\ufeff]|[\ufffe]|[\u0000][\ufeff]|[\ufffe][\u0000]"
+let BOM          = "BOM" ::=          cr"[\ufeff]|[\ufffe]|[\u0000][\ufeff]|[\ufffe][\u0000]|[\xEF\xBB\xBF]"
 let prolog       = "prolog" ::=       ?(WS & XMLDecl) & ?(Misc) & ?(doctypedecl & ?(Misc))
 let XMLDecl      = "XMLDecl" ::=      txt"<?xml" & § VersionInfo & ?(EncodingDecl) & ?(SDDecl) & WS & txt"?>"
 
