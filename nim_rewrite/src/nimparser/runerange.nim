@@ -34,14 +34,17 @@ type
   RuneRange* = tuple[low: Rune, high: Rune]
   RuneSet* = tuple[negate: bool, ranges: seq[RuneRange]]
 
+
 const
   EmptyRuneRange* = (Rune('b'), Rune('a'))
+
 
 proc `$`*(range: Range): string =
   let
     min {.inject.} = range.min
     max {.inject.} = range.max
   if min <= max:  fmt"{min}..{max}"  else: "EMPTY"
+
 
 proc `$`*(rs: RuneSet, verbose: bool = false): string =
   ## Serializes rune set. Use "runeset $ true" for a more
@@ -86,11 +89,14 @@ proc `$`*(rs: RuneSet, verbose: bool = false): string =
     s.add("]")
     return s.join("")
 
+
 proc `$`*(rr: seq[RuneRange], verbose=false): string = (false, rr) $ verbose
 proc `$`*(rr: RuneRange): string = $(@[rr])
 
+
 func toRange*(r: RuneRange): Range = (r.low.uint32, r.high.uint32)
 func toRuneRange*(r: Range): RuneRange = (Rune(r.min), Rune(r.max))
+
 
 func neverEmpty*(rr: seq[RuneRange]): bool =
   ## Confirms that the sequence of ranges is not be empty and that
@@ -99,6 +105,7 @@ func neverEmpty*(rr: seq[RuneRange]): bool =
   for r in rr:
     if r.high <% r.low: return false
   return true
+
 
 func isSortedAndMerged*(rr: seq[RuneRange]): bool =
   ## Confirms that the ranges in the sequences are in ascending order
@@ -117,6 +124,7 @@ func size(R: seq[RuneRange]): uint32 =
   for rr in R:
     sum += size(rr)
   return sum
+
 
 proc sortAndMerge*(R: var seq[RuneRange]) =
   ## Sorts the sequence of ranges and merges overlapping regions
@@ -141,11 +149,13 @@ proc sortAndMerge*(R: var seq[RuneRange]) =
   R.setLen(a + 1)
   # assert isSortedAndMerged(R)
 
+
 proc `+`*(A, B: seq[RuneRange]): seq[RuneRange] =
   result = newSeqOfCap[RuneRange](A.len + B.len)
   for r in A:  result.add(r)
   for r in B:  result.add(r)
   sortAndMerge(result)
+
 
 proc `-`*(A, B: seq[RuneRange]): seq[RuneRange] =
   assert neverEmpty(A)
@@ -196,11 +206,14 @@ proc `-`*(A, B: seq[RuneRange]): seq[RuneRange] =
     i += 1
   # assert isSortedAndMerged(result)
 
+
 # intersection
 proc `*`*(A, B: seq[RuneRange]): seq[RuneRange] = A - (A - B) - (B - A)
 
 
+
 proc `^`*(runes: RuneSet): RuneSet = (not runes.negate, runes.ranges)
+
 
 proc `+`*(A, B: RuneSet): RuneSet =
   let selector = (if A.negate: 2 else: 0) + (if B.negate: 1 else: 0)
@@ -214,6 +227,7 @@ proc `+`*(A, B: RuneSet): RuneSet =
     of 0b11:  # (true, true)
       return (true, A.ranges * B.ranges)
     else:  assert false
+
 
 proc `-`*(A, B: RuneSet): RuneSet =
   let selector = (if A.negate: 2 else: 0) + (if B.negate: 1 else: 0)
@@ -386,7 +400,6 @@ proc rs*(s: string): RuneSet =
     else: 
       while i < s.len and s[i] in " \n":  i += 1
       addOrSubtract(parseRuneSet())
-
 
 
 proc rr*(rangeStr: string): RuneRange =
