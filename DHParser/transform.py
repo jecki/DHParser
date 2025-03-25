@@ -1827,7 +1827,7 @@ NodeGenerator = Callable[[], Node]
 DynamicResultType = Union[Tuple[NodeGenerator, ...], NodeGenerator, str]
 
 
-AT_THE_END = 2**32   # VERY, VERY last position in a tuple of childe nodes
+AT_THE_END = 2**32   # VERY, VERY last position in a tuple of child-nodes
 
 
 def node_maker(name: str,

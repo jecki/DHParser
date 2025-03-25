@@ -1183,94 +1183,123 @@ class Node
 
 * :py:class:`~nodetree.Node`: the central building-block of a node-tree
 
-  * :py:attr:`~nodetree.Node.result`: either the child nodes or the node's
-    string content
-  * :py:attr:`~nodetree.Node.children`: the node's immediate children or an
-    empty tuple
-  * :py:attr:`~nodetree.Node.content`: the concatenated string content of
-    all descendants
-  * :py:attr:`~nodetree.Node.name`: the node's name
-  * :py:attr:`~nodetree.Node.attr`: the dictionary of the node's
-    attributes
-  * :py:attr:`~nodetree.Node.pos`: the source-code position of this node, in
-    case the node stems from a parsing process
+  * :py:attr:`~nodetree.Node.result`:
+    either the child nodes or the node's string content
+
+  * :py:attr:`~nodetree.Node.children`:
+    the node's immediate children or an empty tuple
+
+  * :py:attr:`~nodetree.Node.content`:
+    the concatenated string content of all descendants
+
+  * :py:attr:`~nodetree.Node.name`:
+    the node's name
+
+  * :py:attr:`~nodetree.Node.attr`:
+    the dictionary of the node's attributes
+
+  * :py:attr:`~nodetree.Node.pos`:
+    the source-code position of this node, in case the node stems from
+    a parsing process
 
     **Navigation**
 
-  * :py:meth:`~nodetree.Node.select`: Selects nodes from the tree of
-        descendants.
-  * :py:meth:`~nodetree.Node.pick`: Picks a particular node from the tree of
-        descendants.
-  * :py:meth:`~nodetree.Node.locate`: Finds the leaf-node covering a
-        particular location of string content of the tree originating
-        in this node.
-  * :py:meth:`~nodetree.Node.select_path`: Selects :ref:`paths <paths>`
-        from the tree of descendants.
-  * :py:meth:`~nodetree.Node.pick_path`: Picks a particular path from
-        the tree of descendants.
-  * :py:meth:`~nodetree.Node.locate_path`: Finds the path of the
-        leaf-node covering a particular location of string content of
-        the tree originating in this node.
+  * :py:meth:`~nodetree.Node.select`:
+    Selects nodes from the tree of descendants.
+
+  * :py:meth:`~nodetree.Node.pick`:
+    Picks a particular node from the tree of descendants.
+
+  * :py:meth:`~nodetree.Node.locate`:
+    Finds the leaf-node covering a particular location of string
+    content of the tree originating in this node.
+
+  * :py:meth:`~nodetree.Node.select_path`:
+    Selects :ref:`paths <paths>` from the tree of descendants.
+
+  * :py:meth:`~nodetree.Node.pick_path`:
+    Picks a particular path from the tree of descendants.
+
+  * :py:meth:`~nodetree.Node.locate_path`:
+    Finds the path of the leaf-node covering a particular location
+    of string content of the tree originating in this node.
 
     **Serialization**
 
-  * :py:meth:`~nodetree.Node.as_sxpr`: Serializes the tree originating in a
-    node as S-expression.
-  * :py:meth:`~nodetree.Node.as_xml`: Serializes the tree as XML.
-  * :py:meth:`~nodetree.Node.as_json`: Serializes the tree as JSON.
+  * :py:meth:`~nodetree.Node.as_sxpr`:
+    Serializes the tree originating in a node as S-expression.
+
+  * :py:meth:`~nodetree.Node.as_xml`:
+    Serializes the tree as XML.
+
+  * :py:meth:`~nodetree.Node.as_json`:
+    Serializes the tree as JSON.
 
     **XML-exchange**
 
-  * :py:meth:`~nodetree.Node.as_etree`: Converts the tree to an
-        XML-`ElementTree`_ as defined by the respective module of
-        Python's standard library.
-  * :py:meth:`~nodetree.Node.from_etree`: Converts an XML-`ElementTree`_
-        into a tree of :py:class:`~syntaxtee.Node`-objects.
+  * :py:meth:`~nodetree.Node.as_etree`:
+    Converts the tree to an XML-`ElementTree`_ as defined by the
+    respective module from the Python's standard library.
+
+  * :py:meth:`~nodetree.Node.from_etree`:
+    Converts an XML-`ElementTree`_ into a tree
+    of :py:class:`~syntaxtee.Node`-objects.
 
     **Evaluation**
 
-  * :py:meth:`~nodetree.Node.evaluate`: "Evaluates" a tree by running
-        one of a set of functions on each node depending on its
-        tag-name.
+  * :py:meth:`~nodetree.Node.evaluate`:
+    "Evaluates" a tree by picking the function to be run on each
+    node from a dictionary that maps tag-names to functions.
 
 
 Reading serialized trees
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-* :py:func:`~nodetree.parse_sxpr`: Converts any S-expression string to a
-      tree of nodes.
-* :py:func:`~nodetree.parse_xml`: Converts any XML-document to a tree of
-      nodes.
-* :py:func:`~nodetree.parse_json`: Converts a JSON-document that has
-      previously been created with :py:meth:`~nodetree.as_json` from a
-      tree of nodes back to a tree of nodes.
-* :py:func:`~nodetree.deserialize`: Tries to guess the data-type of a
-      string and then calls any of the above deserialization-functions
-      accordingly.
+* :py:func:`~nodetree.parse_sxpr`:
+  Converts any S-expression string to a tree of nodes.
+
+* :py:func:`~nodetree.parse_xml`:
+  Converts any XML-document to a tree of nodes.
+
+* :py:func:`~nodetree.parse_json`:
+  Converts a JSON-document that has
+  previously been created with :py:meth:`~nodetree.as_json` from a
+  tree of nodes back to a tree of nodes.
+
+* :py:func:`~nodetree.deserialize`:
+  Tries to guess the data-type of a string and then calls any of the
+  above deserialization-functions accordingly.
 
 
 Traversing trees via paths
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-* :py:func:`~nodetree.prev_path`: Returns the :ref:`path <paths>`
-      preceding a given path.
-* :py:func:`~nodetree.next_path`: Returns the :ref:`path <paths>`
-      following a given path.
-* :py:func:`~nodetree.pp_path`: Pretty-prints the given :ref:`path <paths>`
+* :py:func:`~nodetree.prev_path`:
+  Returns the :ref:`path <paths>` preceding a given path.
+
+* :py:func:`~nodetree.next_path`:
+  Returns the :ref:`path <paths>` following a given path.
+
+* :py:func:`~nodetree.pp_path`:
+  Pretty-prints the given :ref:`path <paths>`
 
 
 Attribute-handling
 ^^^^^^^^^^^^^^^^^^
 
-* :py:func:`~nodetree.has_token_on_attr`: Checks whether an attribute of a node
-      contains one or more tokens, i.e. blank separated sequences of letters.
-* :py:func:`~nodetree.add_token_to_attr`: Adds a token to a particular
-      attribute of a node.
-* :py:func:`~nodetree.remove_token_from_attr`: Removes a token from a particular
-      attribute of a node.
-* :py:func:`~nodetree.has_class`, :py:func:`~nodetree.add_class`,
-      :py:func:`~nodetree.remove_class`: the same as above, only that
-      these methods manipulate the tokens specifically of the class-attribute
+* :py:func:`~nodetree.has_token_on_attr`:
+  Checks whether an attribute of a node
+  contains one or more tokens, i.e. blank separated sequences of letters.
+
+* :py:func:`~nodetree.add_token_to_attr`:
+  Adds a token to a particular attribute of a node.
+
+* :py:func:`~nodetree.remove_token_from_attr`:
+  Removes a token from a particular attribute of a node.
+
+* :py:func:`~nodetree.has_class`, :py:func:`~nodetree.add_class`, :py:func:`~nodetree.remove_class`:
+  the same as above, only that these methods manipulate the tokens
+  specifically of the class-attribute
 
 
 class RootNode
@@ -1286,50 +1315,65 @@ root-node or swallow a a tree originating in a common node later.
 
 * :py:class:`~nodetree.RootNode`: additional functionality for a tree of nodes
 
-  * :py:data:`~nodetree.RootNode.errors`:  a list of errors
-  * :py:attr:`~nodetree.RootNode.errors_sorted`: the errors sorted by
-        their position in the source code instead of the time of their
-        having been added
-  * :py:data:`~nodetree.RootNode.inline_tags`: a set of tags that will
-        be printed on a single line with their content when serializing. (This
-        helps to avoid undesired whitespace when exporting to HTML!)
-  * :py:data:`~nodetree.RootNode.string_tags`: a set of tags that will be
-        converted to simple strings that appear as mixed content inside their
-        parent when serializing as XML
-  * :py:data:`~nodetree.RootNode.empty_tags`: a set of tags that will be
-        rendered as empty tags, e.g. ``<mytag />`` when serializing as
-        XML
-  * :py:meth:`~nodetree.RootNode.swallow`: Can be called once in the
-        lifetime of the RootNode-object to assign this root-node to an existing
-        tree of nodes.
-  * :py:meth:`~nodetree.RootNode.new_error`: Creates and adds new error.
-  * :py:meth:`~nodetree.RootNode.as_xml`: Serializes the tree as
-        XML taking into account the XML-customization attributes of the
-        RootNode-object.
+  * :py:data:`~nodetree.RootNode.errors`:
+    a list of errors
+
+  * :py:attr:`~nodetree.RootNode.errors_sorted`:
+    the errors sorted by their position in the source code instead of the
+    time of their having been added
+
+  * :py:data:`~nodetree.RootNode.inline_tags`:
+    a set of tags that will
+    be printed on a single line with their content when serializing. (This
+    helps to avoid undesired whitespace when exporting to HTML!)
+  * :py:data:`~nodetree.RootNode.string_tags`:
+    a set of tags that will be
+    converted to simple strings that appear as mixed content inside their
+    parent when serializing as XML
+
+  * :py:data:`~nodetree.RootNode.empty_tags`:
+    a set of tags that will be
+    rendered as empty tags, e.g. ``<mytag />`` when serializing as XML
+
+  * :py:meth:`~nodetree.RootNode.swallow`:
+    Can be called once in the  lifetime of the RootNode-object to assign
+    this root-node to an existing tree of nodes.
+
+  * :py:meth:`~nodetree.RootNode.new_error`:
+    Creates and adds new a error.
+
+  * :py:meth:`~nodetree.RootNode.as_xml`:
+    Serializes the tree as XML taking into account the XML-customization
+    attributes of the RootNode-object.
 
 
 class ContentMapping
 ^^^^^^^^^^^^^^^^^^^^
 
-    ContentMapping represents a path-mapping of the string-content of
-    all or a specific selection of the leave-nodes of a tree. A
-    content-mapping is an ordered mapping of the first text position of
-    every (selected) leaf-node to the path of this node.
+ContentMapping represents a path-mapping of the string-content of
+all or a specific selection of the leave-nodes of a tree. A
+content-mapping is an ordered mapping of the first text position of
+every (selected) leaf-node to the path of this node.
 
-    The class provides methods for mapping string positions to paths and
-    offsets (relative to the beginning of the leaf-node of the path)
+The class provides methods for mapping string positions to paths and
+offsets (relative to the beginning of the leaf-node of the path)
 
 * :py:class:`~nodetree.ContentMapping`: Mapping the tree to its string-content
 
-    * :py:meth:`~nodetree.ContentMapping.get_path_and_offset`: Maps
-          positions in string-content of the ContentMapping to the
-          leaf-path into which they fall
-    * :py:meth:`~nodetree.ContentMapping.iterate_paths`: Yields all paths from
-          position ``start_pos`` up to and including position ``end_pos``.
-    * :py:meth:`~nodetree.ContentMapping.insert_node`: Inserts a node at a
-          particular text-position.
-    * :py:meth:`~nodetree.ContentMapping.markup`: Adds markup (i.e. an element)
-          to a particular stretch of text.
+    * :py:meth:`~nodetree.ContentMapping.get_path_and_offset`:
+      Maps positions in string-content of the ContentMapping to the
+      leaf-path into which they fall
+
+    * :py:meth:`~nodetree.ContentMapping.iterate_paths`:
+      Yields all paths from
+      position ``start_pos`` up to and including position ``end_pos``.
+
+    * :py:meth:`~nodetree.ContentMapping.insert_node`:
+      Inserts a node at a
+      particular text-position.
+
+    * :py:meth:`~nodetree.ContentMapping.markup`:
+       Adds markup (i.e. an element) to a particular stretch of text.
 
 .. _ElementTree: https://docs.python.org/3/library/xml.etree.elementtree.html
 .. _mixed content: https://www.w3.org/TR/xml/#sec-mixed-content

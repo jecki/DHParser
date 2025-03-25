@@ -833,29 +833,31 @@ as the results of these stages can be serialized with ``str()``.
 Types and Functions
 ^^^^^^^^^^^^^^^^^^^
 
-   * :py:data:`~pipeline.Junction`: A type-alias for a tuple: (name of relative
-        source stage, factory for a compiler, name of the relative destination
-        stage). "relative" here means from the point of view of the compilation
-        function returned by the factory.
+* :py:data:`~pipeline.Junction`: A type-alias for a tuple:
+  (name of relative source stage, factory for a compiler,
+  name of the relative destination stage). "relative" here means from
+  the point of view of the compilation function returned by the factory.
 
-   * :py:data:`~pipeline.PseudoJunction`: A surrogate for :py:data:`~pipeline.Junction`:
-        for the preprocessing-stage in particular where the root-node-object as
-        a handle to passe the data through the pipeline does not yet exist.
+* :py:data:`~pipeline.PseudoJunction`: A surrogate for :py:data:`~pipeline.Junction`:
+  for the preprocessing-stage in particular where the root-node-object as
+  a handle to passe the data through the pipeline does not yet exist.
 
-   * :py:func:`~pipeline.create_preprocess_junction`: Creates a pseudo junction for
-        the preprocessing stage.
+* :py:func:`~pipeline.create_preprocess_junction`:
+  Creates a pseudo junction for the preprocessing stage.
 
-   * :py:func:`~pipeline.create_junction`: Creates a junction-tuple to describe
-        a particular transition in the processing pipeline.
+* :py:func:`~pipeline.create_junction`:
+  Creates a junction-tuple to describe
+  a particular transition in the processing pipeline.
 
-   * :py:func:`~pipeline.run_pipeline`: Runs an extended pipeline of
-        compilation or transformation functions (or, more precisely,
-        callables) that is defined by a set of junctions and returns the
-        results for selected target stages.
+* :py:func:`~pipeline.run_pipeline`:
+  Runs an extended pipeline of
+  compilation or transformation functions (or, more precisely,
+  callables) that is defined by a set of junctions and returns the
+  results for selected target stages.
 
-   * :py:func:`~compile.full_pipeline`: Like
-        :py:func:`~compile.compile_source`, but also runs any
-        post-processing stages beyond the compilation. Or, like
-        :py:func:`~pipeline.run_pipeline`, but also runs the
-        pre-processing- and parsing-stages before running the
-        pipeline.
+* :py:func:`~compile.full_pipeline`:
+  Like :py:func:`~compile.compile_source`, but also runs any
+  post-processing stages beyond the compilation. Or, like
+  :py:func:`~pipeline.run_pipeline`, but also runs the
+  pre-processing- and parsing-stages before running the
+  pipeline.
