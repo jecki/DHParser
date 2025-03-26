@@ -1155,7 +1155,7 @@ const RepLimit* = uint32(2^30)   # 2^31 and higher does not work with js-target,
 type
   CharRangeRef* = ref CharRangeObj not nil
   CharRangeObj = object of ParserObj
-    runes: RuneSet
+    runes: RuneCollection
     repetitions: Range
 
 func rep(s: string | char): Range =
@@ -1175,7 +1175,7 @@ func rep(s: string | char): Range =
       assert false
 
 proc init*(charRangeParser: CharRangeRef,
-           runes: RuneSet,
+           runes: RuneCollection,
            repetitions: Range): CharRangeRef =
   discard Parser(charRangeParser).init(CharRangeName)
   charRangeParser.runes = runes
@@ -1183,10 +1183,10 @@ proc init*(charRangeParser: CharRangeRef,
   charRangeParser.repetitions = repetitions
   return charRangeParser
 
-template CharRange*(runes: RuneSet, repetitions: Range = (1, 1)): CharRangeRef =
+template CharRange*(runes: RuneCollection, repetitions: Range = (1, 1)): CharRangeRef =
   new(CharRangeRef).init(runes, repetitions)
 
-template CharRange*(runes: RuneSet, repetition: string | char): CharRangeRef =
+template CharRange*(runes: RuneCollection, repetition: string | char): CharRangeRef =
   new(CharRangeRef).init(runes, rep(repetition))
 
 proc cr*(s: string): CharRangeRef =
@@ -1210,10 +1210,10 @@ proc cr*(s: string): CharRangeRef =
     a += 1
     b -= 1
     doAssert b >= 0 and b >= a, missingContent
-  let rangeSet = rs(s[a..b])
-  doAssert repetition == ' ' or rangeSet.ranges.len <= 1 or
+  let runes = rs(s[a..b])
+  doAssert repetition == ' ' or runes.ranges.len <= 1 or
            s[0] in "([", fmt(missingBrackets)
-  CharRange(rangeSet, repetition)
+  CharRange(runes, repetition)
 
 method parse*(self: CharRangeRef, location: int32): ParsingResult =
   let
@@ -1229,14 +1229,14 @@ method parse*(self: CharRangeRef, location: int32): ParsingResult =
     if pos >= L:
       return (nil, location)
     document.buf[].fastRuneAt(pos, r)
-    if negate xor (inRuneRange(r, ranges) < 0):
+    if negate xor (inRuneRanges(r, ranges) < 0):
       return (nil, location)
   var lastPos = pos
   for i in self.repetitions.min ..< self.repetitions.max:
     if pos >= L:
       break
     document.buf[].fastRuneAt(pos, r)
-    if negate xor (inRuneRange(r, ranges) < 0):
+    if negate xor (inRuneRanges(r, ranges) < 0):
       break
     lastPos = pos
   return (newNode(self.nodeName, document.cut(location ..< lastPos)), lastPos)

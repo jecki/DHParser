@@ -20,6 +20,7 @@
 {.experimental: "strictFuncs".}
 {.experimental: "strictDefs".}
 {.experimental: "strictCaseObjects".}
+# {.experimental: "codeReordering".}
 
 
 import std/[algorithm, strformat, strutils, unicode]
@@ -28,15 +29,71 @@ import std/[algorithm, strformat, strutils, unicode]
 proc nilRefError(fieldName: string): ref AssertionDefect =
   newException(AssertionDefect, fmt"{fieldName} unexpectedly nil!")
 
+const runeSetSize = 4096
 
 type
+  # RuneCollectionRef = ref RuneCollection
+  IsContainedFunc* = proc(r: Rune, collection: var RuneCollection): bool 
+
   Range* = tuple[min: uint32, max: uint32]
   RuneRange* = tuple[low: Rune, high: Rune]
-  RuneSet* = tuple[negate: bool, ranges: seq[RuneRange]]
-
+  RuneSet* = tuple[low, high: Rune, set: set[0 .. runeSetSize-1]]
+  RuneCollection* = object
+    negate: bool
+    ranges: seq[RuneRange]
+    sets: seq[RuneSet]
+    contains: IsContainedFunc
+  # tuple[negate: bool, ranges: seq[RuneRange], sets: seq[RuneSet], contains: IsContainedFunc]
 
 const
   EmptyRuneRange* = (Rune('b'), Rune('a'))
+
+
+func makeCollection(negate: bool, ranges: seq[RuneRange], sets: seq[RuneSet], contains: IsContainedFunc): RuneCollection =
+  RuneCollection(negate: negate, ranges: ranges, sets: sets, contains: contains)
+
+
+template inContainer(r: Rune, container: RuneRange, nr: int32): int32 = nr
+template inContainer(r: Rune, container: RuneSet, nr: int32): int32 = 
+  if (r.uint32 - container.low.uint32) in container.set: nr else: -1
+
+func inRuneContainerSeq[T: RuneRange|RuneSet](r: Rune, ranges: seq[T]): int32 =
+  ## Binary search to find out if rune r is in one of the containers
+  ## Returns the index of the containers or -1, if r is not in any container
+  ## It is assumed that the containers are sorted and do not overlap.
+  let
+    highest: int32 = ranges.len.int32 - 1'i32
+  var
+    a = 0'i32
+    b = highest
+    last_i = -1'i32
+    i = b div 2
+
+  while i != last_i:
+    if ranges[i].low <=% r:
+      if r <=% ranges[i].high:
+        # return i
+        return inContainer(r, ranges[i], i)
+      else:
+        a = min(i + 1, highest)
+    else:
+      b = max(i - 1, 0)
+    last_i = i
+    i = a + (b - a) div 2
+  return -1
+
+template inRuneRanges*(r: Rune, ranges: seq[RuneRange]): int32 = inRuneContainerSeq(r, ranges)
+template inRuneSets*(r: Rune, sets: seq[RuneSet]): int32 = inRuneContainerSeq(r, sets)
+
+
+proc inRanges(r: Rune, collection: var RuneCollection): bool =
+  collection.negate xor inRuneRanges(r, collection.ranges) >= 0
+
+proc inSets(r: Rune, collection: var RuneCollection): bool =
+  collection.negate xor inRuneRanges(r, collection.ranges) >= 0
+
+proc inRangesProbe(r: Rune, collection: var RuneCollection): bool =
+  collection.negate xor inRuneRanges(r, collection.ranges) >= 0
 
 
 proc `$`*(range: Range): string =
@@ -46,7 +103,7 @@ proc `$`*(range: Range): string =
   if min <= max:  fmt"{min}..{max}"  else: "EMPTY"
 
 
-proc `$`*(rs: RuneSet, verbose: bool = false): string =
+proc `$`*(rc: RuneCollection, verbose: bool = false): string =
   ## Serializes rune set. Use "runeset $ true" for a more
   ## verbose and easier to read serialization.
   proc hexlen(r: Rune): (int8, string) =
@@ -63,11 +120,11 @@ proc `$`*(rs: RuneSet, verbose: bool = false): string =
       b = rr.high.int32
     isIn(a, b, 48, 57) or isIn(a, b, 65, 90) or isIn(a, b, 97, 122)
 
-  var s: seq[string] = newSeqOfCap[string](len(rs.ranges) + 2)
+  var s: seq[string] = newSeqOfCap[string](len(rc.ranges) + 2)
   if not verbose:
     s.add("[")
-    if rs.negate: s.add("^")
-  for rr in rs.ranges:
+    if rc.negate: s.add("^")
+  for rr in rc.ranges:
     if isAlphaNum(rr):
       let low = chr(rr.low.int8)
       if rr.low == rr.high:
@@ -83,28 +140,19 @@ proc `$`*(rs: RuneSet, verbose: bool = false): string =
         s.add(marker & toHex(rr.low.int32, l) & "-" & marker & toHex(rr.high.int32, l))
     if rr.high <% rr.low:  s.add("!") 
   if verbose:
-    (if rs.negate: @["[^", s.join("]-["), "]"] 
+    (if rc.negate: @["[^", s.join("]-["), "]"] 
              else: @["[", s.join("]|["), "]"]).join("")
   else:
     s.add("]")
     return s.join("")
 
 
-proc `$`*(rr: seq[RuneRange], verbose=false): string = (false, rr) $ verbose
+proc `$`*(rr: seq[RuneRange], verbose=false): string = createRC(false, rr, @[], inRanges) $ verbose
 proc `$`*(rr: RuneRange): string = $(@[rr])
 
 
 func toRange*(r: RuneRange): Range = (r.low.uint32, r.high.uint32)
 func toRuneRange*(r: Range): RuneRange = (Rune(r.min), Rune(r.max))
-
-
-func neverEmpty*(rr: seq[RuneRange]): bool =
-  ## Confirms that the sequence of ranges is not be empty and that
-  ## for each range low <= high.
-  if rr.len <= 0: return false
-  for r in rr:
-    if r.high <% r.low: return false
-  return true
 
 
 func isSortedAndMerged*(rr: seq[RuneRange]): bool =
@@ -114,16 +162,14 @@ func isSortedAndMerged*(rr: seq[RuneRange]): bool =
     if rr[i].low <=% rr[i - 1].high: return false
   return true
 
-func size*(range: Range): uint32 = range.max - range.min + 1
-func size*(r: RuneRange): uint32 = size(toRange(r))
-func size(R: seq[RuneRange]): uint32 =
-  if not isSortedAndMerged(R):
-    raise newException(AssertionDefect,
-      fmt"Cannot determine size of unmerged and unsorted rune range: {R}")
-  var sum: uint32 = 0
-  for rr in R:
-    sum += size(rr)
-  return sum
+
+func neverEmpty*(rr: seq[RuneRange]): bool =
+  ## Confirms that the sequence of ranges is not empty and that
+  ## for each range low <= high.
+  if rr.len <= 0: return false
+  for r in rr:
+    if r.high <% r.low: return false
+  return true
 
 
 proc sortAndMerge*(R: var seq[RuneRange]) =
@@ -149,6 +195,45 @@ proc sortAndMerge*(R: var seq[RuneRange]) =
   R.setLen(a + 1)
   # assert isSortedAndMerged(R)
 
+
+func size*(range: Range): uint32 = range.max - range.min + 1
+func size*(r: RuneRange): uint32 = size(toRange(r))
+func size(R: seq[RuneRange]): uint32 =
+  if not isSortedAndMerged(R):
+    raise newException(AssertionDefect,
+      fmt"Cannot determine size of unmerged and unsorted rune range: {R}")
+  var sum: uint32 = 0
+  for rr in R:
+    sum += size(rr)
+  return sum
+
+
+# func inRuneRanges*(r: Rune, ranges: seq[RuneRange]): int32 =
+#   ## Binary search to find out if rune r falls within one of the sorted ranges
+#   ## Returns the index of the range or -1, if r does not fall into any range
+#   ## It is assumed that the ranges are sorted and do not overlap.
+#   let
+#     highest: int32 = ranges.len.int32 - 1'i32
+#   var
+#     a = 0'i32
+#     b = highest
+#     last_i = -1'i32
+#     i  = b div 2
+
+#   while i != last_i:
+#     if ranges[i].low <=% r:
+#       if r <=% ranges[i].high:
+#         return i
+#       else:
+#         a = min(i + 1, highest)
+#     else:
+#       b = max(i - 1, 0)
+#     last_i = i
+#     i = a + (b - a) div 2
+#   return -1
+
+
+## RuneRange Combinators
 
 proc `+`*(A, B: seq[RuneRange]): seq[RuneRange] =
   result = newSeqOfCap[RuneRange](A.len + B.len)
@@ -211,15 +296,18 @@ proc `-`*(A, B: seq[RuneRange]): seq[RuneRange] =
 proc `*`*(A, B: seq[RuneRange]): seq[RuneRange] = A - (A - B) - (B - A)
 
 
+## Rune Collection Combinators
 
-proc `^`*(runes: RuneSet): RuneSet = (not runes.negate, runes.ranges)
+
+proc `^`*(runes: RuneCollection): RuneCollection = 
+  RuneCollection(negate: not runes.negate, ranges: runes.ranges, sets: runes.sets, contains: runes.contains)
 
 
-proc `+`*(A, B: RuneSet): RuneSet =
+proc `+`*(A, B: RuneCollection): RuneCollection =
   let selector = (if A.negate: 2 else: 0) + (if B.negate: 1 else: 0)
   case selector:  # (A.negate, B.negate)
     of 0b00:  # (false, false)
-      return (false, A.ranges + B.ranges)
+      return RuneCollection(false, A.ranges + B.ranges, @[], inRangesProbe)
     of 0b01:  # (false, true)
       return (true, B.ranges - A.ranges)
     of 0b10:  # (true, false)
@@ -229,7 +317,7 @@ proc `+`*(A, B: RuneSet): RuneSet =
     else:  assert false
 
 
-proc `-`*(A, B: RuneSet): RuneSet =
+proc `-`*(A, B: RuneCollection): RuneCollection =
   let selector = (if A.negate: 2 else: 0) + (if B.negate: 1 else: 0)
   case selector:  # (A.negate, B.negate)
     of 0b00:  # (false, false)
@@ -243,34 +331,9 @@ proc `-`*(A, B: RuneSet): RuneSet =
     else: assert false
 
 
-func inRuneRange*(r: Rune, ranges: seq[RuneRange]): int32 =
-  ## Binary search to find out if rune r falls within one of the sorted ranges
-  ## Returns the index of the range or -1, if r does not fall into any range
-  ## It is assumed that the ranges are sorted and do not overlap.
-  let
-    highest: int32 = ranges.len.int32 - 1'i32
-  var
-    a = 0'i32
-    b = highest
-    last_i = -1'i32
-    i  = b div 2
-
-  while i != last_i:
-    if ranges[i].low <=% r:
-      if r <=% ranges[i].high:
-        return i
-      else:
-        a = min(i + 1, highest)
-    else:
-      b = max(i - 1, 0)
-    last_i = i
-    i = a + (b - a) div 2
-  return -1
-
-
 ## Rune range and rune set parsers
 
-proc rs0*(rangesStr: string): RuneSet =
+proc rs0*(rangesStr: string): RuneCollection =
   ## Parses "basic" rune sets. The syntax for rangeStr is more or less the
   ## syntax you'd use inside rectangular brackets [ ] in regular expressions,
   ## only that the only allowed backslashed values are \s (whitespace)
@@ -346,7 +409,7 @@ proc rs0*(rangesStr: string): RuneSet =
   return (negate, runeRanges)
 
 
-proc rs*(s: string): RuneSet =
+proc rs*(s: string): RuneCollection =
   ## parses "complex" rune sets that may be composed of unions or differences
   ## of basic rune sets. Examples:
   ## rs"""[_:]|[A-Z]|[a-z]|[\u00C0-\u00D6]|[\U00010000-\U000EFFFF]"""
@@ -361,7 +424,7 @@ proc rs*(s: string): RuneSet =
     k = 0
     sign = ' '
 
-  proc parseRuneSet(): RuneSet =
+  proc parseRuneCollection(): RuneCollection =
     assert i < s.len
     assert s[i] == '[', $i
     let k = i + 1
@@ -370,15 +433,15 @@ proc rs*(s: string): RuneSet =
     result = rs0(s[k ..< i])
     i += 1
 
-  template addOrSubtract(nextRS: RuneSet) = 
+  template addOrSubtract(nextRC: RuneCollection) = 
       if sign == '-':
-        result = result - nextRS
+        result = result - nextRC
       else:
         if result.ranges.len == 0:
-          result = nextRS
+          result = nextRC
         else:
           assert sign == '|', s[0..i]
-          result = result + nextRS    
+          result = result + nextRC    
       sign = ' '
 
   result = (false, @[])
@@ -394,12 +457,11 @@ proc rs*(s: string): RuneSet =
     elif s[i] != '[':
       k = i      
       while i < s.len and not (s[i] in " \n|"):  i += 1
-      let nextRS = rs0(s[k ..< i])
-      assert nextRS.ranges.len == 1
-      addOrSubtract(nextRS)
+      let nextRC = rs0(s[k ..< i])
+      addOrSubtract(nextRC)
     else: 
       while i < s.len and s[i] in " \n":  i += 1
-      addOrSubtract(parseRuneSet())
+      addOrSubtract(parseRuneCollection())
 
 
 proc rr*(rangeStr: string): RuneRange =
@@ -435,3 +497,7 @@ when isMainModule:
   echo rs3 $ true
   echo $rs(rs3 $ true)
   echo rs3 $ true
+  let rs4 = rs"[acegikmo]"
+  echo $rs4
+  echo $rs4.ranges.len
+  
