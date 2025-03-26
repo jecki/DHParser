@@ -43,14 +43,9 @@ type
     ranges: seq[RuneRange]
     sets: seq[RuneSet]
     contains: IsContainedFunc
-  # tuple[negate: bool, ranges: seq[RuneRange], sets: seq[RuneSet], contains: IsContainedFunc]
 
 const
   EmptyRuneRange* = (Rune('b'), Rune('a'))
-
-
-func makeCollection(negate: bool, ranges: seq[RuneRange], sets: seq[RuneSet], contains: IsContainedFunc): RuneCollection =
-  RuneCollection(negate: negate, ranges: ranges, sets: sets, contains: contains)
 
 
 template inContainer(r: Rune, container: RuneRange, nr: int32): int32 = nr
@@ -92,8 +87,13 @@ proc inRanges(r: Rune, collection: var RuneCollection): bool =
 proc inSets(r: Rune, collection: var RuneCollection): bool =
   collection.negate xor inRuneRanges(r, collection.ranges) >= 0
 
-proc inRangesProbe(r: Rune, collection: var RuneCollection): bool =
+proc metaContainedIn(r: Rune, collection: var RuneCollection): bool =
   collection.negate xor inRuneRanges(r, collection.ranges) >= 0
+
+
+func newRC(negate: bool, ranges: seq[RuneRange], sets: seq[RuneSet], 
+           contains: IsContainedFunc = metaContainedIn): RuneCollection =
+  RuneCollection(negate: negate, ranges: ranges, sets: sets, contains: contains)
 
 
 proc `$`*(range: Range): string =
@@ -147,7 +147,7 @@ proc `$`*(rc: RuneCollection, verbose: bool = false): string =
     return s.join("")
 
 
-proc `$`*(rr: seq[RuneRange], verbose=false): string = createRC(false, rr, @[], inRanges) $ verbose
+proc `$`*(rr: seq[RuneRange], verbose=false): string = newRC(false, rr, @[]) $ verbose
 proc `$`*(rr: RuneRange): string = $(@[rr])
 
 
