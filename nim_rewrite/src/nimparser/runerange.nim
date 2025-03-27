@@ -32,7 +32,7 @@ proc nilRefError(fieldName: string): ref AssertionDefect =
 const runeSetSize = 4096
 
 type
-  IscontainedProc = proc(r: Rune, collection: var RuneCollection): bool
+  IsContainedProc = proc(r: Rune, collection: var RuneCollection): bool
 
   RuneSet = set[0 .. runeSetSize]
   RuneSetRef = ref RuneSet
@@ -48,7 +48,10 @@ const
   EmptyRuneRange* = (Rune('b'), Rune('a'))
 
 
-func inRuneRanges(r: Rune, ranges: seq[RuneRange]): int32 =
+# template inRanges
+
+
+func inRanges(r: Rune, ranges: seq[RuneRange]): int32 =
   ## Binary search to find out if rune r is in one of the containers
   ## Returns the index of the containers or -1, if r is not in any container
   ## It is assumed that the containers are sorted and do not overlap.
@@ -58,13 +61,13 @@ func inRuneRanges(r: Rune, ranges: seq[RuneRange]): int32 =
     a = 0'i32
     b = highest
     last_i = -1'i32
-    i = b div 2
+    i = b shr 1  # div 2
 
   while i != last_i:
     let rng = ranges[i]
     if rng.low <=% r:
       if r <=% rng.high:
-        if isNil(rng.runeSet) or (r.uint32 - rng.low.uint32) in rng.runeSet:
+        if isNil(rng.runeSet) or (r.uint32 - rng.low.uint32) in rng.runeSet[]:
           return i
         else:
           return -1
@@ -73,20 +76,21 @@ func inRuneRanges(r: Rune, ranges: seq[RuneRange]): int32 =
     else:
       b = max(i - 1, 0)
     last_i = i
-    i = a + (b - a) div 2
+    i = a + (b - a) shr 1  # div 2
   return -1
 
 
-proc inRanges(r: Rune, collection: var RuneCollection): bool =
+proc inSets(r: Rune, collection: var RuneCollection): bool =
   collection.negate xor inRuneRanges(r, collection.sets) >= 0
 
-proc metaContainedIn(r: Rune, collection: var RuneCollection): bool =
+proc firstTimeContainedIn(r: Rune, collection: var RuneCollection): bool =
   collection.negate xor inRuneRanges(r, collection.sets) >= 0
 
-
-func newRC(negate: bool, ranges: seq[Range], sets: seq[RuneSet], 
-           contains: IsContainedFunc = metaContainedIn): RuneCollection =
-  RuneCollection(negate: negate, ranges: ranges, sets: sets, contains: contains)
+func makeRuneCollection(negate: bool, ranges: seq[Range]): RuneCollection =
+  RuneCollection(negate: negate, 
+                 ranges: ranges, 
+                 sets: @[], 
+                 contains: firstTimeContainedIn)
 
 
 proc `$`*(range: Range): string =
