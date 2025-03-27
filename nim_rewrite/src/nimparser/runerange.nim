@@ -32,27 +32,23 @@ proc nilRefError(fieldName: string): ref AssertionDefect =
 const runeSetSize = 4096
 
 type
-  # RuneCollectionRef = ref RuneCollection
-  IsContainedFunc* = proc(r: Rune, collection: var RuneCollection): bool 
+  IscontainedProc = proc(r: Rune, collection: var RuneCollection): bool
 
+  RuneSet = set[0 .. runeSetSize]
+  RuneSetRef = ref RuneSet
   Range* = tuple[min: uint32, max: uint32]
-  RuneRange* = tuple[low: Rune, high: Rune]
-  RuneSet* = tuple[low, high: Rune, set: set[0 .. runeSetSize-1]]
+  RuneRange* = tuple[low: Rune, high: Rune, runeSet: RuneSetRef]
   RuneCollection* = object
     negate: bool
-    ranges: seq[RuneRange]
-    sets: seq[RuneSet]
-    contains: IsContainedFunc
+    ranges: seq[Range]
+    sets: seq[RuneRange]
+    contains: IsContainedProc
 
 const
   EmptyRuneRange* = (Rune('b'), Rune('a'))
 
 
-template inContainer(r: Rune, container: RuneRange, nr: int32): int32 = nr
-template inContainer(r: Rune, container: RuneSet, nr: int32): int32 = 
-  if (r.uint32 - container.low.uint32) in container.set: nr else: -1
-
-func inRuneContainerSeq[T: RuneRange|RuneSet](r: Rune, ranges: seq[T]): int32 =
+func inRuneRanges(r: Rune, ranges: seq[RuneRange]): int32 =
   ## Binary search to find out if rune r is in one of the containers
   ## Returns the index of the containers or -1, if r is not in any container
   ## It is assumed that the containers are sorted and do not overlap.
@@ -65,10 +61,13 @@ func inRuneContainerSeq[T: RuneRange|RuneSet](r: Rune, ranges: seq[T]): int32 =
     i = b div 2
 
   while i != last_i:
-    if ranges[i].low <=% r:
-      if r <=% ranges[i].high:
-        # return i
-        return inContainer(r, ranges[i], i)
+    let rng = ranges[i]
+    if rng.low <=% r:
+      if r <=% rng.high:
+        if isNil(rng.runeSet) or (r.uint32 - rng.low.uint32) in rng.runeSet:
+          return i
+        else:
+          return -1
       else:
         a = min(i + 1, highest)
     else:
@@ -77,21 +76,15 @@ func inRuneContainerSeq[T: RuneRange|RuneSet](r: Rune, ranges: seq[T]): int32 =
     i = a + (b - a) div 2
   return -1
 
-template inRuneRanges*(r: Rune, ranges: seq[RuneRange]): int32 = inRuneContainerSeq(r, ranges)
-template inRuneSets*(r: Rune, sets: seq[RuneSet]): int32 = inRuneContainerSeq(r, sets)
-
 
 proc inRanges(r: Rune, collection: var RuneCollection): bool =
-  collection.negate xor inRuneRanges(r, collection.ranges) >= 0
-
-proc inSets(r: Rune, collection: var RuneCollection): bool =
-  collection.negate xor inRuneRanges(r, collection.ranges) >= 0
+  collection.negate xor inRuneRanges(r, collection.sets) >= 0
 
 proc metaContainedIn(r: Rune, collection: var RuneCollection): bool =
-  collection.negate xor inRuneRanges(r, collection.ranges) >= 0
+  collection.negate xor inRuneRanges(r, collection.sets) >= 0
 
 
-func newRC(negate: bool, ranges: seq[RuneRange], sets: seq[RuneSet], 
+func newRC(negate: bool, ranges: seq[Range], sets: seq[RuneSet], 
            contains: IsContainedFunc = metaContainedIn): RuneCollection =
   RuneCollection(negate: negate, ranges: ranges, sets: sets, contains: contains)
 
