@@ -1218,8 +1218,7 @@ proc cr*(s: string): CharRangeRef =
 method parse*(self: CharRangeRef, location: int32): ParsingResult =
   let
     document = self.grammar.document
-    ranges = self.runes.ranges
-    negate = self.runes.negate
+    runes = self.runes
     L: int32 = document.len.int32
   var
     r: Rune
@@ -1229,14 +1228,14 @@ method parse*(self: CharRangeRef, location: int32): ParsingResult =
     if pos >= L:
       return (nil, location)
     document.buf[].fastRuneAt(pos, r)
-    if negate xor (inRuneRanges(r, ranges) < 0):
+    if runes.contains(r, runes):
       return (nil, location)
   var lastPos = pos
   for i in self.repetitions.min ..< self.repetitions.max:
     if pos >= L:
       break
     document.buf[].fastRuneAt(pos, r)
-    if negate xor (inRuneRanges(r, ranges) < 0):
+    if runes.contains(r, runes):
       break
     lastPos = pos
   return (newNode(self.nodeName, document.cut(location ..< lastPos)), lastPos)

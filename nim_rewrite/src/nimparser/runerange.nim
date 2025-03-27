@@ -8,7 +8,7 @@
 ## or, say [\u037F-\u1FFF], negative ranges, e.g. [^0-9] (not a digit) as
 ## well as unions or intersections of such ranges.
 ##
-## The functions allow to normalize (sortAndMerge()) sets of rune
+## The functions allow to normalize (sortAndMerge()) sequences of rune
 ## ranges, query for inclusion (isInRuneRange()) in logarithmic time,
 ## perform basic algrbraic operations (like intersecting * , joining + ,
 ## building the difference -, negating ^), and finally to build rune sets
@@ -34,26 +34,20 @@ const runeSetSize = 4096
 type
   IsContainedProc = proc(r: Rune, collection: var RuneCollection): bool
 
-  RuneSet = set[0 .. runeSetSize]
-  RuneSetRef = ref RuneSet
-  Range* = tuple[min: uint32, max: uint32]
-  RuneRange* = tuple[low: Rune, high: Rune, runeSet: RuneSetRef]
+  RuneRange* = tuple[low: Rune, high: Rune]
+  RuneSet* = tuple[low: Rune, high: Rune, runes: ref set[0 .. runeSetSize]]
   RuneCollection* = object
     negate: bool
-    ranges: seq[Range]
-    sets: seq[RuneRange]
+    ranges: seq[RuneRange]
+    sets: seq[RuneSet]  # if not empty, an optimized version of ranges
     contains: IsContainedProc
 
 const
   EmptyRuneRange* = (Rune('b'), Rune('a'))
 
 
-# template inRanges
-
-
-func inRanges(r: Rune, ranges: seq[RuneRange]): int32 =
+func inRuneRanges[T: RuneRange|RuneSet](r: Rune, ranges: seq[T]): bool =
   ## Binary search to find out if rune r is in one of the containers
-  ## Returns the index of the containers or -1, if r is not in any container
   ## It is assumed that the containers are sorted and do not overlap.
   let
     highest: int32 = ranges.len.int32 - 1'i32
@@ -67,36 +61,49 @@ func inRanges(r: Rune, ranges: seq[RuneRange]): int32 =
     let rng = ranges[i]
     if rng.low <=% r:
       if r <=% rng.high:
-        if isNil(rng.runeSet) or (r.uint32 - rng.low.uint32) in rng.runeSet[]:
-          return i
-        else:
-          return -1
+        when T is RuneRange:
+          return true
+        else:  # T is RuneSet
+          return isNil(rng.runes) or (r.uint32 - rng.low.uint32) in rng.runes[]
       else:
         a = min(i + 1, highest)
     else:
       b = max(i - 1, 0)
     last_i = i
     i = a + (b - a) shr 1  # div 2
-  return -1
+  return false
 
+proc inRanges(r: Rune, collection: var RuneCollection): bool =
+  collection.negate xor inRuneRanges(r, collection.ranges)
+
+proc inSingleRange(r: Rune, collection: var RuneCollection): bool =
+  let rng = collection.ranges[0]
+  collection.negate xor (rng.low <=% r and r <=% rng.high)
 
 proc inSets(r: Rune, collection: var RuneCollection): bool =
-  collection.negate xor inRuneRanges(r, collection.sets) >= 0
+  collection.negate xor inRuneRanges(r, collection.sets)
 
-proc firstTimeContainedIn(r: Rune, collection: var RuneCollection): bool =
-  collection.negate xor inRuneRanges(r, collection.sets) >= 0
+proc inSingleSet(r: Rune, collection: var RuneCollection): bool =
+  let rset = collection.sets[0]
+  collection.negate xor (r.uint32 - rset.low.uint32) in rset.runes[]
 
-func makeRuneCollection(negate: bool, ranges: seq[Range]): RuneCollection =
-  RuneCollection(negate: negate, 
-                 ranges: ranges, 
-                 sets: @[], 
-                 contains: firstTimeContainedIn)
+proc inZeroBasedSet(r: Rune, collection: var RuneCollection): bool =
+  collection.negate xor r.uint32 in collection.sets[0].runes[]
+
+proc initialContainedIn(r: Rune, collection: var RuneCollection): bool =
+  # optimize and select the best isContainedProc.
+  collection.negate xor inRuneRanges(r, collection.ranges)
 
 
-proc `$`*(range: Range): string =
+func RC(negate: bool, ranges: seq[RuneRange]): RuneCollection =
+  RuneCollection(negate: negate, ranges: ranges, sets: @[], 
+                 contains: initialContainedIn)
+
+
+proc `$`*(range: RuneRange): string =
   let
-    min {.inject.} = range.min
-    max {.inject.} = range.max
+    min = range.low.uint32
+    max = range.high.uint32
   if min <= max:  fmt"{min}..{max}"  else: "EMPTY"
 
 
@@ -144,12 +151,8 @@ proc `$`*(rc: RuneCollection, verbose: bool = false): string =
     return s.join("")
 
 
-proc `$`*(rr: seq[RuneRange], verbose=false): string = newRC(false, rr, @[]) $ verbose
+proc `$`*(rr: seq[RuneRange], verbose=false): string = RC(false, rr) $ verbose
 proc `$`*(rr: RuneRange): string = $(@[rr])
-
-
-func toRange*(r: RuneRange): Range = (r.low.uint32, r.high.uint32)
-func toRuneRange*(r: Range): RuneRange = (Rune(r.min), Rune(r.max))
 
 
 func isSortedAndMerged*(rr: seq[RuneRange]): bool =
@@ -192,9 +195,7 @@ proc sortAndMerge*(R: var seq[RuneRange]) =
   R.setLen(a + 1)
   # assert isSortedAndMerged(R)
 
-
-func size*(range: Range): uint32 = range.max - range.min + 1
-func size*(r: RuneRange): uint32 = size(toRange(r))
+func size*(r: RuneRange): uint32 = r.high.uint32 - r.low.uint32 + 1
 func size(R: seq[RuneRange]): uint32 =
   if not isSortedAndMerged(R):
     raise newException(AssertionDefect,
@@ -304,28 +305,32 @@ proc `+`*(A, B: RuneCollection): RuneCollection =
   let selector = (if A.negate: 2 else: 0) + (if B.negate: 1 else: 0)
   case selector:  # (A.negate, B.negate)
     of 0b00:  # (false, false)
-      return RuneCollection(false, A.ranges + B.ranges, @[], inRangesProbe)
+      RC(false, A.ranges + B.ranges)
     of 0b01:  # (false, true)
-      return (true, B.ranges - A.ranges)
+      RC(true, B.ranges - A.ranges)
     of 0b10:  # (true, false)
-      return (true, A.ranges - B.ranges)
+      RC(true, A.ranges - B.ranges)
     of 0b11:  # (true, true)
-      return (true, A.ranges * B.ranges)
-    else:  assert false
+      RC(true, A.ranges * B.ranges)
+    else:  
+      assert false
+      RC(true, @[])
 
 
 proc `-`*(A, B: RuneCollection): RuneCollection =
   let selector = (if A.negate: 2 else: 0) + (if B.negate: 1 else: 0)
   case selector:  # (A.negate, B.negate)
     of 0b00:  # (false, false)
-      return (false, A.ranges - B.ranges)
+      RC(false, A.ranges - B.ranges)
     of 0b01:  # (false, true)
-      return (false, A.ranges * B.ranges)
+      RC(false, A.ranges * B.ranges)
     of 0b10:  # (true, false)
-      return (true, A.ranges + B.ranges)
+      RC(true, A.ranges + B.ranges)
     of 0b11:  # (true, true)
-      return (false, B.ranges - A.ranges)
-    else: assert false
+      RC(false, B.ranges - A.ranges)
+    else: 
+      assert false
+      RC(false, @[])
 
 
 ## Rune range and rune set parsers
@@ -403,7 +408,7 @@ proc rs0*(rangesStr: string): RuneCollection =
     runeRanges.add((low, high))
   assert runeRanges.len >= 1
   sortAndMerge(runeRanges)
-  return (negate, runeRanges)
+  return RC(negate, runeRanges)
 
 
 proc rs*(s: string): RuneCollection =
@@ -441,7 +446,7 @@ proc rs*(s: string): RuneCollection =
           result = result + nextRC    
       sign = ' '
 
-  result = (false, @[])
+  result = RC(false, @[])
   while i < s.len:
     while i < s.len and s[i] in " \n":  i += 1
     if s[i] == '-':
