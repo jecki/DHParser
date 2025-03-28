@@ -32,21 +32,21 @@ proc nilRefError(fieldName: string): ref AssertionDefect =
 const runeSetSize = 4096
 
 type
-  IsContainedProc = proc(r: Rune, collection: var RuneCollection): bool
+  IsContainedProc = proc(r: Rune, collection: var RuneCollection): bool {.nimcall.}
 
   RuneRange* = tuple[low: Rune, high: Rune]
   RuneSet* = tuple[low: Rune, high: Rune, runes: ref set[0 .. runeSetSize]]
   RuneCollection* = object
-    negate: bool
-    ranges: seq[RuneRange]
+    negate*: bool
+    ranges*: seq[RuneRange]
     sets: seq[RuneSet]  # if not empty, an optimized version of ranges
-    contains: IsContainedProc
+    contains*: IsContainedProc not nil
 
 const
   EmptyRuneRange* = (Rune('b'), Rune('a'))
 
 
-func inRuneRanges[T: RuneRange|RuneSet](r: Rune, ranges: seq[T]): bool =
+func inRuneRanges*[T: RuneRange|RuneSet](r: Rune, ranges: seq[T]): bool =
   ## Binary search to find out if rune r is in one of the containers
   ## It is assumed that the containers are sorted and do not overlap.
   let
@@ -95,7 +95,7 @@ proc initialContainedIn(r: Rune, collection: var RuneCollection): bool =
   collection.negate xor inRuneRanges(r, collection.ranges)
 
 
-func RC(negate: bool, ranges: seq[RuneRange]): RuneCollection =
+func RC*(negate: bool, ranges: seq[RuneRange]): RuneCollection =
   RuneCollection(negate: negate, ranges: ranges, sets: @[], 
                  contains: initialContainedIn)
 
@@ -478,7 +478,7 @@ proc rr*(rangeStr: string): RuneRange =
 
 
 when isMainModule:
-  let rs1 = rs"""[_]|[:]|[A-Z]|[a-z]
+  var rs1 = rs"""[_]|[:]|[A-Z]|[a-z]
                 |[\u00C0-\u00D6]|[\u00D8-\u00F6]|[\u00F8-\u02FF]
                 |[\u0370-\u037D]|[\u037F-\u1FFF]|[\u200C-\u200D]
                 |[\u2070-\u218F]|[\u2C00-\u2FEF]|[\u3001-\uD7FF]
@@ -502,4 +502,5 @@ when isMainModule:
   let rs4 = rs"[acegikmo]"
   echo $rs4
   echo $rs4.ranges.len
+  echo $(rs1.contains(Rune('a'), rs1))
   

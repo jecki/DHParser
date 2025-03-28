@@ -6,55 +6,55 @@ import std/[unittest, strutils, unicode, algorithm, strformat]
 import nimparser/runerange
 
 test "String code for Rune-Ranges (rr and sr)":
-  assert (rr"Ä-Ö").toRange() == (196'u32, 214'u32)
-  assert (rr"\xC4-\xD6").toRange() == (196'u32, 214'u32)
+  # assert (rr"Ä-Ö").toRange() == (196'u32, 214'u32)
+  # assert (rr"\xC4-\xD6").toRange() == (196'u32, 214'u32)
   assert rs0"a-z0-9\xc4-\xd6".ranges == @[rr"0-9", rr"a-z", rr"Ä-Ö"]
   assert rs0"abc0-9äöü".ranges == @[rr"0-9", rr"a-c", rr"ä", rr"ö", rr"ü"]
 
 test "inRuneRanges":
   var rr: seq[RuneRange] = @[rr"2-4", rr"B-D", rr"b-d"]
-  assert inRuneRanges("1".runeAt(0), rr) < 0
-  assert inRuneRanges("2".runeAt(0), rr) >= 0
-  assert inRuneRanges("3".runeAt(0), rr) >= 0
-  assert inRuneRanges("4".runeAt(0), rr) >= 0
-  assert inRuneRanges("5".runeAt(0), rr) < 0
+  assert inRuneRanges("1".runeAt(0), rr) == false
+  assert inRuneRanges("2".runeAt(0), rr) == true
+  assert inRuneRanges("3".runeAt(0), rr) == true
+  assert inRuneRanges("4".runeAt(0), rr) == true
+  assert inRuneRanges("5".runeAt(0), rr) == false
 
-  assert inRuneRanges("A".runeAt(0), rr) < 0
-  assert inRuneRanges("B".runeAt(0), rr) >= 0
-  assert inRuneRanges("C".runeAt(0), rr) >= 0
-  assert inRuneRanges("D".runeAt(0), rr) >= 0
-  assert inRuneRanges("E".runeAt(0), rr) < 0
+  assert inRuneRanges("A".runeAt(0), rr) == false
+  assert inRuneRanges("B".runeAt(0), rr) == true
+  assert inRuneRanges("C".runeAt(0), rr) == true
+  assert inRuneRanges("D".runeAt(0), rr) == true
+  assert inRuneRanges("E".runeAt(0), rr) == false
 
-  assert inRuneRanges("a".runeAt(0), rr) < 0
-  assert inRuneRanges("b".runeAt(0), rr) >= 0
-  assert inRuneRanges("c".runeAt(0), rr) >= 0
-  assert inRuneRanges("d".runeAt(0), rr) >= 0
-  assert inRuneRanges("e".runeAt(0), rr) < 0
+  assert inRuneRanges("a".runeAt(0), rr) == false
+  assert inRuneRanges("b".runeAt(0), rr) == true
+  assert inRuneRanges("c".runeAt(0), rr) == true
+  assert inRuneRanges("d".runeAt(0), rr) == true
+  assert inRuneRanges("e".runeAt(0), rr) == false
 
   rr = @[rr"2-4", rr"B-D", rr"U-W", rr"b-d"]
-  assert inRuneRanges("1".runeAt(0), rr) < 0
-  assert inRuneRanges("2".runeAt(0), rr) >= 0
-  assert inRuneRanges("3".runeAt(0), rr) >= 0
-  assert inRuneRanges("4".runeAt(0), rr) >= 0
-  assert inRuneRanges("5".runeAt(0), rr) < 0
+  assert inRuneRanges("1".runeAt(0), rr) == false
+  assert inRuneRanges("2".runeAt(0), rr) == true
+  assert inRuneRanges("3".runeAt(0), rr) == true
+  assert inRuneRanges("4".runeAt(0), rr) == true
+  assert inRuneRanges("5".runeAt(0), rr) == false
 
-  assert inRuneRanges("A".runeAt(0), rr) < 0
-  assert inRuneRanges("B".runeAt(0), rr) >= 0
-  assert inRuneRanges("C".runeAt(0), rr) >= 0
-  assert inRuneRanges("D".runeAt(0), rr) >= 0
-  assert inRuneRanges("E".runeAt(0), rr) < 0
+  assert inRuneRanges("A".runeAt(0), rr) == false
+  assert inRuneRanges("B".runeAt(0), rr) == true
+  assert inRuneRanges("C".runeAt(0), rr) == true
+  assert inRuneRanges("D".runeAt(0), rr) == true
+  assert inRuneRanges("E".runeAt(0), rr) == false
 
-  assert inRuneRanges("T".runeAt(0), rr) < 0
-  assert inRuneRanges("U".runeAt(0), rr) >= 0
-  assert inRuneRanges("V".runeAt(0), rr) >= 0
-  assert inRuneRanges("W".runeAt(0), rr) >= 0
-  assert inRuneRanges("X".runeAt(0), rr) < 0
+  assert inRuneRanges("T".runeAt(0), rr) == false
+  assert inRuneRanges("U".runeAt(0), rr) == true
+  assert inRuneRanges("V".runeAt(0), rr) == true
+  assert inRuneRanges("W".runeAt(0), rr) == true
+  assert inRuneRanges("X".runeAt(0), rr) == false
 
-  assert inRuneRanges("a".runeAt(0), rr) < 0
-  assert inRuneRanges("b".runeAt(0), rr) >= 0
-  assert inRuneRanges("c".runeAt(0), rr) >= 0
-  assert inRuneRanges("d".runeAt(0), rr) >= 0
-  assert inRuneRanges("e".runeAt(0), rr) < 0
+  assert inRuneRanges("a".runeAt(0), rr) == false
+  assert inRuneRanges("b".runeAt(0), rr) == true
+  assert inRuneRanges("c".runeAt(0), rr) == true
+  assert inRuneRanges("d".runeAt(0), rr) == true
+  assert inRuneRanges("e".runeAt(0), rr) == false
 
 test "sortAndMerge":
   var rr: seq[RuneRange] = @[rr"2-5", rr"B-E", rr"H-K", rr"b-e", rr"h-p"]

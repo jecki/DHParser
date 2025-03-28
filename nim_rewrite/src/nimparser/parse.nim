@@ -1153,6 +1153,7 @@ method `$`*(self: IgnoreCaseRef): string =
 const RepLimit* = uint32(2^30)   # 2^31 and higher does not work with js-target, any more
 
 type
+  Range = tuple[min: uint32, max: uint32]
   CharRangeRef* = ref CharRangeObj not nil
   CharRangeObj = object of ParserObj
     runes: RuneCollection
@@ -1228,14 +1229,14 @@ method parse*(self: CharRangeRef, location: int32): ParsingResult =
     if pos >= L:
       return (nil, location)
     document.buf[].fastRuneAt(pos, r)
-    if runes.contains(r, runes):
+    if not runes.contains(r, self.runes):
       return (nil, location)
   var lastPos = pos
   for i in self.repetitions.min ..< self.repetitions.max:
     if pos >= L:
       break
     document.buf[].fastRuneAt(pos, r)
-    if runes.contains(r, runes):
+    if not runes.contains(r, self.runes):
       break
     lastPos = pos
   return (newNode(self.nodeName, document.cut(location ..< lastPos)), lastPos)
