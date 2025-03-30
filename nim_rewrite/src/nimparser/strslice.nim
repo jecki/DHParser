@@ -31,19 +31,20 @@ else:
   import std/re
 
 type
-  # StringSliceRef* = ref StringSlice not nil
+  StringRef* = ref string not nil
+  # StringSlicRef* = ref StringSlice not nil
   StringSlice* = tuple
-    buf: ref string not nil
+    buf: StringRef
     start: int32
     stop: int32
 
-# proc ensureStrRef(): ref string not nil =
+# proc ensureStrRef(): StringRef =
 #   ## Create a new ref string object that is sure to be not nil.
 #   new(result)
 #   # var s: ref string = new(string)
 #   # if not isNil(s):  return s
 
-# proc ensureEmptyStrRef(): ref string not nil =
+# proc ensureEmptyStrRef(): StringRef =
 #   ## Create a new empty ref string that is sure to be not nil.
 #   result = ensureStrRef()
 #   result[] = ""
@@ -55,7 +56,7 @@ proc makeStringSlice*(str: ref string or string): StringSlice =
   ## reference to the string, so any changes to the underlying string will be
   ## visible in all slices made from this string.
   # new result
-  var strRef: ref string not nil
+  var strRef: StringRef
   when str is ref string:
     strRef = str
   else:
@@ -77,7 +78,7 @@ proc `$`*(str: StringSlice): string =
   if str.stop < 0:  return ""
   return str.buf[str.start .. str.stop]
 
-func str*(str: StringSlice): ref string not nil = str.buf
+func str*(str: StringSlice): StringRef = str.buf
 
 func first*(str: StringSlice): int32 = str.start
 

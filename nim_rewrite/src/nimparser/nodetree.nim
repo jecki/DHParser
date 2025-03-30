@@ -12,7 +12,7 @@ type
   Node* = ref NodeObj not nil
   NodeOrNil* = ref NodeObj
   NodeObj {.acyclic.} = object of RootObj
-    nameRef*: ref string not nil
+    nameRef*: StringRef
     childrenSeq: seq[Node]
     textSlice: StringSlice
     attributesRef: ref Attributes
@@ -20,42 +20,47 @@ type
   SourcePosUnassignedDefect* = object of Defect
   SourcePosReAssigmentDefect* = object of Defect
 
-proc init*(node: Node, 
-           name: ref string or string, 
-           data: sink seq[Node] or NodeOrNil or sink StringSlice or ref string or string,
-           attributes: ref Attributes = nil): Node =
+const
+  NoAttributes: ref Attributes = nil
+
+
+proc init(Node: type Node, 
+          name: StringRef or string, 
+          data: sink seq[Node] or NodeOrNil or sink StringSlice or ref string or string,
+          attributes: Attributes or ref Attributes = NoAttributes): Node =
   when name is ref string:
-    node.nameRef = name
+    let nameRef: StringRef = name
   else:
-    new(node.nameRef)
-    node.nameRef[] = name
+    let nameRef: StringRef = new(StringRef)
+    # if isNil(nameRefOrNil):
+    #   raise newException(NilAccessDefect, "Node.init(): could not ")
+    nameRef[] = name
   when data is seq[Node]:
-    node.childrenSeq = data
-    node.textSlice = EmptyStringSlice
+    let childrenSeq: seq[Node] = data
+    let textSlice = EmptyStringSlice
   elif data is NodeOrNil:
+    var childrenSeq: seq[Node] = @[]
     if not isNil(data):
       let nonNilData: Node = data
-      node.childrenSeq = @[nonNilData]
-    # else:  node.childrenSeq = @[]
-    node.textSlice = EmptyStringSlice
+      childrenSeq = @[nonNilData]
+    let textSlice = EmptyStringSlice
   else:
-    # node.childrenSeq = @[]
-    node.textSlice = toStringSlice(data)
-  node.attributesRef = attributes
-  node.sourcePos = -1
-  return node
+    let childrenSeq: seq[Node] = @[]
+    let textSlice = toStringSlice(data)
+  when attributes is ref Attributes:
+    let attributesRef = attributes
+  when attributes is Attributes:
+    let attributesRef = new(ref Attributes)
+    attributesRef[] = attributes
+  Node(nameRef: nameRef, 
+       childrenSeq: childrenSeq, 
+       textSlice: textSlice,
+       attributesRef: attributesRef,
+       sourcePos: -1)
 
-proc init*(node: Node, 
-           name: ref string or string, 
-           data: sink seq[Node] or NodeOrNil or sink StringSlice or ref string or string,
-           attributes: Attributes): Node =
-  var attrRef: ref Attributes
-  new(attrRef)
-  attrRef[] = attributes
-  return init(node, name, data, attrRef)
 
 template newNode*(args: varargs[untyped]): Node =
-  new(Node).init(args)
+  Node.init(args)
 
 
 template `name=`*(node: Node, name: ref string or string) =
@@ -190,7 +195,7 @@ proc copy*(node: Node): Node =
     else:
       newNode(node.nameRef, node.childrenSeq, node.attr)
 
-proc clone*(node: Node, newName: ref string not nil): Node =
+proc clone*(node: Node, newName: StringRef): Node =
   ## Creates a new node, keeping merely the result of the old node
   if node.isLeaf:  newNode(newName, node.textSlice)  else:  newNode(newName, node.childrenSeq)
 
