@@ -23,6 +23,9 @@ type
 const
   NoAttributes: ref Attributes = nil
 
+let
+  NoChildren: seq[Node] = @[]
+
 
 proc new*(Node: type Node, 
           name: StringRef or sink string, 
@@ -47,7 +50,7 @@ proc new*(Node: type Node,
   elif data is NodeOrNil:
     if isNil(data):
       result = Node(nameRef: nameRef,
-                    childrenSeq: @[],
+                    childrenSeq: NoChildren,
                     textSlice: EmptyStringSlice,
                     attributesRef: attributesRef, 
                     sourcePos: -1)
@@ -60,14 +63,13 @@ proc new*(Node: type Node,
                     sourcePos: -1)      
   else:
     result = Node(nameRef: nameRef, 
-                  childrenSeq: @[], 
+                  childrenSeq: NoChildren, 
                   textSlice: toStringslice(data),
                   attributesRef: attributesRef,
                   sourcePos: -1)
 
 
-template newNode*(args: varargs[untyped]): Node =
-  Node.new(args)
+template newNode*(args: varargs[untyped]): Node = Node.new(args)
 
 
 template `name=`*(node: Node, name: ref string or string) =
@@ -99,7 +101,7 @@ func content*(node: Node): string =
 
 proc `text=`(node: Node, text: StringSlice or ref string or string) =
   if node.childrenSeq.len > 0:  
-    node.childrenSeq = @[]
+    node.childrenSeq = NoChildren
   if node.textSlice == EmptyStringSlice:
     node.textSlice = toStringSlice(text)
   else:
