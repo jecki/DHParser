@@ -165,7 +165,7 @@ const
   EmptyName* = ":EMPTY"
 
 let
-  EmptyNode* = newNode(EmptyName, "")
+  EmptyNode* = Node.new(EmptyName, "")
 
 ## Grammar class
 
@@ -523,7 +523,7 @@ proc reentry_point(document: StringSlice, location: int32, rules: seq[Matcher],
   if isNil(skipNode):
     let skipSlice = document.cut(location ..< max(closestMatch, location))
     # let skipSlice = document.`[]`(location ..< max(closestMatch, location))
-    skipNode = newNode(ZombieName, skipSlice)
+    skipNode = Node.new(ZombieName, skipSlice)
   return (skip_node, closestMatch - location)
 
 
@@ -557,8 +557,8 @@ proc handle_error(parser: Parser, pe: ParsingException, location: int32): Parsin
       if tail and not isNil(skipNode):  node.children.add(skipNode)
     else:
       if not isNil(skipNode):
-        node = newNode(parser.nodeName,
-                       @[newNode(ZombieName, cut), pe.node, skipNode])
+        node = Node.new(parser.nodeName,
+                       @[Node.new(ZombieName, cut), pe.node, skipNode])
                        .withPos(location)
       else:
         assert false, "Unrechable, theoretically..."
@@ -566,12 +566,12 @@ proc handle_error(parser: Parser, pe: ParsingException, location: int32): Parsin
     pe.first_throw = false
     raise pe
   elif (grammar.errors[^1].code == MandatoryContinuationAtEOF):
-    node = newNode(parser.nodeName, @[pe.node]).withPos(location)
+    node = Node.new(parser.nodeName, @[pe.node]).withPos(location)
   else:
     if gap == 0:
-      node = newNode(parser.nodeName, @[pe.node]).withPos(location)
+      node = Node.new(parser.nodeName, @[pe.node]).withPos(location)
     else:
-      node = newNode(parser.nodeName, @[newNode(ZombieName, cut), pe.node]).withPos(location)
+      node = Node.new(parser.nodeName, @[Node.new(ZombieName, cut), pe.node]).withPos(location)
     pe.node = node
     pe.node_orig_len = pe.node_orig_len + gap
     pe.location = location
@@ -670,13 +670,13 @@ proc returnItemAsIs(parser: Parser, node: NodeOrNil): Node =
   if dropContent in parser.flags:
     return EmptyNode
   if isNil(node):
-    return newNode(parser.nodeName, "")
-  return newNode(parser.nodeName, @[Node(node)])
+    return Node.new(parser.nodeName, "")
+  return Node.new(parser.nodeName, @[Node(node)])
 
 proc returnSeqAsIs(parser: Parser, nodes: sink seq[Node]): Node =
   if dropContent in parser.flags:
     return EmptyNode
-  return newNode(parser.nodeName, nodes)
+  return Node.new(parser.nodeName, nodes)
 
 proc returnItemFlatten(parser: Parser, node: NodeOrNil): Node =
   if not isNil(node):
@@ -685,11 +685,11 @@ proc returnItemFlatten(parser: Parser, node: NodeOrNil): Node =
         return EmptyNode
       return node
     if node.isAnonymous:
-      return node.clone(parser.node_name)
-    return newNode(parser.nodeName, node)
+      return node.clone(parser.nodeName)
+    return Node.new(parser.nodeName, node)
   elif isDisposable in parser.flags:
     return EmptyNode
-  return newNode(parser.nodeName, "")
+  return Node.new(parser.nodeName, "")
 
 proc returnSeqFlatten(parser: Parser, nodes: sink seq[Node]): Node =
   if dropContent in parser.flags:
@@ -705,14 +705,14 @@ proc returnSeqFlatten(parser: Parser, nodes: sink seq[Node]): Node =
       elif not child.isEmpty or not anonymous:
         res.add(child)
     if res.len > 0 or not (isDisposable in parser.flags):
-      return newNode(parser.nodeName, res)
+      return Node.new(parser.nodeName, res)
     else:
       return EmptyNode
   elif N == 1:
     return parser.grammarVar.returnItem(parser, nodes[0])
   if isDisposable in parser.flags:
     return EmptyNode
-  return newNode(parser.nodeName, "")
+  return Node.new(parser.nodeName, "")
 
 proc returnSeqMergeTreetops(parser: Parser, nodes: sink seq[Node]): Node =
   # TODO: test this!
@@ -742,18 +742,18 @@ proc returnSeqMergeTreetops(parser: Parser, nodes: sink seq[Node]): Node =
           for child in res:  child.text.buf[]
         let text = slices.join("")
         if text.len > 0 or isDisposable notin parser.flags:
-          return newNode(parser.nodeName, text)
+          return Node.new(parser.nodeName, text)
         return EmptyNode
-      return newNode(parser.nodeName, res)
+      return Node.new(parser.nodeName, res)
     if isDisposable in parser.flags:
       return EmptyNode
     else:
-      return newNode(parser.nodeName, "")
+      return Node.new(parser.nodeName, "")
   elif N == 1:
     return parser.returnItemFlatten(nodes[0])
   if isDisposable in parser.flags:
     return EmptyNode
-  return newNode(parser.nodeName, "")
+  return Node.new(parser.nodeName, "")
 
 proc returnItemPlaceholder(parser: Parser, node: NodeOrNil): Node =
   result = EmptyNode
@@ -848,7 +848,7 @@ proc reentry(catcher: ErrorCatchingParserRef, location: int32):
     if not isNil(node):
       let nd: Node = node
       return (nd, reloc)
-  return (newNode(ZombieName, ""), -1)
+  return (Node.new(ZombieName, ""), -1)
 
 proc violation(catcher: ErrorCatchingParserRef,
                location: int32,
@@ -1069,7 +1069,7 @@ method parse*(self: TextRef, location: int32): ParsingResult =
       return (EmptyNode, location + self.text.len.int32)
     # elif isDisposable in self.flags and self.empty:
     #   return (EmptyNode, location)
-    return (newNode(self.nodeName, self.slice), location + self.text.len.int32)
+    return (Node.new(self.nodeName, self.slice), location + self.text.len.int32)
   return (nil, location)
 
 method `$`*(self: TextRef): string =
@@ -1137,7 +1137,7 @@ method parse*(self: IgnoreCaseRef, location: int32): ParsingResult =
     if dropContent in self.flags:
       return (EmptyNode, location + self.text.len.int32)
     let nextLoc = location + self.text.len.int32
-    return (newNode(self.nodeName, self.grammar.document.cut(location..<nextLoc)), nextLoc)
+    return (Node.new(self.nodeName, self.grammar.document.cut(location..<nextLoc)), nextLoc)
   return (nil, location)
 
 method `$`*(self: IgnoreCaseRef): string =
@@ -1239,7 +1239,7 @@ method parse*(self: CharRangeRef, location: int32): ParsingResult =
     if not runes.contains(r, self.runes):
       break
     lastPos = pos
-  return (newNode(self.nodeName, document.cut(location ..< lastPos)), lastPos)
+  return (Node.new(self.nodeName, document.cut(location ..< lastPos)), lastPos)
 
 method `$`*(self: CharRangeRef): string =
   var s: seq[string] = @[$self.runes, ""]
@@ -1305,7 +1305,7 @@ method parse*(self: RegExpRef, location: int32): ParsingResult =
     elif isDisposable in self.flags and l == 0:
       return (EmptyNode, location)
     let text: StringSlice = self.grammar.document.cut(location..<location+l)
-    return (newNode(self.nodeName, text), location + l)
+    return (Node.new(self.nodeName, text), location + l)
   return (nil, location)
 
 method `$`*(self: RegExpRef): string =
@@ -1378,10 +1378,10 @@ method parse*(self: WhitespaceRef, location: int32): ParsingResult =
           capture = self.grammar.document.cut(location..<location+l)
           if capture.strip.len > 0:
             let name = if self.name.len == 0: commentName else: self.nodeName
-            return (newNode(name, capture), location + l)
+            return (Node.new(name, capture), location + l)
         return (EmptyNode, location + l)
       capture = self.grammar.document.cut(location..<location+l)
-      return (newNode(self.nodeName, capture), location + l)
+      return (Node.new(self.nodeName, capture), location + l)
   return (EmptyNode, location)
 
 method `grammar=`*(self: WhitespaceRef, grammar: GrammarRef) =
@@ -1777,7 +1777,7 @@ method parse*(self: LookaheadRef, location: int32): ParsingResult =
     if isDisposable in self.flags:
       node = EmptyNode
     else:
-      node = newNode(self.nodeName, "")
+      node = Node.new(self.nodeName, "")
     return (node, location)
   else:
     return (nil, location)
@@ -1835,11 +1835,11 @@ method parse*(self: SynonymRef, location: int32): ParsingResult =
       return (EmptyNode, loc)
     if not (isDisposable in self.flags):
       if node == EmptyNode:
-        return (newNode(self.node_name, ""), loc)
+        return (Node.new(self.nodeName, ""), loc)
       if node.isAnonymous:
-        node.name = self.node_name
+        node.name = self.nodeName
       else:
-        return (newNode(self.node_name, @[Node(node)]), loc)
+        return (Node.new(self.nodeName, @[Node(node)]), loc)
   return (node, loc)
 
 method `$`*(self: SynonymRef): string =

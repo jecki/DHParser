@@ -25,8 +25,8 @@ const
 
 
 proc new*(Node: type Node, 
-          name: StringRef or string, 
-          data: sink seq[Node] or NodeOrNil or sink StringSlice or ref string or string,
+          name: StringRef or sink string, 
+          data: sink seq[Node] or NodeOrNil or sink StringSlice or ref string or sink string,
           attributes: Attributes or ref Attributes = NoAttributes): Node =
   when name is ref string:
     let nameRef: StringRef = name
@@ -39,22 +39,31 @@ proc new*(Node: type Node,
     let attributesRef = new(ref Attributes)
     attributesRef[] = attributes
   when data is seq[Node]:
-    let childrenSeq: seq[Node] = data
-    let textSlice = EmptyStringSlice
+    result = Node(nameRef: nameRef,
+                  childrenSeq: data,
+                  textSlice: EmptyStringSlice,
+                  attributesRef: attributesRef, 
+                  sourcePos: -1)
   elif data is NodeOrNil:
-    var childrenSeq: seq[Node] = @[]
-    if not isNil(data):
-      let nonNilData: Node = data
-      childrenSeq = @[nonNilData]
-    let textSlice = EmptyStringSlice
+    if isNil(data):
+      result = Node(nameRef: nameRef,
+                    childrenSeq: @[],
+                    textSlice: EmptyStringSlice,
+                    attributesRef: attributesRef, 
+                    sourcePos: -1)
+    else:
+      let node: Node = data   # this step is required, because data has the type NodeOrNil
+      result = Node(nameRef: nameRef,
+                    childrenSeq: @[node],
+                    textSlice: EmptyStringSlice,
+                    attributesRef: attributesRef, 
+                    sourcePos: -1)      
   else:
-    let childrenSeq: seq[Node] = @[]
-    let textSlice = toStringSlice(data)
-  Node(nameRef: nameRef, 
-       childrenSeq: childrenSeq, 
-       textSlice: textSlice,
-       attributesRef: attributesRef,
-       sourcePos: -1)
+    result = Node(nameRef: nameRef, 
+                  childrenSeq: @[], 
+                  textSlice: toStringslice(data),
+                  attributesRef: attributesRef,
+                  sourcePos: -1)
 
 
 template newNode*(args: varargs[untyped]): Node =
@@ -184,18 +193,18 @@ proc copy*(node: Node): Node =
   ## Yields a shallow copy of a node
   if node.isLeaf:
     if isNil(node.attributesRef):
-      newNode(node.nameRef, node.textSlice)
+      Node.new(node.nameRef, node.textSlice)
     else:
-      newNode(node.nameRef, node.textSlice, node.attr)
+      Node.new(node.nameRef, node.textSlice, node.attr)
   else:
     if isNil(node.attributesRef):
-      newNode(node.nameRef, node.childrenSeq)
+      Node.new(node.nameRef, node.childrenSeq)
     else:
-      newNode(node.nameRef, node.childrenSeq, node.attr)
+      Node.new(node.nameRef, node.childrenSeq, node.attr)
 
 proc clone*(node: Node, newName: StringRef): Node =
   ## Creates a new node, keeping merely the result of the old node
-  if node.isLeaf:  newNode(newName, node.textSlice)  else:  newNode(newName, node.childrenSeq)
+  if node.isLeaf:  Node.new(newName, node.textSlice)  else:  Node.new(newName, node.childrenSeq)
 
 
 const indentation = 2
@@ -297,20 +306,20 @@ proc `$`*(node: NodeOrNil): string =
 
 # Test-code
 when isMainModule:
-  var n = newNode("root", @[newNode("left", "LEFT", {"id": "007"}.toOrderedTable),
-                            newNode("right", "RIGHT")])
+  var n = Node.new("root", @[Node.new("left", "LEFT", {"id": "007"}.toOrderedTable),
+                            Node.new("right", "RIGHT")])
   echo $n
   n.pos = 0
   echo n.children[0].sourcePos
   echo n.children[1].sourcePos
 
-  echo newNode("ZOMBIE__", "").asSxpr
+  echo Node.new("ZOMBIE__", "").asSxpr
   n.sourcePos = 3
 
   var
     s: seq[Node] = @[] 
-    m = newNode("", s)
+    m = Node.new("", s)
   echo $m.isLeaf()
 
-  n = newNode("root", newNode("element", "Inhalt"))
+  n = Node.new("root", Node.new("element", "Inhalt"))
   echo $n

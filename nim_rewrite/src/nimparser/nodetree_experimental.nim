@@ -52,7 +52,7 @@ proc init*(node: Node,
   attrRef[] = attributes
   return init(node, name, data, attrRef)
 
-template newNode*(args: varargs[untyped]): Node =
+template Node.new*(args: varargs[untyped]): Node =
   new(Node).init(args)
 
 
@@ -179,18 +179,18 @@ proc copy*(node: Node): Node =
   ## Yields a shallow copy of a node
   if node.isLeaf:
     if isNil(node.attributes):
-      newNode(node.name, node.textSlice)
+      Node.new(node.name, node.textSlice)
     else:
-      newNode(node.name, node.textSlice, node.attr)
+      Node.new(node.name, node.textSlice, node.attr)
   else:
     if isNil(node.attributes):
-      newNode(node.name, node.childrenSeq)
+      Node.new(node.name, node.childrenSeq)
     else:
-      newNode(node.name, node.childrenSeq, node.attr)
+      Node.new(node.name, node.childrenSeq, node.attr)
 
 proc clone*(node: Node, newName: ref string not nil): Node =
   ## Creates a new node, keeping merely the result of the old node
-  if node.isLeaf:  newNode(newName, node.textSlice)  else:  newNode(newName, node.childrenSeq)
+  if node.isLeaf:  Node.new(newName, node.textSlice)  else:  Node.new(newName, node.childrenSeq)
 
 
 const indentation = 2
@@ -292,20 +292,20 @@ proc `$`*(node: Option[Node]): string =
 
 # Test-code
 when isMainModule:
-  var n = newNode("root", @[newNode("left", "LEFT", {"id": "007"}.toOrderedTable),
-                            newNode("right", "RIGHT")])
+  var n = Node.new("root", @[Node.new("left", "LEFT", {"id": "007"}.toOrderedTable),
+                            Node.new("right", "RIGHT")])
   echo $n
   n.pos = 0
   echo n.children[0].sourcePos
   echo n.children[1].sourcePos
 
-  echo newNode("ZOMBIE__", "").asSxpr
+  echo Node.new("ZOMBIE__", "").asSxpr
   n.sourcePos = 3
 
   var
     s: seq[Node] = @[] 
-    m = newNode("", s)
+    m = Node.new("", s)
   echo $m.isLeaf()
 
-  n = newNode("root", newNode("element", "Inhalt"))
+  n = Node.new("root", Node.new("element", "Inhalt"))
   echo $n
