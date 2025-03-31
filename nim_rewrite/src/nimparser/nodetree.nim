@@ -24,7 +24,7 @@ const
   NoAttributes: ref Attributes = nil
 
 
-proc init(Node: type Node, 
+proc new*(Node: type Node, 
           name: StringRef or string, 
           data: sink seq[Node] or NodeOrNil or sink StringSlice or ref string or string,
           attributes: Attributes or ref Attributes = NoAttributes): Node =
@@ -32,9 +32,12 @@ proc init(Node: type Node,
     let nameRef: StringRef = name
   else:
     let nameRef: StringRef = new(StringRef)
-    # if isNil(nameRefOrNil):
-    #   raise newException(NilAccessDefect, "Node.init(): could not ")
     nameRef[] = name
+  when attributes is ref Attributes:
+    let attributesRef = attributes
+  else:  # attributes is Attributes:
+    let attributesRef = new(ref Attributes)
+    attributesRef[] = attributes
   when data is seq[Node]:
     let childrenSeq: seq[Node] = data
     let textSlice = EmptyStringSlice
@@ -47,11 +50,6 @@ proc init(Node: type Node,
   else:
     let childrenSeq: seq[Node] = @[]
     let textSlice = toStringSlice(data)
-  when attributes is ref Attributes:
-    let attributesRef = attributes
-  when attributes is Attributes:
-    let attributesRef = new(ref Attributes)
-    attributesRef[] = attributes
   Node(nameRef: nameRef, 
        childrenSeq: childrenSeq, 
        textSlice: textSlice,
@@ -60,7 +58,7 @@ proc init(Node: type Node,
 
 
 template newNode*(args: varargs[untyped]): Node =
-  Node.init(args)
+  Node.new(args)
 
 
 template `name=`*(node: Node, name: ref string or string) =
