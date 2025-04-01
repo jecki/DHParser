@@ -10,7 +10,7 @@ import std/[enumerate, math, options, sets, strformat, strutils, unicode,
             sugar, tables]
 
 import strslice
-import runerange
+import runesets
 import nodetree
 import error
 
