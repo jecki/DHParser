@@ -27,7 +27,7 @@ let
   NoChildren: seq[Node] = @[]
 
 
-proc new*(Node: type Node, 
+proc new(Node: type Node, 
           name: StringRef or sink string, 
           data: sink seq[Node] or NodeOrNil or sink StringSlice or ref string or sink string,
           attributes: Attributes or ref Attributes = NoAttributes): Node =
@@ -195,18 +195,18 @@ proc copy*(node: Node): Node =
   ## Yields a shallow copy of a node
   if node.isLeaf:
     if isNil(node.attributesRef):
-      Node.new(node.nameRef, node.textSlice)
+      newNode(node.nameRef, node.textSlice)
     else:
-      Node.new(node.nameRef, node.textSlice, node.attr)
+      newNode(node.nameRef, node.textSlice, node.attr)
   else:
     if isNil(node.attributesRef):
-      Node.new(node.nameRef, node.childrenSeq)
+      newNode(node.nameRef, node.childrenSeq)
     else:
-      Node.new(node.nameRef, node.childrenSeq, node.attr)
+      newNode(node.nameRef, node.childrenSeq, node.attr)
 
 proc clone*(node: Node, newName: StringRef): Node =
   ## Creates a new node, keeping merely the result of the old node
-  if node.isLeaf:  Node.new(newName, node.textSlice)  else:  Node.new(newName, node.childrenSeq)
+  if node.isLeaf:  newNode(newName, node.textSlice)  else:  newNode(newName, node.childrenSeq)
 
 
 const indentation = 2
@@ -308,20 +308,20 @@ proc `$`*(node: NodeOrNil): string =
 
 # Test-code
 when isMainModule:
-  var n = Node.new("root", @[Node.new("left", "LEFT", {"id": "007"}.toOrderedTable),
-                            Node.new("right", "RIGHT")])
+  var n = newNode("root", @[newNode("left", "LEFT", {"id": "007"}.toOrderedTable),
+                            newNode("right", "RIGHT")])
   echo $n
   n.pos = 0
   echo n.children[0].sourcePos
   echo n.children[1].sourcePos
 
-  echo Node.new("ZOMBIE__", "").asSxpr
+  echo newNode("ZOMBIE__", "").asSxpr
   n.sourcePos = 3
 
   var
     s: seq[Node] = @[] 
-    m = Node.new("", s)
+    m = newNode("", s)
   echo $m.isLeaf()
 
-  n = Node.new("root", Node.new("element", "Inhalt"))
+  n = newNode("root", newNode("element", "Inhalt"))
   echo $n

@@ -8,9 +8,9 @@ import nimparser/nodetree
 test "Node.content":
   let slice = toStringSlice("ABC")
   var slice2 = toStringSlice(slice)
-  var node = Node.new("TEST", slice2.cut(1..0))
+  var node = newNode("TEST", slice2.cut(1..0))
   check node.content == ""
-  node = Node.new("TEXT", slice2.cut(1..^1))
+  node = newNode("TEXT", slice2.cut(1..^1))
   check node.content == "BC"
 
 

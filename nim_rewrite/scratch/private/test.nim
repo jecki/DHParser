@@ -210,8 +210,8 @@ proc `$`*(node: NodeOrNil): string =
 
 # Test-code
 when isMainModule:
-  var n = Node.new("root", @[Node.new("left", "LEFT", {"id": "007"}.toOrderedTable),
-                            Node.new("right", "RIGHT")])
+  var n = newNode("root", @[newNode("left", "LEFT", {"id": "007"}.toOrderedTable),
+                            newNode("right", "RIGHT")])
   echo $n
   n.`sourcePos=` 0
   echo n.children[0].sourcePos

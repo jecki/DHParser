@@ -46,11 +46,21 @@ const
   EmptyRuneRange* = (Rune('b'), Rune('a'))
 
 
-func inRuneRanges*[T: RuneRange|RuneSet](r: Rune, ranges: seq[T]): bool =
+template inSetOf[T: RuneRange|RuneSet](r: Rune, ctnr: T): bool =
+  ## Checks whether r also falls into the set attached to the rune
+  ## container. It is assumed as a precondition that r already 
+  ## falls into the range (low, high) of the container.
+  when T is RuneRange:
+    true
+  else:
+    isNil(ctnr.runes) or (r.uint32 - ctnr.low.uint32) in ctnr.runes[]
+
+
+func inRuneRanges*[T: RuneRange|RuneSet](r: Rune, containers: seq[T]): bool =
   ## Binary search to find out if rune r is in one of the containers
   ## It is assumed that the containers are sorted and do not overlap.
   let
-    highest: int32 = ranges.len.int32 - 1'i32
+    highest: int32 = containers.len.int32 - 1'i32
   var
     a = 0'i32
     b = highest
@@ -58,13 +68,10 @@ func inRuneRanges*[T: RuneRange|RuneSet](r: Rune, ranges: seq[T]): bool =
     i = b shr 1  # div 2
 
   while i != last_i:
-    let rng = ranges[i]
+    let rng = containers[i]
     if rng.low <=% r:
       if r <=% rng.high:
-        when T is RuneRange:
-          return true
-        else:  # T is RuneSet
-          return isNil(rng.runes) or (r.uint32 - rng.low.uint32) in rng.runes[]
+        return r.inSetOf(rng)
       else:
         a = min(i + 1, highest)
     else:
