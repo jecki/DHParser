@@ -35,36 +35,72 @@ type
 
   RuneRange* = tuple[low: Rune, high: Rune]
 
-  SetSize = enum set8, set12, set16, none
+  SetSize = enum interval, bits256, bits4k, bits64k
   RuneSet* = object
     low: Rune
     high: Rune
-    case setSize: SetSize
-    of set8:  subSet8:  ref set[0 .. 255]
-    of set12: subSet12: ref set[0 .. 4095]
-    of set16: subSet16: ref set[0 .. 65535]
+    case size: SetSize
+    of bits256: set256: ref set[0 .. 255]
+    of bits4k:  set4k:  ref set[0 .. 4095]
+    of bits64k: set64k: ref set[0 .. 65535]
     else: discard
 
   RuneCollection* = object
     negate*: bool
-    ranges*: seq[RuneRange]
-    sets: seq[RuneSet]  # if not empty, an optimized version of ranges
+    ranges*: seq[RuneRange]  # if empty, only a single set will be used!
+    sets: seq[RuneSet]  # if not empty, an optimized version of ranges!
     contains*: IsContainedProc not nil
 
 const
   EmptyRuneRange* = (Rune('b'), Rune('a'))
 
 
-proc `==`*(a, b: RuneCollection): bool =
-  a.negate == b.negate and a.ranges == b.ranges
+proc `$`*(range: RuneRange): string =
+  let
+    min = range.low.uint32
+    max = range.high.uint32
+  if min <= max:  fmt"{min}..{max}"  else: "EMPTY"
+
+
+func validateRuneSet(low, high: Rune, size: SetSize) {.raises: [RangeDefect].} =
+  let (a, b) = (low.uint32, high.uint32)
+
+  proc validateInterval(bitSize: uint32) {.raises: [RangeDefect].} =
+    if b - a + 1 != bitSize:
+      raise newException(RangeDefect, fmt"Interval [{a}, {b}] != set-size ({bitSize})")
+    elif a mod bitSize != 0:
+      raise newException(RangeDefect, 
+        fmt"Interval [{a}, {b}] does not start at multiple of set-size {bitSize}")
+
+  case size
+    of bits256:
+      validateInterval(256)
+    of bits4k:
+      validateInterval(4096)
+    of bits64k:
+      validateInterval(65536)
+    else: discard
+
+
+proc init(typedesc: RuneSet, low, high: Rune, size: SetSize): RuneSet {.raises: [RangeDefect].} =
+  validateRuneSet(low, high, size)
+  case size
+    of interval:
+      result = RuneSet(low: low, high: high, size: interval)
+    of bits256:
+      result = RuneSet(low: low, high: high, size: bits256, set256: new(ref set[0..255]))
+    of bits4k:
+      result = RuneSet(low: low, high: high, size: bits4k, set4k: new(ref set[0..4095]))
+    of bits64k:
+      result = RuneSet(low: low, high: high, size: bits64k, set64k: new(ref set[0..65535]))
 
 
 template inRuneSet(code: uint32, runeSet: RuneSet): bool =
   # let rset = runeSet
-  case runeSet.setSize
-  of set8:  code in runeSet.subSet8[]
-  of set12: code in runeSet.subSet12[]
-  of set16: code in runeSet.subSet16[]
+  case runeSet.size
+  of bits256: code in runeSet.set256[]
+  of bits4k:  code in runeSet.set4k[]
+  of bits64k: code in runeSet.set64k[]
   else: 
     # if no set is specified, it is assumed that the set covers
     # the entire enclosing range
@@ -135,11 +171,8 @@ func RC*(negate: bool, ranges: seq[RuneRange]): RuneCollection =
                  contains: initialContainedIn)
 
 
-proc `$`*(range: RuneRange): string =
-  let
-    min = range.low.uint32
-    max = range.high.uint32
-  if min <= max:  fmt"{min}..{max}"  else: "EMPTY"
+proc `==`*(a, b: RuneCollection): bool =
+  a.negate == b.negate and a.ranges == b.ranges
 
 
 proc `$`*(rc: RuneCollection, verbose: bool = false): string =
@@ -266,6 +299,13 @@ func size(R: seq[RuneRange]): uint32 =
 #   return -1
 
 
+## RuneSet Combinators
+
+# proc `+`*(A, B: RuneSet): RuneSet =
+#   discard
+
+
+
 ## RuneRange Combinators
 
 proc `+`*(A, B: seq[RuneRange]): seq[RuneRange] =
@@ -325,7 +365,6 @@ proc `-`*(A, B: seq[RuneRange]): seq[RuneRange] =
   # assert isSortedAndMerged(result)
 
 
-# intersection
 proc `*`*(A, B: seq[RuneRange]): seq[RuneRange] = A - (A - B) - (B - A)
 
 
