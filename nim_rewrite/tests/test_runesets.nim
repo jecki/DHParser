@@ -11,6 +11,11 @@ test "String code for Rune-Ranges (rr and sr)":
   assert rs0"a-z0-9\xc4-\xd6".ranges == @[rr"0-9", rr"a-z", rr"Ä-Ö"]
   assert rs0"abc0-9äöü".ranges == @[rr"0-9", rr"a-c", rr"ä", rr"ö", rr"ü"]
 
+test "RuneSets":
+  var s: RuneSet = RuneSet.init(Rune('a'), Rune('z'), interval)
+  assert $s == "[a-z]"
+
+
 test "inRuneRanges":
   var rr: seq[RuneRange] = @[rr"2-4", rr"B-D", rr"b-d"]
   assert inRuneRanges("1".runeAt(0), rr) == false

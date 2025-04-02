@@ -28,9 +28,9 @@ let
 
 
 proc new(Node: type Node, 
-          name: StringRef or sink string, 
-          data: sink seq[Node] or NodeOrNil or sink StringSlice or ref string or sink string,
-          attributes: Attributes or ref Attributes = NoAttributes): Node =
+         name: StringRef or sink string, 
+         data: sink seq[Node] or NodeOrNil or sink StringSlice or ref string or sink string,
+         attributes: Attributes or ref Attributes = NoAttributes): Node =
   when name is ref string:
     let nameRef: StringRef = name
   else:

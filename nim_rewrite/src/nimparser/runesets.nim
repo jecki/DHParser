@@ -35,14 +35,14 @@ type
 
   RuneRange* = tuple[low: Rune, high: Rune]
 
-  SetSize = enum interval, bits256, bits4k, bits64k
+  SetSize* = enum interval, size256, size4k, size64k
   RuneSet* = object
     low: Rune
     high: Rune
     case size: SetSize
-    of bits256: set256: ref set[0 .. 255]
-    of bits4k:  set4k:  ref set[0 .. 4095]
-    of bits64k: set64k: ref set[0 .. 65535]
+    of size256: set256: ref set[0 .. 255]
+    of size4k:  set4k:  ref set[0 .. 4095]
+    of size64k: set64k: ref set[0 .. 65535]
     else: discard
 
   RuneCollection* = object
@@ -62,45 +62,47 @@ proc `$`*(range: RuneRange): string =
   if min <= max:  fmt"{min}..{max}"  else: "EMPTY"
 
 
-func validateRuneSet(low, high: Rune, size: SetSize) {.raises: [RangeDefect].} =
-  let (a, b) = (low.uint32, high.uint32)
+proc init*(RuneSet: type RuneSet, low, high: Rune, size: SetSize): 
+  RuneSet {.raises: [RangeDefect].} =
+  var
+    a: uint32 = low.uint32
+    b: uint32 = high.uint32
 
-  proc validateInterval(bitSize: uint32) {.raises: [RangeDefect].} =
-    if b - a + 1 != bitSize:
-      raise newException(RangeDefect, fmt"Interval [{a}, {b}] != set-size ({bitSize})")
-    elif a mod bitSize != 0:
+  proc getFrame(frameSize: uint32): tuple[first: Rune, last: Rune] =
+    assert frameSize in [256u32, 4069u32, 65536u32]
+    var 
+      i = a div frameSize
+      k = b div frameSize
+    if i != k:
       raise newException(RangeDefect, 
-        fmt"Interval [{a}, {b}] does not start at multiple of set-size {bitSize}")
+        fmt"Interval [{a}, {b}] does not fit into a single {frameSize}-runes-frame!")
+    i *= frameSize
+    k = i + frameSize - 1
+    (Rune(i), Rune(k))    
 
-  case size
-    of bits256:
-      validateInterval(256)
-    of bits4k:
-      validateInterval(4096)
-    of bits64k:
-      validateInterval(65536)
-    else: discard
-
-
-proc init(typedesc: RuneSet, low, high: Rune, size: SetSize): RuneSet {.raises: [RangeDefect].} =
-  validateRuneSet(low, high, size)
   case size
     of interval:
       result = RuneSet(low: low, high: high, size: interval)
-    of bits256:
-      result = RuneSet(low: low, high: high, size: bits256, set256: new(ref set[0..255]))
-    of bits4k:
-      result = RuneSet(low: low, high: high, size: bits4k, set4k: new(ref set[0..4095]))
-    of bits64k:
-      result = RuneSet(low: low, high: high, size: bits64k, set64k: new(ref set[0..65535]))
+    of size256:
+      var (i, k) = getFrame(256u32)
+      result = RuneSet(low: i, high: i, size: size256, set256: new(ref set[0..255]))
+      result.set256[] = {a..b}
+    of size4k:
+      var (i, k) = getFrame(4096u32)
+      result = RuneSet(low: i, high: i, size: size4k, set4k: new(ref set[0..4095]))
+      result.set4k[] = {a..b}
+    of size64k:
+      var (i, k) = getFrame(65536u32)
+      result = RuneSet(low: i, high: i, size: size64k, set64k: new(ref set[0..65535]))
+      result.set4k[] = {a..b}
 
 
 template inRuneSet(code: uint32, runeSet: RuneSet): bool =
   # let rset = runeSet
   case runeSet.size
-  of bits256: code in runeSet.set256[]
-  of bits4k:  code in runeSet.set4k[]
-  of bits64k: code in runeSet.set64k[]
+  of size256: code in runeSet.set256[]
+  of size4k:  code in runeSet.set4k[]
+  of size64k: code in runeSet.set64k[]
   else: 
     # if no set is specified, it is assumed that the set covers
     # the entire enclosing range
@@ -170,6 +172,14 @@ func RC*(negate: bool, ranges: seq[RuneRange]): RuneCollection =
   RuneCollection(negate: negate, ranges: ranges, sets: @[], 
                  contains: initialContainedIn)
 
+func RC*(negate: bool, rs: RuneSet): RuneCollection =
+  if rs.low.uint32 == 0:
+    RuneCollection(negate: negate, ranges: @[], sets: @[rs], 
+                   contains: inZeroBasedSet)
+  else:
+    RuneCollection(negate: negate, ranges: @[], sets: @[rs], 
+                   contains: inSingleSet)
+
 
 proc `==`*(a, b: RuneCollection): bool =
   a.negate == b.negate and a.ranges == b.ranges
@@ -192,35 +202,49 @@ proc `$`*(rc: RuneCollection, verbose: bool = false): string =
       b = rr.high.int32
     isIn(a, b, 48, 57) or isIn(a, b, 65, 90) or isIn(a, b, 97, 122)
 
-  var s: seq[string] = newSeqOfCap[string](len(rc.ranges) + 2)
-  if not verbose:
-    s.add("[")
-    if rc.negate: s.add("^")
-  for rr in rc.ranges:
-    if isAlphaNum(rr):
-      let low = chr(rr.low.int8)
-      if rr.low == rr.high:
-        s.add(fmt"{low}")
-      else:
-        let high = chr(rr.high.int8)
-        s.add(fmt"{low}-{high}")
-    else:
-      let (l, marker) = hexlen(rr.high)
-      if rr.low == rr.high:
-        s.add(marker & toHex(rr.low.int32, l))
-      else:
-        s.add(marker & toHex(rr.low.int32, l) & "-" & marker & toHex(rr.high.int32, l))
-    if rr.high <% rr.low:  s.add("!") 
-  if verbose:
-    (if rc.negate: @["[^", s.join("]-["), "]"] 
-             else: @["[", s.join("]|["), "]"]).join("")
+  var s: seq[string] = newSeqOfCap[string](max(rc.ranges.len, rc.sets.len) + 2)
+  let ranges: seq[RuneRange] = if rc.ranges.len > 0: rc.ranges 
+                               else: @[(rc.sets[0].low, rc.sets[0].high)]  
+
+  if rc.ranges.len == 0 and rc.sets[0].size != interval:
+    assert rc.sets.len == 1
+    let rs = rc.sets[0]
+    s.add("{")
+    case rs.size
+    of size256: s.add($rs.set256[])
+    of size4k:  s.add($rs.set4k[])
+    of size64k: s.add($rs.set64k[])
+    else: discard
+    s.add("}")
   else:
-    s.add("]")
-    return s.join("")
+    if not verbose:
+      s.add("[")
+      if rc.negate: s.add("^")
+    for rr in ranges:
+      if isAlphaNum(rr):
+        let low = chr(rr.low.int8)
+        if rr.low == rr.high:
+          s.add(fmt"{low}")
+        else:
+          let high = chr(rr.high.int8)
+          s.add(fmt"{low}-{high}")
+      else:
+        let (l, marker) = hexlen(rr.high)
+        if rr.low == rr.high:
+          s.add(marker & toHex(rr.low.int32, l))
+        else:
+          s.add(marker & toHex(rr.low.int32, l) & "-" & marker & toHex(rr.high.int32, l))
+      if rr.high <% rr.low:  s.add("!") 
+    if verbose:
+      s = if rc.negate: @["[^", s.join("]-["), "]"] else: @["[", s.join("]|["), "]"]
+    else:
+      s.add("]")
+  s.join("")
 
 
 proc `$`*(rr: seq[RuneRange], verbose=false): string = RC(false, rr) $ verbose
 proc `$`*(rr: RuneRange): string = $(@[rr])
+proc `$`*(rs: RuneSet): string = $RC(false, rs)
 
 
 func isSortedAndMerged*(rr: seq[RuneRange]): bool =
