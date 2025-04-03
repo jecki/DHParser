@@ -1156,7 +1156,7 @@ type
   Range = tuple[min: uint32, max: uint32]
   CharRangeRef* = ref CharRangeObj not nil
   CharRangeObj = object of ParserObj
-    runes: RuneCollection
+    runes: RuneSet
     repetitions: Range
 
 func rep(s: string | char): Range =
@@ -1176,7 +1176,7 @@ func rep(s: string | char): Range =
       assert false
 
 proc init*(charRangeParser: CharRangeRef,
-           runes: RuneCollection,
+           runes: RuneSet,
            repetitions: Range): CharRangeRef =
   discard Parser(charRangeParser).init(CharRangeName)
   charRangeParser.runes = runes
@@ -1184,10 +1184,10 @@ proc init*(charRangeParser: CharRangeRef,
   charRangeParser.repetitions = repetitions
   return charRangeParser
 
-template CharRange*(runes: RuneCollection, repetitions: Range = (1, 1)): CharRangeRef =
+template CharRange*(runes: RuneSet, repetitions: Range = (1, 1)): CharRangeRef =
   new(CharRangeRef).init(runes, repetitions)
 
-template CharRange*(runes: RuneCollection, repetition: string | char): CharRangeRef =
+template CharRange*(runes: RuneSet, repetition: string | char): CharRangeRef =
   new(CharRangeRef).init(runes, rep(repetition))
 
 proc cr*(s: string): CharRangeRef =
@@ -1229,14 +1229,14 @@ method parse*(self: CharRangeRef, location: int32): ParsingResult =
     if pos >= L:
       return (nil, location)
     document.buf[].fastRuneAt(pos, r)
-    if not runes.contains(r, self.runes):
+    if not runes.contains(self.runes, r):
       return (nil, location)
   var lastPos = pos
   for i in self.repetitions.min ..< self.repetitions.max:
     if pos >= L:
       break
     document.buf[].fastRuneAt(pos, r)
-    if not runes.contains(r, self.runes):
+    if not runes.contains(self.runes, r):
       break
     lastPos = pos
   return (newNode(self.nodeName, document.cut(location ..< lastPos)), lastPos)
