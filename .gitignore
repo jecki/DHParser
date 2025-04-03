@@ -71,3 +71,16 @@ experimental
 /documentation_src/doc_examples/macros/macrosServer.py
 /nim_rewrite/examples/data/F.htm
 /nim_rewrite/src/nimparser/external/regex.out
+/nim_rewrite/src/nimparser/runerange
+/nim_rewrite/src/nimparser/parse
+/nim_rewrite/src/nimparser/error
+/nim_rewrite/src/nimparser/bitsets
+/nim_rewrite/src/nimparser/strslice
+/nim_rewrite/src/nimparser/runesets
+/nim_rewrite/src/nimparser/nodetree
+/nim_rewrite/src/nimparser/*.js
+/nim_rewrite/tests/test_nodetree
+/nim_rewrite/tests/test_parse
+/nim_rewrite/tests/test_runesets
+/nim_rewrite/tests/test_strslice
+/nim_rewrite/tests/*.js
