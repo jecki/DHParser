@@ -112,7 +112,7 @@ proc `-`*(a, b: bitset): bitset =
 proc `^`*(bs: bitset): bitset =
   discard
 
-proc `-+-`(a, b: bitset): bitset =
+proc `-+-`*(a, b: bitset): bitset =
   discard
 
 proc `==`*(a, b: bitset): bool = 
@@ -124,10 +124,10 @@ proc `<=`*(a, b: bitset): bool =
 proc `<`*(a, b: bitset): bool = 
   discard
 
-proc `in`+(i: Natural, bs: bitset): bool =
+proc `in`*(i: Natural, bs: bitset): bool =
   discard
 
-proc `notin`+(i: Natural, bs: bitset): bool =
+proc `notin`*(i: Natural, bs: bitset): bool =
   discard
 
 proc contains(bs: bitset, i: Natural): bool =
