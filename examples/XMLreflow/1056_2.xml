@@ -1,0 +1,216 @@
+<TEI xmlns="http://www.tei-c.org/ns/1.0">
+  <teiHeader>
+    <fileDesc>
+      <titleStmt>
+        <title>Transcription 1056</title>
+      </titleStmt>
+      <publicationStmt>
+        <p><ref target="https://schelling.badw.de/text/1056">https://schelling.badw.de/text/1056</ref> in TEI-XML.</p>
+      </publicationStmt>
+      <sourceDesc>
+        <p>Cf. <ref target="https://schelling.badw.de/doc/1056">https://schelling.badw.de/doc/1056</ref>.</p>
+      </sourceDesc>
+    </fileDesc>
+  </teiHeader>
+  <text>
+    <body>
+      <div>
+        <pb source="1r"></pb>
+        <p><placename ref="99">Rom</placename> den <date when="1817-01-27">27. Jenner 1817</date>.</p>
+        <p>Geehrtester Herr von Schelling!</p>
+      </div>
+      <div>
+        <p>Ihre <bibl sameas="2786" type="document">beiden Briefe</bibl><bibl sameas="2959" type="document"></bibl>,
+          der erstere welcher recomandirt war, so wie der andere, habe ich richtig erhalten. – Unendlichen Dank bin ich
+          Ihnen schuldig für alle die Sorgfalt und Mühe, die sie sich wegen meiner, und dem Versuche gegeben, den ich
+          dem Wunsche Seiner <persname ref="444">K˖<expan>öniglichen</expan> Hoheit</persname> gemäß aufzusetzen
+          unternohmen. Als nachher Seiner K˖<expan>öniglichen</expan> Hoheit die Bekanntmachung dieser Zeilen
+          wünschten, sah ich mich genöthigt, mich an Sie zu WENDEN mit der Bitte, die Correction des Ganzen gütigst zu
+          besorgen; Dieß war zwar ein Erfragen von meiner Seite, allein ich sah mich eines Theils dazu genöthigt auch
+          war ich anderer Seits zum voraus überzeugt, daß Sie in einem solchen Falle ihren treuen Giovanni Furioso
+          nicht wieder im Dreke steken lassen, und daß Sie mir diesen Freundschafts-Dienst umso weniger versagen
+          würden, da Sie mich so zimlich kennen, wissen, was ich leisten kann, und daß Schreiben meine Sache nicht ist,
+          folglich Ihres Beistands im höchsten Grade bedarf. Doch daß Sie sich mit solchem Eifer und Wärme dieser Sache
+          angenohmen haben, verdiene weder ich, noch meine <bibl sameas="2314" type="literature">Schrift</bibl><bibl
+          n="Bd. I 19. S. 315–404" sameas="6347" type="literature"></bibl>, noch weniger aber jenes Lob über dieselbe,
+          welches mich erröthen machte, welches bei einem Stük Fleische, wie ich bin, nicht wenig sagen will. – Sollte
+          übrigens (nun ins hochste gesprochen) was Gutes daran zu finden sein, so gehört dieses mir nicht zu, sondern
+          der Sache selbst, von welcher beseelt ich nach meiner Uberzeugung niederschrieb, was ich fühlte, und wovon
+          ich durchdrungen war. – – Daß ich hie und da in meinen Citationen nicht ganz pünktlich gewesen, und Sie aus
+          dieser Ursache umso mehr Mühe hatten, solchen aufzufinden, thut mir sehr leid; In einem andern Falle werde
+          ich gewiß aufmerksamer sein. Doch dieß geschah zum Theil, weil ich mich aus Mangel des Nöthigen Buches theils
+          einer deutschen, theils einer Italienischen Übersetzung des <bibl sameas="17035"
+          type="literature">Pausanias</bibl><persname ref="3183"></persname> bedienen mußte.</p>
+        <p>Ob ich noch einen Nachtrag meiner <bibl sameas="2314" type="literature">Schrift</bibl><bibl n="Bd. I 19. S.
+          315–404" sameas="6347" type="literature"></bibl> liefern werde, so wie es im Sinne hatte, darüber bin ich mit
+          mir selbst noch sehr im Zweifel. Ich hatte einen Anfang gemacht, meine Gedanken oder Ansichten über die
+          frühere Kunst der <placename ref="924">Griechen</placename> (wohin eigentlich diese <placename
+          ref="1585">Aeginetische</placename> Werke gehören, und von welchen <persname ref="115">Winkelman</persname>
+          beinah gar nichts bestimmtes sagt, sondern ganz flüchtig darüber weggeht.) im Zusammenhange aufzustellen, und
+          war Willens solche als eine zweite Abtheilung der erstern beizufügen, oder nachfolgen zu lassen. Mein Plan
+          war <pb source="1v"></pb>eigentlich dieser; Nemlich erstlich einen Überblik der <placename
+          ref="895">egyptischen</placename> Kunst in allgemeinen zu geben (besonders der frühern) und ihren Karakter,
+          so viel als nöthig zu bezeichnen. Diese Vorausschikung finde ich für nothwendig, weil nach meiner Meinung
+          oder Ansicht der Dinge, die Kunst der Egypter den später sich ausbildenden Griechen zum Muster gedient. Ich
+          wollte sodann zu der Kunst der Griechen übergehn, und zeigen, wie solche allmählig aus den Egyptischen Stil,
+          der ihr zur Grundlage gedient hervorgegangen, nach und nach selbständiger geworden und eigene Schulen
+          gebildet habe. Alles dieses liese sich, wie ich glaube, zum Theil historisch, zum Theil auch aus dem Karakter
+          der frühern griechischen Kunstwerke selbst erweisen. Leztlich hatte ich die Absicht, auch einen Nebenblik auf
+          die Kunst der <placename ref="1677"> Hetrurier</placename> zu werfen, um zu zeigen, daß (so wie es höchst
+          wahrscheinlich ist) der auf die Egyptische Kunst gegründete Altgriechische Stil sich aus Griechenland nach
+          Hetrurien herübergepflanzt habe, seinen ursprünglichen Karakter in der Folge jenes in etwas weniges geändert
+          habe, in der Hauptsache aber als ein bloser Nebenzweig des Altgriechischen Stils anzusehen sey. – Dieß ist in
+          der Kürze der Inbegriff meiner Ansichten in Hinsicht des Altgriechischen Stils, dessen Verwandschaften, und
+          Nebenverbindungen, welche ich gesonnen war, als einen Anhang mit beyzufügen. – Was meinen Sie dazu? – Ich
+          weiß wohl, daß diese Ansichten in vieler Hinsicht anstösig sein, und manchen Wiederstand finden werden; Doch
+          dieses soll mich desswegen noch nicht irre machen, ich wenigstens sehe die Sache so zimlich klar vor mir
+          liegen.</p>
+        <p>Zur Probe kann ich Ihnen vielleicht einen Theil davon gelegenheitlich überschiken, nicht daß es gedrukt
+          werden soll, sondern blos um Ihnen meine Gedanken zur Beurtheilung vorzulegen. Auch ist es nicht Seiner
+          K˖<expan>öniglichen</expan> Hoheit dem <persname ref="444">Kronprinzen</persname> davon in Kenntniß zu sezen,
+          da dieses eine Sache für sich ausmacht, und in keiner Absoluten Verbindung mit den <placename
+          ref="1585">Aeginetischen</placename> Werken steht. Ich bin in vielen Stüken von der Meinung <persname
+          ref="115">Winkelmans</persname> und anderer abgegangen, weil sie solche, wie ich glaube, nicht so recht mit
+          den aus den neueren Endekungen entsprungenen Resultaten vertragen wollen. Ja diese Resultate sind vielmehr
+          von der Art, die Kunstgeschichte auf einen kürzeren <pb source="2r"></pb>der Natur der Sache angemessenern
+          Weg darzustellen, und die Wiedersprüche, die diese Herren bis jezt nicht vereinigen konnten, mit einem male,
+          wie von selbst, in Verbindung treten lassen, und das Gebäude der früheren Kunstgeschichte ergänzen helfen.
+          Ich erwarte sodann Ihr so wichtiges Urtheil hierüber, und bitte Sie vorzüglich mir sodann alles pünktlich
+          anzumerken, was Ihnen nach Ihren Ansichten anstösig, oder wiedernatürlich scheinen möchte, und zugleich Ihre
+          Gegengründe mitbeizufügen.</p>
+        <p>Der Zweifel, den Sie mir in Ihren <bibl sameas="2786" type="document">Schreiben</bibl><bibl sameas="2959"
+          type="document"></bibl> äusern, nemlich über die von mir angenohmene Abstammung der <placename
+          ref="924">Altgriechischen</placename> Kunst von der <placename ref="895">Egyptischen</placename>, befremdet
+          mich nicht; Auch finde ich die Einwürfe die Sie mir in dieser Hinsicht machen, ganz an ihrer Stelle. Es ist
+          wahr, <persname ref="3183">Pausanias</persname> unterscheidet bei mehreren Gelegenheiten die ältern
+          <placename ref="907">Attischen</placename>, Aeginetischen, und Egyptischen Kunstwerke bestimmt von einander.
+          Dieses gebe ich alles gerne zu, auch steht dieses mit meiner Meinung keineswegs im Wiederspruch. Um mich
+          hierüber nur einigermasen verständlich zu machen, will ich Ihnen hier, bis ich Gelegenheit haben werde,
+          solches umständlicher zu thun, ein Beispiel aus der neuern Kunstgeschichte anführen, zu deutlicherer
+          Erklärung meiner in dieser Hinsicht gesagten Meinung oder Ansicht.</p>
+        <p>Es ist bekannt, daß die Kunst in dem <date from="1300" to="1399">14ten Jahrhundert</date> neurer
+          Zeitrechnung, durch äusere Verhältnisse begünstigt, von neuem Anfing sich zu heben um zu neuem Glanze
+          hervorzutreten. Bis dahin hatte sie sich nur kümmerlich unter wenigen <placename
+          ref="892">griechischen</placename> Künstlern und Mönchen in jener steifen Form der Mittelzeit, welche wir die
+          <placename ref="1678">Bizantinische</placename> zu nennen pflegen, fortgepflanzt. Auch waren selbst die Werke
+          des <persname ref="1474">Cimabue</persname> und seiner Zeitgenossen nichts anders als eine nur unmerkliche
+          Vervollkommnung jenes bizantinischen Stils, von welchem sie, als von ihrer Grundlage ausgiengen. Dieser
+          bizantinische Stil erhielt sich in allen Werken des <date from="1400" to="1499">15ten Jahrhunderts</date>,
+          mehr oder weniger stark, bis endlich <persname ref="1454">Michael Angelo</persname> und <persname ref="1453">
+          Raphael</persname> eine neue Bahn brachen und die alte Hülse der Kunst, die ihr bis dahin gleichsam zum
+          Gerüste gedient hatte, vollig abwarfen. Dieser, von der Wiederauflebung der Kunst bis auf die Zeiten Raphaels
+          herrschende Stil wird nun mit dem Allgemeinen <pb source="2v"></pb>Ausdruck oder Benennnung, <hi
+          rend="u">Stil des 15ten Jahrhunderts</hi> (<hi rend="aq"><foreign xml:lang="it">lo Stile del Cinque
+          Cento</foreign></hi>) bezeichnet. Dieser in den damaligen Zeiten allgemein herrschende Stil hatte nun
+          demohngeachtet wieder seine Unterabtheilungen, oder unter sich verschiedenen Schulen, als der <placename
+          ref="162">florentinischen </placename>, <placename ref="1679">feraresischen</placename>, <placename
+          ref="1521"> Venetianischen</placename> etc. etc. obschon sie im Allgemeinen doch alle das Gepräge jener Zeit,
+          und ihrer bizantinischen Abkunft an sich trugen, und zusammen unter der Benennung des, dem 15ten Jahrhundert
+          eigenthümlichen Stils begriffen waren.</p>
+        <p>Eine gleiche oder ähnliche Bewandtniß hatte es nun, wie ich glaube, mit dem <hi rend="u"><placename
+          ref="924">Altgriechischen</placename> Stil</hi>. Die <placename ref="895">Egyptische</placename> Kunst diente
+          den später sich ausbildenden <placename ref="892">Griechen</placename> zur Grundlage oder Muster, so wie der
+          <placename ref="1678">bizantinische</placename> der wieder aufblühenden Kunst des <date from="1400"
+          to="1499">15ten Jahrhunderts</date>. Der altgriechische Stil trug im Allgemein das Gepräge Egyptischer
+          abkunft (dieß erhellet nur allzu deutlich aus ihren Werken) demohngeachtet zerfiel, oder theilte er sich in
+          Unterabtheilungen oder Schulen, als der ältern <placename ref="907"><hi rend="u">Attischen</hi></placename>,
+          welche dem ältern <persname ref="2725">Daedalus</persname>, die <placename ref="1585"><hi
+          rend="u">Aeginetische</hi></placename>, die dem <persname ref="4997">Smilis</persname>, und etwas später der
+          <placename ref="971">Sycionischen</placename> Schule, welche dem <persname ref="4998">Dipönus</persname> und
+          <persname ref="4999"> Skillis</persname> zu ihren Stifter hatte. Diese Schulen jener frühern Zeiten konnten,
+          obschon sie alle gleicher Entstehung, und ihrer Urform nach Egyptischen Ursprungs waren, dennoch unter sich
+          in etwas verschieden gewesen, so wie dieses der Fall bey den verschiedenen Schulen des <date from="1400"
+          to="1499">15ten Jahrhunderts</date> ist, welche, obschon sämmtlich bizantinischen Ursprungs, und ein ihnen
+          durchaus eigenthümliches Gepräge haben, und desswegen mit der allgemeinen Benennung <hi rend="u">des Stils
+          des 15ten Jahrhunderts</hi> bezeichnet werden, dennoch durch gewisse Eigenthümlichkeiten wieder unter sich in
+          etwas verschieden sind. –</p>
+        <p>Vielleicht werden Sie durch diesen Aufgestellten Vergleich besser einsehen, wie ich dieses meine, und mir
+          die Sache im Zusammenhange vorstelle, und in wiefern ich glaube, daß jener anscheinliche Wiederspruch sich
+          heben lasse. Doch wäre zum Voraus erst gehörig darzuthun, daß wirklich die Kunst der <placename
+          ref="895">Egypter</placename> jenen beträchtlichen Einflus auf die frühere Kunst der <placename
+          ref="924">Griechen</placename> gehabt, wie ich hier voraussetze, und wie ich solches noch darzuthun gedenke.
+          Hierüber in meinen nachfolgenden Versuche vielleicht ein mehreres.</p>
+        <pb source="3r"></pb>
+        <p>Ich kehre nun von dieser Ausschweifung wieder zur Sache zurük. – Es wäre zwar in Hinsicht der <placename
+          ref="1585">Aeginetischen</placename> Werke noch vieles zu errinnern, und nachzutragen gewesen, Dinge, welche
+          sich erst bei den nachherigen Ergänzungen endeken liesen; Allein nun möchte es zu späte sein, auch sind
+          dieser Bemerkungen so viele noch zu machen, so daß ich es für rathsamer halte, dann wenn einmal diese Figuren
+          völlig ergänzt sein werden, einen Nachtrag zum Ganzen zu machen, und bei dieser Gelegenheit das noch zu
+          erwähnende mit einfliesen zu lassen</p>
+        <p>Auf die Frage, wie viele Exemplare ich dann zu erhalten wünsche, weiß ich wahrlich nicht zu antworten. Ich
+          wünsche blos einige zu erhalten, und überlasse es völlig Ihrem Gutachten. Unterdessen wünsche ich jedoch daß
+          die Zahl derselben nicht unter <hi rend="u">6</hi> sey. –</p>
+        <p>Noch mehr beschämte mich die Anfrage wegen des Honorars. Denn sollten diese <bibl sameas="2314"
+          type="literature">Zeilen</bibl><bibl n="Bd. I 19. S. 315–404" sameas="6347" type="literature"></bibl>Zeilen
+          einigen Wehrt haben, oder beim Publikum einiges Interesse erregen. So komt dieses in keinem Fall auf meine
+          Rechnung. Es ist das Interesse welches diese Werke an und für sich selbst erregen, besonders aber die
+          Beisätze und Erläuterungen, welche Sie aus besonderer Freundschaft für mich, gütigst mit beyzufügen
+          beliebten, wodurch das Ganze ein umso grösseres Interesse und umso bessere Aufnahme beim Publikum finden
+          wird. Ich bin also sehr unschuldig in der Sache. Ich schäme mich daher davon zu sprechen, noch mehr aber
+          darüber zu disponiren.</p>
+        <p>Der Alterthumsforscher <persname ref="1409">Hirt</persname> aus <placename ref="27">Berlin</placename> ist
+          vor wenigen Tagen auch <placename ref="99">hier</placename> angekommen, Doch hat er bis jezt diese <placename
+          ref="1585">Aeginetische</placename> Werke noch nicht gesehen. Ich bin neugierig, wie er sich darüber äusern
+          wird. –</p>
+        <p>Die mir aufgetragenen Grüße an <persname ref="589">Fritz Gärtner </persname> habe ich bestellt, er ließ sich
+          Ihnen bestens und vielmals empfehlen. Er wird, wie er mir sagte, mit dem allergrösten Vergnüeg die
+          Aufstellung dieses Monoments übernehmen und gewiß bestmöglichst besorgen. Auch habe ich mit <persname
+          ref="3435">Thorwaldson</persname> gelegenheitllich davon gesprochen, und mich nach allem zu erkundigen
+          gesucht, ohne jedoch merken zu lassen, daß die Anfrage von Ihnen selbst käme. Er sagte mir daß die dazu
+          gehörigen halberhobenen Arbeiten längst vollendet seyen, bis auf einige <pb source="3v"></pb>Verbesserungen
+          daran vorzunehmen gedenke; Und welches er nächstens thun wolle. Doch muß ich Ihnen sagen, daß Thorwaldson ein
+          ganzer wunderbahrer Heilger ist; man kann nie mit ihm aufs Reine kommen, dabey ist er im höchsten Grad
+          fahrläsig und säumselig, es kommt bey ihm nichts zu Stande. Er unternimt alles, verspricht viel, vollendet
+          Aber sehr wenig. Eben so steht es auch mit der Statue des <persname ref="3329">Adonis</persname> den er für
+          Seine K˖<expan>öniglichen</expan> H˖<expan>oheit</expan> dem <persname ref="444">Kronprinzen</persname> zu
+          verferdigen welche schon über 6 Jahre da steht, und immer noch nicht vollendet ist, und vielleicht noch Jahre
+          vergehen werden, bis solches geschieht. So habe ich auch meine tausend Noth mit ihm, wegen den Ergänzungen
+          der <placename ref="1585">Aeginetischen</placename> Werke. Genug hievon. Ich werde mein möglichstes thun,
+          Lieber Herr von Schelling, dem Thorwaldson ernstlichst zu ermahnen, daß wenige, was er noch daran zu machen
+          gedenkt, baldigst, und bestmöglichst zu vollenden.</p>
+        <p>Was die Zahlung betrifft, die <persname ref="3435">er</persname> dafür erhalten, so scheint mir, so viel
+          nemlich aus seiner Rede zu schliesen ist, daß er keine weitere Foderungen zu machen gedenke. Er sagte mir
+          nemlich, daß er diesen Auftrag mehr aus Achtung für ihre Person unternohmen, als dabey etwas zu gewinnen, daß
+          er auch rechtlich keine weitere Foderungen zu machen berechtigt sey, indem man ihn ja zum voraus gesagt
+          hätte, welche Summe man für die Arbeit verwenden wolle, habe er diese Erhalten, so auch er hiemit vollständig
+          bezahlt. Doch erinnere er sich nicht einmal genau wie viel er erhalten hätte. Dieses zeugt von seinem
+          schläflichen Karakter, und der Fahrläsigkeit in seinen Geschäften. Sein Sie desswegen völlig auser Sorgen.
+          Was ich Ihnen indessen rathe, zu thun ist folgendes. Nemlich baldmöglichst an ihm selbst zu schreiben, daß
+          Sie nunmehr gesonnen seyen, da nun <persname ref="589">Gärtner</persname> ehestens zurükreisn würde, durch
+          demselben daselbe aufrichten zu lassen. Sie können vielleicht bey dieser Gelegenheit die Summe wiederhohlen
+          die Sie ihm im Ganzen gezält haben. und daß er auf diese Weise die Summe vollständig erhalten habe, die für
+          diese Arbeit ausgesagt gewesen. Wie dieses gehörig einzukleiden, wissen sie ja am besten. – Wollen Sie dieses
+          aber nicht selbst thun, so geben Sie mir den Auftrag solches ins Reine zu bringen. – Doch halte ich ersteres
+          für rathsamer.</p>
+        <pb source="4r"></pb>
+        <p>Die Nachricht von der gefährlichen Krankheit unsers vielgeliebten <persname
+          ref="444">Kronprinzens</persname>, sezte uns alle in die Gröste Bestürzung. Zwar erhielten wir <placename
+          ref="99">hier</placename> mit dieser traurigen Nachricht auch die Seiner Besserung; Allein dann erst, als
+          sich die Nachricht Seiner Besserung fortwährend bestätigte, verschwand allmählig die Besorgniß um Seine
+          Erhaltung. Gott gebe daß er nun vollig hergestellt sey.</p>
+        <p>In nächstfolgenden Jahre, daß ist <date when="1818"><hi rend="u">1818</hi></date>, werde ich, wenn nichts
+          anderst dazwischen kommt, und die Ergänzungen, und alles was noch dazu gehört, vollendet sein werden, endlich
+          einmal wieder das lang gewünschte Vergnügen haben Sie wieder zu sehen, Ihren Umgang zu geniesen, und mich
+          einmal wieder geistig erwärmen zu können. Ewig unvergesslich sind mir jene Stunden, jene Abendstunden, die
+          ich bey Ihnen verlebte. Es ist doch eine erbärmliche Welt, daß es in derselben so wenige Menschen gibt, mit
+          denen man so eigentlich von Seelen und Leibesgrund harmonirt; was aber noch schlimmer ist, daß das Schiksal
+          auch dann, wenn man ja das Glük gehabt, ein solches Wesen zu finden, nicht einmal erlauben will, in dessen
+          Nähe zu leben. Schon tausendmal habe ich Sie zu mir nach <placename ref="99">Rom</placename> gewünscht, weil
+          ich glaube daß sie hier weit freyer und ruhiger leben könnten. Nur müßten Sie vorher Ihren Namen vertauschen,
+          denn sonst hätten Sie auch gleichfalls die Nachtruhe nicht. Sie müßen doch noch einmal nach Rom, und sollte
+          es auch nur auf ein halbes Jahre sein.</p>
+        <p>Zum Schlusse noch eine Bitte; Sollten Sie Bester Herr von Schelling, einige gute und nüzliche Bücher für
+          mich wissen, so bitte ich Sie vielmals, mir solche durch irgend einen hereinreisenden Kourier oder sonstige
+          Gelegenheit mitzuschiken, und die Kosten mir anzurechnen. Ich würde Ihnen dafür unendlich verbunden sein,
+          weil man <placename ref="99">hier</placename> ganz nichts von <placename ref="889"> deutscher</placename>
+          Litteratur zu lesen bekomt, und ich so sehr wünsche deren welche zu besizen. Nächstens soll, wie ich höre,
+          bald wieder ein Kourier von <placename ref="21">München</placename> hieher reisen.</p>
+      </div>
+      <div>
+        <p>Empfehlen Sie mich bestens Ihrer <persname ref="223">Gemahlinn</persname>, und behalten Sie stets im
+          Andenken<lb></lb> Ihren<lb></lb> innigst ergebensten, und treu gehorsamsten</p>
+        <p>Giovanni <unclear cert="low">###</unclear></p>
+      </div>
+    </body>
+  </text>
+</TEI>
