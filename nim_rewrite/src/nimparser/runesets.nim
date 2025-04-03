@@ -36,7 +36,7 @@ type
   RuneRange* = tuple[low: Rune, high: Rune]
 
   SetSize* = enum interval, size256, size4k, size64k
-  RuneSet* = object
+  RuneSet* {.acyclic.} = object
     low: Rune
     high: Rune
     case size: SetSize
@@ -45,7 +45,7 @@ type
     of size64k: set64k: ref set[0 .. 65535]
     else: discard
 
-  RuneCollection* = object
+  RuneCollection* {.acyclic.} = object
     negate*: bool
     ranges*: seq[RuneRange]  # if empty, only a single set will be used!
     sets: seq[RuneSet]  # if not empty, an optimized version of ranges!

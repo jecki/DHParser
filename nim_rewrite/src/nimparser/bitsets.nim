@@ -10,7 +10,8 @@ import std/strformat
 
 
 type
-  bitset* = object
+  MaskOp = enum setBit, clear, invert
+  bitset* {.acyclic.} = object
     first, last: uint32
     base: uint32 # first shr 6 shl 6
     cap: uint32
@@ -26,12 +27,54 @@ proc init*(bitset: type bitset, first, last: uint32): bitset =
          cap: cap,
          data: cast[ptr UncheckedArray[uint64]](alloc(cap.int * sizeof(uint64))))
 
+proc mask(bs: var bitset, first, last: uint32, mask: MaskOp) =
+  ## Sets or clears or inverts all bits in the interval [a, b].
+  var (a, b) = if first <= last: (first, last) else: (last, first) 
+  if b < bs.first or a > bs.last:  return
+  if a < bs.first:  a = bs.first
+  if b > bs.last:   b = bs.last
+  let 
+    ai = (a - bs.base) shr 6
+    bi = (b - bs.base) shr 6
+    maskA = (1u64 shl (a and 0b111111) - 1) xor 0xFFFFFFFFFFFFFFFFu64
+    maskB = 1u64 shl ((b and 0b111111) + 1) - 1
+  case mask
+    of setBit:
+      for i in (ai + 1)..(bi - 1):  bs.data[i] = 0xFFFFFFFFFFFFFFFFu64
+      bs.data[ai] = bs.data[ai] or maskA
+      bs.data[bi] = bs.data[bi] or maskB
+    of invert:
+      for i in (ai + 1)..(bi - 1):  bs.data[i] = bs.data[i] xor 0xFFFFFFFFFFFFFFFFu64
+      bs.data[ai] = bs.data[ai] xor maskA
+      bs.data[bi] = bs.data[bi] xor maskB
+    of clear:
+      for i in (ai + 1)..(bi - 1):  bs.data[i] = 0u64
+      bs.data[ai] = bs.data[ai] and (maskA xor 0xFFFFFFFFFFFFFFFFu64)
+      bs.data[bi] = bs.data[bi] and (maskB xor 0xFFFFFFFFFFFFFFFFu64)    
 
-proc extend(bs: var bitset, first, last: uint32): bitset =
-    let newBase = first shr 6 shl 6
-    let newCap = last shr 6 shl 6 - newBase + 1
-    # TODO: to be continued...
+proc mask(bs: var bitset, first, last: uint32, mask: bool) =
+  ## Sets or clears all bits in the interval [a, b].
+  mask(bs, first, last, if mask: setBit else: clear) 
 
+proc extend(bs: var bitset, first, last: uint32): bitset =  # TODO: Maybe this is not even needed
+  ## Extend the bitset so that the interval [first, last] is also covered
+  var (a, b) = if first <= last: (first, last) else: (last, first) 
+  if a > bs.first: a = bs.first
+  if b < bs.last: b = bs.last
+  let newBase = a shr 6 shl 6
+  let newCap = b shr 6 shl 6 - newBase + 1
+  if newCap > bs.cap:
+    var data = cast[ptr UncheckedArray[uint64]](alloc(newCap.int * sizeof(uint64)))
+    let delta = (bs.base shr 6) - (newBase shr 6)
+    assert delta <= newCap - bs.cap
+    for i in 0..<bs.cap:
+      data[i + delta] = bs.data[i]
+    dealloc(bs.data)
+    bs.first = a
+    bs.last = b
+    bs.base = newBase
+    bs.cap = newCap
+    bs.data = data
 
 proc `=destroy`*(bs: bitset) =
   if bs.data != nil:
