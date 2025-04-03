@@ -18,13 +18,15 @@ type
     data: ptr UncheckedArray[uint64]
 
 
+template capacity(first, last: uint32): uint32 =
+  # (last div 64 ) - (first div 64) + 1
+  last shr 6 - first shr 6 + 1
+
 proc init*(bitset: type bitset, first, last: uint32): bitset =
-  let base = first shr 6 shl 6
-  let cap = last shr 6 shl 6 - base + 1
   bitset(first: first,
          last: last,
-         base: base,
-         cap: cap,
+         base: first shr 6 shl 6,
+         cap: capacity(first, last),
          data: cast[ptr UncheckedArray[uint64]](alloc(cap.int * sizeof(uint64))))
 
 proc mask(bs: var bitset, first, last: uint32, mask: MaskOp) =
@@ -144,7 +146,28 @@ proc len*(bs: bitset): uint32 {.inline.} = bs.last - bs.first + 1
 # TODO: Implement all set operators
 
 proc `+`*(a, b: bitset): bitset = 
-  discard
+  result = bitset.init(min(a.first, b.first), max(a.last, b.last))
+  let a0 = (a.base - result.base) shr 6
+  let b0 = (b.base - result.base) shr 6
+  let a1 = a0 + a.cap - 1
+  let b1 = b0 + b.cap - 1
+  if b0 > 0:
+    for i in 0..min(b0 - 1, a1): result.data[i] = a.data[i]
+    if a1 < b1:
+      for i in b0..a1: result.data[i] = a.data[i] or b.data[i]
+      for i in max(a1 + 1, b0)..b1: result.data[i] = b.data[i] 
+    else:
+      for i in b0..b1:  result.data[i] = a.data[i] or b.data[i]
+      for i in (b1 + 1)..a1: result.data[i] = a.data[i]
+  else:
+    for i in 0..min(a0 - 1, b1): result.data[i] = b.data[i]
+    if a1 < b1:
+      for i in a0..a1: result.data[i] = a.data[i] or b.data[i]
+      for i in (a1 + 1)..b1: result.data[i] = b.data[i] 
+    else:
+      for i in a0..b1:  result.data[i] = a.data[i] or b.data[i]
+      for i in max(b1 + 1, a0)..a1: result.data[i] = a.data[i]    
+
 
 proc `*`*(a, b: bitset): bitset = 
   discard
