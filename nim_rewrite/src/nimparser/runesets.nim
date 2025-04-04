@@ -37,8 +37,8 @@ type
     negate*: bool
     ranges*: seq[RuneRange]  
     cache256: ref set[0..255]
-    cache4k:  ref set[0 .. 4095]
-    cache64k: ref set[0 .. 65535]   
+    cache4k:  ref set[0..4095]
+    cache64k: ref set[0..65535]   
     contains*: ContainsProc not nil
 
 const
@@ -83,7 +83,31 @@ proc inCacheOrRanges64k(rs: var RuneSet, r: Rune): bool =
 
 proc firstRun(rs: var RuneSet, r: Rune): bool =
   # TODO: caching comes here
-  rs.contains = inRanges
+  if rs.ranges.len == 0:
+    if not isNil(rs.cache256):  rs.contains = inCache256
+    elif not isNil(rs.cache4k): rs.contains = inCache4k
+    else:
+      assert not isNil(rs.cache64k)
+      rs.contains = inCache64k
+  elif rs.ranges[^1].high.uint32 < 256:
+    new(rs.cache256)
+    for rng in rs.ranges:
+      rs.cache256[] = rs.cache256[] + {rng.low.uint8..rng.high.uint8}
+    rs.contains = inCache256
+  elif rs.ranges[^1].high.uint32 < 4096 and rs.ranges.len > 8:
+    new(rs.cache4k)
+    rs.cache4k[] = {rs.ranges[0].low.uint16..rs.ranges[0].high.uint16}
+    for rng in rs.ranges[1..^1]:
+        rs.cache4k[] = rs.cache4k[] + {rng.low.uint16..rng.high.uint16}
+    rs.contains = inCache4k
+  elif rs.ranges[^1].high.uint32 < 65536 and rs.ranges.len > 12:
+    new(rs.cache64k)
+    rs.cache64k[] = {rs.ranges[0].low.uint16..rs.ranges[0].high.uint16}
+    for rng in rs.ranges[1..^1]:
+        rs.cache64k[] = rs.cache64k[] + {rng.low.uint16..rng.high.uint16}
+    rs.contains = inCache64k
+  else:
+    rs.contains = inRanges
   rs.contains(rs, r)
 
 
