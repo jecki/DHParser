@@ -151,7 +151,7 @@ proc `+`*(a, b: bitset): bitset =
   let b0 = (b.base - result.base) shr 6
   let a1 = a0 + a.cap - 1
   let b1 = b0 + b.cap - 1
-  if b0 > 0:
+  if b0 > a0:
     for i in 0..min(b0 - 1, a1): result.data[i] = a.data[i]
     if a1 < b1:
       for i in b0..a1: result.data[i] = a.data[i] or b.data[i]
