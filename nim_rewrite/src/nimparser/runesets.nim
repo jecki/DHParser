@@ -74,15 +74,27 @@ proc inRanges(rs: var RuneSet, r: Rune): bool = rs.negate xor contains(rs.ranges
 proc inCache256(rs: var RuneSet, r: Rune): bool = rs.negate xor r.int32 in rs.cache256[]
 proc inCache4k(rs: var RuneSet, r: Rune): bool = rs.negate xor r.int32 in rs.cache4k[]
 proc inCache64k(rs: var RuneSet, r: Rune): bool = rs.negate xor r.int32 in rs.cache4k[]
-proc inCacheOrRanges256(rs: var RuneSet, r: Rune): bool =
-  rs.negate xor (r.int32 in rs.cache256[] or contains(rs.ranges, r))
-proc inCacheOrRanges4k(rs: var RuneSet, r: Rune): bool =
-  rs.negate xor (r.int32 in rs.cache4k[] or contains(rs.ranges, r))
-proc inCacheOrRanges64k(rs: var RuneSet, r: Rune): bool =
-  rs.negate xor (r.int32 in rs.cache64k[] or contains(rs.ranges, r))
+proc inCacheOrRanges256(rs: var RuneSet, r: Rune): bool = rs.negate xor (r.int32 in rs.cache256[] or contains(rs.ranges, r))
+proc inCacheOrRanges4k(rs: var RuneSet, r: Rune): bool = rs.negate xor (r.int32 in rs.cache4k[] or contains(rs.ranges, r))
+proc inCacheOrRanges64k(rs: var RuneSet, r: Rune): bool = rs.negate xor (r.int32 in rs.cache64k[] or contains(rs.ranges, r))
+
+
+
+proc fullyCached[T: set[0..255]|set [0..4095]|set[0..65535]](rs: var RuneSet, cache: var T) = 
+  new(cache)
+  cache[] = {rs.ranges[0].low.uint16..rs.ranges[0].high.uint16}
+  for rr in rs.ranges[1..^1]:
+    cache[] = cache[] + {rr.low.uint16..rr.high.uint16}
+
+proc partiallyCached[T: set[0..255]|set [0..4095]|set[0..65535]](rs: var RuneSet, cache: var T, cacheSize: uint32) = 
+  assert cacheSize == 256 or cacheSize == 4096 or cacheSize == 65536
+  new(cache)
+  for rr in rs.ranges:
+    if rr.high.uint32 < cacheSize:
+      cache[] = cache[] + {rr.low.uint16..min(rr.high.uint16, (cacheSize - 1).uint16)}
+
 
 proc firstRun(rs: var RuneSet, r: Rune): bool =
-  # TODO: caching comes here
   if rs.ranges.len == 0:
     if not isNil(rs.cache256):  rs.contains = inCache256
     elif not isNil(rs.cache4k): rs.contains = inCache4k
@@ -90,24 +102,40 @@ proc firstRun(rs: var RuneSet, r: Rune): bool =
       assert not isNil(rs.cache64k)
       rs.contains = inCache64k
   elif rs.ranges[^1].high.uint32 < 256:
-    new(rs.cache256)
-    for rng in rs.ranges:
-      rs.cache256[] = rs.cache256[] + {rng.low.uint8..rng.high.uint8}
+    fullyCached(rs, rs.cache256)
     rs.contains = inCache256
   elif rs.ranges[^1].high.uint32 < 4096 and rs.ranges.len > 8:
-    new(rs.cache4k)
-    rs.cache4k[] = {rs.ranges[0].low.uint16..rs.ranges[0].high.uint16}
-    for rng in rs.ranges[1..^1]:
-        rs.cache4k[] = rs.cache4k[] + {rng.low.uint16..rng.high.uint16}
+    fullyCached(rs, rs.cache4k)
     rs.contains = inCache4k
   elif rs.ranges[^1].high.uint32 < 65536 and rs.ranges.len > 12:
-    new(rs.cache64k)
-    rs.cache64k[] = {rs.ranges[0].low.uint16..rs.ranges[0].high.uint16}
-    for rng in rs.ranges[1..^1]:
-        rs.cache64k[] = rs.cache64k[] + {rng.low.uint16..rng.high.uint16}
+    fullyCached(rs, rs.cache64k)
     rs.contains = inCache64k
   else:
-    rs.contains = inRanges
+    var s,m,l: int
+    for rr in rs.ranges:
+      if rr.high.uint32 < 256: s += 1
+      elif rr.low.uint < 256:
+        s += 1
+        m += 1
+        if rr.high.uint32 >= 4096:
+          l += 1
+      elif rr.low.uint32 < 4096:
+        m += 1
+        if rr.high.uint32 >= 4096:
+          l += 1
+      elif rr.low.uint32 < 65536:
+        l += 1
+    if l > 12:
+      partiallyCached(rs, rs.cache64k, 65536)
+      rs.contains = inCacheOrRanges64k
+    elif m > 8:
+      partiallyCached(rs, rs.cache4k, 4096)
+      rs.contains = inCacheOrRanges4k
+    elif s > 4:
+      partiallyCached(rs, rs.cache256, 256)
+      rs.contains = inCacheOrRanges256 
+    else:
+      rs.contains = inRanges
   rs.contains(rs, r)
 
 
