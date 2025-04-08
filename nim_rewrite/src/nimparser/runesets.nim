@@ -26,19 +26,23 @@
 import std/[algorithm, strformat, strutils, unicode]
 
 
-proc nilRefError(fieldName: string): ref AssertionDefect =
-  newException(AssertionDefect, fmt"{fieldName} unexpectedly nil!")
+# proc nilRefError(fieldName: string): ref AssertionDefect =
+#   newException(AssertionDefect, fmt"{fieldName} unexpectedly nil!")
 
 
 type
   ContainsProc = proc(rs: var RuneSet, r: Rune): bool {.nimcall.}
   RuneRange* = tuple[low: Rune, high: Rune]
+  Set256 = set[0..255]
+  Set4K = set[0..4095]
+  Set64K = set[0..65535]
   RuneSet* {.acyclic.} = object
     negate*: bool
-    ranges*: seq[RuneRange]  
-    cache256: ref set[0..255]
-    cache4k:  ref set[0..4095]
-    cache64k: ref set[0..65535]   
+    ranges*: seq[RuneRange]
+    uncached: seq[RuneRange]
+    cache256: ref Set256
+    cache4k:  ref Set4k
+    cache64k: ref Set64k
     contains*: ContainsProc not nil
 
 const
@@ -74,25 +78,26 @@ proc inRanges(rs: var RuneSet, r: Rune): bool = rs.negate xor contains(rs.ranges
 proc inCache256(rs: var RuneSet, r: Rune): bool = rs.negate xor r.int32 in rs.cache256[]
 proc inCache4k(rs: var RuneSet, r: Rune): bool = rs.negate xor r.int32 in rs.cache4k[]
 proc inCache64k(rs: var RuneSet, r: Rune): bool = rs.negate xor r.int32 in rs.cache4k[]
-proc inCacheOrRanges256(rs: var RuneSet, r: Rune): bool = rs.negate xor (r.int32 in rs.cache256[] or contains(rs.ranges, r))
-proc inCacheOrRanges4k(rs: var RuneSet, r: Rune): bool = rs.negate xor (r.int32 in rs.cache4k[] or contains(rs.ranges, r))
-proc inCacheOrRanges64k(rs: var RuneSet, r: Rune): bool = rs.negate xor (r.int32 in rs.cache64k[] or contains(rs.ranges, r))
+proc inCacheOrRanges256(rs: var RuneSet, r: Rune): bool = rs.negate xor (r.int32 in rs.cache256[] or contains(rs.uncached, r))
+proc inCacheOrRanges4k(rs: var RuneSet, r: Rune): bool = rs.negate xor (r.int32 in rs.cache4k[] or contains(rs.uncached, r))
+proc inCacheOrRanges64k(rs: var RuneSet, r: Rune): bool = rs.negate xor (r.int32 in rs.cache64k[] or contains(rs.uncached, r))
 
 
-
-proc fullyCached[T: set[0..255]|set [0..4095]|set[0..65535]](rs: var RuneSet, cache: var T) = 
+proc fullyCached[T: Set256|Set4k|Set64k](rs: var RuneSet, cache: var ref T) = 
   new(cache)
   cache[] = {rs.ranges[0].low.uint16..rs.ranges[0].high.uint16}
   for rr in rs.ranges[1..^1]:
     cache[] = cache[] + {rr.low.uint16..rr.high.uint16}
 
-proc partiallyCached[T: set[0..255]|set [0..4095]|set[0..65535]](rs: var RuneSet, cache: var T, cacheSize: uint32) = 
+proc partiallyCached[T: Set256|Set4k|Set64k](rs: var RuneSet, cache: var ref T, cacheSize: uint32) = 
   assert cacheSize == 256 or cacheSize == 4096 or cacheSize == 65536
   new(cache)
+  let upperLimit = (cacheSize - 1).uint16
   for rr in rs.ranges:
-    if rr.high.uint32 < cacheSize:
-      cache[] = cache[] + {rr.low.uint16..min(rr.high.uint16, (cacheSize - 1).uint16)}
-
+    if rr.low.uint32 < cacheSize:
+      cache[] = cache[] + {rr.low.uint16..min(rr.high.uint16, upperLimit)}
+    else:
+      rs.uncached.add(rr)
 
 proc firstRun(rs: var RuneSet, r: Rune): bool =
   if rs.ranges.len == 0:
@@ -139,19 +144,43 @@ proc firstRun(rs: var RuneSet, r: Rune): bool =
   rs.contains(rs, r)
 
 
-func init(RuneSet: type, neg: bool, ranges: seq[RuneRange]): RuneSet =
-  RuneSet(negate: neg, ranges: ranges, 
+func init*(RuneSet: type, neg: bool, ranges: seq[RuneRange]): RuneSet =
+  RuneSet(negate: neg, ranges: ranges, uncached: @[],
           cache256: nil, cache4k: nil, cache64k: nil, 
           contains: firstRun)
 
+## The following init* functions are used to initialize rune sets
+## directly with sets instead of ranges.
+
+func init*(RuneSet: type, neg: bool, cache: Set256): RuneSet =
+  RuneSet(negate: neg, ranges: @[], uncached: @[],
+          cache256: cache, cache4k: nil, cache64k: nil, 
+          contains: inCache256)
+
+func init*(RuneSet: type, neg: bool, cache: Set4k): RuneSet =
+  RuneSet(negate: neg, ranges: @[], uncached: @[],
+          cache256: nil, cache4k: cache, cache64k: nil, 
+          contains: inCache4k)
+
+func init*(RuneSet: type, neg: bool, cache: Set64k): RuneSet =
+  RuneSet(negate: neg, ranges: @[], uncached: @[],
+          cache256: nil, cache4k: nil, cache64k: cache, 
+          contains: inCache64k)
+
 
 proc `==`*(a, b: RuneSet): bool =
-  a.negate == b.negate and a.ranges == b.ranges
+  a.negate == b.negate and 
+  ((a.ranges.len > 0 and a.ranges == b.ranges) or
+    (a.ranges.len == 0 and b.ranges.len == 0 and
+     a.cache256 == b.cache256 and
+     a.cache4k == b.cache4k and
+     a.cache64k == b.cache64k))
 
 
-proc `$`*(rc: RuneSet, verbose: bool = false): string =
+proc `$`*(rs: RuneSet, verbose: bool = false): string =
   ## Serializes rune set. Use "runeset $ true" for a more
   ## verbose and easier to read serialization.
+
   proc hexlen(r: Rune): (int8, string) =
     let i = r.int32
     if i < 1 shl 8: return (2, r"\x")
@@ -166,12 +195,14 @@ proc `$`*(rc: RuneSet, verbose: bool = false): string =
       b = rr.high.int32
     isIn(a, b, 48, 57) or isIn(a, b, 65, 90) or isIn(a, b, 97, 122)
 
-  var s: seq[string] = newSeqOfCap[string](rc.ranges.len + 2)
-  let ranges: seq[RuneRange] = rc.ranges 
+  var s: seq[string] = newSeqOfCap[string](rs.ranges.len + 2)
+  let ranges: seq[RuneRange] = rs.ranges
+  if ranges.len == 0:
+    discard # TODO: process cache only RuneSets here...
                                
   if not verbose:
     s.add("[")
-    if rc.negate: s.add("^")
+    if rs.negate: s.add("^")
   for rr in ranges:
     if rr.low >% rr.high:
       s.add("EMPTY")
@@ -190,7 +221,7 @@ proc `$`*(rc: RuneSet, verbose: bool = false): string =
         s.add(marker & toHex(rr.low.int32, l) & "-" & marker & toHex(rr.high.int32, l))
     if rr.high <% rr.low:  s.add("!") 
   if verbose:
-    s = if rc.negate: @["[^", s.join("]-["), "]"] else: @["[", s.join("]|["), "]"]
+    s = if rs.negate: @["[^", s.join("]-["), "]"] else: @["[", s.join("]|["), "]"]
   else:
     s.add("]")
   s.join("")

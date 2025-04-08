@@ -141,7 +141,10 @@ test "RuneRanges parser":
             |\uA7B7|\uA7B9|\uA7BB|\uA7BD|\uA7BF|\uA7C3|\uA7FA|[\uAB30-\uAB5A]|[\uAB60-\uAB64]
             |[\uAB66-\uAB67]|[\uFB00-\uFB06]|[\uFF41-\uFF5A]|\U0001F1A5|\U0001F521
             |[\U000E0061-\U000E007A]""")
-  assert latin.ranges.len == 369  
+  assert latin.ranges.len == 369 
+  assert latin.contains(latin, Rune('a'))
+  assert not latin.contains(latin, Rune('0'))
+  
 
 
 test "Serialization":

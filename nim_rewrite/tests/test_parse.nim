@@ -14,7 +14,7 @@ test "Text, simple test":
 
 test "CharRange":
   let rr: seq[RuneRange] = @[rr"2-4", rr"ä-ü", rr"b-d"]
-  check CharRange(RC(false, rr))("ö").root.asSxpr == "(:CharRange \"ö\")"
+  check CharRange(RuneSet.init(false, rr))("ö").root.asSxpr == "(:CharRange \"ö\")"
   let GermanAlphabet = "GermanAlphabet" ::= cr"([A-Z]|[a-z]|[ÄÖÜäöüß])+"
   assert $GermanAlphabet == r"[A-Za-z\xC4\xD6\xDC\xDF\xE4\xF6\xFC]+"
   assert GermanAlphabet("abeäßüÜXYZ").root.asSxpr == "(GermanAlphabet \"abeäßüÜXYZ\")"
