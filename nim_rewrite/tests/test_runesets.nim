@@ -165,3 +165,6 @@ test "Serialization":
   assert $rs1 == $rs(rs1 $ true)
   assert $rs2 == $rs(rs2 $ true)
   assert $rs3 == $rs(rs3 $ true)
+
+  let rs4 = RuneSet.init(true, {97, 98, 99, 100, 105, 108, 109, 110, 120, 121})
+  assert $rs4 == "[^a-dilmnxy]"

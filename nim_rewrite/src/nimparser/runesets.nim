@@ -33,9 +33,9 @@ import std/[algorithm, strformat, strutils, unicode]
 type
   ContainsProc = proc(rs: var RuneSet, r: Rune): bool {.nimcall.}
   RuneRange* = tuple[low: Rune, high: Rune]
-  Set256 = set[0..255]
-  Set4K = set[0..4095]
-  Set64K = set[0..65535]
+  Set256* = set[0..255]
+  Set4K* = set[0..4095]
+  Set64K* = set[0..65535]
   RuneSet* {.acyclic.} = object
     negate*: bool
     ranges*: seq[RuneRange]
@@ -150,21 +150,28 @@ func init*(RuneSet: type, neg: bool, ranges: seq[RuneRange]): RuneSet =
           contains: firstRun)
 
 ## The following init* functions are used to initialize rune sets
-## directly with sets instead of ranges.
+## directly with sets instead of ranges. This is the preferred method
+## when the rune ranges do not contain codes > 0xFFFF
 
 func init*(RuneSet: type, neg: bool, cache: Set256): RuneSet =
+  var cref = new(Set256)
+  cref[] = cache
   RuneSet(negate: neg, ranges: @[], uncached: @[],
-          cache256: cache, cache4k: nil, cache64k: nil, 
+          cache256: cref, cache4k: nil, cache64k: nil, 
           contains: inCache256)
 
 func init*(RuneSet: type, neg: bool, cache: Set4k): RuneSet =
+  var cref = new(Set4k)
+  cref[] = cache
   RuneSet(negate: neg, ranges: @[], uncached: @[],
-          cache256: nil, cache4k: cache, cache64k: nil, 
+          cache256: nil, cache4k: cref, cache64k: nil, 
           contains: inCache4k)
 
 func init*(RuneSet: type, neg: bool, cache: Set64k): RuneSet =
+  var cref = new(Set64k)
+  cref[] = cache
   RuneSet(negate: neg, ranges: @[], uncached: @[],
-          cache256: nil, cache4k: nil, cache64k: cache, 
+          cache256: nil, cache4k: nil, cache64k: cref, 
           contains: inCache64k)
 
 
@@ -176,6 +183,33 @@ proc `==`*(a, b: RuneSet): bool =
      a.cache4k == b.cache4k and
      a.cache64k == b.cache64k))
 
+proc toRanges[T: Ordinal](s: set[T], RT: type): seq[(RT, RT)] =
+  ## Converts a set to a sequence of ranges. The sequence is sorted in ascending order.
+  result = newSeq[RuneRange](0)
+  if s.len > 0:
+    var (a, b) = (T(0), T(0))
+    for i in s:
+      (a, b) = (i, i)
+      break
+    for i in s:
+      if i > b + 1:
+        result.add((RT(a), RT(b)))
+        (a, b) = (i, i)
+      else:
+        b = i
+    result.add((RT(a), RT(b)))
+
+proc cacheToRanges(rs: RuneSet): seq[RuneRange] =
+  ## Converts the cache of RuneSet to a sequence of ranges
+  if not isNil(rs.cache256):
+    toRanges(rs.cache256[], Rune)
+  elif not isNil(rs.cache4k):
+    toRanges(rs.cache4k[], Rune)
+  elif not isNil(rs.cache64k):
+    toRanges(rs.cache64k[], Rune)
+  else:
+    raise newException(AssertionDefect,
+      "Cannot convert an empty RuneSet-cache to a sequence of ranges.")
 
 proc `$`*(rs: RuneSet, verbose: bool = false): string =
   ## Serializes rune set. Use "runeset $ true" for a more
@@ -195,11 +229,10 @@ proc `$`*(rs: RuneSet, verbose: bool = false): string =
       b = rr.high.int32
     isIn(a, b, 48, 57) or isIn(a, b, 65, 90) or isIn(a, b, 97, 122)
 
-  var s: seq[string] = newSeqOfCap[string](rs.ranges.len + 2)
-  let ranges: seq[RuneRange] = rs.ranges
-  if ranges.len == 0:
-    discard # TODO: process cache only RuneSets here...
-                               
+  var 
+    ranges: seq[RuneRange] = if rs.ranges.len > 0: rs.ranges else: cacheToRanges(rs)
+    s: seq[string] = newSeqOfCap[string](ranges.len + 2)
+
   if not verbose:
     s.add("[")
     if rs.negate: s.add("^")
@@ -208,15 +241,19 @@ proc `$`*(rs: RuneSet, verbose: bool = false): string =
       s.add("EMPTY")
     elif isAlphaNum(rr):
       let low = chr(rr.low.int8)
-      if rr.low == rr.high:
+      if rr.high.uint32 - rr.low.uint32 <= 2:
         s.add(fmt"{low}")
+        for n in rr.low.uint32 + 1 .. rr.high.uint32:
+          s[^1] &= fmt"{Rune(n)}"
       else:
         let high = chr(rr.high.int8)
         s.add(fmt"{low}-{high}")
     else:
       let (l, marker) = hexlen(rr.high)
-      if rr.low == rr.high:
+      if rr.high.uint32 - rr.low.uint32 <= 2:
         s.add(marker & toHex(rr.low.int32, l))
+        for n in rr.low.uint32 + 1 .. rr.high.uint32:
+          s[^1] &= marker & toHex(n, l)
       else:
         s.add(marker & toHex(rr.low.int32, l) & "-" & marker & toHex(rr.high.int32, l))
     if rr.high <% rr.low:  s.add("!") 
@@ -230,6 +267,19 @@ proc `$`*(rs: RuneSet, verbose: bool = false): string =
 proc `$`*(rr: seq[RuneRange], verbose=false): string = RuneSet.init(false, rr) $ verbose
 proc `$`*(rr: RuneRange): string = $(@[rr])
 
+
+proc repr*(rs: RuneSet): string =
+  ## Serializes rune set as a set literal
+  var 
+    ranges: seq[RuneRange] = if rs.ranges.len > 0: rs.ranges else: cacheToRanges(rs)
+    s: seq[string] = newSeqOfCap[string](ranges.len + 2)
+
+  for rr in ranges:
+    if rr.high.uint32 == rr.low.uint32:
+      s.add(fmt"0x{toHex(rr.low.uint32)}")
+    else:
+      s.add(fmt"0x{toHex(rr.low.uint32)}..{toHex(rr.high.uint32)}") 
+  fmt"rs({not rs.negate}, " & "{" & s.join(", ") & "})"  
 
 func isSortedAndMerged*(rr: seq[RuneRange]): bool =
   ## Confirms that the ranges in the sequences are in ascending order
@@ -272,7 +322,7 @@ proc sortAndMerge*(R: var seq[RuneRange]) =
   # assert isSortedAndMerged(R)
 
 func size*(r: RuneRange): uint32 = r.high.uint32 - r.low.uint32 + 1
-func size(R: seq[RuneRange]): uint32 =
+proc size(R: seq[RuneRange]): uint32 =
   if not isSortedAndMerged(R):
     raise newException(AssertionDefect,
       fmt"Cannot determine size of unmerged and unsorted rune range: {R}")
@@ -548,6 +598,9 @@ proc rs*(s: string): RuneSet =
     else: 
       while i < s.len and s[i] in " \n":  i += 1
       addOrSubtract(parseRuneSet())
+
+
+proc rs*[T: Ordinal](positive: bool, s: set[T]): RuneSet = RuneSet.init(not positive, s)
 
 
 proc rr*(rangeStr: string): RuneRange =
