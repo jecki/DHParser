@@ -183,6 +183,7 @@ proc `==`*(a, b: RuneSet): bool =
      a.cache4k == b.cache4k and
      a.cache64k == b.cache64k))
 
+
 proc toRanges[T: Ordinal](s: set[T], RT: type): seq[(RT, RT)] =
   ## Converts a set to a sequence of ranges. The sequence is sorted in ascending order.
   result = newSeq[RuneRange](0)
@@ -268,18 +269,27 @@ proc `$`*(rr: seq[RuneRange], verbose=false): string = RuneSet.init(false, rr) $
 proc `$`*(rr: RuneRange): string = $(@[rr])
 
 
-proc repr*(rs: RuneSet): string =
-  ## Serializes rune set as a set literal
+proc repr*(rs: RuneSet, asSet: bool=true): string =
+  ## Serializes rune set with a set literal or range-sequence-literal
   var 
     ranges: seq[RuneRange] = if rs.ranges.len > 0: rs.ranges else: cacheToRanges(rs)
     s: seq[string] = newSeqOfCap[string](ranges.len + 2)
 
-  for rr in ranges:
-    if rr.high.uint32 == rr.low.uint32:
-      s.add(fmt"0x{toHex(rr.low.uint32)}")
-    else:
-      s.add(fmt"0x{toHex(rr.low.uint32)}..{toHex(rr.high.uint32)}") 
-  fmt"rs({not rs.negate}, " & "{" & s.join(", ") & "})"  
+  let setRepr = asSet and (ranges[^1].high.uint32 <= 65535)
+
+  if setRepr:
+    for rr in ranges:
+      let digits = if rr.high.uint32 < 256: 2 else: 4
+      if rr.high.uint32 - rr.low.uint32 <= 1:
+        s.add(fmt"0x{toHex(rr.low.uint32, digits)}")
+        if rr.high != rr.low:
+          s.add(fmt"0x{toHex(rr.high.uint32, digits)}")
+      else:
+        s.add(fmt"0x{toHex(rr.low.uint32, digits)}..0x{toHex(rr.high.uint32, digits)}") 
+    fmt"rs({not rs.negate}, " & "{" & s.join(", ") & "})"  
+  else:
+    fmt"rs({not rs.negate}, {ranges})"
+
 
 func isSortedAndMerged*(rr: seq[RuneRange]): bool =
   ## Confirms that the ranges in the sequences are in ascending order
