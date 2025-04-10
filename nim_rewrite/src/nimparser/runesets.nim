@@ -288,7 +288,18 @@ proc repr*(rs: RuneSet, asSet: bool=true): string =
         s.add(fmt"0x{toHex(rr.low.uint32, digits)}..0x{toHex(rr.high.uint32, digits)}") 
     fmt"rs({not rs.negate}, " & "{" & s.join(", ") & "})"  
   else:
-    fmt"rs({not rs.negate}, {ranges})"
+    for rr in ranges:
+      let digits = if rr.high.uint32 < 256: 2 else: 4
+      s.add(fmt"(0x{toHex(rr.low.uint32, digits)}, 0x{toHex(rr.high.uint32, digits)})")
+    fmt"rs({not rs.negate}, @[" & s.join(", ") & "])"
+
+
+proc cacheCleared(rs: RuneSet): RuneSet =
+  RuneSet(negate: rs.negate, 
+          ranges: if rs.ranges.len > 0: rs.ranges else: rs.cacheToRanges(), 
+          uncached: @[],
+          cache256: nil, cache4k: nil, cache64k: nil, 
+          contains: firstRun)
 
 
 func isSortedAndMerged*(rr: seq[RuneRange]): bool =
@@ -332,6 +343,7 @@ proc sortAndMerge*(R: var seq[RuneRange]) =
   # assert isSortedAndMerged(R)
 
 func size*(r: RuneRange): uint32 = r.high.uint32 - r.low.uint32 + 1
+
 proc size(R: seq[RuneRange]): uint32 =
   if not isSortedAndMerged(R):
     raise newException(AssertionDefect,
@@ -440,12 +452,14 @@ proc `*`*(A, B: seq[RuneRange]): seq[RuneRange] = A - (A - B) - (B - A)
 
 
 proc `^`*(runes: RuneSet): RuneSet = 
-  RuneSet(negate: not runes.negate, ranges: runes.ranges, 
+  RuneSet(negate: not runes.negate, ranges: runes.ranges, uncached: runes.uncached,
           cache256: runes.cache256, cache4k: runes.cache4k, cache64k: runes.cache64k,
           contains: runes.contains)
 
 
 proc `+`*(A, B: RuneSet): RuneSet =
+  let A = A.cacheCleared()
+  let B = B.cacheCleared()
   let selector = (if A.negate: 2 else: 0) + (if B.negate: 1 else: 0)
   case selector:  # (A.negate, B.negate)
     of 0b00:  # (false, false)
@@ -462,6 +476,8 @@ proc `+`*(A, B: RuneSet): RuneSet =
 
 
 proc `-`*(A, B: RuneSet): RuneSet =
+  let A = A.cacheCleared()
+  let B = B.cacheCleared()  
   let selector = (if A.negate: 2 else: 0) + (if B.negate: 1 else: 0)
   case selector:  # (A.negate, B.negate)
     of 0b00:  # (false, false)
@@ -609,8 +625,19 @@ proc rs*(s: string): RuneSet =
       while i < s.len and s[i] in " \n":  i += 1
       addOrSubtract(parseRuneSet())
 
+proc rs*(positive: bool, numberRanges: seq[(int, int)]): RuneSet = 
+  var runeRanges: seq[RuneRange] = newSeqOfCap[RuneRange](numberRanges.len)
+  for (a, b) in numberRanges:
+    runeRanges.add((Rune(a), Rune(b)))
+  RuneSet.init(not positive, runeRanges)
+
+proc rs*(numberRanges: seq[(int, int)]): RuneSet = rs(true, numberRanges)
+
+proc rs*(positive: bool, ranges: seq[RuneRange]): RuneSet = RuneSet.init(not positive, ranges)
+proc rs*(ranges: seq[RuneRange]): RuneSet = rs(true, ranges)
 
 proc rs*[T: Ordinal](positive: bool, s: set[T]): RuneSet = RuneSet.init(not positive, s)
+proc rs*[T: Ordinal](s: set[T]): RuneSet = rs(true, s)
 
 
 proc rr*(rangeStr: string): RuneRange =

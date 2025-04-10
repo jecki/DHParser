@@ -168,5 +168,5 @@ test "Serialization":
 
   let rs4 = RuneSet.init(true, {97, 98, 99, 100, 105, 108, 109, 110, 120, 121})
   assert $rs4 == "[^a-dilmnxy]"
-  echo rs4.repr
-  echo rs4.repr(false)
+  assert rs4.repr == "rs(false, {0x61..0x64, 0x69, 0x6C..0x6E, 0x78, 0x79})"
+  assert rs4.repr(false) == "rs(false, @[(0x61, 0x64), (0x69, 0x69), (0x6C, 0x6E), (0x78, 0x79)])"
