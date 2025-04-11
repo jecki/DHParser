@@ -294,14 +294,6 @@ proc repr*(rs: RuneSet, asSet: bool=true): string =
     fmt"rs({not rs.negate}, @[" & s.join(", ") & "])"
 
 
-proc cacheCleared(rs: RuneSet): RuneSet =
-  RuneSet(negate: rs.negate, 
-          ranges: if rs.ranges.len > 0: rs.ranges else: rs.cacheToRanges(), 
-          uncached: @[],
-          cache256: nil, cache4k: nil, cache64k: nil, 
-          contains: firstRun)
-
-
 func isSortedAndMerged*(rr: seq[RuneRange]): bool =
   ## Confirms that the ranges in the sequences are in ascending order
   ## and that there are no overlapping or adjacent ranges.
@@ -457,9 +449,17 @@ proc `^`*(runes: RuneSet): RuneSet =
           contains: runes.contains)
 
 
+proc emptyCache(rs: RuneSet): RuneSet =
+  RuneSet(negate: rs.negate, 
+          ranges: if rs.ranges.len > 0: rs.ranges else: rs.cacheToRanges(), 
+          uncached: @[],
+          cache256: nil, cache4k: nil, cache64k: nil, 
+          contains: firstRun)
+
+
 proc `+`*(A, B: RuneSet): RuneSet =
-  let A = A.cacheCleared()
-  let B = B.cacheCleared()
+  let A = emptyCache(A)
+  let B = emptyCache(B)
   let selector = (if A.negate: 2 else: 0) + (if B.negate: 1 else: 0)
   case selector:  # (A.negate, B.negate)
     of 0b00:  # (false, false)
@@ -476,8 +476,8 @@ proc `+`*(A, B: RuneSet): RuneSet =
 
 
 proc `-`*(A, B: RuneSet): RuneSet =
-  let A = A.cacheCleared()
-  let B = B.cacheCleared()  
+  let A = emptyCache(A)
+  let B = emptyCache(B)  
   let selector = (if A.negate: 2 else: 0) + (if B.negate: 1 else: 0)
   case selector:  # (A.negate, B.negate)
     of 0b00:  # (false, false)

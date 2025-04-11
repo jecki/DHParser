@@ -19,22 +19,21 @@ test "CharRange":
   assert $GermanAlphabet == r"[A-Za-z\xC4\xD6\xDC\xDF\xE4\xF6\xFC]+"
   assert GermanAlphabet("abeäßüÜXYZ").root.asSxpr == "(GermanAlphabet \"abeäßüÜXYZ\")"
   assert GermanAlphabet("Hunde-Hütte").root.asSxpr == "(GermanAlphabet \"Hunde\")"
-
   let GermanAlphabet2 = "GermanAlphabet" ::= +(cr"[A-Z]" + cr"[ßüöäÜÖÄ]" + cr"[a-z]")
   assert $GermanAlphabet2 == r"[A-Za-z\xC4\xD6\xDC\xDF\xE4\xF6\xFC]+"
-  assert $(cr"A-Z" - cr"X") == "[A-WY-Z]"
-  assert $(*(cr"[A-Z]" - cr"X")) == "[A-WY-Z]*"
+  assert $(cr"A-Z" - cr"X") == "[A-WYZ]"
+  assert $(*(cr"[A-Z]" - cr"X")) == "[A-WYZ]*"
   let char = "Char" ::= cr"[A-Z]"
   let special = *(char - cr"X")
-  assert $special == "[A-WY-Z]*"
+  assert $special == "[A-WYZ]*"
 
   let NameStartChar = "NameStartChar" ::= cr("""[_]|[:]|[A-Z]|[a-z]
                                              |[\u00C0-\u00D6]|[\u00D8-\u00F6]|[\u00F8-\u02FF]
                                              |[\u0370-\u037D]|[\u037F-\u1FFF]|[\u200C-\u200D]
                                              |[\u2070-\u218F]|[\u2C00-\u2FEF]|[\u3001-\uD7FF]
                                              |[\uF900-\uFDCF]|[\uFDF0-\uFFFD]
-                                             |[\U00010000-\U000EFFFF]""")
-  assert $NameStartChar == r"[\x3AA-Z\x5Fa-z\xC0-\xD6\xD8-\xF6\u00F8-\u02FF\u0370-\u037D\u037F-\u1FFF\u200C-\u200D\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD\U00010000-\U000EFFFF]"
+                                             |[\U00010000-\U000EFFFF]""")                                          
+  assert $NameStartChar == r"[\x3AA-Z\x5Fa-z\xC0-\xD6\xD8-\xF6\u00F8-\u02FF\u0370-\u037D\u037F-\u1FFF\u200C\u200D\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD\U00010000-\U000EFFFF]"
   let NameChars    = "NameChars" ::=    cr"""([_:.-]|[A-Z]|[a-z]|[0-9]
                                              |[\u00B7]|[\u0300-\u036F]|[\u203F-\u2040]
                                              |[\u00C0-\u00D6]|[\u00D8-\u00F6]|[\u00F8-\u02FF]
@@ -48,7 +47,7 @@ test "CharRange":
   let check = cr("[^<&\"]+")
   assert $check == r"[^\x22\x26\x3C]+"
   var s = cr"\s"
-  assert $s == r"[\x09-\x0A\x0C-\x0D\x20]"
+  assert $s == r"[\x09\x0A\x0C\x0D\x20]"
   s = cr"\n"
   assert $s == r"[\x0A]"
   s = cr"[^<&\]]"
