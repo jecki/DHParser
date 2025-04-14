@@ -484,6 +484,30 @@ def only_errors(messages: Iterable[Error], level: ErrorCode = ERROR) -> Iterator
 
 
 class SourceMap(NamedTuple):
+    """Class SourceMap captures a mapping from the preprocessed source code (that is
+    possibly also stitched together from different files) to the original source files
+    and source positions. It is possible to use more than one source map (see
+    :py:func:`apply_src_mappings`). Thus, several preprocessing stages can be applied
+    in sequence and the positions, say where errors occurred, can still be back-propagated
+    to the original input file(s).
+
+    :ivar original_name: The original source filename. If the source allows includes,
+        this should be the name of the master file.
+    :ivar positions: A list of locations in the processed file. Each location is to be
+        understood as a marker from which on a different the position in the processed
+        file must be shifted by a different offset to gain the position in the original
+        file. The first element in the list of positions should always be 0 and
+        contain as its last element the length of the processed source - 1.
+    :ivar offsets: The list of offsets corresponding to the positions. For each position
+        entry positions[n], the corresponding offsets value offsets[n] contains
+        the offset (positive or negative or zero) that will be added to all locations
+        in the half open interval [ positions[n], positions[n + 1] [
+    :ivar file_names: A list of file names corresponding to the positions, i.e. for each
+        position[n] the file that the text from this just before the next position was
+        taken from has the name file_names[n].
+    :ivar originals_dict: A dictionary mapping the file-names to their text-content in
+        form of a :py:class:`~stringview.StringView`-object.
+    """
     original_name: str          # nome or path or uri of the original source file
     positions: List[int]        # a list of locations
     offsets: List[int]          # the corresponding offsets to be added from these locations onward
@@ -493,6 +517,15 @@ class SourceMap(NamedTuple):
 
 
 class SourceLocation(NamedTuple):
+    """A particular location in the original, not preprocessed source code.
+
+    :ivar original_name: The original source filename. If the document is composed of
+        a master file and (possibly nested) includes this will be the name of the file
+        that the position is related to.
+    :ivar original_text: The original, i.e. not yet preprocessed text-content of the
+        file the position relates to.
+    :ivar pos: The location within original_text.
+    """
     original_name: str          # the file name (or path or uri) of the source code
     original_text: Union[str, StringView]  # the source code itself
     pos: int                    # a position within the code
@@ -519,6 +552,8 @@ def source_map(position: int, srcmap: SourceMap) -> SourceLocation:
         and source texts.
     :returns:  the mapped position
     """
+    assert len(srcmap.positions) == len(srcmap.offsets) == len(srcmap.file_names)
+    # assert set(srcmap.file_names) == set(srcmap.originals_dict.keys())
     import bisect
     i = bisect.bisect_right(srcmap.positions, position)
     if i:

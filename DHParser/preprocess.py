@@ -20,11 +20,12 @@
 Module ``preprocess`` contains functions for preprocessing source
 code before the parsing stage as well as source mapping facilities
 to map the locations of parser and compiler errors to the
-non-preprocessed source text.
+non-preprocessed source text. (See :py:class:`~error.SourceMap`)
 
-Preprocessing (and source mapping of errors) will only be needed
-for some domain specific languages, most notably those that
-cannot completely be described entirely with context-free grammars.
+Preprocessing (and source mapping of errors) are useful
+in cases where a syntax or certain syntactical features (like marking
+blocks with indentation for example), cannot be described completely
+with context-free grammars.
 """
 
 from __future__ import annotations
@@ -134,7 +135,7 @@ def _apply_preprocessors(original_text: str, original_name: str,
     Applies several preprocessing functions sequentially to a source text
     and returns the preprocessed text as well as a function that maps
     text-positions in the processed text onto the corresponding position
-    in theoriginal source test.
+    in the original source test.
     """
     processed = original_text
     mapping_chain = []
