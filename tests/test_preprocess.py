@@ -82,11 +82,17 @@ class TestSourceMapping:
         # position at the end of the file
         source = " "
         srcmap = tokenized_to_original_mapping(source, source)
-        pos = source_map(1, srcmap)
+        _ = source_map(0, srcmap)
+        _ = source_map(1, srcmap)
+        try:
+            _ = source_map(2, srcmap)
+            assert False, "position out of bounds not recognized..."
+        except ValueError:
+            pass
         # empty file
         source =""
         srcmap = tokenized_to_original_mapping(source, source)
-        pos = source_map(0, srcmap)
+        _ = source_map(0, srcmap)
 
 
 def tokenize_indentation(src: str) -> Tuple[str, List[Error]]:

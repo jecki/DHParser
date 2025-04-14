@@ -497,7 +497,10 @@ class SourceMap(NamedTuple):
         understood as a marker from which on a different the position in the processed
         file must be shifted by a different offset to gain the position in the original
         file. The first element in the list of positions should always be 0 and
-        contain as its last element the length of the processed source - 1.
+        contain as its last element the length of the processed source plus 1 (or higher).
+        (+1 allows the location to exceed the end of the text by 1 which makes writing
+         algorithms easier that if the location was not allowed to point beyond the end
+         of the text.)
     :ivar offsets: The list of offsets corresponding to the positions. For each position
         entry positions[n], the corresponding offsets value offsets[n] contains
         the offset (positive or negative or zero) that will be added to all locations
@@ -556,13 +559,15 @@ def source_map(position: int, srcmap: SourceMap) -> SourceLocation:
     # assert set(srcmap.file_names) == set(srcmap.originals_dict.keys())
     import bisect
     i = bisect.bisect_right(srcmap.positions, position)
-    if i:
+    if 0 < i < len(srcmap.positions):
         original_name = srcmap.file_names[i - 1]
         return SourceLocation(
             original_name,
             srcmap.originals_dict[original_name],
             min(position + srcmap.offsets[i - 1], srcmap.positions[i] + srcmap.offsets[i]))
-    raise ValueError
+    raise ValueError(f"Position {position} seems is out of range "
+                     f"[{srcmap.positions[0]}], {srcmap.positions[-1]}] "
+                     f"or source map ist corrupted.")
 
 
 def apply_src_mappings(position: int, mappings: List[SourceMapFunc]) -> SourceLocation:
