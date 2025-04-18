@@ -1,19 +1,14 @@
-[tool.poetry]
+[project]
 name = "DHParser"
-version = "1.8.3"  # make sure that this is the same as in DHParser/versionnumber.py !
+version = "1.8.4"  # make sure that this is the same as in DHParser/versionnumber.py !
 description = "Parser Generator and DSL-construction-kit"
 
-license = "Apache-2"
+license = { text = "Apache-2.0" }
 
-authors = ["Eckhart Arnold <eckhart.arnold@posteo.de>"]
+authors = [ { name = "Eckhart Arnold", email= "eckhart.arnold@posteo.de" } ]
 
 readme = "README.md"
-
-include = ['CHANGES.txt', 'Introduction.md']
-
-repository = "https://gitlab.lrz.de/badw-it/DHParser"
-homepage = "https://gitlab.lrz.de/badw-it/DHParser"
-documentation = "https://dhparser.readthedocs.io/en/latest/"
+requires-python = ">=3.7"
 
 keywords = [
     'parser',
@@ -25,6 +20,30 @@ keywords = [
     'EBNF', 'SXML', 'XML'
 ]
 
+
+[project.urls]
+repository = "https://gitlab.lrz.de/badw-it/DHParser"
+homepage = "https://gitlab.lrz.de/badw-it/DHParser"
+documentation = "https://dhparser.readthedocs.io/en/latest/"
+"Bug Tracker" = "https://github.com/jecki/DHParser/issues"
+
+[project.scripts]
+dhparser = 'DHParser.scripts.dhparser:main'
+dhparser_build_cython = 'DHParser.scripts.dhparser_cythonize:main'
+dhparser_cythononize = 'DHParser.scripts.dhparser_cythonize:main'
+dhparser_cythonize_stringview = 'DHParser.scripts.dhparser_cythonize:main'
+xml_reflow = 'DHParser.scripts.XMLreflow:main'
+
+[project.optional-dependencies]
+regex = ["regex"]
+cython = ["cython>=3.0"]
+sphinx = ["sphinx (>=8.0) ; python_version >= '3.10'"]
+pytest = ["pytest>=5.0"]
+
+[tool.poetry]
+requires-poetry = ">=2.0"
+packages = [ { include = "DHParser" } ]
+include = ['CHANGES.txt', 'Introduction.md']
 classifiers = [
     'Development Status :: 5 - Production/Stable',
     'Intended Audience :: Developers',
@@ -47,46 +66,13 @@ classifiers = [
     'Topic :: Software Development :: Compilers'
 ]
 
-packages = [
-    { include = "DHParser" }
-]
-
-
-# tool.setuptools_scm ?
-
-# build = "DHParser/scripts/dhparser_build_cython.py"
-
-# IN THE FUTURE, MAYBE:
-# [tool.poetry.build]
-# script = "DHParser/scripts/dhparser_build_cython.py"
-# generate-setup-file = false
-
-
-[tool.poetry.dependencies]
-python = "^3.7"
-regex = { version = "*", optional = true }
-# cython = { version = "^3.0", optional = true }
-
-
-[tool.poetry.group.test.dependencies]
-pytest = { version = ">=5.0", optional = true }
-
-
-[tool.poetry.group.doc.dependencies]
-sphinx = { version = ">=8.0", optional = true}
-
-
-[tool.poetry.scripts]
-dhparser = 'DHParser.scripts.dhparser:main'
-dhparser_build_cython = 'DHParser.scripts.dhparser_cythonize:main'
-dhparser_cythononize = 'DHParser.scripts.dhparser_cythonize:main'
-dhparser_cythonize_stringview = 'DHParser.scripts.dhparser_cythonize:main'
-xml_reflow = 'DHParser.scripts.XMLreflow:main'
-
 
 [build-system]
-requires = ["poetry-core>=1.0.0", "setuptools", "wheel"]  # "Cython>=0.30"
+requires = ["poetry-core>=2.0.0", "setuptools"]  # "wheel", "Cython>=0.30"
 build-backend = "poetry.core.masonry.api"
+
+# to check this file use:
+# $ poetry install --dry-run
 
 # to publish to pypi use commands:
 # $ poetry config pypi-token.pypi [DHPARSER PYPI-TOKEN]
