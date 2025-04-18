@@ -336,7 +336,7 @@ proc sortAndMerge*(R: var seq[RuneRange]) =
 
 func size*(r: RuneRange): uint32 = r.high.uint32 - r.low.uint32 + 1
 
-proc size(R: seq[RuneRange]): uint32 =
+proc size*(R: seq[RuneRange]): uint32 =
   if not isSortedAndMerged(R):
     raise newException(AssertionDefect,
       fmt"Cannot determine size of unmerged and unsorted rune range: {R}")

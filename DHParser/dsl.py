@@ -45,7 +45,7 @@ from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, \
 from DHParser.transform import TransformerFunc, TransformationDict, TransformerFactory
 from DHParser.toolkit import DHPARSER_DIR, load_if_file, is_python_code, is_filename, \
     compile_python_object, re, as_identifier, cpu_count, LazyRE, \
-    deprecated, instantiate_executor
+    deprecated, instantiate_executor, MultiCoreExecutor
 from DHParser.versionnumber import __version__, __version_info__
 
 
@@ -861,7 +861,7 @@ def batch_process(file_names: List[str], out_dir: str,
     import concurrent.futures
     if submit_func is None:
         pool = instantiate_executor(get_config_value('batch_processing_parallelization'),
-                                    concurrent.futures.ProcessPoolExecutor)
+                                    MultiCoreExecutor)
         res_iter = pool.map(process_file, ((name, out_dir) for name in file_names),
             chunksize=min(get_config_value('batch_processing_max_chunk_size'),
                           max(1, len(file_names) // (cpu_count() * 4))))
