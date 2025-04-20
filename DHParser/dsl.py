@@ -246,6 +246,11 @@ if DHParser.versionnumber.__version_info__ < {__version_info__}:
           f'Please install a more recent version of DHParser to avoid unexpected errors!')
 """
 
+LOCAL_CONFIG="""
+CONFIG_PRESET['multicore_pool'] = 'InterpreterPool'
+# read_local_config(os.path.join(scriptdir, '{NAME}Config.ini'))
+"""
+
 
 def compileEBNF(ebnf_src: str, branding="DSL") -> str:
     """
@@ -266,7 +271,7 @@ def compileEBNF(ebnf_src: str, branding="DSL") -> str:
     compiler = raw_compileEBNF(ebnf_src, branding)
     src = ["#/usr/bin/python\n",
            SECTION_MARKER.format(marker=SYMBOLS_SECTION),
-           DHPARSER_IMPORTS, VERSION_CHECK,
+           DHPARSER_IMPORTS, VERSION_CHECK, LOCAL_CONFIG.format(NAME = branding),
            SECTION_MARKER.format(marker=PREPROCESSOR_SECTION), compiler.gen_preprocessor_skeleton(),
            SECTION_MARKER.format(marker=CUSTOM_PARSER_SECTION), compiler.gen_custom_parser_example(),
            SECTION_MARKER.format(marker=PARSER_SECTION), compiler.result,
@@ -536,7 +541,8 @@ def compile_on_disk(source_file: str,
         if RX_WHITESPACE.fullmatch(outro):
             outro = read_template('DSLParser.pyi').format(NAME=compiler_name)
         if RX_WHITESPACE.fullmatch(imports):
-            imports = DHParser.ebnf.DHPARSER_IMPORTS + VERSION_CHECK
+            imports = DHParser.ebnf.DHPARSER_IMPORTS + VERSION_CHECK \
+                      + LOCAL_CONFIG.format(NAME=compiler_name)
         elif imports.find("from DHParser.") < 0 \
                 or imports.find('PseudoJunction') < 0 \
                 or imports.find('create_parser_junction') < 0:

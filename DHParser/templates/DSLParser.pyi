@@ -94,7 +94,7 @@ def process_file(source: str, out_dir: str = '') -> str:
                             junctions, targets, serializations)
 
 
-def _process_file(args: Tuple[str, str]) -> str:
+def process_file_wrapper(args: Tuple[str, str]) -> str:
     return process_file(*args)
 
 
@@ -106,7 +106,8 @@ def batch_process(file_names: List[str], out_dir: str,
     error messages to the directory `our_dir`. Returns a list of error
     messages files.
     """
-    return dsl.batch_process(file_names, out_dir, _process_file,
+    from {NAME}Parser import process_file_wrapper
+    return dsl.batch_process(file_names, out_dir, process_file_wrapper,
         submit_func=submit_func, log_func=log_func, cancel_func=cancel_func)
 
 
@@ -165,9 +166,6 @@ def main(called_from_app=False) -> bool:
 
     args = parser.parse_args()
     file_names, out, log_dir = args.files, args.out[0], ''
-
-    # from DHParser.configuration import read_local_config
-    # read_local_config(os.path.join(scriptdir, '{NAME}Config.ini'))
 
     if args.serialize:
         serializations['*'] = args.serialize

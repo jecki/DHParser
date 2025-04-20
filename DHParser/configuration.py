@@ -123,8 +123,14 @@ def get_forkserver_pid():
 
 def os_getpid(mp_method = None):
     if mp_method is None:
-        multiprocessing.get_start_method()
-    return get_forkserver_pid() if mp_method == "forkserver" else os.getpid()
+        mp_method = multiprocessing.get_start_method()
+    if mp_method == "forkserver" \
+            and (sys.version_info < (3, 14, 0) or
+                 CONFIG_PRESET['multicore_pool'] == 'ProcessPool'):
+        return get_forkserver_pid()
+    else:
+        import os
+        return os.getpid()
 
 
 def get_syncfile_path(pid: int) -> str:
@@ -296,7 +302,7 @@ def read_local_config(ini_filename: str) -> List[str]:
     cfg_files = []
     basename = os.path.basename(ini_filename)
     # first, add path in the script-directory
-    script_path = os.path.abspath(sys.modules['__main__'].__file__ or '.')
+    script_path = os.path.abspath(getattr(sys.modules['__main__'], '__file__', '') or '.')
     cfg_filename = os.path.join(os.path.dirname(script_path), basename)
     if os.path.isfile(cfg_filename): cfg_files.append(cfg_filename)
     # then, add given path
@@ -477,7 +483,7 @@ def add_config_values(configuration: dict):
 # Default value: "InterpreterPool"
 ALLOWED_PRESET_VALUES['multicore_pool'] = frozenset({'ProcessPool',
                                                      'InterpreterPool'})
-CONFIG_PRESET['multicore_pool'] = "InterpreterPool"
+CONFIG_PRESET['multicore_pool'] = "ProcessPool"
 
 
 ########################################################################
