@@ -121,6 +121,12 @@ def get_forkserver_pid():
     return forkserver_pid
 
 
+def os_getpid(mp_method = None):
+    if mp_method is None:
+        multiprocessing.get_start_method()
+    return get_forkserver_pid() if mp_method == "forkserver" else os.getpid()
+
+
 def get_syncfile_path(pid: int) -> str:
     import os
     import tempfile
@@ -149,7 +155,7 @@ def access_presets():
         if not syncfile_path:
             syncfile_path = get_syncfile_path(os.getppid())
             if not os.path.exists(syncfile_path):
-                pid = get_forkserver_pid() if mp_method == "forkserver" else os.getpid()
+                pid = os_getpid(mp_method)
                 syncfile_path = get_syncfile_path(pid)
         f = None
         try:
@@ -192,7 +198,7 @@ def finalize_presets(fail_on_error: bool=False):
             if not syncfile_path:
                 syncfile_path = get_syncfile_path(os.getpid())
                 if not os.path.exists(syncfile_path):
-                    pid = get_forkserver_pid() if mp_method == "forkserver" else os.getpid()
+                    pid = os_getpid(mp_method)
                     syncfile_path = get_syncfile_path(pid)
             if fail_on_error:
                     if not os.path.exists(syncfile_path):
@@ -455,6 +461,23 @@ def add_config_values(configuration: dict):
     with get_access_lock():
         cfg = _config_dict()
         cfg.update(configuration)
+
+
+########################################################################
+#
+# system configuration
+#
+########################################################################
+
+# Defines which kind of multi-core parallelization shall be used:
+# Either "ProcessPool" or "InterpreterPool". Tha latter is only available
+# when Python version is greater or equal 3.14. If "InterpreterPool"
+# is specified but the Python version is smaller than 3.14, "ProcessPool"
+# will automatically be used as a fallback option.
+# Default value: "InterpreterPool"
+ALLOWED_PRESET_VALUES['multicore_pool'] = frozenset({'ProcessPool',
+                                                     'InterpreterPool'})
+CONFIG_PRESET['multicore_pool'] = "InterpreterPool"
 
 
 ########################################################################
