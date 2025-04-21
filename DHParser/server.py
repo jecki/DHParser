@@ -65,7 +65,7 @@ from datetime import datetime
 from functools import partial
 import io
 import json
-from multiprocessing import Process, Value, Array, Manager
+from multiprocessing import Process, Value, Array
 import os
 import sys
 import threading
@@ -391,8 +391,6 @@ class ExecutionEnvironment:
         synchronously and thread-safe.
     :ivar submit_pool_lock:  A threading.Lock to ensure that submissions to
         the submit_pool will be thread_safe
-    :ivar manager: a multiprocessing.SyncManager-object that can be used share
-        data across different processes.
     :ivar loop:  The asynchronous event loop for running coroutines
     :ivar log_file:  The name of the log-file to which error messages are
         written if an executor raises a Broken-Error.
@@ -404,7 +402,6 @@ class ExecutionEnvironment:
         self._process_executor = None                  # type: Optional[ProcessPoolExecutor]
         self._thread_executor = None                   # type: Optional[ThreadPoolExecutor]
         self._submit_pool = None                       # type: Optional[ProcessPoolExecutor]
-        self._manager = None                           # type: Optional[Manager]
         self.submit_pool_lock = threading.Lock()       # type: threading.Lock
         self.loop = event_loop                         # type: asyncio.AbstractEventLoop
         self.log_file = ''                             # type: str
@@ -436,12 +433,6 @@ class ExecutionEnvironment:
                 if self._submit_pool is None:
                     self._submit_pool = ProcessPoolExecutor()
         return self._submit_pool
-
-    @property
-    def manager(self):
-        if self._manager is None:
-            self._manager = Manager()
-        return self._manager
 
     async def execute(self, executor: Optional[Executor],
                       method: Callable,
@@ -540,8 +531,6 @@ class ExecutionEnvironment:
         if self._submit_pool is not None:
             self._submit_pool.shutdown(wait=wait)
             self._submit_pool = None
-        if self._manager is not None:
-            self._manager.shutdown()
 
 
 #######################################################################
@@ -1842,44 +1831,44 @@ class Server:
                 self.exec.shutdown()
                 self.exec = None
 
-    def serve_py35(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT, loop=None):
-        host, port = substitute_default_host_and_port(host, port)
-        assert port >= 0
-        self.stop_response = "DHParser server at {}:{} stopped!".format(host, port)
-        self.host.value = host.encode()
-        self.port.value = port
-        if loop is None:
-            self.loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(self.loop)
-        else:
-            self.loop = loop
-        assert self.loop is not None
-        try:
-            self.exec = ExecutionEnvironment(self.loop)
-            self.exec.log_file = self.log_file
-            self.server = cast(
-                asyncio.base_events.Server,
-                self.loop.run_until_complete(
-                    asyncio.start_server(self.handle, host, port, loop=self.loop)))
-            try:
-                self.stage.value = SERVER_ONLINE
-                # self.server_messages.put(SERVER_ONLINE)
-                self.loop.run_forever()
-            finally:
-                self.server.close()
-                try:
-                    self.loop.run_until_complete(self.server.wait_closed())
-                finally:
-                    try:
-                        self.loop.run_until_complete(self.loop.shutdown_asyncgens())
-                    finally:
-                        asyncio.set_event_loop(None)
-                        self.loop.close()
-                        self.loop = None
-        finally:
-            if self.exec:
-                self.exec.shutdown()
-                self.exec = None
+    # def serve_py35(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT, loop=None):
+    #     host, port = substitute_default_host_and_port(host, port)
+    #     assert port >= 0
+    #     self.stop_response = "DHParser server at {}:{} stopped!".format(host, port)
+    #     self.host.value = host.encode()
+    #     self.port.value = port
+    #     if loop is None:
+    #         self.loop = asyncio.new_event_loop()
+    #         asyncio.set_event_loop(self.loop)
+    #     else:
+    #         self.loop = loop
+    #     assert self.loop is not None
+    #     try:
+    #         self.exec = ExecutionEnvironment(self.loop)
+    #         self.exec.log_file = self.log_file
+    #         self.server = cast(
+    #             asyncio.base_events.Server,
+    #             self.loop.run_until_complete(
+    #                 asyncio.start_server(self.handle, host, port, loop=self.loop)))
+    #         try:
+    #             self.stage.value = SERVER_ONLINE
+    #             # self.server_messages.put(SERVER_ONLINE)
+    #             self.loop.run_forever()
+    #         finally:
+    #             self.server.close()
+    #             try:
+    #                 self.loop.run_until_complete(self.server.wait_closed())
+    #             finally:
+    #                 try:
+    #                     self.loop.run_until_complete(self.loop.shutdown_asyncgens())
+    #                 finally:
+    #                     asyncio.set_event_loop(None)
+    #                     self.loop.close()
+    #                     self.loop = None
+    #     finally:
+    #         if self.exec:
+    #             self.exec.shutdown()
+    #             self.exec = None
 
     def run_tcp_server(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT, loop=None):
         """
@@ -1893,10 +1882,7 @@ class Server:
         if self.echo_log:
             print("Server logging is on.")
         try:
-            if sys.version_info >= (3, 7):
-                asyncio_run(self.serve(host, port))
-            else:
-                self.serve_py35(host, port, loop)
+            asyncio_run(self.serve(host, port))
         except KeyboardInterrupt:
             print("KeyboardInterrupt")
         except asyncio.CancelledError as e:

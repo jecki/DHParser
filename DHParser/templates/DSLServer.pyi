@@ -265,11 +265,6 @@ def run_server(host, port, log_path=None):
     global KNOWN_HOST, KNOWN_PORT
     global scriptpath, servername
 
-    from multiprocessing import set_start_method
-    # 'forkserver' or 'spawn' required to avoid broken process pools
-    if sys.platform.lower().startswith('linux') :  set_start_method('forkserver')
-    else:  set_start_method('spawn')
-
     try:
         grammar_src = os.path.abspath(os.path.realpath(__file__)).replace('Server.py', '.ebnf')
     except NameError:
@@ -283,6 +278,16 @@ def run_server(host, port, log_path=None):
         if i >= 0:
             dhparserdir = scriptdir[:i + 10]  # 10 = len("/DHParser/")
             if dhparserdir not in sys.path:  sys.path.insert(0, dhparserdir)
+
+    from DHParser.configuration import CONFIG_PRESET, read_local_config
+    CONFIG_PRESET['multicore_pool'] = 'InterpreterPool'
+    read_local_config(os.path.join(scriptdir, 'DSLConfig.ini'))
+
+    if sys.version_info < (3, 14, 0) or CONFIG_PRESET['multicore_pool'] != "InterpreterPool":
+        from multiprocessing import set_start_method
+        # 'forkserver' or 'spawn' required to avoid broken process pools
+        if sys.platform.lower().startswith('linux') :  set_start_method('forkserver')
+        else:  set_start_method('spawn')
 
     from DHParser.dsl import recompile_grammar
     if grammar_src and not recompile_grammar(grammar_src, force=False,

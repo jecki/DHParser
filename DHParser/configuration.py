@@ -34,7 +34,8 @@ from __future__ import annotations
 import sys
 from typing import Dict, Any, Container, List
 
-__all__ = ('ALLOWED_PRESET_VALUES',
+__all__ = ('CONFIG_PRESET',
+           'ALLOWED_PRESET_VALUES',
            'validate_value',
            'access_presets',
            'finalize_presets',
@@ -122,15 +123,15 @@ def get_forkserver_pid():
 
 
 def os_getpid(mp_method = None):
-    if mp_method is None:
-        mp_method = multiprocessing.get_start_method()
-    if mp_method == "forkserver" \
-            and (sys.version_info < (3, 14, 0) or
-                 CONFIG_PRESET['multicore_pool'] == 'ProcessPool'):
-        return get_forkserver_pid()
-    else:
-        import os
-        return os.getpid()
+    if sys.version_info < (3, 14, 0) \
+            or CONFIG_PRESET['multicore_pool'] == 'ProcessPool':
+        import multiprocessing
+        if mp_method is None:
+            mp_method = multiprocessing.get_start_method()
+        if mp_method == "forkserver":
+            return get_forkserver_pid()
+    import os
+    return os.getpid()
 
 
 def get_syncfile_path(pid: int) -> str:
