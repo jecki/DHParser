@@ -151,7 +151,7 @@ __all__ = ('re',
            'deprecation_warning',
            'SingleThreadExecutor',
            'multiprocessing_broken',
-           'MultiCoreExecutor',
+           'PickMultiCoreExecutor',
            'instantiate_executor',
            'cpu_count',
            # Type Aliases
@@ -1747,7 +1747,7 @@ def multiprocessing_broken() -> str:
     return ""
 
 
-class PickMultiCoreExecutor:
+class PickMultiCoreExecutorShim:
     def __call__(self):  # -> Type[concurrent.futures.Executor]:
         """Returns an instance of the most lightweight
         concurrent.futures.Executor that can make use of all available cpu
@@ -1762,7 +1762,7 @@ class PickMultiCoreExecutor:
         else:
             return concurrent.futures.ProcessPoolExecutor()
 
-MultiCoreExecutor = PickMultiCoreExecutor()
+PickMultiCoreExecutor = PickMultiCoreExecutorShim()
 
 
 def instantiate_executor(allow_parallel: bool,

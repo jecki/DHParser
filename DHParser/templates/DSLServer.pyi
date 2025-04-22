@@ -280,7 +280,8 @@ def run_server(host, port, log_path=None):
             if dhparserdir not in sys.path:  sys.path.insert(0, dhparserdir)
 
     from DHParser.configuration import CONFIG_PRESET, read_local_config
-    CONFIG_PRESET['multicore_pool'] = 'InterpreterPool'
+    if sys.version_info >= (3, 14, 0):
+        CONFIG_PRESET['multicore_pool'] = 'InterpreterPool'
     read_local_config(os.path.join(scriptdir, 'DSLConfig.ini'))
 
     if sys.version_info < (3, 14, 0) or CONFIG_PRESET['multicore_pool'] != "InterpreterPool":

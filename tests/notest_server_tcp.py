@@ -42,13 +42,17 @@ if __name__ == "__main__":
 
 scriptpath = os.path.abspath(os.path.dirname(__file__) or '.')
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
+sys.path.append(scriptpath)
 
-from DHParser.configuration import set_config_value
+from DHParser.configuration import set_config_value, CONFIG_PRESET
 from DHParser.server import Server, spawn_tcp_server, stop_tcp_server, asyncio_run, asyncio_connect, \
     split_header, has_server_stopped, STOP_SERVER_REQUEST_BYTES, IDENTIFY_REQUEST, \
     SERVER_OFFLINE, connection_cb_dummy
 from DHParser.lsp import gen_lsp_table
 from DHParser.testing import unique_name
+
+
+CONFIG_PRESET['multicore_pool'] = 'InterpreterPool'
 
 TEST_PORT = 8000 + os.getpid() % 1000
 # print('>>> ', sys.version, TEST_PORT)
@@ -247,8 +251,16 @@ class TestServer:
 
         async def run_tasks():
             def extract_result(data: bytes):
-                header, data, backlog = split_header(data)
-                return json.loads(data.decode())['result']
+                try:
+                    header, data, backlog = split_header(data)
+                except ValueError:
+                    pass
+                data_s = data.decode()
+                try:
+                    obj = json.loads(data_s)
+                except json.JSONDecodeError:
+                    obj = {'result': data_s}
+                return obj['result']
 
             reader, writer = await asyncio_connect('127.0.0.1', TEST_PORT)
             sequence.append(SLOW)
@@ -267,6 +279,10 @@ class TestServer:
             print('Skipping Test, because libffi has wrong version or does not exist!')
             return
 
+        if sys.version_info >= (3, 14, 0) \
+                and CONFIG_PRESET['multicore_pool'] == 'InterpreterPool':
+            import notest_server_tcp
+            long_running = notest_server_tcp.long_running
         if sys.version_info >= (3, 6):
             p = None
             try:
@@ -278,7 +294,7 @@ class TestServer:
                     str(sequence) + " due to timing conditions this is not necessarily an error!"
             finally:
                 stop_tcp_server('127.0.0.1', TEST_PORT)
-                if p is not None:
+                if p is not None and p.is_alive():
                     p.join()
                 sequence = []
             p = None

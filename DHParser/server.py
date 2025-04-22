@@ -54,6 +54,10 @@ from __future__ import annotations
 
 import asyncio
 from concurrent.futures import Future, Executor, ThreadPoolExecutor, ProcessPoolExecutor
+try:
+    from concurrent.futures import InterpreterPoolExecutor
+except ImportError:
+    InterpreterPoolExecutor = ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
 try:
     from concurrent.futures.thread import BrokenThreadPool
@@ -79,7 +83,7 @@ from DHParser.nodetree import DHParser_JSONEncoder
 from DHParser.log import create_log, append_log, is_logging, log_dir
 from DHParser.toolkit import re, JSON_Type, JSON_Dict, JSONstr, JSONnull, \
     json_encode_string, json_rpc, json_dumps, pp_json, pp_json_str, identify_python, \
-    normalize_docstring, md5, is_html_name, TypeAlias
+    normalize_docstring, md5, is_html_name, TypeAlias, PickMultiCoreExecutor
 from DHParser.versionnumber import __version__
 
 
@@ -381,6 +385,9 @@ def gen_task_id() -> int:
     return value
 
 
+MultiCoreExecutor = TypeVar('MultiCoreExecutor',
+                            ProcessPoolExecutor, InterpreterPoolExecutor)
+
 class ExecutionEnvironment:
     """Class ExecutionEnvironment provides methods for executing server tasks
     in separate processes, threads, as asynchronous task or as simple function.
@@ -399,9 +406,9 @@ class ExecutionEnvironment:
         yields an error.
     """
     def __init__(self, event_loop: asyncio.AbstractEventLoop):
-        self._process_executor = None                  # type: Optional[ProcessPoolExecutor]
+        self._process_executor = None                  # type: Optional[MultiCoreExecutor]
         self._thread_executor = None                   # type: Optional[ThreadPoolExecutor]
-        self._submit_pool = None                       # type: Optional[ProcessPoolExecutor]
+        self._submit_pool = None                       # type: Optional[MultiCoreExecutor]
         self.submit_pool_lock = threading.Lock()       # type: threading.Lock
         self.loop = event_loop                         # type: asyncio.AbstractEventLoop
         self.log_file = ''                             # type: str
@@ -415,7 +422,7 @@ class ExecutionEnvironment:
         if self._process_executor is None:
             with self.submit_pool_lock:
                 if self._process_executor is None:
-                    self._process_executor = ProcessPoolExecutor()
+                    self._process_executor = PickMultiCoreExecutor()
         return self._process_executor
 
     @property
@@ -431,7 +438,7 @@ class ExecutionEnvironment:
         if self._submit_pool is None:
             with self.submit_pool_lock:
                 if self._submit_pool is None:
-                    self._submit_pool = ProcessPoolExecutor()
+                    self._submit_pool = PickMultiCoreExecutor()
         return self._submit_pool
 
     async def execute(self, executor: Optional[Executor],
@@ -1831,45 +1838,6 @@ class Server:
                 self.exec.shutdown()
                 self.exec = None
 
-    # def serve_py35(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT, loop=None):
-    #     host, port = substitute_default_host_and_port(host, port)
-    #     assert port >= 0
-    #     self.stop_response = "DHParser server at {}:{} stopped!".format(host, port)
-    #     self.host.value = host.encode()
-    #     self.port.value = port
-    #     if loop is None:
-    #         self.loop = asyncio.new_event_loop()
-    #         asyncio.set_event_loop(self.loop)
-    #     else:
-    #         self.loop = loop
-    #     assert self.loop is not None
-    #     try:
-    #         self.exec = ExecutionEnvironment(self.loop)
-    #         self.exec.log_file = self.log_file
-    #         self.server = cast(
-    #             asyncio.base_events.Server,
-    #             self.loop.run_until_complete(
-    #                 asyncio.start_server(self.handle, host, port, loop=self.loop)))
-    #         try:
-    #             self.stage.value = SERVER_ONLINE
-    #             # self.server_messages.put(SERVER_ONLINE)
-    #             self.loop.run_forever()
-    #         finally:
-    #             self.server.close()
-    #             try:
-    #                 self.loop.run_until_complete(self.server.wait_closed())
-    #             finally:
-    #                 try:
-    #                     self.loop.run_until_complete(self.loop.shutdown_asyncgens())
-    #                 finally:
-    #                     asyncio.set_event_loop(None)
-    #                     self.loop.close()
-    #                     self.loop = None
-    #     finally:
-    #         if self.exec:
-    #             self.exec.shutdown()
-    #             self.exec = None
-
     def run_tcp_server(self, host: str = USE_DEFAULT_HOST, port: int = USE_DEFAULT_PORT, loop=None):
         """
         Starts a DHParser-server that listens on a tcp port. This function will
@@ -1993,7 +1961,7 @@ def spawn_tcp_server(host: str = USE_DEFAULT_HOST,
         argument and returns a string response.
     :param Concurrent: The concurrent class, either mutliprocessing.Process or
         threading.Tread for running the server.
-    :return: the `multiprocessing.Proccess`-object of the already started
+    :return: the `multiprocessing.Process`-object of the already started
         server-processs.
     """
     if isinstance(parameters, tuple) or isinstance(parameters, list):
@@ -2026,7 +1994,7 @@ def spawn_stream_server(reader: StreamReaderType,
                         parameters: Union[Tuple, Dict, Callable] = echo_requests,
                         Concurrent: ConcurrentType = Thread) -> ConcurrentType:
     """
-    Starts a DHParser-Server that communitcates via streams in a separate
+    Starts a DHParser-Server that communicates via streams in a separate
     process or thread.
 
     USE THIS ONLY FOR TESTING!

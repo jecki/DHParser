@@ -65,6 +65,9 @@ def evaluate_presets():
     finalize_presets()
     return result
 
+from DHParser.configuration import CONFIG_PRESET
+
+CONFIG_PRESET['multicore_pool'] = 'InterpreterPool'
 
 class TestConfigMultiprocessing:
     def test_presets(self):
@@ -80,7 +83,8 @@ class TestConfigMultiprocessing:
             set_preset_value('test2', 'multiprocessing presets test2', allow_new_key=True)
             finalize_presets()
             with multiprocessing.Pool(1) as pool:
-                assert pool.apply(evaluate_presets)
+                result = pool.apply(evaluate_presets)
+            assert result
         except ImportError:
             print('Skipping Test, because libffi has wrong version or does not exist!')
 

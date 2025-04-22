@@ -35,6 +35,9 @@ from DHParser.server import StreamReaderProxy, StreamWriterProxy, \
     IDENTIFY_REQUEST_BYTES, JSONRPC_HEADER_BYTES, asyncio_run, \
     spawn_stream_server, stop_stream_server, split_header
 from DHParser.testing import read_full_content, add_header, MockStream
+from DHParser.configuration import CONFIG_PRESET
+
+CONFIG_PRESET['multicore_pool'] = 'InterpreterPool'
 
 
 class TestStreamProxies:

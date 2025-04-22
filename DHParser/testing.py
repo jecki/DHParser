@@ -61,7 +61,7 @@ from DHParser.nodetree import Node, RootNode, deserialize, flatten_sxpr, ZOMBIE_
 from DHParser.trace import set_tracer, trace_history
 from DHParser.transform import traverse, remove_children
 from DHParser.toolkit import load_if_file, re, instantiate_executor, TypeAlias, \
-    MultiCoreExecutor
+    PickMultiCoreExecutor
 
 
 __all__ = ('unit_from_config',
@@ -936,7 +936,7 @@ def grammar_suite(directory, parser_factory, transformer_factory,
     assert tests, f"No pattern from {fn_patterns} matched any test in directory {os.getcwd()}"
 
     with instantiate_executor(get_config_value('test_parallelization') and len(tests) > 1,
-                              MultiCoreExecutor) as pool:
+                              PickMultiCoreExecutor) as pool:
         results = []
         for filename in tests:
             parameters = (filename, parser_factory, transformer_factory,
@@ -1262,7 +1262,7 @@ def run_path(path):
         files = os.listdir(path)
         results = []
         with instantiate_executor(get_config_value('test_parallelization') and len(files) > 1,
-                                  MultiCoreExecutor) as pool:
+                                  PickMultiCoreExecutor) as pool:
             for f in files:
                 f_lower = f.lower()
                 if f_lower.startswith('test_') and f_lower.endswith('.py'):
