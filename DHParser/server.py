@@ -18,7 +18,7 @@
 
 """
 Module `server` contains an asynchronous tcp-server that receives compilation
-requests, runs custom compilation functions in a multiprocessing.Pool.
+requests, runs custom compilation functions in a Process- or InterpreterExecutor.
 
 This allows to start a DHParser-compilation environment just once and save the
 startup time of DHParser for each subsequent compilation. In particular, with

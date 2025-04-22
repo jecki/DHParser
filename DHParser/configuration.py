@@ -125,6 +125,7 @@ def get_forkserver_pid():
 def os_getpid(mp_method = None):
     if sys.version_info < (3, 14, 0) \
             or CONFIG_PRESET['multicore_pool'] == 'ProcessPool':
+        # TODO chose this path also, if this has not been called inside an InterpreterPool!!!
         import multiprocessing
         if mp_method is None:
             mp_method = multiprocessing.get_start_method()

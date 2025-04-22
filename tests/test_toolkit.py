@@ -149,6 +149,8 @@ class TestLoggingAndLoading:
         return True
 
     def test_logging_multiprocessing(self):
+        from DHParser.configuration import CONFIG_PRESET
+        CONFIG_PRESET['multicore_pool'] = 'ProcessPool'
         start_logging(self.LOGDIR)
         with concurrent.futures.ProcessPoolExecutor() as ex:
             f1 = ex.submit(self.logging_task)

@@ -65,15 +65,14 @@ def evaluate_presets():
     finalize_presets()
     return result
 
-from DHParser.configuration import CONFIG_PRESET
-
-CONFIG_PRESET['multicore_pool'] = 'InterpreterPool'
 
 class TestConfigMultiprocessing:
     def test_presets(self):
         """Checks whether changes to CONFIG_PRESET before spawning / forking
         new processes will be present in spawned or forked processes
         afterwards."""
+        from DHParser.configuration import CONFIG_PRESET
+        CONFIG_PRESET['multicore_pool'] = 'ProcessPool'
         try:
             from _ctypes import Union, Structure, Array
             access_presets()
