@@ -22,6 +22,7 @@ limitations under the License.
 
 import concurrent.futures
 import collections.abc
+from functools import partial
 import random
 import json
 import os
@@ -34,6 +35,7 @@ import typing
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
+
 from DHParser.nodetree import parse_sxpr
 from DHParser.testing import unique_name
 from DHParser.toolkit import has_fenced_code, load_if_file, re, normalize_docstring, \
@@ -41,6 +43,22 @@ from DHParser.toolkit import has_fenced_code, load_if_file, re, normalize_docstr
     matching_brackets, RX_ENTITY, validate_XML_attribute_value, fix_XML_attribute_value, \
     cached_load, clear_from_cache
 from DHParser.log import log_dir, start_logging, is_logging, suspend_logging, resume_logging
+
+from DHParser.configuration import CONFIG_PRESET
+CONFIG_PRESET['multicore_pool'] = 'ProcessPool'
+
+
+def logging_task():
+    log_dir()
+    assert is_logging(), "Logging should be on inside logging context"
+    save_log_dir = suspend_logging()
+    assert not is_logging(), "Logging should be off outside logging context"
+    resume_logging(save_log_dir)
+    # TODO: Some race condition occurs here, but which and why???
+    #       Maybe: Some other thread has created logdir but not yet info.txt
+    #       Solution: Just return True, cause log_dir() does not guarantee
+    #                 existence of 'info.txt', anyway...
+    return True
 
 
 class TestLoggingAndLoading:
@@ -136,31 +154,38 @@ class TestLoggingAndLoading:
         os.remove(info_path)
         os.rmdir(self.LOGDIR)
 
-    def logging_task(self):
-        log_dir()
-        assert is_logging(), "Logging should be on inside logging context"
-        save_log_dir = suspend_logging()
-        assert not is_logging(), "Logging should be off outside logging context"
-        resume_logging(save_log_dir)
-        # TODO: Some race condition occurs here, but which and why???
-        #       Maybe: Some other thread has created logdir but not yet info.txt
-        #       Solution: Just return True, cause log_dir() does not guarantee
-        #                 existence of 'info.txt', anyway...
-        return True
-
     def test_logging_multiprocessing(self):
         from DHParser.configuration import CONFIG_PRESET
         CONFIG_PRESET['multicore_pool'] = 'ProcessPool'
         start_logging(self.LOGDIR)
         with concurrent.futures.ProcessPoolExecutor() as ex:
-            f1 = ex.submit(self.logging_task)
-            f2 = ex.submit(self.logging_task)
-            f3 = ex.submit(self.logging_task)
-            f4 = ex.submit(self.logging_task)
+            f1 = ex.submit(logging_task)
+            f2 = ex.submit(logging_task)
+            f3 = ex.submit(logging_task)
+            f4 = ex.submit(logging_task)
         assert f1.result()
         assert f2.result()
         assert f3.result()
         assert f4.result()
+
+    # TODO: needs to be moved to a separate module that contains
+    # the CONFG_PRESET['multicore_ppol'] = 'InterpreterTask'
+    # at the beginning of its global scipe!!!
+    #
+    # def test_logging_interpreterpool(self):
+    #     from DHParser.configuration import CONFIG_PRESET
+    #     CONFIG_PRESET['multicore_pool'] = 'InterpreterPool'
+    #     from test_toolkit import logging_task
+    #     start_logging(self.LOGDIR)
+    #     with concurrent.futures.InterpreterPoolExecutor() as ex:
+    #         f1 = ex.submit(logging_task)
+    #         f2 = ex.submit(logging_task)
+    #         f3 = ex.submit(logging_task)
+    #         f4 = ex.submit(logging_task)
+    #     assert f1.result()
+    #     assert f2.result()
+    #     assert f3.result()
+    #     assert f4.result()
 
 
 class TestStringHelpers:
