@@ -123,8 +123,7 @@ def get_forkserver_pid():
 
 
 def os_getpid(mp_method = None):
-    print(sys.version_info)
-    print(CONFIG_PRESET['multicore_pool'])
+    import os
     if sys.version_info < (3, 14, 0) \
             or CONFIG_PRESET['multicore_pool'] == 'ProcessPool':
         # TODO chose this path also, if this has not been called inside an InterpreterPool!!!

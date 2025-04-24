@@ -168,25 +168,6 @@ class TestLoggingAndLoading:
         assert f3.result()
         assert f4.result()
 
-    # TODO: needs to be moved to a separate module that contains
-    # the CONFG_PRESET['multicore_ppol'] = 'InterpreterTask'
-    # at the beginning of its global scipe!!!
-    #
-    # def test_logging_interpreterpool(self):
-    #     from DHParser.configuration import CONFIG_PRESET
-    #     CONFIG_PRESET['multicore_pool'] = 'InterpreterPool'
-    #     from test_toolkit import logging_task
-    #     start_logging(self.LOGDIR)
-    #     with concurrent.futures.InterpreterPoolExecutor() as ex:
-    #         f1 = ex.submit(logging_task)
-    #         f2 = ex.submit(logging_task)
-    #         f3 = ex.submit(logging_task)
-    #         f4 = ex.submit(logging_task)
-    #     assert f1.result()
-    #     assert f2.result()
-    #     assert f3.result()
-    #     assert f4.result()
-
 
 class TestStringHelpers:
     def test_lstrip_docstring(self):

@@ -87,6 +87,28 @@ class TestConfigMultiprocessing:
         except ImportError:
             print('Skipping Test, because libffi has wrong version or does not exist!')
 
+    def test_presets_interpreter_pool(self):
+        """Checks whether changes to CONFIG_PRESET before spawning / forking
+        new processes will be present in spawned or forked processes
+        afterwards."""
+        if sys.version_info >= (3, 14, 0):
+            import concurrent.futures
+            from DHParser.configuration import CONFIG_PRESET
+            CONFIG_PRESET['multicore_pool'] = 'InterpreterPool'
+            try:
+                from _ctypes import Union, Structure, Array
+                access_presets()
+                set_preset_value('test', 'multiprocessing presets test', allow_new_key=True)
+                finalize_presets()
+                access_presets()
+                set_preset_value('test2', 'multiprocessing presets test2', allow_new_key=True)
+                finalize_presets()
+                with concurrent.futures.InterpreterPoolExecutor() as pool:
+                    result = pool.submit(evaluate_presets).result()
+                assert result
+            except ImportError:
+                print('Skipping Test, because libffi has wrong version or does not exist!')
+
 
 TEST_CFG = """
 [DHParser]
