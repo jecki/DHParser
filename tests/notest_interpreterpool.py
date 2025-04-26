@@ -59,13 +59,13 @@ class TestLoggingAndLoading:  # addition to test_toolkit
 
     def test_logging_interpreterpool(self):
         if sys.version_info >= (3, 14, 0):
-            from notest_interpreterpool import logging_task
+            import notest_interpreterpool
             start_logging(self.LOGDIR)
             with concurrent.futures.InterpreterPoolExecutor() as ex:
-                f1 = ex.submit(logging_task)
-                f2 = ex.submit(logging_task)
-                f3 = ex.submit(logging_task)
-                f4 = ex.submit(logging_task)
+                f1 = ex.submit(notest_interpreterpool.logging_task)
+                f2 = ex.submit(notest_interpreterpool.logging_task)
+                f3 = ex.submit(notest_interpreterpool.logging_task)
+                f4 = ex.submit(notest_interpreterpool.logging_task)
             assert f1.result()
             assert f2.result()
             assert f3.result()
