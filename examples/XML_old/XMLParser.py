@@ -78,9 +78,9 @@ class XMLGrammar(Grammar):
     r"""Parser for a XML source file.
     """
     element = Forward()
-    source_hash__ = "b8dac130f135c48c472484ad998d1a46"
+    source_hash__ = "3ebf19135b1f5ca8ea6c6b54604b91be"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:NameChars$|PubidChars$|EOF$|Reference$|CData$|CommentChars$|NameStartChar$|VersionNum$|Misc$|EncName$|PubidCharsSingleQuoted$)')
+    disposable__ = re.compile('(?:NameChars$|PubidCharsSingleQuoted$|PubidChars$|VersionNum$|Misc$|EncName$|NameStartChar$|CData$|EOF$|Reference$|CommentChars$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''

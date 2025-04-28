@@ -105,9 +105,9 @@ class XMLGrammar(Grammar):
     r"""Parser for a XML source file.
     """
     element = Forward()
-    source_hash__ = "90178c8e116c64b3d10752c42887deac"
+    source_hash__ = "58e97ef50ffba8b0d303b4b489cf3fbc"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:BOM$|Reference$|PubidCharsSingleQuoted$|EOF$|prolog$|NameStartChar$|XmlPIAtts$|tagContent$|EncName$|CommentChars$|Misc$|VersionNum$|CData$|PubidChars$|NameChars$)')
+    disposable__ = re.compile('(?:NameChars$|CommentChars$|PubidCharsSingleQuoted$|Reference$|CData$|NameStartChar$|XmlPIAtts$|Misc$|prolog$|VersionNum$|EncName$|PubidChars$|tagContent$|EOF$|BOM$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'tagContent': [('', "syntax error in tag-name of opening or empty tag:  {1}")],
@@ -215,12 +215,11 @@ class XMLTransformer(Compiler):
     """
     def __init__(self):
         super().__init__()
-        self.cleanup_whitespace = not get_config_value("XML.preserve_whitespace", False)  # remove empty CharData from mixed elements
         self.expendables = set()  # {'CDSect', 'doctypedecl', 'XmlModelPI', 'StyleSheetPI', 'UnknownXmlPI', 'PI'}
 
     def reset(self):
         super().reset()
-        self.preserve_whitespace = False
+        self.preserve_whitespace = get_config_value("XML.preserve_whitespace", False)
         self.non_empty_tags: Set[str] = set()
 
     def prepare(self, root: RootNode) -> None:

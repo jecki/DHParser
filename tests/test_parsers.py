@@ -21,7 +21,7 @@ limitations under the License.
 """
 
 from DHParser.parsers import parse_HTML, parse_XML
-from DHParser import nodetree
+from DHParser import nodetree, LEAF_PTYPES
 
 
 class TestHTMLParser:
@@ -36,6 +36,11 @@ class TestHTMLParser:
         tree = parse_HTML("<p><span>68</span><i>&nbsp;</i><b>&#68;</b><span>Δ</span></p>")
         assert tree.as_xml(inline_tags={'p'}) == "<p><span>68</span><i>&nbsp;</i><b>&#x68;</b><span>Δ</span></p>"
         assert tree.as_sxpr() == '(p (span "68") (i (:EntityRef "nbsp")) (b (:CharRef "68")) (span "Δ"))'
+
+    def test_preserve_whitespace(self):
+        html = "<p><i> et</i> <i> p.</i></p>"
+        tree = parse_HTML(html, preserve_whitespace=True)
+        assert tree.as_xml(inline_tags={tree.name}, string_tags=LEAF_PTYPES) == html
 
 
 class TestXMLParser:
@@ -106,6 +111,11 @@ class TestXMLParser:
             
   </info>
 </TEI>"""
+
+    def test_preserve_whitespace(self):
+        xml = "<p><i> et</i> <i> p.</i></p>"
+        tree = parse_XML(xml, preserve_whitespace=True)
+        assert tree.as_xml(inline_tags={tree.name}, string_tags=LEAF_PTYPES) == xml
 
 
 

@@ -2109,6 +2109,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             """Returns the opening string for the representation of `node`."""
             nonlocal self, attr_filter, _empty_tags, line_breaks
             if node is self and node.name == ':XML':  return ''
+            x=node.name
+            l = len(x)
+            x=node.name in string_tags
+            y=node.has_attr()
             if node.name in string_tags and not node.has_attr():
                 if node.name == CHAR_REF_PTYPE and node.content.isalnum(): return "&#x"
                 elif node.name == ENTITY_REF_PTYPE: return "&"
