@@ -30,8 +30,10 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.configuration import access_presets, finalize_presets, \
     set_preset_value, get_preset_value, get_config_value, read_local_config, \
-    get_config_values, set_config_value, get_forkserver_pid
+    get_config_values, set_config_value, get_forkserver_pid, CONFIG_PRESET
 from DHParser.testing import unique_name
+
+# spped up tests for Python3.14: CONFIG_PRESET['multicore_pool'] = 'InterpreterPool'
 
 
 class TestConfigGetAndSet:
@@ -56,6 +58,7 @@ class TestConfigGetAndSet:
 
 
 def evaluate_presets():
+    from DHParser.configuration import os_getpid
     access_presets()
     if get_preset_value('test', 'failure') != 'failure' and \
             get_preset_value('test2', 'failure') != 'failure':
@@ -71,7 +74,7 @@ class TestConfigMultiprocessing:
         """Checks whether changes to CONFIG_PRESET before spawning / forking
         new processes will be present in spawned or forked processes
         afterwards."""
-        from DHParser.configuration import CONFIG_PRESET
+        from DHParser.configuration import CONFIG_PRESET, get_syncfile_path
         CONFIG_PRESET['multicore_pool'] = 'ProcessPool'
         try:
             from _ctypes import Union, Structure, Array
@@ -86,28 +89,6 @@ class TestConfigMultiprocessing:
             assert result
         except ImportError:
             print('Skipping Test, because libffi has wrong version or does not exist!')
-
-    def test_presets_interpreter_pool(self):
-        """Checks whether changes to CONFIG_PRESET before spawning / forking
-        new processes will be present in spawned or forked processes
-        afterwards."""
-        if sys.version_info >= (3, 14, 0):
-            import concurrent.futures
-            from DHParser.configuration import CONFIG_PRESET
-            CONFIG_PRESET['multicore_pool'] = 'InterpreterPool'
-            try:
-                from _ctypes import Union, Structure, Array
-                access_presets()
-                set_preset_value('test', 'multiprocessing presets test', allow_new_key=True)
-                finalize_presets()
-                access_presets()
-                set_preset_value('test2', 'multiprocessing presets test2', allow_new_key=True)
-                finalize_presets()
-                with concurrent.futures.InterpreterPoolExecutor() as pool:
-                    result = pool.submit(evaluate_presets).result()
-                assert result
-            except ImportError:
-                print('Skipping Test, because libffi has wrong version or does not exist!')
 
 
 TEST_CFG = """

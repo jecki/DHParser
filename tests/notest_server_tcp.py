@@ -243,6 +243,7 @@ class TestServer:
     def test_long_running_task(self):
         """Test, whether delegation of (long-running) tasks to
         processes or threads works."""
+        global long_running
         sequence = []
         if self.spawn:
             SLOW, FAST = 0.1, 0.01

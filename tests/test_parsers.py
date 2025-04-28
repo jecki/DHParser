@@ -62,7 +62,7 @@ class TestXMLParser:
             für alle Leute!
         </info>
     </TEI>"""
-        tree = parse_XML(xml)
+        tree = parse_XML(xml, preserve_whitespace=False)
         assert tree.as_sxpr() == """(:XML
   (?xml `(version "1.0") `(encoding "UTF-8"))
   (?xml-model `(href "http://www.tei-c.org/release/xml/tei/custom/schema/relaxng/tei_all.rng"))
