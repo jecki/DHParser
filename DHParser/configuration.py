@@ -154,7 +154,7 @@ def access_presets():
     ACCESSING_PRESETS = True
     import multiprocessing
     mp_method = multiprocessing.get_start_method()
-    if mp_method != 'fork':
+    if mp_method != 'fork' or CONFIG_PRESET['multicore_pool'] == 'InterpreterPool':
         import os
         import pickle
         syncfile_path = CONFIG_PRESET['syncfile_path']
