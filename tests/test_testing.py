@@ -38,7 +38,6 @@ from DHParser.testing import get_report, grammar_unit, unit_from_file, \
     unit_from_config, clean_report, unique_name, reset_unit
 from DHParser.trace import set_tracer, trace_history
 
-
 CFG_FILE_1 = '''
 # a comment
 

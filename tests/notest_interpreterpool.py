@@ -1,4 +1,8 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.14
+
+# This test does not play well with pytest, possibly because of
+# a InterpreterPool and process-id related problems. Therefore,
+# it is so far a "no-test"
 
 """notest_interpreterpool.py - additional tests that require
         interpreterppols
@@ -29,9 +33,10 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 sys.path.append(scriptpath)
 
 from DHParser.log import log_dir, start_logging, is_logging, suspend_logging, resume_logging
-from DHParser.configuration import CONFIG_PRESET
+from DHParser.configuration import CONFIG_PRESET, get_config_value
 CONFIG_PRESET['multicore_pool'] = 'InterpreterPool'
 
+PYTEST = True
 
 def logging_task():
     log_dir()
@@ -41,7 +46,7 @@ def logging_task():
     resume_logging(save_log_dir)
     # TODO: Some race condition occurs here, but which and why???
     #       Maybe: Some other thread has created logdir but not yet info.txt
-    #       Solution: Just return True, cause log_dir() does not guarantee
+    #       Solution: Just return True, because log_dir() does not guarantee
     #                 existence of 'info.txt', anyway...
     return True
 
@@ -49,17 +54,24 @@ def logging_task():
 class TestLoggingAndLoading:  # addition to test_toolkit
     def setup_class(self):
         self.LOGDIR = os.path.abspath(os.path.join(scriptpath, "TESTLOGS" + str(os.getpid())))
+        self.save_dir = os.getcwd()
 
     def teardown_class(self):
+        os.chdir(self.save_dir)
         if os.path.exists(self.LOGDIR):
-            # for fname in os.listdir(self.LOGDIR):
-            #     os.remove(os.path.join(self.LOGDIR, fname))
             os.remove(os.path.join(self.LOGDIR, "info.txt"))
+            for fname in os.listdir(self.LOGDIR):
+                os.remove(os.path.join(self.LOGDIR, fname))
             os.rmdir(self.LOGDIR)
 
     def test_logging_interpreterpool(self):
+        global PYTEST
         if sys.version_info >= (3, 14, 0):
-            import notest_interpreterpool
+            if PYTEST:
+                os.chdir('..')
+                import tests.notest_interpreterpool as notest_interpreterpool
+            else:
+                import notest_interpreterpool
             start_logging(self.LOGDIR)
             with concurrent.futures.InterpreterPoolExecutor() as ex:
                 f1 = ex.submit(notest_interpreterpool.logging_task)
@@ -73,5 +85,6 @@ class TestLoggingAndLoading:  # addition to test_toolkit
 
 
 if __name__ == "__main__":
+    PYTEST = False
     from DHParser.testing import runner
     runner("", globals())
