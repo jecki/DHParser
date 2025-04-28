@@ -41,7 +41,7 @@ def parse_template(src: str,
     return result
 
 
-def parse_HTML(html: str, preserve_whitespace: bool=False) -> Node:
+def parse_HTML(html: str, preserve_whitespace: bool=True) -> Node:
     """Parses an HTML document and returns the root node of the resulting
     DOM-tree."""
     from DHParser.parsers import HTMLParser
