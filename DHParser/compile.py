@@ -41,13 +41,12 @@ import os
 from typing import Any, Optional, Tuple, List, Set, Dict, Union, Callable, NamedTuple
 
 from DHParser.configuration import get_config_value
-from DHParser.preprocess import PreprocessorFunc
+from DHParser.preprocess import PreprocessorFunc, gen_neutral_srcmap_func
 from DHParser.nodetree import Node, RootNode, EMPTY_PTYPE, Path
 from DHParser.transform import TransformerFunc
 from DHParser.parse import ParseFunc
 from DHParser.error import is_error, is_fatal, Error, FATAL, \
-    TREE_PROCESSING_CRASH, COMPILER_CRASH, AST_TRANSFORM_CRASH, has_errors, \
-    gen_neutral_srcmap_func
+    TREE_PROCESSING_CRASH, COMPILER_CRASH, AST_TRANSFORM_CRASH, has_errors
 from DHParser.log import log_parsing_history, log_ST, is_logging
 from DHParser.toolkit import load_if_file, is_filename, re, TypeAlias, \
     deprecated, DHPARSER_FILES

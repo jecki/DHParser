@@ -32,7 +32,8 @@ except ImportError:
     import re
 
 from DHParser.dsl import create_parser
-from DHParser.error import Error, ERROR, add_source_locations, gen_neutral_srcmap_func
+from DHParser.error import Error, ERROR, add_source_locations
+from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.toolkit import linebreaks, line_col
 
 

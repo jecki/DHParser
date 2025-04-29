@@ -223,7 +223,9 @@ re_AST_transformation_table = {
     # ">": [],   # called for each node after calling its specific rules
     "regular_expression": [],
     "regex, grpRegex": [change_name('regex'), replace_by_single_child],
-    "pattern, grpPattern": [change_name('pattern'), merge_adjacent(is_one_of('characters')), replace_by_single_child],
+    "pattern, grpPattern": [change_name('pattern'),
+                            merge_adjacent(is_one_of('characters')),
+                            replace_by_single_child],
     "grpRepetition": [change_name('repetition')],
     "hex2, hex4, hex8": [change_name('hex')],
     "escCh, charSeq, bs": [change_name('characters')],

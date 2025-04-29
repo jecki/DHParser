@@ -32,10 +32,10 @@ from __future__ import annotations
 
 import functools
 import os
-from typing import Union, Optional, Callable, Tuple, List, Any, NamedTuple
+from typing import Union, Optional, Callable, Tuple, List, Dict, Any, \
+    NamedTuple
 
-from DHParser.error import Error, SourceMap, SourceLocation, SourceMapFunc, \
-    add_source_locations, gen_neutral_srcmap_func, source_map, apply_src_mappings
+from DHParser.error import Error, add_source_locations
 from DHParser.stringview import StringView
 from DHParser.toolkit import re, TypeAlias, LazyRE
 
@@ -53,6 +53,12 @@ __all__ = ('RX_TOKEN_NAME',
            'Tokenizer',
            'make_token',
            'strip_tokens',
+           'SourceLocation',
+           'SourceMap',
+           'SourceMapFunc',
+           'gen_neutral_srcmap_func',
+           'source_map',
+           'apply_src_mappings',
            'nil_preprocessor',
            'chain_preprocessors',
            'prettyprint_tokenized',
@@ -220,6 +226,107 @@ def strip_tokens(tokenized: str) -> str:
 #               transformations of the source text
 #
 #######################################################################
+
+
+class SourceLocation(NamedTuple):
+    """A particular location in the original, not preprocessed source code.
+
+    :ivar original_name: The original source filename. If the document is composed of
+        a master file and (possibly nested) includes this will be the name of the file
+        that the position is related to.
+    :ivar original_text: The original, i.e. not yet preprocessed text-content of the
+        file the position relates to.
+    :ivar pos: The location within original_text.
+    """
+    original_name: str          # the file name (or path or uri) of the source code
+    original_text: Union[str, StringView]  # the source code itself
+    pos: int                    # a position within the code
+    __module__ = __name__       # needed for cython compatibility
+
+
+class SourceMap(NamedTuple):
+    """Class SourceMap captures a mapping from the preprocessed source code (that is
+    possibly also stitched together from different files) to the original source files
+    and source positions. It is possible to use more than one source map (see
+    :py:func:`apply_src_mappings`). Thus, several preprocessing stages can be applied
+    in sequence and the positions, say where errors occurred, can still be back-propagated
+    to the original input file(s).
+
+    :ivar original_name: The original source filename. If the source allows includes,
+        this should be the name of the master file.
+    :ivar positions: A list of locations in the processed file. Each location is to be
+        understood as a marker from which on a different the position in the processed
+        file must be shifted by a different offset to gain the position in the original
+        file. The first element in the list of positions should always be 0 and
+        contain as its last element the length of the processed source plus 1 (or higher).
+        (+1 allows the location to exceed the end of the text by 1 which makes writing
+         algorithms easier that if the location was not allowed to point beyond the end
+         of the text.)
+    :ivar offsets: The list of offsets corresponding to the positions. For each position
+        entry positions[n], the corresponding offsets value offsets[n] contains
+        the offset (positive or negative or zero) that will be added to all locations
+        in the half open interval [ positions[n], positions[n + 1] [
+    :ivar file_names: A list of file names corresponding to the positions, i.e. for each
+        position[n] the file that the text from this just before the next position was
+        taken from has the name file_names[n].
+    :ivar originals_dict: A dictionary mapping the file-names to their text-content in
+        form of a :py:class:`~stringview.StringView`-object.
+    """
+    original_name: str          # nome or path or uri of the original source file
+    positions: List[int]        # a list of locations
+    offsets: List[int]          # the corresponding offsets to be added from these locations onward
+    file_names: List[str]       # list of file_names to which the source locations relate
+    originals_dict: Dict[str, Union[str, StringView]]  # File names => (included) source texts
+    __module__ = __name__       # needed for cython compatibility
+
+
+SourceMapFunc: TypeAlias = Union[Callable[[int], SourceLocation], functools.partial]
+
+
+def gen_neutral_srcmap_func(original_text: Union[StringView, str], original_name: str = '') -> SourceMapFunc:
+    """Generates a source map function that maps positions to itself."""
+    if not original_name:  original_name = 'UNKNOWN_FILE'
+    # return lambda pos: SourceLocation(original_name, original_text, pos)
+    return functools.partial(SourceLocation, original_name, original_text)
+
+
+def source_map(position: int, srcmap: SourceMap) -> SourceLocation:
+    """
+    Maps a position in a (pre-)processed text to its corresponding
+    position in the original document according to the given source map.
+
+    :param  position: the position in the processed text
+    :param  srcmap:  the source map, i.e. a mapping of locations to offset values
+        and source texts.
+    :returns:  the mapped position
+    """
+    assert len(srcmap.positions) == len(srcmap.offsets) == len(srcmap.file_names)
+    # assert set(srcmap.file_names) == set(srcmap.originals_dict.keys())
+    import bisect
+    i = bisect.bisect_right(srcmap.positions, position)
+    if 0 < i < len(srcmap.positions):
+        original_name = srcmap.file_names[i - 1]
+        return SourceLocation(
+            original_name,
+            srcmap.originals_dict[original_name],
+            min(position + srcmap.offsets[i - 1], srcmap.positions[i] + srcmap.offsets[i]))
+    raise ValueError(f"Position {position} seems is out of range "
+                     f"[{srcmap.positions[0]}], {srcmap.positions[-1]}] "
+                     f"or source map ist corrupted.")
+
+
+def apply_src_mappings(position: int, mappings: List[SourceMapFunc]) -> SourceLocation:
+    """
+    Sequentially apply a number of mapping functions to a source position.
+    In the context of source mapping, the source position usually is a
+    position within a preprocessed source text and mappings should therefore
+    be a list of reverse-mappings in reversed order.
+    """
+    assert mappings
+    filename, text = '', ''
+    for mapping in mappings:
+        filename, text, position = mapping(position)
+    return SourceLocation(filename, text, position)
 
 
 def tokenized_to_original_mapping(tokenized_text: str,

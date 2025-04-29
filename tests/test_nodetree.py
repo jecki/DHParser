@@ -42,11 +42,12 @@ from DHParser.transform import traverse, reduce_single_child, remove_brackets, \
     replace_by_single_child, flatten, remove_empty, remove_whitespace, TransformerFunc, \
     transformer
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, parse_ebnf
-from DHParser.error import ERROR, gen_neutral_srcmap_func
+from DHParser.error import ERROR
 from DHParser.dsl import grammar_provider, create_parser
 from DHParser.error import Error
 from DHParser.parse import RE, Grammar, Forward, Whitespace, Drop, SmartRE, RegExp, Series, \
     ZeroOrMore, Alternative, Option, Text, mixin_comment
+from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.toolkit import re, ThreadLocalSingletonFactory, INFINITE
 
 

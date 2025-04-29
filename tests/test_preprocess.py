@@ -35,8 +35,8 @@ from DHParser.dsl import grammar_provider
 from DHParser.compile import compile_source
 from DHParser.preprocess import make_token, tokenized_to_original_mapping, BEGIN_TOKEN, END_TOKEN, TOKEN_DELIMITER, PreprocessorResult, chain_preprocessors, \
     strip_tokens, gen_find_include_func, preprocess_includes, IncludeInfo, make_preprocessor, \
-    ReadIncludeClass, ReadIncludeOnce
-from DHParser.error import SourceMap, Error, source_map
+    ReadIncludeClass, ReadIncludeOnce, SourceMap, source_map
+from DHParser.error import Error
 from DHParser.toolkit import normalize_docstring, re
 from DHParser.testing import unique_name
 from typing import Tuple, Dict, List
