@@ -80,8 +80,7 @@ proc `$`*(rs: RuneSet, verbose: bool = false): string =
         s.add(marker & toHex(rr.low.int32, l) & "-" & marker & toHex(rr.high.int32, l))
     if rr.high <% rr.low:  s.add("!") 
   if verbose:
-    (if rs.negate: @["[^", s.join("]-["), "]"] 
-             else: @["[", s.join("]|["), "]"]).join("")
+    (if rs.negate: @["[^", s.join("]-["), "]"] else: @["[", s.join("]|["), "]"]).join("")
   else:
     s.add("]")
     return s.join("")

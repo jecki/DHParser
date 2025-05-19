@@ -4,7 +4,8 @@
 ## A nim library for arbitrairly sized bitsets.
 ## (Implementation is inspired by and partly copy/pasted from:
 ## https://nim-lang.org/docs/destructors.html)
-
+##
+## UNFINISHED!
 
 import std/strformat
 

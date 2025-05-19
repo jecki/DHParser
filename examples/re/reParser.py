@@ -113,9 +113,9 @@ class reGrammar(Grammar):
     _entity = Forward()
     _item = Forward()
     pattern = Forward()
-    source_hash__ = "191d35a673f15134915392a2053b8fdb"
+    source_hash__ = "a2ea49cd886a7c21aa890ee7fa84ccab"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:EOF$|BS$|_escapedCh$|_grpItem$|_escape$|_repeater$|_item$|_extension$|_octal$|_nibble$|_entity$|_special$|_number$|_anyChar$|_illegal$|_character$)')
+    disposable__ = re.compile('(?:_entity$|BS$|_item$|EOF$|_grpItem$|_illegal$|_escapedCh$|_extension$|_escape$|_nibble$|_special$|_character$|_octal$|_number$|_anyChar$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -134,18 +134,19 @@ class reGrammar(Grammar):
     characters = OneOrMore(Series(NegativeLookahead(_entity), _character, dwsp__))
     _grpItem = Series(Alternative(_entity, characters), dwsp__)
     zeroOrOne = Text("?")
-    zeroOrMore = Text("*")
+    zeroOrMore = Series(Drop(Text("")), Drop(Text("*")))
     _number = RegExp('[0-9]+')
     oneOrMore = Text("+")
     lrtype = Alternative(Text("="), Text("!"), Text("<="), Text("<!"))
-    notGreedy = Text("?")
+    noBacktracking = Text("+")
     comment = Series(Drop(Text("#")), RegExp('(?:[\\\\]\\)|[^)\\\\]+)+'))
     groupName = RegExp('(?!\\d)\\w+')
+    notGreedy = Text("?")
     max = Synonym(_number)
-    min = Synonym(_number)
     flags = Series(RegExp('[aiLmsux]+'), Option(Series(Drop(Text("-")), RegExp('[imsx]+'))))
+    min = Synonym(_number)
     range = Series(Drop(Text("{")), min, Option(Series(Drop(Text(",")), max)), Drop(Text("}")))
-    _repeater = Alternative(zeroOrOne, zeroOrMore, oneOrMore, range)
+    repType = Alternative(zeroOrOne, zeroOrMore, oneOrMore, range)
     ch = Series(NegativeLookahead(Drop(Text("]"))), Option(BS), _anyChar)
     chSpecial = RegExp('[abfnrtv]')
     _nibble = RegExp('[0-9a-fA-F]')
@@ -173,18 +174,18 @@ class reGrammar(Grammar):
     start = Text("^")
     any = Text(".")
     _special = Alternative(any, start, end)
-    noBacktracking = Text("+")
-    grpRepetition = Series(_grpItem, _repeater, Option(Alternative(notGreedy, noBacktracking)), dwsp__)
+    grpRepetition = Series(_grpItem, repType, Option(Alternative(notGreedy, noBacktracking)), dwsp__)
     grpPattern = ZeroOrMore(Alternative(grpRepetition, _grpItem))
     grpRegex = Series(dwsp__, grpPattern, ZeroOrMore(Series(Drop(Text("|")), dwsp__, grpPattern)))
     lookaround = Series(lrtype, grpRegex, mandatory=1)
     namedGroup = Series(Drop(Text("P<")), groupName, Drop(Text(">")), grpRegex, mandatory=1)
     subRegex = Series(Drop(Text(">")), grpRegex, mandatory=1)
+    capturing = Synonym(grpRegex)
     nonCapturing = Series(Option(flags), Drop(Text(":")), grpRegex, mandatory=2)
     bifurcation = Series(Drop(Text("(")), Alternative(groupId, groupName), Drop(Text(")")), pattern, Drop(Text("|")), grpPattern, mandatory=1)
     _extension = Series(Drop(Text("?")), Alternative(nonCapturing, subRegex, namedGroup, backRef, comment, lookaround, bifurcation), mandatory=1)
-    repetition = Series(_item, _repeater, Option(Alternative(notGreedy, noBacktracking)), dwsp__)
-    group = Series(Drop(Text("(")), Alternative(_extension, grpRegex), Drop(Text(")")), mandatory=1)
+    repetition = Series(_item, repType, Option(Alternative(notGreedy, noBacktracking)), dwsp__)
+    group = Series(Drop(Text("(")), Alternative(_extension, capturing), Drop(Text(")")), mandatory=1)
     flagGroups = OneOrMore(Series(Drop(Text("(?")), flags, Drop(Text(")")), mandatory=2))
     regex = Series(dwsp__, pattern, ZeroOrMore(Series(Drop(Text("|")), dwsp__, pattern)))
     _entity.set(Alternative(_special, _escape, charset, group))
@@ -222,6 +223,7 @@ re_AST_transformation_table = {
     # "*": [],  # fallback for nodes that do not appear in this table
     # ">": [],   # called for each node after calling its specific rules
     "regular_expression": [],
+    # "group": [replace_by_single_child],
     "regex, grpRegex": [change_name('regex'), replace_by_single_child],
     "pattern, grpPattern": [change_name('pattern'),
                             merge_adjacent(is_one_of('characters')),

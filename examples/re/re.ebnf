@@ -27,7 +27,7 @@
 
 # Tags that may be replaced with their content while parsing
 @ disposable  = EOF, BS, _number, _illegal, _entity, _escape, _special, _item,
-                _grpItem, _extension, _repeater, _anyChar, _character, _octal,
+                _grpItem, _extension, _anyChar, _character, _octal,
                 _nibble, _escapedCh
 
 # Tags that will be dropped with all their content while parsing or any of
@@ -50,8 +50,8 @@ flags      = /[aiLmsux]+/ ["-" /[imsx]+/]
 
 #: repetition
 
-repetition = _item _repeater [ notGreedy | noBacktracking ] ~
-  _repeater = zeroOrOne | zeroOrMore | oneOrMore | range
+repetition = _item repType [ notGreedy | noBacktracking ] ~
+  repType = zeroOrOne | zeroOrMore | oneOrMore | range
     zeroOrOne  = "?"
     zeroOrMore = "*"
     oneOrMore  = "+"
@@ -102,10 +102,11 @@ charset    = "[" [complement] { chRange | escapedSet | _escapedCh | BS error | c
 
 #: group
 
-group     = "(" § (_extension | grpRegex) ")"
+group     = "(" § (_extension | capturing) ")"
 _extension = "?" § ( nonCapturing | subRegex | namedGroup | backRef
                   | comment | lookaround | bifurcation)
 
+capturing  = grpRegex
 nonCapturing = [flags] ":" § grpRegex
 subRegex   = ">" § grpRegex
 namedGroup = "P<" § groupName ">" grpRegex
@@ -119,7 +120,7 @@ bifurcation = "(" § (groupId | groupName) ")" pattern "|" grpPattern
 
 grpRegex   = ~ grpPattern { "|" ~ grpPattern }
 grpPattern = { grpRepetition | _grpItem }
-grpRepetition = _grpItem _repeater [ notGreedy | noBacktracking ] ~
+grpRepetition = _grpItem repType [ notGreedy | noBacktracking ] ~
 _grpItem   = (_entity  | characters) ~
 
 #: misc
