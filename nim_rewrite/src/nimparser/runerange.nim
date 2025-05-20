@@ -408,6 +408,7 @@ when isMainModule:
                 |[\U00010000-\U000EFFFF]"""
   let rs2 = rs"[ace\sD-G]"
   let rs3 = rs"[a-f]|[^c-z0-9]|[24]"
+  let rs4 = rs"[a-z]-[d-g]"
   echo $rs1
   echo $rs($rs1)
   echo $rs(rs1 $ true)

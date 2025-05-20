@@ -113,9 +113,9 @@ class reGrammar(Grammar):
     _entity = Forward()
     _item = Forward()
     pattern = Forward()
-    source_hash__ = "a2ea49cd886a7c21aa890ee7fa84ccab"
+    source_hash__ = "7582661a81b54c2b9efa3f96ba02bede"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:_entity$|BS$|_item$|EOF$|_grpItem$|_illegal$|_escapedCh$|_extension$|_escape$|_nibble$|_special$|_character$|_octal$|_number$|_anyChar$)')
+    disposable__ = re.compile('(?:_nibble$|_entity$|_special$|_grpItem$|_escapedCh$|_escape$|_extension$|_anyChar$|_character$|_octal$|_number$|_illegal$|EOF$|_item$|BS$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -134,7 +134,7 @@ class reGrammar(Grammar):
     characters = OneOrMore(Series(NegativeLookahead(_entity), _character, dwsp__))
     _grpItem = Series(Alternative(_entity, characters), dwsp__)
     zeroOrOne = Text("?")
-    zeroOrMore = Series(Drop(Text("")), Drop(Text("*")))
+    zeroOrMore = Text("*")
     _number = RegExp('[0-9]+')
     oneOrMore = Text("+")
     lrtype = Alternative(Text("="), Text("!"), Text("<="), Text("<!"))
