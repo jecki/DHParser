@@ -45,7 +45,7 @@ _item      = (_entity | charSeq) ~
 _entity    = _special | _escape | charset | group
 
 flagGroups = { "(?" flags § ")" }+
-flags      = /[aiLmsux]+/ ["-" /[imsx]+/]
+flags      = /[aiLmsux]+/ [`-` /[imsx]+/]
 
 
 #: repetition
@@ -72,9 +72,9 @@ _special   = any | start | end
 
 #: escape
 
-_escape      = BS ( reEsc | bs | specialEsc | chCode | chName | groupId | error | escCh )
-  reEsc      = /[AbBZ]/
-  specialEsc = /[abdDfnrsStvwW]/
+_escape      = BS § ( bs | chCode | chName | groupId | reEsc | specialEsc | error | escCh )
+  reEsc      = /[AbBdDsSwWZ]/
+  specialEsc = /[abfnNrtUvx]/
   chCode     = "x" hex2 | "u" hex4 | "U" hex8 | oct
     hex2     = _nibble*2
     hex4     = _nibble*4
@@ -82,10 +82,9 @@ _escape      = BS ( reEsc | bs | specialEsc | chCode | chName | groupId | error 
     _nibble  = /[0-9a-fA-F]/
     oct      = "0" _octal{0,3} | _octal*3
     _octal   = /[0-7]/
-  chName     = "N" § "{" /[\w ]+/ "}"
+  chName     = "N{" /[\w ]+/ "}"
   escCh      = _anyChar | /[)|+*?]/
   groupId    = /\d\d?/
-  groupName  = /(?!\d)\w+/
   error      = &_illegal @Error("Unknown escape sequence") _illegal
     _illegal = /[a-zA-Z]/
 
@@ -117,6 +116,8 @@ lookaround = lrtype § grpRegex
   lrtype   = `=` | `!` | `<=` | `<!`
 
 bifurcation = "(" § (groupId | groupName) ")" pattern "|" grpPattern
+
+groupName  = /(?!\d)\w+/
 
 grpRegex   = ~ grpPattern { "|" ~ grpPattern }
 grpPattern = { grpRepetition | _grpItem }
