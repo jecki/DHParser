@@ -139,7 +139,7 @@ def main(called_from_app=False) -> bool:
                 sys.exit(0)
             else:
                 import platform, subprocess
-                call = ['python', __file__, '--dontrerun'] + sys.argv[1:]
+                call = [sys.executable, __file__, '--dontrerun'] + sys.argv[1:]
                 result = subprocess.run(call, capture_output=True)
                 print(result.stdout.decode('utf-8'))
                 sys.exit(result.returncode)
