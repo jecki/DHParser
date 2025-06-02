@@ -450,9 +450,10 @@ def set_config_value(key: str, value: Any, allow_new_key: bool = False):
             oldkey = key
             if key not in CONFIG_PRESET:  key = RENAMED_KEYS.get(key, key)
             if key not in CONFIG_PRESET:
-                raise ValueError(
-                    '"%s" is not a valid config variable. Use "allow_new_key=True" to '
-                    'add new variables or choose one of %s' % (key, list(cfg.keys())))
+                if key not in cfg:
+                    raise ValueError(
+                        '"%s" is not a valid config variable. Use "allow_new_key=True" to '
+                        'add new variables or choose one of %s' % (key, list(cfg.keys())))
             elif oldkey != key:
                 print(f'Deprecation Warning: Key {oldkey} has been renamed to {key}!')
         validate_value(key, value)
