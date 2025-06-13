@@ -397,7 +397,8 @@ results for the same reflow-column and the same indentation (which is two
 blanks by default).
 
 It should also be noted that assigning a value to the reflow-parameter changes the
-meaning of the `inline_tags`-parameters in a subtle way. Without reflow, the
+meaning of the `inline_tags`-parameters in a subtle way - and likewise the meaning
+of the xml:space-attribute if that is used. Without reflow, the
 `inline-tags`-parameter marks tags, the content of which is strictly preserved
 when serializing. (Unless, the data itself contains a line-break it will be
 written entirely on a single line, thus the name "inline".) However, if the
