@@ -360,10 +360,10 @@ def get_report(test_unit, serializations: Dict[str, List[str]] = dict()) -> str:
     lists the source of all tests as well as the error messages, if a test
     failed or the abstract-syntax-tree (AST) in case of success.
 
-    If an asterix has been appended to the test name then the concrete syntax
+    If an asterix has been appended to the test-name then the concrete syntax
     tree will also be added to the report in this particular case.
 
-    The purpose of the latter is to help constructing and debugging
+    The purpose of the latter is to help to construct and debugging
     of AST-Transformations. It is better to switch the CST-output on and off
     with the asterix marker when needed than to output the CST for all tests
     which would unnecessarily bloat the test reports.
@@ -375,8 +375,8 @@ def get_report(test_unit, serializations: Dict[str, List[str]] = dict()) -> str:
     for parser_name, tests in test_unit.items():
         if parser_name[-2:] == '__':
             heading = parser_name[:-2]
-            report.append(f"{heading}\n{'=' * len(heading)}\n\n"
-                + '\n'.join(f"{k} = {repr(v)}" for k, v in tests.items()))
+            report.append(f"{heading}\n{'=' * len(heading)}\n\n    "
+                + '\n    '.join(f"{k} = {repr(v)}" for k, v in tests.items()))
             continue
         heading = 'Test of parser: "%s"' % parser_name
         report.append('\n\n%s\n%s' % (heading, '=' * len(heading)))

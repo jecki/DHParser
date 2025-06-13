@@ -71,7 +71,7 @@ The source code of module ``nodetree`` consists of four main sections:
     are organized as blank separated sets of strings, like for example
     the class-attribute in HTML.
 
-3.  Path-Navigation: Functions that help navigating with paths through
+3.  Path-Navigation: Functions that help to navigate with paths through
     the tree. A path is the list of nodes that connects the root-node
     of the tree with one particular node inside or at the leaf of the
     tree.
@@ -772,7 +772,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def replace_by(self, replacement: Node, merge_attr: bool=False):
         """Replaces the node's name, result and attributes by that of another
-        node. This allows to effectually replace the node without needing to
+        node. This allows replacing the node without needing to
         change the parent node's children's tuple.
 
         :param replacement: the node by which self shall be "replaced".
@@ -800,7 +800,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def _leaf_data(self) -> List[str]:
         """
-        Returns string content as list of string fragments
+        Returns string content as a list of string fragments
         that are gathered from all child nodes in order.
         """
         if self._children:
@@ -826,7 +826,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         self._result = str(self._result)
         return self._result
 
-        # un-optimized algorithm (strings will be copied over and over
+        # unoptimized algorithm (strings will be copied over and over
         # again for each level of the tree!)
         # return "".join(child.content for child in self._children) if self._children \
         #     else str(self._result)
