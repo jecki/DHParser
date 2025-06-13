@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from typing import Callable, Tuple, List, Any, Dict, Optional
 
-from DHParser.nodetree import Node
+from DHParser.nodetree import RootNode
 from DHParser.error import Error, has_errors
 
 
@@ -30,7 +30,7 @@ __all__ = ("parse_HTML",
 def parse_template(src: str,
                    parse_func: Callable[[str, Dict], Tuple[Any, List[Error]]],
                    src_format: str="unknown",
-                   cfg: Dict={}) -> Node:
+                   cfg: Dict={}) -> RootNode:
     result, errors = parse_func(src, cfg)
     if has_errors(errors):
         err_str = "\n".join(str(e) for e in errors)
@@ -41,7 +41,7 @@ def parse_template(src: str,
     return result
 
 
-def parse_HTML(html: str, preserve_whitespace: Optional[bool]=None) -> Node:
+def parse_HTML(html: str, preserve_whitespace: Optional[bool]=None) -> RootNode:
     """Parses an HTML document and returns the root node of the resulting
     DOM-tree.
 
@@ -62,7 +62,7 @@ def parse_HTML(html: str, preserve_whitespace: Optional[bool]=None) -> Node:
                           {"HTML.preserve_whitespace": preserve_whitespace})
 
 
-def parse_XML(xml: str, preserve_whitespace: Optional[bool]=None) -> Node:
+def parse_XML(xml: str, preserve_whitespace: Optional[bool]=None) -> RootNode:
     """Parses an XML document and returns the root node of the resulting
     DOM-tree. This parser is more exact, but slower than
     :py:func:`~nodetree.parse_xml`. The differences are: Inclusion of

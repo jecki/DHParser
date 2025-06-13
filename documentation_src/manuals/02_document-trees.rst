@@ -282,7 +282,21 @@ declared as such with the `empty_tags`-parameter.
 Note that using `string_tags` can lead to a loss of information. A loss of
 information is inevitable if, like in the example above, more than one tag is
 listed in the `string_tags`-set passed to the
-:py:meth:`~nodetree.Node.as_xml`-method. Deserializing the XML-string yields::
+:py:meth:`~nodetree.Node.as_xml`-method.
+
+When deserializing an XML-string yields, the text-parts within elements
+with mixed-content will be assigned to nodes of their own with the default
+name `:Text`::
+
+    >>> tree = parse_xml(
+    ...    '<sentence>This is <phrase>Buckingham Palace</phrase></sentence>')
+    >>> print(tree.serialize(how='indented'))
+    sentence
+      :Text "This is "
+      phrase "Buckingham Palace"
+
+The name these text-nodes can be configured with the `string_tag`-parameter
+of the :py:func:`~nodetree.parse_xml`-function::
 
     >>> tree = parse_xml(
     ...    '<sentence>This is <phrase>Buckingham Palace</phrase></sentence>',
@@ -291,6 +305,133 @@ listed in the `string_tags`-set passed to the
     sentence
       MIXED "This is "
       phrase "Buckingham Palace"
+
+Excurs on XML-formatting
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+A notorious problem when working with XML is the propper handling
+of whitespace. It ever so often happens that when an XML-document
+is rewrapped or reformatted that whitespace is either added or
+removed in places where this can change the meaning of the data.
+For example, when reformatting the snippet::
+
+   <p>
+     King <name>Charles</name>
+     was crowned by the Archbishop
+     of Cantabury
+   </p>
+
+it may happen (depending on the tool used) that a whitespace gets
+lost::
+
+    <p>
+      King <name>Charles</name>was crowned
+      by the Archbishop of Cantabury
+    </p>
+
+Here, the whitespace between "Charles" and "was" has been
+erroneously deleted. Or that a whitespace is added, where
+it should not::
+
+    <p>
+      King <name>Charles
+      </name> was crowned
+      by the Archbishop
+      of Cantabury
+    </p>
+
+This time round the data markup up by name encompasses also
+a line-break and a few blanks, an addition that can mess up
+algorithms that rely on precise data.
+
+Surely, there is the
+`xml:space <https://www.w3.org/TR/REC-xml/#sec-white-space>`_-Attribute.
+But this is often forgotten by the people encoding data in XML
+and sometimes also by the programmers that develop XML-tools.
+Because of this, DHParser offers the `inline_tags`-parameter
+(which can be passed to the xml-serialization functions and also
+be set as an attribute of the :py:class`~nodetree.RootNode`-class).
+
+However, since this, just like the `xml:space`-attribute is not
+very suitable for reflowing XML-source text, DHParser also offers
+a method for reflowing and normalizing XML-documents that preserves
+the data and is suitable at least for many use cases where text-data
+is involved.
+
+This method assumes that the whitespace inside (but not at the fringes)
+of particular text-containing elements, like for exmple `<p>`, is readily
+expandable to an arbitrarily
+long sequence of whitespace characters (blanks, tabs and lind-feeds)
+and likewise compressible to a single blank with out casing harm to
+the data. (As you may notice this is true for paragraphs of prose-text but not
+for poems.)
+
+The reflow-algorithm can be triggered by assigning a column-number to the
+`reflow_col` of the :py:method:`~nodetree.Node.as_xml`-method::
+
+    >>> text = '<p>King <name>Charles</name> was crowned by the Archbishop of Cantabury</p>'
+    >>> tree = parse_xml(text)
+    >>> reflow = tree.as_xml(inline_tags={'p'}, reflow_col=40)
+    >>> print(reflow)
+    <p>King <name>Charles</name> was
+      crowned by the Archbishop of
+      Cantabury</p>
+
+It is noteworthy that no blanks are introduced to the sake of formatting after the
+opening `<p>`-tag or before the closing `</p>`-tag. The same, although this is not
+visible in the example above, is also true for all tags contained inside the `<p>`-tag.
+(Contain tags inherit the inline-property!)
+
+The reason for this is that while it is
+assumed that whitespace may for the sake of formatting always be substituted by
+other bigger or smaller whitespace, non-whitespace must never be substituted by
+whitespace (i.e. must not be added) and, vice versa, whitespace must never be
+substituted by non-whitespace (i.e. it must not be deleted). If this rule is
+strictly obeyed then any form of the data (i.e. formatting to a particular
+column-number) can always be reconstructed and will in fact yield identical
+results for the same reflow-column and the same indentation (which is two
+blanks by default).
+
+It should also be noted that assigning a value to the reflow-parameter changes the
+meaning of the `inline_tags`-parameters in a subtle way. Without reflow, the
+`inline-tags`-parameter marks tags, the content of which is strictly preserved
+when serializing. (Unless, the data itself contains a line-break it will be
+written entirely on a single line, thus the name "inline".) However, if the
+reflow parameter receives a vaue different from 0, the content of the
+"inline-tags" and their descendants is not serialized on a single line any more
+but allowed to reflow according to the above rule.
+
+The common ground between
+these different meanings of the `inline-tags`-parameter is that in both cases
+the data inside the inline-tags is preserved, though in without reflow it is
+preserved strictly byte for byte, while with reflow it is preserved only
+semantically under the assumption that expanding or reducing whitespace does
+not change the semantics.
+
+Also, the data can always be "normalized" by reformatting it to a particular
+column. A special case of this consists in reducing it to one an the same
+one-line-form, by replacing all line-feeds inside inline-tags by blanks.
+(In order to preserve line-feeds they musst be hard-coded with
+tags like ´<br/>`) Normalization by reformatting in the shorted admissible
+form can be achieved by calling :py:func:`~nodetree.reflow_as_oneliner`::
+
+    >>> from DHParser.nodetree import reflow_as_oneliner
+    >>> tree = parse_xml(reflow)
+    >>> print(tree.as_xml(inline_tags={tree.name}))
+    <p>King <name>Charles</name> was
+      crowned by the Archbishop of
+      Cantabury</p>
+    >>> reflow_as_oneliner(tree)
+    >>> print(tree.as_xml(inline_tags={tree.name}))
+    <p>King <name>Charles</name> was crowned by the Archbishop of Cantabury</p>
+
+Note that the call `tree.as_xml(inline_tags={tree.name})` yields a "neutral"
+serialization in the sense that no formatting is applied anywhere.
+
+DHParser also provides a command line-tool to reflow xml-files, conveniently
+named "xml_reflow". It can be called with::
+
+    $ xml_reflow --column 80 FILENAME.xml
 
 
 ElementTree-Exchange
