@@ -313,7 +313,7 @@ of the :py:func:`~nodetree.parse_xml`-function::
 Excurs on XML-formatting
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-A notorious problem when working with XML is the propper handling
+A notorious  problem when working with XML is the propper handling
 of whitespace. It ever so often happens that when an XML-document
 is rewrapped or reformatted that whitespace is either added or
 removed in places where this can change the meaning of the data.
