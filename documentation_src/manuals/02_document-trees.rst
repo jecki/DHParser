@@ -356,21 +356,34 @@ Because of this, DHParser offers the `inline_tags`-parameter
 (which can be passed to the xml-serialization functions and also
 be set as an attribute of the :py:class`~nodetree.RootNode`-class).
 
-However, since this, just like the `xml:space`-attribute is not
-very suitable for reflowing XML-source text, DHParser also offers
-a method for reflowing and normalizing XML-documents that preserves
-the data and is suitable at least for many use cases where text-data
-is involved.
+The main problem with the `xml:space`-attribute consists in the
+fact that it only either allows that all whitespace is preserved
+literally (xml:space="preserve") or that whitespace may be
+added or removed at liberty to format the XML-document
+(xml:space="default"). These two states are not sufficiently
+finegrained to allow the reflow texts without distorting the
+text data.
 
-This method assumes that the whitespace inside (but not at the fringes)
+Non-distorting reflow requires whitespace inside (but not at the fringes)
 of particular text-containing elements, like for exmple `<p>`, is readily
-expandable to an arbitrarily
-long sequence of whitespace characters (blanks, tabs and lind-feeds)
-and likewise compressible to a single blank with out casing harm to
-the data. (As you may notice this is true for paragraphs of prose-text but not
-for poems.)
+expandable to an arbitrarily long sequence of whitespace characters
+(blanks, tabs and lind-feeds)
+and likewise compressible to a single blank without causing harm to
+the data.
 
-The reflow-algorithm can be triggered by assigning a column-number to the
+As you may notice this is true for paragraphs of prose-text but not
+for poems. But this only means that not all text-data is reflowable and
+that reflow should only be applied to text-data where reflow makes sense.
+
+This constraint for data-preserving reflow assumes that whitespace can
+always be substituted by other (larger or smaller) whitespace, but must
+not be added or removed. If this rule is
+strictly obeyed then any form of the data (i.e. formatting to a particular
+column-number) can always be reconstructed and will in fact yield identical
+results for the same reflow-column and the same indentation (which is two
+blanks by default).
+
+DHParser's reflow-algorithm can be triggered by assigning a column-number to the
 `reflow_col` of the :py:method:`~nodetree.Node.as_xml`-method::
 
     >>> text = '<p>King <name>Charles</name> was crowned by the Archbishop of Cantabury</p>'
@@ -381,44 +394,28 @@ The reflow-algorithm can be triggered by assigning a column-number to the
       crowned by the Archbishop of
       Cantabury</p>
 
-It is noteworthy that no blanks are introduced to the sake of formatting after the
+No blanks are introduced for the sake of formatting after the
 opening `<p>`-tag or before the closing `</p>`-tag. The same, although this is not
 visible in the example above, is also true for all tags contained inside the `<p>`-tag.
-(Contain tags inherit the inline-property!)
-
-The reason for this is that while it is
-assumed that whitespace may for the sake of formatting always be substituted by
-other bigger or smaller whitespace, non-whitespace must never be substituted by
-whitespace (i.e. must not be added) and, vice versa, whitespace must never be
-substituted by non-whitespace (i.e. it must not be deleted). If this rule is
-strictly obeyed then any form of the data (i.e. formatting to a particular
-column-number) can always be reconstructed and will in fact yield identical
-results for the same reflow-column and the same indentation (which is two
-blanks by default).
+(Contained tags inherit the inline-property!)
 
 It should also be noted that assigning a value to the reflow-parameter changes the
-meaning of the `inline_tags`-parameters in a subtle way - and likewise the meaning
-of the xml:space-attribute if that is used. Without reflow, the
+meaning of the `inline_tags`-parameter in a subtle way - and likewise the meaning
+of the `xml:space`-attribute if that is used. Without reflow, the
 `inline-tags`-parameter marks tags, the content of which is strictly preserved
 when serializing. (Unless, the data itself contains a line-break it will be
 written entirely on a single line, thus the name "inline".) However, if the
-reflow parameter receives a vaue different from 0, the content of the
+reflow parameter receives a value different from 0, the content of the
 "inline-tags" and their descendants is not serialized on a single line any more
 but allowed to reflow according to the above rule.
 
-The common ground between
-these different meanings of the `inline-tags`-parameter is that in both cases
-the data inside the inline-tags is preserved, though in without reflow it is
-preserved strictly byte for byte, while with reflow it is preserved only
-semantically under the assumption that expanding or reducing whitespace does
-not change the semantics.
-
 Also, the data can always be "normalized" by reformatting it to a particular
-column. A special case of this consists in reducing it to one an the same
-one-line-form, by replacing all line-feeds inside inline-tags by blanks.
-(In order to preserve line-feeds they musst be hard-coded with
-tags like ´<br/>`) Normalization by reformatting in the shorted admissible
-form can be achieved by calling :py:func:`~nodetree.reflow_as_oneliner`::
+column. A special case of this consists in reducing it to one and the same
+one-line-form, by replacing all line-feeds inside inline-tags by blanks and
+any sequence of blanks by a single blank.
+(Line-feeds can still be preserved if necessary by hard-codeing them with
+tags like `<br/>`) This can be achieved by calling the special
+function :py:func:`~nodetree.reflow_as_oneliner`::
 
     >>> from DHParser.nodetree import reflow_as_oneliner
     >>> tree = parse_xml(reflow)
@@ -430,14 +427,19 @@ form can be achieved by calling :py:func:`~nodetree.reflow_as_oneliner`::
     >>> print(tree.as_xml(inline_tags={tree.name}))
     <p>King <name>Charles</name> was crowned by the Archbishop of Cantabury</p>
 
-Note that the call `tree.as_xml(inline_tags={tree.name})` yields a "neutral"
-serialization in the sense that no formatting is applied anywhere.
+Note that the call `tree.as_xml(inline_tags={tree.name})` that treats all tags
+from the root of the tree onward as inline-tags and does not apply reflow
+yields a "neutral" serialization in the sense that no formatting is applied anywhere.
 
 DHParser also provides a command line-tool to reflow xml-files, conveniently
 named "xml_reflow". It can be called with::
 
     $ xml_reflow --column 80 FILENAME.xml
 
+An alternative to reflowing the content of XML-files manually in this way,
+is to use a text-editor that can reflow (and properly indent) lines with
+excess length. An advantage ist that this works also with XML-files that
+contain areas where the data is not reflowable and must be literally preserved.
 
 ElementTree-Exchange
 --------------------
