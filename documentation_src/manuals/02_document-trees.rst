@@ -310,8 +310,8 @@ of the :py:func:`~nodetree.parse_xml`-function::
 
 .. _xml_formatting:
 
-Excourse On XML-formatting
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+XML-reflow
+^^^^^^^^^^
 
 A notorious problem when working with XML is the propper handling
 of whitespace. It ever so often happens that when an XML-document
