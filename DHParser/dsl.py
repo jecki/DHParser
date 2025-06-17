@@ -1,4 +1,4 @@
-# dsl.py - Support for domain specific notations for DHParser
+# dsl.py - Support for domain-specific notations for DHParser
 #
 # Copyright 2016  by Eckhart Arnold (arnold@badw.de)
 #                 Bavarian Academy of Sciences an Humanities (badw.de)
@@ -17,7 +17,7 @@
 
 """
 Module ``dsl`` contains high-level functions for the compilation
-of domain specific languages based on an EBNF-grammar.
+of domain-specific languages based on an EBNF-grammar.
 """
 
 from __future__ import annotations

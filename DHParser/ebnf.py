@@ -1286,7 +1286,7 @@ def get_regex_group(rxp, expect_group: bool = True) -> Tuple[str, str]:
 
 def neutralize_unnamed_groups(rxp: str) -> str:
     r"""Replaces unnamed groups by non-catching groups, i.e. (\w+) -> (?:w+)"""
-    a = 0;
+    a = 0
     al = []
     for b, _ in matching_brackets(rxp, "(", ")", is_regex=True):
         if rxp[b + 1] != "?":
@@ -1433,7 +1433,7 @@ class EBNFCompiler(Compiler):
 
     :ivar optimizations:  Turns on optimizng parser by substituting
             SmartRE-parsers for compound parsers when possible.
-            (see "optimizations" in  DHParser.config.py).
+            (see "optimizations" in DHParser.config.py).
             An empty set means all optimizations are turned off.
     """
     COMMENT_KEYWORD = "COMMENT__"
@@ -2333,8 +2333,11 @@ class EBNFCompiler(Compiler):
             if len(node.children) > n + 1:
                 self.tree.new_error(node, 'Directive "@%s" can have at most %i values.' % (key, n))
 
-        if key in {'comment', 'whitespace'}:
+        if key in {'comment', 'comment_keep', 'whitespace'}:
             check_argnum()
+            if key == 'comment_keep':
+                key = 'comment'
+                self.directives.drop.add(DROP_NO_COMMENTS)
             if node.children[1].name == "symbol":
                 value = node.children[1].content
                 if key == 'whitespace' and value in WHITESPACE_TYPES:

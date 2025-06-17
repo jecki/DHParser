@@ -120,6 +120,17 @@ class TestDirectives:
         assert syntax_tree.pick('comment__')
         assert not syntax_tree.pick(':Whitespace')
 
+    def test_whitespace_keep_comments_alt(self):
+        lang = """@whitespace = linefeed
+                  @comment_keep = /%.*/
+               """ + self.mini_language
+        MinilangParser = grammar_provider(lang)
+        parser = MinilangParser()
+        assert parser
+        syntax_tree = parser("3 + 4 \n  %comment \n * 12")
+        assert syntax_tree.pick('comment__')
+        assert not syntax_tree.pick(':Whitespace')
+
     def test_whitespace_vertical(self):
         lang = "@ whitespace = vertical\n" + self.mini_language
         parser = grammar_provider(lang)()
@@ -2904,10 +2915,10 @@ class TestOptimizations:
         lang = r"""@ optimizations = all
         @ whitespace  = /\s*/           # implicit whitespace, includes linefeeds
         @ literalws   = right           # literals have implicit whitespace on the right hand side
-        @ comment     = /(?:\/\/.*)\n?|(?:\/\*(?:.|\n)*?\*\/) *\n?/   # /* ... */ or // to EOL
+        @ comment_keep = /(?:\/\/.*)\n?|(?:\/\*(?:.|\n)*?\*\/) *\n?/   # /* ... */ or // to EOL
         @ ignorecase  = False           # literals and regular expressions are case-sensitive
         @ reduction   = merge_treetops  # anonymous nodes are being reduced where possible
-        @ drop        = whitespace, no_comments, strings
+        @ drop        = whitespace, strings
 
         document = `hallo` ~
         word     = /\w+/

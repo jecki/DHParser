@@ -831,11 +831,11 @@ view, adding comments to a DSL raises two questions:
    c) both.
 
 2. How do we avoid pollution of the EBNF-grammar with comment markers?
-   It's already curtails the readability that we have to put whitespace
+   It already curtails the readability that we have to put whitespace
    symbols in so many places. And speaking of comments at the end of
    the line: If line-feeds aren't important for us - as in our toy-grammar
    for prose-text, above - we probably wouldn't want to reframe our
-   grammar just to allow for at the end of the line comments.
+   grammar just to allow for comments at the end of the line.
 
 Luckily, there exists a simple and highly intuitive solution that takes
 care of both of these concerns: We admit comments, wherever whitespace
@@ -946,19 +946,10 @@ probably allow to insert comments in as many places as possible.
 Insignificant Whitespace
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-Coding insignificant whitespace and comments is exactly the
-same as coding significant whitespace and comments and does not
-need to be repeated, here. (The combination of insignificant
-whitespace and significant comments, is slightly more complicated,
-and probably best outsourced to some degree to the post-parsing
-processing stages. It will not be discussed here.) However,
-DHParser offers some special support for insignificant
-whitespace and comments, which can make working with these
-easier in some cases.
-
-First of all, DHParser has a special dedicated token for
-insignificant whitespace which is the tilde ``~``-character.
-We have seen this earlier in the definition of the json-Grammar.
+To make grammars more readable, DHParser uses the
+tilde ``~``-character as a dedicated token for
+insignificant whitespace. We have seen this earlier in the
+definition of the json-Grammar.
 
 The ``~``-whitespace-marker differs from the usual pattern for
 defining whitespace in that it is implicitly optional, or what
@@ -1032,13 +1023,93 @@ tilde-whitespace is allowed, a comment defined by the
 
 Since the json-grammar still contains the ``@drop = whitespace, ...``-
 directive from earlier on (next to other tree-reductions), the comments
-have been nicely dropped along with the tilde-whitespace.
+have been dropped along with the tilde-whitespace.
 
 There is one caveat: When using comments alongside with whitespace that
 captures at most one linefeed, the comments should be defined in such
 a way that the last character of a comment is never a linefeed.
 
-Also a few limitations of the tilde-whitespace and directive-defined
+Sometimes it is desirable to keep the comments in the abstract-syntax-tree,
+for example, when the comments contain embedded processing instructions
+for the compilation- or later processing-stages (see ref:`processing_pipelines`).
+If you only want to drop the insignificant whitespace but not the
+comments inside
+(or between) the insignificant whitespace, you can add the keyword
+"no_comments" to the "@drop"-directive, e.g.
+``@drop = no_comments, ...``. Alternatively, you can
+append the suffix "_keep" to the "@comment"-directive, e.g.
+``@comment_keep = ...``. Either way of indicating that comments shall
+not be dropped has the consequence that comments will remain in the
+syntax tree in dedicated "comments\_\_"-nodes while whitespace
+is dropped::
+
+    >>> a = json_gr.find("@drop")
+    >>> b = json_gr.find("\n", a, len(json_gr))
+    >>> json_gr = json_gr[:a] + "@drop = strings, backticked, no_comments" + json_gr[b:]
+    >>> json_parser = create_parser(json_gr, "JSON")
+    >>> keep_comments_st = json_parser(testdata)
+    >>> print(keep_comments_st.as_sxpr(compact = True))
+    (json
+      (object
+        (member
+          (string "array")
+          (array
+            (number "1")
+            (number "2.0")
+            (string "a string")))
+        (comment__
+          " # a string"
+          "               ")
+        (member
+          (string "number")
+          (number "-1.3e+25"))
+        (comment__
+          "  # a number"
+          "               ")
+        (member
+          (string "bool")
+          (bool "false"))
+        (comment__ "  # a bool")))
+
+Otherwise they will
+either be dropped completely if whitespace is dropped or the content
+of the comment appears as part of the whitespace inside the
+":Whitespace"-nodes when whitespace is not dropped::
+
+    >>> a = json_gr.find("@drop")
+    >>> b = json_gr.find("\n", a, len(json_gr))
+    >>> json_gr = json_gr[:a] + "@drop = strings, backticked" + json_gr[b:]
+    >>> json_parser = create_parser(json_gr, "JSON")
+    >>> keep_whitespace_st = json_parser(testdata)
+    >>> print(keep_whitespace_st.as_sxpr(compact = True))
+    (json
+      (object
+        (member
+          (string "array")
+          (:Whitespace " ")
+          (array
+            (number "1")
+            (:Whitespace " ")
+            (number "2.0")
+            (:Whitespace " ")
+            (string "a string")))
+        (:Whitespace
+          " # a string"
+          "               ")
+        (member
+          (string "number")
+          (:Whitespace " ")
+          (number "-1.3e+25"))
+        (:Whitespace
+          "  # a number"
+          "               ")
+        (member
+          (string "bool")
+          (:Whitespace " ")
+          (bool "false"))
+        (:Whitespace "  # a bool")))
+
+A few limitations of the tilde-whitespace and directive-defined
 comments should be kept in mind: 1. Only one kind of insignificant
 whitespace can be defined this way. If there are more kinds of
 insignificant whitespace, all but one need to be defined conventionally
@@ -1139,7 +1210,7 @@ The complete json-grammar now looks like this::
     >>> syntax_tree_ = json_parser(testdata)
     >>> assert syntax_tree_.equals(syntax_tree)
 
-The whitespace defined by the ``@whitespace``-directive can be access from
+The whitespace defined by the ``@whitespace``-directive can be accessed from
 within the grammar via the name ``WHITESPACE__``. Other than the tilde-sign
 this name refers to the pure whitespace that is not intermingles with
 comments. Similarly, comments defined by the ``@comment``-directive can
