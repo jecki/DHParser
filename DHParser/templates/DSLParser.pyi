@@ -167,6 +167,8 @@ def main(called_from_app=False) -> bool:
     args = parser.parse_args()
     file_names, out, log_dir = args.files, args.out[0], ''
 
+    read_local_config(os.path.join(scriptdir, '{NAME}Config.ini'))
+
     if args.serialize:
         serializations['*'] = args.serialize
         access_presets()
@@ -179,8 +181,8 @@ def main(called_from_app=False) -> bool:
         set_preset_value('history_tracking', True)
         set_preset_value('resume_notices', True)
         set_preset_value('log_syntax_trees', frozenset(['CST', 'AST']))  # don't use a set literal, here!
+        start_logging(log_dir)
         finalize_presets()
-    start_logging(log_dir)
 
     if args.singlethread:
         set_config_value('batch_processing_parallelization', False)

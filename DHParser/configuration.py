@@ -17,13 +17,29 @@
 
 """
 Module "configuration.py" defines the default configuration for DHParser.
+
+The best way to change the configuration or to add custom configurations
+for your own project is to place a [DSL-name]config.ini-file in the main-directory
+of your DSL-project that is the directory where your parsing and
+compilation-scripts reside. This configuration can be overwritten by
+a configuration-file with the same name in the current working-directory
+if different configurations for different workspaces are needed.
+
 The configuration values can be read and changed while running via the
-get_config_value() and set_config_value()-functions.
+get_config_value() and set_config_value()-functions. However, the functions
+only affect the configuration values for the current thread. Changes will
+not be visible to any spawned threads or processes.
 
-The presets can also be overwritten before(!) spawning any parsing processes by
-overwriting the values in the CONFIG_PRESET dictionary.
+In order to change the configuration values for spawned processes or threads,
+the presets can also be overwritten before(!) spawning any parsing processes
+with:
 
-The recommended way to use a different configuration in any custom code using
+    access_presets()
+    set_preset_value and get_preset_value()
+    finalize_presets()
+
+Unless configuration-files are used (see above), the recommended way to use
+a different configuration in any custom code using
 DHParser is to use the second method, i.e. to overwrite the values for which
 this is desired in the CONFIG_PRESET dictionary right after the start of the
 program and before any DHParser-function is invoked.
@@ -38,6 +54,7 @@ __all__ = ('CONFIG_PRESET',
            'ALLOWED_PRESET_VALUES',
            'validate_value',
            'access_presets',
+           'is_accessing_presets',
            'finalize_presets',
            'get_preset_value',
            'get_preset_values',
@@ -92,19 +109,20 @@ def validate_value(key: str, value: Any):
     if allowed:
         if isinstance(allowed, tuple):
             if not isinstance(value, (int, float)):
-                raise TypeError('Value %s is not an int or float as required!' % str(value))
+                raise TypeError(f'Value "{value}" is not an int or float as required '
+                                f'for "{key}"!')
             elif not allowed[0] <= value <= allowed[1]:
-                raise ValueError('Value %s does not lie within the range from %s to %s (included)!'
-                                 % (str(value), str(allowed[0]), str(allowed[1])))
+                raise ValueError(f'Value "{value}" for "{key}" does not lie within the '
+                                 f'range from {allowed[0]} to {allowed[1]} (included)!')
         else:
             if not isinstance(value, str) and isinstance(value, Container):
                 for item in value:
                     if item not in allowed:
-                        raise ValueError('Item %s is not one of the allowed values: %s'
-                                         % (str(item), str(allowed)))
+                        raise ValueError(f'Item "{item}" for "{key}" is not one of the '
+                                         f'allowed values {str(sorted(list(allowed)))[1:-1]}!')
             elif value not in allowed:
-                raise ValueError('Value %s is not one of the allowed values: %s'
-                                 % (str(value), str(allowed)))
+                raise ValueError(f'Value "{value}" for "{key}" is not one of '
+                                 f'the allowed values {str(sorted(list(allowed)))[1:-1]}!')
 
 
 def get_forkserver_pid():
@@ -136,7 +154,7 @@ def os_getpid(mp_method = None):
 def get_syncfile_path(pid: int) -> str:
     import os
     import tempfile
-    return os.path.join(tempfile.gettempdir(), 'DHParser_%i.cfg' % pid)
+    return os.path.join(tempfile.gettempdir(), f'DHParser_{pid}.cfg')
 
 
 def access_presets():
@@ -177,6 +195,12 @@ def access_presets():
         finally:
             if f is not None:
                 f.close()
+
+
+def is_accessing_presets() -> bool:
+    """Checks if presets are currently open for changes."""
+    global ACCESSING_PRESETS
+    return ACCESSING_PRESETS
 
 
 def remove_cfg_tempfile(filename: str):
@@ -248,24 +272,33 @@ def set_preset_value(key: str, value: Any, allow_new_key: bool=False):
     PRESETS_CHANGED = True
 
 
-def ingest_config_data(config):
+def ingest_config_data(config, sources=''):
     """Ingests configuration-data from a Python-STL
     configparser.RawConfigParser-object."""
+    errors = []
     access_presets()
     for section in config.sections():
-        if section.lower() == "dhparser":
-            for variable, value in config[section].items():
-                set_preset_value(f"{variable}", eval(value))
-        else:
-            for variable, value in config[section].items():
-                set_preset_value(f"{section}.{variable}", eval(value),
-                                 allow_new_key=True)
+        try:
+            if section.lower() == "dhparser":
+                for variable, value in config[section].items():
+                    set_preset_value(f"{variable}", eval(value))
+            else:
+                for variable, value in config[section].items():
+                    set_preset_value(f"{section}.{variable}", eval(value),
+                                     allow_new_key=True)
+        except ValueError as e:
+            errors.append(' '.join(e.args))
     finalize_presets()
+    if errors:
+        sources = f' files: {sources}'
+        raise ValueError(f"\n\nErrors found in configuration{sources}:\n\n"
+                         + '\n'.join(errors))
 
 
 def read_local_config(ini_filename: str) -> List[str]:
     """Reads a local config file(s) and updates the presets
-    accordingly. All config-files with the same basename as
+    accordingly. All config-files with the same basename
+    (i.e. name without path) as
     "ini_filename" will subsequently be read from these
     directories and be processed in the same order which
     means config-values in files processed later will
@@ -327,7 +360,7 @@ def read_local_config(ini_filename: str) -> List[str]:
     config.optionxform = lambda optionstr: optionstr
     successfully_read = config.read(cfg_files, encoding='utf-8')
     if successfully_read:
-        ingest_config_data(config)
+        ingest_config_data(config, ', '.join(cfg_files))
     return successfully_read
 
 

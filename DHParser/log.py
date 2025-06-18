@@ -64,7 +64,7 @@ except ImportError:
     import DHParser.externallibs.shadow_cython as cython
 
 from DHParser.configuration import access_presets, finalize_presets, get_config_value, \
-    set_config_value, get_preset_value, set_preset_value
+    set_config_value, get_preset_value, set_preset_value, is_accessing_presets
 from DHParser.error import Error
 from DHParser.stringview import StringView
 from DHParser.nodetree import Node, FrozenNode, ZOMBIE_TAG, EMPTY_PTYPE
@@ -100,13 +100,19 @@ CallItem: TypeAlias = Tuple[str, int]      # call stack item: (name, location)
 def start_logging(dirname: str = "LOGS"):
     """Turns logging on and sets the log-directory to ``dirname``.
     The log-directory, if it does not already exist, will be created
-    lazily, i.e. only when logging actually starts."""
-    access_presets()
+    lazily, i.e. only when logging actually starts.
+
+    This function should best be called before spawning any subprocesses,
+    otherwise the dirname might not be propagated to the subprocesses."""
+    accessing_presets = is_accessing_presets()
+    if not accessing_presets:
+        access_presets()
     log_dir = os.path.abspath(dirname) if dirname else ''
     if log_dir != get_preset_value('log_dir'):
         set_preset_value('log_dir', log_dir)
         # set_config_value('log_dir', log_dir)
-    finalize_presets()
+    if not accessing_presets:
+        finalize_presets()
 
 
 def suspend_logging() -> str:
@@ -141,7 +147,7 @@ def log_dir(path: str = "") -> str:
     be done.)
 
     Parameters:
-        path:   The directory path. If empty, the configured value will be
+        path: The directory path. If empty, the configured value will be
             used, i.e. ``configuration.get_config_value('log_dir')``.
 
     Returns:

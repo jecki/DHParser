@@ -27,7 +27,7 @@ except (ImportError, ModuleNotFoundError):
 
 try:
     from DHParser.configuration import access_presets, set_preset_value, \
-        finalize_presets, get_config_value
+        finalize_presets, get_config_value, read_local_config
     from DHParser import dsl
     import DHParser.log
     from DHParser import testing
@@ -92,6 +92,8 @@ if __name__ == '__main__':
     if args.nohistory is not None:
         print('Argument -n or --nohistory is deprecated! Only parsing-histories of failed '
               'tests will be logged. Use -p or --history to log all tests.')
+
+    read_local_config(os.path.join(scriptdir, '{name}Config.ini'))
 
     config_test_parallelization = get_config_value('test_parallelization')
     access_presets()

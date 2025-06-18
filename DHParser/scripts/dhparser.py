@@ -59,6 +59,7 @@ def create_project(path: str):
     TEST_DOCUMENT_TEMPLATE = read_template('example_02_test_Structure_and_Components.ini')
     README_TEMPLATE = read_template('readme_template.md')
     GRAMMAR_TEST_TEMPLATE = read_template('tst_DSL_grammar.pyi')
+    CONFIG_TEMPLATE = read_template('DSLConfig.ini')
     # SERVER_TEMPLATE = read_template('DSLServer.pyi')
 
     name = os.path.basename(path)
@@ -91,11 +92,12 @@ def create_project(path: str):
                 TEST_DOCUMENT_TEMPLATE)
     create_file(name + '.ebnf', EBNF_TEMPLATE.replace('GRAMMAR_NAME', name, 1))
     create_file('README.md', README_TEMPLATE.format(name=name))
+    create_file(f'{name}Config.ini', CONFIG_TEMPLATE.format(name=name))
     reldhparserdir = os.path.relpath(dhparserdir, os.path.abspath('.'))
     grammar_test_py = GRAMMAR_TEST_TEMPLATE.format(
         name=name, reldhparserdir=str(split_path(reldhparserdir))[1:-1])
     create_file(f'tst_{name}_grammar.py', grammar_test_py)
-    create_file('example.dsl', 'Life is but a walking shadow\n')
+    create_file('example.dsl', 'Life is but a working shadow\n')
     os.chmod(f'tst_{name}_grammar.py', 0o755)
     # os.chmod('%sServer.py' % name, 0o755)
     # The following is left to the user as an exercise
