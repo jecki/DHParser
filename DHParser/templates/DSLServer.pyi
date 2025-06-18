@@ -285,10 +285,14 @@ def run_server(host, port, log_path=None):
     read_local_config(os.path.join(scriptdir, 'DSLConfig.ini'))
 
     if sys.version_info < (3, 14, 0) or CONFIG_PRESET['multicore_pool'] != "InterpreterPool":
-        from multiprocessing import set_start_method
+        from multiprocessing import set_start_method, get_start_method
         # 'forkserver' or 'spawn' required to avoid broken process pools
-        if sys.platform.lower().startswith('linux') :  set_start_method('forkserver')
-        else:  set_start_method('spawn')
+        if sys.platform.lower().startswith('linux') :
+            if get_start_method(allow_none=True) != 'forkserver':
+                set_start_method('forkserver', force=True)
+        else:
+            if get_start_method(allow_none=True) != 'spawn':
+                set_start_method('spawn', force=True)
 
     from DHParser.dsl import recompile_grammar
     if grammar_src and not recompile_grammar(grammar_src, force=False,
