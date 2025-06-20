@@ -21,18 +21,16 @@ Purpose
 DHParser is a parser development-framwork that has been developed 
 with three main purposes in mind:
 
-1. Developing parsers for domain specific languages and notations, either existing
+1. Developing *parsers for domain specific languages* and notations, either existing
    notations, like, LaTeX, or newly created DSLs, like the
    [Medieval-Latin-Dictionary-DSL](https://gitlab.lrz.de/badw-it/mlw-dsl-oeffentlich).
-
    Typically, these languages are strict formal languages the grammar of
    which can be described with context-free grammars. (In cases where
    this does not hold like TeX, it is often still possible to describe a 
    reasonably large subset of the formal language with a context free grammar.) 
 
-2. Developing parsers for semi-structured or informally structured
-   text-data. 
-   
+2. Developing *parsers for semi-structured or informally structured
+   text-data*.    
    This kind of data is typically what you get when retro-digitizing
    textual data like printed bibliographies, or reference works or
    dictionaries. Often such works can be captured with a formal 
@@ -47,9 +45,8 @@ with three main purposes in mind:
    like DHParser than with the PHP-parsing-expression-grammar-kit that
    Florian Zacherl has used.)
 
-3. Developing processing-pipelines for tree-structured data. 
-
-   In typical digital humanities applications one wants to produce
+3. Developing *processing pipelines for tree-structured data*.
+   In typical digital-humanities-applications one wants to produce
    different forms of output (say, printed, online-human-readable,
    online-machine-readable) from one and the same source of data.
    Therefore, the parsing stage (if the data source is structured
@@ -187,15 +184,15 @@ Or, serialize as XML:
       </entry>
     </key_store>
 
-**Set up DSL-projects with unit-tests for long-term-development:** 
+**Set up DSL-projects with unit-tests:** 
 
-For larger projects that require testing and incremental grammar development,
-use:
+For larger DSL projects that require testing and incremental 
+grammar development, use:
   
   $ dhparser NEW_PROJECT_NAME 
 
-to set up a project-directory with all the scaffolding for a new DSL-project,
-including the full unit-testing-framework.
+to set up a project-directory with all the scaffolding that a 
+serious DSL-project needs, including the full unit-testing-framework.
 
 Installation
 ------------
