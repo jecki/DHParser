@@ -8,10 +8,11 @@
 
 
 import collections
+import copy
 from functools import partial
 import os
 import sys
-from typing import Tuple, List, Union, Any, Optional, Callable, cast
+from typing import Tuple, List, Union, Any, Optional, Callable, cast, NamedTuple
 
 try:
     import regex as re
@@ -25,7 +26,7 @@ except NameError:
 if scriptdir and scriptdir not in sys.path: sys.path.append(scriptdir)
 
 try:
-    from DHParser import versionnumber
+    from DHParser import versionnumber, EMPTY_NODE
 except (ImportError, ModuleNotFoundError):
     i = scriptdir.rfind("/DHParser/")
     if i >= 0:
@@ -113,9 +114,9 @@ class reGrammar(Grammar):
     _entity = Forward()
     _item = Forward()
     pattern = Forward()
-    source_hash__ = "430619d250dd718690e99c9bf4c325b3"
+    source_hash__ = "68d3fa0293df12fcc8dd94d35d857908"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:_item$|_escape$|_extension$|_anyChar$|_escapedCh$|_illegal$|_number$|_special$|_grpItem$|_character$|BS$|_entity$|_nibble$|_octal$|EOF$)')
+    disposable__ = re.compile('(?:_item$|_octal$|_nibble$|_grpItem$|_anyChar$|_escapedCh$|_special$|EOF$|_number$|_character$|_entity$|_extension$|_escape$|BS$|_illegal$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -139,15 +140,15 @@ class reGrammar(Grammar):
     groupName = RegExp('(?!\\d)\\w+')
     oneOrMore = Text("+")
     lrtype = Alternative(Text("="), Text("!"), Text("<="), Text("<!"))
-    noBacktracking = Text("+")
+    min = Synonym(_number)
     comment = Series(Drop(Text("#")), RegExp('(?:[\\\\]\\)|[^)\\\\]+)+'))
     backRef = Series(Drop(Text("P=")), groupName, mandatory=1)
-    notGreedy = Text("?")
     max = Synonym(_number)
-    flags = Series(RegExp('[aiLmsux]+'), Option(Series(Text("-"), RegExp('[imsx]+'))))
-    min = Synonym(_number)
     range = Series(Drop(Text("{")), min, Option(Series(Drop(Text(",")), max)), Drop(Text("}")))
+    positive = RegExp('[aiLmsux]+')
     repType = Alternative(zeroOrOne, zeroOrMore, oneOrMore, range)
+    negative = Series(Drop(Text("-")), RegExp('[imsx]+'))
+    flags = Alternative(Series(positive, Option(negative)), negative)
     ch = Series(NegativeLookahead(Drop(Text("]"))), Option(BS), _anyChar)
     chSpecial = RegExp('[abfnrtv]')
     _nibble = RegExp('[0-9a-fA-F]')
@@ -174,6 +175,8 @@ class reGrammar(Grammar):
     start = Text("^")
     any = Text(".")
     _special = Alternative(any, start, end)
+    noBacktracking = Text("+")
+    notGreedy = Text("?")
     grpRepetition = Series(_grpItem, repType, Option(Alternative(notGreedy, noBacktracking)), dwsp__)
     grpPattern = ZeroOrMore(Alternative(grpRepetition, _grpItem))
     grpRegex = Series(dwsp__, grpPattern, ZeroOrMore(Series(Drop(Text("|")), dwsp__, grpPattern)))
@@ -181,10 +184,10 @@ class reGrammar(Grammar):
     namedGroup = Series(Drop(Text("P<")), groupName, Drop(Text(">")), grpRegex, mandatory=1)
     subRegex = Series(Drop(Text(">")), grpRegex, mandatory=1)
     capturing = Synonym(grpRegex)
-    nonCapturing = Series(Option(flags), Drop(Text(":")), grpRegex, mandatory=2)
     bifurcation = Series(Drop(Text("(")), Alternative(groupId, groupName), Drop(Text(")")), pattern, Drop(Text("|")), grpPattern, mandatory=1)
-    _extension = Series(Drop(Text("?")), Alternative(nonCapturing, subRegex, namedGroup, backRef, comment, lookaround, bifurcation), mandatory=1)
     repetition = Series(_item, repType, Option(Alternative(notGreedy, noBacktracking)), dwsp__)
+    nonCapturing = Series(Option(flags), Drop(Text(":")), grpRegex, mandatory=2)
+    _extension = Series(Drop(Text("?")), Alternative(nonCapturing, subRegex, namedGroup, backRef, comment, lookaround, bifurcation), mandatory=1)
     group = Series(Drop(Text("(")), Alternative(_extension, capturing), Drop(Text(")")), mandatory=1)
     flagGroups = OneOrMore(Series(Drop(Text("(?")), flags, Drop(Text(")")), mandatory=2))
     regex = Series(dwsp__, pattern, ZeroOrMore(Series(Drop(Text("|")), dwsp__, pattern)))
@@ -215,6 +218,19 @@ get_grammar = parsing.factory # for backwards compatibility, only
 
 # def contains_linefeed(path: Path) -> bool:
 #     return path[-1].content.find('\n') >= 0
+
+class Flags(NamedTuple):
+    positive: set
+    negative: set
+
+    def __bool__(self) -> bool:
+        return bool(self.positive) and bool(self.negative)
+
+    def __str__(self) -> str:
+        return f"({''.join(self.positive)},{''.join(self.negative)})"
+
+NO_FLAGS = Flags(set(), set())
+FLAG_SET = frozenset({'a', 'i', 'L', 'm', 's', 'u', 'x'})
 
 
 re_AST_transformation_table = {
@@ -252,6 +268,10 @@ ASTTransformation: Junction = Junction(
 #
 #######################################################################
 
+
+
+
+
 class reCompiler(Compiler):
     """Compiler for the abstract-syntax-tree of a 
         re source file.
@@ -271,163 +291,86 @@ class reCompiler(Compiler):
     def finalize(self, result: Any) -> Any:
         return result
 
+    def gather_flags(self, node: Node) -> Flags:
+        pos = []
+        neg = []
+        for i in range(len(node.children)):
+            if node[i].name != 'flags':
+                break
+            pos.append(node[i].get('positive', EMPTY_NODE).content)
+            neg.append(node[i].get('negative', EMPTY_NODE).content)
+        pstr = ''.join(pos)
+        nstr = ''.join(neg)
+        pflags = set(pstr)
+        nflags = set(nstr)
+        if len(pflags) > len(pstr):
+            self.tree.new_error(node, f'One or more flags in: "{pstr}" are redundant!', WARNING)
+        if len(nflags) > len(nstr):
+            self.tree.new_error(node, f'One or more flags in: "-{nstr}" are redundant!', WARNING)
+        if pflags & nflags:
+            self.tree.new_error(node, f'Cannot set and unset "{pflags & nflags}" at the same time!', ERROR)
+        return Flags(pflags, nflags)
+
+    def evaluate_flags(self) -> Flags:
+        for i in range(len(self.path) - 1, -1, -1):
+            effective = self.path[i].get_attr('effective_flags', NO_FLAGS)
+            if effective:
+                break
+        else:
+            effective = Flags({'u'}, set())
+            i = -1
+        for nd in self.path[i + 1:]:
+            flags = nd.get_attr('flags', False)
+            if flags:
+                effective.positive.update(flags.positive)
+                effective.positive.difference_update(flags.negative)
+                effective.negative.difference_update(FLAG_SET)
+                effective.negative.update(FLAG_SET - effective.positive)
+                nd.attr['effective_flags'] = copy.deepcopy(effective)
+
+    def get_effective_flags(self, node) -> Flags:
+        path = self.path
+        for i in range(len(path) - 1, -1, -1):
+            effective = path[i].get_attr('effective_flags', False)
+            if effective:
+                return effective
+            if path[i].has_attr('flags'):
+                self.tree.new_error(
+                    node,
+                    "Internal Error: Effective flags should already have been evaluated",
+                    ERROR)
+        else:
+            return NO_FLAGS
+
     def on_regular_expression(self, node):
+        if node[0].name == 'flagGroups':
+            flags = self.gather_flags(node[0])
+            if flags:  node.attr['flags'] = flags
+            node.result = node.result[1:]
+            self.evaluate_flags()
         return self.fallback_compiler(node)
 
-    # def on_regex(self, node):
-    #     return node
+    def on_nonCapturing(self, node):
+        if node[0].name == 'flags':
+            flags = self.gather_flags(node)
+            if flags:  node.attr['flags'] = flags
+            for i in range(len(node.children)):
+                if node[i].name != 'flags':
+                    node.result = node.result[i:]
+                    break
+            self.evaluate_flags()
+        return self.fallback_compiler(node)
 
-    # def on_pattern(self, node):
-    #     return node
+    def on_pattern(self, node):
+        node = self.fallback_compiler(node)
+        replace_by_single_child(self.path)
+        return node
 
-    # def on_item(self, node):
-    #     return node
-
-    # def on_flagGroups(self, node):
-    #     return node
-
-    # def on_flags(self, node):
-    #     return node
-
-    # def on_repetition(self, node):
-    #     return node
-
-    # def on_repeater(self, node):
-    #     return node
-
-    # def on_zeroOrOne(self, node):
-    #     return node
-
-    # def on_zeroOrMore(self, node):
-    #     return node
-
-    # def on_oneOrMore(self, node):
-    #     return node
-
-    # def on_range(self, node):
-    #     return node
-
-    # def on_min(self, node):
-    #     return node
-
-    # def on_max(self, node):
-    #     return node
-
-    # def on__number(self, node):
-    #     return node
-
-    # def on_notGreedy(self, node):
-    #     return node
-
-    # def on_noBacktracking(self, node):
-    #     return node
-
-    # def on_special(self, node):
-    #     return node
-
-    # def on_any(self, node):
-    #     return node
-
-    # def on_start(self, node):
-    #     return node
-
-    # def on_end(self, node):
-    #     return node
-
-    # def on_characters(self, node):
-    #     return node
-
-    # def on_character(self, node):
-    #     return node
-
-    # def on_escape(self, node):
-    #     return node
-
-    # def on_reEsc(self, node):
-    #     return node
-
-    # def on_chEsc(self, node):
-    #     return node
-
-    # def on_chCode(self, node):
-    #     return node
-
-    # def on_hex(self, node):
-    #     return node
-
-    # def on_octal(self, node):
-    #     return node
-
-    # def on_oct(self, node):
-    #     return node
-
-    # def on_chName(self, node):
-    #     return node
-
-    # def on_groupId(self, node):
-    #     return node
-
-    # def on_groupName(self, node):
-    #     return node
-
-    # def on_error(self, node):
-    #     return node
-
-    # def on__illegal(self, node):
-    #     return node
-
-    # def on_charset(self, node):
-    #     return node
-
-    # def on_chRange(self, node):
-    #     return node
-
-    # def on_escapedSet(self, node):
-    #     return node
-
-    # def on_escapedCh(self, node):
-    #     return node
-
-    # def on_ch(self, node):
-    #     return node
-
-    # def on_group(self, node):
-    #     return node
-
-    # def on_extension(self, node):
-    #     return node
-
-    # def on_nonCapturing(self, node):
-    #     return node
-
-    # def on_subRegex(self, node):
-    #     return node
-
-    # def on_namedGroup(self, node):
-    #     return node
-
-    # def on_backRef(self, node):
-    #     return node
-
-    # def on_comment(self, node):
-    #     return node
-
-    # def on_lookaround(self, node):
-    #     return node
-
-    # def on_lrtype(self, node):
-    #     return node
-
-    # def on_bifurcation(self, node):
-    #     return node
-
-    # def on_BS(self, node):
-    #     return node
-
-    # def on_EOF(self, node):
-    #     return node
-
-
+    def on_characters(self, node):
+        if re.fullmatch(r'[ \t]*\n[ \t]*', node.content):
+            if 'x' in self.get_effective_flags(node).positive:
+                return EMPTY_NODE
+        return node
 
 compiling: Junction = create_junction(
     reCompiler, "AST", "re")

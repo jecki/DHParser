@@ -684,7 +684,7 @@ def is_anonymous(path: Path) -> bool:
     """Returns ``True`` if the current node is anonymous."""
     # return path[-1].anonymous
     tn = path[-1].name
-    return not tn or tn[0] == ':'
+    return not bool(tn) or tn[0] == ':'
 
 
 def is_anonymous_leaf(path: Path) -> bool:
@@ -703,7 +703,7 @@ RX_WHITESPACE = re.compile(r'\s*$')
 def contains_only_whitespace(path: Path) -> bool:
     r"""Returns ``True`` for nodes that contain only whitespace regardless
     of the name, i.e. nodes the content of which matches the regular
-    expression /\s*/, including empty nodes. Note, that this is not true
+    expression /\s*/, including empty nodes. Note that this is not true
     for anonymous whitespace nodes that contain comments."""
     return bool(RX_WHITESPACE.match(path[-1].content))
 

@@ -1549,6 +1549,9 @@ class EBNFCompiler(Compiler):
         tt_name = self.grammar_name + '_AST_transformation_table'
         transtable = [tt_name + ' = {',
                       '    # AST Transformations for the ' + self.grammar_name + '-grammar',
+                      '    # Special rules:',
+                      '    # "<<<": [],  # called once before the tree-traversal starts',
+                      '    # ">>>": [],  # called once after the tree-traversal has finished',
                       '    # "<": [],  # called for each node before calling its specific rules',
                       '    # "*": [],  # fallback for nodes that do not appear in this table',
                       '    # ">": [],   # called for each node after calling its specific rules']

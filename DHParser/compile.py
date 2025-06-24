@@ -267,7 +267,7 @@ class Compiler:
             self.path.pop()
 
     def fallback_compiler(self, node: Node) -> Any:
-        """This is a generic compiler function which will be called on
+        """This is a generic compiler function that will be called on
         all those node types for which no compiler method `on_XXX` has
         been defined."""
         replacements = {}  # type: Dict[int, Node]

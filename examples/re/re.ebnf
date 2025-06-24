@@ -45,7 +45,9 @@ _item      = (_entity | charSeq) ~
 _entity    = _special | _escape | charset | group
 
 flagGroups = { "(?" flags § ")" }+
-flags      = /[aiLmsux]+/ [`-` /[imsx]+/]
+flags      =  positive [negative] | negative
+  positive = /[aiLmsux]+/
+  negative = "-" /[imsx]+/
 
 
 #: repetition
