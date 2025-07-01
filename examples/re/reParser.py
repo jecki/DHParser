@@ -26,7 +26,7 @@ except NameError:
 if scriptdir and scriptdir not in sys.path: sys.path.append(scriptdir)
 
 try:
-    from DHParser import versionnumber, EMPTY_NODE
+    from DHParser import versionnumber, EMPTY_NODE, LEAF_NODE
 except (ImportError, ModuleNotFoundError):
     i = scriptdir.rfind("/DHParser/")
     if i >= 0:
@@ -219,19 +219,6 @@ get_grammar = parsing.factory # for backwards compatibility, only
 # def contains_linefeed(path: Path) -> bool:
 #     return path[-1].content.find('\n') >= 0
 
-class Flags(NamedTuple):
-    positive: set
-    negative: set
-
-    def __bool__(self) -> bool:
-        return bool(self.positive) and bool(self.negative)
-
-    def __str__(self) -> str:
-        return f"({''.join(self.positive)},{''.join(self.negative)})"
-
-NO_FLAGS = Flags(set(), set())
-FLAG_SET = frozenset({'a', 'i', 'L', 'm', 's', 'u', 'x'})
-
 
 re_AST_transformation_table = {
     # AST Transformations for the re-grammar
@@ -269,7 +256,21 @@ ASTTransformation: Junction = Junction(
 #######################################################################
 
 
+class Flags(NamedTuple):
+    positive: set
+    negative: set
 
+    def __bool__(self) -> bool:
+        return bool(self.positive) or bool(self.negative)
+
+    def __str__(self) -> str:
+        return f"({''.join(self.positive)},{''.join(self.negative)})"
+
+NO_FLAGS = Flags(set(), set())
+FLAG_SET = frozenset({'a', 'i', 'L', 'm', 's', 'u', 'x'})
+
+RX_INTERRUPTED_COMMENT = re.compile(r'([ \t]*(?:#.*)?\n)*(?:[ \t]*(?:#.*)$)')
+RX_COMMENT = re.compile(r'([ \t]*(?:#.*)?\n)*(?:[ \t]*(?:#.*)?$)?')
 
 
 class reCompiler(Compiler):
@@ -282,12 +283,15 @@ class reCompiler(Compiler):
         self.forbid_returning_None = True  # set to False if any compilation-method is allowed to return None
 
     def reset(self):
+        self.last_leaf: Node = EMPTY_NODE
         super().reset()
         # initialize your variables here, not in the constructor!
 
     def prepare(self, root: RootNode) -> None:
         assert root.stage == "AST", f"Source stage `AST` expected, `but `{root.stage}` found."
         root.stage = "re"
+        self.last_leaf = root.pick(LEAF_NODE, reverse=True)
+
     def finalize(self, result: Any) -> Any:
         return result
 
@@ -311,7 +315,7 @@ class reCompiler(Compiler):
             self.tree.new_error(node, f'Cannot set and unset "{pflags & nflags}" at the same time!', ERROR)
         return Flags(pflags, nflags)
 
-    def evaluate_flags(self) -> Flags:
+    def evaluate_flags(self):
         for i in range(len(self.path) - 1, -1, -1):
             effective = self.path[i].get_attr('effective_flags', NO_FLAGS)
             if effective:
@@ -362,14 +366,28 @@ class reCompiler(Compiler):
         return self.fallback_compiler(node)
 
     def on_pattern(self, node):
+        # if 'x' in self.get_effective_flags(node).positive:  # NEED a pre-processor for this!
+        #     result = [node[0]]
+        #     for nd in node.children[1:]:
+        #         if (result[-1].name == 'characters'
+        #                 and (nd.name == 'characters' or
+        #                      (nd.name == 'any'
+        #                       and RX_INTERRUPTED_COMMENT.fullmatch(result[-1].content)))):
+        #                 result[-1].result = result[-1].content + nd.content
+        #         else:
+        #             result.append(nd)
+        #     if len(result) != len(node.children):
+        #         node.result = tuple(result)
         node = self.fallback_compiler(node)
         replace_by_single_child(self.path)
         return node
 
     def on_characters(self, node):
-        if re.fullmatch(r'[ \t]*\n[ \t]*', node.content):
-            if 'x' in self.get_effective_flags(node).positive:
-                return EMPTY_NODE
+        # content = node.content
+        # if node is self.last_leaf or content.find('\n') >= 0:
+        #     if RX_COMMENT.fullmatch(node.content):
+        #         if 'x' in self.get_effective_flags(node).positive:
+        #             return EMPTY_NODE
         return node
 
 compiling: Junction = create_junction(
