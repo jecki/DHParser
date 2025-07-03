@@ -83,7 +83,7 @@ def end_points(junctions: Iterable[Junction]) -> Set[str]:
     """Returns all "final" destination stages, i.e. destinations
     that are not a source of another junction."""
     sources = { j.src for j in junctions }
-    return { j.dst for j in junctions if j.dst not in sources }
+    return {j.dst for j in junctions if j.dst not in sources}
 
 
 def extract_data(tree_or_data: Union[RootNode, Node, Any]) -> Any:
@@ -255,7 +255,7 @@ def full_pipeline(source: str,
 #     return factory()(source)
 
 class PseudoJunction(NamedTuple):
-    factory: PreprocessorFactory  #  Callable  # get thread safe preprocessing function
+    factory: Union[PreprocessorFactory, ParserFactory]
     __module__ = __name__  # needed for cython compatibility
 
 

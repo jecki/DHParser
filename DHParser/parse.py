@@ -559,7 +559,7 @@ class Parser:
 
                 Notes: 1.the set is empty for parser that derive neither
                 from :py:class:`UnaryParser` nor from :py:class:`NaryParser`
-                2. unary parser have exactly on sub-parser 3. n-ary parsers
+                2. unary parsers have exactly one sub-parser 3. n-ary parsers
                 have one or more sub_parsers. For n-ary-parsers
                 len(p.sub_parser) can be lower than len(p.parsers), in case
                 one and the same parser is referred to more than once
