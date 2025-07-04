@@ -229,6 +229,8 @@ def reTokenizer(original_text) -> Tuple[str, List[Error]]:
         i += 1
         pattern = ''.join(result)
 
+    # TODO: Source mapping still missing!
+
     return original_text, []
 
 preprocessing: PseudoJunction = create_preprocess_junction(
