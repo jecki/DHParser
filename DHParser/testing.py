@@ -41,23 +41,20 @@ import threading
 import time
 from typing import Dict, List, Union, Deque, Optional, cast
 
-from DHParser import RESUME_NOTICE
-
-if sys.version_info >= (3, 6, 0):
-    OrderedDict = dict
-else:
-    from collections import OrderedDict
+assert sys.version_info >= (3, 6, 0)
+OrderedDict = dict
 
 from DHParser.configuration import get_config_value, set_config_value
-from DHParser.pipeline import extract_data, run_pipeline
 from DHParser.error import Error, is_error, PARSER_LOOKAHEAD_MATCH_ONLY, \
     PARSER_LOOKAHEAD_FAILURE_ONLY, MANDATORY_CONTINUATION_AT_EOF, \
     MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, CAPTURE_STACK_NOT_EMPTY_NON_ROOT_ONLY, \
-    AUTOCAPTURED_SYMBOL_NOT_CLEARED_NON_ROOT, PYTHON_ERROR_IN_TEST
+    AUTOCAPTURED_SYMBOL_NOT_CLEARED_NON_ROOT, PYTHON_ERROR_IN_TEST, RESUME_NOTICE
 from DHParser.log import is_logging, clear_logs, local_log_dir, log_parsing_history
 from DHParser.parse import Lookahead, artifact
 from DHParser.server import RX_CONTENT_LENGTH, RE_DATA_START, JSONRPC_HEADER_BYTES
 from DHParser.nodetree import Node, RootNode, deserialize, flatten_sxpr, ZOMBIE_TAG
+from DHParser.pipeline import extract_data, run_pipeline
+from DHParser.preprocess import nil_preprocessor_factory
 from DHParser.trace import set_tracer, trace_history
 from DHParser.transform import traverse, remove_children
 from DHParser.toolkit import load_if_file, re, instantiate_executor, TypeAlias, \
@@ -453,7 +450,8 @@ def md_codeblock(code: str) -> str:
 
 
 def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT', verbose=False,
-                 junctions=set(), show=set(), serializations: Dict[str, List[str]] = dict()):
+                 junctions=set(), show=set(), serializations: Dict[str, List[str]] = dict(),
+                 preprocessor_factory=nil_preprocessor_factory):
     """
     Unit tests for a grammar-parser and ast-transformations.
 
@@ -511,6 +509,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
     errata = []
     config_history_tracking = get_config_value('history_tracking')
     config_resume_notices = get_config_value('resume_notices')
+    preprocessor = preprocessor_factory()
     parser = parser_factory()
     transform = transformer_factory()
 
@@ -587,7 +586,8 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         if not track_history:
             set_tracer(parser[parser_name].descendants(), trace_history)
             try:
-                _ = parser(test_code, parser_name)
+                _, prepped_text, _ ,_ = preprocessor(test_code, parser_name)
+                _ = parser(prepped_text, parser_name)
             except AttributeError:
                 pass
             except KeyboardInterrupt as ctrlC:
@@ -657,9 +657,11 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         for test_name, test_code in tests.get('match', dict()).items():
             errflag = len(errata)
             err: Optional[Error] = None
+            errors: List[Error] = []
             clean_test_name = str(test_name).replace('*', '')
             try:
-                cst = parser(test_code, parser_name)
+                _, prepped_text, back_mapping, errors = preprocessor(test_code, parser_name)
+                cst = parser(prepped_text, parser_name, back_mapping)
             except AttributeError as upe:
                 cst = RootNode()
                 cst = cst.new_error(Node(ZOMBIE_TAG, "").with_pos(0), str(upe))
@@ -671,7 +673,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 raise ctrlC
 
             tests.setdefault('__CST__', {})[test_name] = cst
-            # errors = []  # type: List[Error]
+            for e in errors:  cst.add_error(None, e)
             if is_error(cst.error_flag) and not lookahead_artifact(cst):
                 errors = [e for e in cst.errors if e.code not in POSSIBLE_ARTIFACTS]
                 errata.append('Match test "%s" for parser "%s" failed:'
@@ -908,10 +910,11 @@ def grammar_suite(directory, parser_factory, transformer_factory,
                   ignore_unknown_filetypes=False,
                   report='REPORT', verbose=True,
                   junctions=set(), show=set(),
-                  serializations: Dict[str, List[str]] = dict()):
+                  serializations: Dict[str, List[str]] = dict(),
+                  preprocessor_factory=nil_preprocessor_factory):
     """
-    Runs all grammar unit tests in a directory. A file is considered a test
-    unit, if it has the word "test" in its name.
+    Runs all grammar unit tests in a directory. A file is considered a test-unit,
+    if it has the word "test" in its name.
     """
     assert isinstance(report, str)
     assert isinstance(show, set) and all(isinstance(element, str) for element in show), \
@@ -940,7 +943,8 @@ def grammar_suite(directory, parser_factory, transformer_factory,
         results = []
         for filename in tests:
             parameters = (filename, parser_factory, transformer_factory,
-                          report, verbose, junctions, show, serializations)
+                          report, verbose, junctions, show, serializations,
+                          preprocessor_factory)
             results.append(pool.submit(grammar_unit, *parameters))
         done, not_done = concurrent.futures.wait(results)
         assert not not_done, str(not_done)

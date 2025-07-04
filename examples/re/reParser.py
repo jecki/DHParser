@@ -179,7 +179,6 @@ def reTokenizer(original_text) -> Tuple[str, List[Error]]:
     in_class = False
     result = []
     i = 0
-
     def process_verbose_flag(k):
         default = True
         while k < len(pattern) and pattern[k] in {'-', 'i', 'm', 'x', 'u', 's', 'L', 'a'}:

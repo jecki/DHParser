@@ -183,7 +183,7 @@ class TestTestfiles:
         class ParserFactory:
             def __init__(self):
                 self.root_parser__ = self
-            def __call__(self, document, name):
+            def __call__(self, document, name, source_mapping=None):
                 return parse_sxpr('(a (b "X"))')
             def __getitem__(self, item):
                 return self

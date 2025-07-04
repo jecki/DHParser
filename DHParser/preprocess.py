@@ -60,6 +60,7 @@ __all__ = ('RX_TOKEN_NAME',
            'source_map',
            'apply_src_mappings',
            'nil_preprocessor',
+           'nil_preprocessor_factory',
            'chain_preprocessors',
            'prettyprint_tokenized',
            'tokenized_to_original_mapping',
@@ -132,6 +133,10 @@ def nil_preprocessor(original_text: str, original_name: str) -> PreprocessorResu
                               original_text,
                               lambda i: SourceLocation(original_name, original_text, i),
                               [])
+
+
+def nil_preprocessor_factory() -> PreprocessorFunc:
+    return nil_preprocessor
 
 
 def _apply_preprocessors(original_text: str, original_name: str,

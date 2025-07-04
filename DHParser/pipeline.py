@@ -36,7 +36,8 @@ from __future__ import annotations
 import functools
 
 from functools import partial
-from typing import Set, Union, Any, Dict, List, Tuple, Iterable, Callable, Sequence, NamedTuple
+from typing import Set, Union, Any, Dict, List, Tuple, Iterable, Optional, Sequence, NamedTuple, \
+    Callable
 
 from DHParser.compile import compile_source, process_tree, CompilerFactory
 from DHParser.configuration import get_config_value
@@ -259,28 +260,30 @@ class PseudoJunction(NamedTuple):
     __module__ = __name__  # needed for cython compatibility
 
 
-def _preprocessor_factory(tokenizer: Tokenizer,
+def _preprocessor_factory(prep_func: Union[PreprocessorFunc, Tokenizer],
                           include_regex,
                           comment_regex,
-                          derive_file_name) -> PreprocessorFunc:
+                          derive_file_name,
+                          func_type: Optional[type]=None) -> PreprocessorFunc:
     # below, the second parameter must always be the same as Grammar.COMMENT__!
     find_next_include = gen_find_include_func(include_regex, comment_regex, derive_file_name)
     include_prep = partial(preprocess_includes, find_next_include=find_next_include)
-    tokenizing_prep = make_preprocessor(tokenizer)
+    print(prep_func.__annotations__)
+    tokenizing_prep = make_preprocessor(prep_func)
     return chain_preprocessors(include_prep, tokenizing_prep)
 
 
-def create_preprocess_junction(tokenizer: Tokenizer,
+def create_preprocess_junction(prep_func: Union[PreprocessorFunc, Tokenizer],
                                include_regex,
                                comment_regex,
-                               derive_file_name: DeriveFileNameFunc=lambda name: name) \
-                                -> PseudoJunction:
+                               derive_file_name: DeriveFileNameFunc=lambda name: name,
+                               func_type: Optional[type]=None) -> PseudoJunction:
     """Creates a factory for thread-safe preprocessing functions as well as a
     thread-safe preprocessing function."""
     preprocessor_factory = partial(
-        _preprocessor_factory, tokenizer=tokenizer,
+        _preprocessor_factory, prep_func=prep_func,
         include_regex=include_regex, comment_regex=comment_regex,
-        derive_file_name=derive_file_name)
+        derive_file_name=derive_file_name, func_type=func_type)
     thread_safe_factory = ThreadLocalSingletonFactory(preprocessor_factory)
     # preprocess = partial(_preprocess, factory=thread_safe_factory)
     return PseudoJunction(thread_safe_factory)  # , preprocess)

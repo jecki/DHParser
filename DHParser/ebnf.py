@@ -138,7 +138,7 @@ from a grammar, step by step::
     >>> python_src = ebnf_compiler(AST)
     >>> set_config_value('optimizations', save)
     >>> assert not AST.errors
-    >>> print(python_src)
+    >>> print(python_src[:python_src.find("\\ntry:")])  # leave out consistency check at the end, here
     class ArithmeticGrammar(Grammar):
         r"""Parser for an Arithmetic source file.
         """
