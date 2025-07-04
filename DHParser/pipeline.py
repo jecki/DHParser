@@ -34,6 +34,7 @@ algorithmically.
 from __future__ import annotations
 
 import functools
+import sys
 
 from functools import partial
 from typing import Set, Union, Any, Dict, List, Tuple, Iterable, Optional, Sequence, NamedTuple, \
@@ -47,7 +48,8 @@ from DHParser.parse import Grammar, ParserFactory, ParserFactory
 from DHParser.preprocess import PreprocessorFactory, PreprocessorFunc, Tokenizer, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors, \
     DeriveFileNameFunc
-from DHParser.toolkit import ThreadLocalSingletonFactory, deprecation_warning, deprecated
+from DHParser.toolkit import ThreadLocalSingletonFactory, deprecation_warning, deprecated, \
+    get_annotations
 from DHParser.trace import resume_notices_on, set_tracer, trace_history
 from DHParser.transform import TransformerFunc, TransformerFactory, transformer, TransformationDict
 
@@ -268,15 +270,33 @@ def _preprocessor_factory(prep_func: Union[PreprocessorFunc, Tokenizer],
     # below, the second parameter must always be the same as Grammar.COMMENT__!
     find_next_include = gen_find_include_func(include_regex, comment_regex, derive_file_name)
     include_prep = partial(preprocess_includes, find_next_include=find_next_include)
-    print(prep_func.__annotations__)
-    tokenizing_prep = make_preprocessor(prep_func)
-    return chain_preprocessors(include_prep, tokenizing_prep)
+    anno = get_annotations(prep_func)
+    try:
+        if anno['return'] == "PreprocessorResult":
+            assert func_type is None or func_type is PreprocessorFunc, \
+                f"func_type={func_type} is incompatible with return type PreprocessorResult of " \
+                f"parameter prep_func when calling DHParser.pipeline.create_preprocess_junction()"
+            prep = prep_func
+        else:
+            assert func_type is None or func_type is Tokenizer, \
+                f"func_type={func_type} is incompatible with return type {anno['return']} of " \
+                f"parameter prep_func when calling DHParser.pipeline.create_preprocess_junction()"
+            prep = make_preprocessor(prep_func)
+    except KeyError:
+        assert func_type is not None, \
+            "Please specify the kind of preprocessor by passing parameter func_type=Tokenizer " \
+            "or func_type=PreprocessorFunc to DHParser.pipeline.create_preprocess_junction()"
+        prep = prep_func if func_type is PreprocessorFunc else make_preprocessor(prep_func)
+    return chain_preprocessors(include_prep, prep)
+
+def same_name(name: str) -> str:
+    return name
 
 
 def create_preprocess_junction(prep_func: Union[PreprocessorFunc, Tokenizer],
                                include_regex,
                                comment_regex,
-                               derive_file_name: DeriveFileNameFunc=lambda name: name,
+                               derive_file_name: DeriveFileNameFunc=same_name,
                                func_type: Optional[type]=None) -> PseudoJunction:
     """Creates a factory for thread-safe preprocessing functions as well as a
     thread-safe preprocessing function."""

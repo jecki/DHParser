@@ -26,6 +26,7 @@ functions that are very generic.
 
 from __future__ import annotations
 
+import annotationlib
 # import concurrent.futures  # commented out to save startup time
 import functools
 import io
@@ -88,6 +89,7 @@ __all__ = ('re',
            'DHPARSER_FILES',
            'identify_python',
            'identity',
+           'get_annotations',
            # 'gen_id',
            'ThreadLocalSingletonFactory',
            'LazyRE',
@@ -457,6 +459,14 @@ def deprecated(message: str) -> Callable:
             return f(*args, **kwargs)
         return wrapper
     return decorator
+
+
+def get_annotations(item):
+    if sys.version_info >= (3, 14):
+        from annotationlib import get_annotations
+        return get_annotations(item, format=annotationlib.Format.STRING)
+    else:
+        return item.__annotations__
 
 
 #######################################################################
