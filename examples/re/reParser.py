@@ -88,80 +88,80 @@ if DHParser.versionnumber.__version_info__ < (1, 8, 0):
 BRACKETS = { '(': ')', '[': ']', '{': '}' }
 
 
-def is_escaped(t: str, i: int) -> Optional[bool]:
-    """Returns True, if the character at position i is escaped,
-    False if it is not and None in case the position i exceeds
-    the bounds of string t.
-    """
-    if 0 <= i < len(t):
-        r = i
-        while r > 0 and t[r - 1] == '\\':
-            r -= 1
-        return (i - r) % 2 != 0
-    else:
-        return None
-
-
-def find_unescaped(t: str, ch: str, i: int) -> int:
-    r"""Find the position of an unescaped character in a string.
-    Examples::
-
-        >>> r"(a\)b)".find(")", 0)
-        3
-        >>> find_unescaped(r"(a\)b)", ")", 0)
-        5
-        >>> find_unescaped(r"(a\\)b)", ")", 0)
-        4
-        >>> find_unescaped(r"(a\\\)b)", ")", 0)
-        7
-    """
-    while i >= 0:
-        i = t.find(ch, i)
-        if is_escaped(t, i):
-            i += 1
-        else:
-            break
-    return i
-
-
-def matching_bracket(t: str, i: int) -> int:
-    r"""Find matching bracket, ignoring escaped brackets.
-    Examples::
-
-        >>> matching_bracket(r"(a\)b)", 0)
-        5
-        >>> matching_bracket(r"(a\\)b)", 0)
-        4
-        >>> matching_bracket(r"(a\\\)b)", 0)
-        7
-        >>> matching_bracket(r"(a(b(c)))", 0)
-        8
-        >>> matching_bracket(r"(a(b(c)))", 2)
-        7
-        >>> matching_bracket(r"(a(b\(c)))", 2)
-        7
-    """
-    opening = t[i]
-    closing = BRACKETS[opening]
-    counter = 1
-    MAX = len(t)
-    k1 = -1
-    k2 = -1
-    while counter > 0:
-        if k1 <= i:
-            k1 = find_unescaped(t, closing, i + 1)
-        if k1 < 0:
-            return len(t)
-        if k2 <= i:
-            k2 = find_unescaped(t, opening, i + 1)
-        if k2 < 0:
-            k2 = MAX
-        if k2 < k1:
-            counter += 1
-        else:
-            counter -= 1
-        i = min(k1, k2)
-    return k1
+# def is_escaped(t: str, i: int) -> Optional[bool]:
+#     """Returns True, if the character at position i is escaped,
+#     False if it is not and None in case the position i exceeds
+#     the bounds of string t.
+#     """
+#     if 0 <= i < len(t):
+#         r = i
+#         while r > 0 and t[r - 1] == '\\':
+#             r -= 1
+#         return (i - r) % 2 != 0
+#     else:
+#         return None
+#
+#
+# def find_unescaped(t: str, ch: str, i: int) -> int:
+#     r"""Find the position of an unescaped character in a string.
+#     Examples::
+#
+#         >>> r"(a\)b)".find(")", 0)
+#         3
+#         >>> find_unescaped(r"(a\)b)", ")", 0)
+#         5
+#         >>> find_unescaped(r"(a\\)b)", ")", 0)
+#         4
+#         >>> find_unescaped(r"(a\\\)b)", ")", 0)
+#         7
+#     """
+#     while i >= 0:
+#         i = t.find(ch, i)
+#         if is_escaped(t, i):
+#             i += 1
+#         else:
+#             break
+#     return i
+#
+#
+# def matching_bracket(t: str, i: int) -> int:
+#     r"""Find matching bracket, ignoring escaped brackets.
+#     Examples::
+#
+#         >>> matching_bracket(r"(a\)b)", 0)
+#         5
+#         >>> matching_bracket(r"(a\\)b)", 0)
+#         4
+#         >>> matching_bracket(r"(a\\\)b)", 0)
+#         7
+#         >>> matching_bracket(r"(a(b(c)))", 0)
+#         8
+#         >>> matching_bracket(r"(a(b(c)))", 2)
+#         7
+#         >>> matching_bracket(r"(a(b\(c)))", 2)
+#         7
+#     """
+#     opening = t[i]
+#     closing = BRACKETS[opening]
+#     counter = 1
+#     MAX = len(t)
+#     k1 = -1
+#     k2 = -1
+#     while counter > 0:
+#         if k1 <= i:
+#             k1 = find_unescaped(t, closing, i + 1)
+#         if k1 < 0:
+#             return len(t)
+#         if k2 <= i:
+#             k2 = find_unescaped(t, opening, i + 1)
+#         if k2 < 0:
+#             k2 = MAX
+#         if k2 < k1:
+#             counter += 1
+#         else:
+#             counter -= 1
+#         i = min(k1, k2)
+#     return k1
 
 
 
@@ -174,7 +174,8 @@ RE_COMMENT = NEVER_MATCH_PATTERN
 
 def reTokenizer(original_text) -> Tuple[str, List[Error]]:
     pattern = original_text
-    verbose = [False]
+    nesting = 0
+    verbose = [(False, nesting)]
     in_class = False
     result = []
     i = 0
@@ -185,18 +186,13 @@ def reTokenizer(original_text) -> Tuple[str, List[Error]]:
             if pattern[k] == '-':
                 default = False
             if pattern[k] == 'x':
-                verbose.append(default)
+                verbose.append((default, nesting))
                 break
             k += 1
 
     while i < len(pattern): # TODO: very messed up
         char = pattern[i]
-        if not verbose[-1]:
-            result.append(char)
-            if pattern[i:i + 2] == "(?":
-                process_verbose_flag(i + 2)
-            i += 1
-        elif char == '\\':  # Escape sequence, keep next char as-is
+        if char == '\\':  # Escape sequence, keep next char as-is
             result.append(char)
             i += 1
             if i < len(pattern):
@@ -208,14 +204,26 @@ def reTokenizer(original_text) -> Tuple[str, List[Error]]:
             in_class = False
             result.append(char)
         elif char == '(' and not in_class:
-            pass
-        elif char == '#' and not in_class:
-            # Skip to end of line (comment)
-            while i < len(pattern) and pattern[i] != '\n':
-                i += 1
-        elif char in ' \t\n\r' and not in_class:
-            # Ignore whitespace outside character classes
-            pass
+            nesting += 1
+            if pattern[i:i + 2] == "(?":
+                process_verbose_flag(i + 2)
+                if i == 0 and len(verbose) > 1:
+                    state = verbose[-1][0]
+                    verbose = [(state, -1)]
+            result.append(char)
+        elif char == ')' and not in_class:
+            if verbose[-1][1] == nesting:
+                verbose.pop()
+            nesting -= 1
+            result.append(char)
+        elif verbose[-1][0]:
+            if char == '#' and not in_class:
+                # Skip to end of line (comment)
+                while i < len(pattern) and pattern[i] != '\n':
+                    i += 1
+            elif char in ' \t\n\r' and not in_class:
+                # Ignore whitespace outside character classes
+                pass
         else:
             result.append(char)
         i += 1

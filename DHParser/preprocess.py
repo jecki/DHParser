@@ -267,9 +267,9 @@ class SourceMap(NamedTuple):
         the offset (positive or negative or zero) that will be added to all locations
         in the half open interval [ positions[n], positions[n + 1] [
     :ivar file_names: A list of file names corresponding to the positions, i.e. for each
-        position[n] the file that the text from this just before the next position was
-        taken from has the name file_names[n].
-    :ivar originals_dict: A dictionary mapping the file-names to their text-content in
+        position[n] the name of the file that the text from this position just until
+        before the next position was taken from.
+    :ivar originals_dict: A dictionary, mapping the file-names to their text-content in
         form of a :py:class:`~stringview.StringView`-object.
     """
     original_name: str          # nome or path or uri of the original source file
