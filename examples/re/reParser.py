@@ -85,17 +85,145 @@ if DHParser.versionnumber.__version_info__ < (1, 8, 0):
 #
 #######################################################################
 
+BRACKETS = { '(': ')', '[': ']', '{': '}' }
+
+
+def is_escaped(t: str, i: int) -> Optional[bool]:
+    """Returns True, if the character at position i is escaped,
+    False if it is not and None in case the position i exceeds
+    the bounds of string t.
+    """
+    if 0 <= i < len(t):
+        r = i
+        while r > 0 and t[r - 1] == '\\':
+            r -= 1
+        return (i - r) % 2 != 0
+    else:
+        return None
+
+
+def find_unescaped(t: str, ch: str, i: int) -> int:
+    r"""Find the position of an unescaped character in a string.
+    Examples::
+
+        >>> r"(a\)b)".find(")", 0)
+        3
+        >>> find_unescaped(r"(a\)b)", ")", 0)
+        5
+        >>> find_unescaped(r"(a\\)b)", ")", 0)
+        4
+        >>> find_unescaped(r"(a\\\)b)", ")", 0)
+        7
+    """
+    while i >= 0:
+        i = t.find(ch, i)
+        if is_escaped(t, i):
+            i += 1
+        else:
+            break
+    return i
+
+
+def matching_bracket(t: str, i: int) -> int:
+    r"""Find matching bracket, ignoring escaped brackets.
+    Examples::
+
+        >>> matching_bracket(r"(a\)b)", 0)
+        5
+        >>> matching_bracket(r"(a\\)b)", 0)
+        4
+        >>> matching_bracket(r"(a\\\)b)", 0)
+        7
+        >>> matching_bracket(r"(a(b(c)))", 0)
+        8
+        >>> matching_bracket(r"(a(b(c)))", 2)
+        7
+        >>> matching_bracket(r"(a(b\(c)))", 2)
+        7
+    """
+    opening = t[i]
+    closing = BRACKETS[opening]
+    counter = 1
+    MAX = len(t)
+    k1 = -1
+    k2 = -1
+    while counter > 0:
+        if k1 <= i:
+            k1 = find_unescaped(t, closing, i + 1)
+        if k1 < 0:
+            return len(t)
+        if k2 <= i:
+            k2 = find_unescaped(t, opening, i + 1)
+        if k2 < 0:
+            k2 = MAX
+        if k2 < k1:
+            counter += 1
+        else:
+            counter -= 1
+        i = min(k1, k2)
+    return k1
+
 
 
 # To capture includes, replace the NEVER_MATCH_PATTERN
 # by a pattern with group "name" here, e.g. r'\input{(?P<name>.*)}'
 RE_INCLUDE = NEVER_MATCH_PATTERN
-RE_COMMENT = '#.*'  # THIS MUST ALWAYS BE THE SAME AS reGrammar.COMMENT__ !!!
+RE_COMMENT = NEVER_MATCH_PATTERN
 
 
 def reTokenizer(original_text) -> Tuple[str, List[Error]]:
-    # Here, a function body can be filled in that adds preprocessor tokens
-    # to the source code and returns the modified source.
+    pattern = original_text
+    verbose = 0
+    i = 0
+    if pattern[0:2] == "(?":
+        i = matching_bracket(pattern, 0)
+        flags = pattern[2:i]
+        if flags.isalpha() and flags.find('x') >= 0:
+            verbose = 1
+    in_class = False
+    result = []
+    while i < len(pattern): # TODO: very messed up
+        char = pattern[i]
+        if verbose % 2 == 0:
+            result.append(char)
+            if pattern[i:i + 2] == "(?" \
+                    and pattern[i + 2: i + 3] in {'-', 'i', 'm', 'x', 'u', 's', 'L', 'a'}:
+                k = i + 2
+                v = True
+                while k < len(pattern) and pattern[k] not in (')', ':'):
+                    if pattern[k] == '-':
+                        v = False
+                    elif pattern[k] == 'x':
+                        verbose = v
+                        verbose += 1
+                        break
+                    k += 1
+            i += 1
+        elif char == '\\':  # Escape sequence, keep next char as-is
+            result.append(char)
+            i += 1
+            if i < len(pattern):
+                result.append(pattern[i])
+        elif char == '[' and not in_class:
+            in_class = True
+            result.append(char)
+        elif char == ']' and in_class:
+            in_class = False
+            result.append(char)
+        elif char == '(' and not in_class:
+            pass
+        elif char == '#' and not in_class:
+            # Skip to end of line (comment)
+            while i < len(pattern) and pattern[i] != '\n':
+                i += 1
+        elif char in ' \t\n\r' and not in_class:
+            # Ignore whitespace outside character classes
+            pass
+        else:
+            result.append(char)
+        i += 1
+        pattern = ''.join(result)
+
     return original_text, []
 
 preprocessing: PseudoJunction = create_preprocess_junction(
@@ -200,6 +328,15 @@ class reGrammar(Grammar):
 parsing: PseudoJunction = create_parser_junction(reGrammar)
 get_grammar = parsing.factory # for backwards compatibility, only
 
+try:
+    assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
+        RE_COMMENT in (reGrammar.COMMENT__, NEVER_MATCH_PATTERN), \
+        "Please adjust the pre-processor-variable RE_COMMENT in file reParser.py so that " \
+        "it has the same value as the COMMENT__-attribute of the grammar class reGrammar! " \
+        'Currently, RE_COMMENT reads "%s" while COMMENT__ is "%s". ' \
+        % (RE_COMMENT, reGrammar.COMMENT__)
+except (AttributeError, NameError):
+    pass
 
 #######################################################################
 #

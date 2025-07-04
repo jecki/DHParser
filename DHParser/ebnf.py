@@ -1073,9 +1073,23 @@ def parse_word(s: StringView) -> Optional[Node]:
 '''
 
 
-GRAMMAR_FACTORY = '''
+GRAMMAR_FACTORY = r'''
 parsing: PseudoJunction = create_parser_junction({NAME}Grammar)
 get_grammar = parsing.factory # for backwards compatibility, only
+
+try:
+    assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
+        RE_COMMENT in ({NAME}Grammar.COMMENT__, NEVER_MATCH_PATTERN), \
+        "Please adjust the pre-processor-variable RE_COMMENT in file {NAME}Parser.py so that " \
+        "it either is the NEVER_MATCH_PATTERN or has the same value as the COMMENT__-attribute " \
+        "of the grammar class {NAME}Grammar! " \
+        'Currently, RE_COMMENT reads "%s" while COMMENT__ is "%s". ' \
+        % (RE_COMMENT, {NAME}Grammar.COMMENT__) + \
+        "\n\nIf RE_COMMENT == NEVER_MATCH_PATTERN then includes will deliberately be " \
+        "processed, otherwise RE_COMMENT=={NAME}Grammar.COMMENT__ allows the " \
+        "preprocessor to ignore comments."
+except (AttributeError, NameError):
+    pass
 '''
 
 

@@ -377,7 +377,7 @@ Präsentation auf dem
 [dhmuc-Workshop: Digitale Editionen und Auszeichnungssprachen](https://dhmuc.hypotheses.org/workshop-digitale-editionen-und-auszeichnungssprachen),
 München 2016. Short-URL: [tiny.badw.de/2JVT][Arnold_2016]
 
-[Arnold_2016]: https://f.hypotheses.org/wp-content/blogs.dir/1856/files/2016/12/EA_Pr%C3%A4sentation_Auszeichnungssprachen.pdf
+[Arnold_2016]: https://dhmuc.hypotheses.org/files/2016/12/EA_Pr%C3%A4sentation_Auszeichnungssprachen.pdf
 
 Brian Ford: Parsing Expression Grammars: A Recognition-Based Syntactic
 Foundation, Cambridge
@@ -432,7 +432,7 @@ Präsentation auf dem
 [dhmuc-Workshop: Digitale Editionen und Auszeichnungssprachen](https://dhmuc.hypotheses.org/workshop-digitale-editionen-und-auszeichnungssprachen),
 München 2016. Short-URL: [tiny.badw.de/2JVy][Müller_2016]
 
-[Müller_2016]: https://f.hypotheses.org/wp-content/blogs.dir/1856/files/2016/12/Mueller_Anzeichnung_10_Vortrag_M%C3%BCnchen.pdf
+[Müller_2016]: https://dhmuc.hypotheses.org/files/2016/12/Mueller_Anzeichnung_10_Vortrag_M%C3%BCnchen.pdf
 
 Markus Voelter, Sbastian Benz, Christian Dietrich, Birgit Engelmann,
 Mats Helander, Lennart Kats, Eelco Visser, Guido Wachsmuth:
