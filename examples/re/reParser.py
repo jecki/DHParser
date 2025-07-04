@@ -171,33 +171,30 @@ RE_INCLUDE = NEVER_MATCH_PATTERN
 RE_COMMENT = NEVER_MATCH_PATTERN
 
 
+
 def reTokenizer(original_text) -> Tuple[str, List[Error]]:
     pattern = original_text
-    verbose = 0
-    i = 0
-    if pattern[0:2] == "(?":
-        i = matching_bracket(pattern, 0)
-        flags = pattern[2:i]
-        if flags.isalpha() and flags.find('x') >= 0:
-            verbose = 1
+    verbose = [False]
     in_class = False
     result = []
+    i = 0
+
+    def process_verbose_flag(k):
+        default = True
+        while k < len(pattern) and pattern[k] in {'-', 'i', 'm', 'x', 'u', 's', 'L', 'a'}:
+            if pattern[k] == '-':
+                default = False
+            if pattern[k] == 'x':
+                verbose.append(default)
+                break
+            k += 1
+
     while i < len(pattern): # TODO: very messed up
         char = pattern[i]
-        if verbose % 2 == 0:
+        if not verbose[-1]:
             result.append(char)
-            if pattern[i:i + 2] == "(?" \
-                    and pattern[i + 2: i + 3] in {'-', 'i', 'm', 'x', 'u', 's', 'L', 'a'}:
-                k = i + 2
-                v = True
-                while k < len(pattern) and pattern[k] not in (')', ':'):
-                    if pattern[k] == '-':
-                        v = False
-                    elif pattern[k] == 'x':
-                        verbose = v
-                        verbose += 1
-                        break
-                    k += 1
+            if pattern[i:i + 2] == "(?":
+                process_verbose_flag(i + 2)
             i += 1
         elif char == '\\':  # Escape sequence, keep next char as-is
             result.append(char)
