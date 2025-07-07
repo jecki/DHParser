@@ -442,7 +442,8 @@ def compile_source(source: str,
         return CompilationResult(None, [Error(str(e), 0, COMPILER_CRASH)], None)
     source_name = source if is_filename(source) else ''
     log_file_name = logfile_basename(source, compiler) if is_logging() else ''  # type: str
-    if not hasattr(parser, 'free_char_parsefunc__') or parser.history_tracking__:
+    if not hasattr(parser, 'free_char_parsefunc__') \
+            or getattr(parser, 'history_tracking__', False):
         # log only for custom parser/transformer/compilers
         log_syntax_trees = {t.upper() for t in get_config_value('log_syntax_trees')}
     else:
@@ -470,7 +471,7 @@ def compile_source(source: str,
     syntax_tree.source_mapping = source_mapping
     if 'CST' in log_syntax_trees:
         log_ST(syntax_tree, log_file_name + '.cst')
-    if parser.history_tracking__:
+    if getattr(parser, 'history_tracking__', False):
         log_parsing_history(parser, log_file_name)
 
     # assert is_error(syntax_tree.error_flag) or str(syntax_tree) == strip_tokens(source_text), \
