@@ -48,7 +48,7 @@ program and before any DHParser-function is invoked.
 from __future__ import annotations
 
 import sys
-from typing import Dict, Any, Container, List
+from typing import Dict, Any, Iterable, List
 
 __all__ = ('CONFIG_PRESET',
            'ALLOWED_PRESET_VALUES',
@@ -115,7 +115,7 @@ def validate_value(key: str, value: Any):
                 raise ValueError(f'Value "{value}" for "{key}" does not lie within the '
                                  f'range from {allowed[0]} to {allowed[1]} (included)!')
         else:
-            if not isinstance(value, str) and isinstance(value, Container):
+            if not isinstance(value, str) and isinstance(value, Iterable):
                 for item in value:
                     if item not in allowed:
                         raise ValueError(f'Item "{item}" for "{key}" is not one of the '
@@ -300,7 +300,7 @@ def read_local_config(ini_filename: str) -> List[str]:
     accordingly. All config-files with the same basename
     (i.e. name without path) as
     "ini_filename" will subsequently be read from these
-    directories and be processed in the same order which
+    directories and be processed in the same order, which
     means config-values in files processed later will
     overwrite config-values from earlier processed files:
 
@@ -473,7 +473,7 @@ def set_config_value(key: str, value: Any, allow_new_key: bool = False):
     Changes a configuration value thread-safely. The configuration
     value will be set only for the current thread. In order to
     set configuration values for any new thread, add the key and value
-    to CONFIG_PRESET, before any thread accessing config values is started.
+    to CONFIG_PRESET, before any thread accessing config-values is started.
     :param key:    the key (an immutable, usually a string)
     :param value:  the value
     """
@@ -509,9 +509,9 @@ def add_config_values(configuration: dict):
 #
 ########################################################################
 
-# Defines which kind of multi-core parallelization shall be used:
-# Either "ProcessPool" or "InterpreterPool". Tha latter is only available
-# when Python version is greater or equal 3.14. If "InterpreterPool"
+# Defines which kind of multicore parallelization shall be used:
+# Either "ProcessPool" or "InterpreterPool". The latter is only available
+# when Python-version is greater or equal 3.14. If "InterpreterPool"
 # is specified but the Python version is smaller than 3.14, "ProcessPool"
 # will automatically be used as a fallback option.
 # Default value: "InterpreterPool"
@@ -596,15 +596,15 @@ CONFIG_PRESET['infinite_loop_warning'] = False
 # 'json'         - output in JSON-format. This is probably the least
 #                  readable representation, but useful for serialization, for
 #                  example, to return syntax trees from remote procedure calls.
-# 'dict.json'    - a different, and often more readable flavor of json, where
-#                  dicts are used whenever possible. Please be aware, that this
+# 'dict.json'    - a different, and often more readable flavor of JSON, where
+#                  dicts are used whenever possible. Please be aware that this
 #                  goes beyond the JSON-sepcification which does not know
 #                  ordered dicts! This could result in the misrepresentation
 #                  of data by JSON parsers that are not aware of the order
 #                  of entries in dictionaries. (e.g. Python < 3.6)
 # 'ndst'         - nodetree-syntax-tree: a JSON-variant following the
 #                  unist-Specification (https://github.com/syntax-tree/unist).
-# 'ndst'         - a JSON-Variant for XML-syntax-trees following the
+# 'xast'         - a JSON-Variant for XML-syntax-trees following the
 #                  xast-Specification (https://github.com/syntax-tree/xast).
 # Default values: "compact" for concrete syntax trees and "XML" for abstract
 #                 syntax trees and "sxpr" (read "S-Expression") for any other
@@ -914,6 +914,13 @@ CONFIG_PRESET['test_parallelization'] = True
 # Default value: True
 CONFIG_PRESET['test_suppress_lookahead_failures'] = True
 
+# Skips the preprocessor stage when running test. This can be helpful
+# a) when running tests on sub-parsers, in case that the preprocessor
+# cannot deal with snippets which do not represent full documents or
+# b) when you'd like to keep preprocessor matters out of the tests.
+# 'test_skip_preprocessor' is best 
+# Default value: False
+CONFIG_PRESET['test_skip_preprocessor'] = False
 
 ########################################################################
 #

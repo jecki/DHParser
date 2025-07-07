@@ -467,6 +467,11 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         processing stages after the AST-transformation.
     :param show: A set of stage names that shall be shown in the report apart from the AST.
         (The abstract-syntax-tree will always be shown!)
+    :param serializations: A (not necessarily complete) dictionary of stages -> serialization
+        that allows to override the default serialization for specific stages.
+    :param preprocessor_factory: The preprocessor factory. This will be ignored of the
+        configuration variable test_skip_preprocessor is set to True. Beware that in this
+        case, all source snippets must already have been preprocessed.
     """
     assert isinstance(report, str)
     assert isinstance(junctions, Set) and all(isinstance(e[0], str) and isinstance(e[2], str)
@@ -509,7 +514,10 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
     errata = []
     config_history_tracking = get_config_value('history_tracking')
     config_resume_notices = get_config_value('resume_notices')
-    preprocessor = preprocessor_factory()
+    if not get_config_value('test_skip_preprocessor', False):
+        preprocessor = preprocessor_factory()
+    else:
+        preprocessor = nil_preprocessor_factory()
     parser = parser_factory()
     transform = transformer_factory()
 
@@ -915,6 +923,27 @@ def grammar_suite(directory, parser_factory, transformer_factory,
     """
     Runs all grammar unit tests in a directory. A file is considered a test-unit,
     if it has the word "test" in its name.
+
+    :param direcotry: The path of a directory that contains test-files.
+    :param parser_factory: the parser-factory-object, typically an instance of
+        :py:class:`~parse.Grammar`.
+    :param transformer_factory: A factory-function for the AST-transformation-function.
+    :param fn_patterns: A glob patterns for selecting those files in the test-directory
+        that shall be used for testing.
+    :param ignore_unknown_filetypes: If True, unknown file types will silently be ignored.
+        Otherwise, an error will be raised if an unknown file-type is encountered
+    :param report: the name of the subdirectory where the test-reports will be saved.
+        If the name is the empty string, no reports will be generated.
+    :param verbose: If True, more information will be printed to the console during testing.
+    :param junctions: A set of :py:class:`~compile.Junction`-objects that define further
+        processing stages after the AST-transformation.
+    :param show: A set of stage names that shall be shown in the report apart from the AST.
+        (The abstract-syntax-tree will always be shown!)
+    :param serializations: A (not necessarily complete) dictionary of stages -> serialization
+        that allows to override the default serialization for specific stages.
+    :param preprocessor_factory: The preprocessor factory. This will be ignored of the
+        configuration variable test_skip_preprocessor is set to True. Beware that in this
+        case, all source snippets must already have been preprocessed.
     """
     assert isinstance(report, str)
     assert isinstance(show, set) and all(isinstance(element, str) for element in show), \
