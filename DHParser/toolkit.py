@@ -26,7 +26,6 @@ functions that are very generic.
 
 from __future__ import annotations
 
-import annotationlib
 # import concurrent.futures  # commented out to save startup time
 import functools
 import io

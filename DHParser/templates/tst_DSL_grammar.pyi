@@ -30,6 +30,7 @@ try:
         finalize_presets, get_config_value, read_local_config
     from DHParser import dsl
     import DHParser.log
+    from DHParser.preprocess import nil_preprocessor_factory
     from DHParser import testing
 except ModuleNotFoundError:
     print('Could not import DHParser. Please adjust sys.path in file '
@@ -54,7 +55,8 @@ def recompile_grammar(grammar_src, force):
 
 
 def run_grammar_tests(fn_pattern, parser_factory, transformer_factory,
-                      junctions=set(), targets=set(), serializations=set()):
+                      junctions=set(), targets=set(), serializations=set(),
+                      preprocessor_factory=nil_preprocessor_factory):
     if fn_pattern.find('/') >= 0 or fn_pattern.find('\\') >= 0:
         testdir, fn_pattern = os.path.split(fn_pattern)
         if not testdir.startswith('/') or not testdir[1:2] == ':':
@@ -65,7 +67,8 @@ def run_grammar_tests(fn_pattern, parser_factory, transformer_factory,
     error_report = testing.grammar_suite(
         testdir, parser_factory, transformer_factory,
         fn_patterns=[fn_pattern], report='REPORT', verbose=True,
-        junctions=junctions, show=targets, serializations=serializations)
+        junctions=junctions, show=targets, serializations=serializations,
+        preprocessor_factory=preprocessor_factory)
     return error_report
 
 
@@ -110,7 +113,7 @@ if __name__ == '__main__':
 
     if args.files:
         # if called with a single filename that is either an EBNF file or a known
-        # test file type then use the given argument
+        # test file-type then use the given argument
         arg = args.files[0]
     else:
         # otherwise run all tests in the test directory
@@ -121,10 +124,11 @@ if __name__ == '__main__':
         recompile_grammar(os.path.join(scriptdir, '{name}.ebnf'),
                           force=False)
         sys.path.append('.')
-        from {name}Parser import parsing, ASTTransformation, \
+        from {name}Parser import parsing, ASTTransformation, preprocessing, \
             junctions, test_targets, serializations
         error_report = run_grammar_tests(arg, parsing.factory, ASTTransformation.factory,
-                                         junctions, test_targets, serializations)
+                                         junctions, test_targets, serializations,
+                                         preprocessing.factory)
         if error_report:
             print('\n')
             print(error_report)
