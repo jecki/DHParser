@@ -462,8 +462,8 @@ def deprecated(message: str) -> Callable:
 
 def get_annotations(item):
     if sys.version_info >= (3, 14):
-        from annotationlib import get_annotations
-        return get_annotations(item, format=annotationlib.Format.STRING)
+        from annotationlib import get_annotations, Format
+        return get_annotations(item, format=Format.STRING)
     else:
         return item.__annotations__
 

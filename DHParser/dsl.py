@@ -326,7 +326,7 @@ def create_parser(ebnf_src: str, branding="DSL", additional_code: str = '') -> G
     """
     grammar_factory = grammar_provider(ebnf_src, branding, additional_code)
     grammar = grammar_factory()
-    grammar.python_src__ = grammar_factory.python_src__
+    grammar.python_src__ = getattr(grammar_factory, 'python_src__','')
     return grammar
 
 

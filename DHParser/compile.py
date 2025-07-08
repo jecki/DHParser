@@ -44,7 +44,7 @@ from DHParser.configuration import get_config_value
 from DHParser.preprocess import PreprocessorFunc, gen_neutral_srcmap_func
 from DHParser.nodetree import Node, RootNode, EMPTY_PTYPE, Path
 from DHParser.transform import TransformerFunc
-from DHParser.parse import ParseFunc
+from DHParser.parse import ParserCallable
 from DHParser.error import is_error, is_fatal, Error, FATAL, \
     TREE_PROCESSING_CRASH, COMPILER_CRASH, AST_TRANSFORM_CRASH, has_errors
 from DHParser.log import log_parsing_history, log_ST, is_logging
@@ -85,7 +85,7 @@ class Compiler:
 
     Subclasses implementing a compiler must define ``on_XXX()``-methods
     for each node name that can occur in the AST where 'XXX' is the
-    node's name(for unnamed nodes it is the node's ptype without the
+    node's name (for unnamed nodes it is the node's ptype without the
     leading colon ':').
 
     These compiler methods take the node on which they are run as
@@ -107,7 +107,7 @@ class Compiler:
         a mistake due to a forgotten return statement. The method
         compile() checks for this mistake and raises an error if
         a compiler-method returns None. However, some compilers require
-        the possibility to return None-values. In this case
+        the possibility to return None values. In this case
         ``forbis_returing_None`` should be set to False in the constructor
         of the derived class.
 
@@ -397,7 +397,7 @@ def NoTransformation(root: RootNode) -> RootNode:
 
 def compile_source(source: str,
                    preprocessor: Optional[PreprocessorFunc],
-                   parser: ParseFunc,
+                   parser: ParserCallable,
                    transformer: TransformerFunc = NoTransformation,
                    compiler: CompilerFunc = NoTransformation,
                    *, preserve_AST: bool = False) -> CompilationResult:
@@ -567,7 +567,7 @@ def process_tree(tp: CompilerFunc, tree: RootNode) -> Any:
                 for i in range(1, len(st)):  # find last call in client-code
                     m = RX_STACKTRACE_FNAME.match(st[-i])
                     if m and os.path.basename(m.group(1)) not in DHPARSER_FILES:
-                        x = m.group(1)
+                        # _ = m.group(1)
                         break
                 mini_trace = st[-i][:st[-i].rstrip().rfind('\n')].replace('\n', '\\n')
                 tree.new_error(
@@ -599,7 +599,7 @@ FullCompilationResult = Dict[str, Tuple[Any, List[Error]]]  # DEPRECATED, use pi
 @deprecated('extract_data() has movee to the pipeline-module! Use "from DHParser.pipeline import extract_data"')
 def extract_data(tree_or_data):
     from DHParser import pipeline
-    return extract_data(tree_or_data)
+    return pipeline.extract_data(tree_or_data)
 
 
 @deprecated('end_points() has moved to the pipeline-module! Use "from DHParser.pipeline import end_points"')

@@ -1211,8 +1211,10 @@ class EBNFDirectives:
             be dropped during the parsing process, already.
     :ivar reduction: The reduction level (0-3) for early tree-reduction
             during the parsing stage.
-    :ivar optimizations: Selects optimizations, overriding configuration
-            value "optimizations".
+    :ivar optimizations:  Turns on optimizing parser by substituting
+            SmartRE-parsers for compound parsers when possible.
+            (see "optimizations" in DHParser.config.py).
+            An empty set means all optimizations are turned off.
     :ivar flavor:  Selects the EBNF-flavor (or "syntax-variant") to be used.
     :ivar \_super\_ws: Cache for the "super whitespace" which
             is a regular expression that merges whitespace and
@@ -1444,11 +1446,6 @@ class EBNFCompiler(Compiler):
     :ivar grammar_name:  The name of the grammar to be compiled
 
     :ivar grammar_source:  The source code of the grammar to be compiled.
-
-    :ivar optimizations:  Turns on optimizng parser by substituting
-            SmartRE-parsers for compound parsers when possible.
-            (see "optimizations" in DHParser.config.py).
-            An empty set means all optimizations are turned off.
     """
     COMMENT_KEYWORD = "COMMENT__"
     COMMENT_PARSER_KEYWORD = "comment__"

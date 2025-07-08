@@ -512,9 +512,9 @@ ChildrenType: TypeAlias = Tuple['Node', ...]
 StrictResultType: TypeAlias = Union[ChildrenType, StringView, str]
 ResultType: TypeAlias = Union[StrictResultType, 'Node']
 
-# RawMappingType: TypeAlias = Dict['Node', Sequence[Union[int,Sequence[int]]]]
 RawMappingType: TypeAlias = Dict['Node', Tuple[int, Union[int,Sequence[int]], int]]
-NO_MAPPING_SENTINEL: RawMappingType = {"don't generate a serialization mapping ": (-1, -1, -1)}
+NO_MAPPING_SENTINEL: RawMappingType = \
+    {"don't generate a serialization mapping ": (-1, -1, -1)}
 NO_REFLOW = lambda tab, content, depth: content
 
 
@@ -4968,7 +4968,7 @@ class ContentMapping:
         up a node completely as well as including empty nodes in the markup.
         In any the case. the string content of the added markup remains the same, but
         it might cover more tags than strictly necessary.
-    :ivar chain_attr: An attribute that will receive one and the same identifier as
+    :ivar chain_attr_name: An attribute that will receive one and the same identifier as
         value for all nodes belonging to the chain of on split-up node.
     :ivar auto_cleanup: Update the content mapping after the markup has been finished.
         Should always be true, if it is intended to reuse the same content mapping

@@ -47,6 +47,7 @@ __all__ = ('RX_TOKEN_NAME',
            'IncludeInfo',
            'FindIncludeFunc',
            'IncludeReaderFunc',
+           'DeriveFileNameFunc',
            'PreprocessorFunc',
            'PreprocessorFactory',
            'PreprocessorResult',
@@ -409,6 +410,9 @@ def gen_find_include_func(rx: Union[str, Any],
     :param rx: A regular expression (either as string or compiled
         regular expression) to catch the names of the includes in
         a document. The expression should catch
+    :param comment_rx: The regular expression for comments. (This
+        should always either be NEVER_MATCH_PATTERN or exactly the
+        same as the comment-regular rexpression defined in the grammar!)
     """
     if isinstance(rx, str):  rx = re.compile(rx)
     if isinstance(comment_rx, str):  comment_rx = re.compile(comment_rx)

@@ -1555,6 +1555,7 @@ deliver understandable error-messages::
     "alpha"
     >>> for e in json_string('"al\\pha"').errors:  print(e)
     1:4: Error (1010): Illegal character(s) »\pha"« in string.
+    1:4: Error (1040): Parser "string" stopped before end, at: »\pha"« Terminating parser.
 
 It is possible to place an error code or number at the beginning of
 the error string, separated by a colon to override the default code
@@ -1578,6 +1579,7 @@ below these::
     >>> json_string = create_parser(grammar, 'json_string')
     >>> for e in json_string(r'"al\pha"').errors:  print(e)
     1:4: Error (1010): Illegal escape sequence »\pha"« Allowed values are b,n,r,t,u
+    1:4: Error (1040): Parser "string" stopped before end, at: »\pha"« Terminating parser.
 
 Here, the more specific and more understandable error message
 has been selected. Careful readers might notice that the the
@@ -1667,6 +1669,7 @@ blank of line-feed, e.g. "1 2 3"::
     >>> for error in syntax_tree.errors_sorted: print(error)
     1:5: Error (2010): Not a valid Number!
     1:5: Notice (20): Parser stopped because of an error
+    1:5: Error (1040): Parser "document" stopped before end, at: »X 3 4 X 5« Terminating parser.
 
 Let's examine this in detail: The definition of the "document"-symbol without
 an error-branch would read::
@@ -1964,6 +1967,7 @@ at the first error. Further errors are neither detected nor reported::
     >>> result = config_parser(cfg_data_with_errors)
     >>> for error in result.errors_sorted:  print(error)
     4:8: Error (1010): value expected by parser 'entry', but »rose"\nBuil...« found instead!
+    4:8: Error (1040): Parser "config" stopped before end, at: »rose"\nBuil...« Terminating parser.
 
 After adding suitable `resume`-clauses for those symbols the definition
 of which contain the mandatory marker `§`, all errors are reported in
@@ -2023,6 +2027,7 @@ document could be parsed::
     >>> result = list_parser(example_with_errors)
     >>> for e in result.errors: print(e)
     1:8: Error (1010): _item expected by parser '_items', but »A, [5, 6; ...« found instead!
+    1:8: Error (1040): Parser "_document" stopped before end, at: »A, [5, 6; ...« Terminating parser.
 
 Now, let's define some regular expression based rules to resume parsing after
 an error::
@@ -2063,6 +2068,7 @@ are involved::
     1:8: Error (1010): _item expected by parser '_items', but »A, [5, 6; ...« found instead!
     1:16: Error (1010): »]« expected by parser 'list', but »; [7, 8], ...« found instead!
     1:28: Error (1010): _EOF expected by parser '_document', but », 10, ]« found instead!
+    1:28: Error (1040): Parser "_document" stopped before end, at: », 10, ]« Terminating parser.
 
 Here, the parser stopped before the end of the document, which shows
 that our resumption rules have been either incomplete or inadequate.
@@ -2078,7 +2084,7 @@ what went wrong::
     1:16: Error (1010): »]« expected by parser 'list', but »; [7, 8], ...« found instead!
     1:24: Notice (50): Resuming from list at 1:16 '; [7, 8...' with _items->:Series at 1:24 ', 9], 1...'
     1:28: Error (1010): _EOF expected by parser '_document', but », 10, ]« found instead!
-
+    1:28: Error (1040): Parser "_document" stopped before end, at: », 10, ]« Terminating parser.
 
 What is of interest here, is the second notice: It seems that the error
 was caught within the "list"-parser. By moving on to the spot after
@@ -2613,6 +2619,7 @@ XML-Parser with a little mistake::
     >>> result = parseXML(xmldoc)
     >>> for e in result.errors_sorted: print(e)
     3:21: Error (1010): »>« expected by parser 'ETag', but »litle>\n   ...« found instead!
+    3:21: Error (1040): Parser "document" stopped before end, at: »litle>\n   ...« Terminating parser.
     5:7: Error (1050): Capture-stack not empty after end of parsing: TagName 1 item
 
 

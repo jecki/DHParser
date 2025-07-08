@@ -21,7 +21,7 @@ connecting successive stages of tree transformations (called
 "junctions") to processing pipelines. Processing pipelines have
 one staring point, the source-document, but can have one or more
 end points. For example, if the source is a text-document, the
-end points can be an HTML-document for the online-presentation
+end points can be an HTML document for the online-presentation
 and a LaTeX-document to produce a printed version.
 
 Each junction is a triple of the name of the source-stage,
@@ -34,7 +34,6 @@ algorithmically.
 from __future__ import annotations
 
 import functools
-import sys
 
 from functools import partial
 from typing import Set, Union, Any, Dict, List, Tuple, Iterable, Optional, Sequence, NamedTuple, \
@@ -44,7 +43,7 @@ from DHParser.compile import compile_source, process_tree, CompilerFactory
 from DHParser.configuration import get_config_value
 from DHParser.error import Error, has_errors, FATAL
 from DHParser.nodetree import RootNode, Node
-from DHParser.parse import Grammar, ParserFactory, ParserFactory
+from DHParser.parse import Grammar, ParserFactory
 from DHParser.preprocess import PreprocessorFactory, PreprocessorFunc, Tokenizer, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors, \
     DeriveFileNameFunc
@@ -234,7 +233,7 @@ def full_pipeline(source: str,
 
     "full_pipeline()" preprocesses and compiles the source-document,
     first. And then it post-processes the source into the given target stages.
-    Mind that if there are fatal errors earlier in the pipeline some or all
+    Mind that if there are fatal errors earlier in the pipeline, some or all
     target stages might not be reached and thus not be included in the result.
     """
     cst, msgs, _ = compile_source(source, preprocessor_factory(), parser_factory())
@@ -323,7 +322,7 @@ def _parser_factory(raw_grammar) -> Grammar:
         set_tracer(grammar, trace_history)
     try:
         if not grammar.__class__.python_src__:
-            grammar.__class__.python_src__ = _parser_factory.python_src__
+            grammar.__class__.python_src__ = getattr(_parser_factory, 'python_src__','')
     except AttributeError:
         pass
     return grammar

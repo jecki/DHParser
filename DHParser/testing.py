@@ -193,7 +193,7 @@ def unit_from_config(config_str: str, filename: str, allowed_stages=UNIT_STAGES)
 
     :param config_str: A string containing a config-file with Grammar unit-tests
     :param filename: The file-name of the config-file containing ``config_str``.
-    :param allows_stages: A set of stage names of stages in the processing pipeline
+    :param allowed_stages: A set of stage names of stages in the processing pipeline
         for which the test-file may contain tests.
 
     Returns:
@@ -924,7 +924,7 @@ def grammar_suite(directory, parser_factory, transformer_factory,
     Runs all grammar unit tests in a directory. A file is considered a test-unit,
     if it has the word "test" in its name.
 
-    :param direcotry: The path of a directory that contains test-files.
+    :param directory: The path of a directory that contains test-files.
     :param parser_factory: the parser-factory-object, typically an instance of
         :py:class:`~parse.Grammar`.
     :param transformer_factory: A factory-function for the AST-transformation-function.

@@ -36,7 +36,7 @@ from collections import defaultdict
 import copy
 from functools import lru_cache
 from typing import Callable, cast, Collection, DefaultDict, Sequence, Union, Optional, \
-    NamedTuple
+    NamedTuple, Iterator
 
 from DHParser.configuration import get_config_value, NEVER_MATCH_PATTERN
 from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
@@ -56,7 +56,7 @@ from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME, SourceMap
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
 from DHParser.nodetree import Node, RootNode, WHITESPACE_PTYPE, \
     KEEP_COMMENTS_PTYPE, TOKEN_PTYPE, MIXED_CONTENT_TEXT_PTYPE, ZOMBIE_TAG, EMPTY_NODE, \
-    EMPTY_PTYPE, LEAF_NODE
+    EMPTY_PTYPE, LEAF_NODE, ChildrenType, ResultType
 from DHParser.toolkit import sane_parser_name, escape_ctrl_chars, re, matching_brackets, \
     abbreviate_middle, RX_NEVER_MATCH, RxPatternType, linebreaks, line_col, TypeAlias, \
     List, Tuple, MutableSet, AbstractSet, FrozenSet, Dict, INFINITE, LazyRE
@@ -75,7 +75,9 @@ __all__ = ('parser_names',
            'ApplyToTrailFunc',
            'FlagFunc',
            'ParseFunc',
+           'BoundParseFunc',
            'ParsingResult',
+           'ParserCallable',
            'ParserFactory',
            'copy_parser_base_attrs',
            'Parser',
@@ -111,6 +113,8 @@ __all__ = ('parser_names',
            'CombinedParser',
            'TreeReduction',
            'RX_NAMED_GROUPS',
+           'PARSER_PLACEHOLDER',
+           'NoMemoizationParser',
            'SmartRE',
            'CustomParseFunc',
            'Custom',
@@ -206,14 +210,14 @@ class ParserError(Exception):
     different kind of error like ``UnknownParserError``) is when a :py:class:`Series`
     or :py:class:`Interleave`-parser detects a missing mandatory element.
 
-    :ivar origin:  The parser within which the error has been raised
+    :ivar parser:  The parser within which the error has been raised
     :ivar node:  The node within which the error is locted
     :ivar node_orig_len:  The original size of that node. The actual size
         of that node may change due to later processing steps und thus not
         be reliable anymore for the description of the error.
     :ivar location:  The location in the document where the parser that caused the
         error started. This is not to be confused with the location where the error
-        occurred, because by the time the error occurs the parser may already have
+        occurred, because by the time the error occurrs the parser may already have
         read some part of the document.
     :ivar error:  The :py:class:`~error.Error` object containing among other things
         the exact error location.
@@ -225,14 +229,14 @@ class ParserError(Exception):
 
     """
     def __init__(self,
-                 origin: Parser,
+                 parser: Parser,
                  node: Node,
                  node_orig_len: int,
                  location: int,
                  error: Error, *,
                  first_throw: bool):
         assert node is not None
-        self.parser = origin  # type: Parser
+        self.parser = parser  # type: Parser
         self.node = node      # type: Node
         self.node_orig_len = node_orig_len  # type: int
         self.location = location  # type: int
@@ -266,7 +270,7 @@ class ParserError(Exception):
             >>> pe_derived.first_throw
             False
         """
-        args = {"origin": self.parser,
+        args = {"parser": self.parser,
                 "node": self.node,
                 "node_orig_len": self.node_orig_len,
                 "location": self.location,
@@ -289,7 +293,7 @@ ReentryPointAlgorithm: TypeAlias = Callable[[StringView, int, int], Tuple[int, i
 
 # @cython.returns(cython.int)
 # must not use: @functools.lru_cache(), because resume-function may contain
-# context sensitive parsers!!!
+# context-sensitive parsers!!!
 @cython.locals(upper_limit=cython.int, closest_match=cython.int, pos=cython.int)
 def reentry_point(rest: StringView,
                   rules: ResumeList,
@@ -300,7 +304,7 @@ def reentry_point(rest: StringView,
     Finds the point where parsing should resume after a ParserError has been caught.
     The algorithm makes sure that this reentry-point does not lie inside a comment.
     The re-entry point is always the point after the end of the match of the regular
-    expression defining the re-entry point. (Use look ahead, if you want to define
+    expression defining the re-entry point. (Use lookahead if you want to define
     the re-entry point by what follows rather than by what text precedes the point.)
 
     REMARK: The algorithm assumes that any stretch of the document that matches
@@ -325,6 +329,10 @@ def reentry_point(rest: StringView,
         reentry-point. A value smaller than zero means that the complete remaining
         text will be searched. A value of zero effectively turns of resuming after
         error
+    :param skip_node_name: A name for the skip-node that is used to store that part
+        of the document that will be skipped before continuing with the parsing process.
+        f"_R{nr}__" will be added to the skip-node name, where "nr" is the nummer
+        of the skip-rule, of which there can be more than one for the same parser.
     :return: A tuple of the integer index (counted from the beginning of rest!)
         of the closest reentry point and a Node
         capturing all text from ``rest`` up to this point or ``(-1, None)`` if no
@@ -340,7 +348,7 @@ def reentry_point(rest: StringView,
     @cython.locals(a=cython.int, b=cython.int)
     def next_comment() -> Tuple[int, int]:
         """Returns the [start, end[ intervall of the next comment in the text.
-        The comment-iterator start at the beginning of the ``rest`` of the
+        The comment-iterator starts at the beginning of the ``rest`` of the
         document and is reset for each search rule.
         """
         nonlocal rest, comments
@@ -482,10 +490,11 @@ ApplyToTrailFunc: TypeAlias = Callable[[ParserTrail], Optional[bool]]
 # The return value of ``True`` stops any further application
 FlagFunc: TypeAlias = Callable[[ApplyFunc, MutableSet[ApplyFunc]], bool]
 ParseFunc: TypeAlias = Callable[['Parser', int], ParsingResult]
+BoundParseFunc: TypeAlias = Callable[[int], ParsingResult]
 
 
 class Parser:
-    """
+    r"""
     (Abstract) Base class for Parser combinator parsers. Any parser
     object that is actually used for parsing (i.e. no mock parsers)
     should be derived from this class.
@@ -517,9 +526,9 @@ class Parser:
     :py:class:`ZeroOrMore` or :py:class:`Option`). If ``i > 0`` then the
     parser has "moved forward".
 
-    If the parser does not match it returns ``(None, text)``. **Note** that
+    If the parser does not match, it returns ``(None, text)``. **Note** that
     this is not the same as an empty match ``("", text)``. Any empty match
-    can for example be returned by the :py:class:`ZeroOrMore`-parser in case
+    can, for example, be returned by the :py:class:`ZeroOrMore`-parser in case
     the contained parser is repeated zero times.
 
     :ivar pname:  The parser's name.
@@ -548,12 +557,12 @@ class Parser:
                 parser returned at the respective place. This dictionary
                 is used to implement memoizing.
 
-    :ivar parse_proxy: Usually, just a reference to ``self._parse``, but can
+    :ivar \_parse_proxy: Usually, just a reference to ``self._parse``, but can
                 be overwritten to run th call to the ``_parse``-method
                 through a proxy like, for example, a tracing debugger.
                 See :py:mod:`~DHParser.trace`
 
-    :ivar sub_parsers: set of parsers that are directly referred to by
+    :ivar \_sub_parsers: set of parsers that are directly referred to by
                 this parser, e.g. parser "a" defined by the EBNF-expression
                 "a = b (b | c)" has the sub-parser-set {b, c}.
 
@@ -591,7 +600,7 @@ class Parser:
         self.drop_content = False     # type: bool
         self._sub_parsers = frozenset()  # type: FrozenSet[Parser]
         # this indirection is required for Cython-compatibility
-        self._parse_proxy = self._parse  # type: ParseFunc
+        self._parse_proxy = self._parse  # type: BoundParseFunc
         try:
             self._grammar = get_grammar_placeholder()  # type: Grammar
         except NameError:
@@ -1597,7 +1606,7 @@ class Grammar:
     parser_initialization__ = ["pending"]  # type: List[str]
     resume_rules__ = dict()        # type: Dict[str, ResumeList]
     skip_rules__ = dict()          # type: Dict[str, ResumeList]
-    error_messages__ = dict()      # type: Dict[str, Sequence[PatternMatchType, str]]
+    error_messages__ = dict()      # type: Dict[str, Tuple[PatternMatchType, str]]
     disposable__ = frozenset()     # type: FrozenSet[str]|RxPatternType
     # some default values
     COMMENT__ = r''  # type: str  # r'#.*'  or r'#.*(?:\n|$)' if combined with horizontal wspc
@@ -1872,7 +1881,7 @@ class Grammar:
                     return tail.pos + tail.strlen()
             return 0
 
-        def lookahead_failure_only(parser):
+        def lookahead_failure_only(parser) ->bool:
             """EXPERIMENTAL!
 
             Checks if failure to match document was only due to a succeeding
@@ -1885,11 +1894,12 @@ class Grammar:
             def is_lookahead(name: str) -> bool:
                 custom_parser_class = None
 
-                def find_parser_class(parser, name):
+                def find_parser_class(parser, name) -> bool:
                     nonlocal custom_parser_class
                     if parser.__class__.__name__ == name:
                         custom_parser_class = parser.__class__
                         return True
+                    return False
 
                 try:
                     return ((name in self
@@ -2073,9 +2083,11 @@ class Grammar:
                     err_pos = max(err_pos, stitch.pos)
                 if len(stitches) > 2:
                     error_msg = f'Error after {len(stitches) - 2}. reentry: ' + error_msg
-                    err_code = PARSER_STOPPED_ON_RETRY
+                    error_code = PARSER_STOPPED_ON_RETRY
                     err_pos = stitch.pos  # in this case stich.pos is more important than ff_pos
-                if error_code in {PARSER_LOOKAHEAD_MATCH_ONLY, PARSER_LOOKAHEAD_FAILURE_ONLY} \
+                if error_code in {PARSER_LOOKAHEAD_MATCH_ONLY,
+                                  PARSER_LOOKAHEAD_FAILURE_ONLY,
+                                  PARSER_STOPPED_BEFORE_END} \
                         or not any(e.pos == err_pos for e in self.tree__.errors if is_error(e)):
                     error = Error(error_msg, err_pos, error_code)
                     self.tree__.add_error(stitch, error)
@@ -2327,8 +2339,8 @@ class Grammar:
         return error_list
 
 
-ParserFunc: TypeAlias = Union[Grammar, Callable[[str], RootNode], functools.partial]
-ParserFactory: TypeAlias = Union[Callable[[], ParserFunc], functools.partial]
+ParserCallable: TypeAlias = Union[Grammar, Callable[[str], RootNode], functools.partial]
+ParserFactory: TypeAlias = Union[Callable[[], ParserCallable], functools.partial]
 
 
 def dsl_error_msg(parser: Parser, error_str: str) -> str:
@@ -2696,7 +2708,7 @@ class RegExp(LeafParser):
 
     def is_lookahead(self) -> bool:
         """Just a heuristic for the simplemost cases!"""
-        return self.regex.pattern[0:3] in ('(?=', '(?!')
+        return self.regexp.pattern[0:3] in ('(?=', '(?!')
 
 
 
@@ -3367,7 +3379,6 @@ class SmartRE(CombinedParser):
         if pattern.lstrip('(')[0:2] in ('?=', '?!'):
             return True
         mb = None
-        rs_pattern = None
         i = pattern.rfind('(?=')
         if i > 0:
             mb = matching_brackets(pattern, '(', ')', )
@@ -3383,7 +3394,6 @@ class SmartRE(CombinedParser):
             if mb is None:
                 mb = matching_brackets(pattern, '(', ')', )
                 mb.reverse()
-                rs_pattern = pattern.rstrip(')')
             rs_pattern = pattern.rstrip(')')
             for a, b in mb:
                 if a == i:
@@ -3447,7 +3457,9 @@ class CustomParser(CombinedParser):
 
     def __repr__(self):
         pf = self.parse_func
-        pfname = getattr(pf, '__name__', getattr(pf.__class__, '__name__', str(pf)))
+        pfname = getattr(pf, '__name__',
+                         getattr(getattr(pf, '__class__', None), '__name__',
+                                 str(pf)))
         return f'Custom({pfname})'
 
 
@@ -4159,8 +4171,8 @@ class ErrorCatchingNary(NaryParser):
         This is a helper function that abstracts functionality that is
         needed by the Interleave-parser as well as the Series-parser.
 
-        :param location: the point, where the mandatory violation happend.
-                As usual the string view represents the remaining text from
+        :param location: the point, where the mandatory violation happened.
+                As usual, the string view represents the remaining text from
                 this point.
         :param failed_on_lookahead: True if the violating parser was a
                 Lookahead-Parser.
@@ -4169,6 +4181,9 @@ class ErrorCatchingNary(NaryParser):
                 reentry-position.
         :param reloc: A position offset that represents the reentry point for
                 parsing after the error occurred.
+        :param err_node: The node to which the mandatory violation error shall
+                be attached. Usually, this is the skip-node so that the error
+                will be located exactly where the violation occurred.
 
         :return:   a tuple of an error object and a location for the
                 continuation the parsing process
@@ -4227,7 +4242,7 @@ class ErrorCatchingNary(NaryParser):
         errors = super().static_analysis()
         msg = []
         length = len(self.parsers)
-        sym = self.symbol
+        # sym = self.symbol
         # if self.mandatory == NO_MANDATORY and sym in self.grammar.error_messages__:
         #     msg.append('Custom error messages require that parameter "mandatory" is set!')
         # elif self.mandatory == NO_MANDATORY and sym in self.grammar.skip_rules__:
@@ -4808,10 +4823,12 @@ class Retrieve(ContextSensitive):
     The constructor parameter ``symbol`` determines which variable is
     used.
 
-    :ivar symbol: The parser that has stored the value to be retrieved, in
-        other words: "the observed parser"
-    :ivar match_func: a procedure that through which the processing to the
-        retrieved symbols is channeled. In the simplest case it merely
+    :ivar parser: The name of the parser that has stored the value
+        to be retrieved, in other words: "the observed parser".
+        (class Retrieve reuses the instance variable "parser" of its
+         superclass Unary with a slightly different semantic)
+    :ivar match: a procedure through which the processing of the
+        retrieved symbols is channeled. In the simple most case, it merely
         returns the last string stored by the observed parser. This can
         be (mis-)used to execute any kind of semantic action.
     """
