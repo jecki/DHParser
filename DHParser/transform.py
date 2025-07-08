@@ -769,13 +769,15 @@ def has_content(path: Path, content: str) -> bool:
 
 
 @transformation_factory(str)
-def has_attr(path: Path, attr: str, value: Optional[str] = None) -> bool:
+def has_attr(path: Path, attr: str="", value: Optional[str] = None) -> bool:
     """
     Returns true, if the node has the attribute ``attr`` and its value
     equals ``value``. If ``value`` is None, True is returned if the attribute
     exists, no matter what it value is.
     """
     node = path[-1]
+    if not attr:
+        return node.has_attr()
     if value is None:
         return node.has_attr(attr)
     else:

@@ -4214,7 +4214,7 @@ def insert_node(leaf_path: Path, rel_pos: int, node: Node,
     a "leaf"-path, i.e. a path that ends in a leaf. Returns the
     parent of the newly inserted node.
 
-    This is the a convenient function for inserting milestons into
+    This is a convenient function for inserting milestons into
     a tree-strcutured document.
 
     Examples::
@@ -5452,12 +5452,12 @@ class ContentMapping:
         self.rebuild_mapping_slice(first_index, last_index)
 
 
-    def insert_node(self, pos: int, node: Node) -> NodeLocation:
+    def insert_node(self, pos: int, node: Node, left_biased: bool=False) -> NodeLocation:
         """Inserts a node at a specific position into the last or
         eventually second but last node in the path from the context mapping
         that covers this position. Returns the parent of the newly inserted
         node."""
-        index = self.get_path_index(pos)
+        index = self.get_path_index(pos, left_biased)
         path = self._path_list[index]
         rel_pos = pos - self._pos_list[index]
         parent = insert_node(path, rel_pos, node)
