@@ -43,7 +43,7 @@ from DHParser.compile import compile_source, process_tree, CompilerFactory
 from DHParser.configuration import get_config_value
 from DHParser.error import Error, has_errors, FATAL
 from DHParser.nodetree import RootNode, Node
-from DHParser.parse import Grammar, ParserFactory
+from DHParser.parse import Grammar, ParserFactory, Parser
 from DHParser.preprocess import PreprocessorFactory, PreprocessorFunc, Tokenizer, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors, \
     DeriveFileNameFunc
@@ -226,7 +226,8 @@ def full_pipeline(source: str,
                   preprocessor_factory: PreprocessorFactory,
                   parser_factory: ParserFactory,
                   junctions: Set[Junction],
-                  target_stages: Set[str]) -> PipelineResult:
+                  target_stages: Set[str],
+                  start_parser: Union[str, Parser] = "root_parser__") -> PipelineResult:
     """Runs a processing pipeline starting from the source-code (in contrast
     to "run_pipeline()" which starts from any tree-stage, typically, from
     the concrete syntax-tree (CST).
@@ -236,7 +237,8 @@ def full_pipeline(source: str,
     Mind that if there are fatal errors earlier in the pipeline, some or all
     target stages might not be reached and thus not be included in the result.
     """
-    cst, msgs, _ = compile_source(source, preprocessor_factory(), parser_factory())
+    cst, msgs, _ = compile_source(source, preprocessor_factory(), parser_factory(),
+                                  start_parser=start_parser)
     if has_errors(msgs, FATAL):
         return {ts: (cst, msgs) for ts in target_stages}
     return run_pipeline(junctions, {cst.stage: cst}, target_stages)

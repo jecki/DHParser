@@ -566,7 +566,7 @@ class Parser:
                 this parser, e.g. parser "a" defined by the EBNF-expression
                 "a = b (b | c)" has the sub-parser-set {b, c}.
 
-                Notes: 1.the set is empty for parser that derive neither
+                Notes: 1.the set is empty for parsers that derive neither
                 from :py:class:`UnaryParser` nor from :py:class:`NaryParser`
                 2. unary parsers have exactly one sub-parser 3. n-ary parsers
                 have one or more sub_parsers. For n-ary-parsers

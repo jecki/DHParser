@@ -44,7 +44,7 @@ from DHParser.configuration import get_config_value
 from DHParser.preprocess import PreprocessorFunc, gen_neutral_srcmap_func
 from DHParser.nodetree import Node, RootNode, EMPTY_PTYPE, Path
 from DHParser.transform import TransformerFunc
-from DHParser.parse import ParserCallable
+from DHParser.parse import ParserCallable, Parser
 from DHParser.error import is_error, is_fatal, Error, FATAL, \
     TREE_PROCESSING_CRASH, COMPILER_CRASH, AST_TRANSFORM_CRASH, has_errors
 from DHParser.log import log_parsing_history, log_ST, is_logging
@@ -132,8 +132,8 @@ class Compiler:
         variables must be reset when it is called again.
     :ivar _debug: A flag indicating that debugging is turned on. The value
         for this flag is read before each call of the configuration
-        (see debugging section in :py:mod:`DHParser.configuration`).
-        If debugging is turned on the compiler class raises en
+        (see debugging-section in :py:mod:`DHParser.configuration`).
+        If debugging is turned on, the compiler class raises en
         error if there is an attempt to be compiled one and the same
         node a second time.
     :ivar _debug_already_compiled: A set of nodes that have already been compiled.
@@ -147,7 +147,7 @@ class Compiler:
 
     def reset(self):
         """
-        Resets alls variables to their default values before the next call
+        Resets all variables to their default values before the next call
         of the object.
         """
         self.tree = ROOTNODE_PLACEHOLDER   # type: RootNode
@@ -200,8 +200,8 @@ class Compiler:
 
     def finalize(self, result: Any) -> Any:
         """
-        A finalization method that is called after compilation has finished and
-        after all tasks from the finalizers-stack have been executed
+        A finalization method that is called after compilation has finished,
+        and after all tasks from the finalizers-stack have been executed.
         """
         if isinstance(self.tree, RootNode):
             self.tree.stage = ''   # turn of stage-verification as default to keep matters simple
@@ -209,7 +209,7 @@ class Compiler:
 
     def wildcard(self, node: Node) -> Any:
         """
-        The wildcard method is called on nodes for which no other compilation-
+        The wildcard method is called on nodes for which no other compilation
         method has been specified. This allows to check, whether illegal
         nodes occur in the tree (although, a static structural validation
         is to be preferred.) or whether a compilation node has been
@@ -228,8 +228,8 @@ class Compiler:
         implemented compiler.)
 
         The ``__call__``-method is also responsible for initializations
-        required before the compilation and the finalization the compilation
-        has been finished by taking the following steps::
+        required before the compilation and the finalization of the
+        compilation has been finished by taking the following steps::
 
             1. reset all variables and initialize ``self.tree`` with ``root``
             2. call the :py:meth:`Compiler.prepare()`-method.
@@ -400,7 +400,8 @@ def compile_source(source: str,
                    parser: ParserCallable,
                    transformer: TransformerFunc = NoTransformation,
                    compiler: CompilerFunc = NoTransformation,
-                   *, preserve_AST: bool = False) -> CompilationResult:
+                   *, start_parser: Union[str, Parser] = "root_parser__",
+                      preserve_AST: bool = False) -> CompilationResult:
     """Compiles a source in four stages:
 
     1. Pre-Processing (if needed)
@@ -425,6 +426,9 @@ def compile_source(source: str,
             transforms it (in place) into an abstract syntax tree.
     :param compiler: A compiler function or compiler class
             instance
+    :param start_parser: The name of the parser (or the parser-object itself)
+            with which to start. This is useful for compiling sections of
+            entire documents without the need to provide a dummy-wrapper.
     :param preserve_AST: Preserves the AST-tree.
 
     :returns: The result of the compilation as a 3-tuple
@@ -464,7 +468,7 @@ def compile_source(source: str,
 
     # parsing
 
-    syntax_tree: RootNode = parser(source_text, source_mapping=source_mapping)
+    syntax_tree: RootNode = parser(source_text, start_parser, source_mapping)
     syntax_tree.docname = source_name if source_name else "DHParser_Document"
     for e in errors:  syntax_tree.add_error(None, e)
     syntax_tree.source = original_text
@@ -534,14 +538,14 @@ RX_STACKTRACE_FNAME = re.compile(r' *File "([^"]*)"')
 
 def process_tree(tp: CompilerFunc, tree: RootNode) -> Any:
     """Process a tree with the tree-processor `tp` only if no fatal error
-    has occurred so far. Catch any Python-exceptions in case
+    has occurred so far. Catch any Python exceptions in case
     any normal errors have occurred earlier in the processing pipeline.
-    Don't catch Python-exceptions if no errors have occurred earlier.
+    Don't catch Python exceptions if no errors have occurred earlier.
 
     This behavior is based on the assumption that given any non-fatal
     errors have occurred earlier, the tree passed through the pipeline
     might not be in a state that is expected by the later stages, thus if
-    an exception occurs it is not really to be considered a programming
+    an exception occurrs it is not really to be considered a programming
     error. Processing stages should be written with possible errors
     occurring in earlier stages in mind, though. However, because it could
     be difficult to provide for all possible kinds of badly structured
