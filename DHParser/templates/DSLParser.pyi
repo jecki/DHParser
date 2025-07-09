@@ -3,6 +3,7 @@
 # Post-Processing-Stages [add one or more postprocessing stages, here]
 #
 #######################################################################
+from DHParser import ALLOWED_PRESET_VALUES
 
 # class PostProcessing(Compiler):
 #     ...
@@ -112,6 +113,7 @@ def batch_process(file_names: List[str], out_dir: str,
 
 
 def main(called_from_app=False) -> bool:
+    global targets, test_targets, serializations, junctions
     # recompile grammar if needed
     scriptpath = os.path.abspath(os.path.realpath(__file__))
     if scriptpath.endswith('Parser.py'):
@@ -162,7 +164,12 @@ def main(called_from_app=False) -> bool:
                         help='Run batch jobs in a single thread (recommended only for debugging)')
     parser.add_argument('--dontrerun', action='store_const', const='dontrerun',
                         help='Do not automatically run again if the grammar has been recompiled.')
-    parser.add_argument('-s', '--serialize', nargs='+', default=[])
+    parser.add_argument('-s', '--serialize', nargs=1, default=[],
+                        help="Choose serialization format for tree structured data. Available: "
+                             + ', '.join(ALLOWED_PRESET_VALUES['default_serialization']))
+    parser.add_argument('-t', '--target', nargs='+', default=[],
+                        help='Pick compilation target(s). Available targets: '
+                             '%s; default: %s' % (', '.join(test_targets), ', '.join(targets)))
 
     args = parser.parse_args()
     file_names, out, log_dir = args.files, args.out[0], ''
@@ -170,6 +177,12 @@ def main(called_from_app=False) -> bool:
     read_local_config(os.path.join(scriptdir, '{NAME}Config.ini'))
 
     if args.serialize:
+        if (args.serialize[0].lower() not in
+                [sf.lower() for sf in ALLOWED_PRESET_VALUES['default_serialization']]):
+            print('Unknown serialization format: ' + args.serialize[0] +
+                  '! Available formats for tree-structures: '
+                  + ', '.join(ALLOWED_PRESET_VALUES['default_serialization']))
+            sys.exit(1)
         serializations['*'] = args.serialize
         access_presets()
         set_preset_value('{NAME}_serializations', serializations, allow_new_key=True)
@@ -186,6 +199,15 @@ def main(called_from_app=False) -> bool:
 
     if args.singlethread:
         set_config_value('batch_processing_parallelization', False)
+
+    if args.target:
+        chosen = set(args.target)
+        unknown = chosen - test_targets
+        if unknown:
+            print('Unknown targets: ' + ', '.join(unknown) + ' chosen!' +
+                  '\nAvailable targets: ' + ', '.join(test_targets))
+            sys.exit(1)
+        targets = chosen
 
     def echo(message: str):
         if args.verbose:

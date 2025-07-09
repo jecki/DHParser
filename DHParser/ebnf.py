@@ -996,7 +996,7 @@ except (ImportError, ModuleNotFoundError):
 from DHParser.compile import Compiler, compile_source, Junction, full_compile
 from DHParser.configuration import set_config_value, add_config_values, get_config_value, \\
     access_thread_locals, access_presets, finalize_presets, set_preset_value, \\
-    get_preset_value, read_local_config, CONFIG_PRESET, NEVER_MATCH_PATTERN
+    get_preset_value, read_local_config, CONFIG_PRESET, NEVER_MATCH_PATTERN, ALLOWED_PRESET_VALUES
 from DHParser import dsl
 from DHParser.dsl import recompile_grammar, never_cancel
 from DHParser.ebnf import grammar_changed
