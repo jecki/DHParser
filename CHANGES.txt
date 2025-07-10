@@ -1,10 +1,19 @@
 DHParser Version 1.8.4
 ......................
+
+- bugfix: test don't forget to call the preprocessor (if present)!
+- empty tags are not explicitly passed to nodtree.Node.as_xml()
+  they will be determined automatically
+- auto-generated parser skript now allows to select a particular
+  compilation target, like the AST or any other intermediate
+  or final stage from the processing-pipline
+-  start_parser-paramters added to compile.compile_source() and
+   pipeline.full_pipline()
+- left_biased-parameter added to nodetree.ContentMapping.insert_node()
 - an (empty) ...Config.ini-file is now automatically generated
   for new projects
 - a small sub-chapter concerning XML-reflow was added to the
   documentation
-
 
 
 DHParser Verion 1.8.3 (20.3.2024)
