@@ -1011,7 +1011,7 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, DropFro
     LateBindingUnary, mixin_comment, last_value, matching_bracket, optional_last_value, \\
     PARSER_PLACEHOLDER, UninitializedError
 from DHParser.pipeline import end_points, full_pipeline, create_parser_junction, \\
-    create_preprocess_junction, create_junction, PseudoJunction
+    create_preprocess_junction, create_junction, PseudoJunction, PipelineResult
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \\
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.stringview import StringView

@@ -49,7 +49,23 @@ serializations = expand_table(dict([('*', [get_config_value('default_serializati
 #
 #######################################################################
 
-def compile_src(source: str, target: str = "{NAME}") -> Tuple[Any, List[Error]]:
+def pipeline(source: str,
+             target: str = "{NAME}",
+             start_parser: str = "root_parser__") -> PipelineResult:
+    """Runs the source code through the processing pipeline. If
+    the parameter target is not the empty string, only the stages required
+    for the given target will be passed. See :py:func:`compile_src` for the
+    explanation of the other parameters.
+    """
+    global targets
+    target_set = set([target]) if target else targets
+    return full_pipeline(
+        source, preprocessing.factory, parsing.factory, junctions, target_set,
+        start_parser)
+
+def compile_src(source: str,
+                target: str = "{NAME}",
+                start_parser: str = "root_parser__") -> Tuple[Any, List[Error]]:
     """Compiles the source to a single target and returns the result of the compilation
     as well as a (possibly empty) list or errors or warnings that have occurred in the
     process.
@@ -59,18 +75,22 @@ def compile_src(source: str, target: str = "{NAME}") -> Tuple[Any, List[Error]]:
         at the beginning of short, i.e. one-line source texts, to avoid these being
         misinterpreted as filenames.
     :param target: the name of the target stage up to which the processing pipeline
-        will be proceeded.
+        will be proceeded
+    :param start_parser: the parser with which the parsing shall start. The default
+        is the root-parser, but if only snippets of a full document shall be processed,
+        it makes sense to pick another parser, here.
 
     :returns: a tuple (data, list of errors) of the data in the format of the
         target-stage selected by parameter "target" and of the potentially
         empty list of errors.
     """
-    full_compilation_result = full_pipeline(
-        source, preprocessing.factory, parsing.factory, junctions, set([target]))
+    full_compilation_result = pipeline(source, target, start_parser)
     return full_compilation_result[target]
 
 
-def compile_snippet(source_code: str, target: str = "{NAME}") -> Tuple[Any, List[Error]]:
+def compile_snippet(source_code: str,
+                    target: str = "{NAME}",
+                    start_parser: str = "root_parser__") -> Tuple[Any, List[Error]]:
     """Compiles a piece of source_code. In contrast to :py:func:`compile_src` the
     parameter source_code is always understood as a piece of source-code and never
     as a filename, not even if it is a one-liner that could also be a file-name.
@@ -78,7 +98,7 @@ def compile_snippet(source_code: str, target: str = "{NAME}") -> Tuple[Any, List
     if source_code[0:1] not in ('\ufeff', '\ufffe') and \
             source_code[0:3] not in ('\xef\xbb\xbf', '\x00\x00\ufeff', '\x00\x00\ufffe'):
         source_code = '\ufeff' + source_code  # add a byteorder-mark for disambiguation
-    return compile_src(source_code)
+    return compile_src(source_code, target, start_parser)
 
 
 def process_file(source: str, out_dir: str = '', target_set: Set[str]=frozenset()) -> str:
