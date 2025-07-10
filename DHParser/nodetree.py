@@ -130,6 +130,7 @@ __all__ = ('WHITESPACE_PTYPE',
            'ENTITY_REF_PTYPE',
            'LEAF_PTYPES',
            'DIVISIBLES',
+           'AUTO_EMPTY_TAGS',
            'HTML_EMPTY_TAGS',
            'ZOMBIE_TAG',
            'PLACEHOLDER',
@@ -256,6 +257,10 @@ HTML_EMPTY_TAGS = frozenset(
      'link', 'meta', 'param', 'source', 'track', 'wbr',
      'AREA', 'BASE', 'BR', 'COL', 'EMBED', 'HR', 'IMG', 'INPUT',
      'LINK', 'META', 'PARAM', 'SOURCE', 'TRACK', 'WBR'})
+
+# a sentinel to signal that empty-tags should be detected automatically
+AUTO_EMPTY_TAGS = frozenset({'__AUTO_EMPTY_TAGS__'})
+EMPTY_SET_SENTINEL = frozenset({""})  # needed by RootNode.as_xml()
 
 ZOMBIE_TAG = "ZOMBIE__"
 
@@ -2053,11 +2058,35 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return self.as_sxpr(src, indentation, compact, flatten_threshold, sxml=normal_form,
                             reflow_col=reflow_col, mapping=mapping)
 
+    def collect_empty_tags(self) -> Set[str]:
+        """Collects the names of all nodes for which it is True that
+        all nodes with that name are empty. Example::
+
+        >>> tree = parse_sxpr('(r (e "") (f "") (g "X") (e "") (f "X") (g ""))')
+        >>> print(tree.collect_empty_tags())
+        {'e'}
+
+        :return: The set of names of always empty-nodes
+        """
+        empty_tags = set()
+        not_empty = set()
+        for nd in self.select(LEAF_NODE, include_root=True):
+            tag = nd.name
+            if nd.result:
+                not_empty.add(tag)
+                try:
+                    empty_tags.remove(tag)
+                except KeyError:
+                    pass
+            elif tag not in not_empty:
+                empty_tags.add(tag)
+        return empty_tags
+
     def as_xml(self, src: Optional[str] = None,
                indentation: int = 2,
                inline_tags: AbstractSet[str] = frozenset(),
                string_tags: AbstractSet[str] = LEAF_PTYPES,
-               empty_tags: AbstractSet[str] = frozenset(),
+               empty_tags: AbstractSet[str] = AUTO_EMPTY_TAGS,
                strict_mode: bool = True, reflow_col: int = 0,  # example: 80
                mapping: RawMappingType = NO_MAPPING_SENTINEL) -> str:
         """Serializes the tree of nodes as XML.
@@ -2089,7 +2118,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         root = cast(RootNode, self) if isinstance(self, RootNode) \
             else None  # type: Optional[RootNode]
         line_breaks = linebreaks(src) if src else []
-        _empty_tags = set(empty_tags)  # make a copy, so elements can be added to _empty_Set, safely
+        if empty_tags is AUTO_EMPTY_TAGS:
+            _empty_tags = self.collect_empty_tags()
+        else:
+            _empty_tags = set(empty_tags)  # make a copy, so elements can be added to _empty_tags, safely
 
         def attr_err_ignore(value: str) -> str:
             return ("'%s'" % value) if value.find('"') >= 0 else '"%s"' % value
@@ -2751,10 +2783,6 @@ def tree_sanity_check(tree: Node) -> bool:
 
 ## RootNode - manage global properties of trees, like error messages ##
 
-
-EMPTY_SET_SENTINEL = {""}  # needed by RootNode.as_xml()
-
-
 class RootNode(Node):
     """The root node for the node-tree is a special kind of node that keeps
     and manages global properties of the tree as a whole. These are first and
@@ -3119,7 +3147,8 @@ class RootNode(Node):
             src, indentation,
             inline_tags=self.inline_tags if inline_tags is EMPTY_SET_SENTINEL else inline_tags,
             string_tags=self.string_tags if string_tags is EMPTY_SET_SENTINEL else string_tags,
-            empty_tags=self.empty_tags if empty_tags is EMPTY_SET_SENTINEL else empty_tags,
+            empty_tags=((self.empty_tags or AUTO_EMPTY_TAGS)
+                        if empty_tags is EMPTY_SET_SENTINEL else empty_tags),
             strict_mode=strict_mode, reflow_col=reflow_col, mapping=mapping)
 
     def serialize(self, how: str = '') -> str:
@@ -3362,13 +3391,10 @@ RX_XML_CLOSING_TAG = LazyRE(r'</\s*(?P<tagname>[\w:.-]+)\s*>')
 RX_XML_HEADER = re.compile(r'<(?![?!])')
 
 
-EMPTY_TAGS_SENTINEL = set()
-
-
 def parse_xml(xml: Union[str, StringView],
               string_tag: str = TOKEN_PTYPE,
               ignore_pos: bool = False,
-              out_empty_tags: Set[str] = EMPTY_TAGS_SENTINEL,
+              out_empty_tags: Set[str] = EMPTY_SET_SENTINEL,
               strict_mode: bool = True) -> RootNode:
     """
     Generates a tree of nodes from a (Pseudo-)XML-source. This
@@ -3401,7 +3427,7 @@ def parse_xml(xml: Union[str, StringView],
     non_empty_tags: Set[str] = set()
     dual_use_notified: Set[str] = set()
 
-    if out_empty_tags is EMPTY_TAGS_SENTINEL:
+    if out_empty_tags is EMPTY_SET_SENTINEL:
         out_empty_tags = set()
 
     def get_pos_str(substring: StringView) -> str:

@@ -1523,7 +1523,7 @@ class TestMarkupInsertion:
         a, b = m.start(), m.end()
         cm = ContentMapping(tree, auto_cleanup=True)
         cm.markup(a, b, 'ref')
-        assert tree.as_xml(inline_tags={'item'}) == '<item><pb n="283" ed="A"></pb>'\
+        assert tree.as_xml(inline_tags={'item'}) == '<item><pb n="283" ed="A"/>'\
             '<ref><hi rend="italic">Beaudouin</hi>. Études</ref><note type="comment" n="10">'\
             'Im Titel heißt es: Étude. </note> sur le jus Italicum (Nouvelle revue historique '\
             'V, 1881, p. 145ff.). </item>'

@@ -81,7 +81,7 @@ def compile_snippet(source_code: str, target: str = "{NAME}") -> Tuple[Any, List
     return compile_src(source_code)
 
 
-def process_file(source: str, out_dir: str = '') -> str:
+def process_file(source: str, out_dir: str = '', target_set: Set[str]=frozenset()) -> str:
     """Compiles the source and writes the serialized results back to disk,
     unless any fatal errors have occurred. Error and Warning messages are
     written to a file with the same name as `result_filename` with an
@@ -89,10 +89,15 @@ def process_file(source: str, out_dir: str = '') -> str:
     extension. Returns the name of the error-messages file or an empty
     string, if no errors or warnings occurred.
     """
-    global serializations
+    global serializations, targets
+    if not target_set:
+        target_set = targets
+    elif not target_set <= targets:
+        raise AssertionError('Unknown compilation target(s): ' +
+                             ', '.join(t for t in target_set - targets))
     # serializations = get_config_value('{NAME}_serializations', serializations)
     return dsl.process_file(source, out_dir, preprocessing.factory, parsing.factory,
-                            junctions, targets, serializations)
+                            junctions, target_set, serializations)
 
 
 def process_file_wrapper(args: Tuple[str, str]) -> str:
@@ -153,7 +158,7 @@ def main(called_from_app=False) -> bool:
     parser = ArgumentParser(description="Parses a {NAME}-file and shows its syntax-tree.")
     parser.add_argument('files', nargs='*' if called_from_app else '+')
     parser.add_argument('-d', '--debug', action='store_const', const='debug',
-                        help='Store debug information in LOGS subdirectory')
+                        help='Write debug information to LOGS subdirectory')
     parser.add_argument('-o', '--out', nargs=1, default=['out'],
                         help='Output directory for batch processing')
     parser.add_argument('-v', '--verbose', action='store_const', const='verbose',
@@ -240,7 +245,10 @@ def main(called_from_app=False) -> bool:
             if category == "ERRORS":
                 sys.exit(1)
     else:
-        result, errors = compile_src(file_names[0])
+        if len(targets) == 1:
+            result, errors = compile_src(file_names[0], target=next(iter(targets)))
+        else:
+            result, errors = compile_src(file_names[0])  # keep default_target
 
         if not errors or (not has_errors(errors, ERROR)) \
                 or (not has_errors(errors, FATAL) and args.force):
