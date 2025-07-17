@@ -562,7 +562,7 @@ class Parser:
                 through a proxy like, for example, a tracing debugger.
                 See :py:mod:`~DHParser.trace`
 
-    :ivar \_sub_parsers: set of parsers that are directly referred to by
+    :ivar \_sub_parsers: Set of parsers that are directly referred to by
                 this parser, e.g. parser "a" defined by the EBNF-expression
                 "a = b (b | c)" has the sub-parser-set {b, c}.
 
