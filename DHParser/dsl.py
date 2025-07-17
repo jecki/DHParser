@@ -823,7 +823,7 @@ def batch_process(file_names: List[str], out_dir: str,
                   process_file: Callable[[Tuple[str, str]], str],
                   *, submit_func: Optional[Callable] = None,
                   log_func: Optional[Callable] = None,
-                  cancel_func: Callable = never_cancel) -> List[str]:
+                  cancel_func: Optional[Callable] = None) -> List[str]:
     """Compiles all files listed in file_names and writes the results and/or
     error messages to the directory `our_dir`. Returns a list of error
     messages files.
@@ -848,7 +848,7 @@ def batch_process(file_names: List[str], out_dir: str,
         res_iter = pool.map(process_file, ((name, out_dir) for name in file_names),
             chunksize=min(get_config_value('batch_processing_max_chunk_size'),
                           max(1, len(file_names) // (cpu_count() * 4))))
-        error_files = collect_results(res_iter, file_names, log_func, cancel_func)
+        error_files = collect_results(res_iter, file_names, log_func, cancel_func or never_cancel)
         if sys.version_info >= (3, 9):
             pool.shutdown(wait=True, cancel_futures=True)
         else:
@@ -856,7 +856,7 @@ def batch_process(file_names: List[str], out_dir: str,
     else:
         futures = [submit_func(process_file, name, out_dir) for name in file_names]
         res_iter = (f.result() for f in futures)
-        error_files = collect_results(res_iter, file_names, log_func, cancel_func)
+        error_files = collect_results(res_iter, file_names, log_func, cancel_func or never_cancel)
         for f in futures:  f.cancel()
         concurrent.futures.wait(futures)
     return error_files
