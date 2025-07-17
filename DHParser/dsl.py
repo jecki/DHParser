@@ -821,12 +821,37 @@ def never_cancel() -> bool:
 
 def batch_process(file_names: List[str], out_dir: str,
                   process_file: Callable[[Tuple[str, str]], str],
-                  *, submit_func: Optional[Callable] = None,
-                  log_func: Optional[Callable] = None,
-                  cancel_func: Optional[Callable] = None) -> List[str]:
+                  *, submit_func: Optional[Callable[[Callable, str, str], str]] = None,
+                  log_func: Optional[Callable[[str], None]] = None,
+                  cancel_func: Union[Callable[[], bool], object, None] = None) -> List[str]:
     """Compiles all files listed in file_names and writes the results and/or
     error messages to the directory `our_dir`. Returns a list of error
     messages files.
+
+    :param file_names: A list of names of files to be processed with the
+        function passed to the process_file-parameter.
+    :param out_dir: The name of a directory, to which the output will be
+        written (i.e. compilation and/or pipeline-processing results as
+        well as possibly intermediate stages and error-logs)
+    :param process_file: A function for processing source-texts. This function
+        receives the name of a source file and output-directory as parameters
+        and returns the name of an error-log-file (if there have been errors)
+        or the empty string if there were none.
+    :param submit_func: A function which calls the process_file function. This
+        additional indirection allows executing the call in a separate thread
+        or process, if desired.
+    :param log_func: A function that receives a string as parameter and which
+        is called with an appropriate message whenever another file has been
+        fully processed.
+    :param cancel_func: A callback-function without parameters that returns
+        either True if further processing shall be canceled or False if
+        processing shall continue. This allows interrupting long-running
+        batch-processing tasks.
+
+        As an alternative to a callback-function
+        an Event-object (typically a threading.Event or multiprocessing.
+        Event but any object with an is_set()-method is acceptable) can be
+        passed. Batch-processing will then be canceled if the event is set.
     """
     def collect_results(res_iter, file_names, log_func, cancel_func) -> List[str]:
         error_list = []
