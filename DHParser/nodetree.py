@@ -5486,7 +5486,11 @@ class ContentMapping:
         index = self.get_path_index(pos, left_biased)
         path = self._path_list[index]
         rel_pos = pos - self._pos_list[index]
-        parent = insert_node(path, rel_pos, node)
+        try:
+            divisables = self.divisibility[node.name]
+        except KeyError:
+            divisables = self.divisibility['*']
+        parent = insert_node(path, rel_pos, node, divisables)
         self.rebuild_mapping_slice(index, index)
         return NodeLocation(parent, index)
 
