@@ -45,15 +45,16 @@ from DHParser.preprocess import PreprocessorFunc, gen_neutral_srcmap_func
 from DHParser.nodetree import Node, RootNode, EMPTY_PTYPE, Path
 from DHParser.transform import TransformerFunc
 from DHParser.parse import ParserCallable, Parser
-from DHParser.error import is_error, is_fatal, Error, FATAL, \
+from DHParser.error import is_error, is_fatal, Error, FATAL, CANCELED, \
     TREE_PROCESSING_CRASH, COMPILER_CRASH, AST_TRANSFORM_CRASH, has_errors
 from DHParser.log import log_parsing_history, log_ST, is_logging
 from DHParser.toolkit import load_if_file, is_filename, re, TypeAlias, \
-    deprecated, DHPARSER_FILES
+    deprecated, DHPARSER_FILES, CancelQuery
 
 
 __all__ = ('CompilerError',
            'Compiler',
+           'CompileMethod',
            'CompilerFunc',
            'CompilerFactory',
            'CompilationResult',
@@ -74,6 +75,10 @@ class CompilerError(Exception):
 
 ROOTNODE_PLACEHOLDER = RootNode()
 CompileMethod: TypeAlias = Callable[[Node], Any]
+
+
+class CancelRequest(Exception):
+    pass
 
 
 class Compiler:
@@ -121,11 +126,19 @@ class Compiler:
     :ivar tree: The root of the abstract syntax tree.
     :ivar finalizers:  A stack of tuples (function, parameters) that will be
         called in reverse order after compilation.
-
+    :ivar method_dict: A cache that maps node-names to their respective
+        compile-methods.
     :ivar has_attribute_visitors:  A flag indicating that the class has
         attribute-visitor-methods which are named 'attr_ATTRIBUTENAME'
         and will be called if the currently processed node has one
         or more attributes for which such visitors exist.
+    :ivar forbid_returning_None: A boolean flag that is true by default to
+        catch a common error (i.e. ommiting the return value) when filling
+        in compile-methods. Should be set to False in sub-classes that
+        do want to allow compile-methods to return None
+    :ivar cancel_query: An optional cancel_query function that will be
+        called by the compile method and stop short compilation with
+        a fatal error if it returns True.
 
     :ivar _dirty_flag:  A flag indicating that the compiler has already been
         called at least once and that therefore all compilation
@@ -143,6 +156,7 @@ class Compiler:
         self.has_attribute_visitors: bool = any(field[0:5] == 'attr_' and callable(getattr(self, field))
                                           for field in dir(self))
         self.forbid_returning_None: bool = True
+        self.cancel_query = None  # type: Optional[CancelQuery]
         self.reset()
 
     def reset(self):
@@ -219,7 +233,7 @@ class Compiler:
         """
         return self.fallback_compiler(node)
 
-    def __call__(self, root: Node) -> Any:
+    def __call__(self, root: Node, *, cancel_query: Optional[CancelQuery] = None) -> Any:
         """
         Compiles the abstract syntax tree with the root node `node` and
         returns the compiled code. It is up to subclasses implementing
@@ -246,14 +260,20 @@ class Compiler:
         if self._dirty_flag:
             self.reset()
         self._dirty_flag = True
+        self.cancel_query = cancel_query
         self.tree = root if isinstance(root, RootNode) else RootNode(root)
         self.prepare(self.tree)
-        result = self.compile(self.tree)
-        while self.finalizers:
-            task, parameters = self.finalizers.pop()
-            task(*parameters)
-        result = self.finalize(result)
-        return result
+        try:
+            result = self.compile(self.tree)
+            while self.finalizers:
+                task, parameters = self.finalizers.pop()
+                task(*parameters)
+            result = self.finalize(result)
+            return result
+        except CancelRequest:
+            return None
+        finally:
+            self.cancel_query = None
 
     def visit_attributes(self, node):
         if node.has_attr():
@@ -352,6 +372,11 @@ class Compiler:
             assert node not in self._debug_already_compiled
             self._debug_already_compiled.add(node)
 
+        if self.cancel_query is not None:
+            if self.cancel_query():
+                self.tree.new_error(node, "Compilation stopped by cancel request!", CANCELED)
+                raise CancelRequest
+
         compiler = self.find_compilation_method(node) if find_compilation_method is None \
                    else find_compilation_method(node)
         self.path.append(node)
@@ -408,7 +433,8 @@ def compile_source(source: str,
                    transformer: TransformerFunc = NoTransformation,
                    compiler: CompilerFunc = NoTransformation,
                    *, start_parser: Union[str, Parser] = "root_parser__",
-                      preserve_AST: bool = False) -> CompilationResult:
+                      preserve_AST: bool = False,
+                      cancel_query: Optional[CancelQuery] = None) -> CompilationResult:
     """Compiles a source in four stages:
 
     1. Pre-Processing (if needed)
@@ -437,6 +463,9 @@ def compile_source(source: str,
             with which to start. This is useful for compiling sections of
             entire documents without the need to provide a dummy-wrapper.
     :param preserve_AST: Preserves the AST-tree.
+    :param cancel_query: A boolean-valued function that will be called
+            between the different compilation-stages as to whether
+            further processing shall be canceled.
 
     :returns: The result of the compilation as a 3-tuple
         (result, errors, abstract syntax tree). In detail:
@@ -489,6 +518,8 @@ def compile_source(source: str,
     #     str(syntax_tree) # Ony valid if neither tokens nor whitespace are dropped early
 
     result = None
+    if cancel_query is not None and cancel_query():
+        syntax_tree.new_error(syntax_tree, "Processing stopped by cancel request!", CANCELED)
     if not is_fatal(syntax_tree.error_flag):
 
         # AST-transformation
@@ -512,6 +543,8 @@ def compile_source(source: str,
         if 'AST' in log_syntax_trees:
             log_ST(syntax_tree, log_file_name + '.ast')
 
+        if cancel_query is not None and cancel_query():
+            syntax_tree.new_error(syntax_tree, "Processing stopped by cancel request!", CANCELED)
         if not is_fatal(syntax_tree.error_flag):
             if preserve_AST:
                 import copy
@@ -520,6 +553,8 @@ def compile_source(source: str,
 
             # Compilation
 
+            if hasattr(compiler, 'cancel_query'):
+                compiler.cancel_query = cancel_query
             result = process_tree(compiler, syntax_tree)
 
     messages = syntax_tree.errors_sorted  # type: List[Error]

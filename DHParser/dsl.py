@@ -44,8 +44,8 @@ from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, \
     PreprocessorFactory
 from DHParser.transform import TransformerFunc, TransformerFactory
 from DHParser.toolkit import DHPARSER_DIR, load_if_file, is_python_code, is_filename, \
-    compile_python_object, re, as_identifier, cpu_count, LazyRE, \
-    deprecated, instantiate_executor, PickMultiCoreExecutor
+    compile_python_object, re, as_identifier, cpu_count, LazyRE, CancelQuery, \
+    deprecated, deprecation_warning, instantiate_executor, PickMultiCoreExecutor
 from DHParser.versionnumber import __version__, __version_info__
 
 
@@ -63,7 +63,6 @@ __all__ = ('DefinitionError',
            'create_scripts',
            'restore_server_script',
            'process_file',
-           'never_cancel',
            'batch_process')
 
 
@@ -737,7 +736,8 @@ def process_file(source: str, out_dir: str,
                  parser_factory: ParserFactory,
                  junctions: Set[Junction],
                  targets: Set[str],
-                 serializations: Dict[str, List[str]]) -> str:
+                 serializations: Dict[str, List[str]],
+                 cancel_query: Optional[CancelQuery] = None) -> str:
     """Compiles the source and writes the serialized results back to disk,
     unless any fatal errors have occurred. Error and Warning messages are
     written to a file with the same name as `result_filename` with an
@@ -757,13 +757,17 @@ def process_file(source: str, out_dir: str,
     :param serializations: A dictionary of serialization names, e.g. "sxpr",
         "xml", "json" for those target stages that still are node-trees. These
         will be serialized and written to disk in all given serializations.
+    :param cancel_query: A boolean-valued function without parameters that
+        is polled during processing. If it returns True, processing will be
+        canceled.
 
     :return: either the empty string or the file name of a file that contains
         the errors or warnings that occurred while processing the source.
     """
     source_filename = source if is_filename(source) else 'unknown_document_name'
     dest_name = os.path.splitext(os.path.basename(source_filename))[0]
-    results = full_pipeline(source, preprocessor_factory, parser_factory, junctions, targets)
+    results = full_pipeline(source, preprocessor_factory, parser_factory, junctions, targets,
+                            cancel_query=cancel_query)
     end_results = {t: r for t, r in results.items() if t in targets}
 
     # create target directories
@@ -823,10 +827,12 @@ Future = object  # to save the import of concurrent.futures when not needed!
                  # todo: Could protocols for structural typing be useful, here?
 
 def batch_process(file_names: List[str], out_dir: str,
-                  process_file: Callable[[Tuple[str, str]], str],
+                  process_file: Union[Callable[[Tuple[str, str, CancelQuery]], str],
+                                      Callable[[Tuple[str, str]], str]],
                   *, submit_func: Optional[Callable[[Callable, str, str], Future]] = None,
                   log_func: Optional[Callable[[str], None]] = None,
-                  cancel_func: Union[Callable[[], bool], None] = None) -> List[str]:
+                  cancel_query: Optional[CancelQuery] = None,
+                  cancel_func: Optional[CancelQuery] = None) -> List[str]:
     """Compiles all files listed in file_names and writes the results and/or
     error messages to the directory `our_dir`. Returns a list of error
     messages files.
@@ -847,16 +853,17 @@ def batch_process(file_names: List[str], out_dir: str,
     :param log_func: A function that receives a string as parameter and which
         is called with an appropriate message whenever another file has been
         fully processed.
-    :param cancel_func: A callback-function without parameters that returns
+    :param cancel_query: A callback-function without parameters that returns
         either True if further processing shall be canceled or False if
         processing shall continue. This allows interrupting long-running
-        batch-processing tasks. Typically, cancel_func will be the
+        batch-processing tasks. Typically, cancel_query will be the
         event.is_set-function of a multiprocessing.Event-object that has
         been instantiated before calling batch_process.
+    :param cancel_func: DEPRECATED. Please, use cancel_query.
     """
-    def collect_results(res_iter, file_names, log_func, cancel_func) -> List[str]:
+    def collect_results(res_iter, file_names, log_func, cancel_query) -> List[str]:
         error_list = []
-        if cancel_func(): return error_list
+        if cancel_query(): return error_list
         for file_name, error_filename in zip(file_names, res_iter):
             if log_func:
                 suffix = (" with " + error_filename[error_filename.rfind('_') + 1:-4]) \
@@ -864,25 +871,51 @@ def batch_process(file_names: List[str], out_dir: str,
                 log_func(f'Compiled "%s"' % os.path.basename(file_name) + suffix)
             if error_filename:
                 error_list.append(error_filename)
-            if cancel_func(): return error_list
+            if cancel_query(): return error_list
         return error_list
 
     import concurrent.futures
+    import inspect
+    if cancel_func is not None:
+        deprecation_warning('Parameter name "cancel_func" of function '
+            'DHParser.dsl.batch_process() is deprected. Use "cancel_query" instead!')
+        if cancel_query is None:
+            cancel_query = cancel_func
+    parm_tuple = list(inspect.signature(process_file).parameters.values())[0]
+    pf_parms = len(str(parm_tuple.annotation).split(","))
+    if pf_parms <= 2:
+        deprecation_warning("'process_file'-function passed to DHParser.dsl.batch_process() "
+                            "appears to be outdated as it does not take a third paramter. "
+                            "It's signature ought to be (source: str, out_dir: str, "
+                            "cancel_query: DHParser.toolkit.CancelQuery).")
+        pf_parms = 2
+    else:
+        pf_parms = 3
     if submit_func is None:
         pool = instantiate_executor(get_config_value('batch_processing_parallelization'),
                                     PickMultiCoreExecutor)
-        res_iter = pool.map(process_file, ((name, out_dir) for name in file_names),
-            chunksize=min(get_config_value('batch_processing_max_chunk_size'),
-                          max(1, len(file_names) // (cpu_count() * 4))))
-        error_files = collect_results(res_iter, file_names, log_func, cancel_func or never_cancel)
+        chunksize = min(get_config_value('batch_processing_max_chunk_size'),
+                        max(1, len(file_names) // (cpu_count() * 4)))
+        if pf_parms == 3:
+            res_iter = pool.map(process_file,
+                                ((name, out_dir, cancel_query) for name in file_names),
+                                chunksize=chunksize)
+        else:
+            res_iter = pool.map(process_file, ((name, out_dir) for name in file_names),
+                                chunksize=chunksize)
+        error_files = collect_results(res_iter, file_names, log_func, cancel_query or never_cancel)
         if sys.version_info >= (3, 9):
             pool.shutdown(wait=True, cancel_futures=True)
         else:
             pool.shutdown(wait=True)
     else:
-        futures = [submit_func(process_file, name, out_dir) for name in file_names]
+        if pf_parms == 3:
+            futures = [submit_func(process_file, name, out_dir, cancel_query)
+                       for name in file_names]
+        else:
+            futures = [submit_func(process_file, name, out_dir) for name in file_names]
         res_iter = (f.result() for f in futures)
-        error_files = collect_results(res_iter, file_names, log_func, cancel_func or never_cancel)
+        error_files = collect_results(res_iter, file_names, log_func, cancel_query or never_cancel)
         for f in futures:  f.cancel()
         concurrent.futures.wait(futures)
     return error_files

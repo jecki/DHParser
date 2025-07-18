@@ -101,7 +101,8 @@ def compile_snippet(source_code: str,
     return compile_src(source_code, target, start_parser)
 
 
-def process_file(source: str, out_dir: str = '', target_set: Set[str]=frozenset()) -> str:
+def process_file(source: str, out_dir: str = '', target_set: Set[str]=frozenset(),
+                 *, cancel_query: CancelQuery = None) -> str:
     """Compiles the source and writes the serialized results back to disk,
     unless any fatal errors have occurred. Error and Warning messages are
     written to a file with the same name as `result_filename` with an
@@ -117,11 +118,11 @@ def process_file(source: str, out_dir: str = '', target_set: Set[str]=frozenset(
                              ', '.join(t for t in target_set - targets))
     # serializations = get_config_value('{NAME}_serializations', serializations)
     return dsl.process_file(source, out_dir, preprocessing.factory, parsing.factory,
-                            junctions, target_set, serializations)
+                            junctions, target_set, serializations, cancel_query)
 
 
-def process_file_wrapper(args: Tuple[str, str]) -> str:
-    return process_file(*args)
+def process_file_wrapper(args: Tuple[str, str, CancelQuery]) -> str:
+    return process_file(args[0], args[1], cancel_query=args[2])
 
 
 def batch_process(file_names: List[str], out_dir: str,

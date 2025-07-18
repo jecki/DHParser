@@ -1,6 +1,13 @@
-DHParser Version 1.8.4
+DHParser Version 1.9.0
 ......................
 
+- more fine-grained cancelation, not only batch-processes can be
+  canceled after each processed file, but now also processing
+  pipelines can be canceled after each step. Processing steps
+  themselves can also be canceld, if the have and make use of
+  a cancel_query attribute. (For the time being only compile.Compile
+  offers a cancel_query-attribute, but tree transformations
+  and eventually grammar-objects may follow in the future.)
 - bugfix: test don't forget to call the preprocessor (if present)!
 - empty tags are not explicitly passed to nodtree.Node.as_xml()
   they will be determined automatically

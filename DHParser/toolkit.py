@@ -88,6 +88,7 @@ __all__ = ('re',
            'DHPARSER_FILES',
            'identify_python',
            'identity',
+           'CancelQuery',
            'get_annotations',
            # 'gen_id',
            'ThreadLocalSingletonFactory',
@@ -201,6 +202,9 @@ def identity(x):
     able to check whether a function parameter has been assigned
     another than the default value or not."""
     return x
+
+
+CancelQuery: TypeAlias = Callable[[], bool]  # A type for a cancellation-callback
 
 
 global_id_counter: int = 0

@@ -134,7 +134,8 @@ __all__ = ('ErrorCode',
            'TREE_PROCESSING_CRASH',
            'COMPILER_CRASH',
            'AST_TRANSFORM_CRASH',
-           'RECURSION_DEPTH_LIMIT_HIT')
+           'RECURSION_DEPTH_LIMIT_HIT',
+           'CANCELED')
 
 
 #######################################################################
@@ -234,6 +235,7 @@ COMPILER_CRASH                           = ErrorCode(10200)
 AST_TRANSFORM_CRASH                      = ErrorCode(10300)
 RECURSION_DEPTH_LIMIT_HIT                = ErrorCode(10400)
 STRUCTURAL_ERROR_IN_AST                  = ErrorCode(10500)
+CANCELED                                 = ErrorCode(10600)
 
 
 #######################################################################

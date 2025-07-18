@@ -41,14 +41,14 @@ from typing import Set, Union, Any, Dict, List, Tuple, Iterable, Optional, Seque
 
 from DHParser.compile import compile_source, process_tree, CompilerFactory
 from DHParser.configuration import get_config_value
-from DHParser.error import Error, has_errors, FATAL
+from DHParser.error import Error, has_errors, is_fatal, FATAL, CANCELED
 from DHParser.nodetree import RootNode, Node
 from DHParser.parse import Grammar, ParserFactory, Parser
 from DHParser.preprocess import PreprocessorFactory, PreprocessorFunc, Tokenizer, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors, \
     DeriveFileNameFunc
 from DHParser.toolkit import ThreadLocalSingletonFactory, deprecation_warning, deprecated, \
-    get_annotations
+    get_annotations, CancelQuery
 from DHParser.trace import resume_notices_on, set_tracer, trace_history
 from DHParser.transform import TransformerFunc, TransformerFactory, transformer, TransformationDict
 
@@ -98,7 +98,8 @@ def extract_data(tree_or_data: Union[RootNode, Node, Any]) -> Any:
 
 def run_pipeline(junctions: Set[Junction],
                  source_stages: Dict[str, RootNode],
-                 target_stages: Set[str]) -> PipelineResult:
+                 target_stages: Set[str],
+                 *, cancel_query: Optional[CancelQuery] = None) -> PipelineResult:
     """
     Runs all the intermediary compilation-steps that are necessary to produce
     the "target-stages" from the given "source-stages". Here, each source-stage
@@ -195,6 +196,7 @@ def run_pipeline(junctions: Set[Junction],
     steps.reverse()
     results: Dict[str, Any] = source_stages.copy()
     errata: Dict[str, List[Error]] = {s: source_stages[s].errors_sorted for s in source_stages}
+    cancel = False
     for step in steps:
         for junction in step:
             t = junction[-1]
@@ -213,12 +215,22 @@ def run_pipeline(junctions: Set[Junction],
                         raise ValueError(f'Object in stage "{s}" is not a tree but a {type(tree)}'
                                          f' and, therefore, cannot be processed to {t}')
                     verify_stage(tree.stage, junction, 0)
-                    results[t] = process_tree(junction[1](), tree)
+                    transformation = junction[1]()
+                    if hasattr(transformation, 'cancel_query'):
+                        transformation.cancel_query = cancel_query
+                    results[t] = process_tree(transformation, tree)  # TODO: pass cancel query, here
+                    errata[t] = copy.copy(tree.errors_sorted)
+                    if cancel_query is not None and cancel_query():
+                        tree.new_error(tree, "Pipeline-processing canceled!", CANCELED)
+                    if is_fatal(tree.error_flag):
+                        cancel = True
+                        break
                     if tree.stage == s:  # tree stage hasn't been set by the processing function
                         tree.stage = junction[2]
                     else:
                         verify_stage(tree.stage, junction, 2)
-                    errata[t] = copy.copy(tree.errors_sorted)
+        if cancel:
+            break
     return {t: (extract_data(results[t]), errata[t]) for t in results.keys()}
 
 
@@ -227,7 +239,8 @@ def full_pipeline(source: str,
                   parser_factory: ParserFactory,
                   junctions: Set[Junction],
                   target_stages: Set[str],
-                  start_parser: Union[str, Parser] = "root_parser__") -> PipelineResult:
+                  start_parser: Union[str, Parser] = "root_parser__",
+                  *, cancel_query: Optional[CancelQuery] = None) -> PipelineResult:
     """Runs a processing pipeline starting from the source-code (in contrast
     to "run_pipeline()" which starts from any tree-stage, typically, from
     the concrete syntax-tree (CST).
@@ -238,10 +251,11 @@ def full_pipeline(source: str,
     target stages might not be reached and thus not be included in the result.
     """
     cst, msgs, _ = compile_source(source, preprocessor_factory(), parser_factory(),
-                                  start_parser=start_parser)
+                                  start_parser=start_parser, cancel_query=cancel_query)
     if has_errors(msgs, FATAL):
         return {ts: (cst, msgs) for ts in target_stages}
-    return run_pipeline(junctions, {cst.stage: cst}, target_stages)
+    return run_pipeline(junctions, {cst.stage: cst}, target_stages,
+                        cancel_query=cancel_query)
 
 
 #######################################################################

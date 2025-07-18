@@ -268,7 +268,7 @@ serializations = expand_table({'DOM': ['sxpr'], '*': ['sxpr']})
 def compile_src(source: str, target: str = "html") -> Tuple[Any, List[Error]]:
     full_compilation_result = full_pipeline(
         source, preprocessing.factory, parsing.factory, junctions, {target})
-    return full_compilation_result[target]
+    return full_compilation_result.get(target, list(full_compilation_result.values())[-1])
 
 
 BAD_NESTING_EXAMPLE = """# Main Heading
