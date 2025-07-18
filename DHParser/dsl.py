@@ -819,9 +819,12 @@ def never_cancel() -> bool:
     return False
 
 
+Future = object  # to save the import of concurrent.futures when not needed!
+                 # todo: Could protocols for structural typing be useful, here?
+
 def batch_process(file_names: List[str], out_dir: str,
                   process_file: Callable[[Tuple[str, str]], str],
-                  *, submit_func: Optional[Callable[[Callable, str, str], str]] = None,
+                  *, submit_func: Optional[Callable[[Callable, str, str], Future]] = None,
                   log_func: Optional[Callable[[str], None]] = None,
                   cancel_func: Union[Callable[[], bool], object, None] = None) -> List[str]:
     """Compiles all files listed in file_names and writes the results and/or
@@ -839,19 +842,17 @@ def batch_process(file_names: List[str], out_dir: str,
         or the empty string if there were none.
     :param submit_func: A function which calls the process_file function. This
         additional indirection allows executing the call in a separate thread
-        or process, if desired.
+        or process, if desired. submit_func must return a
+        concurrent.futures.Future()-object!
     :param log_func: A function that receives a string as parameter and which
         is called with an appropriate message whenever another file has been
         fully processed.
     :param cancel_func: A callback-function without parameters that returns
         either True if further processing shall be canceled or False if
         processing shall continue. This allows interrupting long-running
-        batch-processing tasks.
-
-        As an alternative to a callback-function
-        an Event-object (typically a threading.Event or multiprocessing.
-        Event but any object with an is_set()-method is acceptable) can be
-        passed. Batch-processing will then be canceled if the event is set.
+        batch-processing tasks. Typically, cancel_func will be the
+        event.is_set-function of a multiprocessing.Event-object that has
+        been instantiated before calling batch_process.
     """
     def collect_results(res_iter, file_names, log_func, cancel_func) -> List[str]:
         error_list = []
