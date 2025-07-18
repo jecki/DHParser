@@ -998,7 +998,7 @@ from DHParser.configuration import set_config_value, add_config_values, get_conf
     access_thread_locals, access_presets, finalize_presets, set_preset_value, \\
     get_preset_value, read_local_config, CONFIG_PRESET, NEVER_MATCH_PATTERN, ALLOWED_PRESET_VALUES
 from DHParser import dsl
-from DHParser.dsl import recompile_grammar, never_cancel
+from DHParser.dsl import recompile_grammar
 from DHParser.ebnf import grammar_changed
 from DHParser.error import ErrorCode, Error, canonical_error_strings, has_errors, NOTICE, \\
     WARNING, ERROR, FATAL

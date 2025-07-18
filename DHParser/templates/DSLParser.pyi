@@ -125,9 +125,9 @@ def process_file_wrapper(args: Tuple[str, str]) -> str:
 
 
 def batch_process(file_names: List[str], out_dir: str,
-                  *, submit_func: Callable = None,
-                  log_func: Callable = None,
-                  cancel_func: Callable = never_cancel) -> List[str]:
+                  *, submit_func: Optional[Callable] = None,
+                  log_func: Optional[Callable] = None,
+                  cancel_func: Optional[Callable] = None) -> List[str]:
     """Compiles all files listed in file_names and writes the results and/or
     error messages to the directory `our_dir`. Returns a list of error
     messages files.

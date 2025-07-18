@@ -826,7 +826,7 @@ def batch_process(file_names: List[str], out_dir: str,
                   process_file: Callable[[Tuple[str, str]], str],
                   *, submit_func: Optional[Callable[[Callable, str, str], Future]] = None,
                   log_func: Optional[Callable[[str], None]] = None,
-                  cancel_func: Union[Callable[[], bool], object, None] = None) -> List[str]:
+                  cancel_func: Union[Callable[[], bool], None] = None) -> List[str]:
     """Compiles all files listed in file_names and writes the results and/or
     error messages to the directory `our_dir`. Returns a list of error
     messages files.
