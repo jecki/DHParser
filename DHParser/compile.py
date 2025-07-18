@@ -297,13 +297,14 @@ class Compiler:
             self.visit_attributes(node)
         return node
 
-    def find_compilation_method(self, node_name: str) -> CompileMethod:
+    def find_compilation_method(self, node: Node) -> CompileMethod:
         def wildcard_or_fallback():
             if self.wildcard != Compiler.wildcard:
                 return self.wildcard
             else:
                 return self.fallback_compiler
 
+        node_name = node.name
         try:
             method = self.method_dict[node_name]  # check cache, first
         except KeyError:
@@ -321,24 +322,38 @@ class Compiler:
             self.method_dict[node_name] = method
         return method
 
-    def compile(self, node: Node) -> Any:
+    def compile(self, node: Node,
+                find_compilation_method: Optional[Callable[[Node], CompileMethod]] = None) -> Any:
         """
         Calls the compilation method for the given node and returns the
         result of the compilation.
 
         The method's name is derived from either the node's parser
         name or, if the parser is disposable, the node's parser's class
-        name by adding the prefix ``on_``.
+        name by adding the prefix ``on_``. Other ways of determining
+        the right compilation method are possible by providing a function
+        that returns a compilation-method for a given node to the
+        parameter "find_compilation_method".
 
         Note that ``compile`` does not call any compilation functions
         for the parsers of the sub nodes by itself. Rather, this should
         be done within the compilation methods.
+
+        :param Node: The node that shall be compiled next. (The path
+            of nodes leading from the root of the tree is kept in
+            the instance-variable self.path.)
+        :param find_compilation_method: A function that returns a
+            compilation method for a given node. If None, the
+            default method described above will be used.
+        :returns: An object of any type (determined by the
+            sub-class deriving from class Compile).
         """
         if self._debug:
             assert node not in self._debug_already_compiled
             self._debug_already_compiled.add(node)
 
-        compiler = self.find_compilation_method(node.name)
+        compiler = self.find_compilation_method(node) if find_compilation_method is None \
+                   else find_compilation_method(node)
         self.path.append(node)
         result = compiler(node)
         self.path.pop()   # do not put this into a try ... finally: clause, as error reporting still requires the path
@@ -352,14 +367,6 @@ class Compiler:
                  '`self.forbid_returning_None = False` to the reset()-Method of your'
                  'compiler class, in case on_%s actually SHOULD be allowed to '
                  'return None.') % (node.name.replace(':', '3a'), self.visitor_name(node.name)))
-        return result
-
-    def custom_compile(self, node: Node,
-                       find_compilation_method: Callable[[str], CompileMethod]) -> Any:
-        compiler = find_compilation_method(node.name)
-        self.path.append(node)
-        result = compiler(node)
-        self.path.pop()  # do not put this into a try ... finally: clause, as error reporting still requires the path
         return result
 
 

@@ -1680,8 +1680,8 @@ class EBNFCompiler(Compiler):
         return value
 
 
-    def find_smartRE_method(self, name: str) -> Callable:
-        return getattr(self, 'smartRE_' + name)
+    def find_smartRE_method(self, node: Node) -> Callable:
+        return getattr(self, 'smartRE_' + node.name)
 
 
     def make_search_rule(self, node: Node, nd: Node, kind: str) -> ReprType:
@@ -2685,7 +2685,7 @@ class EBNFCompiler(Compiler):
         code = self.on_macro(node)
         if node.name == 'placeholder':
             return '(?:ERROR)', 'ERROR while expanding placeholder'
-        rxp, rep_str = self.custom_compile(node, self.find_smartRE_method)
+        rxp, rep_str = self.compile(node, self.find_smartRE_method)
         if code.startswith(self.P["Drop"]):
             if rxp[:1] == '(' and rxp[1:3] != "?:":
                 m = RX_NAMED_GROUPS.match(rxp)
@@ -2809,7 +2809,7 @@ class EBNFCompiler(Compiler):
         rxps, rep_strs = [], []
         optional_nd = None
         for nd in node.children:
-            rxp, repr_str = self.custom_compile(nd, self.find_smartRE_method)
+            rxp, repr_str = self.compile(nd, self.find_smartRE_method)
             rxps.append((nd, rxp))
             rep_strs.append(repr_str)
         groups = self.group_rxps(rxps)
@@ -2922,7 +2922,7 @@ class EBNFCompiler(Compiler):
                                         'char_range', 'char_ranges', 'character', 'any_char',
                                         'range_chain') for child in node.children)
         for nd in node.children:
-            rxp, repr_str = self.custom_compile(nd, self.find_smartRE_method)
+            rxp, repr_str = self.compile(nd, self.find_smartRE_method)
             if undrop and nd.name != "whitespace" and rxp[:3] == "(?:":  rxp = "(" + rxp[3:]
             rxps.append(rxp)
             rep_strs.append(repr_str)
@@ -3014,7 +3014,7 @@ class EBNFCompiler(Compiler):
         prefix = node.children[0].content
         if prefix not in ('&', '!'):
             raise ValueError(f'Can only optimize lookhead operators, but not "{prefix}".')
-        arg, rep_str = self.custom_compile(node.children[1], self.find_smartRE_method)
+        arg, rep_str = self.compile(node.children[1], self.find_smartRE_method)
         arg = RX_NAMED_GROUPS.sub('(?:', arg)
         arg = neutralize_unnamed_groups(arg)
         opening = "(?=" if prefix == "&" else "(?!"
@@ -3112,7 +3112,7 @@ class EBNFCompiler(Compiler):
 
 
     def smartRE_option(self, node) -> Tuple[str, str]:
-        rxp, rep_str = self.custom_compile(node.children[0], self.find_smartRE_method)
+        rxp, rep_str = self.compile(node.children[0], self.find_smartRE_method)
         if rxp[:3] == '(?:':
             stripped_re = rxp[3:-1]
             if not self.requires_group(node.children[0], stripped_re):
@@ -3134,7 +3134,7 @@ class EBNFCompiler(Compiler):
 
     def smartRE_group(self, node) -> Tuple[str,str]:
         assert len(node.children) == 1, node.as_sxpr()
-        rxp, rep_str = self.custom_compile(node.children[0], self.find_smartRE_method)
+        rxp, rep_str = self.compile(node.children[0], self.find_smartRE_method)
         if get_regex_group(rxp, expect_group=False) == ('', ''):
             rxp = ''.join(["(?:", rxp, ")"])
         return rxp, rep_str
@@ -3211,7 +3211,7 @@ class EBNFCompiler(Compiler):
         what, r = self.extract_counted(node)
         if r == (0, 1):
             node.name = "option"
-            return self.custom_compile(node, self.find_smartRE_method)
+            return self.compile(node, self.find_smartRE_method)
         raise ValueError('counted-parser can be compiled to smartRE onl if repetions == (0, 1)')
 
 
