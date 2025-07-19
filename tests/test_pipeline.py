@@ -20,10 +20,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import sys
 from functools import partial
 
 from DHParser.compile import Compiler
-from DHParser.error import Error, FATAL
+from DHParser.error import Error, FATAL, CANCELED
 from DHParser.nodetree import Node, RootNode
 from DHParser.parse import Grammar, Forward, CombinedParser, mixin_comment, Whitespace, Drop, \
     NegativeLookahead, RegExp, Synonym, Series, Alternative, Option, ZeroOrMore, Lookahead, \
@@ -265,9 +266,10 @@ test_targets = {j.dst for j in junctions}
 serializations = expand_table({'DOM': ['sxpr'], '*': ['sxpr']})
 
 
-def compile_src(source: str, target: str = "html") -> Tuple[Any, List[Error]]:
+def compile_src(source: str, target: str = "html", cancel_query=None) -> Tuple[Any, List[Error]]:
     full_compilation_result = full_pipeline(
-        source, preprocessing.factory, parsing.factory, junctions, {target})
+        source, preprocessing.factory, parsing.factory, junctions, {target},
+        cancel_query=cancel_query)
     return full_compilation_result.get(target, list(full_compilation_result.values())[-1])
 
 
@@ -285,6 +287,48 @@ class TestErrorPassing:
         # check if Python-Error has been passed through correctly
         assert any(e.code >= FATAL for e in errors)
         assert any(str(e).find('test_pipeline.py') >= 0 for e in errors)
+
+
+EXAMPLE_OUTLINE = """# Main Heading
+
+Some introductory Text
+
+## Section 1
+One paragraph of text
+
+Another paragraph of text. This
+time stretching over several lines.
+
+## Section 2
+
+### Section 2.1
+
+### Section 2.2
+
+The previous sections is (still) empty.
+This one is not.
+"""
+
+
+def never():
+    return False
+
+class TestCancellation:
+    def test_cancellation(self):
+        import multiprocessing
+        import threading
+        from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+        if sys.version_info >= (3, 14):
+            from concurrent.futures import InterpreterPoolExecutor  # TODO: test this!
+        with multiprocessing.Manager() as manager:
+            event = manager.Event()
+            assert not event.is_set()
+            event.set() # cancel right away
+            with ProcessPoolExecutor() as ex:
+                f = ex.submit(compile_src, EXAMPLE_OUTLINE, "html", event.is_set)
+                result = f.result()
+        assert result[0] is None
+        assert result[1][0].code == CANCELED
 
 if __name__ == "__main__":
     from DHParser.testing import runner
