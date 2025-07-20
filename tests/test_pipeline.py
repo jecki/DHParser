@@ -313,13 +313,22 @@ This one is not.
 def never():
     return False
 
+class MyError:
+    def __init__(self, s, c):
+        self.s = s
+        self.c = c
+
+def dummy(a: str):
+    me = MyError("Error", CANCELED)
+    return (None, [1, me])
+
+
 class TestCancellation:
     def test_cancellation(self):
         import multiprocessing
         import threading
         from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
-        if sys.version_info >= (3, 14):
-            from concurrent.futures import InterpreterPoolExecutor  # TODO: test this!
+        # ProcessPool
         with multiprocessing.Manager() as manager:
             event = manager.Event()
             assert not event.is_set()
@@ -329,6 +338,28 @@ class TestCancellation:
                 result = f.result()
         assert result[0] is None
         assert result[1][0].code == CANCELED
+        # ThreadPool
+        with multiprocessing.Manager() as manager:
+            event = manager.Event()
+            assert not event.is_set()
+            event.set() # cancel right away
+            with ThreadPoolExecutor() as ex:
+                f = ex.submit(compile_src, EXAMPLE_OUTLINE, "html", event.is_set)
+                result = f.result()
+        assert result[0] is None
+        assert result[1][0].code == CANCELED
+        if sys.version_info >= (3, 14):
+            from concurrent.futures import InterpreterPoolExecutor
+            with multiprocessing.Manager() as manager:
+                event = manager.Event()
+                assert not event.is_set()
+                event.set()  # cancel right away
+                with InterpreterPoolExecutor() as ex:
+                    # f = ex.submit(compile_src, EXAMPLE_OUTLINE, "html", event.is_set)
+                    f = ex.submit(dummy, "abc")
+                    result = f.result()
+            assert result[0] is None
+            assert result[1][0].code == CANCELED
 
 if __name__ == "__main__":
     from DHParser.testing import runner
