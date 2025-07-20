@@ -348,15 +348,18 @@ class TestCancellation:
                 result = f.result()
         assert result[0] is None
         assert result[1][0].code == CANCELED
+
+    def test_cancellation_interpreter_pool(self):
         if sys.version_info >= (3, 14):
+            import multiprocessing
             from concurrent.futures import InterpreterPoolExecutor
             with multiprocessing.Manager() as manager:
                 event = manager.Event()
                 assert not event.is_set()
                 event.set()  # cancel right away
                 with InterpreterPoolExecutor() as ex:
-                    # f = ex.submit(compile_src, EXAMPLE_OUTLINE, "html", event.is_set)
-                    f = ex.submit(dummy, "abc")
+                    f = ex.submit(compile_src, EXAMPLE_OUTLINE, "html", event.is_set)
+                    # f = ex.submit(dummy, "abc")
                     result = f.result()
             assert result[0] is None
             assert result[1][0].code == CANCELED
