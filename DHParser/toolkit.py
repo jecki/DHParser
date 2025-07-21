@@ -1777,13 +1777,26 @@ class FutureWrapper:
         return self.future.done()
 
     def result(self, timeout=None):
-        return self.future.result(timeout)
+        result = self.future.result(timeout)
+        import pickle
+        try:
+            return pickle.loads(result)
+        except (TypeError, pickle.UnpicklingError):
+            return result
 
     def execption(self, timeout=None):
         return self.future.exception(timeout)
 
     def add_done_callback(self, fn):
         pass # TODO: Wrap fn
+
+
+def wrap_interpreter_pool_task(f):
+    import functools, pickle
+    @functools.wraps(f)
+    def wrapper(*args, **kwargs):
+        result = f(*args, **kwargs)
+        return pickle.dumps(result)
 
 
 class InterpreterPoolWrapper:
