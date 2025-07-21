@@ -1760,6 +1760,15 @@ def multiprocessing_broken() -> str:
     return ""
 
 
+class InterpreterPoolWrapper:
+    def submit(self, fn, /, *args, ** kwargs):
+        pass
+    def map(self, fn, *iterables, timeout=None, chunksize=1, buffersize=None):
+        pass
+    def shutdown(self, wait=True, *, cancel_futures=False):
+        pass
+
+
 class PickMultiCoreExecutorShim:
     def __call__(self):  # -> Type[concurrent.futures.Executor]:
         """Returns an instance of the most lightweight
