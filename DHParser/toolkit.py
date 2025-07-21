@@ -1791,12 +1791,13 @@ class FutureWrapper:
         pass # TODO: Wrap fn
 
 
-def wrap_interpreter_pool_task(f):
+def pickled_return(f):
     import functools, pickle
     @functools.wraps(f)
     def wrapper(*args, **kwargs):
         result = f(*args, **kwargs)
         return pickle.dumps(result)
+    return wrapper
 
 
 class InterpreterPoolWrapper:
