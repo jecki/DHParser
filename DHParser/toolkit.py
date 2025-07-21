@@ -1808,13 +1808,18 @@ class InterpreterPoolWrapper:
         self.pool = interpreter_pool_executor
 
     def submit(self, fn, *args, ** kwargs):
-        pass
+        fn = pickeld_return(fn)  # apply decorator
+        future = self.pool.submit(fn, *args, **kwargs)
+        return FutureWrapper(future)
 
     def map(self, fn, *iterables, timeout=None, chunksize=1, buffersize=None):
-        pass
+        fn = pickled_return(fn)
+        futures = self.pool.map(fn, *iterable,
+                                timeout=timeout, chunksize=chunksize, buffersize=buffersize)
+        return (FutureWrapper(f) for f in futures)
 
     def shutdown(self, wait=True, *, cancel_futures=False):
-        pass
+        self.pool.shutdown(wait, cancel_futures=cancel_futures)
 
 
 class PickMultiCoreExecutorShim:
@@ -1838,11 +1843,15 @@ PickMultiCoreExecutor = PickMultiCoreExecutorShim()
 def instantiate_executor(allow_parallel: bool,
                          preferred_executor,  # : Type[concurrent.futures.Executor],
                          *args, **kwargs):  # -> concurrent.futures.Executor:
-    """Instantiates an Executor of a particular type, if the value of the
-    configuration variable 'debug_parallel_execution' allows to do so.
-    Otherwise, a surrogate executor will be returned.
+    """Instantiates an Executor of a particular type.
+
     If `allow_parallel` is False, a SingleThreadExecutor will be instantiated,
     regardless of the preferred_executor and any configuration values.
+
+    Parallel execution can sill be blocked by the configuration variable
+    'debug_parallel_execution'. (The default
+    is to allow full multiprocessing unless a command-line switch was used to
+    trigger a different behavior.) Otherwise, a surrogate executor will be returned.
 
     :param allow_parallel: If false, a SingeThreadExecutor-object will be returned.
         If true, it depends on the config value of 'debug_parallel_executor'

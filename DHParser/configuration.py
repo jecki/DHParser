@@ -857,6 +857,8 @@ CONFIG_PRESET['compiled_EBNF_log'] = ''
 # 'commandline' -      If any of the above is specified on the command
 #         line with two leading minus-signs, e.g. '--singlethread'
 #
+ALLOWED_PRESET_VALUES['debug_parallel_execution'] = frozenset({
+    'multiprocessing', 'multithreading', 'singlethread', 'commandline'})
 CONFIG_PRESET['debug_parallel_execution'] = 'commandline'
 
 
