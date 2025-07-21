@@ -1833,7 +1833,7 @@ class PickMultiCoreExecutorShim:
         import concurrent.futures
         if sys.version_info >= (3, 14, 0) \
                 and CONFIG_PRESET['multicore_pool'] == 'InterpreterPool':
-            return concurrent.futures.InterpreterPoolExecutor()
+            return InterpreterPoolWrapper(concurrent.futures.InterpreterPoolExecutor())
         else:
             return concurrent.futures.ProcessPoolExecutor()
 
@@ -1858,7 +1858,10 @@ def instantiate_executor(allow_parallel: bool,
         (see comments in config.py for a detailed explanation)
     :param preferred_executor: the preferred executor class that is used if the
         parameter allaw_parallel is true and 'debug_parallel_executor' does not
-        forbid the use of this kind of executor.
+        forbid the use of this kind of executor. The inofficial default value
+        is PickMultiCoreExecutor which yields a ProcessPoolExecutor for Python
+        versions <= 3.13 and a wrapped InterpreterPoolExecutor for Python
+        versions 3.14 and above.
     :returns: and executor-object, either an instance of concurrent.futures.Executor
         or SingleThreadExecutor (see above).
     """

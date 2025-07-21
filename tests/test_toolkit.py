@@ -41,7 +41,7 @@ from DHParser.testing import unique_name
 from DHParser.toolkit import has_fenced_code, load_if_file, re, normalize_docstring, \
     issubtype, concurrent_ident, JSONstr, JSONnull, json_dumps, json_rpc, \
     matching_brackets, RX_ENTITY, validate_XML_attribute_value, fix_XML_attribute_value, \
-    cached_load, clear_from_cache
+    cached_load, clear_from_cache, instantiate_executor, InterpreterPoolWrapper
 from DHParser.log import log_dir, start_logging, is_logging, suspend_logging, resume_logging
 
 from DHParser.configuration import CONFIG_PRESET
@@ -412,6 +412,4 @@ class TestCachedDeserialization:
         assert before != after
 
 
-if __name__ == "__main__":
-    from DHParser.testing import runner
-    runner("", globals())
+
