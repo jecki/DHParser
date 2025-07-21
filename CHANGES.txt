@@ -8,8 +8,8 @@ DHParser Version 1.9.0
   a cancel_query attribute. (For the time being only compile.Compile
   offers a cancel_query-attribute, but tree transformations
   and eventually grammar-objects may follow in the future.)
-- bugfix: test don't forget to call the preprocessor (if present)!
-- empty tags are not explicitly passed to nodtree.Node.as_xml()
+- bugfix: test not to forget to call the preprocessor (if present)!
+- if empty tags are not explicitly passed to nodtree.Node.as_xml()
   they will be determined automatically
 - auto-generated parser skript now allows to select a particular
   compilation target, like the AST or any other intermediate

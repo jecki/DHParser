@@ -1760,11 +1760,45 @@ def multiprocessing_broken() -> str:
     return ""
 
 
+class FutureWrapper:
+    def __init__(self, future):
+        self.future = future
+
+    def cancel(self):
+        return self.future.cancel()
+
+    def cancelled(self):
+        return self.future.cancelled()
+
+    def running(self):
+        return self.future.running()
+
+    def done(self):
+        return self.future.done()
+
+    def result(self, timeout=None):
+        return self.future.result(timeout)
+
+    def execption(self, timeout=None):
+        return self.future.exception(timeout)
+
+    def add_done_callback(self, fn):
+        pass # TODO: Wrap fn
+
+
 class InterpreterPoolWrapper:
-    def submit(self, fn, /, *args, ** kwargs):
+    def __init__(self, interpreter_pool_executor):
+        assert sys.version_info >= (3, 14, 0)
+        from concurrent.futures import InterpreterPoolExecutor
+        assert isinstance(interpreter_pool_executor, InterpreterPoolExecutor)
+        self.pool = interpreter_pool_executor
+
+    def submit(self, fn, *args, ** kwargs):
         pass
+
     def map(self, fn, *iterables, timeout=None, chunksize=1, buffersize=None):
         pass
+
     def shutdown(self, wait=True, *, cancel_futures=False):
         pass
 
