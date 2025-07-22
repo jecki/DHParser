@@ -1814,7 +1814,7 @@ class InterpreterPoolWrapper:
 
     def map(self, fn, *iterables, timeout=None, chunksize=1, buffersize=None):
         fn = pickled_return(fn)
-        futures = self.pool.map(fn, *iterable,
+        futures = self.pool.map(fn, *iterables,
                                 timeout=timeout, chunksize=chunksize, buffersize=buffersize)
         return (FutureWrapper(f) for f in futures)
 
