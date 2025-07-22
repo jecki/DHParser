@@ -1760,6 +1760,14 @@ def multiprocessing_broken() -> str:
     return ""
 
 
+def unpickle_result(result):
+    import pickle
+    try:
+        return pickle.loads(result)
+    except (TypeError, pickle.UnpicklingError):
+        return result
+
+
 class FutureWrapper:
     def __init__(self, future):
         self.future = future
@@ -1778,11 +1786,7 @@ class FutureWrapper:
 
     def result(self, timeout=None):
         result = self.future.result(timeout)
-        import pickle
-        try:
-            return pickle.loads(result)
-        except (TypeError, pickle.UnpicklingError):
-            return result
+        return unpickle_result(result)
 
     def execption(self, timeout=None):
         return self.future.exception(timeout)
@@ -1792,8 +1796,8 @@ class FutureWrapper:
 
 
 def pickled_return(f):
-    import functools, pickle
-    @functools.wraps(f)
+    import pickle  # , functools
+    # @functools.wraps(f)
     def wrapper(*args, **kwargs):
         result = f(*args, **kwargs)
         return pickle.dumps(result)
@@ -1807,16 +1811,22 @@ class InterpreterPoolWrapper:
         assert isinstance(interpreter_pool_executor, InterpreterPoolExecutor)
         self.pool = interpreter_pool_executor
 
+    def __enter__(self):
+        return self.pool.__enter__()
+
+    def __exit__(self, *exc_details):
+        return self.pool.__exit__(*exc_details)
+
     def submit(self, fn, *args, ** kwargs):
-        fn = pickeld_return(fn)  # apply decorator
+        # fn = pickeld_return(fn)  # apply decorator
         future = self.pool.submit(fn, *args, **kwargs)
         return FutureWrapper(future)
 
     def map(self, fn, *iterables, timeout=None, chunksize=1, buffersize=None):
-        fn = pickled_return(fn)
-        futures = self.pool.map(fn, *iterables,
+        # fn = pickled_return(fn)
+        results = self.pool.map(fn, *iterables,
                                 timeout=timeout, chunksize=chunksize, buffersize=buffersize)
-        return (FutureWrapper(f) for f in futures)
+        return (unpickle_result(r) for r in results)
 
     def shutdown(self, wait=True, *, cancel_futures=False):
         self.pool.shutdown(wait, cancel_futures=cancel_futures)

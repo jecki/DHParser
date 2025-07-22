@@ -21,7 +21,11 @@ limitations under the License.
 """
 
 import sys
+import os
 from functools import partial
+
+scriptpath = os.path.dirname(__file__) or '.'
+sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.compile import Compiler
 from DHParser.error import Error, FATAL, CANCELED
@@ -32,7 +36,7 @@ from DHParser.parse import Grammar, Forward, CombinedParser, mixin_comment, Whit
 from DHParser.pipeline import create_parser_junction, create_junction, end_points, full_pipeline, \
     create_preprocess_junction, PseudoJunction, Junction
 from DHParser.toolkit import ThreadLocalSingletonFactory, expand_table, Any, Tuple, List, \
-    NEVER_MATCH_PATTERN, RX_NEVER_MATCH, re
+    NEVER_MATCH_PATTERN, RX_NEVER_MATCH, re, InterpreterPoolWrapper
 from DHParser.transform import merge_adjacent, is_one_of, apply_if, replace_by_single_child, \
     replace_content_with, replace_by_children, reduce_single_child, change_name, transformer, \
     TransformerFunc
@@ -357,7 +361,7 @@ class TestCancellation:
                 event = manager.Event()
                 assert not event.is_set()
                 event.set()  # cancel right away
-                with InterpreterPoolExecutor() as ex:
+                with InterpreterPoolWrapper(InterpreterPoolExecutor()) as ex:
                     f = ex.submit(compile_src, EXAMPLE_OUTLINE, "html", event.is_set)
                     # f = ex.submit(dummy, "abc")
                     result = f.result()

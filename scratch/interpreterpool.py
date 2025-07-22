@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import sys, os
 
 script_dir = os.path.abspath(os.path.dirname(__file__))
