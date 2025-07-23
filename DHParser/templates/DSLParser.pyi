@@ -51,7 +51,8 @@ serializations = expand_table(dict([('*', [get_config_value('default_serializati
 
 def pipeline(source: str,
              target: str = "{NAME}",
-             start_parser: str = "root_parser__") -> PipelineResult:
+             start_parser: str = "root_parser__",
+             *, cancel_query: Optional[CancelQuery] = None) -> PipelineResult:
     """Runs the source code through the processing pipeline. If
     the parameter target is not the empty string, only the stages required
     for the given target will be passed. See :py:func:`compile_src` for the
@@ -61,11 +62,13 @@ def pipeline(source: str,
     target_set = set([target]) if target else targets
     return full_pipeline(
         source, preprocessing.factory, parsing.factory, junctions, target_set,
-        start_parser)
+        start_parser, cancel_query = cancel_query)
+
 
 def compile_src(source: str,
                 target: str = "{NAME}",
-                start_parser: str = "root_parser__") -> Tuple[Any, List[Error]]:
+                start_parser: str = "root_parser__",
+                *, cancel_query: Optional[CancelQuery] = None) -> Tuple[Any, List[Error]]:
     """Compiles the source to a single target and returns the result of the compilation
     as well as a (possibly empty) list or errors or warnings that have occurred in the
     process.
@@ -90,7 +93,8 @@ def compile_src(source: str,
 
 def compile_snippet(source_code: str,
                     target: str = "{NAME}",
-                    start_parser: str = "root_parser__") -> Tuple[Any, List[Error]]:
+                    start_parser: str = "root_parser__",
+                    *, cancel_query: Optional[CancelQuery] = None) -> Tuple[Any, List[Error]]:
     """Compiles a piece of source_code. In contrast to :py:func:`compile_src` the
     parameter source_code is always understood as a piece of source-code and never
     as a filename, not even if it is a one-liner that could also be a file-name.
@@ -98,7 +102,7 @@ def compile_snippet(source_code: str,
     if source_code[0:1] not in ('\ufeff', '\ufffe') and \
             source_code[0:3] not in ('\xef\xbb\xbf', '\x00\x00\ufeff', '\x00\x00\ufffe'):
         source_code = '\ufeff' + source_code  # add a byteorder-mark for disambiguation
-    return compile_src(source_code, target, start_parser)
+    return compile_src(source_code, target, start_parser, cancel_query = cancel_query)
 
 
 def process_file(source: str, out_dir: str = '', target_set: Set[str]=frozenset(),
