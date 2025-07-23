@@ -1998,7 +1998,7 @@ def instantiate_executor(allow_parallel: bool,
             options = [arg for arg in sys.argv if arg[:2] == '--']
             if '--singlethread' in options:  mode = 'singlethread'
             elif '--multithreading' in options:  mode = 'multithreading'
-            else:  mode = 'multiprocessing'
+            else:  mode = 'multicore'
         if mode == "singlethread":
             return SingleThreadExecutor()
         elif mode == "multithreading" or multiprocessing_broken():
