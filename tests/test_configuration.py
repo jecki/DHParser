@@ -70,6 +70,12 @@ def evaluate_presets():
 
 
 class TestConfigMultiprocessing:
+    def setup_method(self):
+        self.mc_pool = CONFIG_PRESET['multicore_pool']
+
+    def teardown_method(self):
+        CONFIG_PRESET['multicore_pool'] = self.mc_pool
+
     def test_presets(self):
         """Checks whether changes to CONFIG_PRESET before spawning / forking
         new processes will be present in spawned or forked processes
@@ -89,6 +95,35 @@ class TestConfigMultiprocessing:
             assert result
         except ImportError:
             print('Skipping Test, because libffi has wrong version or does not exist!')
+
+    def test_presets_interpreter_pool(self):
+        """Checks whether changes to CONFIG_PRESET before spawning / forking
+        new processes will be present in spawned or forked processes
+        afterwards."""
+        global PYTEST, evaluate_presets
+        if sys.version_info >= (3, 14, 0):
+            import concurrent.futures
+            from DHParser.configuration import CONFIG_PRESET, os_getpid
+            CONFIG_PRESET['multicore_pool'] = 'InterpreterPool'
+            if __name__ == '__main__':
+                import test_configuration
+            else:
+                os.chdir('..')
+                import tests.test_configuration as test_configuration
+            evaluate_presets = test_configuration.evaluate_presets
+            try:
+                from _ctypes import Union, Structure, Array
+                access_presets()
+                set_preset_value('test', 'multiprocessing presets test', allow_new_key=True)
+                finalize_presets()
+                access_presets()
+                set_preset_value('test2', 'multiprocessing presets test2', allow_new_key=True)
+                finalize_presets()
+                with concurrent.futures.InterpreterPoolExecutor() as pool:
+                    result = pool.submit(evaluate_presets).result()
+                assert result
+            except ImportError as e:
+                print(f'Skipping Test, because {e}')
 
 
 TEST_CFG = """
@@ -200,5 +235,6 @@ class TestLocalConfig:
 
 
 if __name__ == "__main__":
+    PYTEST = False
     from DHParser.testing import runner
     runner("", globals())

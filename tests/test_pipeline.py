@@ -24,10 +24,13 @@ import sys
 import os
 from functools import partial
 
+from DHParser import PickMultiCoreExecutor
+
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.compile import Compiler
+from DHParser.configuration import CONFIG_PRESET
 from DHParser.error import Error, FATAL, CANCELED
 from DHParser.nodetree import Node, RootNode
 from DHParser.parse import Grammar, Forward, CombinedParser, mixin_comment, Whitespace, Drop, \
@@ -36,7 +39,7 @@ from DHParser.parse import Grammar, Forward, CombinedParser, mixin_comment, Whit
 from DHParser.pipeline import create_parser_junction, create_junction, end_points, full_pipeline, \
     create_preprocess_junction, PseudoJunction, Junction
 from DHParser.toolkit import ThreadLocalSingletonFactory, expand_table, Any, Tuple, List, \
-    NEVER_MATCH_PATTERN, RX_NEVER_MATCH, re, InterpreterPoolWrapper
+    NEVER_MATCH_PATTERN, RX_NEVER_MATCH, re, MultiCoreManager
 from DHParser.transform import merge_adjacent, is_one_of, apply_if, replace_by_single_child, \
     replace_content_with, replace_by_children, reduce_single_child, change_name, transformer, \
     TransformerFunc
@@ -328,6 +331,12 @@ def dummy(a: str):
 
 
 class TestCancellation:
+    def setup_method(self):
+        self.mc_pool = CONFIG_PRESET['multicore_pool']
+
+    def teardown_method(self):
+        CONFIG_PRESET['multicore_pool'] = self.mc_pool
+
     def test_cancellation(self):
         import multiprocessing
         import threading
@@ -355,18 +364,41 @@ class TestCancellation:
 
     def test_cancellation_interpreter_pool(self):
         if sys.version_info >= (3, 14):
-            import multiprocessing
+            CONFIG_PRESET['multicore_pool'] = 'InterpreterPool'
             from concurrent.futures import InterpreterPoolExecutor
-            with multiprocessing.Manager() as manager:
+            if __name__ != '__main__':
+                os.chdir('..')
+                import tests.test_pipeline as test_pipeline
+            else:
+                import test_pipeline
+            with MultiCoreManager() as manager:
                 event = manager.Event()
                 assert not event.is_set()
                 event.set()  # cancel right away
-                with InterpreterPoolWrapper(InterpreterPoolExecutor()) as ex:
-                    f = ex.submit(compile_src, EXAMPLE_OUTLINE, "html", event.is_set)
+                with InterpreterPoolExecutor() as ex:
+                    f = ex.submit(test_pipeline.compile_src, EXAMPLE_OUTLINE, "html", event.is_set)
                     # f = ex.submit(dummy, "abc")
                     result = f.result()
             assert result[0] is None
             assert result[1][0].code == CANCELED
+
+    def test_cancellation_pick_pool(self):
+        CONFIG_PRESET['multicore_pool'] = 'InterpreterPool'
+        if __name__ != '__main__':
+            os.chdir('..')
+            import tests.test_pipeline as test_pipeline
+        else:
+            import test_pipeline
+        with MultiCoreManager() as manager:
+            event = manager.Event()
+            assert not event.is_set()
+            event.set()  # cancel right away
+            with PickMultiCoreExecutor() as ex:
+                f = ex.submit(test_pipeline.compile_src, EXAMPLE_OUTLINE, "html", event.is_set)
+                # f = ex.submit(dummy, "abc")
+                result = f.result()
+        assert result[0] is None
+        assert result[1][0].code == CANCELED
 
 if __name__ == "__main__":
     from DHParser.testing import runner

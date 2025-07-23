@@ -36,8 +36,6 @@ from DHParser.log import log_dir, start_logging, is_logging, suspend_logging, re
 from DHParser.configuration import CONFIG_PRESET, get_config_value, access_presets, finalize_presets, \
     set_preset_value, get_preset_value, get_config_values, set_config_value, read_local_config
 
-CONFIG_PRESET['multicore_pool'] = 'InterpreterPool'
-
 def logging_task():
     log_dir()
     assert is_logging(), "Logging should be on inside logging context"
@@ -64,8 +62,15 @@ class TestLoggingAndLoading:  # addition to test_toolkit
                 os.remove(os.path.join(self.LOGDIR, fname))
             os.rmdir(self.LOGDIR)
 
+    def setup_method(self):
+        self.mc_pool = CONFIG_PRESET['multicore_pool']
+
+    def teardown_method(self):
+        CONFIG_PRESET['multicore_pool'] = self.mc_pool
+
     def test_logging_interpreterpool(self):
         if sys.version_info >= (3, 14, 0):
+            CONFIG_PRESET['multicore_pool'] = 'InterpreterPool'
             if __name__ != '__main__':
                 os.chdir('..')
                 import tests.notest_interpreterpool as notest_interpreterpool
@@ -81,7 +86,6 @@ class TestLoggingAndLoading:  # addition to test_toolkit
             assert f2.result()
             assert f3.result()
             assert f4.result()
-
 
 
 def evaluate_presets():
@@ -102,6 +106,41 @@ class TestConfigMultiprocessing:
 
     def teardown_class(self):
         os.chdir(self.save_dir)
+
+    def setup_method(self):
+        self.mc_pool = CONFIG_PRESET['multicore_pool']
+
+    def teardown_method(self):
+        CONFIG_PRESET['multicore_pool'] = self.mc_pool
+
+    def test_presets_process_pool(self):
+        """Checks whether changes to CONFIG_PRESET before spawning / forking
+        new processes will be present in spawned or forked processes
+        afterwards."""
+        global PYTEST, evaluate_presets
+        if sys.version_info >= (3, 14, 0):
+            import concurrent.futures
+            from DHParser.configuration import CONFIG_PRESET, os_getpid
+            CONFIG_PRESET['multicore_pool'] = 'ProcessPool'
+            if __name__ == '__main__':
+                import notest_interpreterpool
+            else:
+                os.chdir('..')
+                import tests.notest_interpreterpool as notest_interpreterpool
+            evaluate_presets = notest_interpreterpool.evaluate_presets
+            try:
+                from _ctypes import Union, Structure, Array
+                access_presets()
+                set_preset_value('test', 'multiprocessing presets test', allow_new_key=True)
+                finalize_presets()
+                access_presets()
+                set_preset_value('test2', 'multiprocessing presets test2', allow_new_key=True)
+                finalize_presets()
+                with concurrent.futures.ProcessPoolExecutor() as pool:
+                    result = pool.submit(evaluate_presets).result()
+                assert result
+            except ImportError as e:
+                print(f'Skipping Test, because {e}')
 
     def test_presets_interpreter_pool(self):
         """Checks whether changes to CONFIG_PRESET before spawning / forking

@@ -517,7 +517,7 @@ def add_config_values(configuration: dict):
 # Default value: "InterpreterPool"
 ALLOWED_PRESET_VALUES['multicore_pool'] = frozenset({'ProcessPool',
                                                      'InterpreterPool'})
-CONFIG_PRESET['multicore_pool'] = "ProcessPool"
+CONFIG_PRESET['multicore_pool'] = "InterpreterPool"
 
 
 ########################################################################
@@ -849,7 +849,8 @@ CONFIG_PRESET['compiled_EBNF_log'] = ''
 
 # Defines the kind of threading that `toolkit.instantiate_executor()`
 # will allow. Possible values are:
-# 'multitprocessing' - Full multiprocessing will be allowed.
+# 'multitcore' - Full multicore parallel execution will be allowed.
+# 'multiprocessing' - DEPRECATED alias for 'multicore'
 # 'multithreading' -   A ThreadPoolExecutor will be substituted for any
 #         ProcessPoolExecutor.
 # 'singlethread' -     A SingleThreadExecutor will be substituted for
@@ -858,7 +859,7 @@ CONFIG_PRESET['compiled_EBNF_log'] = ''
 #         line with two leading minus-signs, e.g. '--singlethread'
 #
 ALLOWED_PRESET_VALUES['debug_parallel_execution'] = frozenset({
-    'multiprocessing', 'multithreading', 'singlethread', 'commandline'})
+    'multicore', 'multiprocessing', 'multithreading', 'singlethread', 'commandline'})
 CONFIG_PRESET['debug_parallel_execution'] = 'commandline'
 
 

@@ -137,7 +137,7 @@ class TestDHParserCommandLineTool:
                + os.path.join(name, 'example.dsl >') + os.path.join(name, 'example.json'))
         with open(os.path.join(name, 'example.json'), 'r', encoding='utf-8') as f:
             json = f.read()
-        assert json.find('document') >= 0, name + ' ' + str(len(json))
+        assert json.find('document') >= 0, name + ' ' + str(len(json)) + str(json)
         system(self.python + os.path.join(name, '%sServer.py ' % name) +
                os.path.join(name, '/example.dsl ') + self.nulldevice)
         system(self.python + os.path.join(name, '%sServer.py ' % name) +

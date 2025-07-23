@@ -41,11 +41,10 @@ from DHParser.testing import unique_name
 from DHParser.toolkit import has_fenced_code, load_if_file, re, normalize_docstring, \
     issubtype, concurrent_ident, JSONstr, JSONnull, json_dumps, json_rpc, \
     matching_brackets, RX_ENTITY, validate_XML_attribute_value, fix_XML_attribute_value, \
-    cached_load, clear_from_cache, instantiate_executor, InterpreterPoolWrapper
+    cached_load, clear_from_cache
 from DHParser.log import log_dir, start_logging, is_logging, suspend_logging, resume_logging
 
 from DHParser.configuration import CONFIG_PRESET
-CONFIG_PRESET['multicore_pool'] = 'ProcessPool'
 
 
 def logging_task():
@@ -88,6 +87,12 @@ class TestLoggingAndLoading:
             for fname in os.listdir(self.LOGDIR):
                 os.remove(os.path.join(self.LOGDIR, fname))
             os.rmdir(self.LOGDIR)
+
+    def setup_method(self):
+        self.mc_pool = CONFIG_PRESET['multicore_pool']
+
+    def teardown_method(self):
+        CONFIG_PRESET['multicore_pool'] = self.mc_pool
 
     def test_load_if_file(self):
         # an error should be raised if file expected but not found
@@ -412,45 +417,7 @@ class TestCachedDeserialization:
         assert before != after
 
 
-
-class SomeClass:
-    def __init__(self, val):
-        self.val = val
-
-
-def task(val) -> SomeClass:
-    obj = SomeClass(val)
-    return obj
-
-def initialize_interpreter():
-    import sys
-    print(sys.path)
-
-class TestInterpreterPoolWrapper:
-    def test_interpreterpool(self):
-        if sys.version_info >= (3, 14, 0):
-            from concurrent.futures import InterpreterPoolExecutor
-            # save_pp = os.getenv("PYTHONPATH")
-            # if save_pp:
-            #     os.environ["PYTHONPATH"] = save_pp + ":" + script_dir
-            # else:
-            #     os.environ["PYTHONPATH"] = script_dir
-            import test_toolkit
-            with InterpreterPoolWrapper(InterpreterPoolExecutor()) as ex:
-                result = ex.submit(test_toolkit.task, 20)
-            # if save_pp:
-            #     os.environ["PYTHONPATH"] = save_pp
-            # else:
-            #     os.unsetenv("PYTHONPATH")
-            obj = result.result()
-            assert obj.val == 20
-
-    def test_wrapped_interpreterpool(self):
-        pass
-
-
 if __name__ == "__main__":
-    sys.path.append(os.path.abspath('..'))
     from DHParser.testing import runner
     runner("", globals())
 

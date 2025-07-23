@@ -31,6 +31,7 @@ import functools
 import io
 import json
 import os
+import queue
 import sys
 
 
@@ -153,6 +154,7 @@ __all__ = ('re',
            'deprecation_warning',
            'SingleThreadExecutor',
            'multiprocessing_broken',
+           'MultiCoreManager',
            'PickMultiCoreExecutor',
            'instantiate_executor',
            'cpu_count',
@@ -1760,76 +1762,178 @@ def multiprocessing_broken() -> str:
     return ""
 
 
-def unpickle_result(result):
-    import pickle
-    try:
-        return pickle.loads(result)
-    except (TypeError, pickle.UnpicklingError):
-        return result
+class InterpreterEventShim:
+    def __init__(self):
+        from concurrent.interpreters import create_queue
+        self.queue = create_queue()
+
+    def is_set(self):
+        return self.queue.qsize() > 0
+
+    def set(self):
+        if self.queue.qsize() == 0:
+            self.queue.put_nowait(1)
+
+    def clear(self):
+        while self.queue.qsize() > 0:
+            _ = self.queue.get_nowait()
+            self.queue.task_done()
+
+    def wait(self, timeout=None):
+        if self.is_set():
+            return True
+        import queue
+        try:
+            _ = self.queue.get(block=True, timeout=timeout)
+        except queue.Empty:
+            return False
+        self.queue.task_done()
+        if not self.is_set():
+            self.set()
+        return True
 
 
-class FutureWrapper:
-    def __init__(self, future):
-        self.future = future
-
-    def cancel(self):
-        return self.future.cancel()
-
-    def cancelled(self):
-        return self.future.cancelled()
-
-    def running(self):
-        return self.future.running()
-
-    def done(self):
-        return self.future.done()
-
-    def result(self, timeout=None):
-        result = self.future.result(timeout)
-        return unpickle_result(result)
-
-    def execption(self, timeout=None):
-        return self.future.exception(timeout)
-
-    def add_done_callback(self, fn):
-        pass # TODO: Wrap fn
-
-
-def pickled_return(f):
-    import pickle  # , functools
-    # @functools.wraps(f)
-    def wrapper(*args, **kwargs):
-        result = f(*args, **kwargs)
-        return pickle.dumps(result)
-    return wrapper
-
-
-class InterpreterPoolWrapper:
-    def __init__(self, interpreter_pool_executor):
-        assert sys.version_info >= (3, 14, 0)
-        from concurrent.futures import InterpreterPoolExecutor
-        assert isinstance(interpreter_pool_executor, InterpreterPoolExecutor)
-        self.pool = interpreter_pool_executor
-
+class ManagerShim:
     def __enter__(self):
-        return self.pool.__enter__()
+        return self
 
     def __exit__(self, *exc_details):
-        return self.pool.__exit__(*exc_details)
+        pass
 
-    def submit(self, fn, *args, ** kwargs):
-        # fn = pickeld_return(fn)  # apply decorator
-        future = self.pool.submit(fn, *args, **kwargs)
-        return FutureWrapper(future)
+    def start(self):
+        pass
 
-    def map(self, fn, *iterables, timeout=None, chunksize=1, buffersize=None):
-        # fn = pickled_return(fn)
-        results = self.pool.map(fn, *iterables,
-                                timeout=timeout, chunksize=chunksize, buffersize=buffersize)
-        return (unpickle_result(r) for r in results)
+    def shutdown(self):
+        pass
 
-    def shutdown(self, wait=True, *, cancel_futures=False):
-        self.pool.shutdown(wait, cancel_futures=cancel_futures)
+
+class ThreadingManagerShim(ManagerShim):
+    def Event(self):
+        import threading
+        return threading.Event()
+
+    def Queue(self):
+        import queue
+        return queue.Queue()
+
+
+class InterpreterManagerShim(ManagerShim):
+    def Event(self):
+        return InterpreterEventShim()
+
+    def Queue(self):
+        from concurrent.interpreters import create_queue
+        return create_queue()
+
+
+def eval_debug_parallel_execution() -> str:
+    mode = get_config_value('debug_parallel_execution')  # type: str
+    if mode == "commandline":
+        options = [arg for arg in sys.argv if arg[:2] == '--']
+        if '--singlethread' in options:
+            return "singlethread"
+        elif '--multithreading' in options:
+            return "multithreading"
+        else:
+            return "multicore"
+    elif mode == "singlethread":
+        return "singlethread"
+    elif mode == "multithreading" or (mode in ('multicore', 'multiprocessing')
+                                      and multiprocessing_broken()):
+        return "multithreading"
+    else:
+        assert mode in ('multicore', 'multiprocessing')
+        if mode == "multiprocessing":
+            print('Value "multiprocessing" for config-variable "debug_parallel_execution"'
+                  ' is deprecated. Please, use "multicore", instead!')
+        return "multicore"
+
+
+def MultiCoreManager():
+    mode = eval_debug_parallel_execution()
+    if mode == 'multicore':
+        if sys.version_info >= (3, 14, 0) \
+                and CONFIG_PRESET['multicore_pool'] == 'InterpreterPool':
+            return InterpreterManagerShim()
+        else:
+            import multiprocessing
+            return multiprocessing.Manager()
+    else:
+        return ThreadingManagerShim()
+
+
+
+# def unpickle_result(result):
+#     import pickle
+#     try:
+#         return pickle.loads(result)
+#     except (TypeError, pickle.UnpicklingError):
+#         return result
+#
+#
+# class FutureWrapper:
+#     def __init__(self, future):
+#         self.future = future
+#
+#     def cancel(self):
+#         return self.future.cancel()
+#
+#     def cancelled(self):
+#         return self.future.cancelled()
+#
+#     def running(self):
+#         return self.future.running()
+#
+#     def done(self):
+#         return self.future.done()
+#
+#     def result(self, timeout=None):
+#         result = self.future.result(timeout)
+#         return unpickle_result(result)
+#
+#     def execption(self, timeout=None):
+#         return self.future.exception(timeout)
+#
+#     def add_done_callback(self, fn):
+#         pass # TODO: Wrap fn
+#
+#
+# def pickled_return(f):
+#     import pickle  # , functools
+#     # @functools.wraps(f)
+#     def wrapper(*args, **kwargs):
+#         result = f(*args, **kwargs)
+#         return pickle.dumps(result)
+#     return wrapper
+#
+#
+# class InterpreterPoolWrapper:
+#     def __init__(self, interpreter_pool_executor):
+#         assert sys.version_info >= (3, 14, 0)
+#         from concurrent.futures import InterpreterPoolExecutor
+#         assert isinstance(interpreter_pool_executor, InterpreterPoolExecutor)
+#         self.pool = interpreter_pool_executor
+#
+#     def __enter__(self):
+#         return self.pool.__enter__()
+#
+#     def __exit__(self, *exc_details):
+#         return self.pool.__exit__(*exc_details)
+#
+#     def submit(self, fn, *args, ** kwargs):
+#         # fn = pickeld_return(fn)  # apply decorator
+#         future = self.pool.submit(fn, *args, **kwargs)
+#         return future
+#         return FutureWrapper(future)
+#
+#     def map(self, fn, *iterables, timeout=None, chunksize=1, buffersize=None):
+#         # fn = pickled_return(fn)
+#         results = self.pool.map(fn, *iterables,
+#                                 timeout=timeout, chunksize=chunksize, buffersize=buffersize)
+#         return (unpickle_result(r) for r in results)
+#
+#     def shutdown(self, wait=True, *, cancel_futures=False):
+#         self.pool.shutdown(wait, cancel_futures=cancel_futures)
 
 
 class PickMultiCoreExecutorShim:
@@ -1840,25 +1944,37 @@ class PickMultiCoreExecutorShim:
         concurrent.futures.InterpreterPoolExecutor. For older Python-versions
         an instance of concurrent.futures.ProcessPoolExecutor is returned.
         """
+        mode = eval_debug_parallel_execution()  # type: str
+        if mode == "commandline":
+            options = [arg for arg in sys.argv if arg[:2] == '--']
+            if '--singlethread' in options:
+                raise AssertionError("--singlethread forbids using a multi-core-executor")
+            elif '--multithreading' in options:
+                raise AssertionError("--multithreating forbids using a multi-core-executor")
+        elif multiprocessing_broken():
+                raise AssertionError("multi-core-executor does not work with PyInstaller")
+        else:
+            assert mode in ('multicore', 'multiprocessing')
         import concurrent.futures
         if sys.version_info >= (3, 14, 0) \
                 and CONFIG_PRESET['multicore_pool'] == 'InterpreterPool':
-            return InterpreterPoolWrapper(concurrent.futures.InterpreterPoolExecutor())
+            return concurrent.futures.InterpreterPoolExecutor()
         else:
             return concurrent.futures.ProcessPoolExecutor()
+
 
 PickMultiCoreExecutor = PickMultiCoreExecutorShim()
 
 
 def instantiate_executor(allow_parallel: bool,
-                         preferred_executor,  # : Type[concurrent.futures.Executor],
+                         preferred_executor = PickMultiCoreExecutor,  # : Type[concurrent.futures.Executor],
                          *args, **kwargs):  # -> concurrent.futures.Executor:
     """Instantiates an Executor of a particular type.
 
     If `allow_parallel` is False, a SingleThreadExecutor will be instantiated,
     regardless of the preferred_executor and any configuration values.
 
-    Parallel execution can sill be blocked by the configuration variable
+    Parallel execution can still be blocked by the configuration variable
     'debug_parallel_execution'. (The default
     is to allow full multiprocessing unless a command-line switch was used to
     trigger a different behavior.) Otherwise, a surrogate executor will be returned.
@@ -1869,7 +1985,7 @@ def instantiate_executor(allow_parallel: bool,
     :param preferred_executor: the preferred executor class that is used if the
         parameter allaw_parallel is true and 'debug_parallel_executor' does not
         forbid the use of this kind of executor. The inofficial default value
-        is PickMultiCoreExecutor which yields a ProcessPoolExecutor for Python
+        is MultiCoreExecutor, which yields a ProcessPoolExecutor for Python
         versions <= 3.13 and a wrapped InterpreterPoolExecutor for Python
         versions 3.14 and above.
     :returns: and executor-object, either an instance of concurrent.futures.Executor
@@ -1885,12 +2001,15 @@ def instantiate_executor(allow_parallel: bool,
             else:  mode = 'multiprocessing'
         if mode == "singlethread":
             return SingleThreadExecutor()
-        elif mode == "multithreading" or (mode == "multiprocessing" and multiprocessing_broken()):
-            if issubclass(preferred_executor, concurrent.futures.ProcessPoolExecutor):
+        elif mode == "multithreading" or multiprocessing_broken():
+            if not issubclass(preferred_executor, concurrent.futures.ThreadPoolExecutor):
                 return concurrent.futures.ThreadPoolExecutor(*args, **kwargs)
         else:
-            assert mode == "multiprocessing", \
-                'Config variable "debug_parallel_execution" has illegal value "%s"' % mode
+            assert mode in ("multicore", "multiprocessing"), \
+                f'Config variable "debug_parallel_execution" has illegal value "{mode}"'
+            if mode == "multiprocessing":
+                print('Value "multiprocessing" for config-variable "debug_parallel_execution"'
+                      ' is deprecated. Please, use "multicore", instead!')
         return preferred_executor(*args, **kwargs)
     return SingleThreadExecutor()
 

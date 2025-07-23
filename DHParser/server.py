@@ -388,6 +388,7 @@ def gen_task_id() -> int:
 MultiCoreExecutor = TypeVar('MultiCoreExecutor',
                             ProcessPoolExecutor, InterpreterPoolExecutor)
 
+
 class ExecutionEnvironment:
     """Class ExecutionEnvironment provides methods for executing server tasks
     in separate processes, threads, as asynchronous task or as simple function.
