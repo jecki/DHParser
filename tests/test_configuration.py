@@ -114,7 +114,6 @@ class TestConfigMultiprocessing:
                 set_preset_value('test2', 'multiprocessing presets test2', allow_new_key=True)
                 finalize_presets()
                 with concurrent.futures.InterpreterPoolExecutor() as pool:
-                    print(os.getpid())
                     result = pool.submit(evaluate_presets).result()
                 assert result
             except ImportError as e:
