@@ -263,11 +263,11 @@ class TestErrorReporting:
     """
     gr = grammar_provider(lang)()
 
-    def setup(self):
+    def setup_class(self):
         self.log_name = unique_name("LOGS")
         start_logging(self.log_name)
 
-    def teardown(self):
+    def teardown_class(self):
         LOG_DIR = log_dir()
         assert LOG_DIR.endswith(self.log_name), f"{LOG_DIR} does not end with {self.log_name}!?"
         if os.path.exists(LOG_DIR) and os.path.isdir(LOG_DIR):
