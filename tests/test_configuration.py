@@ -70,18 +70,13 @@ def evaluate_presets():
 
 
 class TestConfigMultiprocessing:
-    def setup_method(self):
-        self.mc_pool = CONFIG_PRESET['multicore_pool']
-
-    def teardown_method(self):
-        CONFIG_PRESET['multicore_pool'] = self.mc_pool
-
     def test_presets(self):
         """Checks whether changes to CONFIG_PRESET before spawning / forking
         new processes will be present in spawned or forked processes
         afterwards."""
         from DHParser.configuration import CONFIG_PRESET, get_syncfile_path
-        CONFIG_PRESET['multicore_pool'] = 'ProcessPool'
+        if sys.version_info >= (3,14,0) and CONFIG_PRESET['multicore_pool'] == 'InterpreterPool':
+            return
         try:
             from _ctypes import Union, Structure, Array
             access_presets()
@@ -104,7 +99,6 @@ class TestConfigMultiprocessing:
         if sys.version_info >= (3, 14, 0):
             import concurrent.futures
             from DHParser.configuration import CONFIG_PRESET, os_getpid
-            CONFIG_PRESET['multicore_pool'] = 'InterpreterPool'
             if __name__ == '__main__':
                 import test_configuration
             else:
@@ -120,6 +114,7 @@ class TestConfigMultiprocessing:
                 set_preset_value('test2', 'multiprocessing presets test2', allow_new_key=True)
                 finalize_presets()
                 with concurrent.futures.InterpreterPoolExecutor() as pool:
+                    print(os.getpid())
                     result = pool.submit(evaluate_presets).result()
                 assert result
             except ImportError as e:

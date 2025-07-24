@@ -41,7 +41,7 @@ from DHParser.testing import unique_name
 from DHParser.toolkit import has_fenced_code, load_if_file, re, normalize_docstring, \
     issubtype, concurrent_ident, JSONstr, JSONnull, json_dumps, json_rpc, \
     matching_brackets, RX_ENTITY, validate_XML_attribute_value, fix_XML_attribute_value, \
-    cached_load, clear_from_cache
+    cached_load, clear_from_cache, PickMultiCoreExecutor
 from DHParser.log import log_dir, start_logging, is_logging, suspend_logging, resume_logging
 
 from DHParser.configuration import CONFIG_PRESET
@@ -159,15 +159,21 @@ class TestLoggingAndLoading:
         os.remove(info_path)
         os.rmdir(self.LOGDIR)
 
-    def test_logging_multiprocessing(self):
+    def test_logging_multicore(self):
         from DHParser.configuration import CONFIG_PRESET
-        CONFIG_PRESET['multicore_pool'] = 'ProcessPool'
         start_logging(self.LOGDIR)
-        with concurrent.futures.ProcessPoolExecutor() as ex:
-            f1 = ex.submit(logging_task)
-            f2 = ex.submit(logging_task)
-            f3 = ex.submit(logging_task)
-            f4 = ex.submit(logging_task)
+        cwd = os.getcwd()
+        if __name__ == '__main__':
+            import test_toolkit
+        else:
+            os.chdir('..')
+            import tests.test_toolkit as test_toolkit
+        with PickMultiCoreExecutor() as ex:
+            f1 = ex.submit(test_toolkit.logging_task)
+            f2 = ex.submit(test_toolkit.logging_task)
+            f3 = ex.submit(test_toolkit.logging_task)
+            f4 = ex.submit(test_toolkit.logging_task)
+        os.chdir(cwd)
         assert f1.result()
         assert f2.result()
         assert f3.result()

@@ -147,14 +147,23 @@ def os_getpid(mp_method = None):
             mp_method = multiprocessing.get_start_method()
         if mp_method == "forkserver":
             return get_forkserver_pid()
-    import os
-    return os.getpid()
+        else:
+            return os.getppid()
+    else:
+        return os.getpid()
 
 
-def get_syncfile_path(pid: int) -> str:
+def get_syncfile_path(mp_method: str) -> str:
     import os
     import tempfile
-    return os.path.join(tempfile.gettempdir(), f'DHParser_{pid}.cfg')
+    syncfile_path = CONFIG_PRESET['syncfile_path']
+    if not syncfile_path:
+        pid = os.getpid()
+        syncfile_path = os.path.join(tempfile.gettempdir(), f'DHParser_{pid}.cfg')
+        if not os.path.exists(syncfile_path):
+            pid = os_getpid(mp_method)
+            syncfile_path = os.path.join(tempfile.gettempdir(), f'DHParser_{pid}.cfg')
+    return syncfile_path
 
 
 def access_presets():
@@ -175,12 +184,7 @@ def access_presets():
     if mp_method != 'fork' or CONFIG_PRESET['multicore_pool'] == 'InterpreterPool':
         import os
         import pickle
-        syncfile_path = CONFIG_PRESET['syncfile_path']
-        if not syncfile_path:
-            syncfile_path = get_syncfile_path(os.getppid())
-            if not os.path.exists(syncfile_path):
-                pid = os_getpid(mp_method)
-                syncfile_path = get_syncfile_path(pid)
+        syncfile_path = get_syncfile_path(mp_method)
         f = None
         try:
             f = open(syncfile_path, 'rb')
@@ -220,16 +224,11 @@ def finalize_presets(fail_on_error: bool=False):
     if PRESETS_CHANGED:
         import multiprocessing
         mp_method = multiprocessing.get_start_method()
-        if mp_method != 'fork':
+        if mp_method != 'fork' or CONFIG_PRESET['multicore_pool'] == 'InterpreterPool':
             import atexit
             import os
             import pickle
-            syncfile_path = CONFIG_PRESET['syncfile_path']
-            if not syncfile_path:
-                syncfile_path = get_syncfile_path(os.getpid())
-                if not os.path.exists(syncfile_path):
-                    pid = os_getpid(mp_method)
-                    syncfile_path = get_syncfile_path(pid)
+            syncfile_path = get_syncfile_path(mp_method)
             if fail_on_error:
                     if not os.path.exists(syncfile_path):
                         raise AssertionError(
@@ -267,6 +266,9 @@ def set_preset_value(key: str, value: Any, allow_new_key: bool=False):
         elif oldkey != key:
             print(f'Deprecation Warning: Key {oldkey} has been renamed to {key}!')
     validate_value(key, value)
+    if key == 'multicore_pool':
+        raise AssertionError('Preset of "multicore_pool" can only be changed with a '
+                              'configuration-file, but not at runtime!')
     CONFIG_PRESET[key] = value
     set_config_value(key, value)
     PRESETS_CHANGED = True
