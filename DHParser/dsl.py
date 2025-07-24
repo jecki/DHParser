@@ -881,7 +881,8 @@ def batch_process(file_names: List[str], out_dir: str,
             'DHParser.dsl.batch_process() is deprected. Use "cancel_query" instead!')
         if cancel_query is None:
             cancel_query = cancel_func
-    parm_tuple = list(inspect.signature(process_file).parameters.values())[0]
+    signature = inspect.signature(process_file)
+    parm_tuple = list(signature.parameters.values())[0]
     pf_parms = len(str(parm_tuple.annotation).split(","))
     if pf_parms <= 2:
         deprecation_warning("'process_file'-function passed to DHParser.dsl.batch_process() "
