@@ -38,4 +38,4 @@ from test_toolkit import *
 if __name__ == '__main__':
     multiprocessing.set_start_method('forkserver')
     runner("TestConfigMultiprocessing.test_presets", globals())
-    runner("TestLoggingAndLoading.test_logging_multiprocessing", globals())
+    runner("TestLoggingAndLoading.test_logging_multicore", globals())

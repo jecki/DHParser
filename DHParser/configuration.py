@@ -147,10 +147,7 @@ def os_getpid(mp_method = None):
             mp_method = multiprocessing.get_start_method()
         if mp_method == "forkserver":
             return get_forkserver_pid()
-        else:
-            return os.getppid()
-    else:
-        return os.getpid()
+    return os.getpid()
 
 
 def get_syncfile_path(mp_method: str) -> str:
@@ -158,11 +155,11 @@ def get_syncfile_path(mp_method: str) -> str:
     import tempfile
     syncfile_path = CONFIG_PRESET['syncfile_path']
     if not syncfile_path:
-        pid = os.getpid()
-        syncfile_path = os.path.join(tempfile.gettempdir(), f'DHParser_{pid}.cfg')
-        if not os.path.exists(syncfile_path):
-            pid = os_getpid(mp_method)
+        for getpid in (os.getpid, os.getppid, os_getpid):
+            pid = getpid()
             syncfile_path = os.path.join(tempfile.gettempdir(), f'DHParser_{pid}.cfg')
+            if os.path.exists(syncfile_path):
+                break
     return syncfile_path
 
 
