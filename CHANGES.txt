@@ -14,8 +14,10 @@ DHParser Version 1.9.0
 - auto-generated parser skript now allows to select a particular
   compilation target, like the AST or any other intermediate
   or final stage from the processing-pipline
--  start_parser-paramters added to compile.compile_source() and
-   pipeline.full_pipline()
+- automated app-script completely overhauled, now much better for
+  exploring parsers and processing pipelines.
+- start_parser-paramters added to compile.compile_source() and
+  pipeline.full_pipline()
 - left_biased-parameter added to nodetree.ContentMapping.insert_node()
 - an (empty) ...Config.ini-file is now automatically generated
   for new projects
