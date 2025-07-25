@@ -218,6 +218,8 @@ def run_pipeline(junctions: Set[Junction],
                     transformation = junction[1]()
                     if hasattr(transformation, 'cancel_query'):
                         transformation.cancel_query = cancel_query
+                    elif hasattr(transformation, 'cancel_query__'):
+                        transformation.cancel_query__ = cancel_query
                     results[t] = process_tree(transformation, tree)  # TODO: pass cancel query, here
                     errata[t] = copy.copy(tree.errors_sorted)
                     if cancel_query is not None and cancel_query():

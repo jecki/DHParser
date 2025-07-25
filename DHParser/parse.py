@@ -49,7 +49,7 @@ from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
     AUTOCAPTURED_SYMBOL_NOT_CLEARED, RECURSION_DEPTH_LIMIT_HIT, CAPTURE_STACK_NOT_EMPTY_WARNING, \
     MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, CAPTURE_STACK_NOT_EMPTY_NON_ROOT_ONLY, \
     AUTOCAPTURED_SYMBOL_NOT_CLEARED_NON_ROOT, ERROR_WHILE_RECOVERING_FROM_ERROR, \
-    ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING, PARSER_STOPPED_ON_RETRY, ERROR, \
+    ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING, PARSER_STOPPED_ON_RETRY, ERROR, CANCELED, \
     INFINITE_LOOP_WARNING, REDUNDANT_PARSER_WARNING, has_errors, is_error
 from DHParser.log import CallItem, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME, SourceMapFunc
@@ -59,7 +59,7 @@ from DHParser.nodetree import Node, RootNode, WHITESPACE_PTYPE, \
     EMPTY_PTYPE, LEAF_NODE, ChildrenType, ResultType
 from DHParser.toolkit import sane_parser_name, escape_ctrl_chars, re, matching_brackets, \
     abbreviate_middle, RX_NEVER_MATCH, RxPatternType, linebreaks, line_col, TypeAlias, \
-    List, Tuple, MutableSet, AbstractSet, FrozenSet, Dict, INFINITE, LazyRE
+    List, Tuple, MutableSet, AbstractSet, FrozenSet, Dict, INFINITE, LazyRE, CancelQuery, deprecated
 
 try:
     import cython
@@ -86,6 +86,8 @@ __all__ = ('parser_names',
            'UninitializedError',
            'ensure_drop_propagation',
            'Grammar',
+           'match',
+           'fullmatch',
            'is_grammar_placeholder',
            'is_parser_placeholder',
            'Always',
@@ -834,7 +836,7 @@ class Parser:
         """Sets the parser name to ``pname`` and returns ``self``. If
         `disposable` is True, the nodes produced by the parser will also be
         marked as disposable, i.e. they can be eliminated bur their content
-        will be retained. The same can be achived by prefixing the panme-string
+        will be retained. The same can be achieved by prefixing the panme-string
         with a colon ":" or with "HIDE:". Another possible prefix is "DROP:"
         in which case the nodes will be dropped entirely, including their
         content. (This is useful to keep delimiters out of the syntax-tree.)
@@ -1279,6 +1281,28 @@ class UninitializedError(Exception):
         return f'UninitializedError: {self.msg}'
 
 
+class CancelError(Exception):
+    "An error that is raised, if parsing has been canceled by a cancel_query."
+    def __init__(self, location):
+        self.location = location
+
+    def __str__(self):
+        return f'CancelError: {self.location}'
+
+
+CANCEL_QUERY_INTERVAL = 10
+
+
+def cancel_proxy(self: Parser, location: cython.int) -> Tuple[Optional[Node], cython.int]:
+    grammar = self.grammar
+    grammar.cancel_interval__ -= 1
+    if grammar.cancel_interval__ < 0:
+        grammar.cancel_interval__ = CANCEL_QUERY_INTERVAL
+        if grammar.cancel_query__():
+            raise CancelError(location)
+    return self._parse(location)
+
+
 RESERVED_PARSER_NAMES = ('root__', 'dwsp__', 'wsp__', 'comment__', 'root_parser__', 'ff_parser__')
 
 
@@ -1338,7 +1362,7 @@ class Grammar:
 
     Collecting the parsers that define a grammar in a descendant class of
     class Grammar and assigning the named parsers to class variables
-    rather than global variables has several advantages:
+    rather than to global variables has several advantages:
 
     1. It keeps the namespace clean.
 
@@ -1702,8 +1726,8 @@ class Grammar:
         :param static_analysis: If not None, this overrides the config value
             "static_analysis".
         """
-        self.all_parsers__ = set()             # type: MutableSet[Parser]
-        # add compiled regular expression for comments, if it does not already exist
+        self.all_parsers__: MutableSet[Parser] = set()
+        # add compiled regular expression for comments if it does not already exist
         if not hasattr(self, 'comment_rx__') or self.comment_rx__ is None:
             if hasattr(self.__class__, 'COMMENT__') and self.__class__.COMMENT__:
                 self.comment_rx__ = re.compile(self.__class__.COMMENT__)
@@ -1713,14 +1737,17 @@ class Grammar:
             assert ((self.__class__.COMMENT__
                      and self.__class__.COMMENT__ == self.comment_rx__.pattern)
                     or (not self.__class__.COMMENT__ and self.comment_rx__ == RX_NEVER_MATCH))
-        self.start_parser__ = None               # type: Optional[Parser]
-        self._dirty_flag__ = False               # type: bool
-        self.left_recursion__ = get_config_value('left_recursion')                # type: bool
-        self.history_tracking__ = get_config_value('history_tracking')            # type: bool
-        self.resume_notices__ = get_config_value('resume_notices')                # type: bool
-        self.max_parser_dropouts__ = get_config_value('max_parser_dropouts')      # type: int
-        self.reentry_search_window__ = get_config_value('reentry_search_window')  # type: int
-        self.associated_symbol_cache__ = dict()                   # type: Dict[Parser, Parser]
+        self.start_parser__: Optional[Parser] = None               # type:
+        self._dirty_flag__: bool = False
+        self.left_recursion__: bool = get_config_value('left_recursion')
+        self.history_tracking__: bool = get_config_value('history_tracking')
+        self.resume_notices__: bool = get_config_value('resume_notices')
+        self.max_parser_dropouts__: int = get_config_value('max_parser_dropouts')
+        self.reentry_search_window__: int = get_config_value('reentry_search_window')
+        self.associated_symbol_cache__: Dict[Parser, Parser] = dict()
+        self.cancel_query__: Optional[CancelQuery] = None
+        self.cancel_query_last__: Optional[CancelQuery] = None
+        self.cancel_interval__: int = CANCEL_QUERY_INTERVAL
         self._reset__()
 
         # prepare parsers in the class, first
@@ -1961,6 +1988,7 @@ class Grammar:
         self.document_length__ = len(self.document__)
         self._document_lbreaks__ = linebreaks(self.text__) if self.history_tracking__ else []
         # done by reset: self.last_rb__loc__ = -2  # rollback location
+        self.set_cancel_query__()
         result = None  # type: Optional[Node]
         stitches = []  # type: List[Node]
         L = len(self.document__)
@@ -1991,6 +2019,13 @@ class Grammar:
                 result, location = parser(location)
             except ParserError as pe:
                 result, location = pe.node, L
+                for k in self.variables__:  del self.variables__[k]
+            except CancelError as ce:
+                result = Node(EMPTY_NODE, '').with_pos(0)
+                self.tree__.new_error(
+                    result, f'Parsing was canceled at position: {ce.location} of {L}!', CANCELED)
+                location = L
+                for k in self.variables__:  del self.variables__[k]
             if result is EMPTY_NODE:  # don't ever deal out the EMPTY_NODE singleton!
                 result = Node(EMPTY_PTYPE, '').with_pos(0)
 
@@ -2141,10 +2176,10 @@ class Grammar:
         return self.tree__
 
 
-    def match(self,
-              parser: Union[str, Parser],
-              string: str,
-              source_mapping: Optional[SourceMapFunc] = None):
+    def match__(self,
+                parser: Union[str, Parser],
+                string: str,
+                source_mapping: Optional[SourceMapFunc] = None) -> Optional[str]:
         """Returns the matched string, if the parser matches the
         beginning of a string or ``None`` if the parser does not match."""
         result = self(string, parser, source_mapping, complete_match=False)
@@ -2153,11 +2188,18 @@ class Grammar:
         else:
             return str(result)
 
+    @deprecated("Grammar.match() is deprecated, use Grammar.match__() or match(grammar, ...) instead!")
+    def match(self,
+              parser: Union[str, Parser],
+              string: str,
+              source_mapping: Optional[SourceMapFunc] = None) -> Optional[str]:
+        return self.match__(parser, string, source_mapping)
 
-    def fullmatch(self,
-                  parser: Union[str, Parser],
-                  string: str,
-                  source_mapping: Optional[SourceMapFunc] = None):
+
+    def fullmatch__(self,
+                    parser: Union[str, Parser],
+                    string: str,
+                    source_mapping: Optional[SourceMapFunc] = None) -> Optional[str]:
         """Returns the matched string, if the parser matches the
         complete string or ``None`` if the parser does not match."""
         result = self(string, parser, source_mapping, complete_match=True)
@@ -2165,6 +2207,29 @@ class Grammar:
             return None
         else:
             return str(result)
+
+    @deprecated("Grammar.fullmatch() is deprecated, use Grammar.match__() or fullmatch(grammar, ...) instead!")
+    def fullmatch(self,
+                  parser: Union[str, Parser],
+                  string: str,
+                  source_mapping: Optional[SourceMapFunc] = None) -> Optional[str]:
+        return self.fullmatch__(parser, string, source_mapping)
+
+
+    def set_cancel_query__(self):
+        if self.cancel_query__ != self.cancel_query_last__:
+            for p in self.all_parsers__:
+                if isinstance(p, LeafParser):
+                    if self.cancel_query__ is None:
+                        p.set_proxy(None)
+                    elif p._parse_proxy == p._parse:
+                        p.set_proxy(cancel_proxy)
+                    else:
+                        assert p._parse_proxy.__name__ == "cancel_proxy", \
+                            "DHParser-Error: Currently, cancel_query cannot be used in " \
+                            "combination with parsing-history-recording."
+            self.cancel_query_last__ = self.cancel_query__
+        self.cancel_interval__ = CANCEL_QUERY_INTERVAL
 
 
     @property
@@ -2337,6 +2402,22 @@ class Grammar:
                     'the parsed document' % cast('CombinedParser', parser).location_info(),
                     0, PARSER_NEVER_TOUCHES_DOCUMENT)))
         return error_list
+
+
+def match(grammar: Grammar,
+          parser: Union[str, Parser],
+          string: str,
+          source_mapping: Optional[SourceMapFunc] = None) -> Optional[str]:
+    """See :py:func:`Grammar.match__`"""
+    return grammar.match__(parser, string, source_mapping)
+
+
+def fullmatch(grammar: Grammar,
+              parser: Union[str, Parser],
+              string: str,
+              source_mapping: Optional[SourceMapFunc] = None) -> Optional[str]:
+    """See :py:func:`Grammar.fullmatch__`"""
+    return grammar.fullmatch__(parser, string, source_mapping)
 
 
 ParserCallable: TypeAlias = Union[Grammar, Callable[[str], RootNode], functools.partial]

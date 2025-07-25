@@ -35,7 +35,6 @@ This functionality can be used for several purposes:
    a threading.Event or multiprocessing.Event once in a while
 """
 
-# TODO: Add Trace-Parser-class
 
 from __future__ import annotations
 
@@ -84,7 +83,10 @@ def set_tracer(parsers: Union[Grammar, Parser, Iterable[Parser]], tracer: Option
     if parsers:
         pivot = next(iter(parsers))
         assert all(pivot._grammar == parser._grammar for parser in parsers)
-        if tracer is not None:
+        if tracer is None:
+            pivot._grammar.history_tracking__ = False
+            pivot._grammar.resume_notices__ = False
+        else:
             pivot._grammar.history_tracking__ = True
             pivot._grammar.resume_notices__ = True
         for parser in parsers:

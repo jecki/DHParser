@@ -21,7 +21,7 @@ driven compilation support. Class ``Compiler`` can serve as base
 class for a compiler. Compiler objects
 are callable and receive the Abstract syntax tree (AST)
 as argument and yield whatever output the compiler produces. In
-most Digital Humanities applications this will be
+most Digital Humanities applications, this will be
 XML-code. However, it can also be anything else, like binary
 code or, as in the case of DHParser's EBNF-compiler, Python
 source code.
@@ -497,6 +497,7 @@ def compile_source(source: str,
         source_mapping = gen_neutral_srcmap_func(source_text, source_name)
             # lambda i: SourceLocation(source_name, 0, i)    # type: SourceMapFunc
     else:
+        if hasattr(preprocessor, 'cancel_query'):  preprocessor.cancel_query = cancel_query
         _, source_text, source_mapping, errors = preprocessor(original_text, source_name)
 
     if has_errors(errors, FATAL):
@@ -504,6 +505,7 @@ def compile_source(source: str,
 
     # parsing
 
+    if hasattr(parser, 'cancel_query__'):  parser.cancel_query__ = cancel_query
     syntax_tree: RootNode = parser(source_text, start_parser, source_mapping)
     syntax_tree.docname = source_name if source_name else "DHParser_Document"
     for e in errors:  syntax_tree.add_error(None, e)
@@ -518,7 +520,7 @@ def compile_source(source: str,
     #     str(syntax_tree) # Ony valid if neither tokens nor whitespace are dropped early
 
     result = None
-    if cancel_query is not None and cancel_query():
+    if cancel_query is not None and not is_fatal(syntax_tree.error_flag) and cancel_query():
         syntax_tree.new_error(syntax_tree, "Processing stopped by cancel request!", CANCELED)
     if not is_fatal(syntax_tree.error_flag):
 
@@ -529,6 +531,7 @@ def compile_source(source: str,
             # earlier, the syntax tree might not look like expected,
             # which could (fatally) break AST transformations.
             try:
+                if hasattr(transformer, 'cancel_query'):  transformer.cancel_query = cancel_query
                 syntax_tree = transformer(syntax_tree)
             except Exception as e:
                 syntax_tree.new_error(syntax_tree,
@@ -543,7 +546,7 @@ def compile_source(source: str,
         if 'AST' in log_syntax_trees:
             log_ST(syntax_tree, log_file_name + '.ast')
 
-        if cancel_query is not None and cancel_query():
+        if cancel_query is not None and not is_fatal(syntax_tree.error_flag) and cancel_query():
             syntax_tree.new_error(syntax_tree, "Processing stopped by cancel request!", CANCELED)
         if not is_fatal(syntax_tree.error_flag):
             if preserve_AST:
