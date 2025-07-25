@@ -85,6 +85,7 @@ __all__ = ('parser_names',
            'GrammarError',
            'UninitializedError',
            'ensure_drop_propagation',
+           'cancel_proxy',
            'Grammar',
            'match',
            'fullmatch',
@@ -2225,9 +2226,9 @@ class Grammar:
                     elif p._parse_proxy == p._parse:
                         p.set_proxy(cancel_proxy)
                     else:
-                        assert p._parse_proxy.__name__ == "cancel_proxy", \
-                            "DHParser-Error: Currently, cancel_query cannot be used in " \
-                            "combination with parsing-history-recording."
+                        assert p._parse_proxy.__name__ in ("cancel_proxy", "trace_history"), \
+                            f"DHParser-Error: Currently, cancel_query cannot be used in " \
+                            f"combination with {p._parse_proxy.__name__}."
             self.cancel_query_last__ = self.cancel_query__
         self.cancel_interval__ = CANCEL_QUERY_INTERVAL
 

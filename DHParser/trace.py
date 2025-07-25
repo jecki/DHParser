@@ -49,7 +49,7 @@ from DHParser.error import Error, RESUME_NOTICE, RECURSION_DEPTH_LIMIT_HIT
 from DHParser.nodetree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE
 from DHParser.log import HistoryRecord, NONE_NODE
 from DHParser.parse import Grammar, Parser, ParserError, ParseFunc, ContextSensitive, \
-    UnaryParser, SmartRE
+    UnaryParser, SmartRE, cancel_proxy
 from DHParser.toolkit import line_col, INFINITE
 
 __all__ = ('trace_history', 'set_tracer', 'resume_notices_on', 'resume_notices_off')
@@ -151,6 +151,7 @@ def history_record(parser: Parser, grammar: Grammar,
                i=cython.int, L=cython.int)
 def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], cython.int]:
     grammar = self._grammar  # type: Grammar
+
     if not grammar.history_tracking__:
         if location < 0:
             if location <= -INFINITE:  location = 0
@@ -227,8 +228,11 @@ def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], c
 
     try:
 
+        if grammar.cancel_query__ is not None:
+            node, location = cancel_proxy(self, location)
+        else:
 #####################################################################################
-        node, location_ = self._parse(location)   # <===== call to the actual parser!
+            node, location_ = self._parse(location)   # <===== call to the actual parser!
 #####################################################################################
 
     except ParserError as pe:

@@ -13,7 +13,7 @@ import threading
 scriptdir = os.path.dirname(os.path.realpath(__file__))
 doc_paths = [os.path.join('documentation_src'),
              os.path.join('documentation_src', 'manuals')]
-# sys.path.append(os.path.join(scriptdir, '../'))
+sys.path.append(os.path.realpath(os.path.join(scriptdir, '..')))
 
 from DHParser.configuration import get_config_value
 from DHParser.toolkit import instantiate_executor
