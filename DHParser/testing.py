@@ -62,6 +62,8 @@ from DHParser.toolkit import load_if_file, re, instantiate_executor, TypeAlias, 
 
 
 __all__ = ('unit_from_config',
+           'merge_test_units',
+           'unit_to_config',
            'unit_from_json',
            'TEST_READERS',
            'unit_from_file',
@@ -275,6 +277,78 @@ def unit_from_config(config_str: str, filename: str, allowed_stages=UNIT_STAGES)
                      cfg[pos:cfg.find('\n', pos + 1)].strip('\n'))
         raise SyntaxError(err_str)
     return unit
+
+
+def normalize_test_units(*test_units):
+    """Replaces all non-string keys by string keys and removes all
+    "dump-CST"-markers (*)."""
+    for test_unit in test_units:
+        for symbol, tests in test_unit.items():
+            for typ, cases in tests.items():
+                for name, case in tuple(cases.items()):
+                    del cases[name]
+                    name = str(name).strip().strip('*')
+                    cases[name] = name
+
+
+def merge_test_units(*test_units) -> Dict:
+    """Merges the tests from one or more test units into a single test-unit.
+    ATEENTION: Test-units will be normalized before merging"""
+    assert len(test_units) >= 1
+    normalize_test_units(*test_units)
+    merged = copy.deepcopy(test_units[0])
+    for test_unit in test_units[1:]:
+        for symbol, tests in test_unit.items():
+            if symbol not in merged:
+                merged[symbol] = OrderedDict()
+            for typ, cases in tests.items():
+                if typ not in merged[symbol]:
+                    merged[symbol][typ] = OrderedDict()
+                for name, case in cases.items():
+                    names = str(name).strip('*')
+                    if names in merged[symbol][typ] or name in merged[symbol][typ]:
+                        m = re.match('\d+', names[::-1])
+                        if m:
+                            nr = int(names[-m.end():]) + 1
+                            names = names[:-m.end()]
+                        else:
+                            nr = 1
+                        while names + str(nr) in merged[symbol][typ]:
+                            nr += 1
+                        names = names + str(nr)
+                    merged[symbol][typ][names] = case
+    return merged
+
+
+def format_casestr(s: str) -> str:
+    """Adds quotation marks and possibly indentation to a text-case string."""
+    if s.find("\n") >= 0:
+        for q in ('"""', "'''"):
+            if s.find(q) < 0:
+                l = s.split('\n')
+                for i in range(1, len(l)):
+                    l[i] = "    " + l[i]
+                return ''.join((q, '\n'.join(l), q))
+    else:
+        for q in ('"', "'", '"""', "'''"):
+            if s.find(q) < 0:
+                return ''.join((q, s, q))
+    raise ValueError(
+        f"Cannot add quotation marks to {s}, because all possible single or tripple "
+        f"quotation marks already occurr in this string!")
+
+
+def unit_to_config(test_unit: Dict) -> str:
+    """Converts a test_unit (back) to a config-file."""
+    test_doc = []
+    for symbol, tests in test_unit.items():
+        for typ, cases in tests.items():
+            test_doc.append(f'[{typ}:{symbol}]')
+            for name, case in cases.items():
+                test_doc.append(f'{name}: {format_casestr(case)}')
+            test_doc.append('')
+        test_doc.append('')
+    return '\n'.join(test_doc)
 
 
 def unit_from_json(json_str, filename, allowed_stages=UNIT_STAGES):
@@ -1508,3 +1582,4 @@ class MockStream:
             self.data_waiting.wait()
             data.extend(self._readline())
         return b''.join(data)
+

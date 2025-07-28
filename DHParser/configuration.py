@@ -67,6 +67,7 @@ __all__ = ('CONFIG_PRESET',
            'get_config_values',
            'set_config_value',
            'add_config_values',
+           'dump_config_data',
            'NEVER_MATCH_PATTERN')
 
 
@@ -448,20 +449,24 @@ def get_config_value(key: str, default: Any = NO_DEFAULT) -> Any:
             return value
 
 
-def get_config_values(key_pattern: str = "*") -> Dict:
+def get_config_values(key_pattern: str = "*", *additional_patterns) -> Dict:
     """Returns a dictionary of all configuration entries that match
     `key_pattern`."""
     access_presets()
     presets = get_preset_values(key_pattern)
+    for pattern in additional_patterns:
+        presets.update(get_preset_values(pattern))
     finalize_presets()
     import fnmatch
     with get_access_lock():
         cfg = _config_dict()
-        if key_pattern == "*":
-            cfg_values = cfg
-        else:
-            cfg_values = {key: value for key, value in cfg.items()
-                          if fnmatch.fnmatchcase(key, key_pattern)}
+        cfg_values = dict()
+        for pattern in (key_pattern, *additional_patterns):
+            if pattern == "*":
+                cfg_values.update(cfg)
+            else:
+                cfg_values.update({key: value for key, value in cfg.items()
+                                   if fnmatch.fnmatchcase(key, key_pattern)})
         presets.update(cfg_values)
         cfg.update(presets)
     return presets
@@ -500,6 +505,30 @@ def add_config_values(configuration: dict):
     with get_access_lock():
         cfg = _config_dict()
         cfg.update(configuration)
+
+
+def dump_config_data(*key_patterns, use_headings: bool = True) -> str:
+    """Returns the configuration variables the name of which mathes one of the
+    key_patterns config.ini-string."""
+    if key_patterns:
+        data = get_config_values(key_patterns[0], *key_patterns[1:])
+        results = []
+        last_prefix = None
+        for k, v in data.items():
+            i = k.find('.')
+            prefix = k[:i + 1]
+            name = k[i + 1:] if use_headings else k
+            if prefix != last_prefix:
+                results.append('')
+                if use_headings:
+                    results.append(f'[{prefix[:-1]}]' if prefix else "[DHParser]")
+                last_prefix = prefix
+            results.append(f'{name} = {repr(v)}')
+        if not results[0]:  del results[0]
+        results.append('')
+        return '\n'.join(results)
+    else:
+        return ''
 
 
 ########################################################################

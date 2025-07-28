@@ -30,7 +30,8 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.configuration import access_presets, finalize_presets, \
     set_preset_value, get_preset_value, get_config_value, read_local_config, \
-    get_config_values, set_config_value, get_forkserver_pid, CONFIG_PRESET
+    get_config_values, set_config_value, get_forkserver_pid, CONFIG_PRESET, \
+    dump_config_data
 from DHParser.testing import unique_name
 
 # spped up tests for Python3.14: CONFIG_PRESET['multicore_pool'] = 'InterpreterPool'
@@ -55,6 +56,34 @@ class TestConfigGetAndSet:
             assert False, "KeyError expected"
         except KeyError:
             pass
+
+
+class TestDumpConfig:
+    def test_dump_config(self):
+        set_config_value('test.alpha', 1, allow_new_key=True)
+        set_config_value('test.beta', "beta", allow_new_key=True)
+        s = dump_config_data('test.*', 'server_default_*', 'batch_processing_*')
+        assert s == """[DHParser]
+server_default_host = '127.0.0.1'
+server_default_port = 8888
+batch_processing_parallelization = True
+batch_processing_max_chunk_size = 4
+
+[test]
+alpha = 1
+beta = 'beta'
+"""
+        t = dump_config_data('test.*', 'server_default_*', 'batch_processing_*',
+                             use_headings=False)
+        assert t == """server_default_host = '127.0.0.1'
+server_default_port = 8888
+batch_processing_parallelization = True
+batch_processing_max_chunk_size = 4
+
+test.alpha = 1
+test.beta = 'beta'
+"""
+
 
 
 def evaluate_presets():

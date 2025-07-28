@@ -19,6 +19,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import copy
 import os
 import sys
 from functools import partial
@@ -34,8 +35,8 @@ from DHParser.dsl import grammar_provider, create_parser
 from DHParser.error import PARSER_LOOKAHEAD_FAILURE_ONLY, PARSER_LOOKAHEAD_MATCH_ONLY, \
     MANDATORY_CONTINUATION_AT_EOF, MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, ERROR
 from DHParser.log import start_logging
-from DHParser.testing import get_report, grammar_unit, unit_from_file, \
-    unit_from_config, clean_report, unique_name, reset_unit
+from DHParser.testing import get_report, grammar_unit, unit_from_file, merge_test_units, \
+    unit_from_config, clean_report, unique_name, reset_unit, unit_to_config
 from DHParser.trace import set_tracer, trace_history
 
 CFG_FILE_1 = '''
@@ -230,58 +231,65 @@ ARITHMETIC_EBNFTransform = partial(traverse, transformation_table=ARITHMETIC_EBN
 
 
 class TestGrammarTest:
-    cases = {
-        "factor": {
-            "match": {
-                1: "0",
-                2: "314",
+    def setup_method(self):
+        self.cases = {
+            "factor": {
+                "match": {
+                    1: "0",
+                    2: "314",
+                },
+                "fail": {
+                    3: "21F",
+                    4: "G123"
+                }
             },
-            "fail": {
-                3: "21F",
-                4: "G123"
-            }
-        },
-        "term": {
-            "match": {
-                '1*': "4 * 5",
-                2: "20 / 4",
-                3: "20 / 4 * 3"
+            "term": {
+                "match": {
+                    '1*': "4 * 5",
+                    2: "20 / 4",
+                    3: "20 / 4 * 3"
+                },
+                "ast": {
+                    '1*': "(term (factor 4) (:Text *) (factor 5))",
+                    2: "(term (factor 20) (:Text /) (factor 4))",
+                    3: """(term
+                            (term
+                              (factor 20)
+                              (:Text /)
+                              (factor 4))
+                            (:Text *)
+                            (factor 3))"""
+                },
+                "fail": {
+                    4: "4 + 5",
+                    5: "20 / 4 - 3"
+                }
             },
-            "ast": {
-                '1*': "(term (factor 4) (:Text *) (factor 5))",
-                2: "(term (factor 20) (:Text /) (factor 4))",
-                3: "(term (term (factor 20) (:Text /) (factor 4)) (:Text *) (factor 3))"
-            },
-            "fail": {
-                4: "4 + 5",
-                5: "20 / 4 - 3"
-            }
-        },
-        "no_match_tests_specified": {
-            "fail": {
-                1: "+ 4 5"
+            "no_match_tests_specified": {
+                "fail": {
+                    1: "+ 4 5"
+                }
             }
         }
-    }
 
-    failure_cases = {
-        "term": {
-            "match": {
-                1: "4 + 5",     # error: this should fail
-                2: "20 / 4",
-                3: "20 / 4 * 3"
-            },
-            "ast": {
-                1: "(term (factor 4) (:Text *) (factor 5))",
-                2: "(term (factor 20) (:Text /) (factor 4))",
-                3: "(term (term (factor 19) (:Text /) (factor 4)) (:Text *) (factor 3))"  # error 19 != 20
-            },
-            "fail": {
-                4: "4 * 5",     # error: this should match
-                5: "20 / 4 - 3"
+        self.failure_cases = {
+            "term": {
+                "match": {
+                    1: "4 + 5",     # error: this should fail
+                    2: "20 / 4",
+                    3: "20 / 4 * 3"
+                },
+                "ast": {
+                    1: "(term (factor 4) (:Text *) (factor 5))",
+                    2: "(term (factor 20) (:Text /) (factor 4))",
+                    3: "(term (term (factor 19) (:Text /) (factor 4)) (:Text *) (factor 3))"  # error 19 != 20
+                },
+                "fail": {
+                    4: "4 * 5",     # error: this should match
+                    5: "20 / 4 - 3"
+                }
             }
         }
-    }
 
     def setup_class(self):
         self.save_dir = os.getcwd()
@@ -295,11 +303,12 @@ class TestGrammarTest:
         parser_fac = grammar_provider(ARITHMETIC_EBNF)
         trans_fac = lambda : ARITHMETIC_EBNFTransform
         # reset_unit(self.cases)
-        errata = grammar_unit(self.cases, parser_fac, trans_fac, 'REPORT_TestGrammarTest')
+        cases = copy.deepcopy(self.cases)
+        errata = grammar_unit(cases, parser_fac, trans_fac, 'REPORT_TestGrammarTest')
         assert len(errata) == 1
         assert errata[0] == 'Unknown parser "no_match_tests_specified" in fail test "1"!', \
             "Unknown parser, but no error message!?"
-        report = get_report(self.cases)
+        report = get_report(cases)
         assert report.find('### CST') >= 0
         errata = grammar_unit(self.failure_cases, parser_fac, trans_fac, 'REPORT_TestGrammarTest')
         assert len(errata) == 3, str(errata)
@@ -311,13 +320,97 @@ class TestGrammarTest:
         """Failure test should not pass if it failed because the parser is unknown."""
         fcases = {}
         fcases['berm'] = {}
-        fcases['berm']['fail'] = self.failure_cases['term']['fail']
+        fcases['berm']['fail'] = copy.deepcopy(self.failure_cases['term']['fail'])
         errata = grammar_unit(fcases,
                               grammar_provider(ARITHMETIC_EBNF),
                               lambda : ARITHMETIC_EBNFTransform,
                               'REPORT_TestGrammarTest')
         # print(errata)
         assert errata and len(errata) == 2
+
+    def test_unit_to_config(self):
+        expected = '''[match:factor]
+1: "0"
+2: "314"
+
+[fail:factor]
+3: "21F"
+4: "G123"
+
+
+[match:term]
+1*: "4 * 5"
+2: "20 / 4"
+3: "20 / 4 * 3"
+
+[ast:term]
+1*: "(term (factor 4) (:Text *) (factor 5))"
+2: "(term (factor 20) (:Text /) (factor 4))"
+3: """(term
+                                (term
+                                  (factor 20)
+                                  (:Text /)
+                                  (factor 4))
+                                (:Text *)
+                                (factor 3))"""
+
+[fail:term]
+4: "4 + 5"
+5: "20 / 4 - 3"
+
+
+[fail:no_match_tests_specified]
+1: "+ 4 5"
+
+'''
+        cfg = unit_to_config(copy.deepcopy(self.cases))
+        assert cfg == expected
+
+    def test_merge_units(self):
+        merged = merge_test_units(copy.deepcopy(self.cases),
+                                  copy.deepcopy(self.failure_cases))
+        import json
+        assert json.dumps(merged, indent=2) == """{
+  "factor": {
+    "match": {
+      "1": "1",
+      "2": "2"
+    },
+    "fail": {
+      "3": "3",
+      "4": "4"
+    }
+  },
+  "term": {
+    "match": {
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "1",
+      "5": "2",
+      "6": "3"
+    },
+    "ast": {
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "1",
+      "5": "2",
+      "6": "3"
+    },
+    "fail": {
+      "4": "4",
+      "5": "5",
+      "6": "4",
+      "7": "5"
+    }
+  },
+  "no_match_tests_specified": {
+    "fail": {
+      "1": "1"
+    }
+  }
+}"""
 
 
 class TestASTErrors:
