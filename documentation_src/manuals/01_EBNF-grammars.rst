@@ -822,7 +822,7 @@ Let's just try our grammar on an example::
       (QUESTION_MARK "?"))
 
 Again, it is a question of design, whether we leave whitespace in the data or
-not. Leaving it has the advantage, that serialization become as simple as
+not. Leaving it has the advantage, that serialization becomes as simple as
 printing the content of the data-tree::
 
     >>> print(sentence)
