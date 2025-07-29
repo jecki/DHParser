@@ -8,6 +8,7 @@ a parser. This includes serialization and deserialization of node-trees,
 navigating and searching node-trees as well as annotating node-trees
 with attributes and error messages.
 
+.. _node_objects:
 
 Node-objects
 ------------

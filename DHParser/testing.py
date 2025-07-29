@@ -199,7 +199,7 @@ def unit_from_config(config_str: str, filename: str, allowed_stages=UNIT_STAGES)
         for which the test-file may contain tests.
 
     Returns:
-        A JSON-like object(i.e. dictionary) representing the unit tests.
+        A JSON-like object (i.e. dictionary) representing the unit tests.
     """
     # TODO: issue a warning if the same match:xxx or fail:xxx block appears more than once
 
@@ -297,17 +297,23 @@ def merge_test_units(*test_units) -> Dict:
     assert len(test_units) >= 1
     normalize_test_units(*test_units)
     merged = copy.deepcopy(test_units[0])
+    name_subst = dict()
     for test_unit in test_units[1:]:
         for symbol, tests in test_unit.items():
             if symbol not in merged:
                 merged[symbol] = OrderedDict()
+            name_subst[symbol] = dict()
+            assert next(iter(tests.keys())).lower() == 'match' or 'match' not in tests
             for typ, cases in tests.items():
                 if typ not in merged[symbol]:
                     merged[symbol][typ] = OrderedDict()
                 for name, case in cases.items():
                     names = str(name).strip('*')
-                    if names in merged[symbol][typ] or name in merged[symbol][typ]:
-                        m = re.match('\d+', names[::-1])
+                    orig = names
+                    if names in name_subst[symbol]:
+                        names = name_subst[symbol][names]
+                    elif names in merged[symbol][typ]:
+                        m = re.match(r'\d+', names[::-1])
                         if m:
                             nr = int(names[-m.end():]) + 1
                             names = names[:-m.end()]
@@ -316,6 +322,8 @@ def merge_test_units(*test_units) -> Dict:
                         while names + str(nr) in merged[symbol][typ]:
                             nr += 1
                         names = names + str(nr)
+                        if typ.lower() == 'match':
+                            name_subst[orig] = names
                     merged[symbol][typ][names] = case
     return merged
 

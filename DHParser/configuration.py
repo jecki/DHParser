@@ -508,7 +508,7 @@ def add_config_values(configuration: dict):
 
 
 def dump_config_data(*key_patterns, use_headings: bool = True) -> str:
-    """Returns the configuration variables the name of which mathes one of the
+    """Returns the configuration variables the name of which matches one of the
     key_patterns config.ini-string."""
     if key_patterns:
         data = get_config_values(key_patterns[0], *key_patterns[1:])

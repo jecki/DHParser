@@ -43,7 +43,8 @@ Let's start with creating some test-data::
 We define the `json`_-Grammar in
 top-down manner in EBNF. We'll use a regular-expression look-alike
 syntax. EBNF, as you may recall, consists of a sequence of symbol
-definitions. The definiens of those definitions either is a string
+definitions (often also called "productions").
+The definiens of those definitions either is a string
 literal or regular expression or other symbols or a combination
 of these with four different operators: 1. sequences
 2. alternatives 3. options and 4. repetitions. Here is how these
@@ -119,34 +120,36 @@ This is a rather common EBNF-grammar. A few peculiarities are
 noteworthy, though: First of all you might notice that some components
 of the grammar (or "production rules" as they are commonly called) have
 names with a leading underscore ``_``. It is a convention to mark those
-elements, in which we are on interested on their own account, with an
+elements, in which we are not interested on their own account, with an
 underscore ``_``. When moving from the concrete syntax-tree to a more
 abstract syntax-tree, these elements could be substituted by their
-content, to simplify the tree.
+content to simplify the tree.
 
 Secondly, some production rules carry a name written in capital letters.
-This is also a convention to mark those symbols which with other
-parser-generators would represent tokens delivered by a lexical scanner.
-DHParser is a "scanner-less" parser, which means that the breaking down
-of the string into meaningful tokens is done in place with regular
-expressions (like in the definition of ``_EOF``) or simple combinations
-of regular expressions (see the definition of ``_INT`` above). Their is
-no sharp distinction between tokens and other symbols in DHParser, but
-we keep it as a loose convention. Regular expressions are enclosed in
+This is also a convention to mark those symbols which represent tokens
+that would be delivered by the lexical scanner of a classical parser generator.
+DHParser, however, is a "scanner-less" parser, which means that the breaking down
+of the string into meaningful tokens is done "in place" with regular
+expressions (as seen in the definition of ``_EOF``, above) or simple combinations
+of regular expressions (see the definition of ``_INT``, above). Their is
+no sharp distinction between tokens and other symbols in DHParser.
+
+Regular expressions are enclosed in
 forward slashes and follow the standard syntax of Perl-style regular
-expression that is also used by the "re"-module of the Python standard
-library. (Don't worry about the number of backslashes in the line
-defining ``_CHARS`` for now!)
+expressions. As regular expressions are passed through to the `re`_-module
+of the Python Standard Library this is exactly the regular expression
+syntax of this module. If installed, Matthew Barnett's `regex`_-module
+is preferred to the re-module of the Standard Library.
 
 Finally, it is another helpful convention to indent the definitions of
 symbols that have only been introduced to simplify an otherwise
 unnecessarily complicated definition (e.g. the definition of ``number``,
 above) or to make it more understandable by giving names to its
-components (like ``_EOF``).
+components (like ``_INT``, ``_FRAC`` and ``_EXP``).
 
-Before we try this with some examples, we have to turn DHParser's
-optimizations off to get consistent node-names in the following
-syntax-trees. (Most of DHParser's speed-optimizations work
+Before we try this with some examples, we will for the purpose
+of learning turn DHParser's
+optimizations off. (Most of DHParser's speed-optimizations work
 by "compressing" nested parsers into "smart" regular expressions
 if possible. However, the serialization of the respective
 parser objects might yield different node-names for anonymous-nodes
@@ -165,8 +168,15 @@ this grammar into executable Python-code, we use the high-level-function
     >>> from DHParser.dsl import create_parser
     >>> parser = create_parser(grammar, branding="JSON")
     >>> syntax_tree = parser(testdata)
-    >>> syntax_tree.content
+    >>> syntax_tree.content  # serialize tree as string via the content-property
     '{"array": [1, 2.0, "a string"], "number": -1.3e+25, "bool": false}'
+
+The thus created parser yields a syntax tree if called with source-code
+string as argument. The syntax tree is made up of :py:class:`~nodtree.Node`-objects
+as defined in DHParser's :py:mod:`nodetree`-module. (See section :ref:`node_objects`
+in the manual about document-trees for more details.) Node-objects have
+a ``content``-property that yields the tree originating in this object as
+a flat string.
 
 As expected serializing the content of the resulting syntax-tree yields exactly
 the input-string of the parsing process. What we cannot see here, is that the
@@ -206,7 +216,7 @@ by which they have been generated. Nodes, that have been created by
 components of a production receive the name of of the parser-type
 that has created the node (see :py:mod:`parse`) prefixed
 with a colon ":". In DHParser, these nodes are called "anonymous",
-because they lack the name of a proper grammatical component.
+because they do not represent a symbol in the grammar on their own.
 
 .. _include_directive:
 
@@ -215,15 +225,10 @@ Chaining Grammars with @include
 
 While it is always advisable to keep a grammar definition short and concise,
 so that it neatly fits within one file, the need might arise to reuse parts
-of a grammar definition in different grammar. While this can be done with
-copy & paste, using copy & past has the disadvantage that if the part that
-has been copied will be changed later (if only because an error has been
-detected and needs to be corrected), it must be copied to all places where
-it is used, once again.
-
-In order to avoid such complications, DHParser supports a modest kind of
+of a grammar definition in a different grammar. In many case copy&paste will
+do. But DHParser also supports a modest kind of
 modularization of grammar-definitions via a simple include mechanism.
-Simply add ``@include = "FILENAME"``-directive at the place where
+Just add ``@include = "FILENAME"``-directive at the place where
 you'd like to include another grammar file.
 
 Say, we'd like to make the grammar-definition of floating-point numbers
@@ -257,13 +262,13 @@ Now, we can simply include this file an any grammar::
     '{"array": [1, 2.0, "a string"], "number": -1.3e+25, "bool": false}'
 
 The following command merely removes the grammar on the hard-disk, so that
-our doctest-run does not leave any trails::
+doctest-run of this manual does not leave any trails::
 
     >>> import os;  os.remove('number_include.ebnf')
 
 It should be noted that DHParser's include-mechanism does not (yet) support
 any kind of namespaces, so you have to make sure yourself that the same
-symbol names are not accidentally defined both in the including and included
+symbol-names are not accidentally defined both in the including and included
 file(s).
 
 Using DHParser's include-mechanism for modularizing your EBNF-grammar(s) is
@@ -282,7 +287,8 @@ default all anonymous nodes that are not leaf-nodes by replacing them
 with their children during parsing. Anonymous leaf-nodes will be
 replaced by their content, if they are a single child of some parent,
 and otherwise be left in place. Without this optimization, each
-construct of the EBNF-grammar would leave a node in the syntax-tree::
+construct of the EBNF-grammar would leave a node in the syntax-tree.
+We will show this here just for the purpose of demonstration::
 
     >>> from DHParser.parse import CombinedParser, TreeReduction
     >>> _ = TreeReduction(parser.json, CombinedParser.NO_TREE_REDUCTION)
@@ -321,7 +327,8 @@ construct of the EBNF-grammar would leave a node in the syntax-tree::
                   (:Text '"')))))))
       (:Text "]"))
 
-This can be helpful for understanding how parsing that is directed by
+This maximally verbose syntax-tree is usually not of much use. It can
+be helpful, though. for understanding how parsing that is directed by
 an EBNF-grammar works (next to looking at the logs of the complete
 parsing-process, see :py:mod:`trace`), but other than that it
 is advisable to streamline the syntax-tree as early on as possible,
@@ -331,24 +338,28 @@ increases with the number of nodes in the tree.
 Because of this, DHParser offers further means of simplifying
 syntax-trees during the parsing stage, already. These are not turned
 on by default, because they allow to drop content or to remove named
-nodes from the tree; but they must be turned on by "directives" that
+nodes from the tree. They need to be turned on by "directives" that
 are listed at the top of an EBNF-grammar and that guide the
 parser-generation process. DHParser-directives always start with an
 ``@``-sign. For example, the ``@drop``-directive advises the parser to
-drop certain nodes entirely, including their content. In the following
-example, the parser is directed to drop all insignificant whitespace::
+drop certain nodes entirely, including their content. For example, the
+directive ``@drop = whitespace`` instructs the parser to drop all
+:ref:`insignificant whitespace <insignificant_whitespace>`::
 
     >>> drop_insignificant_wsp = '@drop = whitespace \n'
 
-Directives look similar to productions, only that on the right hand
+Directives look similar to definitions, only that on the right hand
 side of the equal sign follows a list of parameters. In the case
 of the drop-directive these can be either names of non-anonymous
 nodes that shall be dropped or one of four particular classes of
 anonymous nodes (``strings``, ``backticked``, ``regexp``, ``whitespace``) that
 will be dropped.
 
-Another useful directive advises the parser to treat named nodes as
-anonymous nodes and to eliminate them accordingly during parsing. This
+Another useful directive is the ``@hide``-directive that advises the parser
+to treat certain named nodes as
+anonymous nodes. Anonymous nodes may be eliminated during the parsing
+process but, in contrast to the `@drop`-directive, this will only be
+happen if their content can be preserved in another node. This
 is useful, if we have introduced certain names in our grammar
 only as placeholders to render the definition of the grammar a bit
 more readable, not because we are interested in the structure that is
@@ -362,10 +373,15 @@ captured by the production associated with them in its own right::
    the old name "disposable" for the hide-directive will still be 
    understood by future versions of DHParser, however.  
 
-Instead of passing a comma-separated list of symbols to the directive,
-which would also have been possible, we have leveraged our convention
+Just as with the @drop-directive, it is possible to pass either
+an explicit list of all symbols that shall be "hidden"
+or a regular expression for identifying these symbols by their name to the
+@hide-directive, Here, we have leveraged our convention
 to prefix unimportant symbols with an underscore "_" by specifying the
 symbols that shall by anonymized with a regular expression.
+(See :ref:`below < _alternative_simplification_syntax>` for yet another,
+arguably, more convenient syntax for specifying symbols that can
+safely be dropped or hidden.)
 
 Now, let's examine the effect of these two directives::
 
@@ -632,7 +648,7 @@ and tilde (whitespace) -marker. Also, we already added the
       (number "2.0")
       (string "a string"))
 
-The SKIP and DROP markers can also be used as prefixes to definitions, which may
+The HIDE and DROP markers can also be used as prefixes to definitions, which may
 make it more obvious for the readers of the grammar which symbols will be hidden 
 or dropped from the syntax-tree. If written as a prefix, they are written with
 a following colon ":" instead of a preceding arrow "->", e.g. "HIDE:" and "DROP:".
@@ -3078,3 +3094,5 @@ classes.
 For DHParser's EBNF-dirctives, seee the :ref:`Reference of EBNF-directives <directives_reference>`
 
 .. _json: https://www.json.org/
+.. _re: https://docs.python.org/3/library/re.html
+.. _regex: https://github.com/mrabarnett/mrab-regex
