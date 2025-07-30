@@ -1,0 +1,9 @@
+<article>
+   <p>Es ist nur meiner entschiedenen Ueberzeugung gemäß, wenn ich ausspreche, daß keine
+     Philosophie bis jetzt an die <hi rend="g">Sache selbst</hi> gekommen, d. h. <hi rend="g">
+     Wirkliche-</hi>Wissenschaft
+     geworden, sondern stets nur in den
+     Präliminarien zu derselben stecken geblieben ist. Besonders gleicht die deutsche
+     Philosophie der neueren Zeit einer Vorrede ohne Ende, zu der noch immer das Buch
+     vergeblich erwartet wird.</p>
+</article>

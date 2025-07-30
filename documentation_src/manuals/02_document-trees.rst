@@ -737,6 +737,9 @@ that maps text positions within the pure string-content to the paths of
 the leaf-nodes to which they belong. This mapping can be thought of as a
 "string-view" on the tree::
 
+    >>> sentence = parse_sxpr(
+    ...     '(sentence (word "This") (blank " ") (word "is") (blank " ")'
+    ...     ' (phrase (word "Buckingham") (blank " ") (word "Palace")))')
     >>> ctx_mapping = ContentMapping(sentence)
     >>> print(ctx_mapping.content)
     This is Buckingham Palace
@@ -941,19 +944,21 @@ Limitations
 As of now, a limitation of the content mappings provided
 by :py:mod:`DHParser.nodetree` consists in the fact that they remain
 completely agnostic with respect to any textual meaning of the nodes.
-For example assume that the node-name "pB" signifies a page break, which
+For example assume that the node-name "pb" signifies a page break, which
 implies that there is a gap between the two parts separated by the page
 break. However, because this is considered part of the meaning
 of "pb" it may not be required by the encoding guide-lines for the
 document that a gap, say, a blank character or a linefeed is also
-redundantly encoded in the string content of the document as well.
+redundantly encoded in the string content of the document.
 (It may even be forbidden to do so!) But then a search on the
 string content may miss phrases separated by a page break::
 
     >>> tree = parse_xml('<doc>xyz New<pb/>York xyz</doc>')
     >>> print(tree.content)
     xyz NewYork xyz
-    >>> re.search(r'New\s+York', tree.content)
+    >>> m = re.search(r'New\s+York', tree.content)
+    >>> print(m)
+    None
 
 Currently, the only remedy is to either allow redundant encoding
 of textual meanings within the string-content or adding specific
@@ -1225,17 +1230,18 @@ has two advantages:
 
 1. When restructuring the tree and removing or adding nodes during the
    abstract-syntax-tree-transformation and possibly further
-   tree-transformation, error messages do not accidentally get lost.
+   tree-transformations, error messages do not accidentally get lost.
 
 2. It is not necessary to add another slot to the Node class for keeping an
    error list which most of the time would remain empty, anyway.
 
-In order to track errors and other global properties, Module `nodetree`
-provides the `RootNode`-class. The root-object of a syntax-tree produced by
-parsing is of type `RootNode`. If a root node needs to be created manually, it
-is necessary to create a `Node`-object and either pass it to `RootNode` as
-parameter on instantiation or, later, to the :py:meth:`swallow()`-method of the
-RootNode-object::
+In order to track errors and other global properties, Module :py:mod:`~nodetree`
+provides the :py:class:`~nodetree.RootNode`-class. The root-object of
+a syntax-tree produced by parsing is of type :py:class:`~nodetree.RootNode`.
+If a root node needs to be created manually, it
+is necessary to create a plain :py:class:`~nodetree.Node`-object and either
+pass it to :py:class:`~nodetree.RootNode` as parameter on instantiation or, later,
+to the :py:meth:`~nodetree.Node.swallow`-method of the RootNode-object::
 
     >>> document = RootNode(sentence, str(sentence))
 
@@ -1248,7 +1254,7 @@ from a parsing-process, we have to do it manually::
 
     >>> _ = document.with_pos(0)
 
-Now, let's mark all "word"-nodes that contain non-letter characters with an
+Now, let's mark all ``word``-nodes that contain non-letter characters with an
 error-message. There should be plenty of them, because, earlier, we have
 replaced some of the words partially with "..."::
 
