@@ -274,7 +274,7 @@ def set_preset_value(key: str, value: Any, allow_new_key: bool=False):
 
 def ingest_config_data(config, sources=''):
     """Ingests configuration-data from a Python-STL
-    configparser.RawConfigParser-object."""
+    configparser.ConfigParser-object."""
     errors = []
     access_presets()
     for section in config.sections():
@@ -356,7 +356,7 @@ def read_local_config(ini_filename: str) -> List[str]:
         cfg_files.append(basename)
 
     # Now, read and process all config files in this order
-    config = configparser.RawConfigParser()
+    config = configparser.ConfigParser()
     config.optionxform = lambda optionstr: optionstr
     successfully_read = config.read(cfg_files, encoding='utf-8')
     if successfully_read:
@@ -368,7 +368,7 @@ def read_config_string(ini_string: str):
     """Reads configuration data in the .ini-file format from
     a string. See :py:func:`read_local_config` for more details."""
     import configparser
-    config = configparser.RawConfigParser()
+    config = configparser.ConfigParser()
     config.optionxform = lambda optionstr: optionstr
     config.read_string(ini_string)
     ingest_config_data(config)
