@@ -310,6 +310,8 @@ def merge_test_units(*test_units) -> Dict:
                 if typ not in merged[symbol]:
                     merged[symbol][typ] = OrderedDict()
                 for name, case in cases.items():
+                    if any(c == case for c in merged[symbol][typ].values()):
+                        continue
                     names = str(name).strip('*')
                     orig = names
                     if names in name_subst[symbol]:
@@ -355,6 +357,7 @@ def unit_to_config(test_unit: Dict) -> str:
         for typ, cases in tests.items():
             test_doc.append(f'[{typ}:{symbol}]')
             for name, case in cases.items():
+                assert isinstance(case, str), str(case)
                 test_doc.append(f'{name}: {format_casestr(case)}')
             test_doc.append('')
         test_doc.append('')

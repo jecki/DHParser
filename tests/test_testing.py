@@ -370,7 +370,7 @@ class TestGrammarTest:
         merged = merge_test_units(copy.deepcopy(self.cases),
                                   copy.deepcopy(self.failure_cases))
         import json
-        print(json.dumps(merged, indent=2))
+        # print(json.dumps(merged, indent=2))
         assert json.dumps(merged, indent=2) == """{
   "factor": {
     "match": {
@@ -387,23 +387,18 @@ class TestGrammarTest:
       "1": "4 * 5",
       "2": "20 / 4",
       "3": "20 / 4 * 3",
-      "4": "4 + 5",
-      "5": "20 / 4",
-      "6": "20 / 4 * 3"
+      "4": "4 + 5"
     },
     "ast": {
       "1": "(term (factor 4) (:Text *) (factor 5))",
       "2": "(term (factor 20) (:Text /) (factor 4))",
       "3": "(term\\n                            (term\\n                              (factor 20)\\n                              (:Text /)\\n                              (factor 4))\\n                            (:Text *)\\n                            (factor 3))",
-      "4": "(term (factor 4) (:Text *) (factor 5))",
-      "5": "(term (factor 20) (:Text /) (factor 4))",
-      "6": "(term (term (factor 19) (:Text /) (factor 4)) (:Text *) (factor 3))"
+      "4": "(term (term (factor 19) (:Text /) (factor 4)) (:Text *) (factor 3))"
     },
     "fail": {
       "4": "4 + 5",
       "5": "20 / 4 - 3",
-      "6": "4 * 5",
-      "7": "20 / 4 - 3"
+      "6": "4 * 5"
     }
   },
   "no_match_tests_specified": {
