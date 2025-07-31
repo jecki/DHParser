@@ -512,23 +512,23 @@ def dump_config_data(*key_patterns, use_headings: bool = True) -> str:
     key_patterns config.ini-string."""
     if key_patterns:
         data = get_config_values(key_patterns[0], *key_patterns[1:])
-        results = []
-        last_prefix = None
-        for k, v in data.items():
-            i = k.find('.')
-            prefix = k[:i + 1]
-            name = k[i + 1:] if use_headings else k
-            if prefix != last_prefix:
-                results.append('')
-                if use_headings:
-                    results.append(f'[{prefix[:-1]}]' if prefix else "[DHParser]")
-                last_prefix = prefix
-            results.append(f'{name} = {repr(v)}')
-        if not results[0]:  del results[0]
-        results.append('')
-        return '\n'.join(results)
-    else:
-        return ''
+        if data:
+            results = []
+            last_prefix = None
+            for k, v in data.items():
+                i = k.find('.')
+                prefix = k[:i + 1]
+                name = k[i + 1:] if use_headings else k
+                if prefix != last_prefix:
+                    results.append('')
+                    if use_headings:
+                        results.append(f'[{prefix[:-1]}]' if prefix else "[DHParser]")
+                    last_prefix = prefix
+                results.append(f'{name} = {repr(v)}')
+            if not results[0]:  del results[0]
+            results.append('')
+            return '\n'.join(results)
+    return ''
 
 
 ########################################################################

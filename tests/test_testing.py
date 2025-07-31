@@ -370,44 +370,45 @@ class TestGrammarTest:
         merged = merge_test_units(copy.deepcopy(self.cases),
                                   copy.deepcopy(self.failure_cases))
         import json
+        print(json.dumps(merged, indent=2))
         assert json.dumps(merged, indent=2) == """{
   "factor": {
     "match": {
-      "1": "1",
-      "2": "2"
+      "1": "0",
+      "2": "314"
     },
     "fail": {
-      "3": "3",
-      "4": "4"
+      "3": "21F",
+      "4": "G123"
     }
   },
   "term": {
     "match": {
-      "1": "1",
-      "2": "2",
-      "3": "3",
-      "4": "1",
-      "5": "2",
-      "6": "3"
+      "1": "4 * 5",
+      "2": "20 / 4",
+      "3": "20 / 4 * 3",
+      "4": "4 + 5",
+      "5": "20 / 4",
+      "6": "20 / 4 * 3"
     },
     "ast": {
-      "1": "1",
-      "2": "2",
-      "3": "3",
-      "4": "1",
-      "5": "2",
-      "6": "3"
+      "1": "(term (factor 4) (:Text *) (factor 5))",
+      "2": "(term (factor 20) (:Text /) (factor 4))",
+      "3": "(term\\n                            (term\\n                              (factor 20)\\n                              (:Text /)\\n                              (factor 4))\\n                            (:Text *)\\n                            (factor 3))",
+      "4": "(term (factor 4) (:Text *) (factor 5))",
+      "5": "(term (factor 20) (:Text /) (factor 4))",
+      "6": "(term (term (factor 19) (:Text /) (factor 4)) (:Text *) (factor 3))"
     },
     "fail": {
-      "4": "4",
-      "5": "5",
-      "6": "4",
-      "7": "5"
+      "4": "4 + 5",
+      "5": "20 / 4 - 3",
+      "6": "4 * 5",
+      "7": "20 / 4 - 3"
     }
   },
   "no_match_tests_specified": {
     "fail": {
-      "1": "1"
+      "1": "+ 4 5"
     }
   }
 }"""

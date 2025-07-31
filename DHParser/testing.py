@@ -61,7 +61,8 @@ from DHParser.toolkit import load_if_file, re, instantiate_executor, TypeAlias, 
     PickMultiCoreExecutor
 
 
-__all__ = ('unit_from_config',
+__all__ = ('UNIT_STAGES',
+           'unit_from_config',
            'merge_test_units',
            'unit_to_config',
            'unit_from_json',
@@ -284,11 +285,12 @@ def normalize_test_units(*test_units):
     "dump-CST"-markers (*)."""
     for test_unit in test_units:
         for symbol, tests in test_unit.items():
+            if symbol[-2:] == '__':  continue
             for typ, cases in tests.items():
                 for name, case in tuple(cases.items()):
                     del cases[name]
                     name = str(name).strip().strip('*')
-                    cases[name] = name
+                    cases[name] = case
 
 
 def merge_test_units(*test_units) -> Dict:
