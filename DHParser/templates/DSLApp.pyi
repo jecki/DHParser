@@ -13,6 +13,12 @@ import webbrowser
 from tkinter import ttk
 from tkinter import filedialog, messagebox, scrolledtext, font
 
+from DHParser.error import Error, ERROR
+from DHParser.nodetree import Node, EMPTY_NODE
+from DHParser.pipeline import PipelineResult
+from DHParser.testing import merge_test_units
+from DHParser.toolkit import MultiCoreManager
+
 try:
     scriptdir = os.path.dirname(os.path.realpath(__file__))
 except NameError:
@@ -21,11 +27,6 @@ if scriptdir and scriptdir not in sys.path: sys.path.append(scriptdir)
 
 import DSLParser
 
-from DHParser.error import Error, ERROR
-from DHParser.nodetree import Node, EMPTY_NODE
-from DHParser.pipeline import full_pipeline, PipelineResult
-from DHParser.toolkit import MultiCoreManager
-
 
 class TextLineNumbers(tk.Canvas):
     """See https://stackoverflow.com/questions/16369470/tkinter-adding-line-number-to-text-widget
@@ -33,24 +34,51 @@ class TextLineNumbers(tk.Canvas):
     """
     def __init__(self, text_widget, **kwargs):
         super().__init__(width=40, **kwargs)
+        self.first_line = ""
+        self.last_line = ""
         self.text_widget = text_widget
-        self.text_widget.bind('<KeyRelease>', self.redraw)
+        self.text_widget.bind('<KeyRelease>', self.redraw) # This is insufficient and does not work under all OSs
         self.text_widget.bind('<MouseWheel>', self.redraw)
+        self.text_widget.bind('<B1-Motion>', self.redraw)
         self.text_widget.bind('<Button-1>', self.redraw)
         self.text_widget.bind('<Configure>', self.redraw)
+        self.text_widget['yscrollcommand'] = self.yscrollcommand
+        self.text_widget.vbar['command'] = self.yview
         self.redraw()
 
+    def yview(self, *args):
+        self.redraw()
+        self.text_widget.yview(*args)
+
+    def yscrollcommand(self, *args):
+        self.redraw()
+        return self.text_widget.vbar.set(*args)
+
+    def redraw_needed(self):
+        """-> index of last line"""
+        first = self.text_widget.index("@0,0")
+        ysize = self.text_widget.winfo_height()
+        last = self.text_widget.index(f"@0,{ysize}")
+        if first != self.first_line or last != self.last_line:
+            return first, last
+        return "", ""
+
     def redraw(self, event=None):
-        self.delete("all")
-        i = self.text_widget.index("@0,0")
-        while True:
-            dline = self.text_widget.dlineinfo(i)
-            if dline is None:
-                break
-            y = dline[1]
-            linenum = str(i).split(".")[0]
-            self.create_text(2, y, anchor="nw", text=linenum)
-            i = self.text_widget.index(f"{i}+1line")
+        first, last = self.redraw_needed()
+        if first:
+            self.first_line = first
+            self.last_line = last
+            self.delete("all")
+            i = first
+            self.first_line = float(i)
+            while True:
+                dline = self.text_widget.dlineinfo(i)
+                if dline is None:
+                    break
+                y = dline[1]
+                linenum = str(i).split(".")[0]
+                self.create_text(2, y, anchor="nw", text=linenum)
+                i = self.text_widget.index(f"{i}+1line")
 
 
 class DSLApp(tk.Tk):
@@ -91,7 +119,8 @@ class DSLApp(tk.Tk):
 
         self.targets = [j.dst for j in DSLParser.junctions]
         self.targets.sort(key=lambda s: s in DSLParser.targets)
-        self.target_name = tk.StringVar(value=list(DSLParser.targets)[0])
+        self.compilation_target = list(DSLParser.targets)[0]
+        self.target_name = tk.StringVar(value=self.compilation_target)
         self.target_format = tk.StringVar(value="XML")
         self.error_list = []
 
@@ -100,6 +129,14 @@ class DSLApp(tk.Tk):
         family, size = font_properties['family'], font_properties['size']
         self.bold_label = ttk.Style()
         self.bold_label.configure("Bold.TLabel", font=(family, size, "bold"))
+        self.green_label = ttk.Style()
+        self.green_label.configure("Green.TLabel", foreground="green")
+        self.red_label = ttk.Style()
+        self.red_label.configure("Red.TLabel", foreground="red")
+        self.grey_label = ttk.Style()
+        self.grey_label.configure("Grey.TLabel", foreground="grey")
+        self.black_label = ttk.Style()
+        self.black_label.configure("Black.TLabel", foreground="black")
         self.bold_button = ttk.Style()
         self.bold_button.configure("BoldRed.TButton", font=(family, size, "bold"),
                                    foreground="red")
@@ -124,6 +161,7 @@ class DSLApp(tk.Tk):
         self.deiconify()
 
     def create_widgets(self):
+        # self.header = ttk.Label(text="")
         self.pick_source_info = ttk.Label(text="Paste source code below or...")
         self.pick_source = ttk.Button(text="Pick Source file(s)...",
                                       command=self.on_pick_source)
@@ -155,15 +193,15 @@ class DSLApp(tk.Tk):
         self.progressbar = ttk.Progressbar(orient="horizontal", variable=self.progress)
         self.cancel = ttk.Button(text="Cancel", command=self.on_cancel)
         self.cancel['state'] = tk.DISABLED
-        self.message = ttk.Label(text='')
+        self.message = ttk.Label(text='', style="Black.TLabel")
         self.exit = ttk.Button(text="Quit", command=self.on_close)
 
     def connect_events(self):
         self.source.bind("<<Modified>>", self.on_source_change)
-        self.source.bind("<Control-v>", self.on_source_insert)
-        self.source.bind("<Command-v>", self.on_source_insert)
-        self.source.bind("<KeyRelease>", self.on_source_key)
-        self.source.bind("<Button-1>", self.on_source_mouse)
+        self.source.bind("<Control-v>", self.on_source_insert, add="+")
+        self.source.bind("<Command-v>", self.on_source_insert, add="+")
+        self.source.bind("<KeyRelease>", self.on_source_key, add="+")
+        self.source.bind("<Button-1>", self.on_source_mouse, add="+")
         self.target_stage.bind("<<ComboboxSelected>>", self.on_target_stage)
         self.target_choice.bind("<<ComboboxSelected>>", self.on_target_choice)
         self.root_parser.bind("<<ComboboxSelected>>", self.on_root_parser)
@@ -177,34 +215,42 @@ class DSLApp(tk.Tk):
         padE = dict(sticky=(tk.E,), padx="5", pady="5")
         padWE = dict(sticky=(tk.W, tk.E), padx="5", pady="5")
         padAll = dict(sticky=(tk.N, tk.S, tk.W, tk.E), padx="5", pady="5")
-        padNW = dict(sticky=(tk.W, tk.N), padx="5", pady="5")
-        self.pick_source_info.grid(row=0, column=2, **padW)
-        self.pick_source.grid(row=0, column=3, **padW)
-        self.source_info.grid(row=0, column=0, **padW)
-        self.source_undo.grid(row=0, column=4, **padE)
-        self.source_clear.grid(row=0, column=5, **padE)
-        self.source.grid(row=1, column=1, columnspan=5, **padAll)
-        self.line_numbers.grid(row=1, column=0, **padAll)
-        self.root_parser.grid(row=2, column=2, **padE)
-        self.compile.grid(row=2, column=3, **padWE)
-        self.target_stage.grid(row=2, column=4, **padW)
-        self.target_choice.grid(row=2, column=5, **padE)
-        self.result_info.grid(row=2, column=0, **padW)
-        self.result.grid(row=3, column=0, columnspan=6, **padAll)
-        self.save_result.grid(row=4, column=3, **padWE)
-        self.export_test.grid(row=4, column=4, **padWE)
-        self.errors_info.grid(row=4, column=0, **padW)
-        self.errors.grid(row=5, column=0, columnspan=6, **padAll)
-        self.progressbar.grid(row=6, column=0, columnspan=5, **padWE)
-        self.cancel.grid(row=6, column=5, **padE)
-        self.message.grid(row=7, column=0, columnspan=5, **padWE)
-        self.exit.grid(row=7, column=5, **padE)
-        self.rowconfigure(1, weight=1)
-        self.rowconfigure(3, weight=1)
-        self.rowconfigure(5, weight=2)
+        # padNW = dict(sticky=(tk.W, tk.N), padx="5", pady="5")
+        # self.header.grid(row=0, column=0, columnspan=6, **padAll)
+        self.pick_source_info.grid(row=1, column=2, **padW)
+        self.pick_source.grid(row=1, column=3, **padW)
+        self.source_info.grid(row=1, column=0, **padW)
+        self.source_undo.grid(row=1, column=4, **padE)
+        self.source_clear.grid(row=1, column=5, **padE)
+        self.source.grid(row=2, column=1, columnspan=5, **padAll)
+        self.line_numbers.grid(row=2, column=0, **padAll)
+        self.root_parser.grid(row=3, column=2, **padE)
+        self.compile.grid(row=3, column=3, **padWE)
+        self.target_stage.grid(row=3, column=4, **padW)
+        self.target_choice.grid(row=3, column=5, **padE)
+        self.result_info.grid(row=3, column=0, **padW)
+        self.result.grid(row=4, column=0, columnspan=6, **padAll)
+        self.save_result.grid(row=5, column=3, **padWE)
+        self.export_test.grid(row=5, column=4, **padWE)
+        self.errors_info.grid(row=5, column=0, **padW)
+        self.errors.grid(row=6, column=0, columnspan=6, **padAll)
+        # self.progressbar.grid(row=7, column=0, columnspan=5, **padWE)
+        self.cancel.grid(row=7, column=5, **padE)
+        self.message.grid(row=8, column=0, columnspan=5, **padWE)
+        self.exit.grid(row=8, column=5, **padE)
+        self.rowconfigure(2, weight=1)
+        self.rowconfigure(4, weight=1)
+        self.rowconfigure(6, weight=2)
         self.columnconfigure(1, weight=1)
         self.columnconfigure(4, weight=1)
         self.source.focus_set()
+
+    def show_progressbar(self):
+        padWE = dict(sticky=(tk.W, tk.E), padx="5", pady="5")
+        self.progressbar.grid(row=7, column=0, columnspan=5, **padWE)
+
+    def hide_progressbar(self):
+        self.progressbar.grid_forget()
 
     def clear_result(self):
         with self.lock:
@@ -218,28 +264,42 @@ class DSLApp(tk.Tk):
         self.progress.set(min(100, int(100 * self.num_compiled / self.num_sources)))
         self.update()
 
+    def clear_message(self):
+        def clear():
+            self.message['text'] = ''
+            self.message['style'] = 'Black.TLabel'
+        self.message['style'] = 'Grey.TLabel'
+        self.after(1500, clear)
+
     def poll_worker(self):
         self.update_idletasks()
         if self.worker and self.worker.is_alive():
-            if self.cancel['stat'] != tk.NORMAL \
+            if self.cancel['state'] != tk.NORMAL \
                     and not self.cancel_event.is_set():
-                self.cancel['stat'] = tk.NORMAL
+                self.cancel['state'] = tk.NORMAL
+                self.show_progressbar()
             self.after(500, self.poll_worker)
         else:
-            self.cancel['stat'] = tk.DISABLED
+            self.cancel['state'] = tk.DISABLED
+            self.progressbar.stop()
             if self.cancel_event.is_set():
                 self.errors.insert(tk.END, "Canceled\n")
                 self.result.yview_moveto(1.0)
             elif self.compilation_units == 1:
                 self.finish_single_unit()
+                self.progressbar['mode'] = 'determinate'
+                self.progress.set(0)
             else:
                 self.finish_multiple_units()
             self.worker = None
             self.compilation_units = 0
             self.compilation_target = ""
+            self.after(500, self.hide_progressbar)
 
     def on_pick_source(self):
         if not self.worker or self.on_cancel():
+            self.progressbar.stop()
+            self.progressbar['mode'] = 'determinate'
             self.progress.set(0)
             self.names = list(tk.filedialog.askopenfilenames(
                 title="Chose files to parse/compile",
@@ -251,11 +311,14 @@ class DSLApp(tk.Tk):
                 self.source.delete(1.0, tk.END)
                 self.result.delete(1.0, tk.END)
                 self.errors.delete(1.0, tk.END)
+                self.export_test['state'] = tk.DISABLED
+                self.save_result['state'] = tk.DISABLED
                 if len(self.names) == 1:
                     try:
                         with open(self.names[0], 'r', encoding='utf-8') as f:
                             snippet = f.read()
                             self.source.insert(tk.END, snippet)
+                            self.export_test['state'] = tk.NORMAL
                     except (FileNotFoundError, PermissionError,
                             IsADirectoryError, IOError) as e:
                         self.result.insert(tk.END, str(e))
@@ -275,37 +338,23 @@ class DSLApp(tk.Tk):
                                         self.cancel_event.is_set)]))
                     self.worker.start()
                     self.after(100, self.poll_worker)
-                    self.compile['stat'] = tk.DISABLED
-
-    def finish_multiple_units(self):
-        assert self.compilation_units >= 2
-        self.result.insert(tk.END, "Compilation finished.\n")
-        self.result.insert(tk.END, f"Results written to {self.outdir}.\n")
-        self.errors.insert(tk.END, f"Errors (if any) written to {self.outdir}.\n")
-        if self.target_name.get().lower() == 'html':
-            html_name = os.path.splitext(os.path.basename(self.names[0]))[0] + '.html'
-            html_name = os.path.join(self.outdir, html_name)
-            self.errors.insert(tk.END, html_name + "\n")
-            webbrowser.open('file://' + os.path.abspath(html_name)
-                            if sys.platform == "darwin" else html_name)
-        else:
-            webbrowser.open('file://' + os.path.abspath(self.outdir)
-                            if sys.platform == "darwin" else self.outdir)
+                    self.compile['state'] = tk.DISABLED
+                    self.progressbar['mode'] = "determinate"
 
     def on_clear_source(self):
         self.source.delete('1.0', tk.END)
-        self.compile['stat'] = tk.DISABLED
-        self.source_clear['stat'] = tk.DISABLED
+        self.compile['state'] = tk.DISABLED
+        self.source_clear['state'] = tk.DISABLED
         self.source_modified_sentinel = 2
 
     def adjust_button_status(self):
         txt = self.source.get('1.0', tk.END)
         if re.fullmatch(r'\s*', txt):
-            self.compile['stat'] = tk.DISABLED
-            self.source_clear['stat'] = tk.DISABLED
+            self.compile['state'] = tk.DISABLED
+            self.source_clear['state'] = tk.DISABLED
         else:
-            self.compile['stat'] = tk.NORMAL
-            self.source_clear['stat'] = tk.NORMAL
+            self.compile['state'] = tk.NORMAL
+            self.source_clear['state'] = tk.NORMAL
 
     def on_source_change(self, event):
         if self.source_modified_sentinel: # ignore call due to change of emit_modified
@@ -314,12 +363,17 @@ class DSLApp(tk.Tk):
                 self.source.edit_modified(False)
             else:
                 self.adjust_button_status()
+                self.line_numbers.redraw()
+                if self.all_results:
+                    self.export_test['state'] = tk.DISABLED
+                else:
+                    self.export_test['state'] = tk.NORMAL
         else:
             self.source_modified_sentinel = 1
             self.source.edit_modified(False)
             if self.source_paste:
                 self.source_paste = False
-                # Call compile, here, directly
+                # Call compile, here, directly?
 
     def on_source_insert(self, event):
         self.source_paste = True
@@ -358,6 +412,7 @@ class DSLApp(tk.Tk):
 
     def on_source_key(self, event):
         self.show_if_error_at(self.source.index(tk.INSERT))
+        # self.line_numbers.redraw()
 
     def on_source_mouse(self, event):
         self.show_if_error_at(self.source.index(f"@{event.x},{event.y}"))
@@ -383,7 +438,7 @@ class DSLApp(tk.Tk):
     def on_compile(self):
         source = self.source.get("1.0", tk.END)
         if source.find('\n') < 0:
-            if not source.strip():  return
+            if re.fullmatch(r'\s*', source):  return
             source += '\n'
         parser = self.root_name.get()
         self.compilation_target = self.target_name.get()
@@ -396,8 +451,12 @@ class DSLApp(tk.Tk):
             args = (source, self.compilation_target, parser),
         )
         self.worker.start()
-        self.after(200, self.poll_worker)
-        self.compile['stat'] = tk.DISABLED
+        self.progressbar['mode'] = 'indeterminate'
+        self.progressbar.start()
+        self.after(500, self.poll_worker)
+        self.compile['state'] = tk.DISABLED
+        self.save_result['state'] = tk.DISABLED
+        self.export_test['state'] = tk.DISABLED
 
     def finish_single_unit(self):
         self.source.tag_delete("error")
@@ -410,10 +469,14 @@ class DSLApp(tk.Tk):
             target = self.compilation_target
             self.target_name.set(target)
         result, self.error_list = self.all_results[target]
-        self.compile['stat'] = tk.DISABLED
+        self.compile['state'] = tk.DISABLED
         self.result.delete("1.0", tk.END)
-        self.result.insert("1.0", result.serialize(serialization_format)
-                           if isinstance(result, Node) else result)
+        serialized = result.serialize(serialization_format) \
+                     if isinstance(result, Node) else result
+        self.result.insert("1.0", serialized)
+        if not re.fullmatch(r'\s*', serialized):
+            self.save_result['state'] = tk.NORMAL
+        self.export_test['state'] = tk.NORMAL
         self.errors.delete("1.0", tk.END)
         for i, e in enumerate(self.error_list):
             err_str = str(e) + '\n'
@@ -427,17 +490,37 @@ class DSLApp(tk.Tk):
         self.source.tag_config("error", background="orange red")
         self.source.tag_config("warning", background="thistle")
 
+    def finish_multiple_units(self):
+        assert self.compilation_units >= 2
+        self.result.insert(tk.END, "Compilation finished.\n")
+        self.result.insert(tk.END, f"Results written to {self.outdir}.\n")
+        self.errors.insert(tk.END, f"Errors (if any) written to {self.outdir}.\n")
+        if self.target_name.get().lower() == 'html':
+            html_name = os.path.splitext(os.path.basename(self.names[0]))[0] + '.html'
+            html_name = os.path.join(self.outdir, html_name)
+            self.errors.insert(tk.END, html_name + "\n")
+            webbrowser.open('file://' + os.path.abspath(html_name)
+                            if sys.platform == "darwin" else html_name)
+        else:
+            webbrowser.open('file://' + os.path.abspath(self.outdir)
+                            if sys.platform == "darwin" else self.outdir)
+
     def update_result(self, if_tree=False) -> bool:
         target = self.target_name.get()
         result = self.all_results.get(target, ("", []))
+        result_txt = None
         if isinstance(result[0], Node):
             format = self.target_format.get()
             result_txt = cast(Node, result[0]).serialize(format)
+        elif not if_tree:
+            result_txt = result[0]
+        if result_txt is not None:
             self.result.delete('1.0', tk.END)
             self.result.insert(tk.END, result_txt)
-        elif not if_tree:
-            self.result.delete('1.0', tk.END)
-            self.result.insert(tk.END, result[0])
+            if re.fullmatch(r'\s*', result_txt):
+                self.save_result['state'] = tk.DISABLED
+            else:
+                self.save_result['state'] = tk.NORMAL
         return bool(result[0]) or bool(result[1])
 
     def on_target_stage(self, event):
@@ -447,14 +530,14 @@ class DSLApp(tk.Tk):
         elif isinstance(self.all_results.get(target, (EMPTY_NODE, []))[0], Node):
             self.target_choice['state'] = tk.DISABLED
         if not self.update_result():
-            self.compile['stat'] = tk.NORMAL
+            self.compile['state'] = tk.NORMAL
 
     def on_target_choice(self, event):
         self.update_result(if_tree=True)
 
     def on_root_parser(self, event):
         self.update_result(if_tree=True)
-        self.compile['stat'] = tk.NORMAL
+        self.compile['state'] = tk.NORMAL
 
     def on_errors_key(self, event):
         i = int(self.errors.index(tk.INSERT).split('.')[0])
@@ -465,10 +548,155 @@ class DSLApp(tk.Tk):
         self.hilight_error_line(i - 1)
 
     def on_save_result(self):
-        pass
+        target = self.target_name.get()
+        if self.target_choice['state'] == tk.NORMAL:
+            format = 'in format ' + self.target_format.get()
+        else:
+            format = ''
+        file = tk.filedialog.asksaveasfile(
+            title=f"Save {target}-results {format} as..",
+            filetypes=[(target, '*.' + target), ('All', '*')]
+        )
+        if file:
+            result = self.result.get("1.0", tk.END)
+            try:
+                file.write(result)
+                self.message['text'] =  f'"{file.name}" written to disk.'
+                self.message['style'] = "Green.TLabel"
+                self.after(3500, self.clear_message)
+            finally:
+                file.close()
+
+    def read_config_or_test_file(self, path: str) \
+            -> Tuple[object, str, str, str, str, bool]:
+        """-> (ConfigParser-object, fname, fpath, ftype, fdata, failure)"""
+        import configparser
+        fpath, fname = os.path.split(path)
+        ftype = 'config' if fname.lower().endswith('config.ini') \
+                            and not fname.lower().find('test_') >= 0 \
+            else 'test'
+        failure = not bool(path)
+        config = configparser.ConfigParser()
+        if os.path.exists(path):
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    fdata = f.read()
+                if fdata:
+                    config.optionxform = lambda option: option
+                    config.read_string(fdata)
+                    if ftype != 'test' and any(s.find(':') >= 0
+                                               for s in config.sections()):
+                        ftype = 'test'
+                elif ftype == 'test':
+                    ftype = 'empty'
+            except (PermissionError, IOError, IsADirectoryError) as e:
+                tk.messagebox.showerror("IO Error", str(e))
+                failure = True
+            except configparser.Error as e:
+                tk.messagebox.showerror(
+                    "File-format Error",
+                    f"Error in file {fname}+\n\n" + str(e))
+                failure = True
+        else:
+            fdata = ''
+            if ftype == 'test':  ftype = 'empty'
+        return (config, fname, fpath, ftype, fdata, failure)
+
+    def write_or_update_config_file(self, path, config) -> bool:
+        from DHParser.configuration import get_config_values
+        fname = os.path.basename(path)
+        empty = len(config.sections()) == 0
+        ts2p_new = 'DSL' not in config.sections()
+        if ts2p_new:
+            config['DSL'] = {}
+        cfg = get_config_values('DSL.*')
+        i = len('DSL.')
+        cfg = {k[i:]: str(v) for k, v in cfg.items()}
+        config['DSL'].update(cfg)
+        try:
+            with open(path, 'w', encoding='utf-8') as f:
+                config.write(f)
+            if empty:
+                self.message['text'] = f'Configuration written to "{fname}".'
+            else:
+                if ts2p_new:
+                    self.message['text'] = f'Configuration added to "{fname}".'
+                else:
+                    self.message['text'] = f'Configuration updated in "{fname}".'
+        except (FileNotFoundError, PermissionError,
+                IsADirectoryError, IOError) as e:
+            tk.messagebox.showerror("IO Error", str(e))
+            return False
+        return True
 
     def on_export_test(self):
-        pass
+        from DHParser.configuration import dump_config_data, \
+            get_config_values
+        from DHParser.testing import unit_to_config, unit_from_config, \
+            UNIT_STAGES
+        path = tk.filedialog.asksaveasfilename(
+            title=f"Save or add case to test-ini-file..",
+            filetypes=[('Test', '.ini'), ('All', '*')]
+        )
+        config, fname, fpath, ftype, fdata, failure = \
+            self.read_config_or_test_file(path)
+        if failure:  return
+        if ftype == 'config':
+            self.write_or_update_config_file(path, config)
+        else:
+            if ftype == 'test':
+                stages = (UNIT_STAGES
+                    | frozenset(j.dst for j in DSLParser.junctions))
+                suite = unit_from_config(fdata, fname, allowed_stages=stages)
+                if 'config__' in suite:
+                    cfg = get_config_values('DSL.*')
+                    for k, v in suite['config__'].items():
+                        if k not in cfg or cfg[k] != eval(v):
+                            empty = '""'
+                            tk.messagebox.showerror(
+                                "Configuration mismatch",
+                                f'Configuration in file "{fname}" '
+                                "does not match current configuration, "
+                                f'e.g.\n{k}="{v}" instead of '
+                                f'"{cfg.get(k, empty)}"')
+                            return
+                    del suite['config__']
+            else:
+                suite = {}
+            source = self.source.get("1.0", tk.END)
+            parser = self.root_name.get()
+            if self.error_list:
+                error_level = max(e.code for e in self.error_list)
+            else:
+                error_level = 0
+            cases = { 'M1': source.replace('\t', '    ') }
+            tests = { 'match': cases }
+            if error_level < ERROR:
+                for stage, result in self.all_results.items():
+                    if stage.upper() == 'CST':  continue
+                    cases = { 'M1': result[0].serialize()
+                                    if isinstance(result[0], Node)
+                                    else result[0] }
+                    tests[stage] = cases
+            unit = { parser: tests }
+            cfg_data = dump_config_data('DSL.*', use_headings=False)
+            suite = merge_test_units(suite, unit)
+            try:
+                with open(path, 'w', encoding='utf-8') as f:
+                    if cfg_data:
+                        f.write('[config]\n')
+                        f.write(cfg_data)
+                        f.write('\n')
+                    f.write(unit_to_config(suite))
+                if ftype == "empty":
+                    self.message['text'] = f'Test-file "{fname}" written to disk.'
+                elif ftype == "test":
+                    self.message['text'] = f'Test-case added to file "{fname}".'
+            except (FileNotFoundError, PermissionError,
+                    IsADirectoryError, IOError) as e:
+                tk.messagebox.showerror("IO Error", str(e))
+        self.message['style'] = "Green.TLabel"
+        self.after(3500, self.clear_message)
 
     def on_cancel(self) -> bool:
         if self.worker:
@@ -484,6 +712,10 @@ class DSLApp(tk.Tk):
                     self.update()
                     self.update_idletasks()
                     self.worker.join(5.0)
+                    if not self.worker.is_alive():
+                        self.message['text'] = "Parsing/Compilation canceled"
+                        self.message['style'] = "Red.TLabel"
+                        self.after(2500, self.clear_message)
                     self.errors.yview_moveto(1.0)
                     self.adjust_button_status()
                     return True
