@@ -27,6 +27,8 @@ except (ImportError, ModuleNotFoundError):
         dhparserdir = scriptdir[:i + 10]  # 10 == len("/DHParser/")
         if dhparserdir not in sys.path:  sys.path.append(dhparserdir)
 
+from DHParser.configuration import read_local_config, get_config_values, \
+    dump_config_data
 from DHParser.error import Error, ERROR
 from DHParser.nodetree import Node, EMPTY_NODE
 from DHParser.pipeline import PipelineResult
@@ -589,6 +591,7 @@ class DSLApp(tk.Tk):
             else 'test'
         failure = not bool(path)
         config = configparser.ConfigParser()
+        config.optionxform = lambda optionstr: optionstr
         if os.path.exists(path):
             try:
                 with open(path, 'r', encoding='utf-8') as f:
@@ -616,7 +619,6 @@ class DSLApp(tk.Tk):
         return (config, fname, fpath, ftype, fdata, failure)
 
     def write_or_update_config_file(self, path, config) -> bool:
-        from DHParser.configuration import get_config_values
         fname = os.path.basename(path)
         empty = len(config.sections()) == 0
         ts2p_new = 'DSL' not in config.sections()
@@ -643,8 +645,6 @@ class DSLApp(tk.Tk):
         return True
 
     def on_export_test(self):
-        from DHParser.configuration import dump_config_data, \
-            get_config_values
         from DHParser.testing import unit_to_config, unit_from_config, \
             UNIT_STAGES
         path = tk.filedialog.asksaveasfilename(
@@ -747,9 +747,10 @@ class DSLApp(tk.Tk):
 
 
 if __name__ == '__main__':
-    import multiprocessing
-    multiprocessing.freeze_support()
-
+    if sys.version_info < (3, 14, 0):
+        import multiprocessing
+        multiprocessing.freeze_support()
+    read_local_config(os.path.join(scriptdir, 'ts2pythonConfig.ini'))
     if not DSLParser.main(called_from_app=True):
         app = DSLApp()
         app.mainloop()

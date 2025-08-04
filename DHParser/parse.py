@@ -1828,10 +1828,12 @@ class Grammar:
         try:
             return self.__dict__[key]
         except KeyError:
-            #  p = getattr(self, key, None)
             parser_template = getattr(self.__class__, key, None)
             if parser_template:
-                # add parser to grammar object on the fly...
+                if key != parser_template.pname:
+                    raise AttributeError(
+                        f'Illegal parser-name "{key}" for grammar {self.__class__.__name__}!')
+                # add parser to grammar-object on the fly...
                 parser = copy.deepcopy(parser_template)
                 parser.apply(self._add_parser__, self)
                 assert self[key] == parser

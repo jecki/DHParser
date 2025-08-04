@@ -2290,6 +2290,20 @@ EOF        =  !/./        # no more characters ahead, end of file reached
         tree = parser('readonly [number, number] | undefined', "types")
         # This must not fail with an uninitialized position error!
 
+
+class TestEdgeCases:
+    def test_wrong_parser_name(self):
+        trivial = """word = letters { letters | `-` letters }
+        letters = /[A-Za-z]+/"""
+        parser = create_parser(trivial)
+        try:
+            parser('ups', 'root__')
+            assert False, "Attribute Error expected!"
+        except AttributeError:
+            pass
+        _ = parser('ups', 'root_parser__')
+
+
 if __name__ == "__main__":
     from DHParser.testing import runner
     runner("", globals())
