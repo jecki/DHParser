@@ -637,7 +637,7 @@ class DSLApp(tk.Tk):
                 else:
                     self.message['text'] = f'Configuration updated in "{fname}".'
         except (FileNotFoundError, PermissionError,
-                IsADirectoryError, IOError, UnicodeDecodeError) as e:
+                IsADirectoryError, IOError) as e:
             tk.messagebox.showerror("IO Error", str(e))
             return False
         return True
@@ -706,7 +706,7 @@ class DSLApp(tk.Tk):
                 elif ftype == "test":
                     self.message['text'] = f'Test-case added to file "{fname}".'
             except (FileNotFoundError, PermissionError,
-                    IsADirectoryError, IOError, UnicodeDecodeError) as e:
+                    IsADirectoryError, IOError) as e:
                 tk.messagebox.showerror("IO Error", str(e))
         self.message['style'] = "Green.TLabel"
         self.after(3500, self.clear_message)
