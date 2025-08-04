@@ -43,8 +43,7 @@ def build(setup_kwargs={}):
         # find path of DHParser-module
         scriptdir = os.path.dirname(os.path.abspath(os.path.realpath(__file__)))
         i = scriptdir.find('DHParser')
-        k = len('DHParser-submodule') if scriptdir[i:].startswith('DHParser-submodule') \
-            else len('DHParser')
+        k = len('DHParser')
         if i >= 0:
             dhparserdir = scriptdir[:i + k]
             if dhparserdir not in sys.path:
@@ -57,6 +56,9 @@ def build(setup_kwargs={}):
         save_cwd = os.getcwd()
         os.chdir(dhparserdir)
 
+        if os.path.isfile('pyproject.toml'):
+            os.rename('pyproject.toml', 'pyproject.toml.termporarily_suspended')
+
         # delete stale c and object-files
         for name in os.listdir(dhparserdir):
             if name.endswith('.c') or name.endswith('.pyd') or name.endswith('.so'):
@@ -64,11 +66,15 @@ def build(setup_kwargs={}):
 
         # build cyhton modules inplace
         sys.argv.extend(['build_ext', '--inplace'])
+        ext_modules=cythonize(cythonize_modules, nthreads=0, annotate=False)
         setup(
             name='DHParser',
-            ext_modules=cythonize(cythonize_modules, nthreads=0, annotate=False),
+            ext_modules=ext_modules,
             zip_safe=False,
         )
+
+        if os.path.isfile('pyproject.toml.termporarily_suspended'):
+            os.rename('pyproject.toml.termporarily_suspended', 'pyproject.toml')
 
         os.chdir(save_cwd)
 

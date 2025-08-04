@@ -7,9 +7,10 @@
 
 cdef class Compiler:
     cdef public object tree
-    cdef public list path
     cdef public bint has_attribute_visitors
     cdef public bint forbid_returning_None
+    cdef public object cancel_query
+    cdef public list path
     cdef public bint _dirty_flag
     cdef public bint _debug
     cdef public set _debug_already_compiled
@@ -17,4 +18,4 @@ cdef class Compiler:
     cdef public dict method_dict
 
     # cpdef fallback_compiler(self, node)
-    cpdef compile(self, node)
+    # cpdef compile(self, node)

@@ -473,7 +473,7 @@ def artifact(nd: Node) -> bool:
 _GRAMMAR_PLACEHOLDER = None  # type: Optional[Grammar]
 
 
-def get_grammar_placeholder() -> 'Grammar':
+def get_grammar_placeholder() -> Grammar:
     global _GRAMMAR_PLACEHOLDER
     if _GRAMMAR_PLACEHOLDER is None:
         _GRAMMAR_PLACEHOLDER = Grammar.__new__(Grammar)
@@ -2022,7 +2022,7 @@ class Grammar:
                 result, location = pe.node, L
                 for k in self.variables__:  del self.variables__[k]
             except CancelError as ce:
-                result = Node(EMPTY_NODE, '').with_pos(0)
+                result = Node(EMPTY_NODE.name, '').with_pos(0)
                 self.tree__.new_error(
                     result, f'Parsing was canceled at position: {ce.location} of {L}!', CANCELED)
                 location = L

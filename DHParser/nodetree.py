@@ -97,7 +97,7 @@ from enum import IntEnum
 import functools
 import json
 import sys
-from typing import Callable, cast, Iterator, Sequence, List, Set, AbstractSet, \
+from typing import Callable, cast, Iterator, Sequence, List, \
     Union, Tuple, Container, Optional, Dict, Any, NamedTuple
 
 if sys.version_info >= (3, 6, 0):
@@ -112,7 +112,8 @@ from DHParser.preprocess import SourceMapFunc, gen_neutral_srcmap_func
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, linebreaks, line_col, JSONnull, JSON_Dict, \
     validate_XML_attribute_value, fix_XML_attribute_value, lxml_XML_attribute_value, \
-    abbreviate_middle, TypeAlias, deprecated, RxPatternType, INFINITE, LazyRE
+    abbreviate_middle, TypeAlias, deprecated, RxPatternType, INFINITE, LazyRE, \
+    AbstractSet, FrozenSet
 
 try:
     import cython
@@ -3394,7 +3395,7 @@ RX_XML_HEADER = re.compile(r'<(?![?!])')
 def parse_xml(xml: Union[str, StringView],
               string_tag: str = TOKEN_PTYPE,
               ignore_pos: bool = False,
-              out_empty_tags: Set[str] = EMPTY_SET_SENTINEL,
+              out_empty_tags: AbstractSet[str] = EMPTY_SET_SENTINEL,
               strict_mode: bool = True) -> RootNode:
     """
     Generates a tree of nodes from a (Pseudo-)XML-source. This
@@ -5881,7 +5882,10 @@ class SerializationMapping:
                 0
         return SerLocation(self._path[self._node_list[index]], ser_pos, offset, SerPart(part))
 
-    def content_pos(self, node: Node, ser_pos: int, offset: int, part: int = 0) -> int:
+    def content_pos(self, node: Node,
+                    ser_pos: int,
+                    offset: int,
+                    part: SerPart = SerPart.INSIDE) -> int:
         """Returns the corresponding position within the pure string content
         of the tree."""
         assert not node._children
