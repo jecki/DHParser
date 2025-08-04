@@ -78,9 +78,9 @@ class XMLGrammar(Grammar):
     r"""Parser for a XML source file.
     """
     element = Forward()
-    source_hash__ = "3ebf19135b1f5ca8ea6c6b54604b91be"
+    source_hash__ = "94bbf6164b247dc834393675f851c2aa"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:NameChars$|PubidCharsSingleQuoted$|PubidChars$|VersionNum$|Misc$|EncName$|NameStartChar$|CData$|EOF$|Reference$|CommentChars$)')
+    disposable__ = re.compile('(?:NameStartChar$|NameChars$|VersionNum$|PubidChars$|CommentChars$|EOF$|CData$|Misc$|PubidCharsSingleQuoted$|Reference$|EncName$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -145,6 +145,20 @@ class XMLGrammar(Grammar):
     
 parsing: PseudoJunction = create_parser_junction(XMLGrammar)
 get_grammar = parsing.factory # for backwards compatibility, only
+
+try:
+    assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
+        RE_COMMENT in (XMLGrammar.COMMENT__, NEVER_MATCH_PATTERN), \
+        "Please adjust the pre-processor-variable RE_COMMENT in file XMLParser.py so that " \
+        "it either is the NEVER_MATCH_PATTERN or has the same value as the COMMENT__-attribute " \
+        "of the grammar class XMLGrammar! " \
+        'Currently, RE_COMMENT reads "%s" while COMMENT__ is "%s". ' \
+        % (RE_COMMENT, XMLGrammar.COMMENT__) + \
+        "\n\nIf RE_COMMENT == NEVER_MATCH_PATTERN then includes will deliberately be " \
+        "processed, otherwise RE_COMMENT==XMLGrammar.COMMENT__ allows the " \
+        "preprocessor to ignore comments."
+except (AttributeError, NameError):
+    pass
 
 
 #######################################################################

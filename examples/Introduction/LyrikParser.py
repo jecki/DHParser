@@ -110,8 +110,8 @@ preprocessing: PseudoJunction = create_preprocess_junction(
 class LyrikGrammar(Grammar):
     r"""Parser for a Lyrik source file.
     """
-    source_hash__ = "f719a5bd33b1d32dd72c4013628a14d7"
-    disposable__ = re.compile('(?:ziel$|JAHRESZAHL$|ZEICHENFOLGE$|ENDE$|LEERRAUM$|wortfolge$)')
+    source_hash__ = "81998e1ff35a55971d14cfcae071756c"
+    disposable__ = re.compile('(?:wortfolge$|JAHRESZAHL$|ENDE$|LEERRAUM$|ZEICHENFOLGE$|ziel$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -154,6 +154,20 @@ class LyrikGrammar(Grammar):
     
 parsing: PseudoJunction = create_parser_junction(LyrikGrammar)
 get_grammar = parsing.factory # for backwards compatibility, only
+
+try:
+    assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
+        RE_COMMENT in (LyrikGrammar.COMMENT__, NEVER_MATCH_PATTERN), \
+        "Please adjust the pre-processor-variable RE_COMMENT in file LyrikParser.py so that " \
+        "it either is the NEVER_MATCH_PATTERN or has the same value as the COMMENT__-attribute " \
+        "of the grammar class LyrikGrammar! " \
+        'Currently, RE_COMMENT reads "%s" while COMMENT__ is "%s". ' \
+        % (RE_COMMENT, LyrikGrammar.COMMENT__) + \
+        "\n\nIf RE_COMMENT == NEVER_MATCH_PATTERN then includes will deliberately be " \
+        "processed, otherwise RE_COMMENT==LyrikGrammar.COMMENT__ allows the " \
+        "preprocessor to ignore comments."
+except (AttributeError, NameError):
+    pass
 
 
 #######################################################################

@@ -248,9 +248,9 @@ class reGrammar(Grammar):
     _entity = Forward()
     _item = Forward()
     pattern = Forward()
-    source_hash__ = "68d3fa0293df12fcc8dd94d35d857908"
+    source_hash__ = "f33fed6830c6f2cfff59d03b36829c2d"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:_item$|_octal$|_nibble$|_grpItem$|_anyChar$|_escapedCh$|_special$|EOF$|_number$|_character$|_entity$|_extension$|_escape$|BS$|_illegal$)')
+    disposable__ = re.compile('(?:_number$|EOF$|_grpItem$|_octal$|_escapedCh$|_illegal$|_escape$|_anyChar$|_entity$|_special$|_item$|BS$|_nibble$|_extension$|_character$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -338,11 +338,16 @@ try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
         RE_COMMENT in (reGrammar.COMMENT__, NEVER_MATCH_PATTERN), \
         "Please adjust the pre-processor-variable RE_COMMENT in file reParser.py so that " \
-        "it has the same value as the COMMENT__-attribute of the grammar class reGrammar! " \
+        "it either is the NEVER_MATCH_PATTERN or has the same value as the COMMENT__-attribute " \
+        "of the grammar class reGrammar! " \
         'Currently, RE_COMMENT reads "%s" while COMMENT__ is "%s". ' \
-        % (RE_COMMENT, reGrammar.COMMENT__)
+        % (RE_COMMENT, reGrammar.COMMENT__) + \
+        "\n\nIf RE_COMMENT == NEVER_MATCH_PATTERN then includes will deliberately be " \
+        "processed, otherwise RE_COMMENT==reGrammar.COMMENT__ allows the " \
+        "preprocessor to ignore comments."
 except (AttributeError, NameError):
     pass
+
 
 #######################################################################
 #

@@ -105,9 +105,9 @@ class XMLGrammar(Grammar):
     r"""Parser for a XML source file.
     """
     element = Forward()
-    source_hash__ = "58e97ef50ffba8b0d303b4b489cf3fbc"
+    source_hash__ = "06a30bd0c607364587a9babeaf95f018"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:NameChars$|CommentChars$|PubidCharsSingleQuoted$|Reference$|CData$|NameStartChar$|XmlPIAtts$|Misc$|prolog$|VersionNum$|EncName$|PubidChars$|tagContent$|EOF$|BOM$)')
+    disposable__ = re.compile('(?:NameChars$|CommentChars$|NameStartChar$|PubidChars$|Misc$|XmlPIAtts$|EncName$|prolog$|VersionNum$|CData$|Reference$|BOM$|PubidCharsSingleQuoted$|EOF$|tagContent$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'tagContent': [('', "syntax error in tag-name of opening or empty tag:  {1}")],
@@ -189,6 +189,20 @@ class XMLGrammar(Grammar):
     
 parsing: PseudoJunction = create_parser_junction(XMLGrammar)
 get_grammar = parsing.factory # for backwards compatibility, only
+
+try:
+    assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
+        RE_COMMENT in (XMLGrammar.COMMENT__, NEVER_MATCH_PATTERN), \
+        "Please adjust the pre-processor-variable RE_COMMENT in file XMLParser.py so that " \
+        "it either is the NEVER_MATCH_PATTERN or has the same value as the COMMENT__-attribute " \
+        "of the grammar class XMLGrammar! " \
+        'Currently, RE_COMMENT reads "%s" while COMMENT__ is "%s". ' \
+        % (RE_COMMENT, XMLGrammar.COMMENT__) + \
+        "\n\nIf RE_COMMENT == NEVER_MATCH_PATTERN then includes will deliberately be " \
+        "processed, otherwise RE_COMMENT==XMLGrammar.COMMENT__ allows the " \
+        "preprocessor to ignore comments."
+except (AttributeError, NameError):
+    pass
 
 
 #######################################################################
@@ -300,7 +314,7 @@ class XMLTransformer(Compiler):
         return node
 
     def on_UnknownXmlPI(self, node) -> Node:
-        node.name = f'?xml-{node['Name'].content}'
+        node.name = f'?xml-{node["Name"].content}'
         node = self.XmlPI(node)
         return node
 

@@ -107,8 +107,8 @@ class FlexibleEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "42c80c06b10f8ed18ace11689587c7d5"
-    disposable__ = re.compile('(?:countable$|pure_elem$|MOD_SEP$|no_range$|ANY_SUFFIX$|is_mdef$|EOF$|MOD_SYM$|component$|FOLLOW_UP$)')
+    source_hash__ = "3af6ecf4ad66c03a3e2af18958699ca6"
+    disposable__ = re.compile('(?:MOD_SYM$|no_range$|EOF$|ANY_SUFFIX$|countable$|is_mdef$|MOD_SEP$|pure_elem$|component$|FOLLOW_UP$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
@@ -201,6 +201,20 @@ class FlexibleEBNFGrammar(Grammar):
     
 parsing: PseudoJunction = create_parser_junction(FlexibleEBNFGrammar)
 get_grammar = parsing.factory # for backwards compatibility, only
+
+try:
+    assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
+        RE_COMMENT in (FlexibleEBNFGrammar.COMMENT__, NEVER_MATCH_PATTERN), \
+        "Please adjust the pre-processor-variable RE_COMMENT in file FlexibleEBNFParser.py so that " \
+        "it either is the NEVER_MATCH_PATTERN or has the same value as the COMMENT__-attribute " \
+        "of the grammar class FlexibleEBNFGrammar! " \
+        'Currently, RE_COMMENT reads "%s" while COMMENT__ is "%s". ' \
+        % (RE_COMMENT, FlexibleEBNFGrammar.COMMENT__) + \
+        "\n\nIf RE_COMMENT == NEVER_MATCH_PATTERN then includes will deliberately be " \
+        "processed, otherwise RE_COMMENT==FlexibleEBNFGrammar.COMMENT__ allows the " \
+        "preprocessor to ignore comments."
+except (AttributeError, NameError):
+    pass
 
 
 #######################################################################

@@ -49,4 +49,4 @@ document = ~ { WORD } §EOF      # root parser: a sequence of words preceded
 #######################################################################
 
 WORD     =  /\w+/~      # a sequence of letters, optional trailing whitespace
-EOF      =  !/./        # no more characters ahead, end of file reached
+EOF      =  /\s*/ !/./        # no more characters ahead, end of file reached

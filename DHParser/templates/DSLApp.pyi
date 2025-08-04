@@ -13,17 +13,25 @@ import webbrowser
 from tkinter import ttk
 from tkinter import filedialog, messagebox, scrolledtext, font
 
-from DHParser.error import Error, ERROR
-from DHParser.nodetree import Node, EMPTY_NODE
-from DHParser.pipeline import PipelineResult
-from DHParser.testing import merge_test_units
-from DHParser.toolkit import MultiCoreManager
-
 try:
     scriptdir = os.path.dirname(os.path.realpath(__file__))
 except NameError:
     scriptdir = ''
 if scriptdir and scriptdir not in sys.path: sys.path.append(scriptdir)
+
+try:
+    from DHParser import versionnumber
+except (ImportError, ModuleNotFoundError):
+    i = scriptdir.rfind("/DHParser/")
+    if i >= 0:
+        dhparserdir = scriptdir[:i + 10]  # 10 == len("/DHParser/")
+        if dhparserdir not in sys.path:  sys.path.append(dhparserdir)
+
+from DHParser.error import Error, ERROR
+from DHParser.nodetree import Node, EMPTY_NODE
+from DHParser.pipeline import PipelineResult
+from DHParser.testing import merge_test_units
+from DHParser.toolkit import MultiCoreManager
 
 import DSLParser
 
@@ -111,9 +119,8 @@ class DSLApp(tk.Tk):
         self.parser_names = grammar.parser_names__[:]
         # self.parser_names.remove(grammar.root__.pname)
         self.parser_names.sort(key=lambda s: s.lower().lstrip('_'))
-        # self.parser_names.insert(0, grammar.root__.pname)
-        # self.root_name = tk.StringVar(value=grammar.root__.pname)
-        self.root_name = tk.StringVar(value="document")
+        self.parser_names.insert(0, grammar.root__.pname)
+        self.root_name = tk.StringVar(value=grammar.root__.pname)
 
         self.all_results: PipelineResult = {}
 
@@ -317,11 +324,16 @@ class DSLApp(tk.Tk):
                     try:
                         with open(self.names[0], 'r', encoding='utf-8') as f:
                             snippet = f.read()
-                            self.source.insert(tk.END, snippet)
-                            self.export_test['state'] = tk.NORMAL
+                        self.source.delete('1.0', tk.END)
+                        self.source.insert(tk.END, snippet)
+                        self.export_test['state'] = tk.NORMAL
                     except (FileNotFoundError, PermissionError,
-                            IsADirectoryError, IOError) as e:
+                            IsADirectoryError, IOError, UnicodeDecodeError) as e:
                         self.result.insert(tk.END, str(e))
+                        tk.messagebox.showerror("IO Error", str(e))
+                        self.message['text'] = 'IOError: ' + e.__class__.__name__
+                        self.message['style'] = "Red.TLabel"
+                        self.after(3500, self.clear_message)
                 else:
                     self.cancel_event.clear()
                     self.num_sources = len(self.names)
@@ -453,7 +465,7 @@ class DSLApp(tk.Tk):
         self.worker.start()
         self.progressbar['mode'] = 'indeterminate'
         self.progressbar.start()
-        self.after(500, self.poll_worker)
+        self.after(100, self.poll_worker)
         self.compile['state'] = tk.DISABLED
         self.save_result['state'] = tk.DISABLED
         self.export_test['state'] = tk.DISABLED
@@ -589,7 +601,8 @@ class DSLApp(tk.Tk):
                         ftype = 'test'
                 elif ftype == 'test':
                     ftype = 'empty'
-            except (PermissionError, IOError, IsADirectoryError) as e:
+            except (PermissionError, IOError, IsADirectoryError,
+                    UnicodeDecodeError) as e:
                 tk.messagebox.showerror("IO Error", str(e))
                 failure = True
             except configparser.Error as e:
@@ -624,7 +637,7 @@ class DSLApp(tk.Tk):
                 else:
                     self.message['text'] = f'Configuration updated in "{fname}".'
         except (FileNotFoundError, PermissionError,
-                IsADirectoryError, IOError) as e:
+                IsADirectoryError, IOError, UnicodeDecodeError) as e:
             tk.messagebox.showerror("IO Error", str(e))
             return False
         return True
@@ -693,7 +706,7 @@ class DSLApp(tk.Tk):
                 elif ftype == "test":
                     self.message['text'] = f'Test-case added to file "{fname}".'
             except (FileNotFoundError, PermissionError,
-                    IsADirectoryError, IOError) as e:
+                    IsADirectoryError, IOError, UnicodeDecodeError) as e:
                 tk.messagebox.showerror("IO Error", str(e))
         self.message['style'] = "Green.TLabel"
         self.after(3500, self.clear_message)
