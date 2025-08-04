@@ -121,7 +121,7 @@ class DSLApp(tk.Tk):
         self.parser_names = grammar.parser_names__[:]
         # self.parser_names.remove(grammar.root__.pname)
         self.parser_names.sort(key=lambda s: s.lower().lstrip('_'))
-        self.parser_names.insert(0, grammar.root__.pname)
+        self.parser_names.insert(0, "root_parser__")
         self.root_name = tk.StringVar(value=grammar.root__.pname)
 
         self.all_results: PipelineResult = {}
@@ -544,14 +544,14 @@ class DSLApp(tk.Tk):
         elif isinstance(self.all_results.get(target, (EMPTY_NODE, []))[0], Node):
             self.target_choice['state'] = tk.DISABLED
         if not self.update_result():
-            self.compile['state'] = tk.NORMAL
+            self.adjust_button_status()
 
     def on_target_choice(self, event):
         self.update_result(if_tree=True)
 
     def on_root_parser(self, event):
         self.update_result(if_tree=True)
-        self.compile['state'] = tk.NORMAL
+        self.adjust_button_status()
 
     def on_errors_key(self, event):
         i = int(self.errors.index(tk.INSERT).split('.')[0])
