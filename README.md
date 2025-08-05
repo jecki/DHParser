@@ -314,19 +314,21 @@ If you are in a hurry, you can just can also just call
 `dhparser_cythonize_stringview` which just compiles the 
 stringview-module, which profits the most from being "cythonized".
 
-Depending on the use case, e.g. when parsing large files, 
-[PyPy3](https://www.pypy.org/) yields even greater speed-ups. 
-However, in other cases pypy can also be noticeably slower than cpython!
-To circumvent the longer startup times of pypy3 in comparison to CPython, 
-it is recommended to use the xxxServer.py-scripts rather than calling 
-the xxxParser.py-script each time when parsing many documents subsequently.
-
 Another way to speed up your parser is by adding "@ optimizations = all"
 at the beginning of your EBNF-grammar-file. DHParser then tries to 
 compile (some) non-recursive parts of your grammar to entirely to regular 
 rexpressions which yields a 10-20% speedup. Beware that this option
 is still experimental!
 
+Depending on the use case, e.g. when parsing large files, 
+[PyPy3](https://www.pypy.org/) might yield a considerable speed-up. 
+However, in most other cases pypy is noticeably slower than cpython!
+To circumvent the longer startup times of pypy3 in comparison to CPython, 
+it is recommended to use the xxxServer.py-scripts rather than calling 
+the xxxParser.py-script each time when parsing many documents subsequently.
+
+The same goes for [GraalPy](https://www.graalvm.org/python/), which
+seems much slower, most of the time. 
 
 Sources
 -------
