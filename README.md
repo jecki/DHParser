@@ -328,7 +328,8 @@ it is recommended to use the xxxServer.py-scripts rather than calling
 the xxxParser.py-script each time when parsing many documents subsequently.
 
 The same goes for [GraalPy](https://www.graalvm.org/python/), which
-seems much slower, most of the time. 
+seems much slower, most of the time. However, I have only done few
+experiments with both technologies (pypy and graal), so far. 
 
 Sources
 -------
