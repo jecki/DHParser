@@ -68,7 +68,7 @@ The source code of module ``nodetree`` consists of four main sections:
        processing) as well as information on the current processing-stage.
 
 2.  Attribute-handling: Functions to handle attributes-values that
-    are organized as blank separated sets of strings, like for example
+    are organized as blank separated sets of strings like, for example,
     the class-attribute in HTML.
 
 3.  Path-Navigation: Functions that help to navigate with paths through
@@ -113,7 +113,7 @@ from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, linebreaks, line_col, JSONnull, JSON_Dict, \
     validate_XML_attribute_value, fix_XML_attribute_value, lxml_XML_attribute_value, \
     abbreviate_middle, TypeAlias, deprecated, RxPatternType, INFINITE, LazyRE, \
-    AbstractSet, FrozenSet
+    AbstractSet, FrozenSet, Set
 
 try:
     import cython
@@ -1007,7 +1007,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     return set(self.attr.items()) == set(other.attr.items())
                 return self.attr == other.attr
             return len(self.attr) == 0
-            # self has empty dictionary and other has no attributes
+            # self has an empty dictionary and other has no attributes
         elif other.has_attr():
             return len(other.attr) == 0
             # other has empty attribute dictionary and self as no attributes
@@ -2071,17 +2071,30 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         empty_tags = set()
         not_empty = set()
-        for nd in self.select(LEAF_NODE, include_root=True):
+        for nd in self.walk_tree(include_root=True):
             tag = nd.name
-            if nd.result:
-                not_empty.add(tag)
-                try:
-                    empty_tags.remove(tag)
-                except KeyError:
-                    pass
-            elif tag not in not_empty:
-                empty_tags.add(tag)
+            if tag not in not_empty:
+                if nd.result:
+                    not_empty.add(tag)
+                    try:
+                        empty_tags.remove(tag)
+                    except KeyError:
+                        pass
+                else:
+                    empty_tags.add(tag)
         return empty_tags
+
+        # for nd in self.select(LEAF_NODE, include_root=True):
+        #     tag = nd.name
+        #     if nd.result:
+        #         not_empty.add(tag)
+        #         try:
+        #             empty_tags.remove(tag)
+        #         except KeyError:
+        #             pass
+        #     elif tag not in not_empty:
+        #         empty_tags.add(tag)
+        # return empty_tags
 
     def as_xml(self, src: Optional[str] = None,
                indentation: int = 2,

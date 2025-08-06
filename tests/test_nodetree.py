@@ -1013,6 +1013,14 @@ class TestSerialization:
             .replace('\n', '').replace(' ', '') == \
             "<xml><empty/><empty>not_empty!?</empty><empty/></xml>"
 
+    def test_collect_empty_tags(self):
+        tree = parse_xml('<p><a></a><a><b>hi</b></a></p>')
+        empty_tags = tree.collect_empty_tags()
+        assert empty_tags == set()
+        tree = parse_xml('<p><a></a><a><b></b></a></p>')
+        empty_tags = tree.collect_empty_tags()
+        assert empty_tags == set('b')
+
     def test_as_unist(self):
         tree = parse_sxpr('(BelegText (Anker "interdico_1") (BelegLemma "inter.|ticente") (TEXT ", (") '
          '(Anker "interdico_2") (BelegLemma "inter.|titente") (L " ") (Zusatz "var. l.") '
