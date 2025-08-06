@@ -1232,6 +1232,9 @@ def collapse_children_if(path: Path,
     node.result = tuple(result)
 
 
+# TODO: add swallow-parameter
+
+
 def fuse(nodes: Sequence[Node]) -> Union[str, Tuple[Node, ...]]:
     if not any(node._children for node in nodes):
         return ''.join(nd._result for nd in nodes)
@@ -1248,9 +1251,9 @@ def fuse(nodes: Sequence[Node]) -> Union[str, Tuple[Node, ...]]:
 @transformation_factory(collections.abc.Callable)
 def merge_adjacent(path: Path, condition: Callable, preferred_name: str = ''):
     """
-    Merges adjacent nodes that fulfill the given `condition`. It is
-    assumed that ``condition`` is never true for leaf-nodes and non-leaf-nodes
-    alike. Otherwise, a type-error might ensue!
+    Merges adjacent nodes that fulfill the given `condition`. In case,
+    some nodes are leaf-nodes, but others are not, the leaf-nodes' content
+    will be added as TOKEN_PTYPE-Node to the result of the merged node.
 
     The merged node's name will be set to the value ``preferred_name``
     unless that value is the empty string. In this case the name of the
