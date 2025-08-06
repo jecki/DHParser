@@ -3768,7 +3768,7 @@ def remove_token_from_attr(node: Node, token: str, attribute: str,
     value = remove_token(node.get_attr(attribute, ''), token)
     if value:
         node.attr[attribute] = value
-    elif remove_empty_attr:
+    elif remove_empty_attr and node.has_attr(attribute):
         del node.attr[attribute]
     elif node.has_attr(attribute):
         node.attr[attribute] = ''

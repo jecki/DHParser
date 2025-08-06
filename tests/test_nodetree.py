@@ -1299,6 +1299,8 @@ class TestAttributeHandling:
         add_class(nd, 'alpha beta gamma')
         remove_class(nd, 'alpha beta gamma', remove_empty_attr=False)
         assert nd.has_attr('class') and nd.attr['class'] == ''
+        nd = Node('p', 'a paragraph')
+        remove_class(nd, 'alpha')
 
 
     def test_uncommonly_formatted_attributes(self):
