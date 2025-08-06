@@ -36,7 +36,8 @@ from DHParser.nodetree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxp
     prev_path, pick_from_path, pp_path, ContentMapping, leaf_paths, NO_PATH, \
     select_path_if, select_path, create_path_match_function, pick_path, \
     LEAF_PATH, TOKEN_PTYPE, insert_node, content_of, strlen_of, gen_chain_ID, \
-    parse_sxml, LEAF_PTYPES, DIVISIBLES, reflow_as_oneliner, has_token, eq_tokens
+    parse_sxml, LEAF_PTYPES, DIVISIBLES, reflow_as_oneliner, has_token, eq_tokens, \
+    add_class, has_class, remove_class
 from DHParser.pipeline import create_parser_junction, Junction, PseudoJunction
 from DHParser.transform import traverse, reduce_single_child, remove_brackets, \
     replace_by_single_child, flatten, remove_empty, remove_whitespace, TransformerFunc, \
@@ -1277,6 +1278,16 @@ class TestEvaluation:
 
 
 class TestAttributeHandling:
+    def test_attribute_handling(self):
+        nd = Node('p', 'a paragraph')
+        add_class(nd, 'alpha beta gamma')
+        assert has_class(nd, 'alpha beta')
+        assert not has_class(nd, 'alpha delta')
+        assert has_class(nd, 'alpha delta', all=False)
+        remove_class(nd, 'alpha delta')
+        assert has_class(nd, 'beta gamma')
+        assert not has_class(nd, 'alpha')
+
     def test_uncommonly_formatted_attributes(self):
         assert has_token('bold italic', ' italic  bold\n')
         assert has_token('bold italic', ' italic\nbold ')

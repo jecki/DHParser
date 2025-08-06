@@ -3676,11 +3676,12 @@ def normalize_token_sequence(token_sequence: str) -> str:
     return RX_WHITESPACE.sub(' ', token_sequence.strip())
 
 
-def has_token(token_sequence: str, tokens: str) -> bool:
+def has_token(token_sequence: str, token: str, *, all: bool=True) -> bool:
     """Returns true, if `token` is contained in the blank-spearated
     token sequence. If `token` itself is a blank-separated sequence of
-    tokens, True is returned if all tokens are contained in
-    `token_sequence`::
+    tokens then, depending on the value of `all`, True is returned if
+    either all tokens are contained in `token_sequence` or at least one
+    token is contained in `token_sequence`.::
 
         >>> has_token('bold italic', 'italic')
         True
@@ -3694,11 +3695,14 @@ def has_token(token_sequence: str, tokens: str) -> bool:
     # assert validate_token_sequence(token_sequence)
     # assert validate_token_sequence(token)
     token_sequence = RX_WHITESPACE.sub(' ', token_sequence.strip())
-    tokens = RX_WHITESPACE.sub(' ', tokens.strip())
-    return not tokens or set(tokens.split(' ')) <= set(token_sequence.split(' '))
+    token = RX_WHITESPACE.sub(' ', token.strip())
+    if all:
+        return not token or set(token.split(' ')) <= set(token_sequence.split(' '))
+    else:
+        return not token or bool(set(token.split(' ')) & set(token_sequence.split(' ')))
 
 
-def add_token(token_sequence: str, tokens: str) -> str:
+def add_token(token_sequence: str, token: str) -> str:
     """Adds the tokens from 'tokens' that are not already contained in
     `token_sequence` to the end of `token_sequence`::
 
@@ -3711,13 +3715,13 @@ def add_token(token_sequence: str, tokens: str) -> str:
         >>> add_token('red thin', 'stroked red')
         'red thin stroked'
     """
-    for tk in tokens.split(' '):
+    for tk in token.split(' '):
         if tk and token_sequence.find(tk) < 0:
             token_sequence += ' ' + tk
     return token_sequence.lstrip()
 
 
-def remove_token(token_sequence, tokens: str) -> str:
+def remove_token(token_sequence, token: str) -> str:
     """
     Removes all `tokens` from  `token_sequence`::
 
@@ -3728,7 +3732,7 @@ def remove_token(token_sequence, tokens: str) -> str:
         >>> remove_token('red thin stroked', 'blue stroked')
         'red thin'
     """
-    for tk in tokens.split(' '):
+    for tk in token.split(' '):
         token_sequence = token_sequence.replace(tk, '').strip().replace('  ', ' ')
     return token_sequence
 
@@ -3747,20 +3751,19 @@ def eq_tokens(token_sequence1: str, token_sequence2: str) -> bool:
     return set(token_sequence1.split(' ')) - {''} == set(token_sequence2.split(' ')) - {''}
 
 
-def has_token_on_attr(node: Node, tokens: str, attribute: str):
+def has_token_on_attr(node: Node, token: str, attribute: str, *, all: bool=True) -> bool:
     """Returns True, if 'attribute' of 'node' contains all 'tokens'."""
-    return has_token(node.get_attr(attribute, ''), tokens)
+    return has_token(node.get_attr(attribute, ''), token, all=all)
 
 
-def add_token_to_attr(node: Node, tokens: str, attribute: str):
+def add_token_to_attr(node: Node, token: str, attribute: str):
     """Adds all `tokens` to `attribute` of `node`."""
-    if tokens:
-        node.attr[attribute] = add_token(node.get_attr(attribute, ''), tokens)
+    node.attr[attribute] = add_token(node.get_attr(attribute, ''), token)
 
 
-def remove_token_from_attr(node: Node, tokens: str, attribute: str):
+def remove_token_from_attr(node: Node, token: str, attribute: str):
     """Removes all `tokens` from `attribute` of `node`."""
-    node.attr[attribute] = remove_token(node.get_attr(attribute, ''), tokens)
+    node.attr[attribute] = remove_token(node.get_attr(attribute, ''), token)
 
 
 has_class = functools.partial(has_token_on_attr, attribute='class')
