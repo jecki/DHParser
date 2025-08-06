@@ -1288,6 +1288,19 @@ class TestAttributeHandling:
         assert has_class(nd, 'beta gamma')
         assert not has_class(nd, 'alpha')
 
+    def test_empty_attr_handling(self):
+        nd = Node('p', 'a paragraph')
+        add_class(nd, '')
+        assert not nd.has_attr('class')
+        nd = Node('p', 'a paragraph')
+        add_class(nd, 'alpha beta gamma')
+        remove_class(nd, 'alpha beta gamma')
+        assert not nd.has_attr('class')
+        add_class(nd, 'alpha beta gamma')
+        remove_class(nd, 'alpha beta gamma', remove_empty_attr=False)
+        assert nd.has_attr('class') and nd.attr['class'] == ''
+
+
     def test_uncommonly_formatted_attributes(self):
         assert has_token('bold italic', ' italic  bold\n')
         assert has_token('bold italic', ' italic\nbold ')

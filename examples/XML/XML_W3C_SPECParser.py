@@ -118,7 +118,7 @@ class XML_W3C_SPECGrammar(Grammar):
     ignoreSectContents = Forward()
     source_hash__ = "8b0416b79e56cc6a12c3cf4a5d47b154"
     disposable__ = re.compile('$.')
-    static_analysis_pending__ = []  # type: List[bool]
+    static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
     comment_rx__ = RX_NEVER_MATCH

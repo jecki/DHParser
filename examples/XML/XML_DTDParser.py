@@ -100,7 +100,7 @@ class XML_DTDGrammar(Grammar):
     ignoreSectContents = Forward()
     source_hash__ = "f784b4bf7dd55f89d2a551df2f2b31dd"
     disposable__ = re.compile('$.')
-    static_analysis_pending__ = []  # type: List[bool]
+    static_analysis_pending__ = [True]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
     comment_rx__ = RX_NEVER_MATCH

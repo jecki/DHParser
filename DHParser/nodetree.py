@@ -3758,12 +3758,20 @@ def has_token_on_attr(node: Node, token: str, attribute: str, *, all: bool=True)
 
 def add_token_to_attr(node: Node, token: str, attribute: str):
     """Adds all `tokens` to `attribute` of `node`."""
-    node.attr[attribute] = add_token(node.get_attr(attribute, ''), token)
+    if token:
+        node.attr[attribute] = add_token(node.get_attr(attribute, ''), token)
 
 
-def remove_token_from_attr(node: Node, token: str, attribute: str):
+def remove_token_from_attr(node: Node, token: str, attribute: str,
+                           remove_empty_attr: bool=True) -> Node:
     """Removes all `tokens` from `attribute` of `node`."""
-    node.attr[attribute] = remove_token(node.get_attr(attribute, ''), token)
+    value = remove_token(node.get_attr(attribute, ''), token)
+    if value:
+        node.attr[attribute] = value
+    elif remove_empty_attr:
+        del node.attr[attribute]
+    elif node.has_attr(attribute):
+        node.attr[attribute] = ''
 
 
 has_class = functools.partial(has_token_on_attr, attribute='class')

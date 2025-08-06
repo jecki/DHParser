@@ -1232,6 +1232,19 @@ def collapse_children_if(path: Path,
     node.result = tuple(result)
 
 
+def fuse(nodes: Sequence[Node]) -> Union[str, Tuple[Node, ...]]:
+    if not any(node._children for node in nodes):
+        return ''.join(nd._result for nd in nodes)
+    else:
+        result = []
+        for nd in nodes:
+            if nd._children:
+                result.extend(nd._children)
+            else:
+                result.append(Node(TOKEN_PTYPE, nd._result).with_pos(nd._pos))
+        return tuple(result)
+
+
 @transformation_factory(collections.abc.Callable)
 def merge_adjacent(path: Path, condition: Callable, preferred_name: str = ''):
     """
@@ -1271,7 +1284,7 @@ def merge_adjacent(path: Path, condition: Callable, preferred_name: str = ''):
         L = len(children)
         while i < L:
             if condition(path + [children[i]]):
-                initial = () if children[i]._children else ''
+                # initial = () if children[i]._children else ''
                 k = i
                 i += 1
                 while i < L and condition(path + [children[i]]):
@@ -1279,7 +1292,7 @@ def merge_adjacent(path: Path, condition: Callable, preferred_name: str = ''):
                 if i > k:
                     adjacent = children[k:i]
                     head = adjacent[0]
-                    head.result = reduce(operator.add, (nd.result for nd in adjacent), initial)
+                    head.result = fuse(adjacent)  # reduce(operator.add, (nd.result for nd in adjacent), initial)
                     update_attr(head, adjacent[1:], cast(RootNode, path[0]))
                     if preferred_name and len(adjacent) > 1:
                         head.name = preferred_name
@@ -1322,7 +1335,7 @@ def merge_connected(path: Path, content: Callable, delimiter: Callable,
         L = len(children)
         while i < L:
             if content(path + [children[i]]):
-                initial = () if children[i]._children else ''
+                # initial = () if children[i]._children else ''
                 k = i
                 i += 1
                 while i < L and (content(path + [children[i]]) or delimiter(path + [children[i]])):
@@ -1332,7 +1345,7 @@ def merge_connected(path: Path, content: Callable, delimiter: Callable,
                 if i > k:
                     adjacent = children[k:i]
                     head = adjacent[0]
-                    head.result = reduce(operator.add, (nd.result for nd in adjacent), initial)
+                    head.result = fuse(adjacent)  # reduce(operator.add, (nd.result for nd in adjacent), initial)
                     update_attr(head, adjacent[1:], cast(RootNode, path[0]))
                     if content_name:  # and len(adjacent) > 1:
                         head.name = content_name
@@ -1360,11 +1373,15 @@ def merge_results(dest: Node, src: Tuple[Node, ...], root: RootNode) -> bool:
         '123456'
     """
     if all(nd._children for nd in src):
-        dest.result = reduce(operator.add, (nd._children for nd in src[1:]), src[0]._children)
+        # dest.result = reduce(operator.add, (nd._children for nd in src[1:]), src[0]._children)
+        result = []
+        for nd in src:
+            result.extend(nd._children)
+        dest.result = tuple(result)
         update_attr(dest, src, root)
         return True
-    elif all(not nd._children for nd in src):
-        dest.result = reduce(operator.add, (nd.content for nd in src[1:]), src[0].content)
+    elif not any(nd._children for nd in src):
+        dest.result = ''.join(nd._result for nd in src)  # reduce(operator.add, (nd.content for nd in src[1:]), src[0].content)
         update_attr(dest, src, root)
         return True
     return False
