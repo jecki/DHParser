@@ -372,12 +372,15 @@ class TestMerge:
 
         t = copy.deepcopy(tree)
         merge_adjacent([t], is_one_of('i', 'a', 'x'), 'i')
-        assert flatten_sxpr(t.as_sxpr()) == '(p (i (:Text "?") (:Text "alpha") (z "=>") (z "target") (:Text "beta") (:Text "!")))'
+        assert flatten_sxpr(t.as_sxpr()) == '(p (i (:Text "?alpha") (z "=>") (z "target") (:Text "beta!")))'
 
         t = parse_sxpr('(p (x "?") (i "alpha") (a (z "=>") (x ",") (z "target")) (i "beta") (x "!") (x "?"))')
         merge_connected([t], is_one_of('i', 'a'), is_one_of('x'), 'i', TOKEN_PTYPE)
-        print(t.as_sxpr())
         assert flatten_sxpr(t.as_sxpr()) == '(p (x "?") (i (:Text "alpha") (z "=>") (x ",") (z "target") (:Text "beta")) (:Text "!?"))'
+
+        t = parse_sxpr('(p (x "?") (i "alpha") (a (z "=>") (z "target")) (i "beta") (i " gamma") (x "!"))')
+        merge_adjacent([t], is_one_of('i', 'a'), 'i')
+        assert flatten_sxpr(t.as_sxpr()) == '(p (x "?") (i (:Text "alpha") (z "=>") (z "target") (:Text "beta gamma")) (x "!"))'
 
 
 class TestAttributeHandling:

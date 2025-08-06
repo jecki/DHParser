@@ -1232,8 +1232,37 @@ def collapse_children_if(path: Path,
     node.result = tuple(result)
 
 
-# TODO: add swallow-parameter
+def fuse_anonymous_leaves(result: list[Node]) -> list[Node, ...]:
+    """Mereges all anonymous leave nodes and returns a list of the
+    merge nodes, e.g.::
 
+    >>> tree = parse_sxpr('(p (:t "alpha") (:t "beta") (x "zzz") (:y (:t "uuu")) (:t "gamma"))')
+    >>> tree.result = tuple(fuse_anonymous_leaves(list(tree.children)))
+    >>> print(tree.as_sxpr())
+    (p (:t "alphabeta") (x "zzz") (:y (:t "uuu")) (:t "gamma"))
+    """
+    i = 0
+    L = len(result)
+    cuts = []
+    while i < L:
+        nd = result[i]
+        if not nd._children and nd.name[0:1] == ':':  # anonymous leaf node
+            k = i + 1
+            while k < L and not result[k]._children and result[k].name[0:1] == ':':
+                k += 1
+            if k - i > 1:
+                nd.result = ''.join(r._result for r in result[i:k])
+                cuts.append((i + 1, k))
+            i = k
+        else:
+            i += 1
+    if cuts:
+        for a, b in reversed(cuts):
+            del result[a:b]
+    return result
+
+
+# TODO: add swallow-parameter
 
 def fuse(nodes: Sequence[Node]) -> Union[str, Tuple[Node, ...]]:
     if not any(node._children for node in nodes):
@@ -1245,6 +1274,7 @@ def fuse(nodes: Sequence[Node]) -> Union[str, Tuple[Node, ...]]:
                 result.extend(nd._children)
             else:
                 result.append(Node(TOKEN_PTYPE, nd._result).with_pos(nd._pos))
+        result = fuse_anonymous_leaves(result)
         return tuple(result)
 
 
@@ -1380,6 +1410,7 @@ def merge_results(dest: Node, src: Tuple[Node, ...], root: RootNode) -> bool:
         result = []
         for nd in src:
             result.extend(nd._children)
+        result = fuse_anonymous_leaves(result)
         dest.result = tuple(result)
         update_attr(dest, src, root)
         return True

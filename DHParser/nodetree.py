@@ -3257,6 +3257,7 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> RootNode:
     >>> tree['C'].pos
     1
     """
+    assert isinstance(sxpr, (str, StringView))
     remaining = sxpr  # type: Union[str, StringView]
 
     @cython.locals(level=cython.int, k=cython.int)
@@ -3436,7 +3437,7 @@ def parse_xml(xml: Union[str, StringView],
         contains stylistic or interoperability errors, like using one
         and the same tag-name for empty and non-empty tags, for example.
     """
-
+    assert isinstance(xml, (str, StringView))
     xml = StringView(str(xml))
     non_empty_tags: Set[str] = set()
     dual_use_notified: Set[str] = set()
