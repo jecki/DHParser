@@ -229,7 +229,7 @@ def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], c
     try:
 
         if grammar.cancel_query__ is not None:
-            node, location = cancel_proxy(self, location)
+            node, location_ = cancel_proxy(self, location)
         else:
 #####################################################################################
             node, location_ = self._parse(location)   # <===== call to the actual parser!
