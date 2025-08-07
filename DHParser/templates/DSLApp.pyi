@@ -130,7 +130,7 @@ class DSLApp(tk.Tk):
         self.targets.sort(key=lambda s: s in DSLParser.targets)
         self.compilation_target = list(DSLParser.targets)[0]
         self.target_name = tk.StringVar(value=self.compilation_target)
-        self.target_format = tk.StringVar(value="XML")
+        self.target_format = tk.StringVar(value="SXML")
         self.error_list = []
 
         self.default_font = font.nametofont("TkDefaultFont")
