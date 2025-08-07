@@ -578,6 +578,8 @@ class DSLApp(tk.Tk):
                 self.message['text'] =  f'"{file.name}" written to disk.'
                 self.message['style'] = "Green.TLabel"
                 self.after(3500, self.clear_message)
+            except (PermissionError, IOError) as e:
+                tk.messagebox.showerror("IO Error", str(e))
             finally:
                 file.close()
 
