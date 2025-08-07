@@ -890,7 +890,7 @@ def has_sibling(path: Path, name_set: AbstractSet[str]):
 #######################################################################
 
 
-def update_attr(dest: Node, src: Union[Node, Tuple[Node, ...]], root: RootNode):
+def update_attr(dest: Node, src: Union[Node, Tuple[Node, ...]], root: Node):
     """
     Adds all attributes from `src` to `dest` and transfers all errors
     from `src` to `dest`. This is needed, in order to keep the attributes
@@ -909,7 +909,7 @@ def update_attr(dest: Node, src: Union[Node, Tuple[Node, ...]], root: RootNode):
                 dest.attr[k] = v
         # transfer errors
         try:
-            root.transfer_errors(s, dest)
+            cast(RootNode, root).transfer_errors(s, dest)
             # ids = id(s)
             # if ids in root.error_nodes:
             #     root.error_nodes.setdefault(id(dest), []).extend(root.error_nodes[ids])
@@ -938,7 +938,7 @@ def swap_attributes(node: Node, other: Node):
             other._attributes = None
 
 
-def _replace_by(node: Node, child: Node, root: RootNode):
+def _replace_by(node: Node, child: Node, root: Node):
     """
     Replaces node's contents by child's content including the tag name.
     """
@@ -952,7 +952,7 @@ def _replace_by(node: Node, child: Node, root: RootNode):
     update_attr(node, (child,), root)
 
 
-def _reduce_child(node: Node, child: Node, root: RootNode):
+def _reduce_child(node: Node, child: Node, root: Node):
     """
     Sets node's results to the child's result, keeping node's name.Example::
 
@@ -991,7 +991,7 @@ def replace_by_single_child(path: Path):
     """
     node = path[-1]
     if len(node._children) == 1:
-        _replace_by(node, node._children[0], cast(RootNode, path[0]))
+        _replace_by(node, node._children[0], path[0])
 
 
 def replace_by_children(path: Path):
@@ -1026,7 +1026,7 @@ def reduce_single_child(path: Path):
     """
     node = path[-1]
     if len(node._children) == 1:
-        _reduce_child(node, node._children[0], cast(RootNode, path[0]))
+        _reduce_child(node, node._children[0], path[0])
 
 
 @transformation_factory(collections.abc.Callable)
@@ -1041,9 +1041,9 @@ def replace_or_reduce(path: Path, condition: Callable = is_named):
         child = node._children[0]
         cond = condition(path)
         if cond:
-            _replace_by(node, child, cast(RootNode, path[0]))
+            _replace_by(node, child, path[0])
         elif cond is not None:
-            _reduce_child(node, child, cast(RootNode, path[0]))
+            _reduce_child(node, child, path[0])
 
 
 @transformation_factory(str)
@@ -1124,7 +1124,7 @@ def flatten(path: Path, condition: Callable = is_anonymous, recursive: bool = Tr
                 if recursive:
                     flatten(path, condition, recursive)
                 new_result.extend(child._children)
-                update_attr(node, (child,), cast(RootNode, path[0]))
+                update_attr(node, (child,), path[0])
             else:
                 new_result.append(child)
         path.pop()
@@ -1262,9 +1262,12 @@ def fuse_anonymous_leaves(result: list[Node]) -> list[Node, ...]:
     return result
 
 
-# TODO: add swallow-parameter
-
-def fuse(nodes: Sequence[Node]) -> Union[str, Tuple[Node, ...]]:
+def fuse(nodes: Sequence[Node],
+         swallow: Optional[Callable] = None) -> Union[str, Tuple[Node, ...]]:
+    if swallow is not None:
+        for i in range(len(nodes)):
+            if swallow(nodes[i]):
+                nodes[i] = Node(':Swallowed', nodes[i])
     if not any(node._children for node in nodes):
         return ''.join(nd._result for nd in nodes)
     else:
@@ -1279,7 +1282,10 @@ def fuse(nodes: Sequence[Node]) -> Union[str, Tuple[Node, ...]]:
 
 
 @transformation_factory(collections.abc.Callable)
-def merge_adjacent(path: Path, condition: Callable, preferred_name: str = ''):
+def merge_adjacent(path: Path,
+                   condition: Callable,
+                   preferred_name: str = '',
+                   *, swallow: Optional[Callable] = None):
     """
     Merges adjacent nodes that fulfill the given `condition`. In case,
     some nodes are leaf-nodes, but others are not, the leaf-nodes' content
@@ -1308,6 +1314,24 @@ def merge_adjacent(path: Path, condition: Callable, preferred_name: str = ''):
         >>> merge_adjacent([tree], not_one_of({'superscript', 'subscript'}), '')
         >>> print(flatten_sxpr(tree.as_sxpr()))
         (place (abbreviation "p.26") (superscript "b") (mark ",18"))
+
+    The parameter ``swallow`` takes a function that must yield true
+    for those nodes that shall be swallowed as a whole, i.e. of which
+    the content shall not be merged and which keep their name. This is
+    useful, if you'd like to keep certain nodes intact, like for
+    example internet links, when merging a sequence of nodes, e.g.:
+
+        >>> sxpr = '''(p (t "In ") (a '(href "www.munich.de") "München")
+        ...            (t "steht ") (t "ein ") (t "Hofbräuhaus."))'''
+        >>> tree = parse_sxpr(sxpr)
+        >>> t1 = copy.deepcopy(tree)
+        >>> merge_adjacent([t1], is_one_of('t', 'a'))
+        >>> print(t1.as_sxpr())
+        ()
+        >>> t2 = copy.deepcopy(tree)
+        >>> merge_adjacent([t1], is_one_of('t', 'a'), swallow=is_a('a'))
+        >>> print(t1.as_sxrp())
+        ()
     """
     node = path[-1]
     children = node._children
@@ -1325,10 +1349,10 @@ def merge_adjacent(path: Path, condition: Callable, preferred_name: str = ''):
                 if i > k:
                     adjacent = children[k:i]
                     head = adjacent[0]
-                    head.result = fuse(adjacent)  # reduce(operator.add, (nd.result for nd in adjacent), initial)
-                    update_attr(head, adjacent[1:], cast(RootNode, path[0]))
                     if preferred_name and len(adjacent) > 1:
                         head.name = preferred_name
+                    head.result = fuse(adjacent)  # reduce(operator.add, (nd.result for nd in adjacent), initial)
+                    update_attr(head, adjacent[1:], path[0])
                     new_result.append(head)
             else:
                 new_result.append(children[i])
@@ -1379,7 +1403,7 @@ def merge_connected(path: Path, content: Callable, delimiter: Callable,
                     adjacent = children[k:i]
                     head = adjacent[0]
                     head.result = fuse(adjacent)  # reduce(operator.add, (nd.result for nd in adjacent), initial)
-                    update_attr(head, adjacent[1:], cast(RootNode, path[0]))
+                    update_attr(head, adjacent[1:], path[0])
                     if content_name:  # and len(adjacent) > 1:
                         head.name = content_name
                     new_result.append(head)
@@ -1389,7 +1413,7 @@ def merge_connected(path: Path, content: Callable, delimiter: Callable,
         node._set_result(tuple(new_result))
 
 
-def merge_results(dest: Node, src: Tuple[Node, ...], root: RootNode) -> bool:
+def merge_results(dest: Node, src: Tuple[Node, ...], root: Node) -> bool:
     """
     Merges the results of nodes `src` and writes them to the result
     of `dest` type-safely, if all src nodes are leaf-nodes (in which case
@@ -1508,13 +1532,13 @@ def move_fringes(path: Path, condition: Callable, merge: bool = True):
 
             if len(before) + len(prevN) > 1:
                 target = before[-1] if before else prevN[0]
-                if merge_results(target, prevN + before, cast(RootNode, path[0])):
+                if merge_results(target, prevN + before, path[0]):
                     before = (target,)
             before = before or prevN
 
             if len(after) + len(nextN) > 1:
                 target = after[0] if after else nextN[-1]
-                if merge_results(target, after + nextN, cast(RootNode, path[0])):
+                if merge_results(target, after + nextN, path[0]):
                     after = (target,)
             after = after or nextN
 
