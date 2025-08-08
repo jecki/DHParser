@@ -1398,7 +1398,9 @@ def merge_adjacent(path: Path,
                 if i > k:
                     adjacent = children[k:i]
                     head = adjacent[0]
-                    if preferred_name and len(adjacent) > 1:
+                    if swallow is not None and swallow([head]):
+                        head = Node(preferred_name, '').with_pos(head._pos)
+                    elif preferred_name and len(adjacent) > 1:
                         head.name = preferred_name
                     head.result = fuse(adjacent, swallow)
                     update_attr_unless(head, adjacent[1:], path[0], swallow)
@@ -1433,7 +1435,10 @@ def merge_connected(path: Path, content: CondFunc, delimiter: CondFunc,
     identify delimiter nodes must never come true for one and the same node!!!
     """
     # first, merge all delimiters
-    merge_adjacent(path, delimiter, delimiter_name)
+    if swallow is None:
+        merge_adjacent(path, delimiter, delimiter_name)
+    else:
+        merge_adjacent(path, lambda p: delimiter(p) and not swallow(p), delimiter_name)
     node = path[-1]
     children = node._children
     if children:
@@ -1452,9 +1457,11 @@ def merge_connected(path: Path, content: CondFunc, delimiter: CondFunc,
                 if i > k:
                     adjacent = children[k:i]
                     head = adjacent[0]
-                    if content_name:
+                    if swallow is not None and swallow([head]):
+                        head = Node(content_name, '').with_pos(head._pos)
+                    elif content_name:
                         head.name = content_name
-                    head.result = fuse(adjacent)  # reduce(operator.add, (nd.result for nd in adjacent), initial)
+                    head.result = fuse(adjacent, swallow)  # reduce(operator.add, (nd.result for nd in adjacent), initial)
                     update_attr_unless(head, adjacent[1:], path[0], swallow)
                     new_result.append(head)
             else:

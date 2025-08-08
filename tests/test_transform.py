@@ -34,7 +34,8 @@ from DHParser.transform import traverse, reduce_single_child, remove_whitespace,
     remove_tokens, transformation_factory, has_ancestor, has_parent, contains_only_whitespace, \
     merge_adjacent, is_one_of, not_one_of, swap_attributes, delimit_children, merge_treetops, \
     positions_of, insert, node_maker, apply_if, change_name, add_attributes, add_error, \
-    merge_leaves, BLOCK_ANONYMOUS_LEAVES, pick_longest_content, fix_content, merge_connected
+    merge_leaves, BLOCK_ANONYMOUS_LEAVES, pick_longest_content, fix_content, merge_connected, \
+    is_a
 from typing import AbstractSet, List, Sequence, Tuple
 
 
@@ -381,6 +382,10 @@ class TestMerge:
         t = parse_sxpr('(p (x "?") (i "alpha") (a (z "=>") (z "target")) (i "beta") (i " gamma") (x "!"))')
         merge_adjacent([t], is_one_of('i', 'a'), 'i')
         assert flatten_sxpr(t.as_sxpr()) == '(p (x "?") (i (:Text "alpha") (z "=>") (z "target") (:Text "beta gamma")) (x "!"))'
+
+        t = parse_sxpr('(p (a `(attr "1") "=>") (z "target") (i "beta") (x "!"))')
+        merge_adjacent([t], is_one_of('i', 'a', 'z',), 'i', swallow=is_a('a'))
+        assert flatten_sxpr(t.as_sxpr()) == '(p (i (a `(attr "1") "=>") (:Text "targetbeta")) (x "!"))'
 
 
 class TestAttributeHandling:
