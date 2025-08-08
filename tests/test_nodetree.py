@@ -37,7 +37,7 @@ from DHParser.nodetree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxp
     select_path_if, select_path, create_path_match_function, pick_path, \
     LEAF_PATH, TOKEN_PTYPE, insert_node, content_of, strlen_of, gen_chain_ID, \
     parse_sxml, LEAF_PTYPES, DIVISIBLES, reflow_as_oneliner, has_token, eq_tokens, \
-    add_class, has_class, remove_class
+    add_class, has_class, remove_class, HTML_EMPTY_TAGS
 from DHParser.pipeline import create_parser_junction, Junction, PseudoJunction
 from DHParser.transform import traverse, reduce_single_child, remove_brackets, \
     replace_by_single_child, flatten, remove_empty, remove_whitespace, TransformerFunc, \
@@ -1021,6 +1021,13 @@ class TestSerialization:
         tree = parse_xml('<p><a></a><a><b></b></a></p>')
         empty_tags = tree.collect_empty_tags()
         assert empty_tags == set('b')
+
+    def test_empty_tags(self):
+        t = parse_sxpr('(p (a) (b "hallo"))')
+        assert t.as_xml().find('<a/>') >= 0
+        assert t.as_html().find('<a/>') < 0
+        assert t.as_xml(empty_tags=HTML_EMPTY_TAGS).find('<a/>') < 0
+
 
     def test_as_unist(self):
         tree = parse_sxpr('(BelegText (Anker "interdico_1") (BelegLemma "inter.|ticente") (TEXT ", (") '
