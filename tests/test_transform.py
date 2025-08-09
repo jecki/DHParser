@@ -311,6 +311,23 @@ class TestWhitespaceTransformations:
         transformations = {'TEXT': move_fringes(lambda ctx: ctx[-1].name == WHITESPACE_PTYPE)}
         sentence = traverse(sentence, transformations)
 
+    def test_mode_fringes_one_sided(self):
+        urtree = parse_sxpr('(p (a "1") (x (y "-") (b "2") (y "-")) (c "3"))')
+        tree = copy.deepcopy(urtree)
+        path = tree.pick_path('x')
+        move_fringes(path, is_one_of('y'), side="both")
+        assert tree.as_sxpr() == '(p (a "1") (y "-") (x (b "2")) (y "-") (c "3"))'
+
+        tree = copy.deepcopy(urtree)
+        path = tree.pick_path('x')
+        move_fringes(path, is_one_of('y'), side="left")
+        assert tree.as_sxpr() == '(p (a "1") (y "-") (x (b "2") (y "-")) (c "3"))'
+
+        tree = copy.deepcopy(urtree)
+        path = tree.pick_path('x')
+        move_fringes(path, is_one_of('y'), side="right")
+        assert tree.as_sxpr() == '(p (a "1") (x (y "-") (b "2")) (y "-") (c "3"))'
+
     def test_merge_adjacent(self):
         sentence = parse_sxpr('(SENTENCE (TEXT "Guten") (L " ") (TEXT "Tag") '
                               ' (T "\n") (TEXT "Hallo") (L " ") (TEXT "Welt")'

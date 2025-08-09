@@ -1501,10 +1501,10 @@ def merge_results(dest: Node, src: Tuple[Node, ...], root: Node) -> bool:
         return True
     return False
 
-
+# TODO: parameterize to move only left or right fringes!
 @transformation_factory(collections.abc.Callable)
 @cython.locals(a=cython.int, b=cython.int, i=cython.int)
-def move_fringes(path: Path, condition: CondFunc, merge: bool = True):
+def move_fringes(path: Path, condition: CondFunc, *, side:str = "both", merge: bool = True):
     """
     Moves adjacent nodes on the left and right fringe that fulfill the given condition
     to the parent node. If the `merge`-flag is set, a moved node will be merged with its
@@ -1542,6 +1542,10 @@ def move_fringes(path: Path, condition: CondFunc, merge: bool = True):
 
     WARNING: This function should never follow replace_by_children() in the transformation list!!!
     """
+    assert side in ('left', 'right', 'both'), \
+        (f'Parameter side of function move_fringes() must have one of the values '
+         f'"left", "right", "both", but not "{side}"!')
+
     node = path[-1]
     if len(path) <= 1 or not node._children:
         return
@@ -1562,6 +1566,8 @@ def move_fringes(path: Path, condition: CondFunc, merge: bool = True):
             b -= 1
         else:
             break
+    if side == "left":  b = len(children)
+    elif side == "right":  a = 0
     before = children[:a]
     after = children[b:]
     children = children[a:b]
