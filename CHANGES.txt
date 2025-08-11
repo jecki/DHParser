@@ -1,5 +1,11 @@
-DHParser Version 1.9.0
-......................
+DHParser Version 1.9.1 (11.8.2025)
+..................................
+- bugfixes
+- transform.py: move_adjacent and move_connected now take a
+  "side"-keyword that can be either "left", "right" or "both"
+
+DHParser Version 1.9.0 (8.8.2025)
+.................................
 
 - more fine-grained cancelation, not only batch-processes can be
   canceled after each processed file, but now also processing
@@ -25,7 +31,7 @@ DHParser Version 1.9.0
   documentation
 
 
-DHParser Verion 1.8.3 (20.3.2024)
+DHParser Verion 1.8.3 (20.3.2025)
 .................................
 
 - nodetree.py: experimental split-method added to Node-class
@@ -38,7 +44,7 @@ DHParser Verion 1.8.3 (20.3.2024)
   staticmethod(functools.partial(...) where required)
 
 
-DHParser Version 1.8.2 (6.2.2024)
+DHParser Version 1.8.2 (6.2.2025)
 .................................
 
 - bugfixes for xast and nast-serializations
