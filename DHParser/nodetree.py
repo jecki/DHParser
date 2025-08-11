@@ -170,7 +170,7 @@ __all__ = ('WHITESPACE_PTYPE',
            'has_class',
            'add_class',
            'remove_class',
-           'path_names',
+           'node_names',
            'path_str',
            'match_path_str',
            'pred_siblings',
@@ -3789,8 +3789,13 @@ remove_class = functools.partial(remove_token_from_attr, attribute='class')
 
 # path strings ########################################################
 
-def path_names(path: Path) -> Iterator[str]:
+def node_names(path: Path) -> Iterator[str]:
     return (nd.name for nd in path)
+
+@deprecated('Use "node_names()" instead.')
+def path_names(path: Path) -> Iterator[str]:
+    return node_names(path)
+
 
 ### EXPERIMENTAL
 
@@ -5132,8 +5137,12 @@ class ContentMapping:
     def path_str(self, path_index: int) -> str:
         return self._path_str_cache.setdefault(path_index, path_str(self._path_list[path_index]))
 
-    def path_names(self, path_index: int) -> Iterator[str]:
+    def node_names(self, path_index: int) -> Iterator[str]:
         return (nd.name for nd in self._path_list[path_index])
+
+    @deprecated('Use "node_names()" instead.')
+    def path_names(self, path_index: int) -> Iterator[str]:
+        return self.node_names(path_index)
 
     @cython.locals(path_index=cython.int, last=cython.int)
     def get_path_index(self, pos: cython.int, left_biased: bool = False) -> int:
