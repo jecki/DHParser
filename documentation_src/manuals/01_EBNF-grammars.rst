@@ -1228,7 +1228,7 @@ The complete json-grammar now looks like this::
 
 The whitespace defined by the ``@whitespace``-directive can be accessed from
 within the grammar via the name ``WHITESPACE__``. Other than the tilde-sign
-this name refers to the pure whitespace that is not intermingles with
+this name refers to the pure whitespace that is not intermingled with
 comments. Similarly, comments defined by the ``@comment``-directive can
 be accessed via the symbol ``COMMENT__``.
 
