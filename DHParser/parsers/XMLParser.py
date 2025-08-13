@@ -206,6 +206,8 @@ get_grammar = parsing.factory # for backwards compatibility, only
 
 XML_PTYPE = ":XML"
 
+WARNING_AMBIGUOUS_EMPTY_ELEMENT = ErrorCode(205)
+
 ERROR_TAG_NAME_MISMATCH = ErrorCode(2000)
 ERROR_VALUE_CONSTRAINT_VIOLATION = ErrorCode(2010)
 ERROR_VALIDITY_CONSTRAINT_VIOLATION = ErrorCode(2020)
@@ -224,6 +226,7 @@ class XMLTransformer(Compiler):
     def reset(self):
         super().reset()
         self.preserve_whitespace = get_config_value("XML.preserve_whitespace", False)
+        self.consistent_empty_tags = get_config_value("XML.consistent_empty_tags", False)
         self.non_empty_tags: Set[str] = set()
 
     def prepare(self, root: RootNode) -> None:
@@ -356,6 +359,15 @@ class XMLTransformer(Compiler):
                                 f'tag name "{etag["Name"].content}" at {l}:{c}',
                                 ERROR_TAG_NAME_MISMATCH)
 
+        if self.consistent_empty_tags \
+                and tag_name in self.tree.empty_tags \
+                and tag_name not in self.non_empty_tags:  # warn only once!
+            self.tree.new_error(node,
+                f'Tag-name "{tag_name}" has already been used for an empty-tag '
+                f'<{tag_name}/> earlier! Set XML.consistent_empty_tags to False '
+                'to suppress this warning. !',
+                WARNING_AMBIGUOUS_EMPTY_ELEMENT)
+
         self.non_empty_tags.add(tag_name)
         save_preserve_ws = self.preserve_whitespace
         self.preserve_whitespace |= tag_name in self.tree.inline_tags
@@ -374,6 +386,15 @@ class XMLTransformer(Compiler):
             node.attr.update(attributes)
         node.name = node['Name'].content
         node.result = ''
+
+        if self.consistent_empty_tags \
+                and node.name in self.non_empty_tags \
+                and node.name not in self.tree.empty_tags:  # warn only once!
+            self.tree.new_error(node,
+                f'Tag-name "{node.name}" has already been used for a non empty-tag '
+                f'<{node.name}> ... </{node.name}> earlier. Set XML.consistent_empty_tags '
+                'to False to suppress this warning. !',
+                WARNING_AMBIGUOUS_EMPTY_ELEMENT)
 
         self.tree.empty_tags.add(node.name)
         return node
