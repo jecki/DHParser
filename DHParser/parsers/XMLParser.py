@@ -206,7 +206,7 @@ get_grammar = parsing.factory # for backwards compatibility, only
 
 XML_PTYPE = ":XML"
 
-WARNING_AMBIGUOUS_EMPTY_ELEMENT = ErrorCode(205)
+WARNING_INCONSISTENT_EMPTY_TAGS = ErrorCode(205)
 
 ERROR_TAG_NAME_MISMATCH = ErrorCode(2000)
 ERROR_VALUE_CONSTRAINT_VIOLATION = ErrorCode(2010)
@@ -366,7 +366,7 @@ class XMLTransformer(Compiler):
                 f'Tag-name "{tag_name}" has already been used for an empty-tag '
                 f'<{tag_name}/> earlier! Set XML.consistent_empty_tags to False '
                 'to suppress this warning. !',
-                WARNING_AMBIGUOUS_EMPTY_ELEMENT)
+                                WARNING_INCONSISTENT_EMPTY_TAGS)
 
         self.non_empty_tags.add(tag_name)
         save_preserve_ws = self.preserve_whitespace
@@ -394,7 +394,7 @@ class XMLTransformer(Compiler):
                 f'Tag-name "{node.name}" has already been used for a non empty-tag '
                 f'<{node.name}> ... </{node.name}> earlier. Set XML.consistent_empty_tags '
                 'to False to suppress this warning. !',
-                WARNING_AMBIGUOUS_EMPTY_ELEMENT)
+                                WARNING_INCONSISTENT_EMPTY_TAGS)
 
         self.tree.empty_tags.add(node.name)
         return node
