@@ -1345,7 +1345,7 @@ class Grammar:
     r"""
     Class Grammar directs the parsing process and stores global state
     information of the parsers, i.e. state information that is shared
-    accross parsers.
+    across parsers.
 
     Grammars are basically collections of parser objects, which are
     connected to an instance object of class Grammar. There exist two

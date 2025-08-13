@@ -366,7 +366,7 @@ class HTMLTransformer(Compiler):
                 and node.name not in self.tree.empty_tags:  # warn only once!
             self.tree.new_error(node,
                                 f'Tag-name "{node.name}" has already been used for a non empty-tag '
-                                f'<{node.name}> ... </{node.name}> earlier. This is considered bad XML-practice!',
+                                f'<{node.name}> ... </{node.name}> earlier. This is considered bad HTML-practice!',
                                 WARNING_AMBIGUOUS_EMPTY_ELEMENT)
 
         self.tree.empty_tags.add(node.name)

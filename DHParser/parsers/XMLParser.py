@@ -206,8 +206,6 @@ get_grammar = parsing.factory # for backwards compatibility, only
 
 XML_PTYPE = ":XML"
 
-WARNING_AMBIGUOUS_EMPTY_ELEMENT = ErrorCode(205)
-
 ERROR_TAG_NAME_MISMATCH = ErrorCode(2000)
 ERROR_VALUE_CONSTRAINT_VIOLATION = ErrorCode(2010)
 ERROR_VALIDITY_CONSTRAINT_VIOLATION = ErrorCode(2020)
@@ -358,13 +356,6 @@ class XMLTransformer(Compiler):
                                 f'tag name "{etag["Name"].content}" at {l}:{c}',
                                 ERROR_TAG_NAME_MISMATCH)
 
-        if tag_name in self.tree.empty_tags \
-                and tag_name not in self.non_empty_tags:  # warn only once!
-            self.tree.new_error(node,
-                                f'Tag-name "{tag_name}" has already been used for an empty-tag '
-                                f'<{tag_name}/> earlier. This is considered bad XML-practice!',
-                                WARNING_AMBIGUOUS_EMPTY_ELEMENT)
-
         self.non_empty_tags.add(tag_name)
         save_preserve_ws = self.preserve_whitespace
         self.preserve_whitespace |= tag_name in self.tree.inline_tags
@@ -383,13 +374,6 @@ class XMLTransformer(Compiler):
             node.attr.update(attributes)
         node.name = node['Name'].content
         node.result = ''
-
-        if node.name in self.non_empty_tags \
-                and node.name not in self.tree.empty_tags:  # warn only once!
-            self.tree.new_error(node,
-                                f'Tag-name "{node.name}" has already been used for a non empty-tag '
-                                f'<{node.name}> ... </{node.name}> earlier. This is considered bad XML-practice!',
-                                WARNING_AMBIGUOUS_EMPTY_ELEMENT)
 
         self.tree.empty_tags.add(node.name)
         return node
@@ -618,7 +602,7 @@ if __name__ == "__main__":
         set_preset_value('history_tracking', True)
         set_preset_value('resume_notices', True)
         set_preset_value('log_syntax_trees', frozenset(['cst', 'ast']))  # don't use a set literal, here!
-        set_preset_value('XTML.preserve_whitespace', bool(args.whitespace))
+        set_preset_value('XML.preserve_whitespace', bool(args.whitespace))
         finalize_presets()
     start_logging(log_dir)
 
