@@ -35,7 +35,7 @@ from DHParser.transform import traverse, reduce_single_child, remove_whitespace,
     merge_adjacent, is_one_of, not_one_of, swap_attributes, delimit_children, merge_treetops, \
     positions_of, insert, node_maker, apply_if, change_name, add_attributes, add_error, \
     merge_leaves, BLOCK_ANONYMOUS_LEAVES, pick_longest_content, fix_content, merge_connected, \
-    is_a
+    is_a, update_attr
 from typing import AbstractSet, List, Sequence, Tuple
 
 
@@ -421,6 +421,16 @@ class TestAttributeHandling:
         assert A.attr['y'] == 'y'
         assert B.attr['x'] == 'x'
 
+    def test_update_attributes(self):
+        a = Node('A', '')
+        b = Node('B', '').with_attr({'x': 'x'})
+        root = Node('ROOT', (a, b))
+        update_attr(a, b, root)
+        assert root.as_sxpr() =='(ROOT (A `(x "x")) (B `(x "x")))'
+        c = Node('C', '').with_attr({'z': 'z'})
+        root.result = (a, b, c)
+        update_attr(a, (b, c), root)
+        assert root.as_sxpr() == '(ROOT (A `(x "x") `(z "z")) (B `(x "x")) (C `(z "z")))'
 
 class TestConstructiveTransformations:
     def test_add_delimiter(self):

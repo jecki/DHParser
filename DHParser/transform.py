@@ -912,7 +912,7 @@ def update_attr(dest: Node, src: Union[Node, Tuple[Node, ...]], root: Node):
     if the child node is going to be eliminated.
     """
     if isinstance(src, Node):
-        src = (Node,)
+        src = (src,)
     for s in src:
         # update attributes
         if s != dest and hasattr(s, '_attributes'):
