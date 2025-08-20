@@ -175,12 +175,16 @@ __all__ = ('WHITESPACE_PTYPE',
            'match_path_str',
            'pred_siblings',
            'succ_siblings',
+           'get_prev_sibling',
+           'get_next_sibling',
            'prev_path',
            'next_path',
            'zoom_into_path',
            'leaf_path',
            'prev_leaf_path',
            'next_leaf_path',
+           'get_prev_leaf',
+           'get_next_leaf',
            'PickChildFunction',
            'FIRST_CHILD',
            'LAST_CHILD',
@@ -3055,14 +3059,27 @@ class RootNode(Node):
     def new_error(self,
                   node: Node,
                   message: str,
-                  code: ErrorCode = ERROR) -> RootNode:
+                  code: ErrorCode = ERROR,
+                  *, limit: int = -1) -> RootNode:
         """
         Adds an error to this tree, locating it at a specific node.
 
         :param node:    the node where the error occurred
         :param message: a string with the error message
         :param code:    an error code to identify the type of the error
+        :param limit:  if the number of errors reaches the limit,
+            further errors of the same type will be suppressed and a notice
+            to this effect will be appended to the last error of this type.
+            A value <= 0 means no limit.
         """
+        if limit >= 1:
+            errors = [e for e in self.errors_sorted if e.code == code]
+            count = len(errors)
+            if count >= limit:
+                notice = " (Further errors of this type suppressed, limit reached!)"
+                if not errors[-1].message.endswith(notice):
+                    errors[-1].message += notice
+                return self
         error = Error(message, node.pos, code)
         self.add_error(node, error)
         return self
@@ -3823,7 +3840,7 @@ def match_path_str(path_str: str, glob_pattern: str) -> bool:
 def pred_siblings(path: Path, criteria: NodeSelector = ANY_NODE, reverse: bool = False) \
     -> Iterator[Node]:
     """Returns an iterator over the siblings preceeding the end-node in the path.
-    Siblings are iterated left to right, so if the end-node of path is the 5th
+    Siblings are iterated left to right, so if the end-node of `path` is the 5th
     child of its parent (path[-2]) the siblings will be iterated starting with
     the 1st child (not with the 4th!). This can be reversed with reverse=True.
     """
@@ -3868,10 +3885,30 @@ def succ_siblings(path: Path, criteria: NodeSelector = ANY_NODE, reverse: bool =
                 yield sibling
 
 
+def get_prev_sibling(path, default: Node = EMPTY_NODE, *, skip: NodeSelector = NO_NODE) -> Node:
+    """Returns the sibling preceeding the last node in the path or the default
+    value if no predecessor exists."""
+    skip_function = create_match_function(skip)
+    for sibling in pred_siblings(path, lambda nd: not skip_function(nd), reverse=True):
+        return sibling
+    else:
+        return default
+
+
+def get_next_sibling(path, default: Node = EMPTY_NODE, *, skip: NodeSelector = NO_NODE) -> Node:
+    """Returns the sibling succeeding the last node in the path or the default
+    value if no successor exists."""
+    skip_function = create_match_function(skip)
+    for sibling in succ_siblings(path, lambda nd: not skip_function(nd), reverse=False):
+        return sibling
+    else:
+        return default
+
+
 # Navigate paths #####################################################
 
 @cython.locals(i=cython.int, k=cython.int)
-def prev_path(path: Path) -> Optional[Path]:
+def prev_path(path: Optional[Path]) -> Optional[Path]:
     """Returns the path of the predecessor of the last node in the
     path. The predecessor is the sibling of the same parent-node
     preceding the node, or, if it already is the first sibling, the parent's
@@ -3879,6 +3916,8 @@ def prev_path(path: Path) -> Optional[Path]:
     In case no predecessor is found, when the first ancestor has been
     reached, `None` is returned.
     """
+    if path is None:
+        return None
     assert isinstance(path, list)
     node = path[-1]
     for i in range(len(path) - 2, -1, -1):
@@ -3894,7 +3933,7 @@ def prev_path(path: Path) -> Optional[Path]:
 
 
 @cython.locals(i=cython.int, k=cython.int)
-def next_path(path: Path) -> Optional[Path]:
+def next_path(path: Optional[Path]) -> Optional[Path]:
     """Returns the path of the successor of the last node in the
     path. The successor is the sibling of the same parent Node
     succeeding the node, or if it already is the last sibling, the
@@ -3902,6 +3941,8 @@ def next_path(path: Path) -> Optional[Path]:
     so on. In case no successor is found when the first ancestor has been
     reached, `None` is returned.
     """
+    if path is None:
+        return None
     assert isinstance(path, list)
     node = path[-1]
     for i in range(len(path) - 2, -1, -1):
@@ -3946,6 +3987,26 @@ def zoom_into_path(path: Optional[Path],
 leaf_path = functools.partial(zoom_into_path, steps=-1)
 next_leaf_path = lambda trl: leaf_path(next_path(trl), FIRST_CHILD)
 prev_leaf_path = lambda trl: leaf_path(prev_path(trl), LAST_CHILD)
+
+
+def get_prev_leaf(path: Optional[Path],
+                  default: Node = EMPTY_NODE,
+                  *, skip: NodeSelector = NO_NODE) -> Node:
+    skip_func = create_match_function(skip)
+    path = prev_leaf_path(path)
+    while path is not None and skip_func(path[-1]):
+        path = prev_leaf_path(path)
+    return default if path is None else path[-1]
+
+
+def get_next_leaf(path: Optional[Path],
+                  default: Node = EMPTY_NODE,
+                  *, skip: NodeSelector = NO_NODE) -> Node:
+    skip_func = create_match_function(skip)
+    path = next_leaf_path(path)
+    while path is not None and skip_func(path[-1]):
+        path = next_leaf_path(path)
+    return default if path is None else path[-1]
 
 
 def foregoing_str(path: Path, length: int = -1) -> str:

@@ -1741,6 +1741,12 @@ class SingleThreadExecutor:
             future.set_exception(e)
         return future
 
+    def map(self, fn, *iterables, timeout=None, chunksize=1):
+        return map(fn, *iterables)
+
+    def shutdown(self, wait=True, *, cancel_futures=False):
+        pass
+
     # context-manager
     def __enter__(self):
         return self

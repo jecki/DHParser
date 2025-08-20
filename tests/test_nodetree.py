@@ -37,7 +37,7 @@ from DHParser.nodetree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxp
     select_path_if, select_path, create_path_match_function, pick_path, \
     LEAF_PATH, TOKEN_PTYPE, insert_node, content_of, strlen_of, gen_chain_ID, \
     parse_sxml, LEAF_PTYPES, DIVISIBLES, reflow_as_oneliner, has_token, eq_tokens, \
-    add_class, has_class, remove_class, HTML_EMPTY_TAGS
+    add_class, has_class, remove_class, HTML_EMPTY_TAGS, get_next_leaf, get_prev_leaf
 from DHParser.pipeline import create_parser_junction, Junction, PseudoJunction
 from DHParser.transform import traverse, reduce_single_child, remove_brackets, \
     replace_by_single_child, flatten, remove_empty, remove_whitespace, TransformerFunc, \
@@ -1233,6 +1233,12 @@ class TestPathNavigation:
         ende = pick_path(start, LEAF_PATH, include_root=True, reverse=True)
         assert anfang[-1].name == 'B'
         assert ende[-1].name == 'F'
+
+    def test_next_prev_leaf(self):
+        tree = parse_sxpr('(A (H (Y 1)) (G 0) (C (D 2) (X 3)) (F 4))')
+        path = tree.pick_path('Y')
+        leaf = get_next_leaf(path, skip={'G', 'D'})
+        assert leaf.name == "X"
 
 
 class TestEvaluation:
