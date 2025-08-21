@@ -100,14 +100,9 @@ import sys
 from typing import Callable, cast, Iterator, Sequence, List, \
     Union, Tuple, Container, Optional, Dict, Any, NamedTuple
 
-if sys.version_info >= (3, 6, 0):
-    OrderedDict = dict
-else:
-    from collections import OrderedDict
-
 from DHParser.configuration import get_config_value, ALLOWED_PRESET_VALUES
 from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END, \
-    add_source_locations, has_errors, only_errors
+    add_source_locations, has_errors, only_errors, error_category
 from DHParser.preprocess import SourceMapFunc, gen_neutral_srcmap_func
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, linebreaks, line_col, JSONnull, JSON_Dict, \
@@ -940,9 +935,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         try:
             if self._attributes is None:          # cython compatibility
-                self._attributes = OrderedDict()  # type: Dict[str, Any]
+                self._attributes = dict()  # type: Dict[str, Any]
         except AttributeError:
-            self._attributes = OrderedDict()
+            self._attributes = dict()
         return self._attributes
 
     @attr.setter
@@ -2466,7 +2461,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             l, c = line_col(lbreaks, self.pos)
             start = {'line': l, 'column': c, 'offset': self.pos}
         if self.has_attr():
-            unist_obj['attributes'] = {k: str(v) for k, v in self.attr}
+            unist_obj['attributes'] = {k: str(v) for k, v in self.attr.items()}
         if self.children:
             unist_obj['children'] = [child.as_unist_obj(flavor, lbreaks) for child in self.children]
             if lbreaks and self._pos >= 0:
@@ -2753,7 +2748,7 @@ class FrozenNode(Node):
         try:
             return self._attributes
         except AttributeError:
-            return OrderedDict()  # assignments will be void!
+            return dict()  # assignments will be void!
 
     @attr.setter
     def attr(self, attr_dict: Dict[str, Any]):
@@ -3076,7 +3071,8 @@ class RootNode(Node):
             errors = [e for e in self.errors_sorted if e.code == code]
             count = len(errors)
             if count >= limit:
-                notice = " (Further errors of this type suppressed, limit reached!)"
+                notice = f" (Further {error_category(code)} of this type " \
+                        "suppressed, limit reached!)"
                 if not errors[-1].message.endswith(notice):
                     errors[-1].message += notice
                 return self
@@ -3357,7 +3353,7 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> RootNode:
         tagname = sxpr[:end]
         name, class_name = (tagname.split(':') + [''])[:2]
         sxpr = sxpr[end:].strip()
-        attributes = OrderedDict()  # type: Dict[str, Any]
+        attributes = dict()  # type: Dict[str, Any]
         # parse attr
         if sxpr[:2] == '(@':  # SXML-style
             sxpr, pos = parse_attrs(sxpr[2:].lstrip(), "(", attributes)
@@ -3475,7 +3471,7 @@ def parse_xml(xml: Union[str, StringView],
         Parses a sequence of XML-Attributes. Returns the string-slice
         beginning after the end of the attr.
         """
-        attributes = OrderedDict()  # type: Dict[str, Any]
+        attributes = dict()  # type: Dict[str, Any]
         eot = s.find('>')
         restart = 0
         for match in s.finditer(RX_XML_ATTRIBUTES):
@@ -3507,7 +3503,7 @@ def parse_xml(xml: Union[str, StringView],
         k = s.rfind(">", end=i)
         return s[k+1:] if k >= 0 else s[2:]
 
-    def parse_opening_tag(s: StringView) -> Tuple[StringView, str, OrderedDict, bool]:
+    def parse_opening_tag(s: StringView) -> Tuple[StringView, str, Dict[str, str], bool]:
         """
         Parses an opening tag. Returns the string segment following
         the opening tag, the tag name, a dictionary of attr and
@@ -3646,7 +3642,7 @@ def parse_json(json_str: str) -> RootNode:
     a node-tree, but only json-documents that represents a node-tree, e.g.
     a json-document that has been produced by `Node.as_json()`!
     """
-    json_obj = json.loads(json_str, object_pairs_hook=lambda pairs: OrderedDict(pairs))
+    json_obj = json.loads(json_str, object_pairs_hook=lambda pairs: dict(pairs))
     return RootNode(Node.from_json_obj(json_obj))
 
 

@@ -68,6 +68,7 @@ __all__ = ('ErrorCode',
            'is_fatal',
            'is_error',
            'is_warning',
+           'error_category',
            'has_errors',
            'only_errors',
            'add_source_locations',
@@ -441,16 +442,20 @@ def is_fatal(code: Union[Error, int]) -> bool:
     return code >= FATAL
 
 
-# def Warning(message: str, pos, code: ErrorCode = WARNING,
-#             orig_pos: int = -1, line: int = -1, column: int = -1) -> Error:
-#     """
-#     Syntactic sugar for creating Error-objects that contain only a warning.
-#     Raises a ValueError if `code`` is not within the range for warnings.
-#     """
-#     if not is_warning(code):
-#         raise ValueError("Tried to create a warning with an error code {}. "
-#                          "Warning codes must be smaller than {}".format(code, ERROR))
-#     return Error(message, pos, code, orig_pos, line, column)
+def error_category(code: Union[Error, int]) -> str:
+    """Returns the category of the error, which is one of "no errors",
+    "notices", "warnings", "errors", "fatal errors"."""
+    if isinstance(code, Error):  code = code.code
+    if code < NOTICE:
+        return "no errors"
+    elif code < WARNING:
+        return "notices"
+    elif code < ERROR:
+        return "warnings"
+    elif code < FATAL:
+        return "errors"
+    else:
+        return "fatal errors"
 
 
 def has_errors(messages: Iterable[Error], level: ErrorCode = ERROR) -> bool:

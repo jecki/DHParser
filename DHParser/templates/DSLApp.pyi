@@ -28,7 +28,7 @@ except (ImportError, ModuleNotFoundError):
         if dhparserdir not in sys.path:  sys.path.append(dhparserdir)
 
 from DHParser.configuration import read_local_config, get_config_values, \
-    dump_config_data
+    get_config_value, dump_config_data
 from DHParser.error import Error, ERROR
 from DHParser.nodetree import Node, EMPTY_NODE
 from DHParser.pipeline import PipelineResult
@@ -130,7 +130,8 @@ class DSLApp(tk.Tk):
         self.targets.sort(key=lambda s: s in DSLParser.targets)
         self.compilation_target = list(DSLParser.targets)[0]
         self.target_name = tk.StringVar(value=self.compilation_target)
-        self.target_format = tk.StringVar(value="SXML")
+        self.target_format = tk.StringVar(
+            value=get_config_value('default_serialization', 'sxpr'))
         self.error_list = []
 
         self.default_font = font.nametofont("TkDefaultFont")
@@ -485,8 +486,12 @@ class DSLApp(tk.Tk):
         result, self.error_list = self.all_results[target]
         self.compile['state'] = tk.DISABLED
         self.result.delete("1.0", tk.END)
-        serialized = result.serialize(serialization_format) \
-                     if isinstance(result, Node) else result
+        if isinstance(result, Node):
+            serialized = result.serialize(serialization_format)
+            self.target_choice['state'] = tk.NORMAL
+        else:
+            serialized = result
+            self.target_choice['state'] = tk.DISABLED
         self.result.insert("1.0", serialized)
         if not re.fullmatch(r'\s*', serialized):
             self.save_result['state'] = tk.NORMAL
@@ -539,9 +544,10 @@ class DSLApp(tk.Tk):
 
     def on_target_stage(self, event):
         target = self.target_name.get()
-        if target in ('AST', 'CST'):
+        if target in ('AST', 'CST') or isinstance(
+                self.all_results.get(target, (None, []))[0], Node):
             self.target_choice['state'] = tk.NORMAL
-        elif isinstance(self.all_results.get(target, (EMPTY_NODE, []))[0], Node):
+        else:
             self.target_choice['state'] = tk.DISABLED
         if not self.update_result():
             self.adjust_button_status()
