@@ -167,6 +167,7 @@ class DSLApp(tk.Tk):
 
         self.outdir = ''
         self.names = []
+        self.source_name = ''
 
         self.deiconify()
 
@@ -330,6 +331,7 @@ class DSLApp(tk.Tk):
                         self.source.delete('1.0', tk.END)
                         self.source.insert(tk.END, snippet)
                         self.export_test['state'] = tk.NORMAL
+                        self.source_name = self.names[0]
                     except (FileNotFoundError, PermissionError,
                             IsADirectoryError, IOError, UnicodeDecodeError) as e:
                         self.result.insert(tk.END, str(e))
@@ -341,6 +343,7 @@ class DSLApp(tk.Tk):
                     self.cancel_event.clear()
                     self.num_sources = len(self.names)
                     self.num_compiled = 0
+                    self.source_name = ''
                     self.outdir = os.path.join(os.path.dirname(self.names[0]),
                                                'DSL_output')
                     if not os.path.exists(self.outdir):  os.mkdir(self.outdir)
@@ -361,6 +364,7 @@ class DSLApp(tk.Tk):
         self.compile['state'] = tk.DISABLED
         self.source_clear['state'] = tk.DISABLED
         self.source_modified_sentinel = 2
+        self.source_name = ''
 
     def adjust_button_status(self):
         txt = self.source.get('1.0', tk.END)
@@ -574,6 +578,9 @@ class DSLApp(tk.Tk):
         else:
             format = ''
         file = tk.filedialog.asksaveasfile(
+            initialfile=os.path.splitext(os.path.basename(self.source_name))[0]
+            + '.' + target,
+            # defaultextension='.'+target,
             title=f"Save {target}-results {format} as..",
             filetypes=[(target, '*.' + target), ('All', '*')]
         )
