@@ -241,8 +241,8 @@ proc `==`*(a, b: var RuneSet): bool =
       a.ranges = cacheToRanges(a)
     result = a.ranges == b.ranges  
   else:
-    result = a.cache256 == b.cache256 and a.cache4k == b.cache4k and a.cache64k == b.cache64k
-
+    result = a.cache256[] == b.cache256[] and a.cache4k[] == b.cache4k[] and a.cache64k[] == b.cache64k[]
+    
 
 proc `$`*(rs: RuneSet, verbose: bool = false): string =
   ## Serializes rune set. Use "runeset $ true" for a more
