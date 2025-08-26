@@ -214,7 +214,7 @@ proc cacheToRanges(rs: RuneSet): seq[RuneRange] =
 
 proc `$`*(rs: RuneSet, verbose: bool = false): string =
   ## Serializes rune set. Use "runeset $ true" for a more
-  ## verbose and easier to read serialization.
+  ## verbose and easier-to-read serialization.
 
   proc hexlen(r: Rune): (int8, string) =
     let i = r.int32
@@ -440,7 +440,7 @@ proc `-`*(A, B: seq[RuneRange]): seq[RuneRange] =
 proc `*`*(A, B: seq[RuneRange]): seq[RuneRange] = A - (A - B) - (B - A)
 
 
-## Rune Collection Combinators
+## RuneSet Combinators
 
 
 proc `^`*(runes: RuneSet): RuneSet = 

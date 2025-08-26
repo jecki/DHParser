@@ -92,6 +92,8 @@ _escape      = BS § ( bs | chCode | chName | groupId | reEsc | specialEsc | err
 
 #: charset
 
+# What about https://unicode.org/reports/tr18/ ?
+
 charset    = "[" [complement] { chRange | escapedSet | _escapedCh | BS error | ch }+ "]"
   complement = "^"
   chRange    = (_escapedCh | ch) "-" (_escapedCh | ch)
