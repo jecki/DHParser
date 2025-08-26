@@ -175,30 +175,8 @@ func init*(RuneSet: type, neg: bool, ranges: seq[RuneRange]): RuneSet =
           contains: inRuneSet_firstRun)
 
 ## The following init* functions are used to initialize rune sets
-## directly with sets instead of ranges. This is the preferred method
-## when the rune ranges do not contain codes > 0xFFFF
-
-func init*(RuneSet: type, neg: bool, cache: Set256): RuneSet =
-  var cref = new(Set256)
-  cref[] = cache
-  RuneSet(negate: neg, ranges: @[], uncached: @[],
-          cache256: cref, cache4k: nil, cache64k: nil, 
-          contains: inCache256)
-
-func init*(RuneSet: type, neg: bool, cache: Set4k): RuneSet =
-  var cref = new(Set4k)
-  cref[] = cache
-  RuneSet(negate: neg, ranges: @[], uncached: @[],
-          cache256: nil, cache4k: cref, cache64k: nil, 
-          contains: inCache4k)
-
-func init*(RuneSet: type, neg: bool, cache: Set64k): RuneSet =
-  var cref = new(Set64k)
-  cref[] = cache
-  RuneSet(negate: neg, ranges: @[], uncached: @[],
-          cache256: nil, cache4k: nil, cache64k: cref, 
-          contains: inCache64k)
-
+## directly with sets instead of ranges. The defining sequence of
+## ranges is computed from the set.
 
 proc toRanges[T: Ordinal](s: set[T], RT: type): seq[(RT, RT)] =
   ## Converts a set to a sequence of ranges. The sequence is sorted in ascending order.
@@ -216,33 +194,37 @@ proc toRanges[T: Ordinal](s: set[T], RT: type): seq[(RT, RT)] =
         b = i
     result.add((RT(a), RT(b)))
 
-proc cacheToRanges(rs: RuneSet): seq[RuneRange] =
-  ## Converts the cache of RuneSet to a sequence of ranges
-  if not isNil(rs.cache256):
-    toRanges(rs.cache256[], Rune)
-  elif not isNil(rs.cache4k):
-    toRanges(rs.cache4k[], Rune)
-  elif not isNil(rs.cache64k):
-    toRanges(rs.cache64k[], Rune)
-  else:
-    raise newException(AssertionDefect,
-      "Cannot convert an empty RuneSet-cache to a sequence of ranges.")
+proc init*(RuneSet: type, neg: bool, cache: Set256): RuneSet =
+  var cref = new(Set256)
+  cref[] = cache
+  RuneSet(negate: neg, 
+          ranges: toRanges(cache, Rune), 
+          uncached: @[],
+          cache256: cref, cache4k: nil, cache64k: nil, 
+          contains: inCache256)
+
+proc init*(RuneSet: type, neg: bool, cache: Set4k): RuneSet =
+  var cref = new(Set4k)
+  cref[] = cache
+  RuneSet(negate: neg, 
+          ranges: toRanges(result.cache4k[], Rune), 
+          uncached: @[],
+          cache256: nil, cache4k: cref, cache64k: nil, 
+          contains: inCache4k)
+
+proc init*(RuneSet: type, neg: bool, cache: Set64k): RuneSet =
+  var cref = new(Set64k)
+  cref[] = cache
+  RuneSet(negate: neg, 
+          ranges: toRanges(result.cache64k[], Rune), 
+          uncached: @[],
+          cache256: nil, cache4k: nil, cache64k: cref, 
+          contains: inCache64k)
 
 
-proc `==`*(a, b: var RuneSet): bool =
-  if a.negate != b.negate: 
-    result = false
-  elif a.ranges.len > 0:
-    if b.ranges.len == 0:
-      b.ranges = cacheToRanges(b)
-    result = a.ranges == b.ranges
-  elif b.ranges.len > 0:
-    if a.ranges.len == 0:
-      a.ranges = cacheToRanges(a)
-    result = a.ranges == b.ranges  
-  else:
-    result = a.cache256[] == b.cache256[] and a.cache4k[] == b.cache4k[] and a.cache64k[] == b.cache64k[]
-    
+func `==`*(a, b: RuneSet): bool =
+  (a.negate == b.negate) and (a.ranges == b.ranges)
+
 
 proc `$`*(rs: RuneSet, verbose: bool = false): string =
   ## Serializes rune set. Use "runeset $ true" for a more
@@ -263,13 +245,12 @@ proc `$`*(rs: RuneSet, verbose: bool = false): string =
     isIn(a, b, 48, 57) or isIn(a, b, 65, 90) or isIn(a, b, 97, 122)
 
   var 
-    ranges: seq[RuneRange] = if rs.ranges.len > 0: rs.ranges else: cacheToRanges(rs)
-    s: seq[string] = newSeqOfCap[string](ranges.len + 2)
+    s: seq[string] = newSeqOfCap[string](rs.ranges.len + 2)
 
   if not verbose:
     s.add("[")
     if rs.negate: s.add("^")
-  for rr in ranges:
+  for rr in rs.ranges:
     if rr.low >% rr.high:
       s.add("EMPTY")
     elif isAlphaNum(rr):
@@ -304,13 +285,12 @@ proc `$`*(rr: RuneRange): string = $(@[rr])
 proc repr*(rs: RuneSet, asSet: bool=true): string =
   ## Serializes rune set with a set literal or range-sequence-literal
   var 
-    ranges: seq[RuneRange] = if rs.ranges.len > 0: rs.ranges else: cacheToRanges(rs)
-    s: seq[string] = newSeqOfCap[string](ranges.len + 2)
+    s: seq[string] = newSeqOfCap[string](rs.ranges.len + 2)
 
-  let setRepr = asSet and (ranges[^1].high.uint32 <= 65535)
+  let setRepr = asSet and (rs.ranges[^1].high.uint32 <= 65535)
 
   if setRepr:
-    for rr in ranges:
+    for rr in rs.ranges:
       let digits = if rr.high.uint32 < 256: 2 else: 4
       if rr.high.uint32 - rr.low.uint32 <= 1:
         s.add(fmt"0x{toHex(rr.low.uint32, digits)}")
@@ -320,7 +300,7 @@ proc repr*(rs: RuneSet, asSet: bool=true): string =
         s.add(fmt"0x{toHex(rr.low.uint32, digits)}..0x{toHex(rr.high.uint32, digits)}") 
     fmt"rs({not rs.negate}, " & "{" & s.join(", ") & "})"  
   else:
-    for rr in ranges:
+    for rr in rs.ranges:
       let digits = if rr.high.uint32 < 256: 2 else: 4
       s.add(fmt"(0x{toHex(rr.low.uint32, digits)}, 0x{toHex(rr.high.uint32, digits)})")
     fmt"rs({not rs.negate}, @[" & s.join(", ") & "])"
@@ -403,13 +383,6 @@ proc size*(R: seq[RuneRange]): uint32 =
 #   return -1
 
 
-## RuneSet Combinators
-
-# proc `+`*(A, B: RuneSet): RuneSet =
-#   discard
-
-
-
 ## RuneRange Combinators
 
 proc `+`*(A, B: seq[RuneRange]): seq[RuneRange] =
@@ -483,7 +456,7 @@ proc `^`*(runes: RuneSet): RuneSet =
 
 proc emptyCache(rs: RuneSet): RuneSet =
   RuneSet(negate: rs.negate, 
-          ranges: if rs.ranges.len > 0: rs.ranges else: rs.cacheToRanges(), 
+          ranges: rs.ranges,
           uncached: @[],
           cache256: nil, cache4k: nil, cache64k: nil, 
           contains: inRuneSet_firstRun)
@@ -611,6 +584,7 @@ proc rs*(s: string): RuneSet =
   ## rs"[\ufeff]|[\ufffe]|[\u0000][\ufeff]|[\ufffe][\u0000]"
   ## rs"[A-Za-z0-9._\-]"
   ## rs"A-Za-z"
+  ## rs"[a-f][i-h]"
   ## rs"^<&'>\s"
   assert s.len > 0
   var 
@@ -655,6 +629,7 @@ proc rs*(s: string): RuneSet =
       addOrSubtract(nextRC)
     else: 
       while i < s.len and s[i] in " \n":  i += 1
+      if s[i] == '[':  sign = '|'
       addOrSubtract(parseRuneSet())
 
 proc rs*(positive: bool, numberRanges: seq[(int, int)]): RuneSet = 
@@ -683,6 +658,8 @@ proc rr*(rangeStr: string): RuneRange =
   return runes.ranges[0]
 
 
+#######################################################################
+
 when isMainModule:
   var rs1 = rs"""[_]|[:]|[A-Z]|[a-z]
                 |[\u00C0-\u00D6]|[\u00D8-\u00F6]|[\u00F8-\u02FF]
@@ -692,8 +669,23 @@ when isMainModule:
                 |[\U00010000-\U000EFFFF]"""
   let rs2 = rs"[ace\sD-G]"
   let rs3 = rs"[a-f]|[^c-z0-9]|[24]"
+  let rs6 = rs"[a-f][i-h]"
   let rs5 = rs"[a-z]-[d-g]"
+  let rs7 = rs(false, {0x30, 0x31, 0x33, 0x35..0x39, 0x67..0x7A})
+  let rs8 = rs(false, @[(0x30, 0x31), (0x33, 0x33), (0x35, 0x39), (0x67, 0x7A)])
+  echo $rs3.ranges
+  echo $rs7.ranges
+  echo $rs8.ranges
+  assert rs3.ranges == rs7.ranges
+  assert rs3.negate == rs7.negate
+  assert rs8 == rs3
+  assert rs7 == rs3
+  echo repr(rs3)
+  echo repr(rs7)
+  echo repr(rs8)
   echo $rs5
+  echo repr(rs5)
+  echo repr(rs5, false)
   echo $rs1
   echo $rs($rs1)
   echo $rs(rs1 $ true)
@@ -707,6 +699,8 @@ when isMainModule:
   echo rs3 $ true
   echo $rs(rs3 $ true)
   echo rs3 $ true
+  echo repr(rs3)
+  echo repr(rs3, false)
   let rs4 = rs"[acegikmo]"
   echo $rs4
   echo $rs4.ranges.len
