@@ -222,8 +222,9 @@ proc init*(RuneSet: type, neg: bool, cache: Set64k): RuneSet =
           contains: inCache64k)
 
 
-func `==`*(a, b: RuneSet): bool =
-  (a.negate == b.negate) and (a.ranges == b.ranges)
+proc `==`*(a, b: RuneSet): bool =
+  echo "*******"
+  a.negate == b.negate and a.ranges == b.ranges
 
 
 proc `$`*(rs: RuneSet, verbose: bool = false): string =
@@ -629,7 +630,7 @@ proc rs*(s: string): RuneSet =
       addOrSubtract(nextRC)
     else: 
       while i < s.len and s[i] in " \n":  i += 1
-      if s[i] == '[':  sign = '|'
+      if s[i] == '[' and sign == ' ':  sign = '|'
       addOrSubtract(parseRuneSet())
 
 proc rs*(positive: bool, numberRanges: seq[(int, int)]): RuneSet = 
