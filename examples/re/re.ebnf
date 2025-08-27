@@ -27,7 +27,7 @@
 
 # Tags that may be replaced with their content while parsing
 @ disposable  = EOF, BS, _number, _illegal, _entity, _escape, _special, _item,
-                _grpItem, _extension, _anyChar, _character, _octal,
+                _group, _grpItem, _extension, _anyChar, _character, _octal,
                 _nibble, _escapedCh
 
 # Tags that will be dropped with all their content while parsing or any of
@@ -42,7 +42,7 @@ regular_expression = ~ [flagGroups] (regex | ")") EOF
 regex      = ~ pattern { "|" ~ pattern }
 pattern    = { repetition | _item }
 _item      = (_entity | charSeq) ~
-_entity    = _special | _escape | charset | group
+_entity    = _special | _escape | charset | _group
 
 flagGroups = { "(?" flags § ")" }+
 flags      =  positive [negative] | negative
@@ -105,7 +105,7 @@ charset    = "[" [complement] { chRange | escapedSet | _escapedCh | BS error | c
 
 #: group
 
-group     = "(" § (_extension | capturing) ")"
+_group     = "(" § (_extension | capturing) ")"
 _extension = "?" § ( nonCapturing | subRegex | namedGroup | backRef
                   | comment | lookaround | bifurcation)
 

@@ -179,7 +179,7 @@ def run_pipeline(junctions: Set[Junction],
             j_sequence.sort(key=functools.cmp_to_key(cmp_junctions))
             steps.append(j_sequence)
         except KeyError as e:
-            raise AssertionError(f"{e.args[0]} is not a valid target.") from e
+            raise AssertionError(f"{e.args[0]} is not a valid target.")
         targets = {j[0] for j in steps[-1] if j[0] not in already_reached}
         already_reached |= targets
         for step in steps[:-1]:

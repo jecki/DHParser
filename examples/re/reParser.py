@@ -169,9 +169,9 @@ class reGrammar(Grammar):
     _entity = Forward()
     _item = Forward()
     pattern = Forward()
-    source_hash__ = "7bf4f94c58204eb4cdebcff483515cf7"
+    source_hash__ = "fb0058083d7820b01f7d4b8eedff5834"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:_entity$|_illegal$|_escape$|_item$|_octal$|_number$|_escapedCh$|BS$|_grpItem$|_special$|_nibble$|EOF$|_extension$|_character$|_anyChar$)')
+    disposable__ = re.compile('(?:_octal$|EOF$|_group$|_character$|_number$|_entity$|_escapedCh$|_illegal$|_special$|_escape$|_grpItem$|BS$|_extension$|_nibble$|_item$|_anyChar$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -243,10 +243,10 @@ class reGrammar(Grammar):
     repetition = Series(_item, repType, Option(Alternative(notGreedy, noBacktracking)), dwsp__)
     nonCapturing = Series(Option(flags), Drop(Text(":")), grpRegex, mandatory=2)
     _extension = Series(Drop(Text("?")), Alternative(nonCapturing, subRegex, namedGroup, backRef, comment, lookaround, bifurcation), mandatory=1)
-    group = Series(Drop(Text("(")), Alternative(_extension, capturing), Drop(Text(")")), mandatory=1)
+    _group = Series(Drop(Text("(")), Alternative(_extension, capturing), Drop(Text(")")), mandatory=1)
     flagGroups = OneOrMore(Series(Drop(Text("(?")), flags, Drop(Text(")")), mandatory=2))
     regex = Series(dwsp__, pattern, ZeroOrMore(Series(Drop(Text("|")), dwsp__, pattern)))
-    _entity.set(Alternative(_special, _escape, charset, group))
+    _entity.set(Alternative(_special, _escape, charset, _group))
     _item.set(Series(Alternative(_entity, charSeq), dwsp__))
     pattern.set(ZeroOrMore(Alternative(repetition, _item)))
     regular_expression = Series(dwsp__, Option(flagGroups), Alternative(regex, Drop(Text(")"))), EOF)

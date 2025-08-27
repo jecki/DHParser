@@ -3,6 +3,7 @@
 """DSLApp.py - a simple GUI for the compilation of DSL-files"""
 
 import sys
+from functools import partial
 import os
 import re
 import threading
@@ -96,8 +97,8 @@ class DSLApp(tk.Tk):
         super().__init__()
         self.withdraw()
         self.title('DSL App')
-        self.minsize(800, 680)
-        self.geometry("960x880")
+        self.minsize(920, 680)
+        self.geometry("980x880")
         self.option_add('*tearOff', False)
 
         self.protocol("WM_DELETE_WINDOW", self.on_close)
@@ -151,13 +152,13 @@ class DSLApp(tk.Tk):
         self.bold_button.configure("BoldRed.TButton", font=(family, size, "bold"),
                                    foreground="red")
         self.normal_button = ttk.Style()
-        self.normal_button.configure("NormalBlack.TButton", font=(family, size, "bold"),
+        self.normal_button.configure("NormalBlack.TButton", font=(family, size, "normal"),
                                      foreground="black")
+        self.green_button = ttk.Style()
+        self.green_button.configure("Green.TButton", font=(family, size, "normal"),
+                                   foreground="green")
 
-        self.create_widgets()
-        self.connect_events()
-        self.place_widgets()
-
+        # multitasking infrastructure
         self.lock = threading.Lock()
         self.worker = None
         self.compilation_units = 0
@@ -165,23 +166,36 @@ class DSLApp(tk.Tk):
         # self.mc_manager.start()
         self.cancel_event = self.mc_manager.Event()
 
+        # application variables
         self.outdir = ''
         self.names = []
         self.source_name = ''
 
+        # links (fill in the following URLs to activate the respective menu items
+        self.docs_URL = ''
+        self.source_URL = ''
+        self.license_URL = ''
+
         self.deiconify()
+        self.create_widgets()
+        self.connect_events()
+        self.place_widgets()
 
     def create_widgets(self):
         # self.header = ttk.Label(text="")
-        self.pick_source_info = ttk.Label(text="Paste source code below or...")
-        self.pick_source = ttk.Button(text="Pick Source file(s)...",
-                                      command=self.on_pick_source)
+        self.pick_source_info = ttk.Label(text="... or paste your code below:",
+                                          style="Green.TLabel")
+        self.pick_source = ttk.Button(text="Pick source file(s)...",
+            style="Green.TButton", command=self.on_pick_source)
+        self.save_source = ttk.Button(text="Save source", command=self.on_save_source)
+        self.save_source['state'] = tk.DISABLED
         self.source_info = ttk.Label(text='Source:', style="Bold.TLabel")
         self.source_undo = ttk.Button(text="Undo", command=self.on_source_undo)
         self.source_clear = ttk.Button(text="Clear source", command=self.on_clear_source)
         self.source_clear['state'] = tk.DISABLED
         self.source = scrolledtext.ScrolledText(undo=True)
         self.line_numbers = TextLineNumbers(self.source)
+        self.root_info = ttk.Label(text="Parser:")
         self.root_parser = ttk.Combobox(self, values=self.parser_names, textvariable=self.root_name)
         self.compile = ttk.Button(text="Compile", style="BoldRed.TButton", command=self.on_compile)
         self.compile['state'] = tk.DISABLED
@@ -207,6 +221,32 @@ class DSLApp(tk.Tk):
         self.message = ttk.Label(text='', style="Black.TLabel")
         self.exit = ttk.Button(text="Quit", command=self.on_close)
 
+        self.menubar = tk.Menu(self)
+        self.file_menu = tk.Menu(self.menubar, tearoff=0)
+        self.menubar.add_cascade(menu=self.file_menu, label="File")
+        self.file_menu.add_command(label="Load source...", command=self.on_pick_source)
+        self.file_menu.add_command(label="Save source", command=self.on_save_source)
+        self.file_menu.entryconfig("Save source", state=tk.DISABLED)
+        self.file_menu.add_separator()
+        self.file_menu.add_command(label="Save result...", command=self.on_save_result)
+        self.file_menu.entryconfig("Save result...", state=tk.DISABLED)
+        self.file_menu.add_separator()
+        self.file_menu.add_command(label="Exit", command=self.on_close)
+        self.help_menu = tk.Menu(self.menubar, tearoff=0)
+        self.menubar.add_cascade(menu=self.help_menu, label="Help")
+        if self.docs_URL:
+            self.help_menu.add_command(
+                label="Docs", command=partial(self.open_link, url=self.docs_URL))
+        if self.source_URL:
+            self.help_menu.add_command(
+                label="Source code", command=partial(self.open_link, url=self.source_URL))
+        if self.license_URL:
+            self.help_menu.add_command(
+                label="License info", command=partial(self.open_link, url=self.license_URL))
+        self.help_menu.add_separator()
+        self.help_menu.add_command(label="About...", command=self.on_about)
+        self.config(menu=self.menubar)
+
     def connect_events(self):
         self.source.bind("<<Modified>>", self.on_source_change)
         self.source.bind("<Control-v>", self.on_source_insert, add="+")
@@ -228,8 +268,9 @@ class DSLApp(tk.Tk):
         padAll = dict(sticky=(tk.N, tk.S, tk.W, tk.E), padx="5", pady="5")
         # padNW = dict(sticky=(tk.W, tk.N), padx="5", pady="5")
         # self.header.grid(row=0, column=0, columnspan=6, **padAll)
-        self.pick_source_info.grid(row=1, column=2, **padW)
-        self.pick_source.grid(row=1, column=3, **padW)
+        self.pick_source_info.grid(row=1, column=3, **padW)
+        self.pick_source.grid(row=1, column=2, **padE)
+        self.save_source.grid(row=1, column=1, **padE)
         self.source_info.grid(row=1, column=0, **padW)
         self.source_undo.grid(row=1, column=4, **padE)
         self.source_clear.grid(row=1, column=5, **padE)
@@ -240,6 +281,7 @@ class DSLApp(tk.Tk):
         self.target_stage.grid(row=3, column=4, **padW)
         self.target_choice.grid(row=3, column=5, **padE)
         self.result_info.grid(row=3, column=0, **padW)
+        self.root_info.grid(row=3, column=1, **padE)
         self.result.grid(row=4, column=0, columnspan=6, **padAll)
         self.save_result.grid(row=5, column=3, **padWE)
         self.export_test.grid(row=5, column=4, **padWE)
@@ -324,6 +366,7 @@ class DSLApp(tk.Tk):
                 self.errors.delete(1.0, tk.END)
                 self.export_test['state'] = tk.DISABLED
                 self.save_result['state'] = tk.DISABLED
+                self.file_menu.entryconfig("Save result...", state=tk.DISABLED)
                 if len(self.names) == 1:
                     try:
                         with open(self.names[0], 'r', encoding='utf-8') as f:
@@ -363,6 +406,8 @@ class DSLApp(tk.Tk):
         self.source.delete('1.0', tk.END)
         self.compile['state'] = tk.DISABLED
         self.source_clear['state'] = tk.DISABLED
+        self.save_source['state'] = tk.DISABLED
+        self.file_menu.entryconfig("Save source", state=tk.DISABLED)
         self.source_modified_sentinel = 2
         self.source_name = ''
 
@@ -371,9 +416,13 @@ class DSLApp(tk.Tk):
         if re.fullmatch(r'\s*', txt):
             self.compile['state'] = tk.DISABLED
             self.source_clear['state'] = tk.DISABLED
+            self.save_source['state'] = tk.DISABLED
+            self.file_menu.entryconfig("Save source", state=tk.DISABLED)
         else:
             self.compile['state'] = tk.NORMAL
             self.source_clear['state'] = tk.NORMAL
+            self.save_source['state'] = tk.NORMAL
+            self.file_menu.entryconfig("Save source", state=tk.NORMAL)
 
     def on_source_change(self, event):
         if self.source_modified_sentinel: # ignore call due to change of emit_modified
@@ -476,6 +525,7 @@ class DSLApp(tk.Tk):
         self.compile['state'] = tk.DISABLED
         self.save_result['state'] = tk.DISABLED
         self.export_test['state'] = tk.DISABLED
+        self.file_menu.entryconfig("Save result...", state=tk.DISABLED)
 
     def finish_single_unit(self):
         self.source.tag_delete("error")
@@ -499,6 +549,7 @@ class DSLApp(tk.Tk):
         self.result.insert("1.0", serialized)
         if not re.fullmatch(r'\s*', serialized):
             self.save_result['state'] = tk.NORMAL
+            self.file_menu.entryconfig("Save result...", state=tk.NORMAL)
         self.export_test['state'] = tk.NORMAL
         self.errors.delete("1.0", tk.END)
         for i, e in enumerate(self.error_list):
@@ -542,8 +593,10 @@ class DSLApp(tk.Tk):
             self.result.insert(tk.END, result_txt)
             if re.fullmatch(r'\s*', result_txt):
                 self.save_result['state'] = tk.DISABLED
+                self.file_menu.entryconfig("Save result...", state=tk.DISABLED)
             else:
                 self.save_result['state'] = tk.NORMAL
+                self.file_menu.entryconfig("Save result...", state=tk.NORMAL)
         return bool(result[0]) or bool(result[1])
 
     def on_target_stage(self, event):
@@ -571,30 +624,50 @@ class DSLApp(tk.Tk):
         i = int(self.errors.index(f"@0,{event.y}").split('.')[0])
         self.hilight_error_line(i - 1)
 
+    def on_save_source(self):
+        if (not self.source_name or (os.path.exists(self.source_name) and
+                not tk.messagebox.askyesno("Save source?",
+                f'Do you really want to overwrite "{self.source_name}"?'))):
+            source_name = tk.filedialog.asksaveasfilename(
+                title="Save source as..",
+                filetypes=((('All', '*'),)))
+        else:
+            source_name = self.source_name
+        if source_name:
+            source = self.source.get("1.0", tk.END)
+            try:
+                with open(source_name, 'w', encoding='utf-8') as file:
+                    file.write(source)
+                self.message['text'] =  f'"{source_name}" written to disk.'
+                self.message['style'] = "Green.TLabel"
+                self.after(3500, self.clear_message)
+                self.source_name = source_name
+            except (IsADirectoryError, PermissionError, IOError) as e:
+                tk.messagebox.showerror("IO Error", str(e))
+
     def on_save_result(self):
         target = self.target_name.get()
         if self.target_choice['state'] == tk.NORMAL:
             format = 'in format ' + self.target_format.get()
         else:
             format = ''
-        file = tk.filedialog.asksaveasfile(
-            initialfile=os.path.splitext(os.path.basename(self.source_name))[0]
-            + '.' + target,
-            # defaultextension='.'+target,
+        basename = os.path.splitext(os.path.basename(self.source_name))[0]
+        filename = tk.filedialog.asksaveasfilename(
+            initialfile=basename,
+            defaultextension='.' + target,
             title=f"Save {target}-results {format} as..",
             filetypes=[(target, '*.' + target), ('All', '*')]
         )
-        if file:
+        if filename:
             result = self.result.get("1.0", tk.END)
             try:
-                file.write(result)
-                self.message['text'] =  f'"{file.name}" written to disk.'
+                with open(filename, 'w', encoding='utf-8') as file:
+                    file.write(result)
+                self.message['text'] =  f'"{filename}" written to disk.'
                 self.message['style'] = "Green.TLabel"
                 self.after(3500, self.clear_message)
             except (PermissionError, IOError) as e:
                 tk.messagebox.showerror("IO Error", str(e))
-            finally:
-                file.close()
 
     def read_config_or_test_file(self, path: str) \
             -> Tuple[object, str, str, str, str, bool]:
@@ -751,6 +824,24 @@ class DSLApp(tk.Tk):
                     return False
         return True
 
+    def open_link(self, url):
+        import webbrowser
+        webbrowser.open(url)
+
+    def on_about(self):
+        import random
+        slogans = ("'cause it is the machines that bring order to life!",
+                   "We work hard to make your job expendable!",
+                   "We program pig systems that make your life difficult!",
+                   "8 bit can do it all!",
+                   "The apparatus is always right!")
+        tk.messagebox.showinfo(
+            title="About DSL",
+            message=("DSL was brought to you by:\n\n"
+                     "SLAVES TO THE MACHINE SOFTWARE\n\n"
+                     + slogans[random.randint(0, len(slogans) - 1)] + '\n\n')
+        )
+
     def on_close(self):
         if self.on_cancel():
             if self.worker and self.worker.is_alive():
@@ -765,7 +856,7 @@ if __name__ == '__main__':
     if sys.version_info < (3, 14, 0):
         import multiprocessing
         multiprocessing.freeze_support()
-    read_local_config(os.path.join(scriptdir, 'ts2pythonConfig.ini'))
+    read_local_config(os.path.join(scriptdir, 'DSLConfig.ini'))
     if not DSLParser.main(called_from_app=True):
         app = DSLApp()
         app.mainloop()
