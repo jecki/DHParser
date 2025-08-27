@@ -12,7 +12,7 @@ type
   Node* = ref NodeObj not nil
   NodeOrNil* = ref NodeObj
   NodeObj {.acyclic.} = object of RootObj
-    nameRef*: StringRef
+    tagName: string
     childrenSeq: seq[Node]
     textSlice: StringSlice
     attributesRef: ref Attributes
@@ -27,42 +27,37 @@ let
   NoChildren: seq[Node] = @[]
 
 
-proc new(Node: type Node, 
-         name: StringRef or sink string, 
+proc new(Node: type Node,
+         name: sink string, 
          data: sink seq[Node] or NodeOrNil or sink StringSlice or ref string or sink string,
          attributes: Attributes or ref Attributes = NoAttributes): Node =
-  when name is ref string:
-    let nameRef: StringRef = name
-  else:
-    let nameRef: StringRef = new(StringRef)
-    nameRef[] = name
   when attributes is ref Attributes:
     let attributesRef = attributes
   else:  # attributes is Attributes:
     let attributesRef = new(ref Attributes)
     attributesRef[] = attributes
   when data is seq[Node]:
-    result = Node(nameRef: nameRef,
+    result = Node(tagName: name,
                   childrenSeq: data,
                   textSlice: EmptyStringSlice,
                   attributesRef: attributesRef, 
                   sourcePos: -1)
   elif data is NodeOrNil:
     if isNil(data):
-      result = Node(nameRef: nameRef,
+      result = Node(tagName: name,
                     childrenSeq: NoChildren,
                     textSlice: EmptyStringSlice,
                     attributesRef: attributesRef, 
                     sourcePos: -1)
     else:
       let node: Node = data   # this step is required, because data has the type NodeOrNil
-      result = Node(nameRef: nameRef,
+      result = Node(tagName: name,
                     childrenSeq: @[node],
                     textSlice: EmptyStringSlice,
                     attributesRef: attributesRef, 
                     sourcePos: -1)      
   else:
-    result = Node(nameRef: nameRef, 
+    result = Node(tagName: name, 
                   childrenSeq: NoChildren, 
                   textSlice: toStringslice(data),
                   attributesRef: attributesRef,
@@ -72,13 +67,10 @@ proc new(Node: type Node,
 template newNode*(args: varargs[untyped]): Node = Node.new(args)
 
 
-template `name=`*(node: Node, name: ref string or string) =
-  when name is ref string:
-    node.nameRef = name
-  else:
-    node.nameRef[] = name
+template `name=`*(node: Node, name: sink string) = 
+  node.tagName = name
 
-template name*(node: Node): string = node.nameRef[]
+template name*(node: Node): lent string = node.tagName
 
 template isLeaf*(node: Node): bool = node.childrenSeq.len == 0
 
@@ -86,7 +78,7 @@ template hasChildren*(node: Node): bool = node.childrenSeq.len > 0
 
 template isEmpty*(node: Node): bool = node.childrenSeq.len == 0 and node.textSlice.len == 0
 
-template isAnonymous*(node: Node): bool = node.name.len == 0 or node.name[0] == ':'
+template isAnonymous*(node: Node): bool = node.tagName.len == 0 or node.tagName[0] == ':'
 
 func content*(node: Node): string =
   if node.isLeaf:
@@ -195,16 +187,16 @@ proc copy*(node: Node): Node =
   ## Yields a shallow copy of a node
   if node.isLeaf:
     if isNil(node.attributesRef):
-      newNode(node.nameRef, node.textSlice)
+      newNode(node.name, node.textSlice)
     else:
-      newNode(node.nameRef, node.textSlice, node.attr)
+      newNode(node.name, node.textSlice, node.attr)
   else:
     if isNil(node.attributesRef):
-      newNode(node.nameRef, node.childrenSeq)
+      newNode(node.name, node.childrenSeq)
     else:
-      newNode(node.nameRef, node.childrenSeq, node.attr)
+      newNode(node.name, node.childrenSeq, node.attr)
 
-proc clone*(node: Node, newName: StringRef): Node =
+proc clone*(node: Node, newName: sink string): Node =
   ## Creates a new node, keeping merely the result of the old node
   if node.isLeaf:  newNode(newName, node.textSlice)  else:  newNode(newName, node.childrenSeq)
 

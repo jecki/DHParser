@@ -87,89 +87,10 @@ if DHParser.versionnumber.__version_info__ < (1, 8, 0):
 
 BRACKETS = { '(': ')', '[': ']', '{': '}' }
 
-
-# def is_escaped(t: str, i: int) -> Optional[bool]:
-#     """Returns True, if the character at position i is escaped,
-#     False if it is not and None in case the position i exceeds
-#     the bounds of string t.
-#     """
-#     if 0 <= i < len(t):
-#         r = i
-#         while r > 0 and t[r - 1] == '\\':
-#             r -= 1
-#         return (i - r) % 2 != 0
-#     else:
-#         return None
-#
-#
-# def find_unescaped(t: str, ch: str, i: int) -> int:
-#     r"""Find the position of an unescaped character in a string.
-#     Examples::
-#
-#         >>> r"(a\)b)".find(")", 0)
-#         3
-#         >>> find_unescaped(r"(a\)b)", ")", 0)
-#         5
-#         >>> find_unescaped(r"(a\\)b)", ")", 0)
-#         4
-#         >>> find_unescaped(r"(a\\\)b)", ")", 0)
-#         7
-#     """
-#     while i >= 0:
-#         i = t.find(ch, i)
-#         if is_escaped(t, i):
-#             i += 1
-#         else:
-#             break
-#     return i
-#
-#
-# def matching_bracket(t: str, i: int) -> int:
-#     r"""Find matching bracket, ignoring escaped brackets.
-#     Examples::
-#
-#         >>> matching_bracket(r"(a\)b)", 0)
-#         5
-#         >>> matching_bracket(r"(a\\)b)", 0)
-#         4
-#         >>> matching_bracket(r"(a\\\)b)", 0)
-#         7
-#         >>> matching_bracket(r"(a(b(c)))", 0)
-#         8
-#         >>> matching_bracket(r"(a(b(c)))", 2)
-#         7
-#         >>> matching_bracket(r"(a(b\(c)))", 2)
-#         7
-#     """
-#     opening = t[i]
-#     closing = BRACKETS[opening]
-#     counter = 1
-#     MAX = len(t)
-#     k1 = -1
-#     k2 = -1
-#     while counter > 0:
-#         if k1 <= i:
-#             k1 = find_unescaped(t, closing, i + 1)
-#         if k1 < 0:
-#             return len(t)
-#         if k2 <= i:
-#             k2 = find_unescaped(t, opening, i + 1)
-#         if k2 < 0:
-#             k2 = MAX
-#         if k2 < k1:
-#             counter += 1
-#         else:
-#             counter -= 1
-#         i = min(k1, k2)
-#     return k1
-
-
-
 # To capture includes, replace the NEVER_MATCH_PATTERN
 # by a pattern with group "name" here, e.g. r'\input{(?P<name>.*)}'
 RE_INCLUDE = NEVER_MATCH_PATTERN
 RE_COMMENT = NEVER_MATCH_PATTERN
-
 
 
 def reTokenizer(original_text) -> Tuple[str, List[Error]]:
@@ -248,9 +169,9 @@ class reGrammar(Grammar):
     _entity = Forward()
     _item = Forward()
     pattern = Forward()
-    source_hash__ = "9ad5edc0390b512e9268ee146b256402"
+    source_hash__ = "7bf4f94c58204eb4cdebcff483515cf7"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:_special$|_grpItem$|_illegal$|BS$|_number$|_escape$|_extension$|_octal$|_nibble$|_item$|_anyChar$|EOF$|_escapedCh$|_entity$|_character$)')
+    disposable__ = re.compile('(?:_entity$|_illegal$|_escape$|_item$|_octal$|_number$|_escapedCh$|BS$|_grpItem$|_special$|_nibble$|EOF$|_extension$|_character$|_anyChar$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''

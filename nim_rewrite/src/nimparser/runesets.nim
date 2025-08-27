@@ -223,7 +223,6 @@ proc init*(RuneSet: type, neg: bool, cache: Set64k): RuneSet =
 
 
 proc `==`*(a, b: RuneSet): bool =
-  echo "*******"
   a.negate == b.negate and a.ranges == b.ranges
 
 

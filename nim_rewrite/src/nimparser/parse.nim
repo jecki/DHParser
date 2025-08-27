@@ -87,7 +87,7 @@ type
   ParserObj = object of RootObj
     ptype: string
     pname: string
-    nodeName: ref string not nil
+    nodeName: string
     flags: ParserFlagSet
     uniqueID: uint32
     grammarVar: GrammarRef
@@ -218,8 +218,7 @@ method cleanUp(self: Parser) {.base.} =
 proc init*(parser: Parser, ptype: string = ParserName): Parser =
   assert ptype != "" and ptype[0] == ':'
   parser.pname = ""
-  new(parser.nodeName)
-  parser.nodeName[] = ptype
+  parser.nodeName = ptype
   parser.ptype = ptype
   parser.flags = {isDisposable}
   parser.uniqueID = 0
@@ -260,7 +259,7 @@ proc assignName(name: string, parser: Parser): Parser =
   assert parser.pname == ""
   assert name != ""
   if name[0] == ':':
-    parser.nodeName[] = name
+    parser.nodeName = name
     parser.pname = name[1..^1]
   elif name.len >= 5 and name[4] == ':':
     if name[0..3] == "DROP":
@@ -268,7 +267,7 @@ proc assignName(name: string, parser: Parser): Parser =
     else:
       assert name[0..3] == "HIDE"
       parser.flags.incl isDisposable
-    parser.nodeName[] = name[5..^1]  # TODO: [4..^1]?
+    parser.nodeName = name[5..^1]  # TODO: [4..^1]?
     parser.pname = name[5..^1]
   else:
     # assert parser.ptype != ":Whitespace",
@@ -276,7 +275,7 @@ proc assignName(name: string, parser: Parser): Parser =
     #            "with a colon, e.g. \":{name}\", to mark them as disposable!")
     if parser.ptype != ":Whitespace":  # insignificant whitespace is always disposable
       parser.flags.excl isDisposable
-    parser.nodeName[] = name
+    parser.nodeName = name
     parser.pname = name
   assignSymbol(parser, parser)
   return parser
@@ -1337,7 +1336,7 @@ proc newStringRef(s: string): ref string not nil =
   new(result)
   result[] = s
 
-let commentName: ref string not nil = newStringRef("comment__")
+let commentName = "comment__"
 
 proc init*(insignificant: WhitespaceRef,
            whitespace, comment: RegExpInfo,
