@@ -51,6 +51,7 @@ __all__ = ('RX_TOKEN_NAME',
            'PreprocessorFunc',
            'PreprocessorFactory',
            'PreprocessorResult',
+           'result_from_mapping',
            'Tokenizer',
            'make_token',
            'strip_tokens',
@@ -120,15 +121,13 @@ class PreprocessorResult(NamedTuple):
     errors: List[Error]
     __module__ = __name__  # required for cython/pickle compatibility
 
-    @staticmethod
-    def from_SourceMap(mapping: SourceMap,
-                       original_text: Union[str, StringView],
-                       processed_text: Union[str, StringView],
-                       errors: List[Error]) -> PreprocessorResult:
-        mapping.validate()
-        mapper = functools.partial(source_map, srcmap=mapping)
-        return PreprocessorResult(original_text, processed_text, mapper, errors)
-
+def result_from_mapping(mapping: SourceMap,
+              original_text: Union[str, StringView],
+              processed_text: Union[str, StringView],
+              errors: List[Error]) -> PreprocessorResult:
+    mapping.validate()
+    mapper = functools.partial(source_map, srcmap=mapping)
+    return PreprocessorResult(original_text, processed_text, mapper, errors)
 
 FindIncludeFunc: TypeAlias = Union[Callable[[str, int], IncludeInfo],   # (document: str,  start: int)
                                    functools.partial]
@@ -153,10 +152,10 @@ def nil_preprocessor(original_text: str, original_name: str) -> PreprocessorResu
     """
     A preprocessor that does nothing, i.e. just returns the input.
     """
-    return PreprocessorResult(original_text,
-                              original_text,
-                              lambda i: SourceLocation(original_name, original_text, i),
-                              [])
+    def neutral_back_mapping(pos: int) -> SourceLocation:
+        return SourceLocation(original_name, original_text, pos)
+
+    return PreprocessorResult(original_text, original_text, neutral_back_mapping, [])
 
 
 def nil_preprocessor_factory() -> PreprocessorFunc:

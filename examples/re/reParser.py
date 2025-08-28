@@ -54,7 +54,7 @@ from DHParser.pipeline import end_points, full_pipeline, create_parser_junction,
     create_preprocess_junction, create_junction, PseudoJunction
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors, \
-    SourceMap, source_map
+    SourceMap, source_map, result_from_mapping
 from DHParser.stringview import StringView
 from DHParser.toolkit import is_filename, load_if_file, cpu_count, RX_NEVER_MATCH, \
     ThreadLocalSingletonFactory, expand_table
@@ -92,7 +92,7 @@ BRACKETS = { '(': ')', '[': ']', '{': '}' }
 # by a pattern with group "name" here, e.g. r'\input{(?P<name>.*)}'
 RE_INCLUDE = NEVER_MATCH_PATTERN
 RE_COMMENT = NEVER_MATCH_PATTERN
-
+RX_VERBOSE = re.compile(r'\(\?[aiLmsu]*x[aiLmsu]*\)')
 
 def inCharSet(l: str, k: int) -> bool:
     i = 0
@@ -110,6 +110,9 @@ def inCharSet(l: str, k: int) -> bool:
     return state == 'inset'
 
 def reStripComments(original_text, original_name) -> PreprocessorResult:
+    if not RX_VERBOSE.match(original_text):
+        return nil_preprocessor(original_text, original_name)
+
     positions = [0]
     offsets = [0]
     l = original_text.splitlines(keepends=True)
@@ -146,8 +149,8 @@ def reStripComments(original_text, original_name) -> PreprocessorResult:
     mapping = SourceMap(original_name, positions, offsets,
                         [original_name] * len(positions),
                         {original_name: original_text})
-    return PreprocessorResult.from_SourceMap(
-        mapping, original_text, stripped_text, [])
+    return result_from_mapping(mapping, original_text, stripped_text, [])
+
 
 preprocessing: PseudoJunction = create_preprocess_junction(
     reStripComments, RE_INCLUDE, RE_COMMENT)
