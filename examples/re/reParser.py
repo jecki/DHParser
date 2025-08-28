@@ -127,8 +127,10 @@ def reStripComments(original_text, original_name) -> PreprocessorResult:
 
         n = len(l[i])
 
-        k = l[i].rfind('#')
-        if not inCharSet(l[i], k):
+        k = l[i].find('#')
+        while k >= 0 and inCharSet(l[i], k):
+            k = l[i].find('#', k + 1)
+        if k >= 0:
             l[i] = l[i][:k]
         l[i] = l[i].rstrip()
 
