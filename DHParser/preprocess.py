@@ -87,17 +87,31 @@ RX_TOKEN_NAME = re.compile(r'\w+')
 RX_TOKEN_ARGUMENT = re.compile(r'[^\x1b\x1c\x1d]*')
 RX_TOKEN = LazyRE(r'\x1b(?P<name>\w+)\x1c(?P<argument>[^\x1b\x1c\x1d]*)\x1d')
 
-
 class IncludeInfo(NamedTuple):
     begin: int
     length: int
     file_name: str
     __module__ = __name__  # required for cython/pickle compatibility
 
-
 def has_includes(sm: SourceMap) -> bool:
     return any(fname != sm.original_name for fname in sm.file_names)
 
+class SourceLocation(NamedTuple):
+    """A particular location in the original, not preprocessed source code.
+
+    :ivar original_name: The original source filename. If the document is composed of
+        a master file and (possibly nested) includes this will be the name of the file
+        that the position is related to.
+    :ivar original_text: The original, i.e. not yet preprocessed text-content of the
+        file the position relates to.
+    :ivar pos: The location within original_text.
+    """
+    original_name: str          # the file name (or path or uri) of the source code
+    original_text: Union[str, StringView]  # the source code itself
+    pos: int                    # a position within the code
+    __module__ = __name__       # needed for cython compatibility
+
+SourceMapFunc: TypeAlias = Union[Callable[[int], SourceLocation], functools.partial]
 
 class PreprocessorResult(NamedTuple):
     original_text: Union[str, StringView]
@@ -106,13 +120,12 @@ class PreprocessorResult(NamedTuple):
     errors: List[Error]
     __module__ = __name__  # required for cython/pickle compatibility
 
-
 FindIncludeFunc: TypeAlias = Union[Callable[[str, int], IncludeInfo],   # (document: str,  start: int)
                                    functools.partial]
 IncludeReaderFunc = Callable[[str], str]
 IncludeReaderFactory = Callable[[], IncludeReaderFunc]
 DeriveFileNameFunc: TypeAlias = Union[Callable[[str], str], functools.partial]  # include name -> file name
-PreprocessorFunc: TypeAlias = Union[Callable[[str, str], PreprocessorResult],  # text: str, filename: str
+PreprocessorFunc: TypeAlias = Union[Callable[[str, str], PreprocessorResult],  # (text: str, filename: str) -> result
                                     functools.partial]
 PreprocessorFactory: TypeAlias = Callable[[], PreprocessorFunc]
 Tokenizer: TypeAlias = Union[Callable[[str], Tuple[str, List[Error]]],
@@ -233,23 +246,6 @@ def strip_tokens(tokenized: str) -> str:
 #
 #######################################################################
 
-
-class SourceLocation(NamedTuple):
-    """A particular location in the original, not preprocessed source code.
-
-    :ivar original_name: The original source filename. If the document is composed of
-        a master file and (possibly nested) includes this will be the name of the file
-        that the position is related to.
-    :ivar original_text: The original, i.e. not yet preprocessed text-content of the
-        file the position relates to.
-    :ivar pos: The location within original_text.
-    """
-    original_name: str          # the file name (or path or uri) of the source code
-    original_text: Union[str, StringView]  # the source code itself
-    pos: int                    # a position within the code
-    __module__ = __name__       # needed for cython compatibility
-
-
 class SourceMap(NamedTuple):
     """Class SourceMap captures a mapping from the preprocessed source code (that is
     possibly also stitched together from different files) to the original source files
@@ -271,7 +267,7 @@ class SourceMap(NamedTuple):
     :ivar offsets: The list of offsets corresponding to the positions. For each position
         entry positions[n], the corresponding offsets value offsets[n] contains
         the offset (positive or negative or zero) that will be added to all locations
-        in the half open interval [ positions[n], positions[n + 1] [
+        in the half-open interval [ positions[n], positions[n + 1] [
     :ivar file_names: A list of file names corresponding to the positions, i.e. for each
         position[n] the name of the file that the text from this position just until
         before the next position was taken from.
@@ -284,9 +280,6 @@ class SourceMap(NamedTuple):
     file_names: List[str]       # list of file_names to which the source locations relate
     originals_dict: Dict[str, Union[str, StringView]]  # File names => (included) source texts
     __module__ = __name__       # needed for cython compatibility
-
-
-SourceMapFunc: TypeAlias = Union[Callable[[int], SourceLocation], functools.partial]
 
 
 def gen_neutral_srcmap_func(original_text: Union[StringView, str], original_name: str = '') -> SourceMapFunc:

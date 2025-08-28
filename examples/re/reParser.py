@@ -53,7 +53,8 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, DropFro
 from DHParser.pipeline import end_points, full_pipeline, create_parser_junction, \
     create_preprocess_junction, create_junction, PseudoJunction
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
-    gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
+    gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors, \
+    SourceMap, source_map
 from DHParser.stringview import StringView
 from DHParser.toolkit import is_filename, load_if_file, cpu_count, RX_NEVER_MATCH, \
     ThreadLocalSingletonFactory, expand_table
@@ -93,68 +94,58 @@ RE_INCLUDE = NEVER_MATCH_PATTERN
 RE_COMMENT = NEVER_MATCH_PATTERN
 
 
-def reTokenizer(original_text) -> Tuple[str, List[Error]]:
-    pattern = original_text
-    nesting = 0
-    verbose = [(False, nesting)]
-    in_class = False
-    result = []
+def inCharSet(l: str, k: int) -> bool:
     i = 0
-    def process_verbose_flag(k):
-        default = True
-        while k < len(pattern) and pattern[k] in {'-', 'i', 'm', 'x', 'u', 's', 'L', 'a'}:
-            if pattern[k] == '-':
-                default = False
-            if pattern[k] == 'x':
-                verbose.append((default, nesting))
-                break
-            k += 1
-
-    while i < len(pattern): # TODO: very messed up
-        char = pattern[i]
-        if char == '\\':  # Escape sequence, keep next char as-is
-            result.append(char)
-            i += 1
-            if i < len(pattern):
-                result.append(pattern[i])
-        elif char == '[' and not in_class:
-            in_class = True
-            result.append(char)
-        elif char == ']' and in_class:
-            in_class = False
-            result.append(char)
-        elif char == '(' and not in_class:
-            nesting += 1
-            if pattern[i:i + 2] == "(?":
-                process_verbose_flag(i + 2)
-                if i == 0 and len(verbose) > 1:
-                    state = verbose[-1][0]
-                    verbose = [(state, -1)]
-            result.append(char)
-        elif char == ')' and not in_class:
-            if verbose[-1][1] == nesting:
-                verbose.pop()
-            nesting -= 1
-            result.append(char)
-        elif verbose[-1][0]:
-            if char == '#' and not in_class:
-                # Skip to end of line (comment)
-                while i < len(pattern) and pattern[i] != '\n':
-                    i += 1
-            elif char in ' \t\n\r' and not in_class:
-                # Ignore whitespace outside character classes
-                pass
-        else:
-            result.append(char)
+    state = 'neutral'
+    while i < k:
+        if state == 'escaped':
+            state = 'neutral'
+        elif l[i] == '\\':
+            state = 'escaped'
+        elif l[i] == '[':
+            state = 'inset'
+        elif l[i] == ']':
+            state = 'neutral'
         i += 1
-        pattern = ''.join(result)
+    return state == 'inset'
 
-    # TODO: Source mapping still missing!
+def reStripComments(original_text, original_name) -> PreprocessorResult:
+    positions = [0]
+    offsets = [0]
+    l = original_text.splitlines(keepends=True)
+    for i in range(len(l)):
+        n = len(l[i])
 
-    return original_text, []
+        l[i] = l[i].lstrip()
+
+        n = n - len(l[i])
+        if n > 0:
+            offsets[-1] += n
+
+        n = len(l[i])
+
+        k = l[i].rfind('#')
+        if not inCharSet(l[i], k):
+            l[i] = l[i][:k]
+        l[i] = l[i].rstrip()
+
+        m = len(l[i])
+        n = n - m
+        if m > 0:
+            positions.append(positions[-1] + m)
+            offsets.append(offsets[-1] + n)
+        else:
+            offsets[-1] += n
+
+    stripped_text = ''.join(l)
+    mapping = SourceMap(original_name, positions, offsets,
+                        original_text * len(positions),
+                        {original_name: original_text})
+    mapper = partial(source_map, srcmap=mapping)
+    return PreprocessorResult(original_text, stripped_text, mapper, [])
 
 preprocessing: PseudoJunction = create_preprocess_junction(
-    reTokenizer, RE_INCLUDE, RE_COMMENT)
+    reStripComments, RE_INCLUDE, RE_COMMENT)
 
 
 #######################################################################
@@ -169,9 +160,9 @@ class reGrammar(Grammar):
     _entity = Forward()
     _item = Forward()
     pattern = Forward()
-    source_hash__ = "fb0058083d7820b01f7d4b8eedff5834"
+    source_hash__ = "b04b715c2dd64c3285dc1c6a55d82f96"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:_octal$|EOF$|_group$|_character$|_number$|_entity$|_escapedCh$|_illegal$|_special$|_escape$|_grpItem$|BS$|_extension$|_nibble$|_item$|_anyChar$)')
+    disposable__ = re.compile('(?:_special$|_anyChar$|_char$|EOF$|_nibble$|_entity$|_escapedCh$|_chars$|_grpChars$|_octal$|_illegal$|_item$|_group$|_number$|_extension$|BS$|_grpItem$|_escape$|_grpChar$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -180,15 +171,19 @@ class reGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    VERBOSE_WHITESPACE = RegExp('\\s*(?:#.*(?=\\n|$))?\\s*')
     EOF = Drop(NegativeLookahead(RegExp('.')))
     bs = RegExp('\\\\')
     BS = Drop(Synonym(bs))
     _anyChar = RegExp('[^|+*?]')
-    charSeq = OneOrMore(Series(NegativeLookahead(_entity), _anyChar, dwsp__))
-    _character = RegExp('[^)|+*?]')
-    characters = OneOrMore(Series(NegativeLookahead(_entity), _character, dwsp__))
-    _grpItem = Series(Alternative(_entity, characters), dwsp__)
+    _char = Series(NegativeLookahead(_entity), _anyChar)
+    char = Series(_char, NegativeLookahead(_char))
+    charSeq = Series(_char, OneOrMore(_char))
+    _grpChar = Series(NegativeLookahead(_entity), RegExp('[^)|+*?]'))
+    grpChar = Series(_grpChar, NegativeLookahead(_grpChar))
+    grpCharSeq = Series(_grpChar, OneOrMore(_grpChar))
+    _grpChars = Alternative(grpChar, grpCharSeq)
+    _chars = Alternative(char, charSeq)
+    _grpItem = Alternative(_entity, _grpChars)
     zeroOrOne = Text("?")
     zeroOrMore = Text("*")
     _number = RegExp('[0-9]+')
@@ -232,24 +227,24 @@ class reGrammar(Grammar):
     _special = Alternative(any, start, end)
     noBacktracking = Text("+")
     notGreedy = Text("?")
-    grpRepetition = Series(_grpItem, repType, Option(Alternative(notGreedy, noBacktracking)), dwsp__)
+    grpRepetition = Series(_grpItem, repType, Option(Alternative(notGreedy, noBacktracking)))
     grpPattern = ZeroOrMore(Alternative(grpRepetition, _grpItem))
-    grpRegex = Series(dwsp__, grpPattern, ZeroOrMore(Series(Drop(Text("|")), dwsp__, grpPattern)))
+    grpRegex = Series(grpPattern, ZeroOrMore(Series(Drop(Text("|")), grpPattern)))
     lookaround = Series(lrtype, grpRegex, mandatory=1)
     namedGroup = Series(Drop(Text("P<")), groupName, Drop(Text(">")), grpRegex, mandatory=1)
     subRegex = Series(Drop(Text(">")), grpRegex, mandatory=1)
     capturing = Synonym(grpRegex)
     bifurcation = Series(Drop(Text("(")), Alternative(groupId, groupName), Drop(Text(")")), pattern, Drop(Text("|")), grpPattern, mandatory=1)
-    repetition = Series(_item, repType, Option(Alternative(notGreedy, noBacktracking)), dwsp__)
+    repetition = Series(_item, repType, Option(Alternative(notGreedy, noBacktracking)))
     nonCapturing = Series(Option(flags), Drop(Text(":")), grpRegex, mandatory=2)
     _extension = Series(Drop(Text("?")), Alternative(nonCapturing, subRegex, namedGroup, backRef, comment, lookaround, bifurcation), mandatory=1)
     _group = Series(Drop(Text("(")), Alternative(_extension, capturing), Drop(Text(")")), mandatory=1)
     flagGroups = OneOrMore(Series(Drop(Text("(?")), flags, Drop(Text(")")), mandatory=2))
-    regex = Series(dwsp__, pattern, ZeroOrMore(Series(Drop(Text("|")), dwsp__, pattern)))
+    regex = Series(pattern, ZeroOrMore(Series(Drop(Text("|")), pattern)))
     _entity.set(Alternative(_special, _escape, charset, _group))
-    _item.set(Series(Alternative(_entity, charSeq), dwsp__))
+    _item.set(Alternative(_entity, _chars))
     pattern.set(ZeroOrMore(Alternative(repetition, _item)))
-    regular_expression = Series(dwsp__, Option(flagGroups), Alternative(regex, Drop(Text(")"))), EOF)
+    regular_expression = Series(Option(flagGroups), Alternative(regex, Drop(Text(")"))), EOF)
     root__ = regular_expression
     
 parsing: PseudoJunction = create_parser_junction(reGrammar)
@@ -298,11 +293,12 @@ re_AST_transformation_table = {
     # "group": [replace_by_single_child],
     "regex, grpRegex": [change_name('regex'), replace_by_single_child],
     "pattern, grpPattern": [change_name('pattern'),
-                            merge_adjacent(is_one_of('characters')),
+                            merge_adjacent(is_one_of('charSeq')),
                             replace_by_single_child],
     "grpRepetition": [change_name('repetition')],
     "hex2, hex4, hex8": [change_name('hex')],
-    "escCh, charSeq, bs": [change_name('characters')],
+    "grpChar, char": [change_name('char')],
+    "escCh, grpCharSeq, bs": [change_name('charSeq')],
 }
 
 
@@ -425,6 +421,7 @@ class reCompiler(Compiler):
 
     def on_nonCapturing(self, node):
         if node[0].name == 'flags':
+            verbose_already = 'x' in self.get_effective_flags(node).positive
             flags = self.gather_flags(node)
             if flags:  node.attr['flags'] = flags
             for i in range(len(node.children)):
@@ -432,14 +429,21 @@ class reCompiler(Compiler):
                     node.result = node.result[i:]
                     break
             self.evaluate_flags()
+            if 'x' in self.get_effective_flags(node).positive \
+                    and not verbose_already:
+                self.tree.new_error(node,
+                    'Flag "x" ("verbose") is ignored in non-capturing groups! '
+                    'In order to allow verbose regular expressions, please '
+                    'place the flag "x" at the very beginning of your pattern '
+                    'with the flag group "(?x)".', WARNING)
         return self.fallback_compiler(node)
 
     def on_pattern(self, node):
         # if 'x' in self.get_effective_flags(node).positive:  # NEED a pre-processor for this!
         #     result = [node[0]]
         #     for nd in node.children[1:]:
-        #         if (result[-1].name == 'characters'
-        #                 and (nd.name == 'characters' or
+        #         if (result[-1].name == 'charSeq'
+        #                 and (nd.name == 'charSeq' or
         #                      (nd.name == 'any'
         #                       and RX_INTERRUPTED_COMMENT.fullmatch(result[-1].content)))):
         #                 result[-1].result = result[-1].content + nd.content
@@ -451,7 +455,7 @@ class reCompiler(Compiler):
         replace_by_single_child(self.path)
         return node
 
-    def on_characters(self, node):
+    def on_charSeq(self, node):
         # content = node.content
         # if node is self.last_leaf or content.find('\n') >= 0:
         #     if RX_COMMENT.fullmatch(node.content):
