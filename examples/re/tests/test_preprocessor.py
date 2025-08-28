@@ -21,7 +21,7 @@ class TestPreprocessor:
             )
             """
         compact_regex = reStripComments(regex, "<memory>").preprocessed_text
-        print(compact_regex)
+        assert compact_regex == '''(?x)<(a)([^>]*href=['"]?[^#'"])'''
 
 
 if __name__ == "__main__":
