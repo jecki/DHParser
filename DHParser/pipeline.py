@@ -46,7 +46,7 @@ from DHParser.nodetree import RootNode, Node
 from DHParser.parse import Grammar, ParserFactory, Parser
 from DHParser.preprocess import PreprocessorFactory, PreprocessorFunc, Tokenizer, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors, \
-    DeriveFileNameFunc
+    DeriveFileNameFunc, PreprocessorResult
 from DHParser.toolkit import ThreadLocalSingletonFactory, deprecation_warning, deprecated, \
     get_annotations, CancelQuery
 from DHParser.trace import resume_notices_on, set_tracer, trace_history
@@ -289,7 +289,9 @@ def _preprocessor_factory(prep_func: Union[PreprocessorFunc, Tokenizer],
     include_prep = partial(preprocess_includes, find_next_include=find_next_include)
     anno = get_annotations(prep_func)
     try:
-        if anno['return'] == "PreprocessorResult":
+        print('>>>', anno['return'], '>>>', PreprocessorResult)
+        if anno['return'] == PreprocessorResult:
+            print('hicks')
             assert func_type is None or func_type is PreprocessorFunc, \
                 f"func_type={func_type} is incompatible with return type PreprocessorResult of " \
                 f"parameter prep_func when calling DHParser.pipeline.create_preprocess_junction()"

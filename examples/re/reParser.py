@@ -138,8 +138,12 @@ def reStripComments(original_text, original_name) -> PreprocessorResult:
             offsets[-1] += n
 
     stripped_text = ''.join(l)
+
+    if positions[-1] < 2:
+        print('!!!', positions, len(stripped_text))
+
     mapping = SourceMap(original_name, positions, offsets,
-                        original_text * len(positions),
+                        [original_text] * len(positions),
                         {original_name: original_text})
     mapper = partial(source_map, srcmap=mapping)
     return PreprocessorResult(original_text, stripped_text, mapper, [])

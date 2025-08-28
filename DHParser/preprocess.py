@@ -310,7 +310,7 @@ def source_map(position: int, srcmap: SourceMap) -> SourceLocation:
             srcmap.originals_dict[original_name],
             min(position + srcmap.offsets[i - 1], srcmap.positions[i] + srcmap.offsets[i]))
     raise ValueError(f"Position {position} seems is out of range "
-                     f"[{srcmap.positions[0]}], {srcmap.positions[-1]}] "
+                     f"[{srcmap.positions[0]}, {srcmap.positions[-1]}[ "
                      f"or source map ist corrupted.")
 
 
