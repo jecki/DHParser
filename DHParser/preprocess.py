@@ -120,6 +120,16 @@ class PreprocessorResult(NamedTuple):
     errors: List[Error]
     __module__ = __name__  # required for cython/pickle compatibility
 
+    @staticmethod
+    def from_SourceMap(mapping: SourceMap,
+                       original_text: Union[str, StringView],
+                       processed_text: Union[str, StringView],
+                       errors: List[Error]) -> PreprocessorResult:
+        mapping.validate()
+        mapper = functools.partial(source_map, srcmap=mapping)
+        return PreprocessorResult(original_text, processed_text, mapper, errors)
+
+
 FindIncludeFunc: TypeAlias = Union[Callable[[str, int], IncludeInfo],   # (document: str,  start: int)
                                    functools.partial]
 IncludeReaderFunc = Callable[[str], str]
@@ -281,6 +291,20 @@ class SourceMap(NamedTuple):
     originals_dict: Dict[str, Union[str, StringView]]  # File names => (included) source texts
     __module__ = __name__       # needed for cython compatibility
 
+    def validate(self) -> SourceMap:   # actually returns Self
+        if len(self.positions) != len(self.offsets) != len(self.file_names):
+            raise ValueError("The length of the lists of positions, offsets and file names "
+                             "must be equal.")
+        if len(self.positions) < 2:
+            raise ValueError("The length of the lists of positions, offsets and file names "
+                             "must be at least 2.")
+        if self.positions[0] != 0:
+            raise ValueError("The first element of the list of positions must be 0.")
+        if not all(self.positions[i] < self.positions[i + 1]
+                   for i in range(len(self.positions) - 1)):
+            raise ValueError("The list of positions must be strictly increasing.")
+        return self
+
 
 def gen_neutral_srcmap_func(original_text: Union[StringView, str], original_name: str = '') -> SourceMapFunc:
     """Generates a source map function that maps positions to itself."""
@@ -360,17 +384,13 @@ def tokenized_to_original_mapping(tokenized_text: str,
         positions.append(len(tokenized_text) + 1)
         offsets.append(offsets[-1])
 
-    # post conditions
-    assert len(positions) == len(offsets), '\n' + str(positions) + '\n' + str(offsets)
-    assert positions[0] == 0
-    assert all(positions[i] < positions[i + 1] for i in range(len(positions) - 1))
-
     # specific condition for preprocessor tokens
     assert all(offsets[i] > offsets[i + 1] for i in range(len(offsets) - 2))
 
     L = len(positions)
     return SourceMap(
-        original_name, positions, offsets, [original_name] * L, {original_name: original_text})
+        original_name, positions, offsets, [original_name] * L, {original_name: original_text}).\
+        validate()
 
 
 def make_preprocessor(tokenizer: Tokenizer) -> PreprocessorFunc:

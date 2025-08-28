@@ -139,14 +139,15 @@ def reStripComments(original_text, original_name) -> PreprocessorResult:
 
     stripped_text = ''.join(l)
 
-    if positions[-1] < 2:
-        print('!!!', positions, len(stripped_text))
+    if positions[-1] <= len(stripped_text):
+        positions.append(len(stripped_text) + 1)
+        offsets.append(offsets[-1])
 
     mapping = SourceMap(original_name, positions, offsets,
-                        [original_text] * len(positions),
+                        [original_name] * len(positions),
                         {original_name: original_text})
-    mapper = partial(source_map, srcmap=mapping)
-    return PreprocessorResult(original_text, stripped_text, mapper, [])
+    return PreprocessorResult.from_SourceMap(
+        mapping, original_text, stripped_text, [])
 
 preprocessing: PseudoJunction = create_preprocess_junction(
     reStripComments, RE_INCLUDE, RE_COMMENT)
