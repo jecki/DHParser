@@ -289,9 +289,7 @@ def _preprocessor_factory(prep_func: Union[PreprocessorFunc, Tokenizer],
     include_prep = partial(preprocess_includes, find_next_include=find_next_include)
     anno = get_annotations(prep_func)
     try:
-        print('>>>', anno['return'], '>>>', PreprocessorResult)
         if anno['return'] == PreprocessorResult:
-            print('hicks')
             assert func_type is None or func_type is PreprocessorFunc, \
                 f"func_type={func_type} is incompatible with return type PreprocessorResult of " \
                 f"parameter prep_func when calling DHParser.pipeline.create_preprocess_junction()"
