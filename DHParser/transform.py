@@ -1295,7 +1295,7 @@ def fuse_anonymous_leaves(result: list[Node]) -> list[Node, ...]:
 def fuse(result: Sequence[Node],
          swallow: Optional[CondFunc] = None) -> Union[str, Tuple[Node, ...]]:
     """Merges the nodes in the given sequence of nodes by either
-    mergeing their content, if they are all leaves nodes or their results.
+    merging their content, if they are all leaves nodes or their results.
 
     :param result: The sequence of nodes to merge.
     :param swallow: A function that takes a node as an argument and
@@ -1340,7 +1340,7 @@ def merge_adjacent(path: Path,
     first node of the merge will be chosen. (Note that the assignment
     of the preferred name only happens if a merge actually took place,
     i.e. if there are at least two nodes that have been merged.
-    `´merge_adjacent()`` will not rename single nodes.)
+    ``merge_adjacent()`` will not rename single nodes.)
 
     'merge_adjacent' differs from :py:func:`collapse_children_if` in
     two respects:

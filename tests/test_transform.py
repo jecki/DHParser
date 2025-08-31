@@ -404,6 +404,15 @@ class TestMerge:
         merge_adjacent([t], is_one_of('i', 'a', 'z',), 'i', swallow=is_a('a'))
         assert flatten_sxpr(t.as_sxpr()) == '(p (i (a `(attr "1") "=>") (:Text "targetbeta")) (x "!"))'
 
+    def test_merge_adjacent_swallow(self):
+        tree = parse_sxpr('(A (B "1") (C "2") (D "3") (E "4") (F "5") (G "6"))')
+        merge_adjacent([tree], is_one_of('C', 'D', 'E', 'F'), 'X', swallow=is_a('E'))
+        assert tree.as_sxpr() == '(A (B "1") (X (:Text "23") (E "4") (:Text "5")) (G "6"))'
+
+        tree = parse_sxpr('(A (B "1") (C "2") (D "3") (E "4") (F "5"))')
+        merge_adjacent([tree], is_one_of('C', 'D', 'E'), 'package', swallow=is_one_of('C', 'D', 'E'))
+        assert tree.as_sxpr() == '(A (B "1") (package (C "2") (D "3") (E "4")) (F "5"))'
+
 
 class TestAttributeHandling:
     def test_swap_attributes(self):
