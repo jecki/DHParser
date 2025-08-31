@@ -76,7 +76,7 @@ _special   = any | start | end
 
 _escape      = BS § ( bs | chCode | chName | groupId | reEsc | specialEsc | error | escCh )
   reEsc      = /[AbBdDsSwWZ]/
-  specialEsc = /[abfnNrtUvx]/
+  specialEsc = /[afnrtv]/
   chCode     = "x" hex2 | "u" hex4 | "U" hex8 | oct
     hex2     = _nibble*2
     hex4     = _nibble*4

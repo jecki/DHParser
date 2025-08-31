@@ -170,9 +170,9 @@ class reGrammar(Grammar):
     _entity = Forward()
     _item = Forward()
     pattern = Forward()
-    source_hash__ = "b04b715c2dd64c3285dc1c6a55d82f96"
+    source_hash__ = "ea9d51cde5c670e4826d6817e84e3e79"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:_special$|_anyChar$|_char$|EOF$|_nibble$|_entity$|_escapedCh$|_chars$|_grpChars$|_octal$|_illegal$|_item$|_group$|_number$|_extension$|BS$|_grpItem$|_escape$|_grpChar$)')
+    disposable__ = re.compile('(?:_group$|BS$|_char$|_octal$|_escapedCh$|_entity$|_grpItem$|_chars$|_special$|EOF$|_extension$|_illegal$|_item$|_nibble$|_number$|_grpChar$|_anyChar$|_escape$|_grpChars$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -228,7 +228,7 @@ class reGrammar(Grammar):
     _escapedCh = Series(BS, Alternative(chCode, chSpecial))
     chRange = Series(Alternative(_escapedCh, ch), Drop(Text("-")), Alternative(_escapedCh, ch))
     charset = Series(Drop(Text("[")), Option(complement), OneOrMore(Alternative(chRange, escapedSet, _escapedCh, Series(BS, error), ch)), Drop(Text("]")))
-    specialEsc = RegExp('[abfnNrtUvx]')
+    specialEsc = RegExp('[afnrtv]')
     reEsc = RegExp('[AbBdDsSwWZ]')
     _escape = Series(BS, Alternative(bs, chCode, chName, groupId, reEsc, specialEsc, error, escCh), mandatory=1)
     end = Text("$")
