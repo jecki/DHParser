@@ -5263,11 +5263,11 @@ class ContentMapping:
         if index_out is not None:  index_out.append(path_index)
         return ContentLocation(self._path_list[path_index], pos - self._pos_list[path_index])
 
-    def get_node_index(self, node: Node, reverse: bool=False) -> int:
+    def get_node_index(self, node: Optional[Node], reverse: bool=False) -> int:
         """Returns the index in the path_list of the first or last
-        (if reverse is True) path that contains node or -1, if the
-        node cannot be found. Note: If node is a leaf node,
-        the first and last index are the same. Otherwise, it
+        (if reverse is True) path that contains node or -1, if node
+        is Nonde or the node cannot be found. Note: If node is a leaf
+        node, the first and last index are the same. Otherwise, it
         occurs (if at all) more often than once if it or any of its
         children has more than one child.
 
@@ -5287,6 +5287,8 @@ class ContentMapping:
             >>> cm.get_node_index(tree.pick('A', include_root=True), reverse=True)
             2
         """
+        if node is None:
+            return -1
         if reverse:
             while node.children:
                 node = node.children[-1]
@@ -5304,8 +5306,8 @@ class ContentMapping:
     def get_node_position(self, node: Node, reverse: bool=False) -> int:
         """Returns the string-position of first or last + 1 (if reverse
         is True) character of the first or last occurrence of node
-        within the mapping. If node is not contained in any path of
-        the mapping, -1 will be returned. If node is a leaf node it
+        within the mapping. If node is None or not contained in any path
+        of the mapping, -1 will be returned. If node is a leaf node it
         occurs only once (if at all) in the mapping. Otherwise, it
         occurs (if at all) more often than once if it or any of its
         children has more than one child.
