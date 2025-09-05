@@ -108,7 +108,7 @@ from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, linebreaks, line_col, JSONnull, JSON_Dict, \
     validate_XML_attribute_value, fix_XML_attribute_value, lxml_XML_attribute_value, \
     abbreviate_middle, TypeAlias, deprecated, RxPatternType, INFINITE, LazyRE, \
-    AbstractSet, FrozenSet, Set
+    AbstractSet, FrozenSet, Set, deprecation_warning
 
 try:
     import cython
@@ -210,6 +210,8 @@ __all__ = ('WHITESPACE_PTYPE',
            'leaf_paths',
            'reset_chain_ID',
            'DEFAULT_START_INDEX_SENTINEL',
+           'LocationInfo',
+           'NodeLocation',
            'ContentMapping',
            'SerPart',
            'SerLocation',
@@ -5016,24 +5018,25 @@ def leaf_paths(criterion: PathSelector) -> PathMatchFunction:
 
 
 class ContentLocation(NamedTuple):
-    """A location within in a context mapping"""
+    """DEPRECATED: A location within in a context mapping"""
     path: Path
     offset: int
     __module__ = __name__  # required for cython/pickle compatibility
 
 
-# class StrictNodeLocation(NamedTuple):
-#     "Location of a node within the context mapping."
-#     node: Node
-#     path_index: int
-#     __module__ = __name__
+class LocationInfo(NamedTuple):
+    """A location within in a context mapping"""
+    path_index: int
+    path: Path
+    offset: int
+    __module__ = __name__  # required for cython/pickle compatibility
 
 
 class NodeLocation(NamedTuple):
     "Location (possibly void) of a node within the context mapping."
     node: Optional[Node]
     path_index: int
-    __moddule__ = __name__
+    __moddule__ = __name__  # required for cython/pickle compatibility
 
 
 DEFAULT_START_INDEX_SENTINEL = -2 ** 30
@@ -5243,25 +5246,48 @@ class ContentMapping:
         return path_index
 
     def get_path_and_offset(self, pos: int, left_biased: bool = False,
-                            index_out: Optional[List[int]] = None) -> ContentLocation:
+                            index_out: Optional[List[int]] = None) -> Tuple[Path, int]:
         """Returns the path and relative position within the leaf-node of
-        the path.
+        the path for a given position.
 
         :param pos: the position in the string-content for which the path and
             offset should be determined.
         :param left_biased: yields the location after the end of the previous
             path rather than the location at the very beginning of the
             next path. Default value is "False".
-        :param index_out: the index of the path in the content mapping's path-list
-            will be appended to index_out (optional parameter!)
+        :param index_out: DEPRECATED the index of the path in the content
+            mapping's path-list will be appended to index_out.
 
-        :returns:   tuple (path, offset) where the offset is the position
+        :returns:  tuple (path, offset) where the offset is the position
             of ``pos`` relative to the actual position of the last node in the path.
         :raises:    IndexError if not 0 <= position < length of document
         """
         path_index = self.get_path_index(pos, left_biased)
-        if index_out is not None:  index_out.append(path_index)
-        return ContentLocation(self._path_list[path_index], pos - self._pos_list[path_index])
+        if index_out is not None:
+            deprecation_warning('index_out parameter of ContentMapping.get_path_and_offset() '
+                                'is deprecated and should not be used anymore! Use '
+                                'ContentMapping.get_location() instead.')
+            index_out.append(path_index)
+        return (self._path_list[path_index], pos - self._pos_list[path_index])
+
+    def get_location(self, pos: int, left_biased: bool = False) -> LocationInfo:
+        """Returns the path-index, the path and the relative position within
+        the leaf-node of the path for a given position.
+
+        :param pos: the position in the string-content for which the path and
+            offset should be determined.
+        :param left_biased: yields the location after the end of the previous
+            path rather than the location at the very beginning of the
+            next path. Default value is "False".
+
+        :returns:  LocationInfo, i.e. the tuple (path-index, path, offset) where
+            the offset is the position of ``pos`` relative to the actual position
+            of the last node in the path.
+        :raises:  IndexError if not 0 <= position < length of document
+        """
+        path_index = self.get_path_index(pos, left_biased)
+        return LocationInfo(
+            path_index, self._path_list[path_index], pos - self._pos_list[path_index])
 
     def get_node_index(self, node: Optional[Node], reverse: bool=False) -> int:
         """Returns the index in the path_list of the first or last
@@ -5698,8 +5724,7 @@ class ContentMapping:
             return NodeLocation(common_ancestor, path_index)
 
         bag = []
-        path_A, pos_A = self.get_path_and_offset(start_pos, index_out=bag)
-        path_index = bag[0]
+        path_index, path_A, pos_A = self.get_location(start_pos)
         path_B, pos_B = self.get_path_and_offset(end_pos, left_biased=True)
         assert path_A
         assert path_B
@@ -5855,9 +5880,13 @@ class LocalContentMapping(ContentMapping):
         return super().get_path_index(pos + self.pos_offset, left_biased) - self.first_index
 
     def get_path_and_offset(self, pos: int, left_biased: bool = False,
-                            index_out: Optional[List[int]] = None) -> ContentLocation:
+                            index_out: Optional[List[int]] = None) -> Tuple[Path, int]:
         pth, off = super().get_path_and_offset(pos + self.pos_offset, left_biased, index_out)
-        return ContentLocation(pth, off - self.pos_offset)
+        return (pth, off - self.pos_offset)
+
+    def get_location(self, pos: int, left_biased: bool = False) -> LocationInfo:
+        idx, pth, off = super().get_location(pos + self.pos_offset, left_biased)
+        return (idx, pth, off - self.pos_offset)
 
     def iterate_paths(self, start_pos: int, end_pos: int, left_biased: bool = False) \
             -> Iterator[Path]:
@@ -5873,8 +5902,8 @@ class LocalContentMapping(ContentMapping):
     def rebuild_mapping(self, start_pos: int, end_pos: int):
         super().rebuild_mapping(start_pos + self.pos_offset, end_pos + self.pos_offset)
 
-    def insert_node(self, pos: int, node: Node) -> NodeLocation:
-        return super().insert_node(pos + self.pos_offset, node)
+    def insert_node(self, pos: int, node: Node, left_biased: bool=False) -> NodeLocation:
+        return super().insert_node(pos + self.pos_offset, node, left_biased)
 
     def markup(self, start_pos: int, end_pos: int, name: str,
                *attr_dict, **attributes) -> NodeLocation:
