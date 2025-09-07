@@ -919,7 +919,8 @@ def update_attr(dest: Node, src: Union[Node, Tuple[Node, ...]], root: Node):
             for k, v in s.attr.items():
                 if k in dest.attr and v != dest.attr[k]:
                     raise ValueError('Conflicting attribute values %s and %s for key %s '
-                                     'when reducing %s to %s ! Tree transformation stopped.'
+                                     'when merging or reducing %s to %s ! '
+                                     'Tree transformation stopped.'
                                      % (v, dest.attr[k], k, str(src), str(dest)))
                 dest.attr[k] = v
         # transfer errors
