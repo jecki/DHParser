@@ -1144,6 +1144,11 @@ def load_if_file(text_or_file) -> str:
                     % (text_or_file, text_or_file))
             else:
                 return text_or_file
+        except UnicodeDecodeError as e:
+            e.add_note(
+                f'The file "{text_or_file}" could not be read. '
+                'Please check that the file is not corrupted.')
+            raise
     else:
         return text_or_file
 

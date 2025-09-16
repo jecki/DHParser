@@ -63,7 +63,7 @@ __all__ = set().union(compile.__all__,
 
 name = "DHParser"
 __title__ = "DHParser"
-__description__ = "Construction-Kit for Domain Specific Languages"
+__description__ = "Parser-Generator and Construction-Kit for Domain Specific Languages"
 __url__ = 'https://gitlab.lrz.de/badw-it/DHParser'
 __uri__ = __url__
 __author__ = "Eckhart Arnold"

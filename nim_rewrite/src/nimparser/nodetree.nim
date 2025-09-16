@@ -12,7 +12,7 @@ type
   Node* = ref NodeObj not nil
   NodeOrNil* = ref NodeObj
   NodeObj {.acyclic.} = object of RootObj
-    nameRef*: StringRef
+    nameRef*: StringRef   # ref used to avoid copy on write when parser creates new nodes
     childrenSeq: seq[Node]
     textSlice: StringSlice
     attributesRef: ref Attributes

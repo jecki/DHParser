@@ -251,7 +251,7 @@ def main(called_from_app=False) -> bool:
             dir_name = file_names[0]
             echo('Processing all files in directory: ' + dir_name)
             file_names = [os.path.join(dir_name, fn) for fn in os.listdir(dir_name)
-                          if os.path.isfile(os.path.join(dir_name, fn))]
+                          if fn[0:1] != '.' and os.path.isfile(os.path.join(dir_name, fn))]
         elif not ('-o' in sys.argv or '--out' in sys.argv):
             batch_processing = False
 
