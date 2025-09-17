@@ -121,6 +121,7 @@ __all__ = ('re',
            'last',
            'NOPE',
            'INFINITE',
+           'subf',
            'matching_brackets',
            'linebreaks',
            'line_col',
@@ -638,6 +639,25 @@ except AttributeError:
     RxPatternType: TypeAlias = Any
 
 
+def subf(rx: Union[RxPatternType, LazyRE], repl: Callable[[str], str], text) -> str:
+    r"""Substitutes a pattern in text with a replacement that is derived
+    from the found matches by a function. Example::
+
+    >>> RX_CTRL_CHARS = re.compile(r'''[\x00-\x08\x0A-\x1F]''')
+    >>> subf(RX_CTRL_CHARS, lambda s: str(ord(s)), '\r')
+    '13'
+    """
+    a = 0
+    chunks = []
+    for m in rx.finditer(text):
+        start = m.start()
+        if a < start:
+            chunks.append(text[a:start])
+        chunks.append(repl(m.group(0)))
+        a = m.end()
+    if a < len(text): chunks.append(text[a:])
+    return ''.join(chunks)
+
 
 @deprecated('find_re() is deprecated. Use re.search() from the Python-Standard-Library, instead!')
 def re_find(s, r, pos=0, endpos=9223372036854775807):
@@ -922,17 +942,18 @@ def _sub_size(rx: Union[RxPatternType, LazyRE], text: str, fill_char: str = ' ')
         '([     ]*(?=[     ]))'
     """
     assert len(fill_char) == 1
-    a = 0
-    chunks = []
-    for m in rx.finditer(text):
-        start = m.start()
-        end = m.end()
-        if a < start:
-            chunks.append(text[a:start])
-        chunks.append(fill_char * (end - start))
-        a = end
-    if a < len(text): chunks.append(text[a:])
-    return ''.join(chunks)
+    return subf(rx, lambda ms: len(ms) * fill_char, text)
+    # a = 0
+    # chunks = []
+    # for m in rx.finditer(text):
+    #     start = m.start()
+    #     end = m.end()
+    #     if a < start:
+    #         chunks.append(text[a:start])
+    #     chunks.append(fill_char * (end - start))
+    #     a = end
+    # if a < len(text): chunks.append(text[a:])
+    # return ''.join(chunks)
 
 
 @cython.locals(da=cython.int, db=cython.int, a=cython.int, b=cython.int)

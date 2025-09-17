@@ -412,9 +412,9 @@ def create_path_match_function(criterion: PathSelector) -> PathMatchFunction:
 # support functions for tree-serialization
 
 
-RX_IS_SXPR = re.compile(r'\s*\(')
-RX_IS_XML = re.compile(r'\s*<')
-RX_ATTR_NAME = re.compile(r'[\w.:-]')
+RX_IS_SXPR = LazyRE(r'\s*\(')
+RX_IS_XML = LazyRE(r'\s*<')
+RX_ATTR_NAME = LazyRE(r'[\w.:-]')
 
 
 def flatten_sxpr(sxpr: str, threshold: int = -1) -> str:
@@ -1939,7 +1939,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             if 2, the attribute node (@) will always be present, even if empty.
         :param reflow_col:  If > 0, the serialized form of the tree will be
             reflowed to the given column width.
-        :param mapping:  If not NO_MAPPING_SENTINEL, a the passed dictionary
+        :param mapping:  If not NO_MAPPING_SENTINEL, the passed dictionary
             will be filled with a mapping of the nodes to the length of their
             opening, overall length and closing, respectively, e.g.
             '(name "Fritz")' -> (5, 14, 1)
@@ -3188,7 +3188,7 @@ class RootNode(Node):
 
 ## reflow-support #####################################################
 
-RX_WHITESPACE = re.compile(r'\s+')
+RX_WHITESPACE = LazyRE(r'\s+')
 
 class XMLSpacePolicy(IntEnum):
     """Policy for treating the xml:space Attribute when reformating XML.
@@ -3413,12 +3413,12 @@ def parse_sxml(sxml: Union[str, StringView]) -> RootNode:
     return parse_sxpr(sxml)
 
 
-RX_WHITESPACE_TAIL = re.compile(r'\s*$')
+RX_WHITESPACE_TAIL = LazyRE(r'\s*$')
 RX_XML_ATTRIBUTES = LazyRE(r'\s*(?P<attr>[\w:.-]+)\s*=\s*"(?P<value>.*?)"\s*')
-RX_XML_SPECIAL_TAG = re.compile(r'<(?![?!])')
+RX_XML_SPECIAL_TAG = LazyRE(r'<(?![?!])')
 RX_XML_OPENING_TAG = LazyRE(r'<\s*(?P<tagname>[\w:.-]+)\s*')
 RX_XML_CLOSING_TAG = LazyRE(r'</\s*(?P<tagname>[\w:.-]+)\s*>')
-RX_XML_HEADER = re.compile(r'<(?![?!])')
+RX_XML_HEADER = LazyRE(r'<(?![?!])')
 
 
 def parse_xml(xml: Union[str, StringView],
