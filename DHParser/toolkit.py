@@ -1118,7 +1118,7 @@ def char_code(unicode_ch) -> str:
 def ascii_xml_entity(ch) -> str:
     r"""Converts a character to an XML entity. Example::
 
-    >>> print(as_xml_entity('\r'))
+    >>> print(ascii_xml_entity('\r'))
     &#x0d;"""
     return f'&#x{ord(ch):02x};'
 
