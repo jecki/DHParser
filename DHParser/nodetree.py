@@ -107,8 +107,8 @@ from DHParser.preprocess import SourceMapFunc, gen_neutral_srcmap_func
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, linebreaks, line_col, JSONnull, JSON_Dict, \
     validate_XML_attribute_value, fix_XML_attribute_value, lxml_XML_attribute_value, \
-    abbreviate_middle, TypeAlias, deprecated, RxPatternType, INFINITE, LazyRE, \
-    AbstractSet, FrozenSet, Set, deprecation_warning
+    abbreviate_middle, TypeAlias, deprecated, RxPatternType, INFINITE, LazyRE, subf, \
+    AbstractSet, FrozenSet, Set, deprecation_warning, ascii_char_code, ascii_xml_entity
 
 try:
     import cython
@@ -523,6 +523,8 @@ RawMappingType: TypeAlias = Dict['Node', Tuple[int, Union[int,Sequence[int]], in
 NO_MAPPING_SENTINEL: RawMappingType = \
     {"don't generate a serialization mapping ": (-1, -1, -1)}
 NO_REFLOW = lambda tab, content, depth: content
+
+RX_CTRL_CHARS = re.compile(r'''[\x00-\x08\x0B-\x1F]''')
 
 
 class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibility
@@ -1997,6 +1999,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         def pretty(strg: str) -> str:
             """Encloses `strg` with the right kind of quotation marks."""
+            strg = subf(RX_CTRL_CHARS, ascii_char_code, strg)
             return '"%s"' % strg if strg.find('"') < 0 \
                 else "'%s'" % strg if strg.find("'") < 0 \
                 else '"%s"' % strg.replace('"', r'\"')
@@ -2213,6 +2216,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         def sanitizer(content: str) -> str:
             """Substitute "&", "<", ">" in XML-content by the respective entities."""
+            content = subf(RX_CTRL_CHARS, ascii_xml_entity, content)
             content = RX_AMPERSAND.sub('&amp;', content)
             content = content.replace('<', '&lt;').replace('>', '&gt;')
             return content

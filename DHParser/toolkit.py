@@ -100,6 +100,10 @@ __all__ = ('re',
            'validate_XML_attribute_value',
            'fix_XML_attribute_value',
            'lxml_XML_attribute_value',
+           'ascii_xml_entity',
+           'ascii_char_code',
+           'xml_entity',
+           'char_code',
            'RxPatternType',
            'escape_re',
            'escape_ctrl_chars',
@@ -643,7 +647,7 @@ def subf(rx: Union[RxPatternType, LazyRE], repl: Callable[[str], str], text) -> 
     r"""Substitutes a pattern in text with a replacement that is derived
     from the found matches by a function. Example::
 
-    >>> RX_CTRL_CHARS = re.compile(r'''[\x00-\x08\x0A-\x1F]''')
+    >>> RX_CTRL_CHARS = re.compile(r'''[\x00-\x08\x0B-\x1F]''')
     >>> subf(RX_CTRL_CHARS, lambda s: str(ord(s)), '\r')
     '13'
     """
@@ -1085,6 +1089,46 @@ def lxml_XML_attribute_value(value: Any) -> str:
     value = str(value)
     value = RX_NON_ASCII.sub('?', value)
     return fix_XML_attribute_value(value)
+
+
+def xml_entity(unicode_ch) -> str:
+    r"""Converts a unicode character to an XML entity."""
+    o = ord(unicode_ch)
+    if o < 256:
+        return f'&#x{o:02x};'
+    elif o < 65536:
+        return f'&#x{o:04x};'
+    else:
+        assert o < 2**32 -1
+        return f'&#x{o:08x};'
+
+
+def char_code(unicode_ch) -> str:
+    r"""Converts a unicode character to an XML entity."""
+    o = ord(unicode_ch)
+    if o < 256:
+        f'\\x{o:02x}'
+    elif o < 65536:
+        f'\\x{o:04x}'
+    else:
+        assert o < 2**32 -1
+        f'\\x{o:08x}'
+
+
+def ascii_xml_entity(ch) -> str:
+    r"""Converts a character to an XML entity. Example::
+
+    >>> print(as_xml_entity('\r'))
+    &#x0d;"""
+    return f'&#x{ord(ch):02x};'
+
+
+def ascii_char_code(ch) -> str:
+    r"""Converts a character with ord(ch) < 256 to char-code. Example::
+
+    >>> print(ascii_char_code('a'))
+    \x61"""
+    return f'\\x{ord(ch):02x}'
 
 
 #######################################################################

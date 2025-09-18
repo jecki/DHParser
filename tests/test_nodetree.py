@@ -1057,18 +1057,12 @@ class TestSerialization:
 
     def test_special_ch_serialization(self):
         tree = Node('A', '\r')
-        print(tree.strlen())
+        assert tree.strlen() == 1
         t2 = parse_sxpr(tree.as_sxpr())
-        print(len(t2.content))
-        print(tree.as_xml())
-        print(tree.as_sxpr())
-        print(t2.as_sxpr())
-        # t3 = parse_sxpr(r'(A "\x0A")')
-        # print(ord(t3.result[0]))
-        # print(t3.strlen())
-        # print(t3.as_sxpr())
-
-
+        assert len(t2.content) > 1
+        assert tree.as_xml() == '<A>&#x0d;</A>'
+        assert tree.as_sxpr() == r'(A "\x0d")'
+        assert t2.as_sxpr() == r'(A "\x0d")'
 
 class TestSegementExtraction:
     def test_get_path(self):
