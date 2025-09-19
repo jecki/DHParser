@@ -339,8 +339,8 @@ class HTMLTransformer(Compiler):
         if tag_name in self.tree.empty_tags \
                 and tag_name not in self.non_empty_tags:  # warn only once!
             self.tree.new_error(node,
-                                f'Tag-name "{tag_name}" has already been used for an empty-tag '
-                                f'<{tag_name}/> earlier. This is considered bad HTML-practice!',
+                                f'Tag-name {tag_name} has already been used for an empty-tag '
+                                f'{tag_name}/ earlier. This is considered bad HTML-practice!',
                                 WARNING_AMBIGUOUS_EMPTY_ELEMENT)
 
         self.non_empty_tags.add(tag_name)
@@ -365,8 +365,8 @@ class HTMLTransformer(Compiler):
         if node.name in self.non_empty_tags \
                 and node.name not in self.tree.empty_tags:  # warn only once!
             self.tree.new_error(node,
-                                f'Tag-name "{node.name}" has already been used for a non empty-tag '
-                                f'<{node.name}> ... </{node.name}> earlier. This is considered bad HTML-practice!',
+                                f'Tag-name {node.name} has already been used for a non empty-tag '
+                                f'{node.name} ... /{node.name} earlier. This is considered bad HTML-practice!',
                                 WARNING_AMBIGUOUS_EMPTY_ELEMENT)
 
         self.tree.empty_tags.add(node.name)

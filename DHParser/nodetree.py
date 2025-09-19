@@ -2249,7 +2249,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             self._finalize_mapping(mapping)
         return xml
 
-    def as_html(self, css: str='', head: str='', lang: str='en', **kwargs) -> str:
+    def as_html(self, css: str='', head: str='', lang: str='en',
+                empty_tags: AbstractSet[str] = HTML_EMPTY_TAGS,
+                **kwargs) -> str:
         """Serialize as HTML-page. See :py:meth:`Node.as_xml` for the further
         keyword-arguments."""
         kwargs['empty_tags'] = set(kwargs.get('empty_tags', set()))
@@ -2263,7 +2265,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             if css:
                 head = '\n'.join([head[:-7], css_snippet, head[-7:]])
         else:
-            head_tags = ['<head>', '<meta charset="UTF-8" />', '</head>']
+            title = self.get_attr('docname', self.name)
+            head_tags = ['<head>', '<meta charset="UTF-8" />',
+                         f'<title>{title}</title>', '</head>']
             if css:  head_tags.insert(2, css_snippet)
             head = '\n'.join(head_tags)
         html = '\n'.join(['<!DOCTYPE html>', f'<html lang="{lang}" xml:lang="{lang}">', head,

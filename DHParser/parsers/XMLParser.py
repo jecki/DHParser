@@ -363,8 +363,8 @@ class XMLTransformer(Compiler):
                 and tag_name in self.tree.empty_tags \
                 and tag_name not in self.non_empty_tags:  # warn only once!
             self.tree.new_error(node,
-                f'Tag-name "{tag_name}" has already been used for an empty-tag '
-                f'<{tag_name}/> earlier! Set XML.consistent_empty_tags to False '
+                f'Tag-name {tag_name} has already been used for an empty-tag '
+                f'{tag_name}/ earlier! Set XML.consistent_empty_tags to False '
                 'to suppress this warning. !',
                                 WARNING_INCONSISTENT_EMPTY_TAGS)
 
@@ -391,8 +391,8 @@ class XMLTransformer(Compiler):
                 and node.name in self.non_empty_tags \
                 and node.name not in self.tree.empty_tags:  # warn only once!
             self.tree.new_error(node,
-                f'Tag-name "{node.name}" has already been used for a non empty-tag '
-                f'<{node.name}> ... </{node.name}> earlier. Set XML.consistent_empty_tags '
+                f'Tag-name {node.name} has already been used for a non empty-tag '
+                f'{node.name} ... /{node.name} earlier. Set XML.consistent_empty_tags '
                 'to False to suppress this warning. !',
                                 WARNING_INCONSISTENT_EMPTY_TAGS)
 

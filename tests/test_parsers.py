@@ -83,6 +83,7 @@ class TestXMLParser:
 <html lang="en" xml:lang="en">
 <head>
 <meta charset="UTF-8" />
+<title>:XML</title>
 </head>
 <body>
 <?xml version="1.0" encoding="UTF-8"?>
