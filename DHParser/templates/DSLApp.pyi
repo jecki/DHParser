@@ -834,7 +834,8 @@ class DSLApp(tk.Tk):
                    "We work hard to make your job expendable!",
                    "We program pig systems that make your life difficult!",
                    "8 bit can do it all!",
-                   "The apparatus is always right!")
+                   "The apparatus is always right!",
+                   "Everyone is replacable and should be!")
         tk.messagebox.showinfo(
             title="About DSL",
             message=("DSL was brought to you by:\n\n"
