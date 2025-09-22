@@ -475,10 +475,11 @@ def get_annotations(item):
     if sys.version_info >= (3, 14):
         from annotationlib import get_annotations, Format
         return get_annotations(item, format=Format.VALUE)
-    else:
+    elif sys.version_info >= (3, 10):
         import inspect
         return inspect.get_annotations(item)
-        # return item.__annotations__
+    else:
+        return item.__annotations__
 
 
 #######################################################################

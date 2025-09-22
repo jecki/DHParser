@@ -1,3 +1,25 @@
+DHParser Verion 1.9.2 (22.9.2025)
+.................................
+
+- better Python3.14 compatibility
+- much better App-template
+- when passing a directory name to the generated Parser-script,
+  hidden files are ignored.
+- nodetree.py: when serializing trees, ctrl-characters (except \n)
+  will be replaced by their respective character code (e.g. \x0D for  \r)
+  or XML-entity (e.g. &#x0D; for \r). (However, when reading a code
+  or or entity will not be transfored to a ctrl character. This has to
+  be done "by hand" if needed.)
+- a few more improvements of the serialization-methods: XML-serialization
+  now allows mixing empty and non-empty-tags with the same tag name as
+  permitted by the XML-standard. (Only in HTML it is still a mistake.)
+- HTML-serializations now always contain a <title>-tag. If it exists,
+  the "docname"-attribute of the root node is used, otherwise the
+  root node's node name will serve as a subsitute.
+- ContentMapping.get_location() added
+- transform.py now allows to pass a "side"-keyword to move_fringes()
+  which can be left or right
+
 DHParser Version 1.9.1 (11.8.2025)
 ..................................
 - bugfixes
