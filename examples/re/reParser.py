@@ -309,6 +309,8 @@ re_AST_transformation_table = {
     "hex2, hex4, hex8": [change_name('hex')],
     "grpChar, char": [change_name('char')],
     "escCh, grpCharSeq, bs": [change_name('charSeq')],
+    "chCode": [],
+    "chSpecial": [],
 }
 
 
