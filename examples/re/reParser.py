@@ -172,7 +172,7 @@ class reGrammar(Grammar):
     pattern = Forward()
     source_hash__ = "ea9d51cde5c670e4826d6817e84e3e79"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:_group$|BS$|_char$|_octal$|_escapedCh$|_entity$|_grpItem$|_chars$|_special$|EOF$|_extension$|_illegal$|_item$|_nibble$|_number$|_grpChar$|_anyChar$|_escape$|_grpChars$)')
+    disposable__ = re.compile('(?:_entity$|_nibble$|BS$|_group$|_special$|_extension$|_char$|_illegal$|_grpItem$|_item$|_grpChars$|_grpChar$|_escapedCh$|EOF$|_chars$|_escape$|_octal$|_anyChar$|_number$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -294,6 +294,16 @@ except (AttributeError, NameError):
 #     return path[-1].content.find('\n') >= 0
 
 
+SPECIAL_MAP = {
+    'a': '\a',
+    'b': '\b',
+    'f': '\f',
+    'n': '\n',
+    'r': '\r',
+    't': '\t',
+    'v': '\v' }
+
+
 re_AST_transformation_table = {
     # AST Transformations for the re-grammar
     # "<": [],  # called for each node before calling its specific rules
@@ -309,8 +319,10 @@ re_AST_transformation_table = {
     "hex2, hex4, hex8": [change_name('hex')],
     "grpChar, char": [change_name('char')],
     "escCh, grpCharSeq, bs": [change_name('charSeq')],
-    "chCode": [],
-    "chSpecial": [],
+    "ch": [change_name('char')],
+    "chCode": [change_name('char'), transform_result(lambda r: chr(int(r, 16)))],
+    "chSpecial": [change_name('char'), transform_result(lambda r: SPECIAL_MAP[r])],
+
 }
 
 

@@ -1913,8 +1913,8 @@ def transform_result(path: Path, func: CondFunc):  # Callable[[ResultType], Resu
     node.result = func(node.result)
 
 
-@transformation_factory  # (str)
-def replace_content_with(path: Path, content: str):  # Callable[[Node], ResultType]
+@transformation_factory(str)
+def replace_content_with(path: Path, content: str):
     """
     Replaces the content of the node with the given text content.
     """
