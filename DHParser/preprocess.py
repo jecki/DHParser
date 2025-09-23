@@ -84,8 +84,8 @@ TOKEN_DELIMITER = '\x1c'
 END_TOKEN = '\x1d'
 RESERVED_TOKEN_CHARS = BEGIN_TOKEN + TOKEN_DELIMITER + END_TOKEN
 
-RX_TOKEN_NAME = re.compile(r'\w+')
-RX_TOKEN_ARGUMENT = re.compile(r'[^\x1b\x1c\x1d]*')
+RX_TOKEN_NAME = LazyRE(r'\w+')
+RX_TOKEN_ARGUMENT = LazyRE(r'[^\x1b\x1c\x1d]*')
 RX_TOKEN = LazyRE(r'\x1b(?P<name>\w+)\x1c(?P<argument>[^\x1b\x1c\x1d]*)\x1d')
 
 class IncludeInfo(NamedTuple):
