@@ -13,7 +13,7 @@ capabilities of DHParser. Each manual is related to one of the
 major modules of DHParser. It is recommended to read the :doc:`Overview`,
 first, and then read as much of the manuals as needed.
 The usage and API of DHParser is furthermore described
-in the doc-strings of its modules which also contain
+in the doc strings of its modules which also contain
 many runnable examples.
 
 .. toctree::

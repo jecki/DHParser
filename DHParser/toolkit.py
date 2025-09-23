@@ -20,18 +20,17 @@
 Module ``toolkit`` contains utility functions that are needed across
 several of the other DHParser-Modules Helper functions that are not
 needed in more than one module are best placed within that module and
-not in the toolkit-module. An acceptable exception to this rule are
+not in the toolkit-module. Acceptable exceptions to this rule are
 functions that are very generic.
 """
 
 from __future__ import annotations
 
-# import concurrent.futures  # commented out to save startup time
+# import concurrent.futures # commented out to save startup time
 import functools
 import io
 import json
 import os
-import queue
 import sys
 
 
@@ -45,7 +44,7 @@ except ImportError:
 
 if sys.version_info >= (3, 12, 0):
     from collections.abc import Iterable, Sequence, Set, MutableSet, Callable, Container, Hashable
-    from typing import Any, Type, Union, Optional, TypeAlias, TypeVar, Protocol
+    from typing import Any, Type, Union, Optional, TypeAlias, Protocol
     AbstractSet = Set
     FrozenSet = frozenset
     Dict = dict
@@ -198,8 +197,8 @@ DHPARSER_FILES = {'dsl.py', 'log.py', 'parse.py', 'server.py', 'testing.py', 'tr
 
 
 def identify_python() -> str:
-    """Returns a reasonable identification string for the python interpreter,
-    e.g. "cpython 3.8.6"."""
+    """Returns a reasonable identification string for the
+    python interpreter, e.g., "cpython 3.8.6"."""
     return "%s %i.%i.%i" % (sys.implementation.name, *sys.version_info[:3])
 
 
@@ -231,7 +230,7 @@ class ThreadLocalSingletonFactory:
     same thread, but different instances for different threads.
 
     Note: Parameter uniqueID should be provided if class_or_factory is
-    not unique but generic. See source code of
+    not unique but generic. See the source code of
     :py:func:`DHParser.dsl.create_transtable_junction`
     """
     def __init__(self, class_or_factory, name: str = "", *,
@@ -270,9 +269,9 @@ def is_filename(strg: str) -> bool:
     assumed that it is NOT a filename if any of the following
     conditions is true:
 
-    - it starts with a byte-order mark, i.e. '\ufffe' or '\ufeff'
-    - it starts or ends with a blank, i.e. " "
-    - it contains any of the characters in the set [\*?"<>|]
+    - It starts with a byte-order mark, i.e. '\ufffe' or '\ufeff'.
+    - It starts or ends with a blank, i.e. " ".
+    - It contains any of the characters in the set [\*?"<>|].
 
     For disambiguation of non-filenames it is best to add a
     byteorder-mark to the beginning of the string, because this
@@ -286,7 +285,7 @@ def is_filename(strg: str) -> bool:
 
 
 def is_html_name(url: str) -> bool:
-    """Returns True, if url ends with .htm or .html"""
+    """Returns True if the URL ends with .htm or .html"""
     return url[-5:].lower() == '.html' or url[-4:].lower() == '.htm'
 
 
@@ -313,7 +312,7 @@ def relative_path(from_path: str, to_path: str) -> str:
 
 def split_path(path: str) -> Tuple[str, ...]:
     """Splits a filesystem path into its components. Other than
-    os.path.split() it does not only split of the last part::
+    os.path.split(), it does not only split of the last part::
 
         >>> split_path('a/b/c')
         ('a', 'b', 'c')
@@ -495,7 +494,7 @@ DHPARSER_DIR = os.path.dirname(os.path.abspath(os.path.realpath(__file__)))
 
 def sane_parser_name(name) -> bool:
     """
-    Checks whether given name is an acceptable parser name. Parser names
+    Checks whether the given name is an acceptable parser name. Parser names
     must not be preceded or succeeded by a double underscore '__'!
     """
 
@@ -547,7 +546,7 @@ def normalize_circular_paths(path: Union[Tuple[str, ...], AbstractSet[Tuple[str,
 
 class LazyRE:
     """
-    A lazily-evaluating regular expression. This allows to define as many
+    A lazily-evaluating regular expression. This allows defining as many
     regular expressions on the top-level as you like without wasting
     startup-time.
 
@@ -682,6 +681,8 @@ def re_find(s, r, pos=0, endpos=9223372036854775807):
             return m
         except StopIteration:
             return None
+    else:
+        return None
 
 
 @deprecated('escape_re() is deprecated. Use re.escape() from the Python-Standard-Library instead!')
@@ -701,7 +702,7 @@ def escape_re(strg: str) -> str:
 def escape_ctrl_chars(strg: str) -> str:
     r"""
     Replace all control characters (e.g. `\n` `\t`) in a string
-    by their back-slashed representation and replaces backslash by
+    by their backslashed representation and replaces backslash by
     double backslash.
     """
     s = repr(strg.replace('\\', r'\\')).replace('\\\\', '\\')[1:-1]
@@ -810,9 +811,9 @@ def wrap_str_literal(s: Union[str, List[str]], column: int = 80, offset: int = 0
 def wrap_str_nicely(s: str, wrap_column: int = 79, tolerance: int = 24,
                     wrap_chars: str = ")]>, ") -> str:
     r"""Line-wraps a single-line output string at 'wrap_column'. Tries to
-    find a suitable point for wrapping, i.e. after any of the wrap_characters.
+    find a suitable point for wrapping, i.e., after any of the wrap_characters.
 
-    If the strings spans multiple lines, the existing linebreaks will be kept
+    If the strings span multiple lines, the existing linebreaks will be kept
     and no rewrapping takes place. In order to enforce rewrapping of multiline
     strings, use: ``wrap_str_nicely(repr(s)[1:-1])``. (repr() replaces
     linebreaks by the \\n-marker. The slicing [1:-1] removes the opening
@@ -1057,7 +1058,7 @@ def validate_XML_attribute_value(value: Any) -> str:
 
 def fix_XML_attribute_value(value: Any) -> str:
     """Returns the quoted XML-attribute value. In case the values
-    contains illegal characters, like '<', these will be replaced by
+    contain illegal characters, like '<', these will be replaced by
     XML-entities."""
     value = str(value)
     value = value.replace('<', '&lt;')
@@ -1082,10 +1083,10 @@ RX_NON_ASCII = LazyRE(r'[^\U00000000-\U000000FF]')
 def lxml_XML_attribute_value(value: Any) -> str:
     """Makes sure that the attribute value works with the lxml-library,
     at the cost of replacing all characters with a code > 256 by
-    a quesiton mark.
+    a question mark.
 
-    :param value: the original attribute value
-    :return: the quoted and lxml-compatible attribute value.
+    :param value: The original attribute value.
+    :return: The quoted and lxml-compatible attribute value.
     """
     value = str(value)
     value = RX_NON_ASCII.sub('?', value)
@@ -1093,7 +1094,7 @@ def lxml_XML_attribute_value(value: Any) -> str:
 
 
 def xml_entity(unicode_ch) -> str:
-    r"""Converts a unicode character to an XML entity."""
+    r"""Converts a Unicode character to an XML entity."""
     o = ord(unicode_ch)
     if o < 256:
         return f'&#x{o:02x};'
@@ -1105,15 +1106,15 @@ def xml_entity(unicode_ch) -> str:
 
 
 def char_code(unicode_ch) -> str:
-    r"""Converts a unicode character to an XML entity."""
+    r"""Converts a Unicode character to an XML entity."""
     o = ord(unicode_ch)
     if o < 256:
-        f'\\x{o:02x}'
+        return f'\\x{o:02x}'
     elif o < 65536:
-        f'\\x{o:04x}'
+        return f'\\x{o:04x}'
     else:
         assert o < 2**32 -1
-        f'\\x{o:08x}'
+        return f'\\x{o:08x}'
 
 
 def ascii_xml_entity(ch) -> str:
@@ -1142,7 +1143,7 @@ def ascii_char_code(ch) -> str:
 def issubtype(sub_type, base_type) -> bool:
     """Returns `True` if sub_type is a subtype of `base_type`.
     WARNING: Implementation is somewhat "hackish" and might break
-    with new Python-versions.
+    with new Python versions.
     """
     def origin(t) -> tuple:
         def fix(t: Any) -> Any:
@@ -1189,9 +1190,9 @@ RX_FILEPATH = LazyRE(r'[^ \t][^\n\t?*=]+(?<![ \t])')  # r'[\w/:. \\]+'
 
 def load_if_file(text_or_file) -> str:
     """
-    Reads and returns content of a text-file if parameter
-    `text_or_file` is a file name (i.e. a single line string),
-    otherwise (i.e. if `text_or_file` is a multi-line string)
+    Reads and returns the content of a text-file if parameter
+    `text_or_file` is a file name (i.e., a single line string),
+    otherwise (i.e., if `text_or_file` is a multi-line string)
     `text_or_file` is returned.
     """
 
@@ -1224,7 +1225,7 @@ DeserializeFunc: TypeAlias = Union[Callable[[str], Any], functools.partial]
 
 def cached_load(file_name: str, deserialize: DeserializeFunc, cachedir: str = "~/.cache") -> Any:
     """
-    Loads and deserializes as file into a python-object. The Python-object will
+    Loads and deserializes a file into a python-object. The Python object will
     be pickled and written to "cachedir". If a pickled version already exists,
     the same file will not be deserialized again, but the pickled version will be loaded.
     If cachedir == "", the pickled version will always be preferred, even if the
@@ -1302,7 +1303,7 @@ def is_python_code(text_or_file: str) -> bool:
         import ast
         ast.parse(text_or_file)
         return True
-    except (SyntaxError, ValueError, OverflowError) as e:
+    except (SyntaxError, ValueError, OverflowError):
         pass
     return False
 
@@ -1342,7 +1343,7 @@ def has_fenced_code(text_or_file: str, info_strings=('ebnf', 'test')) -> bool:
 def md5(*txt):
     """
     Returns the md5-checksum for `txt`. This can be used to test if
-    some piece of text, for example a grammar source file, has changed.
+    some piece of text, for example, a grammar source file, has changed.
     """
     import hashlib
     md5_hash = hashlib.md5()
@@ -1451,7 +1452,7 @@ def text_pos(text: Union[StringView, str],
 # def smart_list(arg: Union[str, Iterable[T]]) -> Union[Sequence[str], Sequence[T]]:
 def smart_list(arg: Union[str, Iterable, Any]) -> Union[Sequence, Set]:
     """
-    Returns the argument as list, depending on its type and content.
+    Returns the argument as a list, depending on its type and content.
 
     If the argument is a string, it will be interpreted as a list of
     comma separated values, trying ';', ',', ' ' as possible delimiters
@@ -1537,7 +1538,7 @@ JSON_Dict: TypeAlias = Dict[str, JSON_Type]
 class JSONstr:
     """
     JSONStr is a special type that encapsulates already serialized
-    json-chunks in json object-trees. ``json_dumps`` will insert the content
+    JSON chunks in JSON object-trees. ``json_dumps`` will insert the content
     of a JSONStr-object literally, rather than serializing it as other
     objects.
     """
@@ -1552,7 +1553,7 @@ class JSONstr:
 
 
 class JSONnull:
-    """JSONnull is a special type that is serialized as ``null`` by ``json_dumps``.
+    """JSONnull is a special type serialized as ``null`` by ``json_dumps``.
     This can be used whenever it is inconvenient to use ``None`` as the null-value.
     """
     __slots__ = []
@@ -1580,7 +1581,7 @@ def json_encode_string(s: str) -> str:
 
 def json_dumps(obj: JSON_Type, *, cls=json.JSONEncoder, partially_serialized: bool = False) -> str:
     """Returns json-object as string. Other than the standard-library's
-    `json.dumps()`-function `json_dumps` allows to include alrady serialzed
+    `json.dumps()`-function `json_dumps` allows including already serialzed
     parts (in the form of JSONStr-objects) in the json-object. Example::
 
         >>> already_serialized = '{"width":640,"height":400"}'
@@ -1591,7 +1592,7 @@ def json_dumps(obj: JSON_Type, *, cls=json.JSONEncoder, partially_serialized: bo
 
     :param obj: A json-object (or a tree of json-objects) to be serialized
     :param cls: The class of a custom json-encoder berived from ``json.JSONEncoder``
-    :param partially_serialized: If True, :py:class:`JSONStr`-objects within the json tree
+    :param partially_serialized: If True, :py:class:`JSONStr`-objects within the JSON tree
         will be encoded (by inserting their content). If False, :py:class:`JSONStr`-objects
         will raise a TypeError, but encoding will be faster.
     :return: The string-serialized form of the json-object.
@@ -1702,9 +1703,10 @@ def json_rpc(method: str,
 
 
 def pp_json(obj: JSON_Type, *, cls=json.JSONEncoder) -> str:
-    """Returns json-object as pretty-printed string. Other than the standard-library's
-    `json.dumps()`-function `pp_json` allows to include already serialized
-    parts (in the form of JSONStr-objects) in the json-object. Example::
+    """Returns the JSON object as a pretty-printed string. Other than the
+    standard-library's `json.dumps()`-function `pp_json` allows including
+    already serialized parts (in the form of JSONStr-objects) in the json-object.
+    Example::
 
         >>> already_serialized = '{"width":640,"height":400"}'
         >>> literal = JSONstr(already_serialized)
@@ -1778,7 +1780,7 @@ def pp_json(obj: JSON_Type, *, cls=json.JSONEncoder) -> str:
 
 def pp_json_str(jsons: str) -> str:
     """Pretty-prints and already serialized (but possibly ugly-printed)
-    json object in a well-readable form. Syntactic sugar for:
+    JSON object in a well-readable form. Syntactic sugar for:
     `pp_json(json.loads(jsons))`."""
     return pp_json(json.loads(jsons))
 
@@ -1830,7 +1832,7 @@ class SingleThreadExecutor:
 
 @functools.lru_cache(None)
 def multiprocessing_broken() -> str:
-    """Returns an error message, if, for any reason multiprocessing is not safe
+    """Returns an error message, if, for any reason, multiprocessing is not safe
     to be used. For example, multiprocessing does not work with
     PyInstaller (under Windows) or GraalVM.
     """
@@ -2063,11 +2065,11 @@ def instantiate_executor(allow_parallel: bool,
         (see comments in config.py for a detailed explanation)
     :param preferred_executor: the preferred executor class that is used if the
         parameter allaw_parallel is true and 'debug_parallel_executor' does not
-        forbid the use of this kind of executor. The inofficial default value
+        forbid the use of this kind of executor. The unofficial default value
         is MultiCoreExecutor, which yields a ProcessPoolExecutor for Python
         versions <= 3.13 and a wrapped InterpreterPoolExecutor for Python
         versions 3.14 and above.
-    :returns: and executor-object, either an instance of concurrent.futures.Executor
+    :returns: An executor-object, either an instance of concurrent.futures.Executor
         or SingleThreadExecutor (see above).
     """
     if allow_parallel:

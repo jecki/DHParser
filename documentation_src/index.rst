@@ -8,29 +8,29 @@
 Welcome to DHParser's documentation!
 ====================================
 
-DHParser is a parser-generator and and domain-specific-language
+DHParser is a parser generator and domain specific language
 construction kit, designed for but not restricted to
-Digital-Humanities-applications.
+Digital Humanities applications.
 
 DHParser offers:
 
-* Rapid-Prototyping of EBNF-based grammar-specifications with support for
+* Rapid Prototyping of EBNF based grammar specifications with support for
   different flavors of EBNF 
-* Macros to reduce code-repetition within grammars and includes to
-  avoid code-repetition between grammars.
-* Parsing-Expression-Grammar (PEG)-parser with memoization
-  and full left-recursion support
-* unit-testing-framework for grammars
-* post-mortem debugger for generated parsers
-* support for fail-tolerant parsing
+* Macros to reduce code repetition within grammars and includes to
+  avoid code repetition between grammars.
+* Parsing Expression Grammar (PEG) parser with memoization
+  and full left recursion support
+* unit testing framework for grammars
+* post mortem debugger for generated parsers
+* support for fail tolerant parsing
 * customizable error messages
-* extensive tree-processing facilities
+* extensive tree processing facilities
 * support for building language servers (experimental)
 * full unicode support
 
 DHParser is by now mature and "production ready". It is being used in several projects,
 most notably for the domain specific notation of the `Medieval Latin Dictionary`_
-and the Typescript-to-Python-interface-transpiler `ts2python`_
+and the Typescript-to-Python interface transpiler `ts2python`_
 
 License
 --------
@@ -49,9 +49,9 @@ Install DHParser
 
     $ python -m pip install --user DHParser
 
-In order to use DHParser directly from the git-repository, the best way is to make
-a shallow clone of the repository and then add a symlink to the DHParser-subdirectory
-inside the DHParser-repository in your project's directory. For setting up an entirely
+In order to use DHParser directly from the git repository, the best way is to make
+a shallow clone of the repository and then add a symlink to the DHParser subdirectory
+inside the DHParser repository in your project's directory. For setting up an entirely
 new project with DHParser without using "pip install", the commands are the following:
 
 .. code:: bash
@@ -60,14 +60,14 @@ new project with DHParser without using "pip install", the commands are the foll
     $ python3 DHParser/DHParser/scripts/dhparser.py MyNewParserProject
     $ ln -s ../DHParser/DHParser MyNewParserProject/DHParser
 
-In case you would like to use latest bugfixes from the development-branch the first command
+In case you would like to use latest bugfixes from the development branch, the first command
 should be exchanged with:
 
 .. code:: bash
 
    $ git clone --depth=1 --single-branch --branch development https://gitlab.lrz.de/badw-it/DHParser
 
-In order to verify that your local clone of the DHParser-repository has been
+In order to verify that your local clone of the DHParser repository has been
 correctly linked to your project's directory, type:
 
 .. code:: bash

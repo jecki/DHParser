@@ -28,7 +28,7 @@ and `lxml <https://lxml.de/>`_, nodetree maps mixed content to dedicated nodes,
 which simplifies the programming of algorithms that run on the data stored
 in the (XML-)tree.
 
-The source code of module ``nodetree`` consists of four main sections:
+The source code of the module ``nodetree`` consists of four main sections:
 
 1.  Node-classes, i.e. :py:class:`Node`, :py:class:`FrozenNode` and
     :py:class`RootNode` as well as a number
@@ -41,26 +41,26 @@ The source code of module ``nodetree`` consists of four main sections:
 
     b. Retaining its source-position in the document (important for
        error reporting, in particular when errors occur later in
-       the processing-pipeline.)
+       the processing-pipeline).
 
     c. Storing and retrieving of (XML-)attributes. Like
        XML-attributes, attribute-names are strings, but other than
        XML-attributes, attributes attached to Node-objects can
-       take any Python-type as value that is serializable with
+       take any Python type as value that is serializable with
        "str()".
 
-    d. Tree-traversal, in particular node- and path-selection based
+    d. Tree traversal, in particular node- and path-selection based
        on arbitrary criteria (passed as match-node or match-path-function)
 
     e. Experimental (XML-)milestone-support: :py:meth:`Node.milestone_segment`
        and :py:meth:`Node.split`. See also: :py:class:`ContextMapping`
 
-    f. A very simple method for tree-"evaluation":  (More elaborate
-       scaffolding for evaluation tree are found in :py:mod:`~traverse`
+    f. A very simple method for tree evaluation: (More elaborate
+       scaffolding for tree evaluation is found in :py:mod:`~traverse`
        and :py:mod:`compile`.)
 
     g. Functions for serialization and deserialization as XML, S-Expression,
-       JSON as well as conversion to and from ElementTree/LXML-representations.
+       JSON as well as conversion to and from ElementTree/LXML representations.
 
     h. Class :py:class:`RootNode` serving as both root-node of the tree and a hub
        for storing data for the tree as a whole (as, for example, the
@@ -96,7 +96,6 @@ import copy
 from enum import IntEnum
 import functools
 import json
-import sys
 from typing import Callable, cast, Iterator, Sequence, List, \
     Union, Tuple, Container, Optional, Dict, Any, NamedTuple
 
@@ -108,7 +107,7 @@ from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, linebreaks, line_col, JSONnull, JSON_Dict, \
     validate_XML_attribute_value, fix_XML_attribute_value, lxml_XML_attribute_value, \
     abbreviate_middle, TypeAlias, deprecated, RxPatternType, INFINITE, LazyRE, subf, \
-    AbstractSet, FrozenSet, Set, deprecation_warning, ascii_char_code, ascii_xml_entity
+    AbstractSet, Set, deprecation_warning, ascii_char_code, ascii_xml_entity, get_annotations
 
 try:
     import cython
@@ -317,7 +316,7 @@ def VOID_PATH(path: Path) -> bool:
 def create_match_function(criterion: NodeSelector) -> NodeMatchFunction:
     """
     Creates a node-match-function (Node -> bool) for the given criterion
-    that returns True, if the node passed to the function matches the
+    that returns True if the node passed to the function matches the
     criterion.
 
     ==================== ===================================================
@@ -348,7 +347,7 @@ def create_match_function(criterion: NodeSelector) -> NodeMatchFunction:
     elif isinstance(criterion, str):
         return lambda nd: nd.name == criterion
     elif callable(criterion):
-        annotations = criterion.__annotations__.items()
+        annotations = get_annotations(criterion).items()
         if len(annotations) > 2:
             raise ValueError(f'Signature of callable criterion must be f(nd: Node) -> bool, '
                              f'not {list(annotations)}')
@@ -370,7 +369,7 @@ def create_match_function(criterion: NodeSelector) -> NodeMatchFunction:
 def create_path_match_function(criterion: PathSelector) -> PathMatchFunction:
     """
     Creates a path-match-function (Path -> bool) for the given
-    criterion that returns True, if the last node in the path passed
+    criterion that returns True if the last node in the path passed
     to the function matches the criterion.
 
     See :py:func:`create_match_function` for a description of the possible
@@ -393,7 +392,7 @@ def create_path_match_function(criterion: PathSelector) -> PathMatchFunction:
         return lambda trl: trl[-1].name == criterion
     elif callable(criterion):
         is_node_match_func = False
-        for _, typ in criterion.__annotations__.items():
+        for _, typ in get_annotations(criterion).items():
             if typ is Node or typ == 'Node':
                 is_node_match_func = True
             break
@@ -422,9 +421,9 @@ def flatten_sxpr(sxpr: str, threshold: int = -1) -> str:
     Returns S-expression ``sxpr`` as a one-liner without unnecessary
     whitespace.
 
-    The ``threshold`` value is a maximum number of
+    The ``threshold`` value is the maximum number of
     characters allowed in the flattened expression. If this number
-    is exceeded the un-flattened S-expression is returned. A
+    is exceeded, the unflattened S-expression is returned. A
     negative number means that the S-expression will always be
     flattened. Zero or (any positive integer <= 3) essentially means
     that the expression will not be flattened. Example::
@@ -432,9 +431,9 @@ def flatten_sxpr(sxpr: str, threshold: int = -1) -> str:
         >>> flatten_sxpr('(a\\n    (b\\n        c\\n    )\\n)\\n')
         '(a (b c))'
 
-    :param sxpr: and S-expression in string form
+    :param sxpr: An S-expression in string form
     :param threshold: maximum allowed string-length of the flattened
-        S-exrpession. A value < 0 means that it may be arbitrarily long.
+        S-expression. A value < 0 means that it may be arbitrarily long.
 
     :return: Either flattened S-expression or, if the threshold has been
         overstepped, the original S-expression without leading or
@@ -458,11 +457,11 @@ def flatten_sxpr(sxpr: str, threshold: int = -1) -> str:
 
 def flatten_xml(xml: str) -> str:
     """
-    Returns an XML-tree as a one-liner without unnecessary whitespace,
-    i.e. only whitespace within leaf-nodes is preserved.
+    Returns an XML-tree as a one-liner without unnecessary white space,
+    i.e., only whitespace within leaf-nodes is preserved.
 
     A more precise alternative to `flatten_xml` is to use Node.as_xml()
-    and passing a set containing the top level tag to parameter `inline_tags`.
+    and to pass a set, containing the top level tag, to parameter `inline_tags`.
 
     :param xml: the XML-Text to be "flattened"
     :returns: the flattened XML-Text
@@ -481,7 +480,7 @@ RX_AMPERSAND = LazyRE(r'&(?!#?\w+;)')
 
 
 def xml_tag_name(tag_name: str) -> str:
-    """Cleans anonymous tag-names for serialization, so that the colon does not
+    """Cleans anonymous tag-names for serialization so that the colon does not
     lead to invalid XML::
 
         >>> xml_tag_name(':Series')
@@ -573,10 +572,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     :ivar name: The name of the node, which is either its
             parser's name or, if that is empty, the parser's class name.
 
-            By convention the parser's class name when used as tag name
+            By convention, the parser's class name when used as the tag name
             is prefixed with a colon ":". A node, the tag name of which
             starts with a colon ":" or the tag name of which is the
-            empty string is considered as "anonymous". See
+            empty string, is considered as "anonymous". See
             `Node.anonymous()`-property
 
     :ivar result: The result of the parser which generated this node,
@@ -595,10 +594,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             Setting pos to a value >= 0 will trigger the assignment
             of position values of all child nodes relative to this value.
 
-            The pos field is WRITE ONCE, i.e. once assigned it cannot be
-            reassigned. The assignment of the pos values happens either
-            during the parsing process or, when later added to a tree,
-            the pos-values of which have already been initialized.
+            The pos field is WRITE ONCE, i.e., once it has been assigned
+            it cannot be reassigned, anymore. The assignment of the pos
+            values happens either during the parsing process or, when
+            later added to a tree, the pos-values of which have already
+            been initialized.
 
             Thus, pos-values always retain their position in the source
             text. If in any tree-processing stage after parsing, nodes
@@ -626,8 +626,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         the node is informally considered to be a "leaf-node".
 
         :param name: a name for the node. If the node has been created
-            by a parser, this is either the parser's name, e.g. "phrase",
-            or if the parser wasn't named the parser's type, i.e. name of the
+            by a parser, this is either the parser's name, e.g., "phrase"
+            or if the parser wasn't named the parser's type, i.e., name of the
             parser's class, preceded by a colon, e.g. ":Series"
         :param result: the result of the parsing operation that generated the
             node or, more generally, the data that the node contains.
@@ -694,7 +694,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def __bool__(self):
         """Returns the bool value of a node, which is always True. The reason
         for this is that a boolean test on a variable that can contain a node
-        or None will only yield `False` in case of None.
+        or None will only yield `False` in the case of None.
         """
         return True
 
@@ -704,8 +704,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def equals(self, other: Node, ignore_attr_order: bool = True) -> bool:
         """
         Equality of value: Two nodes are considered as having the same value,
-        if their tag name is the same, if their results are equal and
-        if their attributes and attribute values are the same and if either
+        if their tag name is the same, if their results are equal and,
+        if their attributes and attribute values are the same, and if either
         `ignore_attr_order` is `True` or the attributes also appear in the
         same order.
 
@@ -728,11 +728,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     @property
     def anonymous(self) -> bool:
-        """Returns True, if the Node is an "anonymous" Node, i.e. a node that
+        """Returns True, if the Node is an "anonymous" Node, i.e., a node that
         has not been created by a named parser.
 
-        The tag name of anonymous node contains a colon followed by the class name
-        of the parser that created the node, i.e. ":Series". It is the recommended
+        The tag name of an anonymous node contains a colon followed by the class name
+        of the parser that created the node, i.e., ":Series". It is the recommended
         practice to remove (or name) all anonymous nodes during the
         AST-transformation.
         """
@@ -803,8 +803,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     @property
     def children(self) -> ChildrenType:
-        """Returns the tuple of child-nodes or an empty tuple if the node does
-        node have any child-nodes but only string content."""
+        """Returns the tuple of child-nodes or an empty tuple if the
+        node does not have any child-nodes but only string content."""
         return self._children
 
     def _leaf_data(self) -> List[str]:
@@ -823,7 +823,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     @property
     def content(self) -> str:
         """
-        Returns content as string. If the node has child-nodes, the
+        Returns the content as a string. If the node has child-nodes, the
         string content of the child-nodes is recursively read and then
         concatenated.
         """
@@ -868,10 +868,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             [('a', 0), ('b', 0), ('c', 0), ('d', 1), ('e', 1), ('f', 2), ('g', 3)]
 
         :param pos: The position assigned to be assigned to the node.
-            Value must be >= 0 if the position value as already been initialized,
+            Value must be >= 0 if the position value has already been initialized,
             before. If not, a value < 0 has no effect.
         :returns: the node itself (for convenience).
-        :raises: AssertionError if position has already been assigned or
+        :raises: AssertionError if 'position' has already been assigned or
             if parameter `pos` has a value < 0.
         """
         # condition self.pos == pos cannot be assumed when tokens or whitespace are dropped early!
@@ -900,11 +900,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def has_attr(self, attr: str = '') -> bool:
         """
-        Returns `True`, if the node has the attribute `attr` or,
-        in case `attr` is the empty string, any attributes at all;
-        `False` otherwise.
+        Returns True if the node has the attribute 'attr' or,
+        in case 'attr' is the empty string, any attributes at all;
+        False otherwise.
 
-        This function does not create an attribute dictionary, therefore
+        This function does not create an attribute dictionary therefore,
         it should be preferred to querying node.attr when testing for the
         existence of any attributes.
         """
@@ -950,14 +950,14 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def get_attr(self, attribute: str, default: Any) -> Any:
         """
-        Returns the value of 'attribute' if attribute exists. If not, the
+        Returns the value of 'attribute' if 'attribute' exists. If not, the
         default value is returned. This function has the same semantics
         as `node.attr.get(attribute, default)`, but with the advantage then
         other than `node.attr.get` it does not automatically create an
         attribute dictionary on (first) access.
 
         :param attribute: The attribute, the value of which shall be looked up
-        :param default: A default value that is returned, in case attribute
+        :param default: A default value that is returned, in case 'attribute'
             does not exist.
         :returns: the attribute's value or, if unassigned, the default value.
         """
@@ -978,7 +978,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             "Node('test', '').with_attr({'animal': 'frog', 'plant': 'tree', 'building': 'skyscraper'})"
 
         :param attr_dict:  a dictionary of attribute keys and values
-        :param attributes: alternatively, a sequences of keyword parameters
+        :param attributes: alternatively, a sequence of keyword parameters
         :return: `self`
         """
         if attr_dict:
@@ -1000,7 +1000,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def has_equal_attr(self, other: Node, ignore_order: bool = True) -> bool:
         """
-        Returns True, if `self` and `other` have the same attributes with
+        Returns True if `self` and `other` have the same attributes with
         the same attribute values. If `ignore_order` is False, the
         attributes must also appear in the same order.
         """
@@ -1041,11 +1041,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         :param key(str): A tag-name (string) or an index or a slice of the
             child or children that shall be returned.
         :returns: The node with the given index (always type Node) or a
-            list of all nodes which have a given tag name, if `key` was a
+            list of all nodes that have a given tag name, if `key` was a
             tag-name and there is more than one child-node with this tag-name
         :raises:
             KeyError:   if no matching child was found.
-            IndexError: if key was an integer index that did not exist
+            IndexError: if 'key' was an integer index that did not exist.
             ValueError: if the __getitem__ has been called on a leaf node.
         """
         if not self._children and self._result:
@@ -1103,14 +1103,14 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def __delitem__(self, key: Union[int, slice, NodeSelector]):
         """
         Removes children from the node. Note that integer values passed to
-        parameter ``key`` are always interpreted as index, not as an object id
-        as comparison criterion.
+        parameter 'key' are always interpreted as index, not as an object id
+        or as a comparison criterion.
 
-        :param key: An integer index of slice of child-nodes to be deleted
+        :param key: An integer index or a slice of child-nodes to be deleted
             or a tag name (string) for selecting child-nodes for deletion.
         :raises:
             KeyError:   if no matching child was found.
-            IndexError: if key was an integer index that did not exist
+            IndexError: if 'key' was an integer index that did not exist.
             ValueError: if the __getitem__ has been called on a leaf node.
         """
         if not self._children and self.result:
@@ -1137,15 +1137,15 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def get(self, key: Union[int, slice, NodeSelector],
             surrogate: Union[Node, Sequence[Node]]) -> Union[Node, Sequence[Node]]:
-        """Returns the child node with the given index if ``key``
+        """Returns the child node with the given index if 'key'
         is an integer or the first child node with the given tag name. If no
-        child with the given index or name exists, the ``surrogate`` is
+        child with the given index or name exists, the surrogate is
         returned instead. This mimics the behavior of Python's dictionary's
         ``get()``-method.
 
         The type of the return value is always the same type as that of the
         surrogate. If the surrogate is a Node, but there are several items
-        matching ``key``, then only the first of these will be returned.
+        matching 'key', then only the first of these will be returned.
         """
         try:
             items = self[key]
@@ -1162,7 +1162,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         exists. See :py:func:`create_match_function` for a catalogue of
         possible criteria.
 
-        :param selector: a criterion that describes the child-node
+        :param selector: A criterion that describes the child-node.
         :returns: True, if at least one child fulfills the criterion
         """
         mf = create_match_function(selector)
@@ -1193,12 +1193,12 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         Returns the index of the first child that fulfills the criterion
         `what`. If the parameters start and stop are given, the search is
         restricted to the children with indices from the half-open interval
-        [start:end[. If no such child exists a ValueError is raised.
+        [start:end[. If no such child exists, a ValueError is raised.
 
-        :param selector: the criterion by which the child is identified, the index
+        :param selector: The criterion by which the child is identified, the index
             of which shall be returned.
-        :param start: the first index to start searching.
-        :param stop: the last index that shall be searched
+        :param start: The first index to start searching.
+        :param stop: The last index that shall be searched.
         :returns: the index of the first child that matches `what`.
         :raises: ValueError, if no child matching the criterion `what` was found.
         """
@@ -1276,7 +1276,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         :param skip_subtree: A criterion to identify subtrees that the returned
                 iterator shall not dive into. Note that the root-node of the
                 subtree will still be yielded by the iterator.
-        :returns: An iterator over all descendant nodes which fulfill the
+        :returns: An iterator over all descendant nodes that fulfill the
            given criterion. Traversal is pre-order.
 
         Examples::
@@ -1395,20 +1395,20 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def walk_tree_paths(self, include_root: bool=False, reverse: bool=False):
         """Yields all paths of the tree. (Faster than select_paths_if())"""
-        def recursive(trl) -> Iterator[Path]:
+        def recursive(path) -> Iterator[Path]:
             nonlocal reverse
-            top = trl[-1]
+            top = path[-1]
             child_iterator = reversed(top._children) if reverse else top._children
             for child in child_iterator:
-                child_trl = trl + [child]
-                yield child_trl
+                child_path = path + [child]
+                yield child_path
                 if child._children:
-                    yield from recursive(child_trl)
+                    yield from recursive(child_path)
 
-        trl = [self]
+        path = [self]
         if include_root:
-            yield trl
-        yield from recursive(trl)
+            yield path
+        yield from recursive(path)
 
     def select_path_if(self, match_func: PathMatchFunction,
                        include_root: bool = False,
@@ -1420,24 +1420,24 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         the matching nodes. NOTE: In contrast to `select_if()`, `match_function`
         receives the complete path as argument, rather than just the last node!
         """
-        def recursive(trl) -> Iterator[Path]:
+        def recursive(path) -> Iterator[Path]:
             nonlocal match_func, reverse, skip_func
-            top = trl[-1]
+            top = path[-1]
             child_iterator = reversed(top._children) if reverse else top._children
             for child in child_iterator:
-                child_trl = trl + [child]
-                if match_func(child_trl):
-                    yield child_trl
-                if child._children and not skip_func(child_trl):
-                    yield from recursive(child_trl)
+                child_path = path + [child]
+                if match_func(child_path):
+                    yield child_path
+                if child._children and not skip_func(child_path):
+                    yield from recursive(child_path)
 
-        trl: List[Node] = [self]
+        path: List[Node] = [self]
         if include_root:
-            if match_func(trl):  yield trl
-            if not skip_func(trl):
-                yield from recursive(trl)
+            if match_func(path):  yield path
+            if not skip_func(path):
+                yield from recursive(path)
         else:
-            yield from recursive(trl)
+            yield from recursive(path)
 
     def select_path(self, criteria: PathSelector,
                     include_root: bool = False,
@@ -1485,10 +1485,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         chain of descendants) relative to `self` is returned.
         """
         end = 0
-        for trl in self.select_path_if(lambda trl: not trl[-1]._children, include_root=True):
-            end += trl[-1].strlen()
+        for path in self.select_path_if(lambda path: not path[-1]._children, include_root=True):
+            end += path[-1].strlen()
             if location < end:
-                return trl
+                return path
         return []
 
     # milestone support ### EXPERIMENTAL!!! ###
@@ -1499,15 +1499,15 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         the public method `reconstruct_path`, this method returns the chain of ancestors
         in reverse order [node, ... , self] and returns None in case `node` does not exist
         in the tree rooted in self instead of raising a Value Error.
-        If `node` equals `self`, any empty path, i.e. list will be returned.
+        If `node` equals `self`, any empty path, i.e., list will be returned.
         """
         if node in self._children:
             return [node, self]
         for nd in self._children:
-            trl = nd._reconstruct_path_recursive(node)
-            if trl:
-                trl.append(self)
-                return trl
+            path = nd._reconstruct_path_recursive(node)
+            if path:
+                path.append(self)
+                return path
         return []
 
     def reconstruct_path(self, node: Node) -> Path:
@@ -1523,10 +1523,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """
         if node == self:
             return [node]
-        trl = self._reconstruct_path_recursive(node)
-        if trl:
-            trl.reverse()
-            return trl
+        path = self._reconstruct_path_recursive(node)
+        if path:
+            path.reverse()
+            return path
         else:
             raise ValueError('Node "%s" does not occur in the tree %s '
                              % (node.name, flatten_sxpr(self.as_sxpr())))
@@ -1554,12 +1554,12 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         def right_cut(result: Tuple[Node, ...], index: int, subst: Node) -> Tuple[Node, ...]:
             return result[:index] + (subst,)
 
-        def cut(trl: Path, cut_func: Callable) -> Node:
-            child = trl[-1]
+        def cut(path: Path, cut_func: Callable) -> Node:
+            child = path[-1]
             tainted = False
-            for i in range(len(trl) - 1, 0, -1):
-                parent = trl[i - 1]
-                k = index(parent, trl[i])
+            for i in range(len(path) - 1, 0, -1):
+                parent = path[i - 1]
+                k = index(parent, path[i])
                 segment = cut_func(parent.result, k, child)
                 if tainted or len(segment) != len(parent.result):
                     parent_copy = Node(parent.name, segment)
@@ -1577,14 +1577,14 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 else (cast(Path, begin)[-1].pos > cast(Path, end)[-1].pos)):
             begin, end = end, begin
         common_ancestor = self  # type: Node
-        trlA = self.reconstruct_path(cast(Node, begin)) if nodes else cast(Path, begin)
-        trlB = self.reconstruct_path(cast(Node, end)) if nodes else cast(Path, end)
-        for a, b in zip(trlA, trlB):
+        pathA = self.reconstruct_path(cast(Node, begin)) if nodes else cast(Path, begin)
+        pathB = self.reconstruct_path(cast(Node, end)) if nodes else cast(Path, end)
+        for a, b in zip(pathA, pathB):
             if a != b:
                 break
             common_ancestor = a
-        left = cut(trlA[trlA.index(common_ancestor):], left_cut)  # type: Node
-        right = cut(trlB[trlB.index(common_ancestor):], right_cut)  # type: Node
+        left = cut(pathA[pathA.index(common_ancestor):], left_cut)  # type: Node
+        right = cut(pathB[pathB.index(common_ancestor):], right_cut)  # type: Node
         left_children = left._children    # type: Tuple[Node, ...]
         right_children = right._children  # type: Tuple[Node, ...]
         if left_children == right_children:
@@ -1606,8 +1606,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def split_if(self, milestone: PathMatchFunction,
                  skip_func: PathMatchFunction = NO_PATH) -> Tuple[Node, ...]:
         """Splits the entire tree into several trees at every Path for which
-        the milestone-function yield True. The last node in the path for which
-        the milestone-function yields True, will be removed from the tree.
+        the milestone-function yields True. The last node in the path for which
+        the milestone-function yields True will be removed from the tree.
         Thus, split_if() resembles the split-method of the Python-string-object.
 
         EXPERIMENTAL!
@@ -1634,7 +1634,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
               skip_subtree: PathSelector = NO_PATH) -> Tuple[Node, ...]:
         """Splits the entire tree into several trees at every Path for which
         the milestone-selector yields True. The last node in the path for which
-        the milestone-selector yields True, will be removed from the tree.
+        the milestone-selector yields True will be removed from the tree.
         Thus, split_if() resembles the split-method of the Python-string-object.
 
         EXPERIMENTAL!
@@ -1666,12 +1666,12 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         passing the beginning of the path to its ``path``-argument, each function
         will be called with the current path as its first argument and the
         evaluated values of its children as the following arguments,
-        e.g. ``result = node.evaluate(actions, path=[node])``
+        e.g., ``result = node.evaluate(actions, path=[node])``.
         This more sophisticated mode gives the action function access to the
         nodes of the tree as well.
 
         :param actions: A dictionary that maps node-names to action functions.
-        :param path: If not empty, the current tree-path will be passed as first
+        :param path: If not empty, the current tree-path will be passed as the first
             argument (before the evaluation results of the children) to each action.
             Start with a list of the node itself to trigger passing the path.
         :raises KeyError: if an action is missing in the table, use the joker
@@ -1732,20 +1732,20 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             neither line brakes nor spaces will be added by the
             serialization algorithm.
         :param inline_fn:  A function (Node -> bool) that determines whether
-            a node (and if so all its child nodes as well) shall be serialized
-            inline. If parameter inline is True this will always be the case,
+            a node (and if so, all its child nodes as well) shall be serialized
+            inline. If parameter inline is True, this will always be the case,
             no matter what inline_fn() returns
         :param allow_omissions:  If True, the serialization algorithm may
             drop whitespace at certain points. This is useful (only)
             when serializing a tree as XML with mixed-mode nodes.
         :param reflow_fn:  A hook function ((str, str, int) -> str) that can
             reflow the serialized form of the current node (self) to a given
-            column width, if inline_fn(self) yields true, but the parameter
+            column width if inline_fn(self) yields true, but the parameter
             inline was False.
         :param mapping:  A dictionary that will be filled with the
             serialization mapping that maps each passed node to a tuple of
             three integers that represent that the length of the opening tag,
-            the overall length of ther serialized from of the node, and
+            the overall length of the serialized form of the node and
             the length of the closing tag,
             e.g.  "<name>Fritz</name>" -> (6, 18, 7)"
         :param depth:  The current depth of the node in the tree.
@@ -1861,7 +1861,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 if not_inline:
                    mp_child_0 += 1
                 if isinstance(mp_child_1, Sequence):
-                    content = mapping[child][1]
+                    # content = mapping[child][1]
                     mp_child_1 = sum(mp_child_1) + len(mp_child_1)
                 else:
                     mp_child_1 = mp_child_0 + mp_child_1 + mp_child_2
@@ -1936,7 +1936,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             the flattened expression does not exceed the threshold length.
             A negative number means that it will always be flattened.
         :param sxml:  If >= 1, attributes are rendered according to the
-            `SXML <https://okmij.org/ftp/Scheme/SXML.html>`_ -conventions,
+            `SXML <https://okmij.org/ftp/Scheme/SXML.html>`_-conventions,
             e.g. `` (@ (attr "value")`` instead of `` `(attr "value") ``
             if 2, the attribute node (@) will always be present, even if empty.
         :param reflow_col:  If > 0, the serialized form of the tree will be
@@ -2040,7 +2040,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             if len(sxpr) != len(sxpr_0) and indentation != 0:
                 # a hack to ensure that the mapping is correct in case the
                 # serialized has unforeseeably been flattened
-                indentation = 0
+                # indentation = 0
                 for k in tuple(mapping.keys()):  del mapping[k]
                 sxpr = flatten_sxpr('\n'.join(
                     self._tree_repr(
@@ -2127,6 +2127,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                 raises a ValueError.
         :param reflow_col: If > 0, the serialized form of the tree will be
             reflown to the given column width. This is useful for pretty-printing
+        :param mapping: If not NO_MAPPING_SENTINEL, the passed dictionary
+            will be filled with a mapping of the nodes to the length of their
+            opening, the overall length and closing, respectively, e.g.
+            '<name>Fritz</name>' -> (6, 18, 7)
         :returns: The XML-string representing the tree originating in `self`
         """
         if mapping and mapping is not NO_MAPPING_SENTINEL:
@@ -2160,10 +2164,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             """Returns the opening string for the representation of `node`."""
             nonlocal self, attr_filter, _empty_tags, line_breaks
             if node is self and node.name == ':XML':  return ''
-            x=node.name
-            l = len(x)
-            x=node.name in string_tags
-            y=node.has_attr()
             if node.name in string_tags and not node.has_attr():
                 if node.name == CHAR_REF_PTYPE and node.content.isalnum(): return "&#x"
                 elif node.name == ENTITY_REF_PTYPE: return "&"
@@ -2252,10 +2252,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def as_html(self, css: str='', head: str='', lang: str='en',
                 empty_tags: AbstractSet[str] = HTML_EMPTY_TAGS,
                 **kwargs) -> str:
-        """Serialize as HTML-page. See :py:meth:`Node.as_xml` for the further
+        """Serialize as HTML page. See :py:meth:`Node.as_xml` for the further
         keyword-arguments."""
-        kwargs['empty_tags'] = set(kwargs.get('empty_tags', set()))
-        kwargs['empty_tags'].update(HTML_EMPTY_TAGS)
+        kwargs['empty_tags'] = empty_tags
+        if empty_tags is not HTML_EMPTY_TAGS:
+            kwargs['empty_tags'].update(HTML_EMPTY_TAGS)
         xhtml = self.as_xml(**kwargs)
         css_snippet = '\n'.join(['<style type="text/css">', css, '</style>'])
         if head:
@@ -2297,7 +2298,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         be serialized in list-flavor (faster) or dictionary-flavor
         (``asdict=True``, slower).
 
-        In list-flavor, Nodes are serialized as JSON-lists with either
+        In list-flavor, Nodes are serialized as JSON lists with either
         two or three elements:
 
         1. name (always a string),
@@ -2379,8 +2380,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     @staticmethod
     def from_json_obj(json_obj: Union[Dict, Sequence]) -> Node:
-        """Converts a JSON-object representing a node (or tree) back into a
-        Node object. Raises a ValueError, if `json_obj` does not represent
+        """Converts a JSON object representing a node (or tree) back into a
+        Node object. Raises a ValueError if `json_obj` does not represent
         a node."""
         if isinstance(json_obj, Sequence):  # list flavor
             assert 2 <= len(json_obj) <= 4, str(json_obj)
@@ -2423,8 +2424,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def as_json(self, indent: Optional[int] = 2, ensure_ascii=False,
                 as_dict: bool=False, include_pos: bool=True) -> str:
-        """Serializes the tree originating in `self` as JSON-string. Nodes
-        are serialized as JSON-lists with either two or three elements:
+        """Serializes the tree originating in `self` as a JSON string. Nodes
+        are serialized as JSON lists with either two or three elements:
 
         1. name (always a string),
         2. content (either a string or a list of JSON-serialized Nodes)
@@ -2433,11 +2434,11 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         If as_dict is True, nodes are serialized as JSON dictionaries, which
         can be better human-readable when serialized. Keep in mind, though,
-        that while this renders the json files more readable, not
-        all json parsers honor the order of the entries of dictionaries.
-        Thus, serializing node trees as ordered JSON-dictionaries is not
-        strictly in accordance with the JSON-specification! Also serializing
-        and de-serializing the dictionary-flavored JSON is slower.
+        that while this renders the JSON files more readable, not
+        all JSON parsers honor the order of the entries of dictionaries.
+        Thus, serializing node trees as ordered JSON dictionaries is not
+        strictly in accordance with the JSON specification! Also, serializing
+        and deserializing the dictionary-flavored JSON is slower.
 
         Example::
 
@@ -2455,9 +2456,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
 
     def as_unist_obj(self, flavor: str = "xast", lbreaks: List[int] = []) -> Dict:
-        """Returns tree as JSON-Object conforming to the
+        """Returns the tree as JSON-Object conforming to the
         `xast <https://github.com/syntax-tree/xast>`_-Specifictaion.
-        In order to get the actual xast, the returned JSON-object
+        In order to get the actual xast, the returned JSON object
         needs to be serialized.
         """
         if flavor == 'xast':
@@ -2491,8 +2492,13 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def as_xast(self, src: Optional[str] = '', indent: Optional[int] = 2) -> str:
         """Serializes the tree as XML-Abstract-Syntax-Tree following the
-        `xast <https://github.com/syntax-tree/xast>`_ -Specification.
+        `xast <https://github.com/syntax-tree/xast>`_-Specification.
 
+        :param src: The source code of this tree. This is needed to
+             calculate the line- and column-numbers of the nodes.
+             If self is a root node and src is the empty string,
+             self.source will be used instead. Use src=None to indicate
+             that no line- and column-numbers shall be added to the result.
         :param indent: number of spaces for indentation
         """
         if isinstance(self, RootNode) and (src == '' or src == self.source):
@@ -2505,8 +2511,13 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def as_ndst(self, src: Optional[str] = '', indent: Optional[int] = 2) -> str:
         """Serializes the tree as Abstract-Syntax-Tree following the
-        `unist <https://github.com/syntax-tree/unist>`_ -Specification.
+        `unist <https://github.com/syntax-tree/unist>`_-Specification.
 
+        :param src: The source code of this tree. This is needed to
+             calculate the line- and column-numbers of the nodes.
+             If self is a root node and src is the empty string,
+             self.source will be used instead. Use src=None to indicate
+             that no line- and column-numbers shall be added to the result.
         :param indent: number of spaces for indentation
         """
         if isinstance(self, RootNode) and (src == '' or src == self.source):
@@ -2530,17 +2541,17 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         Serializes the tree originating in the node `self` either as
         S-expression, XML, JSON, or in compact form. Possible values for
         `how` are 'S-expression', 'XML', 'JSON', 'indented' accordingly, or
-        'AST', 'CST', 'default', in which case the value of respective
+        'AST', 'CST', 'default', in which case the value of the respective
         configuration variable determines the serialization format.
         (See module :py:mod:`DHParser.configuration`.)
         """
         def exceeds_compact_threshold(node: Node, threshold: int) -> bool:
-            """Returns True, if the S-expression-serialization of the tree
+            """Returns True if the S-expression-serialization of the tree
             rooted in `node` would exceed a certain number of lines and
             should therefore be rendered in a more compact form.
             """
             vsize = 0
-            for nd in node.select_if(lambda _: True, include_root=True):
+            for _ in node.select_if(lambda _: True, include_root=True):
                 vsize += 1
                 if vsize > threshold:
                     return True
@@ -2727,12 +2738,12 @@ class FrozenNode(Node):
     optimizations, like not having to instantiate empty nodes (because they
     are always the same and will be dropped while parsing, anyway) and
     to be able to trigger errors if the program tries to treat such
-    temporary nodes as a regular ones. (See :py:mod:`DHParser.parse`)
+    temporary nodes as regular ones. (See :py:mod:`DHParser.parse`)
 
     Frozen nodes must only be used temporarily during parsing or
     tree-transformation and should not occur in the product of the
     transformation anymore. This can be verified with
-    :py:func:`tree_sanity_check`. Or, as comparison criterion for
+    :py:func:`tree_sanity_check`. Or, as a comparison criterion for
     content equality when picking or selecting nodes or paths from
     a tree (see :py:func:`create_match_function`).
     """
@@ -2809,7 +2820,7 @@ def tree_sanity_check(tree: Node) -> bool:
 class RootNode(Node):
     """The root node for the node-tree is a special kind of node that keeps
     and manages global properties of the tree as a whole. These are first and
-    foremost the list off errors that occurred during tree generation
+    foremost the list of errors that occurred during tree generation
     (i.e. parsing) or any transformation of the tree.
 
     Other properties concern the customization of the XML-serialization and
@@ -2823,7 +2834,7 @@ class RootNode(Node):
     dropped that might also contain error messages.
 
     The root node can be instantiated before the tree is fully parsed. This is
-    necessary, because the root node is needed for managing error messages
+    necessary because the root node is needed for managing error messages
     during the parsing process, already. In order to connect the root node to
     the tree, when parsing is finished, the swallow()-method must be called.
 
@@ -2849,26 +2860,26 @@ class RootNode(Node):
     :ivar string_tags: see `Node.as_xml()` for an explanation.
     :ivar empty_tags: see `Node.as_xml()` for an explanation.
 
-    :ivar docname: a name for the document
-    :ivar stage: a name for the current processing stage or the empty string
-        (default). This name if present is used for verifying the stage in
+    :ivar docname: A name for the document.
+    :ivar stage: A name for the current processing stage or the empty string
+        (default). This name, if present, is used for verifying the stage in
         :py:func:`DHParser.compile.run_pipeline`. If ``stage`` contains the
         empty string, stage-verification is turned off (which may result
         in obscure error messages in case a tree-transformation is run on
         the wrong stage.) Stage-names should be considered as case-insensitive,
-        i.e. "AST" is treated as the same stage as "ast".
+        i.e., "AST" is treated as the same stage as "ast".
     :ivar serialization_type: The kind of serialization for the
         current processing stage. Can be one of 'XML', 'json',
         'indented', 'S-expression' or 'default'. (The latter picks
         the default serialization from the configuration.)
 
-    :ivar data: Compiled data. If the data still is a tree this
+    :ivar data: Compiled data. If the data still is a tree, 'data'
         simply contains a reference to self.
     """
 
     def __new__(cls, *args, **kwargs):
         if len(args) == 1 and isinstance(args[0], RootNode):
-            return args[0]  # avoid creating a root-node form a root-node
+            return args[0]  # avoid creating a root-node from a root-node
         return Node.__new__(cls)
 
     def __init__(self, node: Optional[Node] = None,
@@ -2900,7 +2911,7 @@ class RootNode(Node):
             self.source_mapping: SourceMapFunc = gen_neutral_srcmap_func(source) \
                 if source_mapping is None else source_mapping
 
-        # Data resembling the compiled tree. Default is the tree itself.
+        # Data resembling the compiled tree. The default is the tree itself.
         self.data = self
 
     def __str__(self):
@@ -3114,7 +3125,7 @@ class RootNode(Node):
                 for _ in node.select_if(lambda n: id(n) == nid):
                     break
                 else:
-                    # node is not connected to tree anymore, but since errors
+                    # node is not connected to the tree anymore, but since errors
                     # should not get lost, display its errors on its parent
                     errors.extend(self.error_nodes[nid])
         return errors
@@ -3140,7 +3151,7 @@ class RootNode(Node):
     @property
     def errors_sorted(self) -> List[Error]:
         """
-        Returns the list of errors, ordered bv their position.
+        Returns the list of errors, ordered by their position.
         """
         errors = self.errors[:]
         errors.sort(key=lambda e: e.pos)
@@ -3160,10 +3171,10 @@ class RootNode(Node):
 
     def did_match(self) -> bool:
         """
-        Returns True, if the parser that has generated this tree did
+        Returns True if the parser that has generated this tree did
         match, False otherwise. Depending on wether the Grammar-object that
         that generated the node-tree was called with `complete_match=True`
-        or not this requires either the complete document to have been
+        or not, this requires either the complete document to have been
         matched or only the beginning.
 
         Note: If the parser did match, this does not mean that it must
@@ -3437,13 +3448,13 @@ def parse_xml(xml: Union[str, StringView],
     """
     Generates a tree of nodes from a (Pseudo-)XML-source. This
     simplified XML-parser only parses the XML-content, processing
-    instructions, document-type definitions etc. will be ignored.
+    instructions, document-type definitions, etc. will be ignored.
     The source-document should not contain embedded DTDs or CData-sections,
     as the outcome is undefined, i.e. either an error will be raised or the
     returned tree will contain (possibly inconclusive) fragments of these
     parts.
 
-    For a more precise XML-parser, that conforms to the
+    For a more precise XML parser which conforms to the
     `W3C-XML-specification <https://www.w3.org/TR/xml/>`_, use
     :py:func:`~parsers.parse_XML` or :py:func:`~parsers.parse_HTML`.
 
@@ -3469,7 +3480,7 @@ def parse_xml(xml: Union[str, StringView],
         out_empty_tags = set()
 
     def get_pos_str(substring: StringView) -> str:
-        """Returns line:column indicating where substring is located within
+        """Returns line:column indicating where the substring is located within
         the whole xml-string."""
         nonlocal xml
         pos = len(xml) - len(substring)
@@ -3647,9 +3658,9 @@ class DHParser_JSONEncoder(json.JSONEncoder):
 
 def parse_json(json_str: str) -> RootNode:
     """
-    Parses a JSON-representation of a node-tree. Other than
+    Parses a JSON representation of a node-tree. Other than
     and parse_xml, this function does not convert any json-document into
-    a node-tree, but only json-documents that represents a node-tree, e.g.
+    a node-tree, but only json-documents that represent a node-tree, e.g.,
     a json-document that has been produced by `Node.as_json()`!
     """
     json_obj = json.loads(json_str, object_pairs_hook=lambda pairs: dict(pairs))
@@ -3686,7 +3697,7 @@ def deserialize(xml_sxpr_or_json: str) -> Optional[Node]:
 def validate_token_sequence(token_sequence: str) -> bool:
     """Returns True, if `token_sequence` is properly formed, i.e. normalized.
 
-    Token sequences are strings or words which are separated by
+    Token sequences are strings or words that are separated by
     single blanks with no leading or trailing blank.
     """
     return token_sequence[:1] != ' ' and token_sequence[-1:] != ' ' \
@@ -3701,11 +3712,11 @@ def normalize_token_sequence(token_sequence: str) -> str:
 
 
 def has_token(token_sequence: str, token: str, *, all: bool=True) -> bool:
-    """Returns true, if `token` is contained in the blank-spearated
+    """Returns true if `token` is contained in the blank-spearated
     token sequence. If `token` itself is a blank-separated sequence of
-    tokens then, depending on the value of `all`, True is returned if
+    tokens, then depending on the value of `all`, True is returned if
     either all tokens are contained in `token_sequence` or at least one
-    token is contained in `token_sequence`.::
+    token is contained in `token_sequence`::
 
         >>> has_token('bold italic', 'italic')
         True
@@ -3776,7 +3787,7 @@ def eq_tokens(token_sequence1: str, token_sequence2: str) -> bool:
 
 
 def has_token_on_attr(node: Node, token: str, attribute: str, *, all: bool=True) -> bool:
-    """Returns True, if 'attribute' of 'node' contains all 'tokens'."""
+    """Returns True if 'attribute' of 'node' contains all 'tokens'."""
     return has_token(node.get_attr(attribute, ''), token, all=all)
 
 
@@ -3787,7 +3798,7 @@ def add_token_to_attr(node: Node, token: str, attribute: str):
 
 
 def remove_token_from_attr(node: Node, token: str, attribute: str,
-                           remove_empty_attr: bool=True) -> Node:
+                           remove_empty_attr: bool=True):
     """Removes all `tokens` from `attribute` of `node`."""
     value = remove_token(node.get_attr(attribute, ''), token)
     if value:
@@ -3823,7 +3834,7 @@ def path_names(path: Path) -> Iterator[str]:
 ### EXPERIMENTAL
 
 def path_str(path: Path) -> str:
-    """Returns the path as pseudo filepath of tag-names."""
+    """Returns the path as a pseudo filepath of tag-names."""
     tag_list = ['']
     for node in path:
         assert not node.name.find('/'), 'path_str() not allowed for tag-names containing "/"!'
@@ -3847,7 +3858,7 @@ def pred_siblings(path: Path, criteria: NodeSelector = ANY_NODE, reverse: bool =
     -> Iterator[Node]:
     """Returns an iterator over the siblings preceeding the end-node in the path.
     Siblings are iterated left to right, so if the end-node of `path` is the 5th
-    child of its parent (path[-2]) the siblings will be iterated starting with
+    child of its parent (path[-2]), the siblings will be iterated starting with
     the 1st child (not with the 4th!). This can be reversed with reverse=True.
     """
     if len(path) <= 1:
@@ -3973,7 +3984,7 @@ def zoom_into_path(path: Optional[Path],
                    steps: int) \
                       -> Optional[Path]:
     """Returns the path of a descendant that follows `steps` generations
-    up the tree originating in `path[-1]`. If `steps` < 0 this will be
+    up the tree originating in `path[-1]`. If `steps` < 0, this will be
     as many generations as are needed to reach a leaf-node.
     The function `pick_child` determines which branch to follow during each
     iteration, as long as the top of the path is not yet a leaf node.
@@ -3991,8 +4002,8 @@ def zoom_into_path(path: Optional[Path],
 
 
 leaf_path = functools.partial(zoom_into_path, steps=-1)
-next_leaf_path = lambda trl: leaf_path(next_path(trl), FIRST_CHILD)
-prev_leaf_path = lambda trl: leaf_path(prev_path(trl), LAST_CHILD)
+next_leaf_path = lambda path: leaf_path(next_path(path), FIRST_CHILD)
+prev_leaf_path = lambda path: leaf_path(prev_path(path), LAST_CHILD)
 
 
 def get_prev_leaf(path: Optional[Path],
@@ -4055,16 +4066,16 @@ def select_path_if(start_path: Path,
     `match_function` is true, starting from `path`.
     """
 
-    def recursive(trl):
+    def recursive(path):
         nonlocal match_func, reverse, skip_func
-        if match_func(trl):
-            yield trl
-        top = trl[-1]
+        if match_func(path):
+            yield path
+        top = path[-1]
         child_iterator = reversed(top._children) if reverse else top._children
         for child in child_iterator:
-            child_trl = trl + [child]
-            if not skip_func(child_trl):
-                yield from recursive(child_trl)
+            child_path = path + [child]
+            if not skip_func(child_path):
+                yield from recursive(child_path)
 
     path = start_path.copy()
     while path:
@@ -4139,7 +4150,7 @@ def pick_path(start_path: Path,
 def select_from_path_if(path: Path,
                         match_func: NodeMatchFunction,
                         reverse: bool=False) -> Iterator[Node]:
-    """Yields all nodes from path for which the match_function is true."""
+    """Yields all nodes from 'path' for which the match_function is true."""
     if reverse:
         for nd in reversed(path):
             if match_func(nd):
@@ -4152,7 +4163,7 @@ def select_from_path_if(path: Path,
 
 def select_from_path(path: Path, criteria: NodeSelector, reverse: bool=False) \
         -> Iterator[Node]:
-    """Yields all nodes from path which fulfill the criterion."""
+    """Yields all nodes from 'path' that fulfill the criterion."""
     return select_from_path_if(path, create_match_function(criteria), reverse)
 
 
@@ -4241,8 +4252,8 @@ def path_tail(path: Path, criterion: NodeSelector, greedy: bool=False) -> Path:
 
 
 def drop_leaf(leaf_path: Path):
-    """Drops the last node in the leaf_path, if it is a leaf. Recursively drops
-    all parent nodes, if they are empty after dropping the leaf. Examples::
+    """Drops the last node in the leaf_path if it is a leaf. Recursively drops
+    all parent nodes if they are empty after dropping the leaf. Examples::
 
         >>> tree = parse_sxpr('(A (B (C (D (B (E "?"))))))')
         >>> drop_leaf(tree.pick_path('E'))
@@ -4294,7 +4305,7 @@ def pp_path(path: Path,
             with_content: Union[int, Tuple[int, int]] = 0,
             delimiter: str = ' <- ') \
         -> str:
-    """Serializes a path as string.
+    """Serializes a path as a string.
 
     :param path: the path to be serialized.
     :param with_content: the number of nodes from the end of the path for
@@ -4335,7 +4346,7 @@ def insert_node(leaf_path: Path, rel_pos: int, node: Node,
                 divisible_leaves: Container = DIVISIBLES) -> Node:
     """Inserts a node at a specific position into the last or
     eventually second but last node in the path. The path must be
-    a "leaf"-path, i.e. a path that ends in a leaf. Returns the
+    a "leaf"-path, i.e., a path that ends in a leaf. Returns the
     parent of the newly inserted node.
 
     This is a convenient function for inserting milestons into
@@ -4362,7 +4373,7 @@ def insert_node(leaf_path: Path, rel_pos: int, node: Node,
         >>> print(tree.as_sxpr())
         (A (B "Gu") (Hicks!) (B "ten") (S " ") (C "Morgen"))
         >>> tree = parse_sxpr('(A (B "Guten") (S " ") (C "Morgen"))')
-        >>> path = [tree['B']]  # same tree, but path is confined to the leaf node!
+        >>> path = [tree['B']]  # same tree, but 'path' is confined to the leaf node!
         >>> _ = insert_node(path, 2, Node('Hicks!', ''), divisible_leaves={'B', 'S', 'C'})
         >>> print(tree.as_sxpr())
         (A (B (B "Gu") (Hicks!) (B "ten")) (S " ") (C "Morgen"))
@@ -4437,7 +4448,7 @@ def reset_chain_ID(chain_length: int = 3):
 
 
 def gen_chain_ID() -> str:
-    """Generate a unique chain-ID for marking splitted nodes or tags,
+    """Generate a unique chain-ID for marking split nodes or tags,
     for that matter.
 
     Chain-IDs in different threads or processes can be identical. It is assumed
@@ -4482,10 +4493,10 @@ def split_node(node: Node, parent: Node, i: cython.int, left_biased: bool = True
         which the node will be split.
     :param left_biased: if True, yields the location after the end of
         the previous path rather than the location at the very beginning
-        of the next path. Default value is "True".
+        of the next path. The default value is "True".
     :param chain_attr: a dictionary with a single key and value resembling
         an attribute and value that will be added to the attributes-dicitonary
-        of both nodes after the split, if the node is named node.
+        of both nodes after the split if the node is named node.
 
     :returns: the index of the split within the children's tuple of the
         parent node.
@@ -4658,9 +4669,9 @@ def full_split(path: Path, i: cython.int,
                match_func: PathMatchFunction = ANY_PATH,
                skip_func: PathMatchFunction = NO_PATH,
                chain_attr_name: str = '') -> Tuple[Node, Node]:
-    """Like :py:func:`deep_split`, but splits the first node in the path,
-    and returns two trees one to the left of the split, one to the right.
-    As an edge case either tree can be an empty node.
+    """Like :py:func:`deep_split`, but splits the first node in the path
+    and returns two trees, one to the left of the split, one to the right.
+    As an edge case, either tree can be an empty node.
     Note that the type RootNode will only be preserved for the first
     returned Node. The second Node will always be an ordinary node.
     Also, no attributes will be transferred to the second Node from the
@@ -4766,7 +4777,7 @@ def markup_right(path: Path, i: cython.int, name: str, attr_dict: Dict[str, Any]
                  skip_func: PathMatchFunction = NO_PATH,
                  divisible: Container[str] = DIVISIBLES,
                  chain_attr_name: str = ''):
-    """Markup the content from string position i within the last node of
+    """Mark up the content from string position i within the last node of
     the path up to the very end of the content of the first node of the
     path.
 
@@ -4872,7 +4883,7 @@ def markup_left(path: Path, i: cython.int, name: str, attr_dict: Dict[str, Any],
                 skip_func: PathMatchFunction = NO_PATH,
                 divisible: Container[str] = DIVISIBLES,
                 chain_attr_name: str = ''):
-    """Markup the content from string position i within the last node of
+    """Mark up the content from string position i within the last node of
     the path up to the very end of the content of the first node of the
     path.
 
@@ -5057,9 +5068,9 @@ class ContentMapping:
     mapping of the first text position of every (selected) leaf-node to the
     path of this node.
 
-    Path-mappings allow to search the flat document with regular expressions or
+    Path-mappings allow searching the flat document with regular expressions or
     simple text search and then changing the tree at the appropriate places,
-    for example by adding markup (i.e. nodes) in these places.
+    for example, by adding markup (i.e., nodes) in these places.
 
     The ContentMapping class provides methods for adding markup-nodes.
     In cases where the new markup-nodes cut across the existing tree-hierarchy,
@@ -5074,7 +5085,7 @@ class ContentMapping:
 
     Location-related instance variables:
 
-    :ivar origin: The orogin of the tree for which a path mapping shall be
+    :ivar origin: The origin of the tree for which a path mapping shall be
         generated. This can be a branch of another tree and therefore does not
         need to be a RootNode-object.
     :ivar select_func: Only leaf-paths for which this is true will be considered when
@@ -5091,18 +5102,18 @@ class ContentMapping:
     :ivar greedy: If True, the algorithm for adding markup minimizes the number
         of required cuts by switching child and parent nodes if the markup fills
         up a node completely as well as including empty nodes in the markup.
-        In any the case. the string content of the added markup remains the same, but
+        In any case, the string content of the added markup remains the same, but
         it might cover more tags than strictly necessary.
     :ivar chain_attr_name: An attribute that will receive one and the same identifier as
         value for all nodes belonging to the chain of on split-up node.
     :ivar auto_cleanup: Update the content mapping after the markup has been finished.
-        Should always be true, if it is intended to reuse the same content mapping
+        Should always be true if it is intended to reuse the same content mapping
         for further markups in the same range or other purposes.
     :param divisibility: A dictionary that contains the information which tags
         (or nodes as identified by their name) are "harder" than other tags. Each
-        key-tag in the dictionary is harder than (i.e. is  allowed to split up) up
-        all tags in the associated value (which is a set of node, or for that matter,
-        tag-names). Tag or node-names associated to the wildcard key ``*`` can be split
+        key-tag in the dictionary is harder than (i.e., is allowed to split up) up
+        all tags in the associated value (which is a set of nodes, or for that matter,
+        tag-names). Tag or node-names associated with the wildcard key ``*`` can be split
         by any tag.
 
         If the markup-method reaches nodes that cannot be split, it will split
@@ -5156,13 +5167,13 @@ class ContentMapping:
         select_func = (lambda pth: self.select_func(stump + pth)) if stump else self.select_func
         if self.ignore_func([origin]):
             return '', [], []
-        for trl in origin.select_path_if(
+        for path in origin.select_path_if(
                 select_func, include_root=True, skip_func=self.ignore_func):
-            #  if self.ignore_func(trl):  continue
+            #  if self.ignore_func(path):  continue
             pos_list.append(pos)
-            path_list.append(trl)
-            content_list.append(trl[-1].content)
-            pos += trl[-1].strlen()
+            path_list.append(path)
+            content_list.append(path[-1].content)
+            pos += path[-1].strlen()
         return ''.join(content_list), pos_list, path_list
 
     def __str__(self):
@@ -5221,10 +5232,10 @@ class ContentMapping:
             path mapping ``cm`` was generated
         :param left_biased: yields the location after the end of the previous
             path rather than the location at the very beginning of the
-            next path. Default value is "False".
+            next path. The default value is "False".
         :returns:   the integer index of the path in self.path_list that
             covers the given position ``pos``
-        :raises:    IndexError if not 0 <= position < length of document
+        :raises:    IndexError if not 0 <= position < length of the document
 
         Example::
 
@@ -5262,13 +5273,13 @@ class ContentMapping:
             offset should be determined.
         :param left_biased: yields the location after the end of the previous
             path rather than the location at the very beginning of the
-            next path. Default value is "False".
+            next path. The default value is "False".
         :param index_out: DEPRECATED the index of the path in the content
             mapping's path-list will be appended to index_out.
 
         :returns:  tuple (path, offset) where the offset is the position
             of ``pos`` relative to the actual position of the last node in the path.
-        :raises:    IndexError if not 0 <= position < length of document
+        :raises:    IndexError if not 0 <= position < length of the document
         """
         path_index = self.get_path_index(pos, left_biased)
         if index_out is not None:
@@ -5286,12 +5297,12 @@ class ContentMapping:
             offset should be determined.
         :param left_biased: yields the location after the end of the previous
             path rather than the location at the very beginning of the
-            next path. Default value is "False".
+            next path. The default value is "False".
 
-        :returns:  LocationInfo, i.e. the tuple (path-index, path, offset) where
+        :returns:  LocationInfo, i.e., the tuple (path-index, path, offset) where
             the offset is the position of ``pos`` relative to the actual position
             of the last node in the path.
-        :raises:  IndexError if not 0 <= position < length of document
+        :raises:  IndexError if not 0 <= position < length of the document
         """
         path_index = self.get_path_index(pos, left_biased)
         return LocationInfo(
@@ -5299,9 +5310,9 @@ class ContentMapping:
 
     def get_node_index(self, node: Optional[Node], reverse: bool=False) -> int:
         """Returns the index in the path_list of the first or last
-        (if reverse is True) path that contains node or -1, if node
-        is Nonde or the node cannot be found. Note: If node is a leaf
-        node, the first and last index are the same. Otherwise, it
+        (if 'reverse' is True) path that contains 'node' or -1 if 'node'
+        is None or the node cannot be found. Note: If 'node' is a leaf
+        node, the first and the last index are the same. Otherwise, it
         occurs (if at all) more often than once if it or any of its
         children has more than one child.
 
@@ -5338,17 +5349,17 @@ class ContentMapping:
         return -1
 
     def get_node_position(self, node: Node, reverse: bool=False) -> int:
-        """Returns the string-position of first or last + 1 (if reverse
-        is True) character of the first or last occurrence of node
-        within the mapping. If node is None or not contained in any path
-        of the mapping, -1 will be returned. If node is a leaf node it
+        """Returns the string-position of the first or last + 1 (if 'reverse'
+        is True) character of the first or last occurrence of 'node'
+        within the mapping. If 'node' is None or not contained in any path
+        of the mapping, -1 will be returned. If 'node' is a leaf node, it
         occurs only once (if at all) in the mapping. Otherwise, it
         occurs (if at all) more often than once if it or any of its
         children has more than one child.
 
         Independent of whether the node is a leaf-node, the position
         of the first and last + 1 character is the same if and
-        only if the string content of node is empty.
+        only if the string content of 'node' is empty.
 
         Examples::
 
@@ -5403,7 +5414,7 @@ class ContentMapping:
         """Yields the node and its path-index for all nodes that are matched
         by the match function. Searching starts from the path with the index
         ``start_from``. Searching within a path starts from the end
-        of the path and only the last matching node in every path is returned.
+        of the path, and only the last matching node in every path is returned.
         Only the path-index from the first path that contains a matching node
         is returned. Subseuqent pathes that contain the same node are skipped.
 
@@ -5630,7 +5641,7 @@ class ContentMapping:
         with ``name``, eventually cutting through ``divisible`` nodes. Returns the
         nearest common ancestor of ``start_pos`` and ``end_pos``.
 
-        :param cm:  A context mapping of the document (or a part therof) where the
+        :param cm:  A context mapping of the document (or a part thereof) where the
             markup shall be inserted. See :py:func:`generate_content_mapping`
         :param start_pos:  The string-position of the first character to be marked
             up. Note that this is the position in the string-content of the tree
@@ -5638,8 +5649,8 @@ class ContentMapping:
             in the XML or any other serialization of the tree!
         :param end_pos:  The string-position after the last character to be included
             in the markup. Similar to the slicing of Python lists
-            or strings the beginning and ending define an half-open intervall,
-            [start_pos, ent_pos[ . The character indexed by end_pos is not included
+            or strings, the beginning and ending define a half-open intervall,
+            [start_pos, ent_pos[. The character indexed by end_pos is not included
             in the markup. Also, keep in mind that ``end_pos`` is the position in
             the string-content of the tree over which the content mapping has been
             generated and not the positionvin the XML or any other serialization
@@ -5890,11 +5901,11 @@ class LocalContentMapping(ContentMapping):
     def get_path_and_offset(self, pos: int, left_biased: bool = False,
                             index_out: Optional[List[int]] = None) -> Tuple[Path, int]:
         pth, off = super().get_path_and_offset(pos + self.pos_offset, left_biased, index_out)
-        return (pth, off - self.pos_offset)
+        return pth, off - self.pos_offset
 
     def get_location(self, pos: int, left_biased: bool = False) -> LocationInfo:
         idx, pth, off = super().get_location(pos + self.pos_offset, left_biased)
-        return (idx, pth, off - self.pos_offset)
+        return LocationInfo(idx, pth, off - self.pos_offset)
 
     def iterate_paths(self, start_pos: int, end_pos: int, left_biased: bool = False) \
             -> Iterator[Path]:
@@ -5934,7 +5945,7 @@ class SerLocation(NamedTuple):
 
 
 class SerializationMapping:
-    "Maps serializations (e.g. XML, SXML, S-Expression) to paths. EXPERIMENTAL AND UNTESTED!!!"
+    """Maps serializations (e.g., XML, SXML, S-Expression) to paths. EXPERIMENTAL AND UNTESTED!!!"""
 
     def __init__(self, tree: Node, serialization: str, raw_mapping: RawMappingType):
         assert serialization[0:1] in ('(', '<'), "XML- or S-Expression-serialization expected!"

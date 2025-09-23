@@ -31,25 +31,24 @@ scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.configuration import get_config_value, set_config_value
-from DHParser.nodetree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxpr, \
+from DHParser.nodetree import (Node, RootNode, parse_sxpr, parse_xml, flatten_sxpr, \
     flatten_xml, parse_json, ZOMBIE_TAG, EMPTY_NODE, ANY_NODE, next_path, \
-    prev_path, pick_from_path, pp_path, ContentMapping, leaf_paths, NO_PATH, \
-    select_path_if, select_path, create_path_match_function, pick_path, \
-    LEAF_PATH, TOKEN_PTYPE, insert_node, content_of, strlen_of, gen_chain_ID, \
-    parse_sxml, LEAF_PTYPES, DIVISIBLES, reflow_as_oneliner, has_token, eq_tokens, \
-    add_class, has_class, remove_class, HTML_EMPTY_TAGS, get_next_leaf, get_prev_leaf
+    prev_path, pick_from_path, ContentMapping, leaf_paths, NO_PATH, \
+    select_path_if, pick_path, LEAF_PATH, TOKEN_PTYPE, content_of, strlen_of, \
+    gen_chain_ID, parse_sxml, DIVISIBLES, reflow_as_oneliner, has_token, eq_tokens, \
+    add_class, has_class, remove_class, HTML_EMPTY_TAGS, get_next_leaf)
 from DHParser.pipeline import create_parser_junction, Junction, PseudoJunction
 from DHParser.transform import traverse, reduce_single_child, remove_brackets, \
     replace_by_single_child, flatten, remove_empty, remove_whitespace, TransformerFunc, \
     transformer
-from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, parse_ebnf
+from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.error import ERROR
 from DHParser.dsl import grammar_provider, create_parser
 from DHParser.error import Error
 from DHParser.parse import RE, Grammar, Forward, Whitespace, Drop, SmartRE, RegExp, Series, \
     ZeroOrMore, Alternative, Option, Text, mixin_comment
 from DHParser.preprocess import gen_neutral_srcmap_func
-from DHParser.toolkit import re, ThreadLocalSingletonFactory, INFINITE
+from DHParser.toolkit import re, ThreadLocalSingletonFactory
 
 
 class TestParseSxpression:

@@ -17,13 +17,13 @@
 
 """
 Module ``compile`` contains a skeleton class for syntax
-driven compilation support. Class ``Compiler`` can serve as base
+driven compilation support. Class ``Compiler`` can serve as the base
 class for a compiler. Compiler objects
 are callable and receive the Abstract syntax tree (AST)
 as argument and yield whatever output the compiler produces. In
 most Digital Humanities applications, this will be
 XML-code. However, it can also be anything else, like binary
-code or, as in the case of DHParser's EBNF-compiler, Python
+code or, as in the case of DHParser's EBNF compiler, Python
 source code.
 
 Function ``compile_source`` invokes all stages of the compilation
@@ -108,7 +108,7 @@ class Compiler:
     value if changed during subesquent calls:
 
     :ivar forbid_returning_None:  Default value: True. Most of the time,
-        if a compiler-method (i.e. on_XXX()) returns None, this is
+        if a compiler-method (i.e., on_XXX()) returns None, this is
         a mistake due to a forgotten return statement. The method
         compile() checks for this mistake and raises an error if
         a compiler-method returns None. However, some compilers require
@@ -133,8 +133,8 @@ class Compiler:
         and will be called if the currently processed node has one
         or more attributes for which such visitors exist.
     :ivar forbid_returning_None: A boolean flag that is true by default to
-        catch a common error (i.e. ommiting the return value) when filling
-        in compile-methods. Should be set to False in sub-classes that
+        catch a common error (i.e., ommiting the return value) when filling
+        in compile-methods. Should be set to False in subclasses that
         do want to allow compile-methods to return None
     :ivar cancel_query: An optional cancel_query function that will be
         called by the compile method and stop short compilation with
@@ -145,7 +145,7 @@ class Compiler:
         variables must be reset when it is called again.
     :ivar _debug: A flag indicating that debugging is turned on. The value
         for this flag is read before each call of the configuration
-        (see debugging-section in :py:mod:`DHParser.configuration`).
+        (see the debugging section in :py:mod:`DHParser.configuration`).
         If debugging is turned on, the compiler class raises en
         error if there is an attempt to be compiled one and the same
         node a second time.
@@ -242,15 +242,15 @@ class Compiler:
         implemented compiler.)
 
         The ``__call__``-method is also responsible for initializations
-        required before the compilation and the finalization of the
+        required before the compilation, and the finalization of the
         compilation has been finished by taking the following steps::
 
-            1. reset all variables and initialize ``self.tree`` with ``root``
-            2. call the :py:meth:`Compiler.prepare()`-method.
-            3. compile the syntax-tree originating in ``root`` by calling
+            1. Reset all variables and initialize ``self.tree`` with ``root``.
+            2. Call the :py:meth:`Compiler.prepare()`-method.
+            3. Compile the syntax-tree originating in ``root`` by calling
                :py:meth:`Compiler.compile()` on the root-node.
-            4. call all finalizers in the ``self.finalizers``-list.
-            5. call the :py:meth:`Compiler.finalize()`-method.
+            4. Call all finalizers in the ``self.finalizers``-list.
+            5. Call the :py:meth:`Compiler.finalize()`-method.
 
         :param root: The root-node of the syntax tree to be compiled. ``root``
             does not need to be of type :py:class:`~nodetree.RootNode` in order
@@ -359,7 +359,7 @@ class Compiler:
         for the parsers of the sub nodes by itself. Rather, this should
         be done within the compilation methods.
 
-        :param Node: The node that shall be compiled next. (The path
+        :param node: The node that shall be compiled next. (The path
             of nodes leading from the root of the tree is kept in
             the instance-variable self.path.)
         :param find_compilation_method: A function that returns a
