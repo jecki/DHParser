@@ -26,7 +26,7 @@ DHParser offers:
 * customizable error messages
 * extensive tree processing facilities
 * support for building language servers (experimental)
-* full unicode support
+* full Unicode support
 
 DHParser is by now mature and "production ready". It is being used in several projects,
 most notably for the domain specific notation of the `Medieval Latin Dictionary`_

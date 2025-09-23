@@ -711,10 +711,10 @@ you'd like to keep the whitespace in you data or not.
 There can be different kinds of whitespace with different meaning
 (and differing significance). For example, one can make a difference
 between horizontal whitespace (spaces and tabs) and vertical
-whitespace (including linefeeds). And there can be different sizes
+whitespace (including line feeds). And there can be different sizes
 of whitespace with different meaning. For example in LaTeX, a single
 linefeed still counts as plain whitespace while an empty line (i.e.
-whitespace including two or more not linefeeds) signals a new
+whitespace including two or more not line feeds) signals a new
 paragraph.
 
 Finally, even the position of whitespace can make a difference.
