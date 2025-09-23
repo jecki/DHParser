@@ -116,6 +116,9 @@ proc cacheAll[T: Set256|Set4k|Set64k](rs: var RuneSet, cache: var ref T) =
 
 proc cacheSome[T: Set256|Set4k|Set64k](rs: var RuneSet, cache: var ref T, cacheSize: uint32) = 
   assert cacheSize == 256 or cacheSize == 4096 or cacheSize == 65536
+  when T is Set256: assert cacheSize == 256
+  when T is Set4k:  assert cacheSize == 4096
+  when T is Set64k: assert cacheSize == 65536
   new(cache)
   let upperLimit = (cacheSize - 1).uint16
   for rr in rs.ranges:
@@ -176,29 +179,15 @@ func init*(RuneSet: type, neg: bool, ranges: seq[RuneRange]): RuneSet =
 
 ## The following init* functions are used to initialize rune sets
 ## directly with sets instead of ranges. The defining sequence of
-## ranges is computed from the set.
-
-proc toRanges[T: Ordinal](s: set[T], RT: type): seq[(RT, RT)] =
-  ## Converts a set to a sequence of ranges. The sequence is sorted in ascending order.
-  result = newSeq[RuneRange](0)
-  if s.len > 0:
-    var (a, b) = (T(0), T(0))
-    for i in s:
-      (a, b) = (i, i)
-      break
-    for i in s:
-      if i > b + 1:
-        result.add((RT(a), RT(b)))
-        (a, b) = (i, i)
-      else:
-        b = i
-    result.add((RT(a), RT(b)))
+## ranges is computed from the set. 
+## In terms of startup speed this is the preferred method for
+## initializing rune sets.
 
 proc init*(RuneSet: type, neg: bool, cache: Set256): RuneSet =
   var cref = new(Set256)
   cref[] = cache
   RuneSet(negate: neg, 
-          ranges: toRanges(cache, Rune), 
+          ranges: @[],  # toRanges(cache, Rune)
           uncached: @[],
           cache256: cref, cache4k: nil, cache64k: nil, 
           contains: inCache256)
@@ -207,7 +196,7 @@ proc init*(RuneSet: type, neg: bool, cache: Set4k): RuneSet =
   var cref = new(Set4k)
   cref[] = cache
   RuneSet(negate: neg, 
-          ranges: toRanges(result.cache4k[], Rune), 
+          ranges: @[], 
           uncached: @[],
           cache256: nil, cache4k: cref, cache64k: nil, 
           contains: inCache4k)
@@ -216,10 +205,46 @@ proc init*(RuneSet: type, neg: bool, cache: Set64k): RuneSet =
   var cref = new(Set64k)
   cref[] = cache
   RuneSet(negate: neg, 
-          ranges: toRanges(result.cache64k[], Rune), 
+          ranges: @[],
           uncached: @[],
           cache256: nil, cache4k: nil, cache64k: cref, 
           contains: inCache64k)
+
+proc toRanges[T: Ordinal](s: ref set[T] not nil, RT: type): seq[(RT, RT)] =
+  ## Converts a set to a sequence of ranges. The sequence is sorted in ascending order.
+  result = newSeq[RuneRange](0)
+  if s[].len > 0:
+    var (a, b) = (T(0), T(0))
+    for i in s[]:
+      (a, b) = (i, i)
+      break
+    for i in s[]:
+      if i > b + 1:
+        result.add((RT(a), RT(b)))
+        (a, b) = (i, i)
+      else:
+        b = i
+    result.add((RT(a), RT(b)))
+
+proc emptyCache(rs: RuneSet): RuneSet =
+  ## Returns a copy of the RuneSet with all cache fields set to nil
+  let ranges: seq[RuneRange]
+  if rs.ranges.len == 0:
+    if not isNil(rs.cache256):
+      ranges = toRanges(rs.cache256, Rune) 
+    elif not isNil(rs.cache4k):
+      ranges = toRanges(rs.cache4k, Rune) 
+    elif not isNil(rs.cache64k):
+      ranges = toRanges(rs.cache64k, Rune)
+    else:
+      ranges = rs.ranges
+  else:
+    ranges = rs.ranges
+  RuneSet(negate: rs.negate, 
+          ranges: ranges,
+          uncached: @[],
+          cache256: nil, cache4k: nil, cache64k: nil, 
+          contains: inRuneSet_firstRun)
 
 
 proc `==`*(a, b: RuneSet): bool =
@@ -452,14 +477,6 @@ proc `^`*(runes: RuneSet): RuneSet =
   RuneSet(negate: not runes.negate, ranges: runes.ranges, uncached: runes.uncached,
           cache256: runes.cache256, cache4k: runes.cache4k, cache64k: runes.cache64k,
           contains: runes.contains)
-
-
-proc emptyCache(rs: RuneSet): RuneSet =
-  RuneSet(negate: rs.negate, 
-          ranges: rs.ranges,
-          uncached: @[],
-          cache256: nil, cache4k: nil, cache64k: nil, 
-          contains: inRuneSet_firstRun)
 
 
 proc `+`*(A, B: RuneSet): RuneSet =
