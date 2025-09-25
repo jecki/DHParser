@@ -1077,6 +1077,16 @@ def replace_or_reduce(path: Path, condition: CondFunc = is_named):
             _reduce_child(node, child, path[0])
 
 
+def swap_with_sinlge_child(path: Path):
+    """Swaps the tag-name and attributes with those of
+    a single child. e.g. (A (B "...")) -> (B (A "..."))."""
+    node = path[-1]
+    if len(node.children) == 1:
+        child = node._result[0]
+        child.name, node.name = node.name, child.name
+        swap_attributes(node, child) 
+
+
 @transformation_factory(str)
 def change_name(path: Path, name: str):
     """
