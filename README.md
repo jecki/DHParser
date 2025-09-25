@@ -374,6 +374,9 @@ Munich Germany 2017-2025, https://gitlab.lrz.de/badw-it/dhparser
 References and Acknowledgement
 ------------------------------
 
+An incomplete list of literature that has been used
+to develop DHParser.
+
 Eckhart Arnold: Domänenspezifische Notationen. Eine (noch)
 unterschätzte Technologie in den Digitalen Geisteswissenschaften,
 Präsentation auf dem
@@ -441,6 +444,11 @@ Markus Voelter, Sbastian Benz, Christian Dietrich, Birgit Engelmann,
 Mats Helander, Lennart Kats, Eelco Visser, Guido Wachsmuth:
 DSL Engineering. Designing, Implementing and Using Domain-Specific Languages, 2013.
 [dslbook.org/][voelter_2013]
+
+Redziejowski, R.R. (2023). Left Recursion by Recursive Ascent. 
+In: Schlingloff, BH., Vogel, T., Skowron, A. (eds) Concurrency, Specification and Programming. 
+Studies in Computational Intelligence, vol 1091. Springer, Cham. 
+https://doi.org/10.1007/978-3-031-26651-5_2 URL: https://ceur-ws.org/Vol-2951/paper2.pdf
 
 Christopher Seaton: A Programming Language Where the Syntax and Semantics
 are Mutuable at Runtime, University of Bristol 2007,
