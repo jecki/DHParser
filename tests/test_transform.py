@@ -35,7 +35,7 @@ from DHParser.transform import traverse, reduce_single_child, remove_whitespace,
     merge_adjacent, is_one_of, not_one_of, swap_attributes, delimit_children, merge_treetops, \
     positions_of, insert, node_maker, apply_if, change_name, add_attributes, add_error, \
     merge_leaves, BLOCK_ANONYMOUS_LEAVES, pick_longest_content, fix_content, merge_connected, \
-    is_a, update_attr, swap_nested_nodes
+    is_a, update_attr, swap_nested_nodes, has_child
 from typing import AbstractSet, List, Sequence, Tuple
 
 
@@ -289,7 +289,17 @@ class TestComplexTransformations:
         traverse(tree, {'A': [swap_nested_nodes]})
         assert tree.as_sxpr() == '(B `(class "bold") (A (C "...")))'
         tree = copy.deepcopy(original)
+        traverse(tree, {'B': [swap_nested_nodes]})
+        assert tree.as_sxpr() == '(A (C (B `(class "bold") "...")))'
+        tree = copy.deepcopy(original)
+        traverse(tree, {'C': [swap_nested_nodes]})
+        assert tree.as_sxpr() == '(A (B `(class "bold") (C "...")))'
+        tree = copy.deepcopy(original)
         traverse(tree, {'*': [swap_nested_nodes]})
+        assert tree.as_sxpr() == '(C (A (B `(class "bold") "...")))'
+
+        tree = copy.deepcopy(original)
+        traverse(tree, {'*': [apply_if(swap_nested_nodes, has_child('C'))]})
         assert tree.as_sxpr() == '(C (A (B `(class "bold") "...")))'
 
         tree = parse_sxpr('(A (G (B (C "a") (D (F "b")) (E "c"))))')
