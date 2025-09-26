@@ -76,6 +76,7 @@ __all__ = ('TransformationDict',
            'replace_by_children',
            'reduce_single_child',
            'replace_or_reduce',
+           'swap_nested_nodes',
            'change_name',
            # 'change_tag_name',
            'replace_child_names',
@@ -1077,7 +1078,7 @@ def replace_or_reduce(path: Path, condition: CondFunc = is_named):
             _reduce_child(node, child, path[0])
 
 
-def swap_with_sinlge_child(path: Path):
+def swap_nested_nodes(path: Path):
     """Swaps the tag-name and attributes with those of
     a single child. e.g. (A (B "...")) -> (B (A "..."))."""
     node = path[-1]

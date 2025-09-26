@@ -35,7 +35,7 @@ from DHParser.transform import traverse, reduce_single_child, remove_whitespace,
     merge_adjacent, is_one_of, not_one_of, swap_attributes, delimit_children, merge_treetops, \
     positions_of, insert, node_maker, apply_if, change_name, add_attributes, add_error, \
     merge_leaves, BLOCK_ANONYMOUS_LEAVES, pick_longest_content, fix_content, merge_connected, \
-    is_a, update_attr
+    is_a, update_attr, swap_nested_nodes
 from typing import AbstractSet, List, Sequence, Tuple
 
 
@@ -274,6 +274,27 @@ class TestComplexTransformations:
         collapse_children_if([tree], is_one_of('L'), 'L', fix_content(" "))
         s = flatten_sxpr(tree.as_sxpr())
         assert s == '(Article (TEXT "Hello") (L `(spatium "4") " ") (Text "World"))'
+
+    def test_swap_nested(self):
+        tree = parse_sxpr('(A (B `(class "bold") "..."))')
+        original = copy.deepcopy(tree)
+        path = tree.pick_path('B')
+        swap_nested_nodes(path)  # nothing should happen, as B has no child.
+        assert tree.equals(original)
+        swap_nested_nodes(path[:1])  # A and B should be swapped
+        assert tree.as_sxpr() == '(B `(class "bold") (A "..."))'
+
+        original = parse_sxpr('(A (B `(class "bold") (C "...")))')
+        tree = copy.deepcopy(original)
+        traverse(tree, {'A': [swap_nested_nodes]})
+        assert tree.as_sxpr() == '(B `(class "bold") (A (C "...")))'
+        tree = copy.deepcopy(original)
+        traverse(tree, {'*': [swap_nested_nodes]})
+        assert tree.as_sxpr() == '(C (A (B `(class "bold") "...")))'
+
+        tree = parse_sxpr('(A (G (B (C "a") (D (F "b")) (E "c"))))')
+        traverse(tree, {'*': [swap_nested_nodes]})
+        assert tree.as_sxpr() == '(B (A (G (C "a") (F (D "b")) (E "c"))))'
 
 
 class TestWhitespaceTransformations:
