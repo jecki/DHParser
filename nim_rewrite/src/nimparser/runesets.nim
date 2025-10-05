@@ -74,15 +74,15 @@ const
   EmptyRuneRange* = (Rune('b'), Rune('a'))
 
 
-func toRanges[T: Ordinal](s: ref set[T], RT: type): seq[(RT, RT)] =
+func toRanges[T: Ordinal](s: set[T], RT: type): seq[(RT, RT)] =
   ## Converts a set to a sequence of ranges. The sequence is sorted in ascending order.
   result = newSeq[RuneRange](0)
-  if not isNil(s) and s[].len > 0:
+  if s.len > 0:
     var (a, b) = (T(0), T(0))
-    for i in s[]:
+    for i in s:
       (a, b) = (i, i)
       break
-    for i in s[]:
+    for i in s:
       if i > b + 1:
         result.add((RT(a), RT(b)))
         (a, b) = (i, i)
@@ -91,17 +91,34 @@ func toRanges[T: Ordinal](s: ref set[T], RT: type): seq[(RT, RT)] =
     result.add((RT(a), RT(b)))
 
 
+# func toRanges[T: Ordinal](s: ref set[T], RT: type): seq[(RT, RT)] = toRanges(s[], RT)
+  # result = newSeq[RuneRange](0)
+  # if not isNil(s) and s[].len > 0:
+  #   var (a, b) = (T(0), T(0))
+  #   for i in s[]:
+  #     (a, b) = (i, i)
+  #     break
+  #   for i in s[]:
+  #     if i > b + 1:
+  #       result.add((RT(a), RT(b)))
+  #       (a, b) = (i, i)
+  #     else:
+  #       b = i
+  #   result.add((RT(a), RT(b)))
+
+
+
 func ranges*(rs: RuneSet): seq[RuneRange] =
   ## Returns the sequence of ranges that define the rune set.
   ## If the rune set was initialized with an empty sequence of ranges
   ## but with a cache, the sequence of ranges is computed from the cache.
   if rs.allRanges.len == 0:
     if not isNil(rs.cache256):
-      result = toRanges(rs.cache256, Rune) 
+      result = toRanges(rs.cache256[], Rune) 
     elif not isNil(rs.cache4k):
-      result = toRanges(rs.cache4k, Rune) 
+      result = toRanges(rs.cache4k[], Rune) 
     elif not isNil(rs.cache64k):
-      result = toRanges(rs.cache64k, Rune)
+      result = toRanges(rs.cache64k[], Rune)
     else:
       result = rs.allRanges
   else:
@@ -703,6 +720,14 @@ proc rr*(rangeStr: string): RuneRange =
 
 #######################################################################
 
+
+const s: Set4K = {0x30, 0x31, 0x33, 0x35..0x39, 0x67..0x77A}
+const t = toRanges(s, Rune)
+
+# const rs7 = rs[uint16](s)
+# const rs8 = rs(false, @[(0x30, 0x31), (0x33, 0x33), (0x35, 0x39), (0x67, 0x7A)])
+
+
 when isMainModule:
   var rs1 = rs"""[_]|[:]|[A-Z]|[a-z]
                 |[\u00C0-\u00D6]|[\u00D8-\u00F6]|[\u00F8-\u02FF]
@@ -713,7 +738,7 @@ when isMainModule:
   let rs2 = rs"[ace\sD-G]"
   let rs3 = rs"[a-f]|[^c-z0-9]|[24]"
   let rs6 = rs"[a-f][i-h]"
-  let rs5 = rs"[a-z]-[d-g]"
+  let rs5 = rs"[a-z]-[d-g]" 
   let rs7 = rs(false, {0x30, 0x31, 0x33, 0x35..0x39, 0x67..0x7A})
   let rs8 = rs(false, @[(0x30, 0x31), (0x33, 0x33), (0x35, 0x39), (0x67, 0x7A)])
   echo $rs6

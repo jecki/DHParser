@@ -170,9 +170,9 @@ class reGrammar(Grammar):
     _entity = Forward()
     _item = Forward()
     pattern = Forward()
-    source_hash__ = "ea9d51cde5c670e4826d6817e84e3e79"
+    source_hash__ = "c0b000303556baaa7422c5505eb301d8"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:_extension$|_grpChar$|_chars$|_escapedCh$|_illegal$|_escape$|_grpItem$|BS$|_grpChars$|EOF$|_nibble$|_group$|_number$|_octal$|_entity$|_anyChar$|_char$|_special$|_item$)')
+    disposable__ = re.compile('(?:_anyChar$|_char$|BS$|_illegal$|EOF$|_escape$|_number$|_escapedCh$|_nibble$|_chars$|_extension$|_item$|_ch$|_grpChars$|_group$|_grpItem$|_octal$|_entity$|_special$|_grpChar$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -209,11 +209,13 @@ class reGrammar(Grammar):
     repType = Alternative(zeroOrOne, zeroOrMore, oneOrMore, range)
     negative = Series(Drop(Text("-")), RegExp('[imsx]+'))
     flags = Alternative(Series(positive, Option(negative)), negative)
-    ch = Series(NegativeLookahead(Drop(Text("]"))), Option(BS), _anyChar)
+    _ch = Series(NegativeLookahead(Drop(Text("]"))), Option(BS), RegExp('.'))
+    ch = Synonym(_ch)
     chSpecial = RegExp('[abfnrtv]')
     _nibble = RegExp('[0-9a-fA-F]')
     escapedSet = Series(BS, RegExp('[dDsSwW]'))
     hex2 = Counted(_nibble, repetitions=(2, 2))
+    hex4 = Counted(_nibble, repetitions=(4, 4))
     complement = Text("^")
     hex8 = Counted(_nibble, repetitions=(8, 8))
     _illegal = RegExp('[a-zA-Z]')
@@ -223,11 +225,11 @@ class reGrammar(Grammar):
     chName = Series(Drop(Text("N{")), RegExp('[\\w ]+'), Drop(Text("}")))
     _octal = RegExp('[0-7]')
     oct = Alternative(Series(Drop(Text("0")), Counted(_octal, repetitions=(0, 3))), Counted(_octal, repetitions=(3, 3)))
-    hex4 = Counted(_nibble, repetitions=(4, 4))
     chCode = Alternative(Series(Drop(Text("x")), hex2), Series(Drop(Text("u")), hex4), Series(Drop(Text("U")), hex8), oct)
     _escapedCh = Series(BS, Alternative(chCode, chSpecial))
-    chRange = Series(Alternative(_escapedCh, ch), Drop(Text("-")), Alternative(_escapedCh, ch))
-    charset = Series(Drop(Text("[")), Option(complement), OneOrMore(Alternative(chRange, escapedSet, _escapedCh, Series(BS, error), ch)), Drop(Text("]")))
+    chRange = Series(Alternative(_escapedCh, ch), Drop(Text("-")), NegativeLookahead(escapedSet), Alternative(_escapedCh, ch))
+    chSet = Series(_ch, ZeroOrMore(Series(NegativeLookahead(escapedSet), NegativeLookahead(chRange), NegativeLookahead(_escapedCh), NegativeLookahead(BS), _ch)))
+    charset = Series(Drop(Text("[")), Option(complement), OneOrMore(Alternative(escapedSet, chRange, _escapedCh, Series(BS, error), chSet)), Drop(Text("]")))
     specialEsc = RegExp('[afnrtv]')
     reEsc = RegExp('[AbBdDsSwWZ]')
     _escape = Series(BS, Alternative(bs, chCode, chName, groupId, reEsc, specialEsc, error, escCh), mandatory=1)
@@ -322,9 +324,9 @@ re_AST_transformation_table = {
     "grpChar, char": [change_name('char')],
     "grpChars, grpCharSeq": [change_name('charSeq')],
     "escCh, bs": [change_name('charSeq')],
-    "ch": [change_name('char')],
-    "chCode": [change_name('char'), reduce_single_child],
-    "chSpecial": [change_name('char'), transform_result(lambda r: SPECIAL_MAP[r])],
+    "ch": [],  # [change_name('char')],
+    "chCode": [change_name('ch'), reduce_single_child],
+    "chSpecial": [change_name('ch'), transform_result(lambda r: SPECIAL_MAP[r])],
 }
 
 

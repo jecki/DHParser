@@ -1,8 +1,5 @@
 LaTeX
 =====
 
-This is going to be a compiler for a subset of LaTeX. TeX/LaTeX in
-general is not a context free language ADD REFERENCE HERE. 
-Thus, only a subset.
+A more complete version can be found under: https://github.com/jecki/LaTeX2TEIXML
 
-Presently, parser and AST-Transformation works.
