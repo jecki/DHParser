@@ -1180,7 +1180,7 @@ proc init*(charRangeParser: CharRangeRef,
            repetitions: Range): CharRangeRef =
   discard Parser(charRangeParser).init(CharRangeName)
   charRangeParser.runes = runes
-  charRangeParser.runes.ranges.sortAndMerge()
+  # charRangeParser.runes.ranges.sortAndMerge()
   charRangeParser.repetitions = repetitions
   return charRangeParser
 
@@ -1837,7 +1837,11 @@ method parse*(self: SynonymRef, location: int32): ParsingResult =
       if node == EmptyNode:
         return (newNode(self.nodeName, ""), loc)
       if node.isAnonymous:
-        node.name = self.nodeName
+        # node.name = self.nodeName
+        if node.hasChildren:
+            return (newNode(self.nodeName, node.children), loc)
+        else:
+            return (newNode(self.nodeName, node.text), loc)
       else:
         return (newNode(self.nodeName, @[Node(node)]), loc)
   return (node, loc)
