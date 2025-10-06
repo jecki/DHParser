@@ -5074,7 +5074,7 @@ class Synonym(UnaryParser):
                     return Node(self.node_name, '', True), location
                 if node.name[0] == ':':  # node.anonymous:
                     # eliminate anonymous child-node on the fly
-                    # node.name = self.node_name   # TODO: Need a unit-test, here !!!!!!!
+                    # node.name = self.node_name   # Bit mistake: this can spoil the memo-cache
                     return Node(self.node_name, node._result), location
                 else:
                     return Node(self.node_name, (node,)), location

@@ -1693,6 +1693,20 @@ class TestMemoization:
         # fixed in DHParser Version 1.50
         assert Buchtitel.content == "Hans im Glück"
 
+    def test_memoization_synonym(self):
+        lang = r"""@disposable = /_\w+/
+            @drop = whitespace@reduction = merge
+            doc = range | set
+            range = !"\\" ch "-" !"\\" ch
+            set = { _ch }+
+            ch = _ch
+            _ch = /./
+            """
+        parser = create_parser(lang)
+        tree = parser(r"\s-\t")
+        sxpr = tree.as_sxpr()
+        assert sxpr == r'(doc (set "\s-\t"))'
+
     def test_signature(self):
         lang = """doc = A | B 
         A = $space_before("x") "x"
