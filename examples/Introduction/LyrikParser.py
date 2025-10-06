@@ -111,7 +111,7 @@ class LyrikGrammar(Grammar):
     r"""Parser for a Lyrik source file.
     """
     source_hash__ = "99b1ba6b62ae18408e6ffad2b04cbfbd"
-    disposable__ = re.compile('(?:JAHRESZAHL$|ZEICHENFOLGE$|wortfolge$|ziel$|LEERRAUM$|ENDE$)')
+    disposable__ = re.compile('(?:ENDE$|wortfolge$|ZEICHENFOLGE$|LEERRAUM$|ziel$|JAHRESZAHL$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''

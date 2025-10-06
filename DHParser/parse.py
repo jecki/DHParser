@@ -5111,6 +5111,9 @@ class Forward(UnaryParser):
             has already been called recursively at this place. This
             is needed to implement left recursion. The number of
             calls becomes irrelevant once a result has been memoized.
+
+    The Forward parser class also contains the algorithm to handle left-recursive
+    grammars. See it's __call__()-method.
     """
 
     def __init__(self):

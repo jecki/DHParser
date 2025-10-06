@@ -5630,7 +5630,8 @@ class ContentMapping:
         except KeyError:
             divisables = self.divisibility['*']
         parent = insert_node(path, rel_pos, node, divisables)
-        self.rebuild_mapping_slice(index, index)
+        if self.auto_cleanup:
+            self.rebuild_mapping_slice(max(index - 1, 0), min(index + 1, len(self._path_list) - 1))
         return NodeLocation(parent, index)
 
 

@@ -80,7 +80,7 @@ class XMLGrammar(Grammar):
     element = Forward()
     source_hash__ = "1a2273263838bd8c8e90ec9fa642930f"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:NameChars$|Reference$|CommentChars$|NameStartChar$|EncName$|PubidChars$|EOF$|Misc$|PubidCharsSingleQuoted$|VersionNum$|CData$)')
+    disposable__ = re.compile('(?:CData$|EncName$|EOF$|PubidCharsSingleQuoted$|PubidChars$|VersionNum$|Misc$|CommentChars$|NameStartChar$|Reference$|NameChars$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
