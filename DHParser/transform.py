@@ -841,7 +841,7 @@ def has_parent(path: Path, name_set: AbstractSet[str]) -> bool:
 
 
 def has_children(path: Path) -> bool:
-    """Checks whether last node in path has children."""
+    """Checks whether last node in 'path' has children."""
     return bool(path[-1]._children)
 
 

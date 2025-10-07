@@ -4596,7 +4596,7 @@ def deep_split(path: Path, i: cython.int,
     index) of the split in the last node of the path.
     Returns the index of the split-location in the first node of the path.
 
-    Exapmles::
+    Examples::
 
         >>> from DHParser.toolkit import printw
         >>> tree = parse_sxpr('(X (s "") (A (u "") (C "One, ") (D "two, ")) '
@@ -5631,7 +5631,9 @@ class ContentMapping:
             divisables = self.divisibility['*']
         parent = insert_node(path, rel_pos, node, divisables)
         if self.auto_cleanup:
-            self.rebuild_mapping_slice(max(index - 1, 0), min(index + 1, len(self._path_list) - 1))
+            i1 = self.get_path_index(pos, left_biased=True)
+            i2 = self.get_path_index(pos + node.strlen(), left_biased=False)
+            self.rebuild_mapping_slice(i1, i2)
         return NodeLocation(parent, index)
 
 
@@ -5834,8 +5836,11 @@ class ContentMapping:
                 common_ancestor.result = common_ancestor[:t + 1] + (nd,) + common_ancestor[u:]
 
         if self.auto_cleanup:
-            self.rebuild_mapping_slice(self.get_path_index(start_pos),
-                                       self.get_path_index(end_pos, left_biased=True))
+            self.rebuild_mapping_slice(self.get_path_index(start_pos, left_biased=True),
+                                       self.get_path_index(end_pos, left_biased=False))
+            # TODO: add a suitable unit-test for a case for the left_biased=True and
+            #       left_biased=False parameter values are indeed neded! They are, to be sure!
+        return NodeLocation(common_ancestor, path_index)
         assert not common_ancestor.pick_if(lambda nd: nd.name == ':Text' and bool(nd.children),
             include_root=True), common_ancestor.as_sxpr()
         return NodeLocation(common_ancestor, path_index)
