@@ -1307,12 +1307,12 @@ def fuse_anonymous_leaves(result: list[Node]) -> list[Node, ...]:
 def fuse(result: Sequence[Node],
          swallow: Optional[CondFunc] = None) -> Union[str, Tuple[Node, ...]]:
     """Merges the nodes in the given sequence of nodes by either
-    merging their content, if they are all leaves nodes or their results.
+    merging their content if they are all leaves nodes or their results.
 
     :param result: The sequence of nodes to merge.
     :param swallow: A function that takes a node as an argument and
         returns True if the node should be added as a whole
-        without merging it's content.
+        without merging its content.
         See :py:func:`merge_adjacent for an example`.
     :returns: The merges result, either a tuple of nodes or a
         string with the merged content in case all nodes where
@@ -1363,7 +1363,7 @@ def merge_adjacent(path: Path,
        if it actually occurs among the nodes to be merged.
 
     This, if 'merge_adjacent' is substituted for 'collapse_children_if'
-    in doc-string example of the latter function, the example yields::
+    in the doc-string example of the latter function, the example yields::
 
         >>> sxpr = '(place (abbreviation "p.") (page "26") (superscript "b") (mark ",") (page "18"))'
         >>> tree = parse_sxpr(sxpr)
@@ -1374,8 +1374,8 @@ def merge_adjacent(path: Path,
     The parameter ``swallow`` takes a function that must yield true
     for those nodes that shall be swallowed as a whole, i.e. of which
     the content shall not be merged and which keep their name. This is
-    useful, if you'd like to keep certain nodes intact, like for
-    example internet links, when merging a sequence of nodes, as seen
+    useful if you'd like to keep certain nodes intact like, for
+    example, internet links, when merging a sequence of nodes, as seen
     below. Without the swallow-parameter, the link (node named "a") will
     not be retained in the merged node, but merely its attribute is
     copied, which may not be what had been intended::
@@ -1388,7 +1388,7 @@ def merge_adjacent(path: Path,
         (p (t `(href "www.munich.de") "In Münchensteht ein Hofbräuhaus."))
 
     To reatain the link-node, merge_adjacent must be instructed to swallow
-    nodes with name "a" as a whole::
+    nodes with the name "a" as a whole::
 
         >>> merge_adjacent([tree_copy], is_one_of('t', 'a'), swallow=is_a('a'))
         >>> print(tree_copy.as_sxpr())
@@ -1411,7 +1411,7 @@ def merge_adjacent(path: Path,
                     adjacent = children[k:i]
                     head = adjacent[0]
                     if swallow is not None and swallow([head]):
-                        head = Node(preferred_name, '').with_pos(head._pos)
+                        head = Node(preferred_name or head.name, '').with_pos(head._pos)
                     elif preferred_name and len(adjacent) > 1:
                         head.name = preferred_name
                     head.result = fuse(adjacent, swallow)

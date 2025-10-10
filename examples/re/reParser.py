@@ -327,6 +327,7 @@ re_AST_transformation_table = {
     "ch": [],  # [change_name('char')],
     "chCode": [change_name('ch'), reduce_single_child],
     "chSpecial": [change_name('ch'), transform_result(lambda r: SPECIAL_MAP[r])],
+    "charset": [merge_adjacent(is_one_of('chSet', 'ch'), 'chSet')],
 }
 
 

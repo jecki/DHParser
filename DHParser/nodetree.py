@@ -5841,9 +5841,9 @@ class ContentMapping:
             # TODO: add a suitable unit-test for a case for the left_biased=True and
             #       left_biased=False parameter values are indeed neded! They are, to be sure!
         return NodeLocation(common_ancestor, path_index)
-        assert not common_ancestor.pick_if(lambda nd: nd.name == ':Text' and bool(nd.children),
-            include_root=True), common_ancestor.as_sxpr()
-        return NodeLocation(common_ancestor, path_index)
+        # assert not common_ancestor.pick_if(lambda nd: nd.name == ':Text' and bool(nd.children),
+        #     include_root=True), common_ancestor.as_sxpr()
+        # return NodeLocation(common_ancestor, path_index)
 
 
 class LocalContentMapping(ContentMapping):
