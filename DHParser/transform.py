@@ -1687,7 +1687,7 @@ def left_associative(path: Path):
 @transformation_factory(collections.abc.Set)
 def lean_left(path: Path, operators: AbstractSet[str]):
     """
-    Turns a right leaning tree into a left leaning tree:
+    Turns a right-leaning tree into a left-leaning tree:
 
         (op1 a (op2 b c))  ->  (op2 (op1 a b) c)
 
@@ -1695,9 +1695,9 @@ def lean_left(path: Path, operators: AbstractSet[str]):
     parser, `lean_left` can be used to rearrange the tree structure
     so that it properly reflects the order of association.
 
-    This transformation is needed, if you want to get the order of
+    This transformation is needed if you want to get the order of
     precedence right, when writing a grammar, say, for arithmetic
-    that avoids left-recursion. (DHParser does support left-recursion
+    that avoids left-recursion. (DHParser does support left-recursion,
     but left-recursive grammars might not be compatible with
     other PEG-frameworks anymore.)
 
