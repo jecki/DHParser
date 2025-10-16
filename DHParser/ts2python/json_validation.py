@@ -1,15 +1,14 @@
-"""json_validation.py - provides validation functions and decorators
-                        for those types that can occur in a
-                        JSON-dataset, in particular TypedDicts.
+"""Module json_validation.py - provides validation functions and decorators
+for those types that can occur in a JSON-dataset, in particular TypedDicts.
 
-Copyright 2021  by Eckhart Arnold (arnold@badw.de)
+Copyright 2021  by Eckhart Arnold (Eckhart.Arnold@badw.de)
                 Bavarian Academy of Sciences an Humanities (badw.de)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    https://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -24,7 +23,7 @@ import functools
 import inspect
 import sys
 from typing import Union, List, Tuple, Dict, Set, Any, \
-    TypeVar, Iterable, Callable, get_type_hints
+    TypeVar, Iterable, Callable, get_type_hints, Union
 try:
     from typing_extensions import GenericMeta, \
         ClassVar, Final, Protocol, NoReturn, Literal
@@ -33,15 +32,15 @@ except (ImportError, ModuleNotFoundError):
         ClassVar, Final, Protocol, NoReturn, Literal
 
 try:
-    from DHParser.ts2python.typeddict_shim import TypedDict, _TypedDictMeta, get_origin, \
-        get_args, ForwardRef, _GenericAlias, is_typeddict
+    from ts2python.typeddict_shim import TypedDict, _TypedDictMeta, get_origin, \
+        get_args, ForwardRef, _GenericAlias, is_typeddict, NotRequired
 except (ImportError, ModuleNotFoundError):
     try:
         from typeddict_shim import TypedDict, _TypedDictMeta, get_origin, \
-            get_args, ForwardRef, _GenericAlias, is_typeddict
+            get_args, ForwardRef, _GenericAlias, is_typeddict, NotRequired
     except (ImportError, ModuleNotFoundError):
         from .typeddict_shim import TypedDict, _TypedDictMeta, get_origin, \
-            get_args, ForwardRef, _GenericAlias, is_typeddict
+            get_args, ForwardRef, _GenericAlias, is_typeddict, NotRequired
 
 if sys.version_info >= (3, 11):
     from typing import _GenericAlias, TypedDict, _TypedDictMeta, get_origin, get_args, ForwardRef
@@ -74,9 +73,19 @@ def resolve_forward_refs(T: type, Ur_T: type = None,) -> type:
         return T
     elif str(T).find('ForwardRef') >= 0:
         if Ur_T is None:  Ur_T = T
-        if sys.version_info < (3, 14, 0):
-            T.__args__ = tuple(resolve_forward_refs(arg, Ur_T)
-                               for arg in get_args(T))
+        args = tuple(resolve_forward_refs(arg, Ur_T) for arg in get_args(T))
+        try:
+            T.__args__ = args
+        except AttributeError:
+            try:
+                T = T.copy_with(args)
+            except AttributeError:
+                if isinstance(T, Union):
+                    # Union[*args] is a SyntaxError in older Python versions
+                    # that, however, will never reach this branch in the first
+                    # place. eval() is needed so that these older Python-versions
+                    # don't throw a SyntaxError when loading this module!
+                    return eval('Union[*args]')
     return T
 
 
@@ -99,8 +108,8 @@ def is_TypedDictClass(typ) -> bool:
 
 def validate_type(val: Any, typ):
     """Raises a TypeError if value `val` is not of type `typ`.
-    In particualr, `validate_type()` can be used to validate
-    dictionaries against TypedDict-types and, more general,
+    In particular, `validate_type()` can be used to validate
+    dictionaries against TypedDict-types and, more generally,
     to validate JSON-data.
     Examples::
     >>> validate_type(1, int)
@@ -137,12 +146,12 @@ def validate_uniform_sequence(sequence: Iterable, item_type):
     """Ensures that every item in a given sequence is of the same particular
     type. Example::
 
-    >>> validate_uniform_sequence((1, 5, 3), int)
-    >>> try:
-    ...     validate_uniform_sequence(['a', 'b', 3], str)
-    ... except TypeError as e:
-    ...     print(e)
-    3 is not of type <class 'str'>
+        >>> validate_uniform_sequence((1, 5, 3), int)
+        >>> try:
+        ...     validate_uniform_sequence(['a', 'b', 3], str)
+        ... except TypeError as e:
+        ...     print(e)
+        3 is not of type <class 'str'>
 
     :param sequence: An iterable to be validated
     :param item_type: The expected type of all items the iterable `sequence` yields.
@@ -176,7 +185,7 @@ def validate_compound_type(value: Any, T):
     ...     print(e)
     1.5 is not of type <class 'int'>
 
-    :param value: the value which shall be validated against the given type
+    :param value: the value which shall by validated against the given type
     :param T: the type which the value is supposed to represent.
     :return: None
     :raise: TypeError if value is not of compound type T.
@@ -239,6 +248,7 @@ def validate_TypedDict(D: Dict, T: _TypedDictMeta):
     assert isinstance(D, Dict), str(D)
     assert is_TypedDictClass(T), str(T)
     type_errors = []
+    # X = T.__required_keys__
     missing = T.__required_keys__ - D.keys()
     if missing:
         type_errors.append(f"Missing required keys: {missing}")
@@ -307,38 +317,36 @@ def type_check(func: Callable, check_return_type: bool = True) -> Callable:
     """Decorator that validates the type of the parameters as well as the
     return value of a function against its type annotations during runtime.
     Parameters that have no type annotation will be silently ignored by
-    the type check. Likewise, the return type.
+    the type check. Likewise, the return type. Example::
 
-    Example::
+        >>> class Position(TypedDict, total=True):
+        ...     line: int
+        ...     character: int
+        >>> class Range(TypedDict, total=True):
+        ...     start: Position
+        ...     end: Position
+        >>> # just a fix for doctest stumbling over ForwardRef:
+        >>> Range.__annotations__ = {'start': Position, 'end': Position}
+        >>> @type_check
+        ... def middle_line(rng: Range) -> Position:
+        ...     line = (rng['start']['line'] + rng['end']['line']) // 2
+        ...     character = 0
+        ...     return Position(line=line, character=character)
+        >>> rng = {'start': {'line': 1, 'character': 1},
+        ...        'end': {'line': 8, 'character': 17}}
+        >>> middle_line(rng)
+        {'line': 4, 'character': 0}
+        >>> malformed_rng = {'start': 1, 'end': 8}
+        >>> try:
+        ...     middle_line(malformed_rng)
+        ... except TypeError as e:
+        ...     print(e)
+        Parameter "rng" of function "middle_line" failed the type-check, because:
+        Type error(s) in dictionary of type <class 'json_validation.Range'>:
+        Field start: '1' is not of <class 'json_validation.Position'>, but of type <class 'int'>
+        Field end: '8' is not of <class 'json_validation.Position'>, but of type <class 'int'>
 
-    >>> class Position(TypedDict, total=True):
-    ...     line: int
-    ...     character: int
-    >>> class Range(TypedDict, total=True):
-    ...     start: Position
-    ...     end: Position
-    >>> # just a fix for doctest stumbling over ForwardRef:
-    >>> Range.__annotations__ = {'start': Position, 'end': Position}
-    >>> @type_check
-    ... def middle_line(rng: Range) -> Position:
-    ...     line = (rng['start']['line'] + rng['end']['line']) // 2
-    ...     character = 0
-    ...     return Position(line=line, character=character)
-    >>> rng = {'start': {'line': 1, 'character': 1},
-    ...        'end': {'line': 8, 'character': 17}}
-    >>> middle_line(rng)
-    {'line': 4, 'character': 0}
-    >>> malformed_rng = {'start': 1, 'end': 8}
-    >>> try:
-    ...     middle_line(malformed_rng)
-    ... except TypeError as e:
-    ...     print(e)
-    Parameter "rng" of function "middle_line" failed the type-check, because:
-    Type error(s) in dictionary of type <class 'json_validation.Range'>:
-    Field start: '1' is not of <class 'json_validation.Position'>, but of type <class 'int'>
-    Field end: '8' is not of <class 'json_validation.Position'>, but of type <class 'int'>
-
-    :param func: The function, the parameters and return value of which shall
+    :param func: The function, the parameters and the return value of which shall
         be type-checked during runtime.
     :return: The decorated function that will raise TypeErrors, if either
         at least one of the parameter's or the return value does not

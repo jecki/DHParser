@@ -141,7 +141,7 @@ class TestLSP:
         except TypeError:
             pass
         try:
-            _ = type_checked_func(2, {'jsonrpc': '2.0', 'id': 21, 'method': 'check'},
+            _ = type_checked_func(2, {'jsonrpc': '2.0', 'id': 23, 'method': 'check'},
                                      Position(line=21, character=15))
             if sys.version_info >= (3, 8):
                 assert False, "Type Error in nested return type not detected"

@@ -1,11 +1,12 @@
 """singledispatch_shim.py - singledispatch with forward-referenced types
 
 Python's functools.singledispatch does not work with function or
-method-signatures where the type of dispatch-parameter is forward-references,
-i.e. where the dispatch-parameter is not annotated with a type itself,
-but with the string-name of the type. While the module "typing" allows this
-kind of annotation as a simple form of forward-referencing,
-"functools.singledispatch" raises a name.
+method-signatures where the type of the dispatch-parameter is a
+forward-reference, i.e. where the dispatch-parameter is not annotated with
+a type itself, but with the string-name of the type. While the module "typing"
+allows this kind of annotation as a simple form of forward-referencing,
+"functools.singledispatch" raises a TypeError because of an unresolved
+reference.
 
 singledispatch_shim contains an alternative implementation of
 single dispatch that works correctly with forward-referenced types.
@@ -17,7 +18,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    https://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -37,6 +38,18 @@ except ImportError:
         from typing_extensions import get_args, get_origin, get_type_hints
     except ImportError:
         from .typing_extensions import get_args, get_origin, get_type_hints
+
+
+try:
+    import annotationlib
+    def get_annotations(cls):
+        try:
+            return annotationlib.get_annotations(cls)
+        except NameError:
+            return True
+except (ImportError, ModuleNotFoundError):
+    def get_annotations(cls):
+        return getattr(cls, '__annotations__', {})
 
 
 # The following functions have been copied from the Python
@@ -130,7 +143,7 @@ def singledispatch(func):
                     f"Invalid first argument to `register()`. "
                     f"{cls!r} is not a class or union type."
                 )
-            ann = getattr(cls, '__annotations__', {})
+            ann = get_annotations(cls)
             if not ann:
                 if isinstance(cls, ForwardRef):
                     obj = next(iter(registry.values()))

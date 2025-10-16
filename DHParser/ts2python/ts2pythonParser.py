@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""ts2python.py - compiles typescript dataclasses to Python
+"""ts2python.py - compiles Typescript dataclasses to Python
         TypedDicts <https://www.python.org/dev/peps/pep-0589/>
 
 Copyright 2021  by Eckhart Arnold (arnold@badw.de)
@@ -10,7 +10,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    https://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -30,17 +30,16 @@ import keyword
 from functools import partial, lru_cache
 import os
 import sys
-from typing import Tuple, List, Union, Any, Callable, Set, Dict, Sequence, cast
+from typing import Tuple, List, Union, Any, Callable, Set, Dict, Sequence, \
+    Optional
 
 
 try:
     scriptpath = os.path.abspath(os.path.dirname(__file__))
-    dhparser_path = os.path.abspath(os.path.join(scriptpath, '..', '..'))
 except NameError:
     scriptpath = ''
-    dhparser_path = ''
-if dhparser_path and dhparser_path not in sys.path:
-    sys.path.append(dhparser_path)
+if scriptpath not in sys.path:
+    sys.path.append(scriptpath)
 
 try:
     import regex as re
@@ -48,28 +47,29 @@ except ImportError:
     import re
 
 from DHParser.compile import Compiler, compile_source, Junction, full_compile
-from DHParser.configuration import set_config_value, get_config_value, access_thread_locals, \
+from DHParser.configuration import set_config_value, get_config_value, get_config_values, \
     access_presets, finalize_presets, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN, \
-    get_config_values
+    get_config_values, read_local_config,ALLOWED_PRESET_VALUES, dump_config_data
 from DHParser import dsl
 from DHParser.dsl import recompile_grammar, never_cancel
 from DHParser.ebnf import grammar_changed
 from DHParser.error import ErrorCode, Error, canonical_error_strings, has_errors, NOTICE, \
     WARNING, ERROR, FATAL
 from DHParser.log import start_logging, suspend_logging, resume_logging
-from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode, Path, pick_from_path
+from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode, Path, pick_from_path, \
+    node_names
 from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar, Parser, \
-    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, ERR, \
+    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, ERR, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, mixin_comment, \
     last_value, matching_bracket, optional_last_value, SmartRE
 from DHParser.pipeline import create_parser_junction, create_preprocess_junction, \
-    create_junction, PseudoJunction, full_pipeline, end_points
+    create_junction, PseudoJunction, full_pipeline, end_points, PipelineResult
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.stringview import StringView
 from DHParser.toolkit import is_filename, load_if_file, cpu_count, RX_NEVER_MATCH, \
-    ThreadLocalSingletonFactory, expand_table, md5, as_list, INFINITE, static
+    ThreadLocalSingletonFactory, expand_table, md5, as_list, static
 from DHParser.trace import set_tracer, resume_notices_on, trace_history
 from DHParser.transform import is_empty, remove_if, TransformationDict, TransformerFunc, \
     transformation_factory, remove_children_if, move_fringes, normalize_whitespace, \
@@ -87,7 +87,7 @@ from DHParser.transform import is_empty, remove_if, TransformationDict, Transfor
 from DHParser import parse as parse_namespace__
 
 
-version = "0.7.5"
+version = "0.8.0"
 
 
 #######################################################################
@@ -140,9 +140,9 @@ class ts2pythonGrammar(Grammar):
     literal = Forward()
     type = Forward()
     types = Forward()
-    source_hash__ = "f5a5dc3cbfe4c1e981bc8faaf6cbaba8"
+    source_hash__ = "582498e801f2bd1c3f27dbda68c69b25"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:_part$|_namespace$|EXP$|FRAC$|EOF$|_top_level_assignment$|NEG$|INT$|_array_ellipsis$|_top_level_literal$|_quoted_identifier$|DOT$)')
+    disposable__ = re.compile('(?:_top_level_assignment$|NEG$|EXP$|_keyword$|EOF$|_part$|DOT$|_array_ellipsis$|_quoted_identifier$|FRAC$|_namespace$|_top_level_literal$|_reserved$|INT$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'(?://.*)\n?|(?:/\*(?:.|\n)*?\*/) *\n?'
@@ -151,39 +151,40 @@ class ts2pythonGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__, keep_comments=True))
-    EOF = Drop(NegativeLookahead(RegExp('.')))
-    EXP = Option(Series(Alternative(Text("E"), Text("e")), Option(Alternative(Text("+"), Text("-"))), RegExp('[0-9]+')))
+    EOF = Drop(SmartRE(f'(?!.)', '!/./'))
+    EXP = Option(SmartRE(f'(?P<:Text>E|e)(?:(?P<:Text>\\+|\\-)?)([0-9]+)', '`E`|`e` [`+`|`-`] /[0-9]+/'))
     DOT = Text(".")
     FRAC = Option(Series(DOT, RegExp('[0-9]+')))
     NEG = Text("-")
-    INT = Series(Option(NEG), Alternative(RegExp('[1-9][0-9]+'), RegExp('[0-9]')))
+    INT = Series(Option(NEG), SmartRE(f'([1-9][0-9]+|[0-9])', '/[1-9][0-9]+/|/[0-9]/'))
+    _reserved = Drop(SmartRE(f'(?P<:Text>true|false)', '`true`|`false`'))
     _part = RegExp('(?!\\d)\\w+')
-    identifier = Series(NegativeLookahead(Alternative(Text("true"), Text("false"))), _part, dwsp__)
-    name = Series(NegativeLookahead(Alternative(Text("true"), Text("false"))), _part, ZeroOrMore(Series(Text("."), _part)), dwsp__)
+    identifier = Series(NegativeLookahead(_reserved), _part, dwsp__)
+    name = Series(NegativeLookahead(_reserved), _part, ZeroOrMore(Series(Text("."), _part)), dwsp__)
     _quoted_identifier = Alternative(identifier, Series(Series(Drop(Text('"')), dwsp__), identifier, Series(Drop(Text('"')), dwsp__), mandatory=2), Series(Series(Drop(Text("\'")), dwsp__), identifier, Series(Drop(Text("\'")), dwsp__), mandatory=2))
     variable = Synonym(name)
-    basic_type = Series(Alternative(Text("object"), Text("array"), Text("string"), Text("number"), Text("boolean"), Text("null"), Text("integer"), Text("uinteger"), Text("decimal"), Text("unknown"), Text("any"), Text("void")), dwsp__)
+    basic_type = SmartRE(f'(?P<:Text>object|array|string|number|boolean|null|integer|uinteger|decimal|unknown|any|void)(?P<comment__>{WSP_RE__})', '`object`|`array`|`string`|`number`|`boolean`|`null`|`integer`|`uinteger`|`decimal`|`unknown`|`any`|`void` ~')
     key = Alternative(identifier, Series(Series(Drop(Text('"')), dwsp__), identifier, Series(Drop(Text('"')), dwsp__)))
     association = Series(key, Series(Drop(Text(":")), dwsp__), literal, mandatory=1)
     object = Series(Series(Drop(Text("{")), dwsp__), Option(Series(association, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), association)))), Option(Series(Drop(Text(",")), dwsp__)), Series(Drop(Text("}")), dwsp__))
     array = Series(Series(Drop(Text("[")), dwsp__), Option(Series(literal, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), literal)))), Series(Drop(Text("]")), dwsp__))
-    string = Alternative(Series(RegExp('"[^"\\n]*"'), dwsp__), Series(RegExp("'[^'\\n]*'"), dwsp__))
-    boolean = Series(Alternative(Text("true"), Text("false")), dwsp__)
+    string = SmartRE(f'("[^"\\n]*")(?P<comment__>{WSP_RE__})|(\'[^\'\\n]*\')(?P<comment__>{WSP_RE__})', '/"[^"\\n]*"/ ~|/\'[^\'\\n]*\'/ ~')
+    boolean = SmartRE(f'(?P<:Text>true|false)(?P<comment__>{WSP_RE__})', '`true`|`false` ~')
     number = Series(INT, FRAC, EXP, dwsp__)
-    integer = Series(INT, NegativeLookahead(RegExp('[.Ee]')), dwsp__)
+    integer = Series(INT, SmartRE(f'(?![.Ee])', '!/[.Ee]/'), dwsp__)
     type_name = Synonym(name)
     _top_level_literal = Drop(Synonym(literal))
     _array_ellipsis = Drop(Series(literal, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), literal))))
-    assignment = Series(variable, Series(Drop(Text("=")), dwsp__), Alternative(literal, variable), Series(Drop(Text(";")), dwsp__))
+    assignment = Series(variable, Series(Drop(Text("=")), dwsp__), Alternative(literal, variable), Option(Series(Drop(Text(";")), dwsp__)))
     _top_level_assignment = Drop(Synonym(assignment))
-    const = Series(Option(Series(Drop(Text("export")), dwsp__)), Series(Drop(Text("const")), dwsp__), declaration, Option(Series(Series(Drop(Text("=")), dwsp__), Alternative(literal, identifier))), Series(Drop(Text(";")), dwsp__), mandatory=2)
+    const = Series(Option(Series(Drop(Text("export")), dwsp__)), Series(Drop(Text("const")), dwsp__), declaration, Option(Series(Series(Drop(Text("=")), dwsp__), Alternative(literal, identifier))), Option(Series(Drop(Text(";")), dwsp__)), mandatory=2)
     item = Series(_quoted_identifier, Option(Series(Series(Drop(Text("=")), dwsp__), literal)))
     enum = Series(Option(Series(Drop(Text("export")), dwsp__)), Series(Drop(Text("enum")), dwsp__), identifier, Series(Drop(Text("{")), dwsp__), item, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), item)), Option(Series(Drop(Text(",")), dwsp__)), Series(Drop(Text("}")), dwsp__), mandatory=3)
     keyof = Series(Text("keyof"), dwsp__)
-    readonly = Series(Text("readonly"), dwsp__)
     optional = Series(Text("?"), dwsp__)
+    readonly = Series(Text("readonly"), dwsp__)
     func_type = Series(Option(Series(Drop(Text("new")), dwsp__)), Series(Drop(Text("(")), dwsp__), Option(arg_list), Series(Drop(Text(")")), dwsp__), Series(Drop(Text("=>")), dwsp__), types)
-    extends = Series(Alternative(Series(Drop(Text("extends")), dwsp__), Series(Drop(Text("implements")), dwsp__)), Alternative(generic_type, type_name), ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), Alternative(generic_type, type_name))))
+    extends = Series(SmartRE(f'(?:extends)(?P<comment__>{WSP_RE__})|(?:implements)(?P<comment__>{WSP_RE__})', '"extends"|"implements"'), Alternative(generic_type, type_name), ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), Alternative(generic_type, type_name))))
     index_signature = Series(Option(readonly), Series(Drop(Text("[")), dwsp__), identifier, Alternative(Series(Drop(Text(":")), dwsp__), Series(Option(Series(Drop(Text("in")), dwsp__)), keyof), Series(Drop(Text("in")), dwsp__)), type, Series(Drop(Text("]")), dwsp__), Option(optional))
     map_signature = Series(index_signature, Series(Drop(Text(":")), dwsp__), types)
     mapped_type = Series(Series(Drop(Text("{")), dwsp__), map_signature, Option(Series(Drop(Text(";")), dwsp__)), Series(Drop(Text("}")), dwsp__))
@@ -195,35 +196,37 @@ class ts2pythonGrammar(Grammar):
     array_types = Synonym(array_type)
     array_of = Series(array_types, Series(Drop(Text("[]")), dwsp__))
     equals_type = Series(Series(Drop(Text("=")), dwsp__), Alternative(basic_type, type_name))
-    parameter_type = Series(Option(Series(Drop(Text("readonly")), dwsp__)), Alternative(array_of, basic_type, generic_type, indexed_type, Series(type_name, Option(extends_type), Option(equals_type)), declarations_block, type_tuple, declarations_tuple))
+    parameter_type = Series(Option(readonly), Alternative(array_of, basic_type, generic_type, indexed_type, Series(type_name, Option(extends_type), Option(equals_type)), declarations_block, type_tuple, declarations_tuple))
     parameter_types = Series(Option(Series(Drop(Text("|")), dwsp__)), parameter_type, ZeroOrMore(Series(Series(Drop(Text("|")), dwsp__), parameter_type)))
     type_parameters = Series(Series(Drop(Text("<")), dwsp__), parameter_types, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), parameter_types)), Series(Drop(Text(">")), dwsp__), mandatory=1)
-    interface = Series(Option(Series(Drop(Text("export")), dwsp__)), Option(Series(Drop(Text("declare")), dwsp__)), Alternative(Series(Drop(Text("interface")), dwsp__), Series(Drop(Text("class")), dwsp__)), identifier, Option(type_parameters), Option(extends), declarations_block, Option(Series(Drop(Text(";")), dwsp__)), mandatory=3)
-    type_alias = Series(Option(Series(Drop(Text("export")), dwsp__)), Series(Drop(Text("type")), dwsp__), identifier, Option(type_parameters), Series(Drop(Text("=")), dwsp__), types, Series(Drop(Text(";")), dwsp__), mandatory=2)
-    wildcard = Series(Text("*"), dwsp__)
-    intersection = Series(type, OneOrMore(Series(Series(Drop(Text("&")), dwsp__), type, mandatory=1)))
+    type_alias = Series(Option(Series(Drop(Text("export")), dwsp__)), Series(Drop(Text("type")), dwsp__), identifier, Option(type_parameters), Series(Drop(Text("=")), dwsp__), types, Option(Series(Drop(Text(";")), dwsp__)), mandatory=2)
     alias = Synonym(identifier)
-    namespace = Series(Option(Series(Drop(Text("export")), dwsp__)), Series(Drop(Text("namespace")), dwsp__), identifier, Series(Drop(Text("{")), dwsp__), ZeroOrMore(Alternative(interface, type_alias, enum, const, Series(Option(Series(Drop(Text("export")), dwsp__)), declaration, Series(Drop(Text(";")), dwsp__)), Series(Option(Series(Drop(Text("export")), dwsp__)), function, Series(Drop(Text(";")), dwsp__)))), Series(Drop(Text("}")), dwsp__), mandatory=2)
-    virtual_enum = Series(Option(Series(Drop(Text("export")), dwsp__)), Series(Drop(Text("namespace")), dwsp__), identifier, Series(Drop(Text("{")), dwsp__), ZeroOrMore(Alternative(interface, type_alias, enum, const, Series(declaration, Series(Drop(Text(";")), dwsp__)))), Series(Drop(Text("}")), dwsp__))
+    wildcard = Series(Series(Drop(Text("*")), dwsp__), Series(Drop(Text("as")), dwsp__), alias)
+    intersection = Series(type, OneOrMore(Series(Series(Drop(Text("&")), dwsp__), type, mandatory=1)))
+    symbol = Series(Option(Series(Drop(Text("type")), dwsp__)), identifier, Option(Series(Series(Drop(Text("as")), dwsp__), alias)))
+    interface = Series(Option(Series(Drop(Text("export")), dwsp__)), Option(Series(Drop(Text("declare")), dwsp__)), SmartRE(f'(?:interface)(?P<comment__>{WSP_RE__})|(?:class)(?P<comment__>{WSP_RE__})', '"interface"|"class"'), identifier, Option(type_parameters), Option(extends), declarations_block, Option(Series(Drop(Text(";")), dwsp__)), mandatory=3)
+    namespace = Series(Option(Series(Drop(Text("export")), dwsp__)), Series(Drop(Text("namespace")), dwsp__), identifier, Series(Drop(Text("{")), dwsp__), ZeroOrMore(Alternative(interface, type_alias, enum, const, Series(declaration, Option(Series(Drop(Text(";")), dwsp__))), Series(function, Option(Series(Drop(Text(";")), dwsp__))))), Series(Drop(Text("}")), dwsp__), mandatory=2)
     static = Series(Text("static"), dwsp__)
-    _namespace = Alternative(virtual_enum, namespace)
-    qualifiers = Interleave(readonly, static, repetitions=[(0, 1), (0, 1)])
-    special = Series(Series(Drop(Text("[")), dwsp__), name, Series(Drop(Text("]")), dwsp__), Series(Drop(Text("(")), dwsp__), Option(arg_list), Series(Drop(Text(")")), dwsp__), Option(Series(Series(Drop(Text(":")), dwsp__), types)), mandatory=4)
-    argument = Series(identifier, Option(optional), Option(Series(Series(Drop(Text(":")), dwsp__), types)))
-    arg_tail = Series(Series(Drop(Text("...")), dwsp__), identifier, Option(Series(Series(Drop(Text(":")), dwsp__), Alternative(array_of, generic_type))))
-    symbol = Alternative(identifier, Series(wildcard, Option(Series(Series(Drop(Text("as")), dwsp__), alias))))
-    symlist = Series(Series(Drop(Text("{")), dwsp__), symbol, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), symbol)), Series(Drop(Text("}")), dwsp__))
-    Import = Series(Series(Drop(Text("import")), dwsp__), Option(Series(Alternative(symlist, symbol), Series(Drop(Text("from")), dwsp__))), string)
+    virtual_enum = Series(Option(Series(Drop(Text("export")), dwsp__)), Series(Drop(Text("namespace")), dwsp__), identifier, Series(Drop(Text("{")), dwsp__), ZeroOrMore(Alternative(interface, type_alias, enum, const, Series(declaration, Option(Series(Drop(Text(";")), dwsp__))))), Series(Drop(Text("}")), dwsp__))
+    qualifiers = Interleave(readonly, static, Series(Drop(Text('public')), dwsp__), Series(Drop(Text('protected')), dwsp__), Series(Drop(Text('private')), dwsp__), repetitions=[(0, 1), (0, 1), (0, 1), (0, 1), (0, 1)])
+    _keyword = Drop(SmartRE(f'(?P<:Text>readonly|function|const|public|private|protected)(?!\\w)', '`readonly`|`function`|`const`|`public`|`private`|`protected` !/\\w/'))
+    special = Series(Series(Drop(Text("[")), dwsp__), name, Series(Drop(Text("]")), dwsp__), Series(Drop(Text("(")), dwsp__), Option(arg_list), Series(Drop(Text(")")), dwsp__), Option(Series(Series(Drop(Text(":")), dwsp__), types, mandatory=1)), mandatory=4)
+    argument = Series(identifier, Option(optional), Option(Series(Series(Drop(Text(":")), dwsp__), types, mandatory=1)))
+    arg_tail = Series(Series(Drop(Text("...")), dwsp__), identifier, Option(Series(Series(Drop(Text(":")), dwsp__), Alternative(array_of, generic_type), mandatory=1)))
+    symList = Series(Series(Drop(Text("{")), dwsp__), symbol, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), symbol)), Series(Drop(Text("}")), dwsp__))
+    importList = Series(Alternative(symList, identifier), ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), Alternative(symList, identifier))))
+    Import = Series(Series(Drop(Text("import")), dwsp__), Option(Series(Alternative(wildcard, importList), Series(Drop(Text("from")), dwsp__))), string)
     module = Series(Series(Drop(Text("declare")), dwsp__), Series(Drop(Text("module")), dwsp__), _quoted_identifier, Series(Drop(Text("{")), dwsp__), document, Series(Drop(Text("}")), dwsp__))
+    _namespace = Alternative(virtual_enum, namespace)
     literal.set(Alternative(integer, number, boolean, string, array, object))
     generic_type.set(Series(type_name, type_parameters))
-    type.set(Series(Option(Series(Drop(Text("readonly")), dwsp__)), Alternative(array_of, basic_type, generic_type, indexed_type, Series(type_name, NegativeLookahead(Text("("))), Series(Series(Drop(Text("(")), dwsp__), types, Series(Drop(Text(")")), dwsp__)), mapped_type, declarations_block, type_tuple, declarations_tuple, literal, func_type)))
+    type.set(Series(Option(readonly), Alternative(array_of, basic_type, generic_type, indexed_type, Series(type_name, NegativeLookahead(Text("("))), Series(Series(Drop(Text("(")), dwsp__), types, Series(Drop(Text(")")), dwsp__)), mapped_type, declarations_block, type_tuple, declarations_tuple, literal, func_type)))
     types.set(Series(Option(Series(Drop(Text("|")), dwsp__)), Alternative(intersection, type), ZeroOrMore(Series(Series(Drop(Text("|")), dwsp__), Alternative(intersection, type)))))
     arg_list.set(Series(Alternative(Series(argument, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), argument)), Option(Series(Series(Drop(Text(",")), dwsp__), arg_tail))), arg_tail), Option(Series(Drop(Text(",")), dwsp__))))
-    function.set(Alternative(Series(Option(Series(Option(Series(Drop(Text("export")), dwsp__)), Option(static), Option(Series(Drop(Text("function")), dwsp__)), identifier, Option(optional), Option(type_parameters))), Series(Drop(Text("(")), dwsp__), Option(arg_list), Series(Drop(Text(")")), dwsp__), Option(Series(Series(Drop(Text(":")), dwsp__), types)), mandatory=2), special))
-    declaration.set(Series(qualifiers, Option(Alternative(Series(Drop(Text("let")), dwsp__), Series(Drop(Text("var")), dwsp__))), identifier, Option(optional), NegativeLookahead(Text("(")), Option(Series(Series(Drop(Text(":")), dwsp__), types))))
-    declarations_block.set(Series(Series(Drop(Text("{")), dwsp__), Option(Series(Alternative(function, declaration), ZeroOrMore(Series(Option(Alternative(Series(Drop(Text(";")), dwsp__), Series(Drop(Text(",")), dwsp__))), Alternative(function, declaration))), Option(Series(Series(Drop(Text(";")), dwsp__), map_signature)), Option(Alternative(Series(Drop(Text(";")), dwsp__), Series(Drop(Text(",")), dwsp__))))), Series(Drop(Text("}")), dwsp__)))
-    document.set(Series(dwsp__, ZeroOrMore(Alternative(interface, type_alias, _namespace, enum, const, module, _top_level_assignment, _array_ellipsis, _top_level_literal, Series(Option(Series(Drop(Text("export")), dwsp__)), declaration, Series(Drop(Text(";")), dwsp__)), Series(Option(Series(Drop(Text("export")), dwsp__)), function, Series(Drop(Text(";")), dwsp__)), Series(Import, Series(Drop(Text(";")), dwsp__))))))
+    function.set(Alternative(Series(Option(Series(Option(Series(Drop(Text("export")), dwsp__)), qualifiers, Option(Series(Drop(Text("function")), dwsp__)), NegativeLookahead(_keyword), identifier, Option(optional), Option(type_parameters))), Series(Drop(Text("(")), dwsp__), Option(arg_list), Series(Drop(Text(")")), dwsp__), Option(Series(Series(Drop(Text(":")), dwsp__), types, mandatory=1)), mandatory=2), special))
+    declaration.set(Series(Option(Series(Drop(Text("export")), dwsp__)), qualifiers, Option(SmartRE(f'(?:let)(?P<comment__>{WSP_RE__})|(?:var)(?P<comment__>{WSP_RE__})', '"let"|"var"')), NegativeLookahead(_keyword), identifier, Option(optional), NegativeLookahead(Text("(")), Option(Series(Series(Drop(Text(":")), dwsp__), types, mandatory=1))))
+    declarations_block.set(Series(Series(Drop(Text("{")), dwsp__), Option(Series(Alternative(function, declaration), ZeroOrMore(Series(Option(SmartRE(f'(?:;)(?P<comment__>{WSP_RE__})|(?:,)(?P<comment__>{WSP_RE__})', '";"|","')), Alternative(function, declaration))), Option(SmartRE(f'(?:;)(?P<comment__>{WSP_RE__})|(?:,)(?P<comment__>{WSP_RE__})', '";"|","')))), Option(Series(map_signature, Option(SmartRE(f'(?:;)(?P<comment__>{WSP_RE__})|(?:,)(?P<comment__>{WSP_RE__})', '";"|","')))), Series(Drop(Text("}")), dwsp__)))
+    document.set(Series(dwsp__, ZeroOrMore(Alternative(interface, type_alias, _namespace, enum, const, module, _top_level_assignment, _array_ellipsis, _top_level_literal, Series(Import, Option(Series(Drop(Text(";")), dwsp__))), Series(function, Option(Series(Drop(Text(";")), dwsp__))), Series(declaration, Option(Series(Drop(Text(";")), dwsp__)))))))
     root = Series(document, EOF)
     resume_rules__ = {'interface': [re.compile(r'(?=export|$)')],
                       'type_alias': [re.compile(r'(?=export|$)')],
@@ -234,9 +237,23 @@ class ts2pythonGrammar(Grammar):
                       '_top_level_literal': [re.compile(r'(?=export|$)')],
                       'module': [re.compile(r'(?=export|$)')]}
     root__ = root
-        
+    
 parsing: PseudoJunction = create_parser_junction(ts2pythonGrammar)
 get_grammar = parsing.factory # for backwards compatibility, only
+
+try:
+    assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
+        RE_COMMENT in (ts2pythonGrammar.COMMENT__, NEVER_MATCH_PATTERN), \
+        "Please adjust the pre-processor-variable RE_COMMENT in file ts2pythonParser.py so that " \
+        "it either is the NEVER_MATCH_PATTERN or has the same value as the COMMENT__-attribute " \
+        "of the grammar class ts2pythonGrammar! " \
+        'Currently, RE_COMMENT reads "%s" while COMMENT__ is "%s". ' \
+        % (RE_COMMENT, ts2pythonGrammar.COMMENT__) + \
+        "\n\nIf RE_COMMENT == NEVER_MATCH_PATTERN then includes will deliberately be " \
+        "processed, otherwise RE_COMMENT==ts2pythonGrammar.COMMENT__ allows the " \
+        "preprocessor to ignore comments."
+except (AttributeError, NameError):
+    pass
 
 
 #######################################################################
@@ -271,7 +288,9 @@ ts2python_AST_transformation_table = {
                          lambda p: p[-1]['name'].content not in SPECIAL_FUNCTIONS),
                 convert_special_function],
     "function": apply_if(reduce_single_child, has_child('special')),
-    "*": move_fringes(lambda p: p[-1].name == "comment__"),
+    "alias": reduce_single_child,
+    "document, root": [],  # declarations_block? # ensures that the transfomations under "*" are not applied, here!
+    "*": move_fringes(lambda p: p[-1].name == "comment__", side="right"),
     ">>>": clear_flags
 }
 
@@ -281,10 +300,10 @@ def ts2pythonTransformer() -> TransformerCallable:
     threads or processes."""
     return static(partial(transformer,
         transformation_table=ts2python_AST_transformation_table.copy(),
-        src_stage='cst', dst_stage='ast'))
+        src_stage='CST', dst_stage='AST'))
 
 ASTTransformation: Junction = Junction(
-    'cst', ThreadLocalSingletonFactory(ts2pythonTransformer), 'ast')
+    'CST', ThreadLocalSingletonFactory(ts2pythonTransformer), 'AST')
 
 #######################################################################
 #
@@ -294,16 +313,75 @@ ASTTransformation: Junction = Junction(
 
 def dump_configuration() -> str:
     return f"""[ts2python]
-BaseClassName = {get_config_value('ts2python.BaseClassName', 'TypedDict')}
 RenderAnonymous = {get_config_value('ts2python.RenderAnonymous', 'local')}
-ClassDecorator = {get_config_value('ts2python.ClassDecorator', '')} 
 UseEnum = {get_config_value('ts2python.UseEnum', True)}
+UsePostponedEvaluation = {get_config_value('ts2python.UsePostponedEvaluation', True)}
 UseTypeUnion = {get_config_value('ts2python.UseTypeUnion', False)}
+UseExplicitTypeAlias = {get_config_value('ts2python.UseExplicitTypeAlias', False)}
 UseTypeParameters = {get_config_value('ts2python.UseTypeParameters', False)}
 UseLiteralType = {get_config_value('ts2python.UseLiteralType', False)}
 UseVariadicGenerics = {get_config_value('ts2python.UseVariadicGenerics', False)}
 UseNotRequired = {get_config_value('ts2python.UseNotRequired', False)}
+AllowReadOnly = {get_config_value('ts2python.AllowReadOnly', False)}
+AssumeDeferredEvaluation = {get_config_value('ts2python.AssumeDeferredEvaluation', False)}
 KeepMultilineComments = {get_config_value('ts2python.KeepMultilineComments', False)}"""
+
+
+def required_python_version(ts2python_cfg: Dict[str, bool],
+                            purpose: str = "compatibility") -> Tuple[int, int]:
+    assert purpose in ("compatibility", "features")
+    min_version = (3, 7)
+    if ts2python_cfg.get('ts2python.UseLiteralType', False):
+        min_version = (3, 8)
+    if ts2python_cfg.get('ts2python.UseTypeUnion', False):
+        min_version = (3, 10)
+    elif ts2python_cfg.get('ts2python.UseExplicitTypeAlias', False):
+        min_version = (3, 10)
+    if ts2python_cfg.get('ts2python.UseVariadicGenerics', False):
+        min_version = (3, 11)
+    elif ts2python_cfg.get('ts2python.UseNotRequired', False) \
+            and purpose == "features":
+        min_version = (3, 11)
+    if ts2python_cfg.get('ts2python.UseTypeParameters', False):
+        min_version = (3, 12)
+    if ts2python_cfg.get('ts2python.AllowReadOnly', False) \
+            and purpose == "features":
+        min_version = (3, 13)
+    if ts2python_cfg.get('ts2python.AssumeDeferredEvaluation', False):
+        min_version = (3, 14)
+    # Neither UseReadOnly nor UseNotRequired place any demand on the
+    # Python version, because:
+    # ReadOnly can be defined as Union for Python-version < 3.13
+    # NotRequired can be defined as Optional for Python-version < 3.11
+    return min_version
+
+
+def set_compatibility_level(version_info: Tuple[int, ...] = (3, 7),
+                            config_or_preset: str = "preset"):
+    if config_or_preset == "preset":
+        set_value = set_preset_value
+    else:
+        assert config_or_preset == "config"
+        set_value = set_config_value
+    if not version_info >= (3, 7):
+        print('Compatibility version must be >= 3.7')
+        sys.exit(1)
+    if version_info >= (3, 8):
+        set_value('ts2python.UseLiteralType', True, allow_new_key=True)
+    if version_info >= (3, 10):
+        set_value('ts2python.UseTypeUnion', True, allow_new_key=True)
+        if version_info < (3, 12):
+            set_value('ts2python.UseExplicitTypeAlias', True, allow_new_key=True)
+    if version_info >= (3, 11):
+        set_value('ts2python.UseNotRequired', True, allow_new_key=True)
+        set_value('ts2python.UseVariadicGenerics', True, allow_new_key=True)
+    if version_info >= (3, 12):
+        set_value('ts2python.UseTypeParameters', True, allow_new_key=True)
+    if version_info >= (3, 13):
+        set_value('ts2python.AllowReadOnly', True, allow_new_key=True)
+    if version_info >= (3, 14):
+        set_value('ts2python.AssumeDeferredEvaluation', True, allow_new_key=True)
+        set_value('ts2python.UsePostponedEvaluation', False, allow_new_key=True)
 
 
 def source_hash(source_text: str) -> str:
@@ -317,49 +395,62 @@ def source_hash(source_text: str) -> str:
 
 GENERAL_IMPORTS = """
 import sys
-from enum import Enum, IntEnum
-if sys.version_info >= (3, 9, 0):
-    from typing import Union, Optional, Any, Generic, TypeVar, Callable, List, Tuple, Dict
-    # do not use list, tuple, dict, because contained types won't be forward ref'd
-    from collections.abc import Coroutine
-else:
-    from typing import Union, List, Tuple, Optional, Dict, Any, Generic, TypeVar, Callable, Coroutine
+from enum import Enum, IntEnum"""
+
+
+TYPE_IMPORTS_37 = """from typing import Union, Optional, Any, Generic, TypeVar, Callable, List, \\
+    Iterable, Iterator, Tuple, Dict, Awaitable
 """
 
-TYPEDDICT_IMPORTS = """
-from typing import TypedDict, NotRequired, Literal, Iterable, Iterator
-"""
 
-TYPEDDICT_IMPORTS_LEGACY = """
+TYPE_IMPORTS_311 = """from typing import Union, Optional, Any, Generic, TypeVar, Callable, List, \\
+    Iterable, Iterator, Tuple, Dict, TypedDict, NotRequired, Literal, TypeAlias, \\
+    Awaitable, Self
 try:
-    from ts2python.typeddict_shim import TypedDict, GenericTypedDict, NotRequired, Literal, Iterable, Iterator
+    from typing import ReadOnly
+except ImportError:
+    ReadOnly = Union
+"""
+
+TYPE_IMPORTS_313 = """from typing import Union, Optional, Any, Generic, TypeVar, Callable, List, \\
+    Iterable, Iterator, Tuple, Dict, TypedDict, NotRequired, Literal, ReadOnly, Awaitable
+"""
+
+TYPEDDICT_IMPORTS_37 = """
+try:
+    from ts2python.typeddict_shim import TypedDict, GenericTypedDict, NotRequired, Literal, \\
+        ReadOnly, TypeAlias
     # Override typing.TypedDict for Runtime-Validation
 except ImportError:
     print("Module ts2python.typeddict_shim not found. Only coarse-grained " 
           "runtime type-validation of TypedDicts possible")
     try:
-        from typing import TypedDict, Literal, Iterable, Iterator
+        from typing import TypedDict, Literal
     except ImportError:
         try:
             from ts2python.typing_extensions import TypedDict, Literal
         except ImportError:
             print(f'Please install the "typing_extensions" module via the shell '
                   f'command "# pip install typing_extensions" before running '
-                  f'{__file__} with Python-versions <= 3.7!')
+                  f'{__file__} with Python-versions <= 3.8!')
     try:
-        from typing_extensions import NotRequired
+        from typing_extensions import NotRequired, ReadOnly, TypeAlias
     except ImportError:
         NotRequired = Optional
-    if sys.version_info >= (3, 7, 0):  GenericMeta = type
-    else:
-        from typing import GenericMeta
+        ReadOnly = Union
+        TypeAlias = Any
+    GenericMeta = type
     class _GenericTypedDictMeta(GenericMeta):
         def __new__(cls, name, bases, ns, total=True):
             return type.__new__(_GenericTypedDictMeta, name, (dict,), ns)
         __call__ = dict
     GenericTypedDict = _GenericTypedDictMeta('TypedDict', (dict,), {})
-    GenericTypedDict.__module__ = __name__
-"""
+    GenericTypedDict.__module__ = __name__"""
+
+TYPE_IMPORTS_MAPPING = {(3, 13): [TYPE_IMPORTS_313],
+                        (3, 11): [TYPE_IMPORTS_311],
+                        (3,  9): [TYPE_IMPORTS_37, TYPEDDICT_IMPORTS_37],
+                        (3,  7): [TYPE_IMPORTS_37, TYPEDDICT_IMPORTS_37]}
 
 FUNCTOOLS_IMPORTS = """
 try:
@@ -376,8 +467,13 @@ except ImportError:
               f"singledispatchmethod is needed, anywhere!")     
 """
 
-# PEP655_IMPORTS = """
-# """
+
+PROMISE_LIKE_CLASS_312 = """class PromiseLike[T]:
+    def then(self, onfullfilled: Optional[Callable], onrejected: Optional[Callable]) -> Self:
+        pass
+"""
+
+PROMISE_LIKE_CLASS_37 = """PromiseLike = Iterable  # Admittedly, a very poor hack"""
 
 
 def to_typename(varname: str) -> str:
@@ -406,6 +502,55 @@ def to_dict(declarations: str) -> str:
     return "".join(["{", ", ".join(entries), "}"])
 
 
+def is_qualified(name: str) -> bool:
+    """Returns True if the given type-name is qualified, e.g.::
+
+        >>> is_qualified("T")
+        False
+        >>> is_qualified("ReadOnly[T]")
+        True
+    """
+    return name[-1:] == ']'
+
+
+def strip_qualifier(qualified_name: str) -> str:
+    """Removes qualifiers from type names, e.g.::
+
+        >>> qualified_name = "ReadOnly[T]"
+        >>> strip_qualifier(qualified_name)
+        'T'
+    """
+    while True:
+        a = qualified_name.find('[')
+        b = qualified_name.rfind(']')
+        if a >= 0:
+            assert b >= 0, f"unmatched brackets in {qualified_name}"
+            qualified_name = qualified_name[a + 1:b]
+        else:
+            assert b < 0, f"unmatched brackets in {qualified_name}"
+            return qualified_name
+
+
+def strip_type_parameters(objname: str) -> str:
+    """Removes Type-Parameters from object name, e.g.::
+
+        >>> strip_type_parameters("Mapping_0[K, V]")
+        'Mapping_0'
+        >>> strip_type_parameters("Mapping_0[K[X, Y], V]")
+        'Mapping_0'
+        >>> strip_type_parameters("Mapping_0[K, V[T[A, B]]]")
+        'Mapping_0'
+    """
+    if objname[-1:] == ']':
+        b = len(objname) - 1
+        a = b
+        while b >= a:
+            a = objname.rfind('[', 0, a)
+            b = objname.rfind(']', 0, b)
+        return objname[:a]
+    return objname
+
+
 NOT_YET_IMPLEMENTED_WARNING = ErrorCode(310)
 UNSUPPORTED_WARNING = ErrorCode(320)
 
@@ -424,9 +569,10 @@ TYPE_NAME_SUBSTITUTION = {
     'any': 'Any',
     'void': 'None',
 
-    'Thenable': 'Coroutine',
+    'PromiseLike': 'PromiseLike',
     'IterableIterator': 'Iterator',
     'Array': 'List',
+    'Record': 'Dict',
     'ReadonlyArray': 'List',
     'Uint32Array': 'List[int]',
     'Error': 'Exception',
@@ -439,39 +585,43 @@ class ts2pythonCompiler(Compiler):
 
     def reset(self):
         super().reset()
-        bcn = get_config_value('ts2python.BaseClassName', 'TypedDict')
-        i = bcn.rfind('.')
-        if i >= 0:
-            self.additional_imports = f'\nfrom {bcn[:i]} import {bcn[i + 1:]}\n'
-            bcn = bcn[i + 1:]
-        else:
-            self.additional_imports = ''
-        self.base_class_name = bcn
+        self.additional_imports = ''
+        self.require_singledispatch = False
+        self.base_class_name = "TypedDict"
         self.render_anonymous = get_config_value('ts2python.RenderAnonymous', 'local')
-        self.class_decorator = get_config_value('ts2python.ClassDecorator', '').strip()
         if self.render_anonymous not in ('type', 'functional', 'local', 'toplevel'):
             raise ValueError(
                 f'Illegal value "{self.render_anonymous}" for '
                 f'ts2python.RenderAnonymous. Must be one of "type", '
                 f'"functional", "local", "toplevel".')
-        if self.class_decorator:
-            if self.class_decorator[0] != '@':
-                self.class_decorator = '@' + self.class_decorator
-            self.class_decorator += '\n'
-        self.use_enums = get_config_value('ts2python.UseEnum', True)
-        self.use_type_union = get_config_value('ts2python.UseTypeUnion', False)
-        self.use_type_parameters = get_config_value('ts2Python.UseTypeParameters', False)
-        self.use_literal_type = get_config_value('ts2python.UseLiteralType', False)
-        self.use_variadic_generics = get_config_value('ts2python.UseVariadicGenerics', False)
-        self.use_not_required = get_config_value('ts2python.UseNotRequired', False)
-        self.keep_comments = get_config_value('ts2python.KeepMultilineComments', False)
+        ts2python_cfg = get_config_values('ts2python.*')
+        self.use_enums = ts2python_cfg.get('ts2python.UseEnum', True)
+        self.use_postponed_evaluation = ts2python_cfg.get('ts2python.UsePostponedEvaluation', False)
+        self.use_type_union = ts2python_cfg.get('ts2python.UseTypeUnion', False)
+        self.use_explicit_type_alias = ts2python_cfg.get('ts2python.UseExplicitTypeAlias', False)
+        self.use_type_parameters = ts2python_cfg.get('ts2python.UseTypeParameters', False)
+        if self.use_type_parameters:
+            self.use_explicit_type_alias = False
+        self.use_literal_type = ts2python_cfg.get('ts2python.UseLiteralType', False)
+        self.use_variadic_generics = ts2python_cfg.get('ts2python.UseVariadicGenerics', False)
+        self.use_not_required = ts2python_cfg.get('ts2python.UseNotRequired', False)
+        self.allow_read_only = ts2python_cfg.get('ts2python.AllowReadOnly', False)
+        self.assume_deferred_evaluation = ts2python_cfg.get('ts2python.AssumeDeferredEvaluation', False)
+        self.keep_comments = ts2python_cfg.get('ts2python.KeepMultilineComments', False)
+        self.compatibility_level = required_python_version(ts2python_cfg, "compatibility")
+        self.feature_level = required_python_version(ts2python_cfg, "features")
+        if self.use_type_parameters and not self.use_variadic_generics:
+            raise ValueError(
+                'Configuration flag UseTypeParameters can only be set to True '
+                'if UseVariadicGenerics is also set to True!')
 
         self.overloaded_type_names: Set[str] = set()
-        self.known_types: List[Dict[str]] = [
+        self.known_types: List[Dict[str, str]] = [
             {'Union': 'Union', 'List': 'List', 'Tuple': 'Tuple', 'Optional': 'Optional',
              'Dict': 'Dict', 'Set': 'Set', 'Any': 'Any', 'Generic': 'Generic',
              'Coroutine': 'Coroutine', 'list': 'list', 'tuple': 'tuple', 'dict': 'dict',
-             'set': 'set', 'frozenset': 'frozenset', 'int': 'int', 'float': 'float'}]
+             'set': 'set', 'frozenset': 'frozenset', 'int': 'int', 'float': 'float',
+             'str': 'str', 'None': 'None'}]
         self.local_classes: List[List[str]] = [[]]
         self.base_classes: Dict[str, List[str]] = {}
         self.typed_dicts: Set[str] = {'TypedDict'}  # names of classes that are TypedDicts
@@ -482,6 +632,7 @@ class ts2pythonCompiler(Compiler):
         self.scope_type: List[str] = ['']
         self.optional_keys: List[List[str]] = [[]]
         self.func_name: str = ''  # name of the current functions header or ''
+        self.func_type_parameters: str = ''  # type parameters of the current function header, if any
         self.strip_type_from_const = False
 
 
@@ -495,14 +646,16 @@ class ts2pythonCompiler(Compiler):
     def is_toplevel(self) -> bool:
         return self.obj_name == ['TOPLEVEL_']
 
-    def is_known_type(self, typename: str) -> bool:
-        for type_set in self.known_types:
-            if typename in type_set:
-                return True
-        return False
+    def get_known_type(self, typename: str, value: str = "") -> str:
+        i = typename.find('[')
+        if i >= 0:  typename = typename[:i]  # for example, reduces List[str] to List
+        for type_dict in self.known_types:
+            if typename in type_dict:
+                return type_dict[typename]
+        return value
 
     def add_to_known_types(self, node, typename: str, kind: str):
-        if typename in self.known_types[-1] and kind != '?':
+        if typename in self.known_types[-1] and not is_qualified(kind):
             self.tree.new_error(
                 node, f'{node.name} {typename} has already been defined earlier as '
                 f'{self.known_types[-1][typename]}!', WARNING)
@@ -518,20 +671,28 @@ class ts2pythonCompiler(Compiler):
     def finalize(self, python_code: Any) -> Any:
         chksum = f'source_hash__ = "{source_hash(self.tree.source)}"'
         if self.tree.name == 'root':
-            code_blocks = [
-                f'# Generated by ts2python version {version} on {datetime.datetime.now()}\n',
-                GENERAL_IMPORTS,
-                TYPEDDICT_IMPORTS if self.use_not_required else TYPEDDICT_IMPORTS_LEGACY,
-                FUNCTOOLS_IMPORTS,
-                self.additional_imports, chksum, '\n##### BEGIN OF LSP SPECS\n'
-            ]
-            # if self.base_class_name == 'TypedDict':
-            #     code_blocks.append(PEP655_IMPORTS)
+            for py_version, type_imports in TYPE_IMPORTS_MAPPING.items():
+                if self.compatibility_level >= py_version:
+                    break
+            else:
+                raise ValueError(f'Illegal minimal Python version {self.compatibility_level}')
+            c_major, c_minor = self.compatibility_level
+            # f_major, f_minor = self.feature_level
+            code_blocks = [f'# Generated by ts2python version {version} '
+                           f'on {datetime.datetime.now()}\n# compatibility level: '
+                           f'Python {c_major}.{c_minor} and above\n',
+                           # f'# feature level: Python {f_major}.{f_minor}\n',
+                           'from __future__ import annotations' if
+                           self.use_postponed_evaluation else '',
+                           GENERAL_IMPORTS] \
+                + type_imports \
+                + ([FUNCTOOLS_IMPORTS] if self.require_singledispatch else []) \
+                + [self.additional_imports, chksum, '\n##### BEGIN OF ts2python generated code\n']
         else:
             code_blocks = []
         code_blocks.append(python_code)
         if self.tree.name == 'root':
-            code_blocks.append('\n##### END OF LSP SPECS\n')
+            code_blocks.append('\n##### END OF ts2python generated code\n')
         cooked = '\n\n'.join(code_blocks)
         cooked = re.sub(' +(?=\n)', '', cooked)
         return re.sub(r'\n\n\n+', '\n\n\n', cooked)
@@ -553,6 +714,7 @@ class ts2pythonCompiler(Compiler):
             comment = comment.strip()
             comment = re.sub(r'/\*+\s*|\s*\*/|//[ \t]*', '', comment)
             comment = re.sub(r'(?:\n|^)[ \t]*\* ?', '\n', comment).lstrip()
+            comment = comment.replace("'", chr(0x2bc))  # circumvent possible source of errors in compile_type_expression()!
             lines = comment.split('\n')
             for i in range(len(lines)):
                 line = lines[i].strip()
@@ -562,8 +724,9 @@ class ts2pythonCompiler(Compiler):
         return ""
 
     def on_root(self, node) -> str:
-        assert len(node.children) == 1
-        return self.compile(node.children[0])
+        roots = [child for child in node.children if child.name != 'comment__']
+        assert len(roots) == 1, node.as_sxpr()
+        return self.compile(roots[0])
 
     def on_document(self, node) -> str:
         if 'module' in node and isinstance(node['module'], Sequence) > 1:
@@ -583,42 +746,45 @@ class ts2pythonCompiler(Compiler):
     def on_Import(self, node) -> str:
         return ""  # For now, ignore imports
 
+    def on_symbol(self, node) -> str:
+        return ""  # For the time being
+
     def render_class_header(self, name: str,
                             base_classes: str,
-                            force_base_class: str = '') -> str:
+                            force_base_class: str = '',
+                            generic_types: str = '') -> str:
+        assert name
         optional_key_list = self.optional_keys[-1]
-        decorator = self.class_decorator
         base_class_name = (force_base_class or self.base_class_name).strip()
+        tps = generic_types if self.use_type_parameters else ''
         if base_class_name == 'TypedDict':
             total = not bool(optional_key_list) or self.use_not_required
             if base_classes:
                 td_name = 'TypedDict' if (self.use_variadic_generics or
                                           base_classes.find('Generic[') < 0) \
                                       else 'GenericTypedDict'
-                if self.use_not_required:
-                    return decorator + \
-                           f"class {name}({base_classes}, {td_name}):\n"
+                if self.use_not_required or total:
+                    return f"class {name}{tps}({base_classes}, {td_name}):\n"
                 else:
-                    return decorator + f"class {name}({base_classes}, "\
+                    return f"class {name}{tps}({base_classes}, "\
                            f"{td_name}, total={total}):\n"
             else:
-                if self.use_not_required:
-                    return decorator + f"class {name}(TypedDict):\n"
+                tps = generic_types if self.use_type_parameters else ''
+                if self.use_not_required or total:
+                    return f"class {name}{tps}(TypedDict):\n"
                 else:
-                    return decorator + \
-                           f"class {name}(TypedDict, total={total}):\n"
+                    return f"class {name}{tps}(TypedDict, total={total}):\n"
         else:
             if base_classes:
                 if base_class_name:
-                    return decorator + \
-                        f"class {name}({base_classes}, {base_class_name}):\n"
+                    return f"class {name}{tps}({base_classes}, {base_class_name}):\n"
                 else:
-                    return decorator + f"class {name}({base_classes}):\n"
+                    return f"class {name}{tps}({base_classes}):\n"
             else:
                 if base_class_name:
-                    return decorator + f"class {name}({base_class_name}):\n"
+                    return f"class {name}{tps}({base_class_name}):\n"
                 else:
-                    return decorator + f"class {name}:\n"
+                    return f"class {name}{tps}:\n"
 
     def render_local_classes(self) -> str:
         self.func_name = ''
@@ -630,12 +796,16 @@ class ts2pythonCompiler(Compiler):
         preface = ''
         try:
             tp = self.compile(node['type_parameters'])
-            tpl = [p.strip("'") for p in tp.split(', ')]
+            tpl_qualified = [p.replace("'", "") for p in tp.split(', ')]  # may contain "ReadOnly[...]"
+            tpl = [strip_qualifier(p) for p in tpl_qualified]
             tps = '[' + ', '.join(p for p in tpl) + ']'
-            # tps = '[' + tp + ']'
-            preface = ''.join(f"{p} = TypeVar('{p}')\n"
-                              for p in tpl if not self.is_known_type(p))
-            for p in tpl:  self.add_to_known_types(node, p, '?')
+            if self.use_type_parameters:
+                preface = ''
+            else:
+                preface = ''.join(f"{p} = TypeVar('{p}')\n"
+                                  for p in tpl if not self.get_known_type(p))
+            for q, p in zip(tpl_qualified, tpl):
+                self.add_to_known_types(node, p, q if is_qualified(q) else '[]')
         except KeyError:
             pass
         return tps, preface
@@ -646,12 +816,11 @@ class ts2pythonCompiler(Compiler):
         self.scope_type.append('interface')
         self.local_classes.append([])
         self.optional_keys.append([])
+        if self.use_type_parameters:  self.known_types.append(dict())
         tps, preface = self.process_type_parameters(node)
-        if self.use_type_parameters:  preface = ''
-        # else:  tps =''
         preface += '\n'
         preface += node.get_attr('preface', '')
-        self.known_types.append(dict())
+        if not self.use_type_parameters:  self.known_types.append(dict())
         base_class_list = []
         try:
             base_class_list = self.bases(node['extends'])
@@ -663,8 +832,9 @@ class ts2pythonCompiler(Compiler):
                 base_classes += f", Generic{tps}"
         except KeyError:
             base_classes = f"Generic{tps}" \
-                if tps and (not self.use_variadic_generics
-                            or 'function' in node['declarations_block'])\
+                if (tps and not self.use_type_parameters
+                    and (not self.use_variadic_generics
+                         or 'function' in node['declarations_block']))\
                 else ''
         if any(bc not in self.typed_dicts for bc in base_class_list):
             force_base_class = ' '
@@ -673,13 +843,19 @@ class ts2pythonCompiler(Compiler):
         else:
             force_base_class = ''
             self.typed_dicts.add(name)
-        decls = self.compile(node['declarations_block'])
-        interface = self.render_class_header(name, base_classes, force_base_class)
+        decls_block = node['declarations_block']
+        save_render_anonymous = self.render_anonymous
+        if force_base_class:
+            self.render_anonymous = "local"
+            decls_block.attr['no_typed_dict'] = True
+        decls = self.compile(decls_block)
+        interface = self.render_class_header(name, base_classes, force_base_class, tps)
         self.base_classes[name] = base_class_list
         if self.base_class_name == "TypedDict" and self.render_anonymous == "toplevel":
             interface = self.render_local_classes() + '\n' + interface
         else:
             interface += ('    ' + self.render_local_classes().replace('\n', '\n    ')).rstrip(' ')
+        self.render_anonymous = save_render_anonymous
         self.optional_keys.pop()
         self.local_classes.pop()
         self.known_types.pop()
@@ -707,7 +883,13 @@ class ts2pythonCompiler(Compiler):
             self.basic_type_aliases.add(alias)
         self.obj_name.append(alias)
         if alias not in self.overloaded_type_names:
-            _, preface = self.process_type_parameters(node)
+            if self.use_type_parameters:  self.known_types.append(dict())
+            tps, preface = self.process_type_parameters(node)
+            if not self.use_type_parameters:
+                if self.use_explicit_type_alias:
+                    tps = ": TypeAlias"
+                else:
+                    tps = ''
             if self.known_types[-1].get(alias, '') \
                     in ('namespace', 'enum', 'virtual_enum'):
                 preface = ('# commented out, because there is already an '
@@ -720,7 +902,14 @@ class ts2pythonCompiler(Compiler):
             preface += self.render_local_classes()
             self.optional_keys.pop()
             self.local_classes.pop()
-            code = preface + f"{alias} = {types}"
+            if self.use_type_parameters:  self.known_types.pop()
+            code = preface + ("type " if self.use_type_parameters else "") \
+                   + f"{alias}{tps} = {types}"
+            # there follows a hack to avoid failure on type unions of
+            # stringified type aliases and real types
+            if not self.use_type_parameters \
+                    and types[-1:] == "'" and alias in self.known_types[-1]:
+                del self.known_types[-1][alias]
         else:
             code = ''
         if node[-1].name == 'comment__':
@@ -741,6 +930,7 @@ class ts2pythonCompiler(Compiler):
                         '@singledispatchmethod' if is_interface \
                         else '@singledispatch'
                     func_decl.attr['decorator'] = f'@{name}.register'
+                    self.require_singledispatch = True
                 else:
                     first_use[name] = func_decl
         except KeyError:
@@ -753,9 +943,15 @@ class ts2pythonCompiler(Compiler):
         self.mark_overloaded_functions(node)
         # declarations = '\n'.join(self.compile(nd) for nd in node
         #                          if nd.name in ('declaration', 'function'))
+        if node.get_attr('no_typed_dict', False):
+            for nd in node.children:
+                if 'optional' in nd:
+                    nd.attr['force_optional'] = True
         raw_decls = [self.compile(nd) for nd in node
                      if nd.name in ('declaration', 'function', 'comment__')]
         declarations = '\n'.join(d for d in raw_decls if d)
+        if all(decl.lstrip()[0:1] in ('#', '') for decl in raw_decls):
+            return "pass"
         return declarations or "pass"
 
     def on_declaration(self, node) -> str:
@@ -769,20 +965,8 @@ class ts2pythonCompiler(Compiler):
             T = typename  # substitute typename for type
         if 'optional' in node:
             self.optional_keys[-1].append(identifier)
-            if self.use_not_required:
-                T = f"NotRequired[{T}]"
-            else:
-                if T.startswith('Union['):
-                    if T.find('None') < 0:
-                        T = T[:-1] + ', None]'
-                elif T.find('|') >= 0:
-                    if T.find('None') < 0:
-                        if T[0:1] not in ("'", '"'):
-                            T += ' | None'
-                        else:
-                            T = T[:-1] + (" | None" + T[0:1])
-                else:
-                    T = f"Optional[{T}]"
+            T = f"Optional[{T}]" if node.get_attr('force_optional', False) \
+                else f"NotRequired[{T}]"
         if self.is_toplevel() and bool(self.local_classes[-1]):
             preface = self.render_local_classes()
             self.local_classes.pop()
@@ -800,9 +984,13 @@ class ts2pythonCompiler(Compiler):
                 is_constructor = True
         else:  # anonymous function
             name = "__call__"
+        if self.use_type_parameters:  self.known_types.append(dict())
         tps, preface = self.process_type_parameters(node)
-        if self.use_type_parameters:  preface = ''
-        else:  tps = ''
+        if preface and not self.is_toplevel():
+            self.local_classes[-1].insert(0, preface)
+            preface = ''
+        if not self.use_type_parameters:  tps = ''
+        self.func_type_parameters = tps
         try:
             arguments = self.compile(node['arg_list'])
             if self.scope_type[-1] == 'interface':
@@ -813,6 +1001,7 @@ class ts2pythonCompiler(Compiler):
             return_type = self.compile(node['types'])
         except KeyError:
             return_type = 'Any'
+        if self.use_type_parameters:  self.known_types.pop()
         decorator = node.get_attr('decorator', '')
         fallback = ""
         type_error = "raise TypeError(f'First argument {arg1} of single-dispatch " \
@@ -886,26 +1075,45 @@ class ts2pythonCompiler(Compiler):
 
     def render_union(self, preface, union) -> str:
         if self.use_type_union or len(union) <= 1:
-            if any(typ[0:1] in ('"', "'") for typ in union):
-                # union = [typ.strip("'").strip('"') for typ in union]
-                union = [typ.replace("'", '').replace('"', '') for typ in union]
+            # if any(typ[0:1] in ('"', "'") for typ in union):
+            if any(typ[0:1] in ('"', "'") for typ in union)\
+                    or (not self.use_type_parameters and
+                        (not all(self.get_known_type(typ) for typ in union) \
+                         and pick_from_path(self.path, 'type_alias'))):
+                union = [typ.replace("'", '') for typ in union]
+                union = [typ.replace('"', '') for typ in union if not typ.find('Literal') >= 0] # rather crude criterion!
                 return f"{preface}'{' | '.join(union)}'"
-            return preface + ' | '.join(union)
+            else:
+                return preface + ' | '.join(union)
         else:
             return preface + f"Union[{', '.join(union)}]"
+
+    def readonly_decl(self) -> bool:
+        for i in range(len(self.path) - 2, -1, -1):
+            decl = self.path[i]
+            if decl.name == 'types':
+                break
+            if decl.name == 'declaration':
+                if i >= 0 and self.path[i-1].name == 'declarations_block' \
+                        and 'function' in self.path[i-1]:
+                    break
+                qualifiers = decl.get('qualifiers', None)
+                if qualifiers and 'readonly' in qualifiers:
+                    return True
+        return False
 
     def on_types(self, node) -> str:
         union = []
         i = 0
-
-        obj_name_stub = self.obj_name[-1]
+        obj_name_stub = '' if self.is_toplevel() else self.obj_name[-1]
         fname = self.func_name[:1].upper() + self.func_name[1:]
+        ftps = self.func_type_parameters
         for nd in node.children:
             n = obj_name_stub.rfind('_')
-            ending = obj_name_stub[n + 1:]
+            ending = strip_type_parameters(obj_name_stub)[n + 1:]
             if n >= 0 and (not ending or ending.isdecimal()):
                 obj_name_stub = obj_name_stub[:n]
-            self.obj_name[-1] = fname + obj_name_stub + '_' + str(i)
+            self.obj_name[-1] = fname + obj_name_stub + '_' + str(i) + ftps
             save = self.func_name
             self.func_name = ""
             typ = self.compile_type_expression(node, nd)
@@ -913,12 +1121,12 @@ class ts2pythonCompiler(Compiler):
             if typ not in union:
                 union.append(typ)
                 i += 1
-            self.obj_name[-1] = obj_name_stub
+            self.obj_name[-1] = obj_name_stub or 'TOPLEVEL_'
         for i in range(len(union)):
             typ = union[i]
             if typ[0:5] == 'class':
                 k = typ.rfind('\nclass')
-                m = re.match(r"class\s*(\w+)[\w(){},' =]*\s*:", typ[k + 1:])
+                m = re.match(r"class\s*(\w+)(\[\w+(?:,\s*\w+)*])?[\w(){},' =]*\s*:", typ[k + 1:])
                 assert m, typ
                 cname = m.group(1)
                 self.local_classes[-1].append(typ)
@@ -928,34 +1136,46 @@ class ts2pythonCompiler(Compiler):
         else:
             preface = ''
         if self.use_literal_type and \
-                any(nd[0].name == 'literal' for nd in node.children):
-            if all(nd[0].name == 'literal' for nd in node.children):
-                return f"Literal[{', '.join(typ for typ in union)}]"
-                # return f"Literal[{', '.join(nd.content for nd in node.children)}]"
-            new_union = []
-            literal_package = []
-            for i, nd in enumerate(node.children):
-                if nd[0].name == 'literal':
-                    literal_package.append(union[i])
-                else:
-                    if literal_package:
-                        new_union.append(f"Literal[{', '.join(l for l in literal_package)}]")
-                        literal_package = []
-                    new_union.append(union[i])
-            if literal_package:
-                new_union.append(f"Literal[{', '.join(l for l in literal_package)}]")
-            return self.render_union(preface, new_union)
+                any(nd[0].name == 'literal' for nd in node.children
+                    if nd.name != 'comment__'):
+            if all(nd[0].name == 'literal' for nd in node.children
+                   if nd.name != 'comment__'):
+                result = f"Literal[{', '.join(typ for typ in union)}]"
+            else:
+                new_union = []
+                literal_package = []
+                for i, nd in enumerate(node.children):
+                    if nd.name == 'comment__':
+                        continue
+                    if nd[0].name == 'literal':
+                        literal_package.append(union[i])
+                    else:
+                        if literal_package:
+                            new_union.append(f"Literal[{', '.join(l for l in literal_package)}]")
+                            literal_package = []
+                        new_union.append(union[i])
+                if literal_package:
+                    new_union.append(f"Literal[{', '.join(l for l in literal_package)}]")
+                result = self.render_union(preface, new_union)
         else:
-            return self.render_union(preface, union)
+            result = self.render_union(preface, union)
+        return f"ReadOnly[{result}]" if self.allow_read_only and self.readonly_decl() \
+            else result
 
-    def render_declarations(self, decls) -> str:
+    def render_declarations(self, decls: str) -> str:
         if self.base_class_name != "TypedDict" or self.render_anonymous == "local":
             return ''.join([self.render_class_header(self.obj_name[-1], '') + "    ",
                             self.render_local_classes().replace('\n', '\n    '),
                             decls.replace('\n', '\n    ')])
         elif self.render_anonymous == "toplevel":
+            # the magic marker "TOPLEVEL_" should not be part of the class-name,
+            # but make sure that there is always a name, even in a testing-context
+            # that does not start at top-level. Thus, the or-clause in class_name.
+            names = [strip_type_parameters(name) for name in self.obj_name[1:-1]] \
+                    + [self.obj_name[-1]]
+            class_name = '_'.join(names) or self.obj_name[0]
             return ''.join([self.render_local_classes(),
-                            self.render_class_header('_'.join(self.obj_name[1:]), '') + "    ",
+                            self.render_class_header(class_name, '') + "    ",
                             decls.replace('\n', '\n    ')])
         elif self.render_anonymous == "functional":
             return f'TypedDict("{self.obj_name[-1]}", {to_dict(decls)})'
@@ -964,8 +1184,12 @@ class ts2pythonCompiler(Compiler):
             return f'TypedDict[{to_dict(decls)}]'
 
     def on_type(self, node) -> str:
-        assert len(node.children) == 1
-        typ = node[0]
+        num_children = len(node.children)
+        assert 1 <= num_children <= 2
+        readonly = node[0].name == 'readonly'
+        assert readonly or num_children == 1
+        typ = node[1] if readonly else node[0]
+        readonly = readonly or self.readonly_decl()
         if typ.name in ('declarations_block', 'declarations_tuple'):
             self.local_classes.append([])
             self.optional_keys.append([])
@@ -973,30 +1197,35 @@ class ts2pythonCompiler(Compiler):
             result = self.render_declarations(decls)
             self.optional_keys.pop()
             self.local_classes.pop()
-            return result
         elif typ.name == 'literal':
             literal_typ = typ[0].name
             if self.use_literal_type:
-                return self.compile(typ)
+                result = self.compile(typ)
             elif literal_typ == 'array':
-                return 'List'
+                result = 'List'
             elif literal_typ == 'object':
-                return 'Dict'
+                result = 'Dict'
             elif literal_typ in ('number', 'integer'):
                 literal = self.compile(typ)
                 try:
                     _ = int(literal)
-                    return 'int'
+                    result = 'int'
                 except ValueError:
-                    return 'str'
+                    result = 'str'
             elif literal_typ == 'boolean':
-                return 'bool'
+                result = 'bool'
             else:
                 assert literal_typ == 'string', literal_typ
                 _ = self.compile(typ)
-                return 'str'
+                result = 'str'
         else:
-            return self.compile(typ)
+            result = self.compile(typ)
+        if self.allow_read_only and \
+                (readonly or self.get_known_type(result)[:9] == "ReadOnly["):
+            return f"ReadOnly[{result}]"
+        else:
+            return result
+
 
     def on_type_tuple(self, node):
         return 'Tuple[' + ', '.join(self.compile(nd) for nd in node) + ']'
@@ -1086,16 +1315,24 @@ class ts2pythonCompiler(Compiler):
         for nd in node[2:]:
             declaration = self.compile(nd)
             declarations.extend(declaration.split('\n'))
-        local_classes = self.render_local_classes().replace('\n', '\n    ')
-        if local_classes:
-            declarations.insert(1, local_classes)
+        local_classes = self.render_local_classes()
+        if self.render_anonymous != 'toplevel':
+            if local_classes:
+                declarations.insert(1, local_classes.replace('\n', '\n    '))
+            result = '\n    '.join(declarations)
+        else:
+            if local_classes:
+                result = ''.join([local_classes, '\n',
+                                  '\n    '.join(declarations)])
+            else:
+                result = '\n    '.join(declarations)
         self.known_types.pop()
         self.add_to_known_types(node, name, 'namespace')
         self.local_classes.pop()
         self.optional_keys.pop()
         self.scope_type.pop()
         self.obj_name.pop()
-        return '\n    '.join(declarations)
+        return result
 
     def on_enum(self, node) -> str:
         if self.use_enums:
@@ -1151,7 +1388,12 @@ class ts2pythonCompiler(Compiler):
         return {'true': 'True', 'false': 'False'}[node.content]
 
     def on_string(self, node) -> str:
-        return node.content
+        string_literal = node.content
+        if string_literal[0] == "'":
+            string_literal = f'"{string_literal[1:-1]}"'
+            # immunize string literal against removal of
+            # single quotes
+        return string_literal
 
     def on_array(self, node) -> str:
         return '[' + \
@@ -1173,12 +1415,24 @@ class ts2pythonCompiler(Compiler):
         return TYPE_NAME_SUBSTITUTION[node.content]
 
     def on_generic_type(self, node) -> str:
-        base_type = self.compile(node['type_name'])
+        type_name = node['type_name']
+        if type_name.content == 'PromiseLike' \
+                and 'PromiseLike' not in self.known_types \
+                and 'PromiseLike' not in self.obj_name:  # a hack for a special case
+            interface = pick_from_path(self.path, 'interface')  # a hack for a special case
+            if not interface or not interface['identifier'].content == 'PromiseLike':
+                if self.compatibility_level >= (3, 12):
+                    promiselike_def = PROMISE_LIKE_CLASS_312
+                else:
+                    promiselike_def = PROMISE_LIKE_CLASS_37
+                self.local_classes[-1].append(promiselike_def)
+                self.known_types[-1]['PromiseLike']= 'PromiseLike'
+        base_type = self.compile(type_name)
         parameters = self.compile(node['type_parameters'])
         if parameters == 'None':
             return base_type
         else:
-            return ''.join([base_type, '[', parameters, ']'])
+            return f'{base_type}[{parameters}]'
 
     def on_type_parameters(self, node) -> str:
         type_parameters = [self.compile(nd) for nd in node.children]
@@ -1188,7 +1442,7 @@ class ts2pythonCompiler(Compiler):
         return self.on_types(node)
 
     def on_parameter_type(self, node) -> str:
-        if len(node.children) > 1:
+        if len(node.children) > 1 and node[0].name != 'readonly':
             node.result = (node[0],)  # ignore extends_type and equals_type for now
         return self.on_type(node)
 
@@ -1209,18 +1463,32 @@ class ts2pythonCompiler(Compiler):
         return TYPE_NAME_SUBSTITUTION.get(name, name)
 
     def compile_type_expression(self, node, type_node) -> str:
+        def no_type_alias(path) -> bool:
+            names = [nd.name for nd in path[::-1]]
+            if 'type_alias' not in names:
+                return True
+            if ('declarations_block' in names and
+                names.index('declarations_block') < names.index('type_alias')):
+                return True
+            return False
+
         unknown_types = set(tn.content for tn in node.select('type_name')
-                            if not self.is_known_type(tn.content))
+                            if not self.get_known_type(tn.content))
         type_expression = self.compile(type_node)
-        for typ in unknown_types:
-            rx = re.compile(r"(?:(?<=[^\w'])|^)" + typ + r"(?:(?=[^\w'])|$)")
-            segments = type_expression.split("'")
-            for i in range(0, len(segments), 2):
-                segments[i] = rx.sub(f"'{typ}'", segments[i])
-            type_expression = "'".join(segments)
-            # type_expression = rx.sub(f"'{typ}'", type_expression)
-        if type_expression[0:1] == "'":
-            type_expression = ''.join(["'", type_expression.replace("'", ""), "'"])
+        if self.assume_deferred_evaluation or (
+                self.use_postponed_evaluation and
+                (self.use_type_parameters or no_type_alias(self.path))):
+            type_expression = type_expression.replace("'", "")
+        elif not self.use_postponed_evaluation or type_expression[0:5] != 'class':
+            for typ in unknown_types:
+                rx = re.compile(r"(?:(?<=[^\w'])|^)" + typ + r"(?:(?=[^\w'])|$)")
+                segments = type_expression.split("'")
+                for i in range(0, len(segments), 2):
+                    segments[i] = rx.sub(f"'{typ}'", segments[i])
+                type_expression = "'".join(segments)
+                # type_expression = rx.sub(f"'{typ}'", type_expression)
+            if type_expression[0:1] == "'":
+                type_expression = ''.join(["'", type_expression.replace("'", ""), "'"])
         return type_expression
 
     def on_array_of(self, node) -> str:
@@ -1235,7 +1503,9 @@ class ts2pythonCompiler(Compiler):
         return self.on_type(node)
 
     def on_qualifiers(self, node):
-        assert False, "Qualifiers should be ignored and this method should never be called!"
+        assert False, ('Qualifiers should be ignored and this method should '
+                       'never be called! "readonly" will be taken care by '
+                       'on_type().')
 
     def on_variable(self, node) -> str:
         return self.compile(node['name'])
@@ -1251,7 +1521,7 @@ class ts2pythonCompiler(Compiler):
         return identifier
 
 compiling: Junction = create_junction(
-    ts2pythonCompiler, "ast", "py")
+    ts2pythonCompiler, 'AST', "py")
 
 
 #######################################################################
@@ -1264,7 +1534,7 @@ compiling: Junction = create_junction(
 # (See DHParser.compile for a description of junctions)
 
 # ADD YOUR OWN POST-PROCESSING-JUNCTIONS HERE:
-junctions = set([ASTTransformation, compiling])
+junctions = {ASTTransformation, compiling}
 
 # put your targets of interest, here. A target is the name of result (or stage)
 # of any transformation, compilation or postprocessing step after parsing.
@@ -1287,42 +1557,62 @@ serializations = expand_table(dict([('*', ['sxpr'])]))
 #
 #######################################################################
 
-RESULT_FILE_EXTENSION = ".sxpr"  # Change this according to your needs!
+RESULT_FILE_EXTENSION = ".py"  # Change this according to your needs!
 
 
-def compile_src(source: str, target: str = "py") -> Tuple[Any, List[Error]]:
-    """Compiles ``source`` and returns (result, errors)."""
-    results = full_pipeline(source, preprocessing.factory, parsing.factory,
-                           junctions, {target})
-    return results[target]
-
-
-def serialize_result(result: Any) -> Union[str, bytes]:
-    """Serialization of result. REWRITE THIS, IF YOUR COMPILATION RESULT
-    IS NOT A TREE OF NODES.
+def pipeline(source: str,
+             target: str = "{NAME}",
+             start_parser: str = "root_parser__",
+             *, cancel_query=None) -> PipelineResult:
+    """Runs the source code through the processing pipeline. If
+    the parameter target is not the empty string, only the stages required
+    for the given target will be passed.
     """
+    global targets
+    target_set = set([target]) if target else targets
+    return full_pipeline(
+        source, preprocessing.factory, parsing.factory, junctions, target_set,
+        start_parser, cancel_query=cancel_query)
+
+
+def compile_src(source: str,
+                target: str = "py",
+                start_parser: str = "root_parser__",
+                *, cancel_query=None) -> Tuple[Any, List[Error]]:
+    """Compiles ``source`` and returns (result, errors)."""
+    full_compilation_result = pipeline(source, target, start_parser, cancel_query=cancel_query)
+    return full_compilation_result[target]
+
+
+def serialize_result(result: Any, format = "") -> Union[str, bytes]:
+    """Serialization of the compilation-result."""
     if isinstance(result, Node):
-        return result.serialize(how='default' if RESULT_FILE_EXTENSION != '.xml' else 'xml')
+        if not format:  format = serializations['*'][0]
+        return result.serialize(format)
     elif isinstance(result, (str, StringView)):
         return result
     else:
         return repr(result)
 
 
-def process_file(source: str, result_filename: str = '') -> str:
+def process_file(source: str, out_dir: str = '', target: str='py',
+                 *, cancel_query=None) -> str:
     """Compiles the source and writes the serialized results back to disk,
     unless any fatal errors have occurred. Error and Warning messages are
     written to a file with the same name as `result_filename` with an
     appended "_ERRORS.txt" or "_WARNINGS.txt" in place of the name's
     extension. Returns the name of the error-messages file or an empty
-    string, if no errors of warnings occurred.
+    string if no errors of warnings occurred.
     """
+    global targets, serializations
+    extension = RESULT_FILE_EXTENSION if target == 'py' else '.' + serializations['*'][0]
+
     source_filename = source if is_filename(source) else ''
-    if not result_filename:
-        if source_filename:
-            result_filename = source_filename[:result_filename.rfind('.')] + '.py'
-        else:
-            result_filename = "out.py"
+    if source_filename:
+        result_filename = os.path.join(out_dir,
+            os.path.splitext(os.path.basename(source_filename))[0] + extension)
+    else:
+        result_filename = os.path.join(out_dir, "out.py")
     if os.path.isfile(result_filename):
         with open(result_filename, 'r', encoding='utf-8') as f:
             result = f.read()
@@ -1332,7 +1622,7 @@ def process_file(source: str, result_filename: str = '') -> str:
         m = re.search(r'source_hash__ *= *"([\w.!? ]*)"', result)
         if m and m.groups()[-1] == source_hash(source):
             return ''  # no re-compilation necessary, because source hasn't changed
-    result, errors = compile_src(source)
+    result, errors = compile_src(source, target, cancel_query=cancel_query)
     if not has_errors(errors, FATAL):
         if os.path.abspath(source_filename) != os.path.abspath(result_filename):
             with open(result_filename, 'w', encoding='utf-8') as f:
@@ -1349,41 +1639,20 @@ def process_file(source: str, result_filename: str = '') -> str:
     return ''
 
 
+def _process_file(args: Tuple[str, str, Callable]) -> str:
+    return process_file(*args[:2], cancel_query=args[2])
+
+
 def batch_process(file_names: List[str], out_dir: str,
                   *, submit_func: Callable = None,
-                  log_func: Callable = None) -> List[str]:
+                  log_func: Callable = None,
+                  cancel_func: Callable = never_cancel) -> List[str]:
     """Compiles all files listed in filenames and writes the results and/or
     error messages to the directory `our_dir`. Returns a list of error
     messages files.
     """
-    error_list =  []
-
-    def gen_dest_name(name):
-        return os.path.join(out_dir, os.path.splitext(os.path.basename(name))[0] \
-                                     + RESULT_FILE_EXTENSION)
-
-    def run_batch(submit_func: Callable):
-        nonlocal error_list
-        err_futures = []
-        for name in file_names:
-            dest_name = gen_dest_name(name)
-            err_futures.append(submit_func(process_file, name, dest_name))
-        for file_name, err_future in zip(file_names, err_futures):
-            error_filename = err_future.result()
-            if log_func:
-                log_func('Compiling "%s"' % file_name)
-            if error_filename:
-                error_list.append(error_filename)
-
-    if submit_func is None:
-        import concurrent.futures
-        from DHParser.toolkit import instantiate_executor
-        with instantiate_executor(get_config_value('batch_processing_parallelization'),
-                                  concurrent.futures.ProcessPoolExecutor) as pool:
-            run_batch(pool.submit)
-    else:
-        run_batch(submit_func)
-    return error_list
+    return dsl.batch_process(file_names, out_dir, _process_file,
+        submit_func=submit_func, log_func=log_func, cancel_query=cancel_func)
 
 
 INSPECT_TEMPLATE = """<h2>{testname}</h2>
@@ -1440,9 +1709,10 @@ def inspect(test_file_path: str):
     webbrowser.open('file://' + destpath if sys.platform == "darwin" else destpath)
 
 
-def main():
+def main(called_from_app=False):
+    global targets, test_targets, serializations, junctions
     # recompile grammar if needed
-    script_path = os.path.abspath(os.path.realpath(__file__))
+    script_path = os.path.abspath(__file__)
     script_name = os.path.basename(script_path)
     if script_name.endswith('Parser.py'):
         base_path = script_path[:-9]
@@ -1472,10 +1742,10 @@ def main():
 
     from argparse import ArgumentParser
     parser = ArgumentParser(description="Parses a ts2python-file and shows its syntax-tree.")
-    parser.add_argument('files', nargs='+')
+    parser.add_argument('files', nargs='*' if called_from_app else '+')
     parser.add_argument('-D', '--debug', action='store_const', const='debug',
-                        help='Store debug information in LOGS subdirectory')
-    parser.add_argument('-o', '--out', nargs=1, default=['out'],
+                        help='Write debug information to LOGS subdirectory')
+    parser.add_argument('-o', '--out', nargs=1, default=['ts2python_output'],
                         help='Output directory for batch processing')
     parser.add_argument('-v', '--verbose', action='store_const', const='verbose',
                         help='Verbose output')
@@ -1483,71 +1753,93 @@ def main():
                         help='Run batch jobs in a single thread (recommended only for debugging)')
     parser.add_argument('-c', '--compatibility', nargs=1, action='extend', type=str,
                         help='Minimal required python version (must be >= 3.7)')
-    parser.add_argument('-b', '--base', nargs=1, action='extend', type=str,
-                        help='Base class name, e.g. TypedDict (default) or BaseModel (pydantic)')
     parser.add_argument('-a', '--anonymous', nargs=1, action='extend', type=str,
                         help='How to render anonymous interfaces: "local" (default), '
                              '"toplevel", "functional", "type"')
-    parser.add_argument('-d', '--decorator', nargs=1, action='extend', type=str,
-                        help="addes the given decorator ")
-    parser.add_argument('-p', '--peps', nargs='+', action='extend', type=str,
-                        help='Assume Python-PEPs, e.g. 655 or ~655')
+    parser.add_argument('-p', '--peps', nargs=1, action='extend', type=str,
+                        help='Assume or ignore Python-PEPs, e.g. "655,~705" assume NotRequired '
+                             '(PEP 655), but ignore ReadOnly (PEP 705)')
     parser.add_argument('-k', '--comments', action='store_const', const="comments",
                         help="Preserve (multiline) comments")
+    parser.add_argument('-s', '--serialize', nargs=1, default=[],
+                        help="Choose serialization format for abstract syntax tree. Available: "
+                             + ', '.join(ALLOWED_PRESET_VALUES['default_serialization']))
+    parser.add_argument('-t', '--target', nargs='+', default=[],
+                        help='Pick compilation target(s). Available targets: '
+                             '%s; default: %s' % (', '.join(test_targets), ', '.join(targets)))
 
     args = parser.parse_args()
     file_names, out, log_dir = args.files, args.out[0], ''
 
-    workdir = file_names[0] if os.path.isdir(file_names[0]) else os.path.dirname(file_names[0])
-    from DHParser.configuration import read_local_config
-    read_local_config(os.path.join(scriptpath, 'ts2python/ts2pythonParser.ini'))
+    read_local_config(os.path.join(scriptpath, 'ts2pythonConfig.ini'))
 
-    if args.debug or args.compatibility or args.base or args.decorator or args.peps or args.anonymous:
+    if args.serialize:
+        if (args.serialize[0].lower() not in
+                [sf.lower() for sf in ALLOWED_PRESET_VALUES['default_serialization']]):
+            print('Unknown serialization format: ' + args.serialize[0] +
+                  '! Available formats for tree-structures: '
+                  + ', '.join(ALLOWED_PRESET_VALUES['default_serialization']))
+            sys.exit(1)
+        serializations['*'] = args.serialize
+        access_presets()
+        set_preset_value('{NAME}_serializations', serializations, allow_new_key=True)
+        finalize_presets()
+
+    if args.target:
+        chosen = set(args.target)
+        unknown = chosen - test_targets
+        if unknown:
+            print('Unknown targets: ' + ', '.join(unknown) + ' chosen!' +
+                  '\nAvailable targets: ' + ', '.join(test_targets))
+            sys.exit(1)
+        targets = chosen
+
+    if args.debug or args.compatibility or args.peps or args.anonymous:
         access_presets()
         if args.debug is not None:
             log_dir = 'LOGS'
             set_preset_value('history_tracking', True)
             set_preset_value('resume_notices', True)
-            set_preset_value('log_syntax_trees', frozenset(['cst', 'ast']))  # don't use a set literal, here
+            set_preset_value('log_syntax_trees', frozenset(['CST', 'AST']))  # don't use a set literal, here
         if args.compatibility:
             version_info = tuple(int(part) for part in args.compatibility[0].split('.'))
-            if not version_info >= (3, 7):
-                print('Compatibility version must be >= 3.7')
-                sys.exit(1)
-            if version_info >= (3, 8):
-                set_preset_value('ts2python.UseLiteralType', True, allow_new_key=True)
-            if version_info >= (3, 10):
-                set_preset_value('ts2python.UseTypeUnion', True, allow_new_key=True)
-            if version_info >= (3, 11):
-                set_preset_value('ts2python.UseNotRequired', True, allow_new_key=True)
-                set_preset_value('ts2python.UseVariadicGenerics', True, allow_new_key=True)
-            if version_info >= (3, 12):
-                set_preset_value('ts2python.UseTypeParameters', True, allow_new_key=True)
-        if args.base:  set_preset_value('ts2python.BaseClassName', args.base[0].strip())
+            set_compatibility_level(version_info, "preset")
         if args.anonymous:  set_preset_value('ts2python.RenderAnonymous', args.anonymous[0].strip())
-        if args.decorator:  set_preset_value('ts2python.ClassDecorator', args.decorator[0].strip())
         if args.peps:
-            args_peps = [pep.strip() for pep in args.peps]
-            all_peps = { '435',  '584',  '586',  '604',  '646',  '655',
-                        '~435', '~584', '~586', '~604', '~646', '~655'}
+            args_peps = [pep.strip() for pep in args.peps[0].split(',')]
+            all_peps = { '435',  '563',  '584',  '586',  '604', '613',
+                         '646',  '649',  '655',  '695',  '705',  '749',
+                        '~435', '~563', '~584', '~586', '~604', '~613',
+                        '~646', '~649', '~655', '~695', '~705', '~749'}
             if not all(pep in all_peps for pep in args_peps):
                 print(f'Unsupported PEPs specified: {args_peps}\n'
                       'Allowed PEP arguments are:\n'
                       '  435  - use Enums (Python 3.4)\n'
+                      '  563  - use postponed evaluation (Python 3.7)\n'
+                      '  584 or 586  - use Literal type (Python 3.8)\n'
                       '  604  - use type union (Python 3.10)\n'
-                      '  586  - use Literal type (Python 3.8)\n'
-                      '  655  - use NotRequired instead of Optional (Python3.11)\n')
+                      '  613  - use explicit type alias (Python 3.10 - 3.11)\n'
+                      '  646  - use variadic Generics (Python 3.11)\n'
+                      '  649 or 749 - assume deferred type evaluation (Python 3.14)\n'
+                      '  655  - use NotRequired instead of Optional (Python3.11)\n'
+                      '  695  - use type parameters (Python 3.12)\n'
+                      '  705  - allow ReadOnly (Python 3.13)\n')
                 sys.exit(1)
             for pep in args_peps:
                 kwargs= {'value': pep[0] != '~', 'allow_new_key': True}
                 if pep == '435':  set_preset_value('ts2python.UseEnum', **kwargs)
+                if pep == '563':  set_preset_value('ts2python.UsePostponedEvaluation', **kwargs)
                 if pep in ('586', '584'):  set_preset_value('ts2python.UseLiteralType', **kwargs)
                 if pep == '604':  set_preset_value('ts2python.TypeUnion', **kwargs)
-                if pep == '646': set_preset_value('tsPython.UseVariadicGenerics', **kwargs)
+                if pep == '613':  set_preset_value('ts2python.UseExplicitTypeAlias', **kwargs)
+                if pep == '646':  set_preset_value('tsPython.UseVariadicGenerics', **kwargs)
                 if pep == '655':  set_preset_value('ts2python.UseNotRequired', **kwargs)
-        if args.comments: set_preset_value('ts2python.KeepMultilineComments', True)
+                if pep == '695':  set_preset_value('ts2python.UseTypeParameters', **kwargs)
+                if pep == '705':  set_preset_value('ts2python.AllowReadOnly', **kwargs)
+                if pep in ('649', '749'):  set_preset_value('ts2python.AssumeDeferredEvaluation', **kwargs)
+        if args.comments: set_preset_value('ts2python.KeepMultilineComments', True, allow_new_key=True)
         finalize_presets()
-        _ = get_config_values('ts2python.*')  # fill config value cache
+        # _ = get_config_values('ts2python.*')  # fill config value cache
 
     start_logging(log_dir)
 
@@ -1557,6 +1849,8 @@ def main():
     def echo(message: str):
         if args.verbose:
             print(message)
+
+    if called_from_app and not file_names:  return False
 
     batch_processing = True
     if len(file_names) == 1:
@@ -1588,7 +1882,10 @@ def main():
 
     else:
         assert file_names[0].lower().endswith('.ts')
-        error_file = process_file(file_names[0], file_names[0][:-3] + '.py')
+        if len(targets) == 1:
+            error_file = process_file(file_names[0], '.', target=next(iter(targets)))
+        else:
+            error_file = process_file(file_names[0], '.')
         if error_file:
             with open(error_file, 'r', encoding='utf-8') as f:
                 print(f.read())
