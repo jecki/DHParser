@@ -7,6 +7,9 @@ scriptdir = os.path.dirname(os.path.abspath(os.path.realpath(__file__)))
 destfile = os.path.abspath(os.path.join(scriptdir, '..', 'lsp.py'))
 
 
+from DHParser.configuration import read_local_config
+
+
 LSP_SPEC_SOURCE = \
     "https://raw.githubusercontent.com/microsoft/language-server-protocol/gh-pages/_specifications/lsp/3.18/specification.md"
 
@@ -100,21 +103,25 @@ def transpile_ts_to_python(specs):
     return specs_py
 
 
-BEGIN_MARKER = "##### BEGIN OF LSP SPECS"
-END_MARKER = "##### END OF LSP SPECS"
+BEGIN_MARKER = "##### BEGIN OF LSP SPECS", "##### BEGIN OF ts2python generated code"
+END_MARKER = "##### END OF LSP SPECS", "##### END OF ts2python generated code"
 
 def update_lsp_module(specs, destfile):
     with open(destfile, 'r', encoding='utf-8') as f:
         lsp = f.read()
 
     # skip import block
-    i = specs.find(BEGIN_MARKER) + len(BEGIN_MARKER)
-    k = specs.find(END_MARKER)
+    for marker in BEGIN_MARKER:
+        i = specs.find(marker)
+        if i >= 0:  break
+    else:  raise ValueError(f"Could not find any begin marker {BEGIN_MARKER} in specs!")
+    i += len(BEGIN_MARKER)
+    for marker in END_MARKER:
+        k = specs.find(marker)
+        if k >= 0:  break
+    else:  raise ValueError(f"Could not find any begin marker {BEGIN_MARKER} in specs!")
+
     specs = specs[i:k]
-
-    i = lsp.find(BEGIN_MARKER) + len(BEGIN_MARKER)
-    k = lsp.find(END_MARKER)
-
     new_lsp = '\n'.join([lsp[:i], specs, lsp[k:]])
 
     os.rename(destfile, destfile + '.save')
@@ -124,6 +131,7 @@ def update_lsp_module(specs, destfile):
 
 
 def run_update():
+    read_local_config(os.path.join(scriptdir, 'ts2pythonConfig.ini'))
     specs_md = download_specs(LSP_SPEC_SOURCE)
     specs_ts = extract_ts_code(specs_md)
     specs_py = transpile_ts_to_python(specs_ts)
