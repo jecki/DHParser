@@ -42,6 +42,7 @@ else:
 
 try:
     from DHParser.ts2python.typeddict_shim import TypedDict, Gener
+
 ### BEGIN OF ts2python generated code
 
 
@@ -7087,7 +7088,6 @@ class WorkDoneProgressCancelParams(TypedDict):
 
 
 ##### END OF ts2python generated code
-##### END OF LSP SPECS
 
 
 #######################################################################
