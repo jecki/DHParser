@@ -107,22 +107,28 @@ BEGIN_MARKER = "##### BEGIN OF LSP SPECS", "##### BEGIN OF ts2python generated c
 END_MARKER = "##### END OF LSP SPECS", "##### END OF ts2python generated code"
 
 def update_lsp_module(specs, destfile):
+    a = specs.find(BEGIN_MARKER[-1])
+    if a < 0:  raise ValueError(f"Could not find any begin marker {BEGIN_MARKER[-1]} in specs!")
+    a += len(BEGIN_MARKER[-1])
+    b = specs.find(END_MARKER[-1])
+    if b < 0:  raise ValueError(f"Could not find any begin marker {END_MARKER[-1]} in specs!")
+
     with open(destfile, 'r', encoding='utf-8') as f:
         lsp = f.read()
 
-    # skip import block
     for marker in BEGIN_MARKER:
-        i = specs.find(marker)
+        i = lsp.find(marker)
         if i >= 0:  break
-    else:  raise ValueError(f"Could not find any begin marker {BEGIN_MARKER} in specs!")
-    i += len(BEGIN_MARKER)
+    else:  raise ValueError(f"Could not find any begin marker {BEGIN_MARKER} in DHParser.lsp!")
+    i += len(marker)
     for marker in END_MARKER:
-        k = specs.find(marker)
+        k = lsp.find(marker)
         if k >= 0:  break
-    else:  raise ValueError(f"Could not find any begin marker {BEGIN_MARKER} in specs!")
+    else:  raise ValueError(f"Could not find any begin marker {END_MARKER} in DHParser.lsp!")
+
 
     specs = specs[i:k]
-    new_lsp = '\n'.join([lsp[:i], specs, lsp[k:]])
+    new_lsp = '\n'.join([lsp[:i], specs[a:b], lsp[k:]])
 
     os.rename(destfile, destfile + '.save')
     with open(destfile, 'w', encoding='utf-8') as f:
