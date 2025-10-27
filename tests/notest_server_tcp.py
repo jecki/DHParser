@@ -99,9 +99,12 @@ class TestServer:
 
     def setup_class(self):
         stop_tcp_server('127.0.0.1', TEST_PORT)
+        self.save_path = os.getcwd()
+        os.chdir(scriptpath)
 
     def teardown_class(self):
         stop_tcp_server('127.0.0.1', TEST_PORT)
+        os.chdir(self.save_path)
 
     def test_server_process(self):
         """Basic Test of server module."""

@@ -4,6 +4,7 @@
 import sys, os, re
 
 scriptdir = os.path.dirname(os.path.abspath(os.path.realpath(__file__)))
+dhparserdir = os.path.abspath(os.path.join(scriptdir, os.pardir, os.pardir))
 destfile = os.path.abspath(os.path.join(scriptdir, '..', 'lsp.py'))
 
 
@@ -11,7 +12,7 @@ from DHParser.configuration import read_local_config
 
 
 LSP_SPEC_SOURCE = \
-    "https://raw.githubusercontent.com/microsoft/language-server-protocol/gh-pages/_specifications/lsp/3.18/specification.md"
+    "https://raw.githubusercontent.com/microsoft/language-server-protocol/gh-pages/_specifications/lsp/3.17/specification.md"
 
 
 def no_declaration(l):
@@ -126,8 +127,6 @@ def update_lsp_module(specs, destfile):
         if k >= 0:  break
     else:  raise ValueError(f"Could not find any begin marker {END_MARKER} in DHParser.lsp!")
 
-
-    specs = specs[i:k]
     new_lsp = '\n'.join([lsp[:i], specs[a:b], lsp[k:]])
 
     os.rename(destfile, destfile + '.save')
@@ -137,7 +136,9 @@ def update_lsp_module(specs, destfile):
 
 
 def run_update():
-    read_local_config(os.path.join(scriptdir, 'ts2pythonConfig.ini'))
+    config_path = os.path.join(dhparserdir, 'DHParser', 'ts2python', 'ts2pythonConfig.ini')
+    assert os.path.exists(config_path), "ts2pythonConfig.ini not found!"
+    read_local_config(config_path)
     specs_md = download_specs(LSP_SPEC_SOURCE)
     specs_ts = extract_ts_code(specs_md)
     specs_py = transpile_ts_to_python(specs_ts)
