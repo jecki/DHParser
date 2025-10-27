@@ -756,7 +756,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
             clean_test_name = str(test_name).replace('*', '')
             try:
                 _, prepped_text, back_mapping, errors = preprocessor(test_code, parser_name)
-                cst = parser(prepped_text, parser_name, back_mapping)
+                cst = parser(prepped_text, parser_name, back_mapping, complete_match=True)
             except AttributeError as upe:
                 cst = RootNode()
                 cst = cst.new_error(Node(ZOMBIE_TAG, "").with_pos(0), str(upe))
