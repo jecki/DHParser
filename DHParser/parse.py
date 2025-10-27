@@ -1887,7 +1887,7 @@ class Grammar:
                  document: str,
                  start_parser: Union[str, Parser] = "root_parser__",
                  source_mapping: Optional[SourceMapFunc] = None,
-                 *, complete_match: bool = True) -> RootNode:
+                 *, complete_match: Union[bool, str] = "WSP_RE__") -> RootNode:
         """
         Parses a document with parser-combinators.
 
@@ -1896,7 +1896,12 @@ class Grammar:
             with which to start. This is useful for testing particular parsers
             (i.e. particular parts of the EBNF-Grammar.)
         :param complete_match: If True, an error is generated, if
-            ``start_parser`` did not match the entire document.
+            ``start_parser`` did not match the entire document. If complete_match
+            is a string (default) it suffices that the remaining text after the
+            match consists of whitespace. The string is interpreted as the name
+            of an attribute of self that contains a regular expression string
+            defining the ensuing whitespace. If False, no error is generated
+            even if not the complete text has been matched.
         :return: The root node of the parse-tree alias "concrete-syntax-tree".
         """
         assert source_mapping is None or callable(source_mapping), source_mapping
@@ -2041,7 +2046,10 @@ class Grammar:
             # in order to allow proper error-reporting when testing sub-parsers with
             # lookaheads etc.
 
-            if location < L and complete_match:
+            if location < L and (complete_match is True
+                    or (complete_match is not False and
+                        re.fullmatch(getattr(self, complete_match),
+                                     self.text__[location:]) is None)):
                 rest = self.document__[location:]
                 fwd = rest.find("\n") + 1 or len(rest)
                 skip, location = rest[:fwd], location + fwd

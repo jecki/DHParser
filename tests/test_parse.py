@@ -1217,7 +1217,7 @@ class TestBorderlineCases:
         gr = grammar_provider(minilang)()
         cst = gr(' ', 'parser')
         assert not cst.error_flag
-        cst = gr('  ', 'parser')
+        cst = gr('  ', 'parser', complete_match=True)
         assert cst.error_flag and cst.errors_sorted[0].code == PARSER_STOPPED_BEFORE_END
         cst = gr('', 'parser')
         assert not cst.error_flag
