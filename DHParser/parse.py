@@ -1943,7 +1943,7 @@ class Grammar:
                     #  eval(name[1:]) failed, because custom parsers are not visible from here
                     nonlocal parser
                     parser.apply(functools.partial(find_parser_class, name=name[1:]))
-                    if custom_parser_class:
+                    if custom_parser_class is not None:
                         return issubclass(custom_parser_class, Lookahead)
                     return False
 

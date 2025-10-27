@@ -787,10 +787,14 @@ def has_content(path: Path, content: str) -> bool:
 @transformation_factory(str)
 def has_attr(path: Path, attr: str="", value: Optional[str] = None) -> bool:
     """
-    Returns true, if the node has the attribute ``attr`` and its value
+    Returns True, if the node has the attribute ``attr`` and its value
     equals ``value``. If ``value`` is None, True is returned if the attribute
-    exists, no matter what it value is.
+    exists, no matter what its value is.
     """
+    if isinstance(path, Node):
+        raise ValueError('Function DHParser.transform.has_attr() expects a path, not a node! '
+                         'Use method node.has_attr() to check whether a node has attributes '
+                         'or has a particular attribute or a particular attribute value?')
     node = path[-1]
     if not attr:
         return node.has_attr()
