@@ -153,81 +153,81 @@ class ResponseError(TypedDict):
     # information about the error. Can be omitted.
     data: NotRequired[LSPAny]
 
-class ErrorCodes(TypedDict):
+class ErrorCodes(IntEnum):
 
-# Defined by JSON-RPC
-    ParseError: int = -32700
-    InvalidRequest: int = -32600
-    MethodNotFound: int = -32601
-    InvalidParams: int = -32602
-    InternalError: int = -32603
+    # Defined by JSON-RPC
+    ParseError = -32700
+    InvalidRequest = -32600
+    MethodNotFound = -32601
+    InvalidParams = -32602
+    InternalError = -32603
 
-# This is the start range of JSON-RPC reserved error codes.
-# It doesnʼt denote a real error code. No LSP error codes should
-# be defined between the start and end range. For backwards
-# compatibility the `ServerNotInitialized` and the `UnknownErrorCode`
-# are left in the range.
+    # This is the start range of JSON-RPC reserved error codes.
+    # It doesnʼt denote a real error code. No LSP error codes should
+    # be defined between the start and end range. For backwards
+    # compatibility the `ServerNotInitialized` and the `UnknownErrorCode`
+    # are left in the range.
 
-# @since 3.16.0
-    jsonrpcReservedErrorRangeStart: int = -32099
+    # @since 3.16.0
+    jsonrpcReservedErrorRangeStart = -32099
 
-# @deprecated use jsonrpcReservedErrorRangeStart
-    serverErrorStart: int = jsonrpcReservedErrorRangeStart
+    # @deprecated use jsonrpcReservedErrorRangeStart
+    serverErrorStart = jsonrpcReservedErrorRangeStart
 
-# Error code indicating that a server received a notification or
-# request before the server received the `initialize` request.
-    ServerNotInitialized: int = -32002
-    UnknownErrorCode: int = -32001
+    # Error code indicating that a server received a notification or
+    # request before the server received the `initialize` request.
+    ServerNotInitialized = -32002
+    UnknownErrorCode = -32001
 
-# This is the end range of JSON-RPC reserved error codes.
-# It doesnʼt denote a real error code.
+    # This is the end range of JSON-RPC reserved error codes.
+    # It doesnʼt denote a real error code.
 
-# @since 3.16.0
-    jsonrpcReservedErrorRangeEnd: Any = -32000
+    # @since 3.16.0
+    jsonrpcReservedErrorRangeEnd = -32000
 
-# @deprecated use jsonrpcReservedErrorRangeEnd
-    serverErrorEnd: int = jsonrpcReservedErrorRangeEnd
+    # @deprecated use jsonrpcReservedErrorRangeEnd
+    serverErrorEnd = jsonrpcReservedErrorRangeEnd
 
-# This is the start range of LSP reserved error codes.
-# It doesnʼt denote a real error code.
+    # This is the start range of LSP reserved error codes.
+    # It doesnʼt denote a real error code.
 
-# @since 3.16.0
-    lspReservedErrorRangeStart: int = -32899
+    # @since 3.16.0
+    lspReservedErrorRangeStart = -32899
 
-# A request failed but it was syntactically correct, e.g the
-# method name was known and the parameters were valid. The error
-# message should contain human readable information about why
-# the request failed.
+    # A request failed but it was syntactically correct, e.g the
+    # method name was known and the parameters were valid. The error
+    # message should contain human readable information about why
+    # the request failed.
 
-# @since 3.17.0
-    RequestFailed: int = -32803
+    # @since 3.17.0
+    RequestFailed = -32803
 
-# The server cancelled the request. This error code should
-# only be used for requests that explicitly support being
-# server cancellable.
+    # The server cancelled the request. This error code should
+    # only be used for requests that explicitly support being
+    # server cancellable.
 
-# @since 3.17.0
-    ServerCancelled: int = -32802
+    # @since 3.17.0
+    ServerCancelled = -32802
 
-# The server detected that the content of a document got
-# modified outside normal conditions. A server should
-# NOT send this error code if it detects a content change
-# in its unprocessed messages. The result even computed
-# on an older state might still be useful for the client.
+    # The server detected that the content of a document got
+    # modified outside normal conditions. A server should
+    # NOT send this error code if it detects a content change
+    # in its unprocessed messages. The result even computed
+    # on an older state might still be useful for the client.
 
-# If a client decides that a result is not of any use anymore
-# the client should cancel the request.
-    ContentModified: int = -32801
+    # If a client decides that a result is not of any use anymore
+    # the client should cancel the request.
+    ContentModified = -32801
 
-# The client has canceled a request and a server has detected
-# the cancel.
-    RequestCancelled: int = -32800
+    # The client has canceled a request and a server has detected
+    # the cancel.
+    RequestCancelled = -32800
 
-# This is the end range of LSP reserved error codes.
-# It doesnʼt denote a real error code.
+    # This is the end range of LSP reserved error codes.
+    # It doesnʼt denote a real error code.
 
-# @since 3.16.0
-    lspReservedErrorRangeEnd: int = -32800
+    # @since 3.16.0
+    lspReservedErrorRangeEnd = -32800
 
 
 class NotificationMessage(Message, TypedDict):
@@ -327,23 +327,23 @@ PositionEncodingKind = str
 
 # @since 3.17.0
 
-class PositionEncodingKind(TypedDict):
+class PositionEncodingKind(Enum):
 
-# Character offsets count UTF-8 code units (e.g bytes).
-    UTF8: PositionEncodingKind = "utf-8"
+    # Character offsets count UTF-8 code units (e.g bytes).
+    UTF8 = "utf-8"
 
-# Character offsets count UTF-16 code units.
+    # Character offsets count UTF-16 code units.
 
-# This is the default and must always be supported
-# by servers
-    UTF16: PositionEncodingKind = "utf-16"
+    # This is the default and must always be supported
+    # by servers
+    UTF16 = "utf-16"
 
-# Character offsets count UTF-32 code units.
+    # Character offsets count UTF-32 code units.
 
-# Implementation note: these are the same as Unicode code points,
-# so this `PositionEncodingKind` may also be used for an
-# encoding-agnostic representation of character offsets.
-    UTF32: PositionEncodingKind = "utf-32"
+    # Implementation note: these are the same as Unicode code points,
+    # so this `PositionEncodingKind` may also be used for an
+    # encoding-agnostic representation of character offsets.
+    UTF32 = "utf-32"
 
 
 # source file: "types/range.md"
@@ -603,19 +603,19 @@ class Diagnostic(TypedDict):
     # @since 3.16.0
     data: NotRequired[LSPAny]
 
-class DiagnosticSeverity(TypedDict):
+class DiagnosticSeverity(IntEnum):
 
-# Reports an error.
-    Error: int = 1
+    # Reports an error.
+    Error = 1
 
-# Reports a warning.
-    Warning: int = 2
+    # Reports a warning.
+    Warning = 2
 
-# Reports an information.
-    Information: int = 3
+    # Reports an information.
+    Information = 3
 
-# Reports a hint.
-    Hint: int = 4
+    # Reports a hint.
+    Hint = 4
 
 # commented out, because there is already an enumeration with the same name
 # DiagnosticSeverity = int
@@ -625,18 +625,18 @@ class DiagnosticSeverity(TypedDict):
 
 # @since 3.15.0
 
-class DiagnosticTag(TypedDict):
+class DiagnosticTag(IntEnum):
 
-# Unused or unnecessary code.
+    # Unused or unnecessary code.
 
-# Clients are allowed to render diagnostics with this tag faded out
-# instead of having an error squiggle.
-    Unnecessary: int = 1
+    # Clients are allowed to render diagnostics with this tag faded out
+    # instead of having an error squiggle.
+    Unnecessary = 1
 
-# Deprecated or obsolete code.
+    # Deprecated or obsolete code.
 
-# Clients are allowed to rendered diagnostics with this tag strike through.
-    Deprecated: int = 2
+    # Clients are allowed to rendered diagnostics with this tag strike through.
+    Deprecated = 2
 
 # commented out, because there is already an enumeration with the same name
 # DiagnosticTag = int
@@ -691,13 +691,13 @@ class Command(TypedDict):
 # Please note that `MarkupKinds` must not start with a `$`. This kinds
 # are reserved for internal usage.
 
-class MarkupKind(TypedDict):
+class MarkupKind(Enum):
 
-# Plain text is supported as a content format
-    PlainText: str = "plaintext"
+    # Plain text is supported as a content format
+    PlainText = "plaintext"
 
-# Markdown is supported as a content format
-    Markdown: str = "markdown"
+    # Markdown is supported as a content format
+    Markdown = "markdown"
 
 # commented out, because there is already an enumeration with the same name
 # MarkupKind = str
@@ -935,38 +935,38 @@ class WorkspaceEditClientCapabilities(TypedDict):
 
 ResourceOperationKind = str
 
-class ResourceOperationKind(TypedDict):
+class ResourceOperationKind(Enum):
 
-# Supports creating new files and folders.
-    Create: ResourceOperationKind = "create"
+    # Supports creating new files and folders.
+    Create = "create"
 
-# Supports renaming existing files and folders.
-    Rename: ResourceOperationKind = "rename"
+    # Supports renaming existing files and folders.
+    Rename = "rename"
 
-# Supports deleting existing files and folders.
-    Delete: ResourceOperationKind = "delete"
+    # Supports deleting existing files and folders.
+    Delete = "delete"
 
 FailureHandlingKind = str
 
-class FailureHandlingKind(TypedDict):
+class FailureHandlingKind(Enum):
 
-# Applying the workspace change is simply aborted if one of the changes
-# provided fails. All operations executed before the failing operation
-# stay executed.
-    Abort: FailureHandlingKind = "abort"
+    # Applying the workspace change is simply aborted if one of the changes
+    # provided fails. All operations executed before the failing operation
+    # stay executed.
+    Abort = "abort"
 
-# All operations are executed transactional. That means they either all
-# succeed or no changes at all are applied to the workspace.
-    Transactional: FailureHandlingKind = "transactional"
+    # All operations are executed transactional. That means they either all
+    # succeed or no changes at all are applied to the workspace.
+    Transactional = "transactional"
 
-# If the workspace edit contains only textual file changes they are
-# executed transactional. If resource changes (create, rename or delete
-# file) are part of the change the failure handling strategy is abort.
-    TextOnlyTransactional: FailureHandlingKind = "textOnlyTransactional"
+    # If the workspace edit contains only textual file changes they are
+    # executed transactional. If resource changes (create, rename or delete
+    # file) are part of the change the failure handling strategy is abort.
+    TextOnlyTransactional = "textOnlyTransactional"
 
-# The client tries to undo the operations already executed. But there is no
-# guarantee that this is succeeding.
-    Undo: FailureHandlingKind = "undo"
+    # The client tries to undo the operations already executed. But there is no
+    # guarantee that this is succeeding.
+    Undo = "undo"
 
 
 # source file: "types/workDoneProgress.md"
@@ -1472,14 +1472,14 @@ class InitializeResult(TypedDict):
 
 # Known error codes for an `InitializeErrorCodes`;
 
-class InitializeErrorCodes(TypedDict):
+class InitializeErrorCodes(IntEnum):
 
-# If the protocol version provided by the client canʼt be handled by
-# the server.
+    # If the protocol version provided by the client canʼt be handled by
+    # the server.
 
-# @deprecated This initialize error got replaced by client capabilities.
-# There is no version handshake in version 3.0x
-    unknownProtocolVersion: int = 1
+    # @deprecated This initialize error got replaced by client capabilities.
+    # There is no version handshake in version 3.0x
+    unknownProtocolVersion = 1
 
 # commented out, because there is already an enumeration with the same name
 # InitializeErrorCodes = int
@@ -1778,19 +1778,19 @@ class LogTraceParams(TypedDict):
 # Defines how the host (editor) should sync document changes to the language
 # server.
 
-class TextDocumentSyncKind(TypedDict):
+class TextDocumentSyncKind(IntEnum):
 
-# Documents should not be synced at all.
-    None_: Any = 0
+    # Documents should not be synced at all.
+    None_ = 0
 
-# Documents are synced by always sending the full content
-# of the document.
-    Full: Any = 1
+    # Documents are synced by always sending the full content
+    # of the document.
+    Full = 1
 
-# Documents are synced by sending the full content on open.
-# After that only incremental updates to the document are
-# sent.
-    Incremental: Any = 2
+    # Documents are synced by sending the full content on open.
+    # After that only incremental updates to the document are
+    # sent.
+    Incremental = 2
 
 # commented out, because there is already an enumeration with the same name
 # TextDocumentSyncKind = int
@@ -1891,17 +1891,17 @@ class WillSaveTextDocumentParams(TypedDict):
 
 # Represents reasons why a text document is saved.
 
-class TextDocumentSaveReason(TypedDict):
+class TextDocumentSaveReason(IntEnum):
 
-# Manually triggered, e.g. by the user pressing save, by starting
-# debugging, or by an API call.
-    Manual: Any = 1
+    # Manually triggered, e.g. by the user pressing save, by starting
+    # debugging, or by an API call.
+    Manual = 1
 
-# Automatic after a delay.
-    AfterDelay: Any = 2
+    # Automatic after a delay.
+    AfterDelay = 2
 
-# When the editor lost focus.
-    FocusOut: Any = 3
+    # When the editor lost focus.
+    FocusOut = 3
 
 # commented out, because there is already an enumeration with the same name
 # TextDocumentSaveReason = int
@@ -2046,13 +2046,13 @@ class NotebookCell(TypedDict):
 
 # @since 3.17.0
 
-class NotebookCellKind(TypedDict):
+class NotebookCellKind(IntEnum):
 
-# A markup-cell is formatted source that is used for display.
-    Markup: int = 1
+    # A markup-cell is formatted source that is used for display.
+    Markup = 1
 
-# A code-cell is source code.
-    Code: int = 2
+    # A code-cell is source code.
+    Code = 2
 
 
 class ExecutionSummary(TypedDict):
@@ -2645,16 +2645,16 @@ class DocumentHighlight(TypedDict):
 
 # A document highlight kind.
 
-class DocumentHighlightKind(TypedDict):
+class DocumentHighlightKind(IntEnum):
 
-# A textual occurrence.
-    Text: Any = 1
+    # A textual occurrence.
+    Text = 1
 
-# Read-access of a symbol, like reading a variable.
-    Read: Any = 2
+    # Read-access of a symbol, like reading a variable.
+    Read = 2
 
-# Write-access of a symbol, like writing to a variable.
-    Write: Any = 3
+    # Write-access of a symbol, like writing to a variable.
+    Write = 3
 
 # commented out, because there is already an enumeration with the same name
 # DocumentHighlightKind = int
@@ -2894,16 +2894,16 @@ class FoldingRangeParams(WorkDoneProgressParams, PartialResultParams, TypedDict)
 
 # A set of predefined range kinds.
 
-class FoldingRangeKind(TypedDict):
+class FoldingRangeKind(Enum):
 
-# Folding range for a comment
-    Comment: Any = "comment"
+    # Folding range for a comment
+    Comment = "comment"
 
-# Folding range for imports or includes
-    Imports: Any = "imports"
+    # Folding range for imports or includes
+    Imports = "imports"
 
-# Folding range for a region (e.g. `#region`)
-    Region: Any = "region"
+    # Folding range for a region (e.g. `#region`)
+    Region = "region"
 
 
 # The type is a string since the value set is extensible
@@ -3091,10 +3091,10 @@ class SymbolKind(IntEnum):
 
 # @since 3.16
 
-class SymbolTag(TypedDict):
+class SymbolTag(IntEnum):
 
-# Render a symbol as obsolete, usually using a strike-out.
-    Deprecated: int = 1
+    # Render a symbol as obsolete, usually using a strike-out.
+    Deprecated = 1
 
 # commented out, because there is already an enumeration with the same name
 # SymbolTag = int
@@ -3559,13 +3559,13 @@ class InlayHintLabelPart(TypedDict):
 
 # @since 3.17.0
 
-class InlayHintKind(TypedDict):
+class InlayHintKind(IntEnum):
 
-# An inlay hint that for a type annotation.
-    Type: Any = 1
+    # An inlay hint that for a type annotation.
+    Type = 1
 
-# An inlay hint that is for a parameter.
-    Parameter: Any = 2
+    # An inlay hint that is for a parameter.
+    Parameter = 2
 
 # commented out, because there is already an enumeration with the same name
 # InlayHintKind = int
@@ -3962,19 +3962,19 @@ class CompletionParams(TextDocumentPositionParams, WorkDoneProgressParams, Parti
 
 # How a completion was triggered
 
-class CompletionTriggerKind(TypedDict):
+class CompletionTriggerKind(IntEnum):
 
-# Completion was triggered by typing an identifier (24x7 code
-# complete), manual invocation (e.g Ctrl+Space) or via API.
-    Invoked: int = 1
+    # Completion was triggered by typing an identifier (24x7 code
+    # complete), manual invocation (e.g Ctrl+Space) or via API.
+    Invoked = 1
 
-# Completion was triggered by a trigger character specified by
-# the `triggerCharacters` properties of the
-# `CompletionRegistrationOptions`.
-    TriggerCharacter: int = 2
+    # Completion was triggered by a trigger character specified by
+    # the `triggerCharacters` properties of the
+    # `CompletionRegistrationOptions`.
+    TriggerCharacter = 2
 
-# Completion was re-triggered as the current completion list is incomplete.
-    TriggerForIncompleteCompletions: int = 3
+    # Completion was re-triggered as the current completion list is incomplete.
+    TriggerForIncompleteCompletions = 3
 
 # commented out, because there is already an enumeration with the same name
 # CompletionTriggerKind = int
@@ -4059,18 +4059,18 @@ class CompletionList(TypedDict):
 # Defines whether the insert text in a completion item should be interpreted as
 # plain text or a snippet.
 
-class InsertTextFormat(TypedDict):
+class InsertTextFormat(IntEnum):
 
-# The primary text to be inserted is treated as a plain string.
-    PlainText: Any = 1
+    # The primary text to be inserted is treated as a plain string.
+    PlainText = 1
 
-# The primary text to be inserted is treated as a snippet.
+    # The primary text to be inserted is treated as a snippet.
 
-# A snippet can define tab stops and placeholders with `$1`, `$2`
-# and `${3:foo}`. `$0` defines the final tab stop, it defaults to
-# the end of the snippet. Placeholders with equal identifiers are linked,
-# that is typing in one will update others too.
-    Snippet: Any = 2
+    # A snippet can define tab stops and placeholders with `$1`, `$2`
+    # and `${3:foo}`. `$0` defines the final tab stop, it defaults to
+    # the end of the snippet. Placeholders with equal identifiers are linked,
+    # that is typing in one will update others too.
+    Snippet = 2
 
 # commented out, because there is already an enumeration with the same name
 # InsertTextFormat = int
@@ -4081,10 +4081,10 @@ class InsertTextFormat(TypedDict):
 
 # @since 3.15.0
 
-class CompletionItemTag(TypedDict):
+class CompletionItemTag(IntEnum):
 
-# Render a completion as obsolete, usually using a strike-out.
-    Deprecated: Any = 1
+    # Render a completion as obsolete, usually using a strike-out.
+    Deprecated = 1
 
 # commented out, because there is already an enumeration with the same name
 # CompletionItemTag = int
@@ -4112,23 +4112,23 @@ class InsertReplaceEdit(TypedDict):
 
 # @since 3.16.0
 
-class InsertTextMode(TypedDict):
+class InsertTextMode(IntEnum):
 
-# The insertion or replace strings is taken as it is. If the
-# value is multi line the lines below the cursor will be
-# inserted using the indentation defined in the string value.
-# The client will not apply any kind of adjustments to the
-# string.
-    asIs: int = 1
+    # The insertion or replace strings is taken as it is. If the
+    # value is multi line the lines below the cursor will be
+    # inserted using the indentation defined in the string value.
+    # The client will not apply any kind of adjustments to the
+    # string.
+    asIs = 1
 
-# The editor adjusts leading whitespace of new lines so that
-# they match the indentation up to the cursor of the line for
-# which the item is accepted.
+    # The editor adjusts leading whitespace of new lines so that
+    # they match the indentation up to the cursor of the line for
+    # which the item is accepted.
 
-# Consider a line like this: <2tabs><cursor><3tabs>foo. Accepting a
-# multi line completion item is indented using 2 tabs and all
-# following lines inserted will be indented using 2 tabs as well.
-    adjustIndentation: int = 2
+    # Consider a line like this: <2tabs><cursor><3tabs>foo. Accepting a
+    # multi line completion item is indented using 2 tabs and all
+    # following lines inserted will be indented using 2 tabs as well.
+    adjustIndentation = 2
 
 # commented out, because there is already an enumeration with the same name
 # InsertTextMode = int
@@ -4474,15 +4474,15 @@ DocumentDiagnosticReport = Union['RelatedFullDocumentDiagnosticReport', 'Related
 
 # @since 3.17.0
 
-class DocumentDiagnosticReportKind(TypedDict):
+class DocumentDiagnosticReportKind(Enum):
 
-# A diagnostic report with a full
-# set of problems.
-    Full: Any = "full"
+    # A diagnostic report with a full
+    # set of problems.
+    Full = "full"
 
-# A report indicating that the last
-# returned report is still accurate.
-    Unchanged: Any = "unchanged"
+    # A report indicating that the last
+    # returned report is still accurate.
+    Unchanged = "unchanged"
 
 # commented out, because there is already an enumeration with the same name
 # DocumentDiagnosticReportKind = str
@@ -4756,17 +4756,17 @@ class SignatureHelpParams(TextDocumentPositionParams, WorkDoneProgressParams, Ty
 
 # @since 3.15.0
 
-class SignatureHelpTriggerKind(TypedDict):
+class SignatureHelpTriggerKind(IntEnum):
 
-# Signature help was invoked manually by the user or by a command.
-    Invoked: int = 1
+    # Signature help was invoked manually by the user or by a command.
+    Invoked = 1
 
-# Signature help was triggered by a trigger character.
-    TriggerCharacter: int = 2
+    # Signature help was triggered by a trigger character.
+    TriggerCharacter = 2
 
-# Signature help was triggered by the cursor moving or by the document
-# content changing.
-    ContentChange: int = 3
+    # Signature help was triggered by the cursor moving or by the document
+    # content changing.
+    ContentChange = 3
 
 # commented out, because there is already an enumeration with the same name
 # SignatureHelpTriggerKind = int
@@ -4991,67 +4991,67 @@ CodeActionKind = str
 
 # A set of predefined code action kinds.
 
-class CodeActionKind(TypedDict):
+class CodeActionKind(Enum):
 
-# Empty kind.
-    Empty: CodeActionKind = ""
+    # Empty kind.
+    Empty = ""
 
-# Base kind for quickfix actions: ʼquickfixʼ.
-    QuickFix: CodeActionKind = "quickfix"
+    # Base kind for quickfix actions: ʼquickfixʼ.
+    QuickFix = "quickfix"
 
-# Base kind for refactoring actions: ʼrefactorʼ.
-    Refactor: CodeActionKind = "refactor"
+    # Base kind for refactoring actions: ʼrefactorʼ.
+    Refactor = "refactor"
 
-# Base kind for refactoring extraction actions: ʼrefactor.extractʼ.
+    # Base kind for refactoring extraction actions: ʼrefactor.extractʼ.
 
-# Example extract actions:
+    # Example extract actions:
 
-# - Extract method
-# - Extract function
-# - Extract variable
-# - Extract interface from class
-# - ...
-    RefactorExtract: CodeActionKind = "refactor.extract"
+    # - Extract method
+    # - Extract function
+    # - Extract variable
+    # - Extract interface from class
+    # - ...
+    RefactorExtract = "refactor.extract"
 
-# Base kind for refactoring inline actions: ʼrefactor.inlineʼ.
+    # Base kind for refactoring inline actions: ʼrefactor.inlineʼ.
 
-# Example inline actions:
+    # Example inline actions:
 
-# - Inline function
-# - Inline variable
-# - Inline constant
-# - ...
-    RefactorInline: CodeActionKind = "refactor.inline"
+    # - Inline function
+    # - Inline variable
+    # - Inline constant
+    # - ...
+    RefactorInline = "refactor.inline"
 
-# Base kind for refactoring rewrite actions: ʼrefactor.rewriteʼ.
+    # Base kind for refactoring rewrite actions: ʼrefactor.rewriteʼ.
 
-# Example rewrite actions:
+    # Example rewrite actions:
 
-# - Convert JavaScript function to class
-# - Add or remove parameter
-# - Encapsulate field
-# - Make method static
-# - Move method to base class
-# - ...
-    RefactorRewrite: CodeActionKind = "refactor.rewrite"
+    # - Convert JavaScript function to class
+    # - Add or remove parameter
+    # - Encapsulate field
+    # - Make method static
+    # - Move method to base class
+    # - ...
+    RefactorRewrite = "refactor.rewrite"
 
-# Base kind for source actions: `source`.
+    # Base kind for source actions: `source`.
 
-# Source code actions apply to the entire file.
-    Source: CodeActionKind = "source"
+    # Source code actions apply to the entire file.
+    Source = "source"
 
-# Base kind for an organize imports source action:
-# `source.organizeImports`.
-    SourceOrganizeImports: CodeActionKind = "source.organizeImports"
+    # Base kind for an organize imports source action:
+    # `source.organizeImports`.
+    SourceOrganizeImports = "source.organizeImports"
 
-# Base kind for a ʼfix allʼ source action: `source.fixAll`.
+    # Base kind for a ʼfix allʼ source action: `source.fixAll`.
 
-# ʼFix allʼ actions automatically fix errors that have a clear fix that
-# do not require user input. They should not suppress errors or perform
-# unsafe fixes such as generating new types or classes.
+    # ʼFix allʼ actions automatically fix errors that have a clear fix that
+    # do not require user input. They should not suppress errors or perform
+    # unsafe fixes such as generating new types or classes.
 
-# @since 3.17.0
-    SourceFixAll: CodeActionKind = "source.fixAll"
+    # @since 3.17.0
+    SourceFixAll = "source.fixAll"
 
 
 # Contains additional diagnostic information about the context in which
@@ -5084,16 +5084,16 @@ class CodeActionContext(TypedDict):
 
 # @since 3.17.0
 
-class CodeActionTriggerKind(TypedDict):
+class CodeActionTriggerKind(IntEnum):
 
-# Code actions were explicitly requested by the user or by an extension.
-    Invoked: int = 1
+    # Code actions were explicitly requested by the user or by an extension.
+    Invoked = 1
 
-# Code actions were requested automatically.
+    # Code actions were requested automatically.
 
-# This typically happens when current selection in a file changes, but can
-# also be triggered when file content changes.
-    Automatic: int = 2
+    # This typically happens when current selection in a file changes, but can
+    # also be triggered when file content changes.
+    Automatic = 2
 
 # commented out, because there is already an enumeration with the same name
 # CodeActionTriggerKind = int
@@ -5378,11 +5378,11 @@ class DocumentOnTypeFormattingParams(TypedDict):
 
 # source file: "language/rename.md"
 
-class PrepareSupportDefaultBehavior(TypedDict):
+class PrepareSupportDefaultBehavior(IntEnum):
 
-# The clientʼs default behavior is to select the identifier
-# according to the languageʼs syntax rule.
-    Identifier: int = 1
+    # The clientʼs default behavior is to select the identifier
+    # according to the languageʼs syntax rule.
+    Identifier = 1
 
 # commented out, because there is already an enumeration with the same name
 # PrepareSupportDefaultBehavior = int
@@ -5676,13 +5676,13 @@ class FileOperationRegistrationOptions(TypedDict):
 
 # @since 3.16.0
 
-class FileOperationPatternKind(TypedDict):
+class FileOperationPatternKind(Enum):
 
-# The pattern matches a file only.
-    file: str = "file"
+    # The pattern matches a file only.
+    file = "file"
 
-# The pattern matches a folder only.
-    folder: str = "folder"
+    # The pattern matches a folder only.
+    folder = "folder"
 
 # commented out, because there is already an enumeration with the same name
 # FileOperationPatternKind = str
@@ -5911,16 +5911,16 @@ class FileSystemWatcher(TypedDict):
     # which is 7.
     kind: NotRequired['WatchKind']
 
-class WatchKind(TypedDict):
+class WatchKind(IntEnum):
 
-# Interested in create events.
-    Create: Any = 1
+    # Interested in create events.
+    Create = 1
 
-# Interested in change events
-    Change: Any = 2
+    # Interested in change events
+    Change = 2
 
-# Interested in delete events
-    Delete: Any = 4
+    # Interested in delete events
+    Delete = 4
 
 # commented out, because there is already an enumeration with the same name
 # WatchKind = int
@@ -5946,16 +5946,16 @@ class FileEvent(TypedDict):
 
 # The file event type.
 
-class FileChangeType(TypedDict):
+class FileChangeType(IntEnum):
 
-# The file got created.
-    Created: Any = 1
+    # The file got created.
+    Created = 1
 
-# The file got changed.
-    Changed: Any = 2
+    # The file got changed.
+    Changed = 2
 
-# The file got deleted.
-    Deleted: Any = 3
+    # The file got deleted.
+    Deleted = 3
 
 # commented out, because there is already an enumeration with the same name
 # FileChangeType = int
@@ -6034,25 +6034,25 @@ class ShowMessageParams(TypedDict):
     # The actual message.
     message: str
 
-class MessageType(TypedDict):
+class MessageType(IntEnum):
 
-# An error message.
-    Error: Any = 1
+    # An error message.
+    Error = 1
 
-# A warning message.
-    Warning: Any = 2
+    # A warning message.
+    Warning = 2
 
-# An information message.
-    Info: Any = 3
+    # An information message.
+    Info = 3
 
-# A log message.
-    Log: Any = 4
+    # A log message.
+    Log = 4
 
-# A debug message.
+    # A debug message.
 
-# @since 3.18.0
-# @proposed
-    Debug: Any = 5
+    # @since 3.18.0
+    # @proposed
+    Debug = 5
 
 # commented out, because there is already an enumeration with the same name
 # MessageType = int
