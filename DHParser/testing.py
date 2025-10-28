@@ -16,13 +16,13 @@
 # permissions and limitations under the License.
 
 """
-Module ``testing`` contains support for unit-testing domain specific
+Module ``testing`` contains support for unit-testing of domain-specific
 languages. Tests for arbitrarily small components of the Grammar can
 be written into test files with ini-file syntax in order to test
 whether the parser matches or fails as expected. It can also be
 tested whether it produces an expected concrete or abstract syntax tree.
 Usually, however, unexpected failure to match a certain string is the
-main cause of trouble when constructing a context free Grammar.
+main cause of trouble when constructing a context-free Grammar.
 """
 
 from __future__ import annotations
@@ -756,7 +756,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
             clean_test_name = str(test_name).replace('*', '')
             try:
                 _, prepped_text, back_mapping, errors = preprocessor(test_code, parser_name)
-                cst = parser(prepped_text, parser_name, back_mapping, complete_match=True)
+                cst = parser(prepped_text, parser_name, back_mapping)  # , complete_match=True
             except AttributeError as upe:
                 cst = RootNode()
                 cst = cst.new_error(Node(ZOMBIE_TAG, "").with_pos(0), str(upe))

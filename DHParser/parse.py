@@ -50,7 +50,8 @@ from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
     MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, CAPTURE_STACK_NOT_EMPTY_NON_ROOT_ONLY, \
     AUTOCAPTURED_SYMBOL_NOT_CLEARED_NON_ROOT, ERROR_WHILE_RECOVERING_FROM_ERROR, \
     ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING, PARSER_STOPPED_ON_RETRY, ERROR, CANCELED, \
-    INFINITE_LOOP_WARNING, REDUNDANT_PARSER_WARNING, has_errors, is_error
+    INFINITE_LOOP_WARNING, REDUNDANT_PARSER_WARNING, PARSER_STOPPED_BEFORE_END_WARNING, \
+    has_errors, is_error
 from DHParser.log import CallItem, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME, SourceMapFunc
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
@@ -2143,7 +2144,14 @@ class Grammar:
                             [(stitch.name, stitch.pos)], stitch,
                             self.document__[error.pos:], lc, [error]))
             else:
-                # if complete_match is False, ignore the rest and leave while loop
+                # if complete_match is not True, ignore the rest and leave while loop
+                if location < L and not isinstance(complete_match, bool):
+                    # match was complete except for trailing whitespace
+                    if result is None: result = Node(EMPTY_PTYPE, '').with_pos(0)
+                    self.tree__.add_error(result, Error(
+                        f'Parser "{parser.pname}" stopped before end, '
+                        f'because of trailing whitespace.',
+                        location, PARSER_STOPPED_BEFORE_END_WARNING))
                 location = L
         if stitches:
             if location < L:

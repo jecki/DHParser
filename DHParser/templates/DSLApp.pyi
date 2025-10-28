@@ -30,7 +30,7 @@ except (ImportError, ModuleNotFoundError):
 
 from DHParser.configuration import read_local_config, get_config_values, \
     get_config_value, dump_config_data
-from DHParser.error import Error, ERROR
+from DHParser.error import Error, ERROR, PARSER_STOPPED_BEFORE_END_WARNING
 from DHParser.nodetree import Node, EMPTY_NODE
 from DHParser.pipeline import PipelineResult
 from DHParser.testing import merge_test_units
@@ -538,6 +538,8 @@ class DSLApp(tk.Tk):
             target = self.compilation_target
             self.target_name.set(target)
         result, self.error_list = self.all_results[target]
+        self.error_list = [e for e in self.error_list
+                           if e.code != PARSER_STOPPED_BEFORE_END_WARNING]
         self.compile['state'] = tk.DISABLED
         self.result.delete("1.0", tk.END)
         if isinstance(result, Node):

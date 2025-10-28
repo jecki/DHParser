@@ -32,8 +32,9 @@ from DHParser.configuration import get_config_value, set_config_value
 from DHParser.toolkit import compile_python_object, re, INFINITE
 from DHParser.log import is_logging, log_ST, log_parsing_history, start_logging
 from DHParser.error import Error, is_error, add_source_locations, MANDATORY_CONTINUATION, \
-    MALFORMED_ERROR_STRING, MANDATORY_CONTINUATION_AT_EOF, RESUME_NOTICE, PARSER_STOPPED_BEFORE_END, \
-    PARSER_NEVER_TOUCHES_DOCUMENT, CAPTURE_DROPPED_CONTENT_WARNING, \
+    MALFORMED_ERROR_STRING, MANDATORY_CONTINUATION_AT_EOF, RESUME_NOTICE, \
+    PARSER_STOPPED_BEFORE_END, PARSER_NEVER_TOUCHES_DOCUMENT, \
+    CAPTURE_DROPPED_CONTENT_WARNING, PARSER_STOPPED_BEFORE_END_WARNING, \
     MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, INFINITE_LOOP_WARNING, ErrorCode
 from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, \
@@ -1208,9 +1209,11 @@ class TestBorderlineCases:
         cst = gr('X', 'parser')
         assert not cst.error_flag
         cst = gr(' ', 'parser')
-        assert cst.error_flag and cst.errors_sorted[0].code == PARSER_STOPPED_BEFORE_END
+        assert (cst.error_flag and cst.errors_sorted[0].code
+                in (PARSER_STOPPED_BEFORE_END, PARSER_STOPPED_BEFORE_END_WARNING))
         cst = gr('', 'parser')
-        assert cst.error_flag and cst.errors_sorted[0].code == PARSER_STOPPED_BEFORE_END
+        assert (cst.error_flag and cst.errors_sorted[0].code
+                in (PARSER_STOPPED_BEFORE_END, PARSER_STOPPED_BEFORE_END_WARNING))
 
     def test_matching(self):
         minilang = """parser = /.?/"""
