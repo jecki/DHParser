@@ -12,6 +12,9 @@ if platform.system().lower() == "linux":
     os.environ['CXX'] = 'clang++'
     os.environ['LDSHARED'] = 'clang -shared'
 
+if sys.version_info >= (3, 14, 0):
+    os.environ['CYTHON_USE_MODULE_STATE'] = '1'
+
 try:
     from Cython.Build import cythonize
     has_cython = True

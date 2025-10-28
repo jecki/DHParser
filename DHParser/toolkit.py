@@ -2037,8 +2037,10 @@ class PickMultiCoreExecutorShim:
         else:
             assert mode in ('multicore', 'multiprocessing')
         import concurrent.futures
+        import DHParser.stringview
         if sys.version_info >= (3, 14, 0) \
-                and CONFIG_PRESET['multicore_pool'] == 'InterpreterPool':
+                and CONFIG_PRESET['multicore_pool'] == 'InterpreterPool' \
+                and not getattr(DHParser.stringview, 'cython_optimized', False):
             return concurrent.futures.InterpreterPoolExecutor()
         else:
             return concurrent.futures.ProcessPoolExecutor()

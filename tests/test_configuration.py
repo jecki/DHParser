@@ -125,7 +125,9 @@ class TestConfigMultiprocessing:
         new processes will be present in spawned or forked processes
         afterwards."""
         global PYTEST, evaluate_presets
-        if sys.version_info >= (3, 14, 0):
+        import DHParser.stringview
+        if sys.version_info >= (3, 14, 0) \
+                and not getattr(DHParser.stringview, 'cython_optimized', False):
             import concurrent.futures
             from DHParser.configuration import CONFIG_PRESET, os_getpid
             if __name__ == '__main__':

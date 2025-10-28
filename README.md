@@ -313,6 +313,10 @@ CPython-interpreted version. Compiling can take quite a while.
 If you are in a hurry, you can just can also just call
 `dhparser_cythonize_stringview` which just compiles the 
 stringview-module, which profits the most from being "cythonized".
+As of October 2025, cython appears to be incompatible with the
+InterpreterPoolExecutor, newly added to Python 3.14. Therefore,
+DHParser will fall back to ProcessPoolExecutors if cython has been
+used to compile DHParser. (This may change in the future.)
 
 Another way to speed up your parser is by adding "@ optimizations = all"
 at the beginning of your EBNF-grammar-file. DHParser then tries to 

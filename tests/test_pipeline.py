@@ -363,7 +363,9 @@ class TestCancellation:
         assert result[1][0].code == CANCELED
 
     def test_cancellation_interpreter_pool(self):
-        if sys.version_info >= (3, 14):
+        import DHParser.stringview
+        if sys.version_info >= (3, 14) \
+                and not getattr(DHParser.stringview, 'cython_optimized', False):
             CONFIG_PRESET['multicore_pool'] = 'InterpreterPool'
             from concurrent.futures import InterpreterPoolExecutor
             if __name__ != '__main__':
@@ -383,7 +385,12 @@ class TestCancellation:
             assert result[1][0].code == CANCELED
 
     def test_cancellation_pick_pool(self):
-        CONFIG_PRESET['multicore_pool'] = 'InterpreterPool'
+        import DHParser.stringview
+        if sys.version_info < (3, 14) \
+                or not getattr(DHParser.stringview, 'cython_optimized', False):
+            CONFIG_PRESET['multicore_pool'] = 'InterpreterPool'
+        else:
+            CONFIG_PRESET['multicore_pool'] = 'ProcessPool'
         if __name__ != '__main__':
             os.chdir('..')
             import tests.test_pipeline as test_pipeline

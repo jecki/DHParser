@@ -604,6 +604,7 @@ CONFIG_PRESET['left_recursion'] = True
 # Default value: False
 CONFIG_PRESET['infinite_loop_warning'] = False
 
+
 ########################################################################
 #
 # nodetree configuration
