@@ -33,7 +33,7 @@ import DHParser.ebnf
 from DHParser.compile import Compiler, compile_source, CompilerFactory
 from DHParser.pipeline import full_pipeline, Junction
 from DHParser.configuration import get_config_value, set_config_value
-from DHParser.ebnf import EBNFCompiler, grammar_changed, DHPARSER_IMPORTS, \
+from DHParser.ebnf import EBNFCompiler, DHPARSER_IMPORTS, \
     get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.error import Error, is_error, has_errors, only_errors, canonical_error_strings, \
     ErrorCode, ERROR
@@ -44,7 +44,7 @@ from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, \
     PreprocessorFactory
 from DHParser.transform import TransformerFunc, TransformerFactory
 from DHParser.toolkit import DHPARSER_DIR, load_if_file, is_python_code, is_filename, \
-    compile_python_object, re, as_identifier, cpu_count, LazyRE, CancelQuery, \
+    compile_python_object, re, as_identifier, cpu_count, LazyRE, CancelQuery, md5, \
     deprecated, deprecation_warning, instantiate_executor, PickMultiCoreExecutor
 from DHParser.versionnumber import __version__, __version_info__
 
@@ -53,6 +53,7 @@ __all__ = ('DefinitionError',
            'CompilationError',
            'read_template',
            'load_compiler_suite',
+           'grammar_changed',
            'compileDSL',
            'raw_compileEBNF',
            'compileEBNF',
@@ -189,6 +190,40 @@ def grammar_instance(grammar_representation) -> Tuple[Grammar, str]:
     return parser_root, grammar_src
 
 
+def grammar_changed(grammar_class, grammar_source: str) -> bool:
+    """
+    Returns ``True`` if ``grammar_class`` does not reflect the latest
+    changes of ``grammar_source``
+
+    Parameters:
+        grammar_class:  the parser class representing the grammar
+            or the file name of a compiler suite containing the grammar
+        grammar_source:  File name or string representation of the
+            EBNF code of the grammar
+
+    Returns (bool):
+        True, if the source text of the grammar is different from the
+        source from which the grammar class was generated
+    """
+    grammar = load_if_file(grammar_source)
+    chksum = md5(grammar, __version__)
+    if isinstance(grammar_class, str):
+        # grammar_class = load_compiler_suite(grammar_class)[1]
+        with open(grammar_class, 'r', encoding='utf8') as f:
+            pycode = f.read()
+        m = re.search(r'class \w*\(Grammar\)', pycode)
+        if m:
+            m = re.search(' {4}source_hash__ *= *"([a-z0-9]*)"',
+                          pycode[m.span()[1]:])
+            if m is None:
+                return False
+            return not (m.groups() and m.groups()[-1] == chksum)
+        else:
+            return True
+    else:
+        return chksum != grammar_class.source_hash__
+
+
 def compileDSL(text_or_file: str,
                preprocessor: Optional[PreprocessorFunc],
                dsl_grammar: Union[str, Grammar],
@@ -196,7 +231,7 @@ def compileDSL(text_or_file: str,
                compiler: Compiler,
                fail_when: ErrorCode = ERROR) -> Any:
     """
-    Compiles a text in a domain specific language (DSL) with an
+    Compiles a text in a domain-specific language (DSL) with an
     EBNF-specified grammar. Returns the compiled text or raises a
     compilation error.
 
@@ -235,6 +270,7 @@ def raw_compileEBNF(ebnf_src: str, branding="DSL", fail_when: ErrorCode = ERROR)
     compiler = get_ebnf_compiler(branding, ebnf_src)
     transformer = get_ebnf_transformer()
     compileDSL(ebnf_src, nil_preprocessor, grammar, transformer, compiler, fail_when)
+    # compile.result now contains the result of the last call
     return compiler
 
 
@@ -325,14 +361,22 @@ def create_parser(ebnf_src: str, branding="DSL", additional_code: str = '') -> G
     """
     grammar_factory = grammar_provider(ebnf_src, branding, additional_code)
     grammar = grammar_factory()
-    grammar.python_src__ = getattr(grammar_factory, 'python_src__','')
+    src = getattr(grammar_factory, 'python_src__','')
+    # extract Grammar class from source code for more clarity
+    i = src.find(f'class {branding}Grammar(Grammar):')
+    assert i >= 0, src
+    src = src[i:]
+    k = src.find('\n') + 1
+    while k > 0 and (src[k:k + 1] == '\n' or src[k: k + 4] == '    '):
+        k = src.find('\n', k) + 1
+    grammar.python_src__ = (src[:k] if k > 0 else src).rstrip() + '\n'
     return grammar
 
 
 def split_source(file_name: str, file_content: str) -> List[str]:
     """Splits the ``file_content`` into the seven sections: intro, imports,
     preprocessor_py, parser_py, ast_py, compiler_py, outro.
-    Raises a value error, if the number of sections if not equal to 7.
+    Raises a value error if the number of sections is not equal to 7.
     """
     sections = RX_SECTION_MARKER.split(file_content)
     ls = len(sections)
@@ -346,7 +390,7 @@ def load_compiler_suite(compiler_suite: str) -> \
         Tuple[PreprocessorFactory, ParserFactory,
               TransformerFactory, CompilerFactory]:
     """
-    Extracts a compiler suite from file or string ``compiler_suite``
+    Extracts a compiler suite from the file name or string ``compiler_suite``
     and returns it as a tuple (preprocessor, parser, ast, compiler).
 
     Returns:

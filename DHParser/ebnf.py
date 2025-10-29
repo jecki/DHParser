@@ -261,7 +261,7 @@ from DHParser.preprocess import PreprocessorFunc, PreprocessorResult, gen_find_i
 from DHParser.nodetree import Node, RootNode, Path, WHITESPACE_PTYPE, KEEP_COMMENTS_PTYPE, \
     TOKEN_PTYPE, ZOMBIE_TAG, flatten_sxpr, parse_sxpr
 from DHParser.toolkit import load_if_file, wrap_str_literal, escape_ctrl_chars, md5, \
-    sane_parser_name, re, expand_table, unrepr, compile_python_object, \
+    sane_parser_name, re, expand_table, unrepr, compile_python_object, deprecated, \
     ThreadLocalSingletonFactory, Any, Iterable, Sequence, Set, AbstractSet, Union, Dict, List, \
     Tuple, FrozenSet, MutableSet, Optional, Type, Callable, Container, TypeAlias, \
     matching_brackets, INFINITE, LazyRE, static
@@ -287,7 +287,6 @@ __all__ = ('DHPARSER_IMPORTS',
            'EBNFDirectives',
            'WHITESPACE_TYPES',
            'EBNFCompiler',
-           'grammar_changed',
            'compile_ebnf')
 
 
@@ -644,6 +643,7 @@ class ConfigurableEBNFGrammar(Grammar):
         self.mode__ = 'fixed'
 
 
+@deprecated(f"grammar_changed() has been moved from DHParser.ebnf to DHParser.dsl. Please, update your imports.")
 def grammar_changed(grammar_class, grammar_source: str) -> bool:
     """
     Returns ``True`` if ``grammar_class`` does not reflect the latest

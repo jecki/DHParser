@@ -146,7 +146,7 @@ key_value_store.py:
     from DHParser.dsl import create_parser
 
     # specify the grammar of your DSL in EBNF-notation
-    grammar = '''@ drop = whitespace, strings
+    grammar = r'''@ drop = whitespace, strings
     key_store   = ~ { entry }
     entry       = key "="~ value          # ~ means: insignificant whitespace 
     key         = /\w+/~                  # Scanner-less parsing: Use regular
@@ -155,7 +155,7 @@ key_value_store.py:
     # generating a parser is almost as simple as compiling a regular expression
     parser = create_parser(grammar)       # parser factory for thread-safety
 
-Now, parse some text and extract the data from the Python-shell:
+Now, parse some text and extract the data from the Python shell:
 
     >>> from key_value_store import parser
     >>> text = '''
