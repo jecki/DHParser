@@ -35,11 +35,11 @@ from DHParser.error import Error, FATAL, CANCELED
 from DHParser.nodetree import Node, RootNode
 from DHParser.parse import Grammar, Forward, CombinedParser, mixin_comment, Whitespace, Drop, \
     NegativeLookahead, RegExp, Synonym, Series, Alternative, Option, ZeroOrMore, Lookahead, \
-    Lookbehind, Text
+    Lookbehind, Text, RX_NEVER_MATCH
 from DHParser.pipeline import create_parser_junction, create_junction, end_points, full_pipeline, \
     create_preprocess_junction, PseudoJunction, Junction
 from DHParser.toolkit import ThreadLocalSingletonFactory, expand_table, Any, Tuple, List, \
-    NEVER_MATCH_PATTERN, RX_NEVER_MATCH, re, MultiCoreManager
+    NEVER_MATCH_PATTERN, re, MultiCoreManager
 from DHParser.transform import merge_adjacent, is_one_of, apply_if, replace_by_single_child, \
     replace_content_with, replace_by_children, reduce_single_child, change_name, transformer, \
     TransformerFunc

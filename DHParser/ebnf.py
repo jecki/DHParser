@@ -138,9 +138,14 @@ from a grammar, step by step::
     >>> python_src = ebnf_compiler(AST)
     >>> set_config_value('optimizations', save)
     >>> assert not AST.errors
-    >>> print(python_src[:python_src.find("\\ntry:")])  # leave out consistency check at the end, here
+    >>> print(python_src[:python_src.find("\\ntry:")])
     class ArithmeticGrammar(Grammar):
-        r"""Parser for an Arithmetic source file.
+        r"""Parser for an Arithmetic document.
+    <BLANKLINE>
+        Instantiate this class and then call the instance with the
+        source code as argument in order to use the parser, e.g.:
+            parser = Arithmetic()
+            syntax_tree = parser(source_code)
         """
         expression = Forward()
         disposable__ = re.compile('$.')
@@ -1009,13 +1014,13 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, DropFro
     Option, NegativeLookbehind, OneOrMore, RegExp, SmartRE, Retrieve, Series, Capture, TreeReduction, \\
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, \\
     LateBindingUnary, mixin_comment, last_value, matching_bracket, optional_last_value, \\
-    PARSER_PLACEHOLDER, UninitializedError
+    PARSER_PLACEHOLDER, RX_NEVER_MATCH, UninitializedError
 from DHParser.pipeline import end_points, full_pipeline, create_parser_junction, \\
     create_preprocess_junction, create_junction, PseudoJunction, PipelineResult
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \\
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.stringview import StringView
-from DHParser.toolkit import is_filename, load_if_file, cpu_count, RX_NEVER_MATCH, \\
+from DHParser.toolkit import is_filename, load_if_file, cpu_count, \\
     ThreadLocalSingletonFactory, expand_table, static, CancelQuery
 from DHParser.trace import set_tracer, resume_notices_on, trace_history
 from DHParser.transform import is_empty, remove_if, TransformationDict, TransformerFunc, \\
@@ -2001,9 +2006,12 @@ class EBNFCompiler(Compiler):
         show_source = get_config_value('add_grammar_source_to_parser_docstring')
         declarations = ['class ' + self.grammar_name
                         + 'Grammar(Grammar):',
-                        'r"""Parser for ' + article + self.grammar_name
-                        + ' source file'
-                        + ('. Grammar:' if self.grammar_source and show_source else '.')]
+                        'r"""Parser for ' + article + self.grammar_name + ' document.\n\n'
+                        + '    Instantiate this class and then call the instance with the\n'
+                        + '    source code as argument in order to use the parser, e.g.:\n'
+                        + f'        parser = {self.grammar_name}()\n'
+                        + f'        syntax_tree = parser(source_code)'
+                        + ('\n\n    Grammar:' if self.grammar_source and show_source else '')]
         definitions.append(('parser_initialization__', '["upon instantiation"]'))
         definitions.append(('static_analysis_pending__', '[True]'))
         definitions.append(('disposable__',

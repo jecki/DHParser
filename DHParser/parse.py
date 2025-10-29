@@ -59,8 +59,8 @@ from DHParser.nodetree import Node, RootNode, WHITESPACE_PTYPE, \
     KEEP_COMMENTS_PTYPE, TOKEN_PTYPE, MIXED_CONTENT_TEXT_PTYPE, ZOMBIE_TAG, EMPTY_NODE, \
     EMPTY_PTYPE, LEAF_NODE, ChildrenType, ResultType
 from DHParser.toolkit import sane_parser_name, escape_ctrl_chars, re, matching_brackets, \
-    abbreviate_middle, RX_NEVER_MATCH, RxPatternType, linebreaks, line_col, TypeAlias, \
-    List, Tuple, MutableSet, AbstractSet, FrozenSet, Dict, INFINITE, LazyRE, CancelQuery, deprecated
+    abbreviate_middle, RxPatternType, linebreaks, line_col, TypeAlias, List, Tuple, \
+    MutableSet, AbstractSet, FrozenSet, Dict, INFINITE, LazyRE, CancelQuery, deprecated
 
 try:
     import cython
@@ -87,6 +87,8 @@ __all__ = ('parser_names',
            'UninitializedError',
            'ensure_drop_propagation',
            'cancel_proxy',
+           'NEVER_MATCH_PATTERN',
+           'RX_NEVER_MATCH',
            'Grammar',
            'match',
            'fullmatch',
@@ -1183,6 +1185,10 @@ def has_non_autocaptured_symbols(ptrail: ParserTrail) -> Optional[bool]:
 #
 ########################################################################
 
+
+RX_NEVER_MATCH = LazyRE(NEVER_MATCH_PATTERN)
+
+
 def mixin_comment(whitespace: str, comment: str, always_match: bool = True) -> str:
     r"""
     Returns a regular expression pattern that merges comment and whitespace
@@ -1738,8 +1744,9 @@ class Grammar:
         else:
             assert ((self.__class__.COMMENT__
                      and self.__class__.COMMENT__ == self.comment_rx__.pattern)
-                    or (not self.__class__.COMMENT__ and self.comment_rx__ == RX_NEVER_MATCH))
-        self.start_parser__: Optional[Parser] = None               # type:
+                    or (not self.__class__.COMMENT__ and
+                        self.comment_rx__.pattern == RX_NEVER_MATCH.pattern))
+        self.start_parser__: Optional[Parser] = None
         self._dirty_flag__: bool = False
         self.left_recursion__: bool = get_config_value('left_recursion')
         self.history_tracking__: bool = get_config_value('history_tracking')

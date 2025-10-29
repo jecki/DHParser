@@ -93,7 +93,6 @@ __all__ = ('re',
            # 'gen_id',
            'ThreadLocalSingletonFactory',
            'LazyRE',
-           'RX_NEVER_MATCH',
            'RX_ENTITY',
            'RX_NON_ASCII',
            'validate_XML_attribute_value',
@@ -636,7 +635,7 @@ class LazyRE:
         return self.rx.subn(*args, **kwargs)
 
 
-RX_NEVER_MATCH = LazyRE(NEVER_MATCH_PATTERN)
+# RX_NEVER_MATCH = LazyRE(NEVER_MATCH_PATTERN)  # DEPRECATED: moved to parse.py
 try:
     RxPatternType: TypeAlias = re.Pattern
 except AttributeError:
