@@ -18,6 +18,6 @@
 from __future__ import annotations
 
 __all__ = ('__version__', '__version_info__')
-__version__ = '1.9.2'  # make sure that this is the same as in pyproject.toml !
+__version__ = '1.9.3'  # make sure that this is the same as in pyproject.toml !
 __version_info__ = tuple(int(part) for part in __version__.split('.'))
 

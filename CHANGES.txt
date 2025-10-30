@@ -1,3 +1,12 @@
+DHParser Verions 1.9.3 (30.10.2025)
+...................................
+
+- transform.py: swap_nested_nodes added
+- lsp.py updated
+- bugfix: parse.py: Synonym._parse() could rewrite the momoizing cache
+- bugfix: nodetree.py: ContentMapping.insert_node() now works
+
+
 DHParser Verion 1.9.2 (22.9.2025)
 .................................
 
