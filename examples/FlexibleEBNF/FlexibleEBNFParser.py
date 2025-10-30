@@ -42,10 +42,10 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, ERR, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, mixin_comment, \
-    last_value, matching_bracket, optional_last_value, SmartRE
+    last_value, matching_bracket, optional_last_value, SmartRE, RX_NEVER_MATCH
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
-from DHParser.toolkit import is_filename, load_if_file, cpu_count, RX_NEVER_MATCH, \
+from DHParser.toolkit import is_filename, load_if_file, cpu_count, \
     ThreadLocalSingletonFactory, expand_table, INFINITE
 from DHParser.trace import set_tracer, resume_notices_on, trace_history
 from DHParser.transform import is_empty, remove_if, TransformationDict, TransformerFunc, \
@@ -102,13 +102,18 @@ def preprocess_new(source):
 #######################################################################
 
 class FlexibleEBNFGrammar(Grammar):
-    r"""Parser for a FlexibleEBNF source file.
+    r"""Parser for a FlexibleEBNF document.
+
+    Instantiate this class and then call the instance with the
+    source code as argument in order to use the parser, e.g.:
+        parser = FlexibleEBNF()
+        syntax_tree = parser(source_code)
     """
     countable = Forward()
     element = Forward()
     expression = Forward()
     source_hash__ = "afcc402d32e20a8874b1b984cfbd57d2"
-    disposable__ = re.compile('(?:countable$|FOLLOW_UP$|MOD_SYM$|is_mdef$|no_range$|component$|pure_elem$|ANY_SUFFIX$|EOF$|MOD_SEP$)')
+    disposable__ = re.compile('(?:is_mdef$|no_range$|FOLLOW_UP$|component$|pure_elem$|ANY_SUFFIX$|countable$|MOD_SEP$|MOD_SYM$|EOF$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}

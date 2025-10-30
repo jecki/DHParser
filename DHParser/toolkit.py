@@ -635,7 +635,7 @@ class LazyRE:
         return self.rx.subn(*args, **kwargs)
 
 
-# RX_NEVER_MATCH = LazyRE(NEVER_MATCH_PATTERN)  # DEPRECATED: moved to parse.py
+RX_NEVER_MATCH = LazyRE(NEVER_MATCH_PATTERN)  # DEPRECATED: moved to parse.py
 try:
     RxPatternType: TypeAlias = re.Pattern
 except AttributeError:

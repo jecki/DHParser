@@ -48,13 +48,13 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, ERR, \
     Option, NegativeLookbehind, OneOrMore, RegExp, SmartRE, Retrieve, Series, Capture, TreeReduction, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, mixin_comment, \
-    last_value, matching_bracket, optional_last_value
+    last_value, matching_bracket, optional_last_value, RX_NEVER_MATCH
 from DHParser.pipeline import end_points, full_pipeline, create_parser_junction, \
     create_preprocess_junction, create_junction, PseudoJunction 
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.stringview import StringView
-from DHParser.toolkit import is_filename, load_if_file, cpu_count, RX_NEVER_MATCH, \
+from DHParser.toolkit import is_filename, load_if_file, cpu_count, \
     ThreadLocalSingletonFactory, expand_table, INFINITE
 from DHParser.trace import set_tracer, resume_notices_on, trace_history
 from DHParser.transform import is_empty, remove_if, TransformationDict, TransformerFunc, \
@@ -108,10 +108,15 @@ preprocessing: PseudoJunction = create_preprocess_junction(
 #######################################################################
 
 class LyrikGrammar(Grammar):
-    r"""Parser for a Lyrik source file.
+    r"""Parser for a Lyrik document.
+
+    Instantiate this class and then call the instance with the
+    source code as argument in order to use the parser, e.g.:
+        parser = Lyrik()
+        syntax_tree = parser(source_code)
     """
     source_hash__ = "99b1ba6b62ae18408e6ffad2b04cbfbd"
-    disposable__ = re.compile('(?:ENDE$|wortfolge$|ZEICHENFOLGE$|LEERRAUM$|ziel$|JAHRESZAHL$)')
+    disposable__ = re.compile('(?:ZEICHENFOLGE$|ENDE$|wortfolge$|ziel$|JAHRESZAHL$|LEERRAUM$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''

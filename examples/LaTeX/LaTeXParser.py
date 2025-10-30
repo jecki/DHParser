@@ -42,10 +42,10 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, ERR, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, mixin_comment, \
-    last_value, matching_bracket, optional_last_value, SmartRE
+    last_value, matching_bracket, optional_last_value, SmartRE, RX_NEVER_MATCH
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
-from DHParser.toolkit import is_filename, load_if_file, cpu_count, RX_NEVER_MATCH, \
+from DHParser.toolkit import is_filename, load_if_file, cpu_count, \
     ThreadLocalSingletonFactory, expand_table, INFINITE
 from DHParser.trace import set_tracer, resume_notices_on, trace_history
 from DHParser.transform import is_empty, remove_if, TransformationDict, TransformerFunc, \
@@ -61,12 +61,6 @@ from DHParser.transform import is_empty, remove_if, TransformationDict, Transfor
     positions_of, replace_child_names, add_attributes, delimit_children, merge_connected, \
     has_attr, has_parent, traverse, apply_unless, apply_ifelse, has_children, merge_treetops
 from DHParser import parse as parse_namespace__
-
-from DHParser.dsl import PseudoJunction, create_parser_junction
-
-from DHParser.dsl import PseudoJunction, create_parser_junction
-
-from DHParser.dsl import PseudoJunction, create_parser_junction
 
 
 #######################################################################
@@ -100,7 +94,12 @@ get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory)
 #######################################################################
 
 class LaTeXGrammar(Grammar):
-    r"""Parser for a LaTeX source file.
+    r"""Parser for a LaTeX document.
+
+    Instantiate this class and then call the instance with the
+    source code as argument in order to use the parser, e.g.:
+        parser = LaTeX()
+        syntax_tree = parser(source_code)
     """
     _block_environment = Forward()
     _text_element = Forward()
@@ -108,7 +107,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     param_block = Forward()
     tabular_config = Forward()
-    source_hash__ = "837d1c34eda86bd5b610b2bee4c8de94"
+    source_hash__ = "014245b5b777b86fd557a1e54bb9f10e"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
     disposable__ = re.compile('_\\w+')
     static_analysis_pending__ = []  # type: List[bool]

@@ -923,13 +923,25 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         for test_name, test_code in tests.get('fail', dict()).items():
             errflag = len(errata)
             try:
-                cst = parser(test_code, parser_name)
+                cst = parser(test_code, parser_name, complete_match=True)
+                # complete_math=True, because fail-tests are specifically needed
+                # to test whitespace-parsers and thus must not tolerate left-over
+                # whitespace at the end!
+            except KeyboardInterrupt as ctrlC:
+                if is_logging() and track_history:
+                    with local_log_dir('./LOGS'):
+                        log_parsing_history(parser, "interrupted_fail_%s_%s.log" %
+                                            (parser_name, clean_test_name))
+                raise ctrlC
             except AttributeError as upe:
                 node = Node(ZOMBIE_TAG, "").with_pos(0)
                 cst = RootNode(node).new_error(node, str(upe))
                 errata.append('Unknown parser "{}" in fail test "{}"!'.format(
                     parser_name, test_name))
                 tests.setdefault('__err__', {})[test_name] = errata[-1]
+            except Exception as e:
+                errata.append('Fail-test "%s" for parser "%s" failed with:\n%s' %
+                              (test_name, parser_name, str(e)))
             if 'AST' in tests or report:
                 traverse(cst, {'*': remove_children({TEST_ARTIFACT})})
                 transform(cst)

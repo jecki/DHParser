@@ -91,7 +91,12 @@ def get_preprocessor() -> PreprocessorFunc:
 #######################################################################
 
 class XML_DTDGrammar(Grammar):
-    r"""Parser for a XML_DTD source file.
+    r"""Parser for a XML_DTD document.
+
+    Instantiate this class and then call the instance with the
+    source code as argument in order to use the parser, e.g.:
+        parser = XML_DTD()
+        syntax_tree = parser(source_code)
     """
     choice = Forward()
     cp = Forward()

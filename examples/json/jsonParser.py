@@ -39,10 +39,10 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, ERR, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, mixin_comment, \
-    last_value, matching_bracket, optional_last_value, SmartRE
+    last_value, matching_bracket, optional_last_value, SmartRE, RX_NEVER_MATCH
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
-from DHParser.toolkit import is_filename, load_if_file, cpu_count, RX_NEVER_MATCH, \
+from DHParser.toolkit import is_filename, load_if_file, cpu_count, \
     ThreadLocalSingletonFactory, expand_table, INFINITE
 from DHParser.trace import set_tracer, resume_notices_on, trace_history
 from DHParser.transform import is_empty, remove_if, TransformationDict, TransformerFunc, \
@@ -59,19 +59,12 @@ from DHParser.transform import is_empty, remove_if, TransformationDict, Transfor
     has_attr, has_parent, traverse
 from DHParser import parse as parse_namespace__
 
-from DHParser.dsl import PseudoJunction, create_parser_junction
-
-from DHParser.dsl import PseudoJunction, create_parser_junction
-
-from DHParser.dsl import PseudoJunction, create_parser_junction
-
 
 #######################################################################
 #
 # PREPROCESSOR SECTION - Can be edited. Changes will be preserved.
 #
 #######################################################################
-
 
 
 RE_INCLUDE = NEVER_MATCH_PATTERN
@@ -107,7 +100,12 @@ def preprocess_json(source):
 #######################################################################
 
 class jsonGrammar(Grammar):
-    r"""Parser for a json source file.
+    r"""Parser for a json document.
+
+    Instantiate this class and then call the instance with the
+    source code as argument in order to use the parser, e.g.:
+        parser = json()
+        syntax_tree = parser(source_code)
     """
     _element = Forward()
     source_hash__ = "2b6e6ddd513afc6386848e0142d5204e"

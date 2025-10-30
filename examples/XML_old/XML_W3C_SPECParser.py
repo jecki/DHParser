@@ -98,7 +98,12 @@ def preprocess_XML_W3C_SPEC(source):
 #######################################################################
 
 class XML_W3C_SPECGrammar(Grammar):
-    r"""Parser for a XML_W3C_SPEC source file.
+    r"""Parser for a XML_W3C_SPEC document.
+
+    Instantiate this class and then call the instance with the
+    source code as argument in order to use the parser, e.g.:
+        parser = XML_W3C_SPEC()
+        syntax_tree = parser(source_code)
     """
     content = Forward()
     cp = Forward()

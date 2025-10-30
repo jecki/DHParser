@@ -104,12 +104,17 @@ def preprocess_HTML(source):
 #######################################################################
 
 class HTMLGrammar(Grammar):
-    r"""Parser for a HTML source file.
+    r"""Parser for a HTML document.
+
+    Instantiate this class and then call the instance with the
+    source code as argument in order to use the parser, e.g.:
+        parser = HTML()
+        syntax_tree = parser(source_code)
     """
     element = Forward()
     source_hash__ = "39f0495f389b8171c0130acb8df9ded1"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:NameChars$|EOF$|PubidCharsSingleQuoted$|VersionNum$|CData$|Reference$|CommentChars$|prolog$|EncName$|tagContent$|PubidChars$|NameStartChar$|BOM$|Misc$)')
+    disposable__ = re.compile('(?:BOM$|EOF$|prolog$|NameChars$|PubidCharsSingleQuoted$|Reference$|CData$|tagContent$|PubidChars$|EncName$|Misc$|VersionNum$|CommentChars$|NameStartChar$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'tagContent': [('', "syntax error in tag-name of opening or empty tag:  {1}")],

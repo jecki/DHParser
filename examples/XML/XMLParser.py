@@ -41,10 +41,10 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, ERR, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, mixin_comment, \
-    last_value, matching_bracket, optional_last_value, SmartRE, EMPTY_NODE
+    last_value, matching_bracket, optional_last_value, SmartRE, EMPTY_NODE,RX_NEVER_MATCH
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
-from DHParser.toolkit import is_filename, load_if_file, cpu_count, RX_NEVER_MATCH, \
+from DHParser.toolkit import is_filename, load_if_file, cpu_count,  \
     ThreadLocalSingletonFactory, expand_table, line_col, INFINITE
 from DHParser.trace import set_tracer, resume_notices_on, trace_history
 from DHParser.transform import is_empty, remove_if, TransformationDict, TransformerFunc, \
@@ -102,12 +102,17 @@ def preprocess_XML(source):
 #######################################################################
 
 class XMLGrammar(Grammar):
-    r"""Parser for a XML source file.
+    r"""Parser for a XML document.
+
+    Instantiate this class and then call the instance with the
+    source code as argument in order to use the parser, e.g.:
+        parser = XML()
+        syntax_tree = parser(source_code)
     """
     element = Forward()
     source_hash__ = "63dd930fda3d60b17e3e2688978c6abc"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:BOM$|XmlPIAtts$|PubidCharsSingleQuoted$|NameStartChar$|NameChars$|EncName$|EOF$|Misc$|prolog$|CommentChars$|tagContent$|Reference$|CData$|PubidChars$|VersionNum$)')
+    disposable__ = re.compile('(?:EncName$|Misc$|PubidCharsSingleQuoted$|EOF$|CData$|CommentChars$|PubidChars$|BOM$|NameChars$|tagContent$|NameStartChar$|prolog$|XmlPIAtts$|Reference$|VersionNum$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'tagContent': [('', "syntax error in tag-name of opening or empty tag:  {1}")],

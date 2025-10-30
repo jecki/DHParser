@@ -23,7 +23,7 @@
 #
 ########################################################################
 
-latexdoc       = preamble §document
+latexdoc       = preamble  §document
 preamble       = { [_WSPC] _command }+
 
 document       = [_WSPC] "\begin{document}"

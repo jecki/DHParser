@@ -733,7 +733,7 @@ def create_scripts(ebnf_filename: str,
     if os.path.isdir(ebnf_filename):
         for entry in os.listdir(ebnf_filename):
             if entry.lower().endswith('.ebnf') and os.path.isfile(entry):
-                restore_server_script(entry)
+                create_scripts(entry)
         return
 
     base, _ = os.path.splitext(ebnf_filename)

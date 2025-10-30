@@ -75,12 +75,17 @@ def get_preprocessor() -> PreprocessorFunc:
 #######################################################################
 
 class XMLGrammar(Grammar):
-    r"""Parser for a XML source file.
+    r"""Parser for a XML document.
+
+    Instantiate this class and then call the instance with the
+    source code as argument in order to use the parser, e.g.:
+        parser = XML()
+        syntax_tree = parser(source_code)
     """
     element = Forward()
     source_hash__ = "1a2273263838bd8c8e90ec9fa642930f"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:CData$|EncName$|EOF$|PubidCharsSingleQuoted$|PubidChars$|VersionNum$|Misc$|CommentChars$|NameStartChar$|Reference$|NameChars$)')
+    disposable__ = re.compile('(?:Reference$|EOF$|CommentChars$|Misc$|EncName$|CData$|PubidChars$|PubidCharsSingleQuoted$|VersionNum$|NameStartChar$|NameChars$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''

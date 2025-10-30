@@ -49,14 +49,14 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, DropFro
     Option, NegativeLookbehind, OneOrMore, RegExp, SmartRE, Retrieve, Series, Capture, TreeReduction, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, \
     LateBindingUnary, mixin_comment, last_value, matching_bracket, optional_last_value, \
-    PARSER_PLACEHOLDER, UninitializedError
+    PARSER_PLACEHOLDER, UninitializedError,  RX_NEVER_MATCH
 from DHParser.pipeline import end_points, full_pipeline, create_parser_junction, \
     create_preprocess_junction, create_junction, PseudoJunction
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors, \
     SourceMap, source_map, result_from_mapping
 from DHParser.stringview import StringView
-from DHParser.toolkit import is_filename, load_if_file, cpu_count, RX_NEVER_MATCH, \
+from DHParser.toolkit import is_filename, load_if_file, cpu_count, \
     ThreadLocalSingletonFactory, expand_table
 from DHParser.trace import set_tracer, resume_notices_on, trace_history
 from DHParser.transform import is_empty, remove_if, TransformationDict, TransformerFunc, \
@@ -165,14 +165,19 @@ preprocessing: PseudoJunction = create_preprocess_junction(
 #######################################################################
 
 class reGrammar(Grammar):
-    r"""Parser for a re source file.
+    r"""Parser for a re document.
+
+    Instantiate this class and then call the instance with the
+    source code as argument in order to use the parser, e.g.:
+        parser = re()
+        syntax_tree = parser(source_code)
     """
     _entity = Forward()
     _item = Forward()
     pattern = Forward()
     source_hash__ = "357b1950b7b1894c1147c36f9667e4f0"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:_entity$|_escapedCh$|_extension$|_group$|_octal$|_nibble$|_anyChar$|_char$|_escape$|_special$|EOF$|_item$|_grpChar$|BS$|_grpItem$|_ch$|_illegal$|_chars$|_grpChars$|_number$)')
+    disposable__ = re.compile('(?:_ch$|_nibble$|_grpChar$|_escapedCh$|_number$|_grpItem$|_illegal$|EOF$|_char$|_chars$|_grpChars$|_group$|_octal$|_entity$|BS$|_anyChar$|_escape$|_extension$|_item$|_special$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''

@@ -109,7 +109,12 @@ def preprocess_miniXML(source):
 #######################################################################
 
 class miniXMLGrammar(Grammar):
-    r"""Parser for a miniXML source file.
+    r"""Parser for a miniXML document.
+
+    Instantiate this class and then call the instance with the
+    source code as argument in order to use the parser, e.g.:
+        parser = miniXML()
+        syntax_tree = parser(source_code)
     """
     element = Forward()
     source_hash__ = "fff2ec2ec91e28d26bfec6ead829dd39"
