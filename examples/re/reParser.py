@@ -12,6 +12,7 @@ import copy
 from functools import partial
 import os
 import sys
+from stringprep import b1_set
 from typing import Tuple, List, Union, Any, Optional, Callable, cast, NamedTuple
 
 try:
@@ -192,7 +193,7 @@ class reGrammar(Grammar):
     pattern = Forward()
     source_hash__ = "f70f928e23fc153818747164b982c814"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:_grpItem$|_escapedCh$|_octal$|_illegal$|_char$|BS$|EOF$|_anyChar$|_chars$|_entity$|_ch$|_grpChar$|_special$|_item$|_group$|_nibble$|_number$|_extension$|_grpChars$|_escape$)')
+    disposable__ = re.compile('(?:_char$|_grpChars$|_grpItem$|EOF$|_group$|_escape$|_nibble$|_chars$|_entity$|_extension$|BS$|_special$|_anyChar$|_illegal$|_octal$|_grpChar$|_ch$|_item$|_number$|_escapedCh$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -380,7 +381,7 @@ class Flags(NamedTuple):
         return bool(self.positive) or bool(self.negative)
 
     def __str__(self) -> str:
-        return f"({''.join(self.positive)},{''.join(self.negative)})"
+        return f"({''.join(sorted(self.positive))},{''.join(sorted(self.negative))})"
 
 NO_FLAGS = Flags(set(), set())
 FLAG_SET = frozenset({'a', 'i', 'L', 'm', 's', 'u', 'x'})
@@ -505,7 +506,7 @@ class FlagProcessing(Compiler):
             assert len(node.result) == 1
             node.name = "charset"
             node.result = Node(
-                'chSet', node.result.lower() + node.result.upper()).with_pos(node.pos)
+                'chSet', node.result.upper() + node.result.lower()).with_pos(node.pos)
         return node
 
     def on_chSet(self, node):
@@ -519,6 +520,39 @@ class FlagProcessing(Compiler):
             node.result = ''.join((sorted(set(node.result.lower()) | set(node.result.upper()))))
         else:
             node.result = ''.join(sorted(letters))
+        return node
+
+    def on_chRange(self, node):
+        node = self.fallback_compiler(node)
+        assert node.children
+        assert len(node.result) == 2
+        assert all(nd.name == 'ch' and not nd.children and len(nd.result) == 1
+                   for nd in node.result)
+        a1 = node.result[0].result
+        b1 = node.result[1].result
+        assert a1 <= b1
+        if a1 == b1:
+            node.name = "chSet"
+            node.result = a1
+            self.on_chSet(node)
+        elif 'i' in self.effective_flags.positive:
+            a1 = a1.upper()
+            a2 = a1.lower()
+            if a1 > a2: a1, a2 = a2, a1
+            b1 = b1.upper()
+            b2 = b1.lower()
+            if b1 > b2: b1, b2 = b2, b1
+            if (a1 != a1 or b1 != b2):
+                assert a1 < a2 and b1 < b2, f"{(a1, b1), (a2, b2)}"
+                node.result[0].result = a1
+                node.result[1].result = b1
+                if a2 <= chr(ord(b1) + 1):
+                    node.result[1].result = b2
+                elif len(self.path) > 1:
+                    nd = Node('chRange', (Node('ch', a2), Node('ch', b2))).with_pos(node.pos)
+                    parent = self.path[-2]
+                    i = parent.index(node)
+                    parent.insert(i + 1, nd)
         return node
 
     def on_pattern(self, node):

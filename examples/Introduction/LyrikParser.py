@@ -110,8 +110,8 @@ class LyrikGrammar(Grammar):
         parser = Lyrik()
         syntax_tree = parser(source_code)
     """
-    source_hash__ = "99b1ba6b62ae18408e6ffad2b04cbfbd"
-    disposable__ = re.compile('(?:ZEICHENFOLGE$|ENDE$|wortfolge$|ziel$|JAHRESZAHL$|LEERRAUM$)')
+    source_hash__ = "d081534dd330fa9c7310ea2bda1831fa"
+    disposable__ = re.compile('(?:JAHRESZAHL$|ziel$|ENDE$|LEERRAUM$|wortfolge$|ZEICHENFOLGE$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''

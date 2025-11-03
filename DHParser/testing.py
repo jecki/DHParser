@@ -273,9 +273,13 @@ def unit_from_config(config_str: str, filename: str, allowed_stages=UNIT_STAGES)
         err_head = 'N' if first_section_missing else 'Test NAME:STRING or n'
         err_str = err_head + 'ew section [TEST:PARSER] expected, ' \
                   + 'where TEST is "match", "fail" or "AST"; in file ' \
-                  + '"%s", line %i: "%s"' \
+                  + '"%s", line %i: "%s".' \
                   % (filename, cfg[:pos + 1].count('\n') + 1,
                      cfg[pos:cfg.find('\n', pos + 1)].strip('\n'))
+        i = cfg[:pos].rfind('\n')
+        if i >= 0 and pos - i < 4:
+            err_str += '  A possible cause can also be an insufficient ' \
+                       'indentation of less than 4 characters in a test case!'
         raise SyntaxError(err_str)
     return unit
 

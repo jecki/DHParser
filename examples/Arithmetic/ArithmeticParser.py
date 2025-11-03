@@ -84,7 +84,7 @@ class ArithmeticGrammar(Grammar):
         syntax_tree = parser(source_code)
     """
     expression = Forward()
-    source_hash__ = "aea3e1b1bd9c7280bff7d76fd15b8197"
+    source_hash__ = "f28af4dcd04f80303d2ae10b3e4a7e6c"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
