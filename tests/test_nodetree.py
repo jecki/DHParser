@@ -378,6 +378,23 @@ class TestParseJSON:
         set_config_value('xml_attribute_error_handling', 'lxml')
         assert n.as_xml() == '''<tag faulty='&lt;&amp;"' nonascii="??????????????">content</tag>'''
 
+    def test_attr_comparison(self):
+        a = parse_sxpr('(test `(x "1") `(y "2") "content")')
+        b = parse_sxpr('(test `(y "2") `(x "1") "content")')
+        c = parse_sxpr('(test `(y "1") `(x "2") "content")')
+
+        # attribute values
+        assert not a.has_equal_attr(c)
+        assert not c.has_equal_attr(a)
+        assert not b.has_equal_attr(c)
+        assert not c.has_equal_attr(b)
+
+        # attribute order
+        assert a.has_equal_attr(b)
+        assert b.has_equal_attr(a)
+        assert not a.has_equal_attr(b, ignore_order=False)
+        assert not b.has_equal_attr(a, ignore_order=False)
+
 
 class TestNode:
     """

@@ -1007,19 +1007,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         if self.has_attr():
             if other.has_attr():
                 if ignore_order:
-                    try:
-                        return set(self.attr.items()) == set(other.attr.items())
-                    except TypeError:  # for the rare case, when attr is not str -> str, but str -> obj
-                        self_items = [(k, str(v)) for k, v in self.attr.items()]
-                        other_items = [(k, str(v)) for k, v in other.attr.items()]
-                        return set(self_items) == set(other_items)
+                    return self.attr == other.attr
                 else:
-                    try:
-                        return self.attr == other.attr
-                    except TypeError:  # for the rare case, when attr is not str -> str, but str -> obj
-                        self_items = [(k, str(v)) for k, v in self.attr.items()]
-                        other_items = [(k, str(v)) for k, v in other.attr.items()]
-                        return self_items == other_items
+                    return list(self.attr.items()) == list(other.attr.items())
             return len(self.attr) == 0
             # self has an empty dictionary and other has no attributes
         elif other.has_attr():
