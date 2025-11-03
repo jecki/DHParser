@@ -15,11 +15,6 @@ import sys
 from typing import Tuple, List, Union, Any, Optional, Callable, cast, NamedTuple
 
 try:
-    import regex as re
-except ImportError:
-    import re
-
-try:
     scriptdir = os.path.dirname(os.path.realpath(__file__))
 except NameError:
     scriptdir = ''
@@ -56,7 +51,7 @@ from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, Preprocessor
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors, \
     SourceMap, source_map, result_from_mapping, gen_neutral_srcmap_func
 from DHParser.stringview import StringView
-from DHParser.toolkit import is_filename, load_if_file, cpu_count, \
+from DHParser.toolkit import re, is_filename, load_if_file, cpu_count, \
     ThreadLocalSingletonFactory, expand_table
 from DHParser.trace import set_tracer, resume_notices_on, trace_history
 from DHParser.transform import is_empty, remove_if, TransformationDict, TransformerFunc, \
@@ -393,6 +388,8 @@ FLAG_SET = frozenset({'a', 'i', 'L', 'm', 's', 'u', 'x'})
 # RX_INTERRUPTED_COMMENT = re.compile(r'([ \t]*(?:#.*)?\n)*(?:[ \t]*(?:#.*)$)')
 # RX_COMMENT = re.compile(r'([ \t]*(?:#.*)?\n)*(?:[ \t]*(?:#.*)?$)?')
 
+DUPLICATE_CHARACTERS = ErrorCode(2010)
+
 
 class FlagProcessing(Compiler):
     """Compiler for the abstract-syntax-tree of a 
@@ -437,7 +434,7 @@ class FlagProcessing(Compiler):
             self.tree.new_error(node, f'Cannot set and unset "{pflags & nflags}" at the same time!', ERROR)
         return Flags(pflags, nflags)
 
-    def evaluate_flags(self):
+    def evaluate_flags(self) -> Flags:
         for i in range(len(self.path) - 1, -1, -1):
             effective = self.path[i].get_attr('effective_flags', NO_FLAGS)
             if effective:
@@ -453,47 +450,76 @@ class FlagProcessing(Compiler):
                 effective.negative.difference_update(FLAG_SET)
                 effective.negative.update(FLAG_SET - effective.positive)
                 nd.attr['effective_flags'] = copy.deepcopy(effective)
+        return effective
 
-    def get_effective_flags(self, node) -> Flags:
-        path = self.path
-        for i in range(len(path) - 1, -1, -1):
-            effective = path[i].get_attr('effective_flags', False)
-            if effective:
-                return effective
-            if path[i].has_attr('flags'):
-                self.tree.new_error(
-                    node,
-                    "Internal Error: Effective flags should already have been evaluated",
-                    ERROR)
-        else:
-            return NO_FLAGS
+    # def get_effective_flags(self, node) -> Flags:
+    #     path = self.path
+    #     for i in range(len(path) - 1, -1, -1):
+    #         effective = path[i].get_attr('effective_flags', False)
+    #         if effective:
+    #             return effective
+    #         if path[i].has_attr('flags'):
+    #             self.tree.new_error(
+    #                 node,
+    #                 "Internal Error: Effective flags should already have been evaluated",
+    #                 ERROR)
+    #     else:
+    #         return NO_FLAGS
 
     def on_regular_expression(self, node):
+        save = self.effective_flags
         if node[0].name == 'flagGroups':
             flags = self.gather_flags(node[0])
             if flags:  node.attr['flags'] = flags
             node.result = node.result[1:]
-            self.evaluate_flags()
-        return self.fallback_compiler(node)
+            self.effective_flags = self.evaluate_flags()
+        node = self.fallback_compiler(node)
+        self.effective_flags = save
+        return node
 
     def on_nonCapturing(self, node):
+        save = self.effective_flags
         if node[0].name == 'flags':
-            verbose_already = 'x' in self.get_effective_flags(node).positive
+            verbose_already = 'x' in self.effective_flags.positive
             flags = self.gather_flags(node)
             if flags:  node.attr['flags'] = flags
             for i in range(len(node.children)):
                 if node[i].name != 'flags':
                     node.result = node.result[i:]
                     break
-            self.evaluate_flags()
-            if 'x' in self.get_effective_flags(node).positive \
+            self.effective_flags = self.evaluate_flags()
+            if 'x' in self.effective_flags.positive \
                     and not verbose_already:
                 self.tree.new_error(node,
                     'Flag "x" ("verbose") is ignored in non-capturing groups! '
                     'In order to allow verbose regular expressions, please '
                     'place the flag "x" at the very beginning of your pattern '
                     'with the flag group "(?x)".', WARNING)
-        return self.fallback_compiler(node)
+        node = self.fallback_compiler(node)
+        self.effective_flags = save
+        return node
+
+    def on_char(self, node):
+        if 'i' in self.effective_flags.positive:
+            assert not node.children
+            assert len(node.result) == 1
+            node.name = "charset"
+            node.result = Node(
+                'chSet', node.result.lower() + node.result.upper()).with_pos(node.pos)
+        return node
+
+    def on_chSet(self, node):
+        letters = set(node.result)
+        if len(letters) != len(node.result):
+            dupl = {ch for ch in letters if node.result.count(ch) > 1}
+            self.tree.new_error(
+                node, f'Duplicate characters {dupl} in character set {repr(node.result)}!',
+                DUPLICATE_CHARACTERS)
+        if 'i' in self.effective_flags.positive:
+            node.result = ''.join((sorted(set(node.result.lower()) | set(node.result.upper()))))
+        else:
+            node.result = ''.join(sorted(letters))
+        return node
 
     def on_pattern(self, node):
         # if 'x' in self.get_effective_flags(node).positive:  # NEED a pre-processor for this!

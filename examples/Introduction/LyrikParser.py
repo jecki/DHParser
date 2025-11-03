@@ -16,11 +16,6 @@ sys.path.extend([os.path.join('..', '..'), '..', '.'])
 from typing import Tuple, List, Union, Any, Optional, Callable, cast
 
 try:
-    import regex as re
-except ImportError:
-    import re
-
-try:
     scriptdir = os.path.dirname(os.path.realpath(__file__))
 except NameError:
     scriptdir = ''
@@ -54,7 +49,7 @@ from DHParser.pipeline import end_points, full_pipeline, create_parser_junction,
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.stringview import StringView
-from DHParser.toolkit import is_filename, load_if_file, cpu_count, \
+from DHParser.toolkit import re, is_filename, load_if_file, cpu_count, \
     ThreadLocalSingletonFactory, expand_table, INFINITE
 from DHParser.trace import set_tracer, resume_notices_on, trace_history
 from DHParser.transform import is_empty, remove_if, TransformationDict, TransformerFunc, \

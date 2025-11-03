@@ -10,10 +10,6 @@
 from functools import partial
 import os
 import sys
-try:
-    import regex as re
-except ImportError:
-    import re
 
 dhparser_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../examples', '..'))
 if dhparser_path not in sys.path:
@@ -31,7 +27,7 @@ from DHParser import is_filename, load_if_file, get_config_value, \
     remove_empty, remove_tokens, flatten, \
     is_empty, collapse, remove_children, remove_content, remove_brackets, change_name, \
     keep_children, is_one_of, content_matches, apply_if, \
-    WHITESPACE_PTYPE, TOKEN_PTYPE, THREAD_LOCALS
+    WHITESPACE_PTYPE, TOKEN_PTYPE, THREAD_LOCALS, re
 from DHParser.transform import TransformationFunc
 from DHParser.log import start_logging
 

@@ -26,15 +26,11 @@ import sys
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
-try:
-    import regex as re
-except ImportError:
-    import re
 
 from DHParser.dsl import create_parser
 from DHParser.error import Error, ERROR, add_source_locations
 from DHParser.preprocess import gen_neutral_srcmap_func
-from DHParser.toolkit import linebreaks, line_col
+from DHParser.toolkit import re, linebreaks, line_col
 
 
 class TestErrorSupport:

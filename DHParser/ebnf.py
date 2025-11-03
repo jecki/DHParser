@@ -980,11 +980,6 @@ import sys
 from typing import Tuple, List, Set, Union, Any, Optional, Callable, cast
 
 try:
-    import regex as re
-except ImportError:
-    import re
-
-try:
     scriptdir = os.path.dirname(os.path.realpath(__file__))
 except NameError:
     scriptdir = ''
@@ -1021,7 +1016,7 @@ from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, Preprocessor
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.stringview import StringView
 from DHParser.toolkit import is_filename, load_if_file, cpu_count, \\
-    ThreadLocalSingletonFactory, expand_table, static, CancelQuery
+    ThreadLocalSingletonFactory, expand_table, static, CancelQuery, re
 from DHParser.trace import set_tracer, resume_notices_on, trace_history
 from DHParser.transform import is_empty, remove_if, TransformationDict, TransformerFunc, \\
     transformation_factory, remove_children_if, move_fringes, normalize_whitespace, \\

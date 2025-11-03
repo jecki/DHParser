@@ -22,10 +22,6 @@ if scriptpath not in sys.path:
 if dhparser_parentdir not in sys.path:
     sys.path.append(dhparser_parentdir)
 
-try:
-    import regex as re
-except ImportError:
-    import re
 from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, AnyChar, \
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
@@ -46,7 +42,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \
     positions_of, replace_child_names, add_attributes, delimit_children, merge_connected, \
     has_attr, has_parent, ThreadLocalSingletonFactory
-from DHParser.toolkit import INFINITE
+from DHParser.toolkit import re, INFINITE
 
 
 #######################################################################

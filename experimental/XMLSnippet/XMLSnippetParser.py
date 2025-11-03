@@ -16,10 +16,6 @@ dhparser_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../e
 if dhparser_path not in sys.path:
     sys.path.append(dhparser_path)
 
-try:
-    import regex as re
-except ImportError:
-    import re
 from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, \
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, \
@@ -38,7 +34,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     add_error, error_on, recompile_grammar, left_associative, lean_left, set_config_value, \
     get_config_value, access_thread_locals, access_presets, \
     finalize_presets, ErrorCode, RX_NEVER_MATCH, set_tracer, resume_notices_on, \
-    trace_history, has_descendant, neg, has_ancestor, ThreadLocalSingletonFactory
+    trace_history, has_descendant, neg, has_ancestor, ThreadLocalSingletonFactory, re
 
 
 #######################################################################

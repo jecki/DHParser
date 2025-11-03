@@ -51,17 +51,13 @@ if scriptpath not in sys.path:
 if dhparser_parentdir not in sys.path:
     sys.path.append(dhparser_parentdir)
 
-try:
-    import regex as re
-except ImportError:
-    import re
 from DHParser.configuration import ALLOWED_PRESET_VALUES
 from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar, Parser, \
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, ERR, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, mixin_comment, \
     last_value, matching_bracket, optional_last_value, SmartRE, Always, Never, ParseFunc
-from DHParser.toolkit import Tuple, List, INFINITE
+from DHParser.toolkit import re, Tuple, List, INFINITE
 
 __all__ = ('HeuristicEBNFGrammar')
 

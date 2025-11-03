@@ -1344,7 +1344,10 @@ def is_disposable(name: str, disposables: AbstractSet[str]|RxPatternType) -> boo
         return True
     elif isinstance(disposables, AbstractSet):
         return name in disposables
+    elif isinstance(disposables, RxPatternType):
+        return bool(disposables.match(name))
     else:
+        assert isinstance(disposables, str), type(disposables)
         return bool(re.match(disposables, name))
 
 

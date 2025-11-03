@@ -19,11 +19,6 @@ limitations under the License.
 """
 
 import os
-
-try:
-    import regex as re
-except ImportError:
-    import re
 import sys
 
 
