@@ -1279,8 +1279,8 @@ def collapse_children_if(path: Path,
 
 
 def fuse_anonymous_leaves(result: list[Node]) -> list[Node, ...]:
-    """Mereges all anonymous leave nodes and returns a list of the
-    merge nodes, e.g.::
+    """Merges all anonymous leave nodes and returns a list of the
+    merged nodes, e.g.::
 
     >>> tree = parse_sxpr('(p (:t "alpha") (:t "beta") (x "zzz") (:y (:t "uuu")) (:t "gamma"))')
     >>> tree.result = tuple(fuse_anonymous_leaves(list(tree.children)))

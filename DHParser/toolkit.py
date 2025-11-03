@@ -37,6 +37,15 @@ import sys
 try:
     if sys.version.find('PyPy') >= 0:
         import re  # regex might not work with PyPy reliably: https://pypi.org/project/regex/
+    elif sys.version_info >= (3, 14, 0):
+        try:
+            import regex
+            print("DHParser won't use regex as a substitute for re, because "
+                  "it does not work with InterpreterPool based multiprocessing "
+                  "in Python 3.14 or higher!")
+        except ImportError:
+            pass
+        import re
     else:
         import regex as re
 except ImportError:

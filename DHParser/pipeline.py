@@ -303,7 +303,7 @@ def _preprocessor_factory(prep_func: Union[PreprocessorFunc, Tokenizer],
         assert func_type is not None, \
             "Please specify the kind of preprocessor by passing parameter func_type=Tokenizer " \
             "or func_type=PreprocessorFunc to DHParser.pipeline.create_preprocess_junction()"
-        prep = prep_func if func_type is PreprocessorFunc else make_preprocessor(prep_func)
+        prep = prep_func if func_type == PreprocessorFunc else make_preprocessor(prep_func)
     return chain_preprocessors(include_prep, prep)
 
 def same_name(name: str) -> str:

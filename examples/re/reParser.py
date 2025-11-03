@@ -54,7 +54,7 @@ from DHParser.pipeline import end_points, full_pipeline, create_parser_junction,
     create_preprocess_junction, create_junction, PseudoJunction
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors, \
-    SourceMap, source_map, result_from_mapping
+    SourceMap, source_map, result_from_mapping, gen_neutral_srcmap_func
 from DHParser.stringview import StringView
 from DHParser.toolkit import is_filename, load_if_file, cpu_count, \
     ThreadLocalSingletonFactory, expand_table
@@ -93,6 +93,25 @@ BRACKETS = { '(': ')', '[': ']', '{': '}' }
 RE_INCLUDE = NEVER_MATCH_PATTERN
 RE_COMMENT = NEVER_MATCH_PATTERN
 RX_VERBOSE = re.compile(r'\(\?[aiLmsu]*x[aiLmsu]*\)')
+
+INCOMPATIBLE_REGULAR_EXPRESSION = ErrorCode(510)
+INVALID_REGULAR_EXPRESSION = ErrorCode(20010)  # fatal
+
+
+def reValidate(original_text, original_name) -> PreprocessorResult:
+    import re
+    try:
+        _ = re.compile(original_text)
+        return nil_preprocessor(original_text, original_name)
+    except (re.PatternError, ValueError) as err:
+        err_code = INVALID_REGULAR_EXPRESSION
+        if re.match(r'\(\?[aixLmsu]*-[aixLmsu]*\)', original_text):
+            err_code = INCOMPATIBLE_REGULAR_EXPRESSION
+        return PreprocessorResult(
+            original_text, original_text,
+            gen_neutral_srcmap_func(original_text, original_name),
+            [Error(str(err), getattr(err, 'pos', 0), err_code)])
+
 
 def inCharSet(l: str, k: int) -> bool:
     i = 0
@@ -155,7 +174,8 @@ def reStripComments(original_text, original_name) -> PreprocessorResult:
 
 
 preprocessing: PseudoJunction = create_preprocess_junction(
-    reStripComments, RE_INCLUDE, RE_COMMENT)
+    chain_preprocessors(reValidate, reStripComments), RE_INCLUDE, RE_COMMENT,
+    func_type=PreprocessorFunc)
 
 
 #######################################################################
@@ -175,9 +195,9 @@ class reGrammar(Grammar):
     _entity = Forward()
     _item = Forward()
     pattern = Forward()
-    source_hash__ = "357b1950b7b1894c1147c36f9667e4f0"
+    source_hash__ = "f70f928e23fc153818747164b982c814"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:_ch$|_nibble$|_grpChar$|_escapedCh$|_number$|_grpItem$|_illegal$|EOF$|_char$|_chars$|_grpChars$|_group$|_octal$|_entity$|BS$|_anyChar$|_escape$|_extension$|_item$|_special$)')
+    disposable__ = re.compile('(?:_grpItem$|_escapedCh$|_octal$|_illegal$|_char$|BS$|EOF$|_anyChar$|_chars$|_entity$|_ch$|_grpChar$|_special$|_item$|_group$|_nibble$|_number$|_extension$|_grpChars$|_escape$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -370,27 +390,28 @@ class Flags(NamedTuple):
 NO_FLAGS = Flags(set(), set())
 FLAG_SET = frozenset({'a', 'i', 'L', 'm', 's', 'u', 'x'})
 
-RX_INTERRUPTED_COMMENT = re.compile(r'([ \t]*(?:#.*)?\n)*(?:[ \t]*(?:#.*)$)')
-RX_COMMENT = re.compile(r'([ \t]*(?:#.*)?\n)*(?:[ \t]*(?:#.*)?$)?')
+# RX_INTERRUPTED_COMMENT = re.compile(r'([ \t]*(?:#.*)?\n)*(?:[ \t]*(?:#.*)$)')
+# RX_COMMENT = re.compile(r'([ \t]*(?:#.*)?\n)*(?:[ \t]*(?:#.*)?$)?')
 
 
-class reCompiler(Compiler):
+class FlagProcessing(Compiler):
     """Compiler for the abstract-syntax-tree of a 
         re source file.
     """
 
     def __init__(self):
-        super(reCompiler, self).__init__()
+        super(FlagProcessing, self).__init__()
         self.forbid_returning_None = True  # set to False if any compilation-method is allowed to return None
 
     def reset(self):
         self.last_leaf: Node = EMPTY_NODE
+        self.effective_flags: Flags = NO_FLAGS
         super().reset()
         # initialize your variables here, not in the constructor!
 
     def prepare(self, root: RootNode) -> None:
         assert root.stage == "AST", f"Source stage `AST` expected, `but `{root.stage}` found."
-        root.stage = "re"
+        root.stage = "flagsDone"
         self.last_leaf = root.pick(LEAF_NODE, reverse=True)
 
     def finalize(self, result: Any) -> Any:
@@ -499,8 +520,8 @@ class reCompiler(Compiler):
         #             return EMPTY_NODE
         return node
 
-compiling: Junction = create_junction(
-    reCompiler, "AST", "re")
+flagProcessing: Junction = create_junction(
+    FlagProcessing, "AST", "flagsDone")
 
 
 #######################################################################
@@ -535,14 +556,14 @@ compiling: Junction = create_junction(
 # (See DHParser.compile for a description of junctions)
 
 # ADD YOUR OWN POST-PROCESSING-JUNCTIONS HERE:
-junctions = set([ASTTransformation, compiling])
+junctions = set([ASTTransformation, flagProcessing])
 
 # put your targets of interest, here. A target is the name of result (or stage)
 # of any transformation, compilation or postprocessing step after parsing.
 # Serializations of the stages listed here will be written to disk when
 # calling process_file() or batch_process() and also appear in test-reports.
 targets = end_points(junctions)
-# alternative: targets = set([compiling.dst])
+# alternative: targets = set([flagProcessing.dst])
 
 # provide a set of those stages for which you would like to see the output
 # in the test-report files, here. (AST is always included)
@@ -559,7 +580,7 @@ serializations = expand_table(dict([('*', [get_config_value('default_serializati
 #
 #######################################################################
 
-def compile_src(source: str, target: str = "re") -> Tuple[Any, List[Error]]:
+def compile_src(source: str, target: str = "flagsDone") -> Tuple[Any, List[Error]]:
     """Compiles the source to a single target and returns the result of the compilation
     as well as a (possibly empty) list or errors or warnings that have occurred in the
     process.
