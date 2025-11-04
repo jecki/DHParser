@@ -95,11 +95,11 @@ INVALID_REGULAR_EXPRESSION = ErrorCode(20010)  # fatal
 
 
 def reValidate(original_text, original_name) -> PreprocessorResult:
-    import re
+    import re  # be sure to use Python STL re, not regex, here!
     try:
         _ = re.compile(original_text)
         return nil_preprocessor(original_text, original_name)
-    except (re.PatternError, ValueError) as err:
+    except Exception as err:
         err_code = INVALID_REGULAR_EXPRESSION
         if re.match(r'\(\?[aixLmsu]*-[aixLmsu]*\)', original_text):
             err_code = INCOMPATIBLE_REGULAR_EXPRESSION
@@ -123,6 +123,7 @@ def inCharSet(l: str, k: int) -> bool:
             state = 'neutral'
         i += 1
     return state == 'inset'
+
 
 def reStripComments(original_text, original_name) -> PreprocessorResult:
     if not RX_VERBOSE.match(original_text):
@@ -331,7 +332,7 @@ re_AST_transformation_table = {
     # AST Transformations for the re-grammar
     # "<": [],  # called for each node before calling its specific rules
     # "*": [],  # fallback for nodes that do not appear in this table
-    # ">": [],   # called for each node after calling its specific rules
+    # ">": [],  # called for each node after calling its specific rules
     "regular_expression": [],
     # "group": [replace_by_single_child],
     "regex, grpRegex": [change_name('regex'), replace_by_single_child],
@@ -344,6 +345,7 @@ re_AST_transformation_table = {
     "grpItem, _grpItem": [change_name('item')],
     "grpChar, char": [change_name('char')],
     "grpChars, grpCharSeq": [change_name('charSeq')],
+    "nonCapturing": [apply_if(replace_by_single_child, neg(has_child('flags')))],
     "escCh, bs": [change_name('charSeq')],
     "ch": [],  # [change_name('char')],
     "chCode": [change_name('ch'), reduce_single_child],
@@ -498,9 +500,34 @@ class FlagProcessing(Compiler):
                     'with the flag group "(?x)".', WARNING)
         node = self.fallback_compiler(node)
         self.effective_flags = save
+        if len(node.result) == 1 and not node.result[0].has_attr():
+            replace_by_single_child(self.path)
+        return node
+
+    def on_charSeq(self, node):
+        # node = self.fallback_compiler(node)
+        assert not node.children
+        if 'i' in self.effective_flags.positive:
+            seq = []
+            for d, ch in enumerate(node.result):
+                if ch.lower() == ch.upper():
+                    if len(seq) > 0 and seq[-1].name == 'charSeq':
+                        seq[-1].result += ch
+                    else:
+                        seq.append(Node('charSeq', ch).with_pos(node.pos + d))
+                else:
+                    chSet = Node('chSet', ch.upper() + ch.lower())
+                    seq.append(Node('charset', chSet).with_pos(node.pos + d))
+            if len(self.path) > 1 and (len(seq) > 1 or seq[-1].name != 'charSeq'):
+                node.name = 'pattern'
+                node.result = tuple(seq)
         return node
 
     def on_char(self, node):
+        """If the ignore case flag ist set, and the character is case-sensitive,
+        turn the character into a character set containing both the lower- and
+        the upper-case version of the character.
+        """
         if 'i' in self.effective_flags.positive:
             assert not node.children
             assert len(node.result) == 1
@@ -510,6 +537,11 @@ class FlagProcessing(Compiler):
         return node
 
     def on_chSet(self, node):
+        """Check for duplicate characters and emit an error. If the ignore case
+        flag is set add the missing case for each character. Finally, normalize
+        the character set by sorting the characters in ascending order according
+        to their ordinal value (i.e. Unicode code point).
+        """
         letters = set(node.result)
         if len(letters) != len(node.result):
             dupl = {ch for ch in letters if node.result.count(ch) > 1}
@@ -523,6 +555,11 @@ class FlagProcessing(Compiler):
         return node
 
     def on_chRange(self, node):
+        """Reduce character ranges of size 1 to single charcters.
+        If the ignore case flag is set and the range contains case-sensitive
+        characters, make it two character ranges, one for lower-case and one
+        for upper-case characters.
+        """
         node = self.fallback_compiler(node)
         assert node.children
         assert len(node.result) == 2
@@ -556,29 +593,10 @@ class FlagProcessing(Compiler):
         return node
 
     def on_pattern(self, node):
-        # if 'x' in self.get_effective_flags(node).positive:  # NEED a pre-processor for this!
-        #     result = [node[0]]
-        #     for nd in node.children[1:]:
-        #         if (result[-1].name == 'charSeq'
-        #                 and (nd.name == 'charSeq' or
-        #                      (nd.name == 'any'
-        #                       and RX_INTERRUPTED_COMMENT.fullmatch(result[-1].content)))):
-        #                 result[-1].result = result[-1].content + nd.content
-        #         else:
-        #             result.append(nd)
-        #     if len(result) != len(node.children):
-        #         node.result = tuple(result)
         node = self.fallback_compiler(node)
         replace_by_single_child(self.path)
         return node
 
-    def on_charSeq(self, node):
-        # content = node.content
-        # if node is self.last_leaf or content.find('\n') >= 0:
-        #     if RX_COMMENT.fullmatch(node.content):
-        #         if 'x' in self.get_effective_flags(node).positive:
-        #             return EMPTY_NODE
-        return node
 
 flagProcessing: Junction = create_junction(
     FlagProcessing, "AST", "flagsDone")
