@@ -39,7 +39,8 @@ from DHParser.ebnf import grammar_changed
 from DHParser.error import ErrorCode, Error, canonical_error_strings, has_errors, NOTICE, \
     WARNING, ERROR, FATAL
 from DHParser.log import start_logging, suspend_logging, resume_logging
-from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode, Path, ZOMBIE_TAG
+from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode, Path, ZOMBIE_TAG, \
+    parse_sxpr
 from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, DropFrom, AnyChar, Parser, \
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, ERR, \
     Option, NegativeLookbehind, OneOrMore, RegExp, SmartRE, Retrieve, Series, Capture, TreeReduction, \
@@ -386,12 +387,26 @@ class Flags(NamedTuple):
         return f"({''.join(sorted(self.positive))},{''.join(sorted(self.negative))})"
 
 NO_FLAGS = Flags(set(), set())
-FLAG_SET = frozenset({'a', 'i', 'L', 'm', 's', 'u', 'x'})
+FLAG_SET = frozenset({
+    'a',   # TODO: ASCII-only
+    'i',   # ignore case
+    'L',   # locale dependent (this will be ignored!)
+    'm',   # multi-line, i.e. ^ and $ also match beginning and end of line
+    's',   # TODO: dot matches all, including newline chracters
+    'u',   # Unicode (default)
+    'x'    # verbose (global only, preprocessor take care of this)
+})
 
 # RX_INTERRUPTED_COMMENT = re.compile(r'([ \t]*(?:#.*)?\n)*(?:[ \t]*(?:#.*)$)')
 # RX_COMMENT = re.compile(r'([ \t]*(?:#.*)?\n)*(?:[ \t]*(?:#.*)?$)?')
 
-DUPLICATE_CHARACTERS = ErrorCode(2010)
+FLAGS_WARNING        = ErrorCode(520)
+FLAGS_ERROR          = ErrorCode(2020)
+DUPLICATE_CHARACTERS = ErrorCode(2030)
+
+
+multiline_start = parse_sxpr('(regex (lookaround (lrtype "<=") (specialEsc "n")) (start "^"))')
+multiline_end   = parse_sxpr('(regex (lookaround (lrtype "=") (specialEsc "n")) (end "$"))')
 
 
 class FlagProcessing(Compiler):
@@ -430,11 +445,21 @@ class FlagProcessing(Compiler):
         pflags = set(pstr)
         nflags = set(nstr)
         if len(pflags) > len(pstr):
-            self.tree.new_error(node, f'One or more flags in: "{pstr}" are redundant!', WARNING)
+            self.tree.new_error(
+                node, f'One or more flags in: "{pstr}" are redundant!', FLAGS_WARNING)
         if len(nflags) > len(nstr):
-            self.tree.new_error(node, f'One or more flags in: "-{nstr}" are redundant!', WARNING)
+            self.tree.new_error(
+                node, f'One or more flags in: "-{nstr}" are redundant!', FLAGS_WARNING)
         if pflags & nflags:
-            self.tree.new_error(node, f'Cannot set and unset "{pflags & nflags}" at the same time!', ERROR)
+            self.tree.new_error(
+                node, f'Cannot set and unset "{pflags & nflags}" at the same time!', FLAGS_ERROR)
+        if 'L' in pflags:
+            self.tree.new_error(node, 'Flag "L" ("locale dependent") is ignored!', FLAGS_WARNING)
+        if 'a' in pflags and 'u' in pflags:
+            self.tree.new_error(
+                node, 'Flag "a" ("ASCII-only") and "u" ("Unicode") must not be set '
+                'at the same time!', FLAGS_ERROR)
+        if 'u' in nflags:  pflags.add('a')
         return Flags(pflags, nflags)
 
     def evaluate_flags(self) -> Flags:
@@ -502,6 +527,28 @@ class FlagProcessing(Compiler):
         self.effective_flags = save
         if len(node.result) == 1 and not node.result[0].has_attr():
             replace_by_single_child(self.path)
+        return node
+
+    def on_start(self, node):
+        assert not node.children
+        assert node.result == '^'
+        if 'm' in self.effective_flags.positive:
+            ml_start = copy.deepcopy(multiline_start)
+            for nd in ml_start.walk_tree():
+                nd._pos = node._pos
+            node.name = 'regex'
+            node.result = ml_start.children
+        return node
+
+    def on_end(self, node):
+        assert not node.children
+        assert node.result == '$'
+        if 'm' in self.effective_flags.positive:
+            ml_end = copy.deepcopy(multiline_end)
+            for nd in ml_end.walk_tree():
+                nd._pos = node._pos
+            node.name = 'regex'
+            node.result = ml_end.children
         return node
 
     def on_charSeq(self, node):
