@@ -100,7 +100,6 @@ __all__ = ('re',
            'CancelQuery',
            'get_annotations',
            # 'gen_id',
-           'ThreadLocalSingletonFactory',
            'LazyRE',
            'RX_ENTITY',
            'RX_NON_ASCII',
@@ -164,6 +163,7 @@ __all__ = ('re',
            'DHPARSER_DIR',
            'deprecated',
            'deprecation_warning',
+           'ThreadLocalSingletonFactory',
            'SingleThreadExecutor',
            'multiprocessing_broken',
            'MultiCoreManager',
@@ -219,118 +219,6 @@ def identity(x):
 
 
 CancelQuery: TypeAlias = Callable[[], bool]  # A type for a cancellation-callback
-
-
-global_id_counter: int = 0
-
-
-def gen_id() -> int:
-    """Generates a unique id. (Not thread-safe!)"""
-    global global_id_counter
-    global_id_counter += 1
-    return global_id_counter
-
-
-class ThreadLocalSingletonFactory:
-    """
-    Generates a singleton-factory that returns one and
-    the same instance of `class_or_factory` for one and the
-    same thread, but different instances for different threads.
-
-    Note: Parameter uniqueID should be provided if class_or_factory is
-    not unique but generic. See the source code of
-    :py:func:`DHParser.dsl.create_transtable_junction`
-    """
-    def __init__(self, class_or_factory, name: str = "", *,
-                 uniqueID: Union[str, int] = 0,
-                 ident=None):
-        if ident is not None:
-            deprecation_warning('Parameter "ident" of DHParser.toolkit.ThreadLocalSingletonFactory'
-                                ' is deprecated and will be ignored.')
-        self.class_or_factory = class_or_factory
-        # partial functions do not have a __name__ attribute!
-        name = name or getattr(class_or_factory, '__name__', '') or class_or_factory.func.__name__
-        if not uniqueID:
-            if not hasattr(self.__class__, 'lock'):
-                import threading
-                self.__class__.lock = threading.Lock()
-            with self.__class__.lock:
-                uniqueID = gen_id()
-        self.singleton_name = f"{name}_{str(id(self))}_{str(uniqueID)}_singleton"
-        THREAD_LOCALS = access_thread_locals()
-        assert not hasattr(THREAD_LOCALS, self.singleton_name), self.singleton_name
-
-    def __call__(self):
-        THREAD_LOCALS = access_thread_locals()
-        try:
-            singleton = getattr(THREAD_LOCALS, self.singleton_name)
-        except AttributeError:
-            setattr(THREAD_LOCALS, self.singleton_name, self.class_or_factory())
-            singleton = getattr(THREAD_LOCALS, self.singleton_name)
-        return singleton
-
-
-@functools.lru_cache()
-def is_filename(strg: str) -> bool:
-    r"""
-    Tries to guess whether the given string is a file name. It is
-    assumed that it is NOT a filename if any of the following
-    conditions is true:
-
-    - It starts with a byte-order mark, i.e. '\ufffe' or '\ufeff'.
-    - It starts or ends with a blank, i.e. " ".
-    - It contains any of the characters in the set [\*?"<>|].
-
-    For disambiguation of non-filenames it is best to add a
-    byteorder-mark to the beginning of the string, because this
-    will be stripped by the DHParser's parser, anyway!
-    """
-    return strg and strg[0:1] not in ('\ufeff', '\ufffe') \
-        and strg[0:3] not in ('\xef\xbb\xbf', '\x00\x00\ufeff', '\x00\x00\ufffe') \
-        and strg.find('\n') < 0 \
-        and strg[:1] != " " and strg[-1:] != " " \
-        and all(strg.find(ch) < 0 for ch in '*?"<>|')
-
-
-def is_html_name(url: str) -> bool:
-    """Returns True if the URL ends with .htm or .html"""
-    return url[-5:].lower() == '.html' or url[-4:].lower() == '.htm'
-
-
-@cython.locals(i=cython.int, L=cython.int)
-def relative_path(from_path: str, to_path: str) -> str:
-    """Returns the relative path in order to open a file from
-    `to_path` when the script is running in `from_path`. Example::
-
-        >>> relative_path('project/common/dir_A', 'project/dir_B').replace(chr(92), '/')
-        '../../dir_B'
-    """
-    from_path = os.path.normpath(os.path.abspath(from_path)).replace('\\', '/')
-    to_path = os.path.normpath(os.path.abspath(to_path)).replace('\\', '/')
-    if from_path and from_path[-1] != '/':
-        from_path += '/'
-    if to_path and to_path[-1] != '/':
-        to_path += '/'
-    i = 0
-    L = min(len(from_path), len(to_path))
-    while i < L and from_path[i] == to_path[i]:
-        i += 1
-    return os.path.normpath(from_path[i:].count('/') * '../' + to_path[i:])
-
-
-def split_path(path: str) -> Tuple[str, ...]:
-    """Splits a filesystem path into its components. Other than
-    os.path.split(), it does not only split of the last part::
-
-        >>> split_path('a/b/c')
-        ('a', 'b', 'c')
-        >>> os.path.split('a/b/c')  # for comparison.
-        ('a/b', 'c')
-    """
-    split = os.path.split(path)
-    while split[0]:
-        split = os.path.split(split[0]) + split[1:]
-    return split[1:]
 
 
 def concurrent_ident() -> str:
@@ -543,6 +431,76 @@ def normalize_circular_paths(path: Union[Tuple[str, ...], AbstractSet[Tuple[str,
         return {normalize_circular_path(p) for p in path}
     else:
         return normalize_circular_path(path)
+
+
+#######################################################################
+#
+#  files and directories
+#
+#######################################################################
+
+
+@functools.lru_cache()
+def is_filename(strg: str) -> bool:
+    r"""
+    Tries to guess whether the given string is a file name. It is
+    assumed that it is NOT a filename if any of the following
+    conditions is true:
+
+    - It starts with a byte-order mark, i.e. '\ufffe' or '\ufeff'.
+    - It starts or ends with a blank, i.e. " ".
+    - It contains any of the characters in the set [\*?"<>|].
+
+    For disambiguation of non-filenames it is best to add a
+    byteorder-mark to the beginning of the string, because this
+    will be stripped by the DHParser's parser, anyway!
+    """
+    return strg and strg[0:1] not in ('\ufeff', '\ufffe') \
+        and strg[0:3] not in ('\xef\xbb\xbf', '\x00\x00\ufeff', '\x00\x00\ufffe') \
+        and strg.find('\n') < 0 \
+        and strg[:1] != " " and strg[-1:] != " " \
+        and all(strg.find(ch) < 0 for ch in '*?"<>|')
+
+
+def is_html_name(url: str) -> bool:
+    """Returns True if the URL ends with .htm or .html"""
+    return url[-5:].lower() == '.html' or url[-4:].lower() == '.htm'
+
+
+@cython.locals(i=cython.int, L=cython.int)
+def relative_path(from_path: str, to_path: str) -> str:
+    """Returns the relative path in order to open a file from
+    `to_path` when the script is running in `from_path`. Example::
+
+        >>> relative_path('project/common/dir_A', 'project/dir_B').replace(chr(92), '/')
+        '../../dir_B'
+    """
+    from_path = os.path.normpath(os.path.abspath(from_path)).replace('\\', '/')
+    to_path = os.path.normpath(os.path.abspath(to_path)).replace('\\', '/')
+    if from_path and from_path[-1] != '/':
+        from_path += '/'
+    if to_path and to_path[-1] != '/':
+        to_path += '/'
+    i = 0
+    L = min(len(from_path), len(to_path))
+    while i < L and from_path[i] == to_path[i]:
+        i += 1
+    return os.path.normpath(from_path[i:].count('/') * '../' + to_path[i:])
+
+
+def split_path(path: str) -> Tuple[str, ...]:
+    """Splits a filesystem path into its components. Other than
+    os.path.split(), it does not only split of the last part::
+
+        >>> split_path('a/b/c')
+        ('a', 'b', 'c')
+        >>> os.path.split('a/b/c')  # for comparison.
+        ('a/b', 'c')
+    """
+    split = os.path.split(path)
+    while split[0]:
+        split = os.path.split(split[0]) + split[1:]
+    return split[1:]
 
 
 #######################################################################
@@ -1799,6 +1757,55 @@ def pp_json_str(jsons: str) -> str:
 #
 #######################################################################
 
+global_id_counter: int = 0
+
+
+def gen_id() -> int:
+    """Generates a unique id. (Not thread-safe!)"""
+    global global_id_counter
+    global_id_counter += 1
+    return global_id_counter
+
+
+class ThreadLocalSingletonFactory:
+    """
+    Generates a singleton-factory that returns one and
+    the same instance of `class_or_factory` for one and the
+    same thread, but different instances for different threads.
+
+    Note: Parameter uniqueID should be provided if class_or_factory is
+    not unique but generic. See the source code of
+    :py:func:`DHParser.dsl.create_transtable_junction`
+    """
+    def __init__(self, class_or_factory, name: str = "", *,
+                 uniqueID: Union[str, int] = 0,
+                 ident=None):
+        if ident is not None:
+            deprecation_warning('Parameter "ident" of DHParser.toolkit.ThreadLocalSingletonFactory'
+                                ' is deprecated and will be ignored.')
+        self.class_or_factory = class_or_factory
+        # partial functions do not have a __name__ attribute!
+        name = name or getattr(class_or_factory, '__name__', '') or class_or_factory.func.__name__
+        if not uniqueID:
+            if not hasattr(self.__class__, 'lock'):
+                import threading
+                self.__class__.lock = threading.Lock()
+            with self.__class__.lock:
+                uniqueID = gen_id()
+        self.singleton_name = f"{name}_{str(id(self))}_{str(uniqueID)}_singleton"
+        THREAD_LOCALS = access_thread_locals()
+        assert not hasattr(THREAD_LOCALS, self.singleton_name), self.singleton_name
+
+    def __call__(self):
+        THREAD_LOCALS = access_thread_locals()
+        try:
+            singleton = getattr(THREAD_LOCALS, self.singleton_name)
+        except AttributeError:
+            setattr(THREAD_LOCALS, self.singleton_name, self.class_or_factory())
+            singleton = getattr(THREAD_LOCALS, self.singleton_name)
+        return singleton
+
+
 class SingleThreadExecutor:
     r"""SingleThreadExecutor is a replacement for
     concurrent.future.ProcessPoolExecutor and
@@ -1949,7 +1956,6 @@ def MultiCoreManager():
             return multiprocessing.Manager()
     else:
         return ThreadingManagerShim()
-
 
 
 # def unpickle_result(result):
