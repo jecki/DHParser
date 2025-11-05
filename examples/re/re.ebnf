@@ -28,7 +28,7 @@
 # Tags that may be replaced with their content while parsing
 @ disposable  = EOF, BS, _number, _illegal, _entity, _escape, _special, _item,
                 _group, _grpItem, _extension, _char, _anyChar, _grpChar,
-                _chars, _grpChars, _octal, _nibble, _escapedCh, _ch
+                _chars, _grpChars, _octal, _nibble, _escapedCh, _ch, _reEsc
 
 # Tags that will be dropped with all their content while parsing or any of
 # the special values: strings, backticked, whitespace, regexps
@@ -74,8 +74,8 @@ _special   = any | start | end
 
 #: escape
 
-_escape      = BS § ( bs | chCode | chName | groupId | reEsc | specialEsc | error | escCh )
-  reEsc      = /[AbBdDsSwWZ]/
+_escape      = BS § ( bs | chCode | chName | groupId | _reEsc | specialEsc | error | escCh )
+  _reEsc      = &/[AbBdDsSwWZ]/ (fixedChSet | wordBorder | absStart | absEnd)
   specialEsc = /[afnrtv]/
   chCode     = "x" hex2 | "u" hex4 | "U" hex8 | oct
     hex2     = _nibble*2
@@ -90,20 +90,26 @@ _escape      = BS § ( bs | chCode | chName | groupId | reEsc | specialEsc | err
   error      = &_illegal @Error("Unknown escape sequence") _illegal
     _illegal = /[a-zA-Z]/
 
+wordBorder   = /[bB]/
+absStart     = /[aA]/
+absEnd       = /[zZ]/
+
+
 #: charset
 
 # What about https://unicode.org/reports/tr18/ ?
 
-charset    = "[" [complement] { escapedSet | chRange | _escapedCh | BS error | chSet }+ "]"  # TODO: Compaibilitätstest für STL-re benötigt!
+charset    = "[" [complement] { _csEsc | chRange | _escapedCh | BS error | chSet }+ "]"
   complement = "^"
-  chRange    = (_escapedCh | ch) "-" !escapedSet (_escapedCh | ch)
-  chSet      = _ch  { !escapedSet !chRange !_escapedCh !BS _ch }
-  escapedSet = BS /[dDsSwW]/
+  chRange    = (_escapedCh | ch) "-" !_csEsc (_escapedCh | ch)
+  chSet      = _ch  { !_csEsc !chRange !_escapedCh !BS _ch }
+  _csEsc     = BS fixedChSet
   _escapedCh = BS (chCode | chSpecial)
   chSpecial  = /[abfnrtv]/  # /b means backspace inside character ranges
   ch         = _ch
   _ch        = !"]" [BS] /./
 
+fixedChSet   = /[dDsSwW]/  # /lL/ for letters only occurs later in the pipeline
 
 #: group
 

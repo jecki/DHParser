@@ -193,9 +193,9 @@ class reGrammar(Grammar):
     _entity = Forward()
     _item = Forward()
     pattern = Forward()
-    source_hash__ = "f6c27c4d38604488c231ee0ab66dfceb"
+    source_hash__ = "0582068b2cc540cc0bc053926f85f098"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:_grpChar$|_number$|_escapedCh$|EOF$|_octal$|_item$|_ch$|BS$|_illegal$|_escape$|_extension$|_chars$|_grpChars$|_entity$|_special$|_anyChar$|_grpItem$|_group$|_nibble$|_char$)')
+    disposable__ = re.compile('(?:_grpChars$|_anyChar$|_illegal$|_chars$|BS$|_octal$|_entity$|_escape$|_nibble$|_escapedCh$|_ch$|_grpItem$|EOF$|_item$|_extension$|_reEsc$|_char$|_special$|_number$|_grpChar$|_group$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -232,15 +232,19 @@ class reGrammar(Grammar):
     repType = Alternative(zeroOrOne, zeroOrMore, oneOrMore, range)
     negative = Series(Drop(Text("-")), RegExp('[imsx]+'))
     flags = Alternative(Series(positive, Option(negative)), negative)
+    fixedChSet = RegExp('[dDsSwW]')
     _ch = Series(NegativeLookahead(Drop(Text("]"))), Option(BS), RegExp('.'))
     ch = Synonym(_ch)
     chSpecial = RegExp('[abfnrtv]')
     _nibble = RegExp('[0-9a-fA-F]')
-    escapedSet = Series(BS, RegExp('[dDsSwW]'))
+    _csEsc = Series(BS, fixedChSet)
     hex2 = Counted(_nibble, repetitions=(2, 2))
     hex4 = Counted(_nibble, repetitions=(4, 4))
     complement = Text("^")
     hex8 = Counted(_nibble, repetitions=(8, 8))
+    absEnd = RegExp('[zZ]')
+    absStart = RegExp('[aA]')
+    wordBorder = RegExp('[bB]')
     _illegal = RegExp('[a-zA-Z]')
     error = Series(Lookahead(_illegal), Custom(ERR("Unknown escape sequence")), _illegal)
     groupId = RegExp('\\d\\d?')
@@ -250,12 +254,12 @@ class reGrammar(Grammar):
     oct = Alternative(Series(Drop(Text("0")), Counted(_octal, repetitions=(0, 3))), Counted(_octal, repetitions=(3, 3)))
     chCode = Alternative(Series(Drop(Text("x")), hex2), Series(Drop(Text("u")), hex4), Series(Drop(Text("U")), hex8), oct)
     _escapedCh = Series(BS, Alternative(chCode, chSpecial))
-    chRange = Series(Alternative(_escapedCh, ch), Drop(Text("-")), NegativeLookahead(escapedSet), Alternative(_escapedCh, ch))
-    chSet = Series(_ch, ZeroOrMore(Series(NegativeLookahead(escapedSet), NegativeLookahead(chRange), NegativeLookahead(_escapedCh), NegativeLookahead(BS), _ch)))
-    charset = Series(Drop(Text("[")), Option(complement), OneOrMore(Alternative(escapedSet, chRange, _escapedCh, Series(BS, error), chSet)), Drop(Text("]")))
+    chRange = Series(Alternative(_escapedCh, ch), Drop(Text("-")), NegativeLookahead(_csEsc), Alternative(_escapedCh, ch))
+    chSet = Series(_ch, ZeroOrMore(Series(NegativeLookahead(_csEsc), NegativeLookahead(chRange), NegativeLookahead(_escapedCh), NegativeLookahead(BS), _ch)))
+    charset = Series(Drop(Text("[")), Option(complement), OneOrMore(Alternative(_csEsc, chRange, _escapedCh, Series(BS, error), chSet)), Drop(Text("]")))
     specialEsc = RegExp('[afnrtv]')
-    reEsc = RegExp('[AbBdDsSwWZ]')
-    _escape = Series(BS, Alternative(bs, chCode, chName, groupId, reEsc, specialEsc, error, escCh), mandatory=1)
+    _reEsc = Series(Lookahead(RegExp('[AbBdDsSwWZ]')), Alternative(fixedChSet, wordBorder, absStart, absEnd))
+    _escape = Series(BS, Alternative(bs, chCode, chName, groupId, _reEsc, specialEsc, error, escCh), mandatory=1)
     end = Text("$")
     start = Text("^")
     any = Text(".")
@@ -406,15 +410,22 @@ FLAGS_ERROR          = ErrorCode(2020)
 DUPLICATE_CHARACTERS = ErrorCode(2030)
 
 # default_start = parse_sxpr('(lookaround (lrtype "<!") (any "."))')
-# default_end   = parse_sxpr('(lookaround (lrtype "!") (any "."))')
+# default_end = parse_sxpr('(lookaround (lrtype "!") (any "."))')
 # multiline_start = parse_sxpr('(regex (lookaround (lrtype "<=") (specialEsc "n")) (lookaround (lrtype "<!") (any ".")))')
-# multiline_end   = parse_sxpr('(regex (lookaround (lrtype "=") (specialEsc "n")) (lookaround (lrtype "!") (any ".")))')
+# multiline_end = parse_sxpr('(regex (lookaround (lrtype "=") (specialEsc "n")) (lookaround (lrtype "!") (any ".")))')
+# word_border = parse_sxpr('(regex (pattern (lookaround (lrtype "<!") (fixedChSet "L")) (lookaround (lrtype "=") (fixedChSet "L")))'
+#                                ' (pattern (lookaround (lrtype "<=") (fixedChSet "L")) (lookaround (lrtype "!") (fixedChSet "L"))))')
 default_start = Node('lookaround', (Node('lrtype', '<!'), Node('any', '.')))
 default_end   = Node('lookaround', (Node('lrtype', '!'), Node('any', '.')))
 multiline_start = Node('regex', (Node('lookaround', (Node('lrtype', '<='), Node('specialEsc', 'n'))),
                                  Node('lookaround', (Node('lrtype', '<!'), Node('any', '.')))))
 multiline_end   = Node('regex', (Node('lookaround', (Node('lrtype', '='), Node('specialEsc', 'n'))),
                                  Node('lookaround', (Node('lrtype', '!'), Node('any', '.')))))
+word_border = Node('regex', (Node('pattern', (Node('lookaround', (Node('lrtype', '<!'), Node('fixedChSet', 'L'))),
+                                              Node('lookaround', (Node('lrtype', '='), Node('fixedChSet', 'L'))))),
+                             Node('pattern', (Node('lookaround', (Node('lrtype', '<='), Node('fixedChSet', 'L'))),
+                                              Node('lookaround', (Node('lrtype', '!'), Node('fixedChSet', 'L')))))))
+
 
 class FlagProcessing(Compiler):
     """Compiler for the abstract-syntax-tree of a 
@@ -534,6 +545,28 @@ class FlagProcessing(Compiler):
         self.effective_flags = save
         if len(node.result) == 1 and not node.result[0].has_attr():
             replace_by_single_child(self.path)
+        return node
+
+    def on_absStart(self, node):
+        assert not node.children
+        assert node.result in ('A', 'a')
+        start = copy.deepcopy(default_start)
+        for nd in start.walk_tree():
+            nd._pos = node._pos
+        node.name = 'regex'
+        node.attr['re'] = r'\A'
+        node.result = start.children
+        return node
+
+    def on_absEnd(self, node):
+        assert not node.children
+        assert node.result in ('Z', 'Z')
+        end = copy.deepcopy(default_end)
+        for nd in end.walk_tree():
+            nd._pos = node._pos
+        node.name = 'regex'
+        node.attr['re'] = r'\Z'
+        node.result = end.children
         return node
 
     def on_start(self, node):
