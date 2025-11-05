@@ -100,7 +100,7 @@ charset    = "[" [complement] { escapedSet | chRange | _escapedCh | BS error | c
   chSet      = _ch  { !escapedSet !chRange !_escapedCh !BS _ch }
   escapedSet = BS /[dDsSwW]/
   _escapedCh = BS (chCode | chSpecial)
-  chSpecial  = /[abfnrtv]/
+  chSpecial  = /[abfnrtv]/  # /b means backspace inside character ranges
   ch         = _ch
   _ch        = !"]" [BS] /./
 

@@ -193,9 +193,9 @@ class reGrammar(Grammar):
     _entity = Forward()
     _item = Forward()
     pattern = Forward()
-    source_hash__ = "f70f928e23fc153818747164b982c814"
+    source_hash__ = "f6c27c4d38604488c231ee0ab66dfceb"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:_char$|_grpChars$|_grpItem$|EOF$|_group$|_escape$|_nibble$|_chars$|_entity$|_extension$|BS$|_special$|_anyChar$|_illegal$|_octal$|_grpChar$|_ch$|_item$|_number$|_escapedCh$)')
+    disposable__ = re.compile('(?:_grpChar$|_number$|_escapedCh$|EOF$|_octal$|_item$|_ch$|BS$|_illegal$|_escape$|_extension$|_chars$|_grpChars$|_entity$|_special$|_anyChar$|_grpItem$|_group$|_nibble$|_char$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -351,6 +351,7 @@ re_AST_transformation_table = {
     "ch": [],  # [change_name('char')],
     "chCode": [change_name('ch'), reduce_single_child],
     "chSpecial": [change_name('ch'), transform_result(lambda r: SPECIAL_MAP[r])],
+    "specialEsc": [change_name('char'), transform_result(lambda r: SPECIAL_MAP[r])],
     "charset": [merge_adjacent(is_one_of('chSet', 'ch'), 'chSet'),
                 # replace_child_names({'ch': 'chSet'})
                 ],
@@ -391,8 +392,8 @@ FLAG_SET = frozenset({
     'a',   # TODO: ASCII-only
     'i',   # ignore case
     'L',   # locale dependent (this will be ignored!)
-    'm',   # multi-line, i.e. ^ and $ also match beginning and end of line
-    's',   # TODO: dot matches all, including newline chracters
+    'm',   # multi-line, i.e. ^ and $ also match the beginning and end of the line
+    's',   # TODO: dot matches all, including newline characters
     'u',   # Unicode (default)
     'x'    # verbose (global only, preprocessor take care of this)
 })
@@ -404,10 +405,16 @@ FLAGS_WARNING        = ErrorCode(520)
 FLAGS_ERROR          = ErrorCode(2020)
 DUPLICATE_CHARACTERS = ErrorCode(2030)
 
-
-multiline_start = parse_sxpr('(regex (lookaround (lrtype "<=") (specialEsc "n")) (start "^"))')
-multiline_end   = parse_sxpr('(regex (lookaround (lrtype "=") (specialEsc "n")) (end "$"))')
-
+# default_start = parse_sxpr('(lookaround (lrtype "<!") (any "."))')
+# default_end   = parse_sxpr('(lookaround (lrtype "!") (any "."))')
+# multiline_start = parse_sxpr('(regex (lookaround (lrtype "<=") (specialEsc "n")) (lookaround (lrtype "<!") (any ".")))')
+# multiline_end   = parse_sxpr('(regex (lookaround (lrtype "=") (specialEsc "n")) (lookaround (lrtype "!") (any ".")))')
+default_start = Node('lookaround', (Node('lrtype', '<!'), Node('any', '.')))
+default_end   = Node('lookaround', (Node('lrtype', '!'), Node('any', '.')))
+multiline_start = Node('regex', (Node('lookaround', (Node('lrtype', '<='), Node('specialEsc', 'n'))),
+                                 Node('lookaround', (Node('lrtype', '<!'), Node('any', '.')))))
+multiline_end   = Node('regex', (Node('lookaround', (Node('lrtype', '='), Node('specialEsc', 'n'))),
+                                 Node('lookaround', (Node('lrtype', '!'), Node('any', '.')))))
 
 class FlagProcessing(Compiler):
     """Compiler for the abstract-syntax-tree of a 
@@ -532,23 +539,25 @@ class FlagProcessing(Compiler):
     def on_start(self, node):
         assert not node.children
         assert node.result == '^'
-        if 'm' in self.effective_flags.positive:
-            ml_start = copy.deepcopy(multiline_start)
-            for nd in ml_start.walk_tree():
-                nd._pos = node._pos
-            node.name = 'regex'
-            node.result = ml_start.children
+        start = copy.deepcopy(multiline_start) if 'm' in self.effective_flags.positive \
+                                                else copy.deepcopy(default_start)
+        for nd in start.walk_tree():
+            nd._pos = node._pos
+        node.name = 'regex'
+        node.attr['re'] = node.result
+        node.result = start.children
         return node
 
     def on_end(self, node):
         assert not node.children
         assert node.result == '$'
-        if 'm' in self.effective_flags.positive:
-            ml_end = copy.deepcopy(multiline_end)
-            for nd in ml_end.walk_tree():
-                nd._pos = node._pos
-            node.name = 'regex'
-            node.result = ml_end.children
+        end = copy.deepcopy(multiline_end) if 'm' in self.effective_flags.positive \
+                                           else copy.deepcopy(default_end)
+        for nd in end.walk_tree():
+            nd._pos = node._pos
+        node.name = 'regex'
+        node.attr['re'] = node.result
+        node.result = end.children
         return node
 
     def on_charSeq(self, node):
@@ -567,6 +576,7 @@ class FlagProcessing(Compiler):
                     seq.append(Node('charset', chSet).with_pos(node.pos + d))
             if len(self.path) > 1 and (len(seq) > 1 or seq[-1].name != 'charSeq'):
                 node.name = 'pattern'
+                node.attr['re'] = node.result
                 node.result = tuple(seq)
         return node
 
@@ -578,9 +588,13 @@ class FlagProcessing(Compiler):
         if 'i' in self.effective_flags.positive:
             assert not node.children
             assert len(node.result) == 1
-            node.name = "charset"
-            node.result = Node(
-                'chSet', node.result.upper() + node.result.lower()).with_pos(node.pos)
+            upper = node.result.upper()
+            lower = node.result.lower()
+            if upper != lower:
+                node.name = "charset"
+                node.attr['re'] = node.result
+                node.result = Node(
+                    'chSet', upper + lower).with_pos(node.pos)
         return node
 
     def on_chSet(self, node):
@@ -596,6 +610,7 @@ class FlagProcessing(Compiler):
                 node, f'Duplicate characters {dupl} in character set {repr(node.result)}!',
                 DUPLICATE_CHARACTERS)
         if 'i' in self.effective_flags.positive:
+            node.attr['re'] = node.result
             node.result = ''.join((sorted(set(node.result.lower()) | set(node.result.upper()))))
         else:
             node.result = ''.join(sorted(letters))
@@ -633,10 +648,14 @@ class FlagProcessing(Compiler):
                 if a2 <= chr(ord(b1) + 1):
                     node.result[1].result = b2
                 elif len(self.path) > 1:
-                    nd = Node('chRange', (Node('ch', a2), Node('ch', b2))).with_pos(node.pos)
+                    nd = Node('chRange', (Node('ch', a2), Node('ch', b2)))\
+                        .with_pos(node.pos).with_attr(re=None)
                     parent = self.path[-2]
                     i = parent.index(node)
                     parent.insert(i + 1, nd)
+        return node
+
+    def on_any(self, node):
         return node
 
     def on_pattern(self, node):

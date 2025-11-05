@@ -6,6 +6,16 @@
 import unicodedata
 
 
+def pick(selector) -> list[tuple[int, str]]:   # e.g. selector = "isdecimal"
+    all_digits: list[tuple[int, str]] = []
+    for codepoint in range(0x110000):  # Unicode range ends at 0x10FFFF
+        char = chr(codepoint)
+        check = getattr(char, selector)
+        if check():
+            all_digits.append((codepoint, unicodedata.name(char, '')))
+    return all_digits
+
+
 def as_intervals(elements: list[int]) -> list[tuple[int, int]]:
     """Converts a list of integers into a list of intervals."""
     elements.sort()
@@ -32,37 +42,13 @@ def digits() -> list[tuple[int, str]]:
     return all_digits
 
 
-def whitespaces() -> list[tuple[int, str]]:
-    all_whitespaces: list[tuple[int, str]] = []
-    for codepoint in range(0x110000):  # Unicode range ends at 0x10FFFF
-        char = chr(codepoint)
-        if char.isspace():
-            all_whitespaces.append((codepoint, unicodedata.name(char, '')))
-    return all_whitespaces
-
-
-def alphanums() -> list[tuple[int, str]]:
-    all_alphanum: list[tuple[int, str]] = []
-    for codepoint in range(0x110000):  # Unicode range ends at 0x10FFFF
-        char = chr(codepoint)
-        if char.isalnum():
-            all_alphanum.append((codepoint, unicodedata.name(char, '')))
-    return all_alphanum
-
 
 if __name__ == "__main__":
-    all_digits = digits()
-    print(len(all_digits), all_digits)
-    intervals = as_intervals([d[0] for d in all_digits])
-    print(len(intervals), intervals)
+    for selector in ("isdecimal", "isspace", "isalpha", "isalnum", "isidentifier"):
+        print('\n' + selector + ":")
+        all_elements = pick(selector)
+        print(len(all_elements), all_elements[:100])
+        intervals = as_intervals([e[0] for e in all_elements])
+        print(len(intervals), intervals[:100])
 
-    all_whitespaces = whitespaces()
-    print(len(all_whitespaces), all_whitespaces)
-    intervals = as_intervals([w[0] for w in all_whitespaces])
-    print(len(intervals), intervals)
-
-    all_alphanums = alphanums()
-    print(len(all_alphanums)) # , all_alphanums)
-    intervals = as_intervals([an[0] for an in all_alphanums])
-    print(len(intervals), intervals)
 

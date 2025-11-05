@@ -32,7 +32,9 @@ scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 LOG_DIR = os.path.abspath(os.path.join(scriptpath, "LOGS"))
 
+
 from DHParser.testing import unique_name
+from DHParser import *  # test import of __all__
 
 
 def system(s: str) -> int:
