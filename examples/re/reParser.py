@@ -393,11 +393,11 @@ class Flags(NamedTuple):
 
 NO_FLAGS = Flags(set(), set())
 FLAG_SET = frozenset({
-    'a',   # TODO: ASCII-only
+    'a',   # ASCII-only
     'i',   # ignore case
     'L',   # locale dependent (this will be ignored!)
     'm',   # multi-line, i.e. ^ and $ also match the beginning and end of the line
-    's',   # TODO: dot matches all, including newline characters
+    's',   # dot matches all, including newline characters
     'u',   # Unicode (default)
     'x'    # verbose (global only, preprocessor take care of this)
 })
@@ -425,6 +425,10 @@ word_border = Node('regex', (Node('pattern', (Node('lookaround', (Node('lrtype',
                                               Node('lookaround', (Node('lrtype', '='), Node('fixedChSet', 'L'))))),
                              Node('pattern', (Node('lookaround', (Node('lrtype', '<='), Node('fixedChSet', 'L'))),
                                               Node('lookaround', (Node('lrtype', '!'), Node('fixedChSet', 'L')))))))
+no_word_border = Node('regex', (Node('pattern', (Node('lookaround', (Node('lrtype', '<='), Node('fixedChSet', 'L'))),
+                                                 Node('lookaround', (Node('lrtype', '='), Node('fixedChSet', 'L'))))),
+                                Node('pattern', (Node('lookaround', (Node('lrtype', '<!'), Node('fixedChSet', 'L'))),
+                                                 Node('lookaround', (Node('lrtype', '!'), Node('fixedChSet', 'L')))))))
 
 
 class FlagProcessing(Compiler):
@@ -498,20 +502,6 @@ class FlagProcessing(Compiler):
                 nd.attr['effective_flags'] = copy.deepcopy(effective)
         return effective
 
-    # def get_effective_flags(self, node) -> Flags:
-    #     path = self.path
-    #     for i in range(len(path) - 1, -1, -1):
-    #         effective = path[i].get_attr('effective_flags', False)
-    #         if effective:
-    #             return effective
-    #         if path[i].has_attr('flags'):
-    #             self.tree.new_error(
-    #                 node,
-    #                 "Internal Error: Effective flags should already have been evaluated",
-    #                 ERROR)
-    #     else:
-    #         return NO_FLAGS
-
     def on_regular_expression(self, node):
         save = self.effective_flags
         if node[0].name == 'flagGroups':
@@ -551,8 +541,7 @@ class FlagProcessing(Compiler):
         assert not node.children
         assert node.result in ('A', 'a')
         start = copy.deepcopy(default_start)
-        for nd in start.walk_tree():
-            nd._pos = node._pos
+        for nd in start.walk_tree():  nd._pos = node._pos
         node.name = 'regex'
         node.attr['re'] = r'\A'
         node.result = start.children
@@ -562,8 +551,7 @@ class FlagProcessing(Compiler):
         assert not node.children
         assert node.result in ('Z', 'Z')
         end = copy.deepcopy(default_end)
-        for nd in end.walk_tree():
-            nd._pos = node._pos
+        for nd in end.walk_tree():  nd._pos = node._pos
         node.name = 'regex'
         node.attr['re'] = r'\Z'
         node.result = end.children
@@ -574,8 +562,7 @@ class FlagProcessing(Compiler):
         assert node.result == '^'
         start = copy.deepcopy(multiline_start) if 'm' in self.effective_flags.positive \
                                                 else copy.deepcopy(default_start)
-        for nd in start.walk_tree():
-            nd._pos = node._pos
+        for nd in start.walk_tree():  nd._pos = node._pos
         node.name = 'regex'
         node.attr['re'] = node.result
         node.result = start.children
@@ -586,11 +573,36 @@ class FlagProcessing(Compiler):
         assert node.result == '$'
         end = copy.deepcopy(multiline_end) if 'm' in self.effective_flags.positive \
                                            else copy.deepcopy(default_end)
-        for nd in end.walk_tree():
-            nd._pos = node._pos
+        for nd in end.walk_tree():  nd._pos = node._pos
         node.name = 'regex'
         node.attr['re'] = node.result
         node.result = end.children
+        return node
+
+    def on_wordBorder(self, node):
+        assert not node.children
+        assert node.result in ('b', 'B')
+        wb = copy.deepcopy(word_border) if node.result == 'b' else copy.deepcopy(no_word_border)
+        for nd in wb.walk_tree():
+            nd._pos = node._pos
+            if nd.name == 'fixedChSet':
+                if 'a' in self.effective_flags.positive:
+                    nd.attr['set'] = 'ascii_alpha'
+                else:
+                    nd.attr['set'] = 'alpha'
+        node.name = 'regex'
+        node.attr['re'] = '\\' + node.result
+        return node
+
+    def on_fixedChSet(self, node):
+        assert not node.children
+        assert node.result in "dDsSwW"
+        chset = { 'd': 'decimal', 's': 'space', 'w': 'identifier' }[node.result.lower()]
+        ascii = 'ascii_' if 'a' in self.effective_flags.positive else ''
+        node.attr['set'] = ascii + chset
+        if node.result.islower():
+            node.attr['complement'] = '^'
+        node.attr['re'] = '\\' + node.result
         return node
 
     def on_charSeq(self, node):
@@ -689,6 +701,12 @@ class FlagProcessing(Compiler):
         return node
 
     def on_any(self, node):
+        assert not node.children
+        assert node.result == '.'
+        if 's' not in self.effective_flags.positive:
+            node.name = 'charset'
+            node.result = (Node('complement', '^').with_pos(node.pos),
+                           Node('ch', '\n').with_pos(node.pos))
         return node
 
     def on_pattern(self, node):
