@@ -731,6 +731,16 @@ flagProcessing: Junction = create_junction(
 #
 #######################################################################
 
+# TODO: Serialization of both AST and flagsDone stage,
+#       probably possible with one and the same function
+# TODO: Optimize regex tree after flagsDone-stage, most notably
+#       use charsets as much as possible, introducing set
+#       substraction, here. Otherwise simplify tree, here, i.e.
+#       some node types may be dropped, some constructs (charsets)
+#       simplified.
+# TODO: Compile optimized tree to a PEG-tree (== EBNF-AST)
+# TODO: Serialization of EBNF-AST needed in DHParser.ebnf-module
+
 # class PostProcessing(Compiler):
 #     ...
 

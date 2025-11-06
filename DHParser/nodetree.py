@@ -2089,18 +2089,6 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                     empty_tags.add(tag)
         return empty_tags
 
-        # for nd in self.select(LEAF_NODE, include_root=True):
-        #     tag = nd.name
-        #     if nd.result:
-        #         not_empty.add(tag)
-        #         try:
-        #             empty_tags.remove(tag)
-        #         except KeyError:
-        #             pass
-        #     elif tag not in not_empty:
-        #         empty_tags.add(tag)
-        # return empty_tags
-
     def as_xml(self, src: Optional[str] = None,
                indentation: int = 2,
                inline_tags: AbstractSet[str] = frozenset(),
