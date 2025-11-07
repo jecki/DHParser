@@ -897,7 +897,7 @@ EBNF_AST_transformation_table = {
     "flowmarker, retrieveop":
         [reduce_single_child],
     "group":
-        [remove_brackets],
+        [remove_brackets],  # don't replace by single child or interleave might break!
     "oneormore, repetition, option":
         [reduce_single_child, remove_brackets,  # remove_tokens('?', '*', '+'),
          forbid('repetition', 'option', 'oneormore'), assert_content(r'(?!§)(?:.|\n)*')],
@@ -1002,6 +1002,7 @@ EBNF_AST_Serialization_Table = expand_table({
     "placeholder": lambda p, s: "$" + s,
     "hide": lambda p, s: "HIDE",
     "drop": lambda p, s: "DROP",
+    # TODO: "directive"
     "definition": serialize_definition,
     "expression": lambda p, *ts: ' | '.join(ts),
     "sequence": lambda p, *ts: ' '.join((s if c.name != 'expression' else f'({s})')
@@ -1013,8 +1014,11 @@ EBNF_AST_Serialization_Table = expand_table({
         lambda p, *ts: ' '.join((s if c.name not in ('expression', 'sequence', "interleave")
                                  else f'({s})')
                                 for s, c in zip(ts, p[-1].children)),
+    "group": lambda p, s: s if len(p) < 2 or p[-2].name != 'interleave' else f'({s})',
     "repetition": lambda p, s: ''.join(["{ ", s, ' }']),
     "oneormore": lambda p, s: ''.join(["{ ", s, ' }+']),
+    "option": lambda p, s: ''.join(['[ ', s, ' ]']),
+    # TODO: "counted"
     "syntax": lambda p, *ts: '\n'.join(ts),
     "term": lambda p, *ts: ts[0] + (' -> ' + ts[1] if len(ts) > 1 else ''),
     "modifier": lambda p, *ts: ''.join(ts)
