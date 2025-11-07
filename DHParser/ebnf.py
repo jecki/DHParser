@@ -874,7 +874,7 @@ EBNF_AST_transformation_table = {
     "literals":
         [replace_by_single_child],
     "definition":
-        [flatten, remove_children('DEF', 'ENDL'),
+        [flatten, remove_children('DEF', 'ENDL', 'OR'),
          remove_tokens('=')],  # remove_tokens('=') is only for backwards-compatibility
     "modifier": [],
     "expression":
@@ -961,6 +961,35 @@ def transform_ebnf(cst: RootNode) -> RootNode:
     syntax tree in place. No value is returned."""
     root = get_ebnf_transformer()(cst)
     return root
+
+
+########################################################################
+#
+# EBNF abstract syntax tree to EBNF code serialization
+#
+########################################################################
+
+def yield_string_result(result: str) -> str:
+    assert isinstance(result, str)
+    return str
+
+
+def yield_merged_strings(strings: Tuple[str]) -> str:
+    for s in strings:  assert isinstance(s, str)
+    return ''.join(s)
+
+def serialize_char_range(strings: Tuple[str]) -> str:
+    for s in strings:  assert isinstance(s, str)
+    return ''.join(['[', ''.join(s), ']'])
+
+
+
+EBNF_AST_Serialization_Table = {
+    "symbol, literal, plaintext, free_char, any_char, flowmarker, :Text":
+        yield_string_result,
+    "range_desc, lookaround": yield_merged_strings,
+    "char_range": serialize_char_range
+}
 
 
 ########################################################################
