@@ -969,29 +969,29 @@ def transform_ebnf(cst: RootNode) -> RootNode:
 #
 ########################################################################
 
-def yield_string_result(content: str) -> str:
+def yield_string_result(path: Path, content: str) -> str:
     assert isinstance(content, str)
     return content
 
 
-def yield_merged_strings(*strings) -> str:
+def yield_merged_strings(path: Path, *strings) -> str:
     for s in strings:  assert isinstance(s, str)
     return ''.join(strings)
 
 
-def serialize_char_range(*strings) -> str:
+def serialize_char_range(path: Path, *strings) -> str:
     for s in strings:  assert isinstance(s, str)
     return ''.join(['[', ''.join(strings), ']'])
 
 
-def serialize_char_ranges(*strings) -> str:
+def serialize_char_ranges(path: Path, *strings) -> str:
     for s in strings: assert isinstance(s, str)
     assert string[0] == '/'
     assert string[-1] == '/'
     return ''.join(['/', '|'.join(strings[1:-1]), '/'])
 
 
-def serialize_character(content: str) -> str:
+def serialize_character(path: Path, content: str) -> str:
     assert isinstance(content, str)
     l = len(content)
     assert l <= 8
@@ -999,7 +999,7 @@ def serialize_character(content: str) -> str:
     return prefix + "0" * (d - l) + content.lower()
 
 
-def serialize_definition(*strings) -> str:
+def serialize_definition(path: Path, *strings) -> str:
     assert 2 <= len(strings) <= 4
     for s in strings: assert isinstance(s, str)
     modifier = (strings[0]) if strings[0][-1] == ':' else ''
@@ -1010,7 +1010,7 @@ def serialize_definition(*strings) -> str:
     return ''.join([modifier, definiens, ' = ', definiendum])
 
 
-def serialize_repetition(content: str) -> str:
+def serialize_repetition(path: Path, content: str) -> str:
     assert isinstance(content, str)
     return ''.join(["{ ", content, ' }'])
 
@@ -1023,17 +1023,18 @@ EBNF_AST_Serialization_Table = expand_table({
     "char_range, range_chain": serialize_char_range,
     "char_ranges": serialize_char_ranges,
     "character": serialize_character,
-    "regexp": lambda s: ''.join(['/', s, '/']),
-    "procedure": lambda s: s + "()",
-    "placeholder": lambda s: "$" + s,
-    "hide": lambda s: "HIDE",
-    "drop": lambda s: "DROP",
+    "regexp": lambda p, s: ''.join(['/', s, '/']),
+    "procedure": lambda p, s: s + "()",
+    "placeholder": lambda p, s: "$" + s,
+    "hide": lambda p, s: "HIDE",
+    "drop": lambda p, s: "DROP",
     "definition": serialize_definition,
-    "sequence": lambda *ts: ' '.join(ts),
+    "sequence": lambda p, *ts: ' '.join((s if c.name != 'expression' else f'({s})')
+                                        for s, c in zip(ts, p[-1].children)),
     "repetition": serialize_repetition,
-    "syntax": lambda *ts: '\n'.join(ts),
-    "term": lambda *ts: ts[0] + (' -> ' + ts[1] if len(ts) > 1 else ''),
-    "modifier": lambda *ts: ''.join(ts)
+    "syntax": lambda p, *ts: '\n'.join(ts),
+    "term": lambda p, *ts: ts[0] + (' -> ' + ts[1] if len(ts) > 1 else ''),
+    "modifier": lambda p, *ts: ''.join(ts)
 })
 
 

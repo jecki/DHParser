@@ -2938,7 +2938,7 @@ class TestSerialization:
             ws = / +/ -> DROP"""
         cst = parse_ebnf(gr)
         ast = transform_ebnf(cst)
-        ebnf = ast.evaluate(EBNF_AST_Serialization_Table)
+        ebnf = ast.evaluate(EBNF_AST_Serialization_Table, path=[ast])
         assert ebnf == r"""document = { paragraph }
 paragraph = word { ws word }
 HIDE:word = /\w+/
