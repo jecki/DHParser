@@ -4055,7 +4055,7 @@ def select_path_if(start_path: Path,
     `match_function` is true, starting from `path`.
     """
 
-    def recursive(path):
+    def recursive(path) -> Iterator[Path]:
         nonlocal match_func, reverse, skip_func
         if match_func(path):
             yield path

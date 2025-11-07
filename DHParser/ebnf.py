@@ -969,27 +969,72 @@ def transform_ebnf(cst: RootNode) -> RootNode:
 #
 ########################################################################
 
-def yield_string_result(result: str) -> str:
-    assert isinstance(result, str)
-    return str
+def yield_string_result(content: str) -> str:
+    assert isinstance(content, str)
+    return content
 
 
-def yield_merged_strings(strings: Tuple[str]) -> str:
+def yield_merged_strings(*strings) -> str:
     for s in strings:  assert isinstance(s, str)
-    return ''.join(s)
+    return ''.join(strings)
 
-def serialize_char_range(strings: Tuple[str]) -> str:
+
+def serialize_char_range(*strings) -> str:
     for s in strings:  assert isinstance(s, str)
-    return ''.join(['[', ''.join(s), ']'])
+    return ''.join(['[', ''.join(strings), ']'])
 
 
+def serialize_char_ranges(*strings) -> str:
+    for s in strings: assert isinstance(s, str)
+    assert string[0] == '/'
+    assert string[-1] == '/'
+    return ''.join(['/', '|'.join(strings[1:-1]), '/'])
 
-EBNF_AST_Serialization_Table = {
-    "symbol, literal, plaintext, free_char, any_char, flowmarker, :Text":
+
+def serialize_character(content: str) -> str:
+    assert isinstance(content, str)
+    l = len(content)
+    assert l <= 8
+    d, prefix = (2, "\\x") if l <= 2 else (4, "\\u") if l <= 4 else (8, "\\U")
+    return prefix + "0" * (d - l) + content.lower()
+
+
+def serialize_definition(*strings) -> str:
+    assert 2 <= len(strings) <= 4
+    for s in strings: assert isinstance(s, str)
+    modifier = (strings[0]) if strings[0][-1] == ':' else ''
+    definiens = strings[1] if modifier else strings[0]
+    definiendum = strings[2] if modifier else strings[1]
+    if len(strings) >= 3 and not modifier:
+        modifier = strings[2] + ':'
+    return ''.join([modifier, definiens, ' = ', definiendum])
+
+
+def serialize_repetition(content: str) -> str:
+    assert isinstance(content, str)
+    return ''.join(["{ ", content, ' }'])
+
+
+EBNF_AST_Serialization_Table = expand_table({
+    "symbol, literal, plaintext, free_char, any_char, flowmarker, :Text, " \
+    "RE_LEADIN, RE_LEADOUT, :MOD_SEP, whitspace, retrieveop, name":
         yield_string_result,
     "range_desc, lookaround": yield_merged_strings,
-    "char_range": serialize_char_range
-}
+    "char_range, range_chain": serialize_char_range,
+    "char_ranges": serialize_char_ranges,
+    "character": serialize_character,
+    "regexp": lambda s: ''.join(['/', s, '/']),
+    "procedure": lambda s: s + "()",
+    "placeholder": lambda s: "$" + s,
+    "hide": lambda s: "HIDE",
+    "drop": lambda s: "DROP",
+    "definition": serialize_definition,
+    "sequence": lambda *ts: ' '.join(ts),
+    "repetition": serialize_repetition,
+    "syntax": lambda *ts: '\n'.join(ts),
+    "term": lambda *ts: ts[0] + (' -> ' + ts[1] if len(ts) > 1 else ''),
+    "modifier": lambda *ts: ''.join(ts)
+})
 
 
 ########################################################################

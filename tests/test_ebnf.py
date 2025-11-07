@@ -40,11 +40,12 @@ from DHParser.error import has_errors, MANDATORY_CONTINUATION, PARSER_STOPPED_BE
     PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS, ERROR, WARNING, UNDEFINED_MACRO, \
     UNKNOWN_MACRO_ARGUMENT, UNUSED_MACRO_ARGUMENTS_WARNING, \
     ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING, SYMBOL_NAME_IS_PYTHON_KEYWORD
-from DHParser.nodetree import WHITESPACE_PTYPE, flatten_sxpr, parse_sxpr
+from DHParser.nodetree import WHITESPACE_PTYPE, flatten_sxpr, parse_sxpr, RootNode, Node, ANY_PATH, \
+    pp_path
 from DHParser.parse import Interleave
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
     EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS, \
-    WHITESPACE_TYPES
+    WHITESPACE_TYPES, parse_ebnf, transform_ebnf, EBNF_AST_Serialization_Table
 from DHParser.dsl import CompilationError, compileDSL, create_parser, grammar_provider
 from DHParser.testing import grammar_unit, clean_report, unique_name
 from DHParser.trace import set_tracer, trace_history
@@ -2927,6 +2928,25 @@ class TestOptimizations:
         tree = parser('hallo /* Kommentar */ ')
         assert not tree.errors
         assert tree.as_sxpr() == '(document (:Text "hallo") (comment__ " /* Kommentar */ "))'
+
+
+class TestSerialization:
+    def test_serialization_simple(self):
+        gr = r"""document = { paragraph }
+            paragraph = word { ws word }
+            HIDE:word = /\w+/
+            ws = / +/ -> DROP"""
+        cst = parse_ebnf(gr)
+        ast = transform_ebnf(cst)
+        ebnf = ast.evaluate(EBNF_AST_Serialization_Table)
+        assert ebnf == r"""document = { paragraph }
+paragraph = word { ws word }
+HIDE:word = /\w+/
+ws = / +/ -> DROP"""
+        cst2 = parse_ebnf(ebnf)
+        ast2 = transform_ebnf(cst2)
+        assert ast2.equals(ast)
+
 
 if __name__ == "__main__":
     from DHParser.testing import runner
