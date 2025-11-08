@@ -273,7 +273,8 @@ from DHParser.toolkit import load_if_file, wrap_str_literal, escape_ctrl_chars, 
 from DHParser.transform import TransformerFunc, transformer, remove_brackets, change_name, \
     reduce_single_child, replace_by_single_child, is_empty, remove_children, add_error, \
     remove_tokens, remove_anonymous_tokens, flatten, forbid, assert_content, remove_children_if, \
-    all_of, not_one_of, apply_if, neg, has_parent, BLOCK_LEAVES
+    all_of, not_one_of, apply_if, apply_unless, neg, has_parent, has_child, any_of, \
+    peek, BLOCK_LEAVES
 from DHParser.versionnumber import __version__
 
 
@@ -288,6 +289,8 @@ __all__ = ('DHPARSER_IMPORTS',
            'compile_ebnf_ast',
            'ConfigurableEBNFGrammar',
            'EBNFTransform',
+           'EBNF_AST_Serialization_Table',
+           'ebnf_from_ast',
            'EBNFCompilerError',
            'EBNFDirectives',
            'WHITESPACE_TYPES',
@@ -897,7 +900,7 @@ EBNF_AST_transformation_table = {
     "flowmarker, retrieveop":
         [reduce_single_child],
     "group":
-        [remove_brackets],  # don't replace by single child or interleave might break!
+        [remove_brackets], # don't replace by single child or interleave and terms annotated with ->drop might break!
     "oneormore, repetition, option":
         [reduce_single_child, remove_brackets,  # remove_tokens('?', '*', '+'),
          forbid('repetition', 'option', 'oneormore'), assert_content(r'(?!§)(?:.|\n)*')],
@@ -991,9 +994,9 @@ def serialize_definition(path: Path, *strings) -> str:
 
 EBNF_AST_Serialization_Table = expand_table({
     "symbol, literal, plaintext, free_char, any_char, flowmarker, :Text, " \
-    "RE_LEADIN, RE_LEADOUT, :MOD_SEP, whitspace, retrieveop, name":
+    "RE_LEADIN, RE_LEADOUT, :MOD_SEP, whitespace, retrieveop, name, multiplier":
         lambda p, s: s,
-    "range_desc": lambda p, *ts: ''.join(ts),
+    "range_desc, element": lambda p, *ts: ''.join(ts),
     "char_range, range_chain": lambda p, *ts: ''.join(['[', ''.join(ts), ']']),
     "char_ranges": lambda p, *ts: ''.join([ts[0], '|'.join(ts[1:-1]), ts[-1]]),
     "character": serialize_character,
@@ -1002,7 +1005,11 @@ EBNF_AST_Serialization_Table = expand_table({
     "placeholder": lambda p, s: "$" + s,
     "hide": lambda p, s: "HIDE",
     "drop": lambda p, s: "DROP",
-    # TODO: "directive"
+    "directive": lambda p, *ts: ' '.join(
+        ['@', ts[0], ' = ', ', '.join(
+            (s if c.name != 'expression' else f'({s})')
+            for s, c in zip(ts[1:], p[-1].children[1:]))]),
+    "literals": lambda p, *ts: '\n    '.join(ts),
     "definition": serialize_definition,
     "expression": lambda p, *ts: ' | '.join(ts),
     "sequence": lambda p, *ts: ' '.join((s if c.name != 'expression' else f'({s})')
@@ -1014,15 +1021,23 @@ EBNF_AST_Serialization_Table = expand_table({
         lambda p, *ts: ' '.join((s if c.name not in ('expression', 'sequence', "interleave")
                                  else f'({s})')
                                 for s, c in zip(ts, p[-1].children)),
-    "group": lambda p, s: s if len(p) < 2 or p[-2].name != 'interleave' else f'({s})',
+    "group": lambda p, s: f'({s})',
     "repetition": lambda p, s: ''.join(["{ ", s, ' }']),
     "oneormore": lambda p, s: ''.join(["{ ", s, ' }+']),
     "option": lambda p, s: ''.join(['[ ', s, ' ]']),
-    # TODO: "counted"
+    "counted": lambda p, *ts: (''.join(ts) if 'range' in p[-1] else '*'.join(ts)),
+    "range": lambda p, *ts: ''.join(['{', ts[0], ',', ts[1],'}']),
     "syntax": lambda p, *ts: '\n'.join(ts),
     "term": lambda p, *ts: ts[0] + (' -> ' + ts[1] if len(ts) > 1 else ''),
     "modifier": lambda p, *ts: ''.join(ts)
 })
+
+
+def ebnf_from_ast(EBNF_AST: Node):
+    try:
+        ebnf = ast.evaluate(EBNF_AST_Serialization_Table, path=[EBNF_AST])
+    except Exception as e:
+        raise ValueError("EBNF_AST does not seem to be a valid EBNF AST: " + str(e))
 
 
 ########################################################################

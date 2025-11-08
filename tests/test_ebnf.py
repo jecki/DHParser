@@ -2930,6 +2930,210 @@ class TestOptimizations:
         assert tree.as_sxpr() == '(document (:Text "hallo") (comment__ " /* Kommentar */ "))'
 
 
+FlexibleEBNF = r'''
+@ optimizations = all
+@ comment    = /(?!#x[A-Fa-f0-9])#.*(?:\n|$)|\/\*(?:.|\n)*?\*\/|\(\*(?:.|\n)*?\*\)/
+    # comments can be either C-Style: /* ... */
+    # or pascal/modula/oberon-style: (* ... *)
+    # or python-style: # ... \n, excluding, however, character markers: #x20
+@ whitespace = /\s*/                            # whitespace includes linefeed
+@ literalws  = right                            # trailing whitespace of literals will be ignored tacitly
+@ hide       = is_mdef, component, pure_elem, countable, no_range, FOLLOW_UP,
+               MOD_SYM, MOD_SEP, ANY_SUFFIX, EOF
+@ drop       = whitespace, MOD_SYM, EOF, no_range        # do not include these even in the concrete syntax tree
+@ RNG_BRACE_filter = matching_bracket()         # filter or transform content of RNG_BRACE on retrieve
+
+# re-entry-rules for resuming after parsing-error
+
+@ definition_resume = /\n\s*(?=@|\w+\w*\s*=)/
+@ directive_resume  = /\n\s*(?=@|\w+\w*\s*=)/
+
+# specialized error messages for certain cases
+
+@ definition_error  = /,/, 'Delimiter "," not expected in definition!\nEither this was meant to '
+                           'be a directive and the directive symbol @ is missing\nor the error is '
+                           'due to inconsistent use of the comma as a delimiter\nfor the elements '
+                           'of a sequence.'
+
+
+#: top-level
+
+syntax     = ~ { definition | directive | macrodef } EOF
+definition = [modifier] symbol §:DEF~ [ :OR~ ] expression [ MOD_SYM~ hide ]
+             :ENDL~ & FOLLOW_UP  # [:OR~] to support v. Rossum's syntax
+  modifier = (drop | [hide]) MOD_SEP   # node LF after modifier allowed!
+  is_def   = [ MOD_SEP symbol ] :DEF | MOD_SEP is_mdef
+  _is_def  = [ MOD_SEP symbol ] _DEF | MOD_SEP is_mdef
+  MOD_SEP  = / *: */
+
+directive  = "@" §symbol "=" component { "," component } & FOLLOW_UP
+  # component  = (regexp | literals | procedure | symbol !DEF)
+  component  = regexp | literals | procedure | symbol !_DEF !_is_def
+             | &`$` !is_mdef § placeholder !is_def
+             | "(" expression ")"  | RAISE_EXPR_WO_BRACKETS expression
+  literals   = { literal }+                       # string chaining, only allowed in directives!
+  procedure  = SYM_REGEX "()"                     # procedure name, only allowed in directives!
+
+macrodef   =  [modifier] "$" name~ ["(" §placeholder { "," placeholder }  ")"]
+             :DEF~ [ OR~ ] macrobody [ MOD_SYM~ hide ] :ENDL~ & FOLLOW_UP
+  macrobody  = expression
+  is_mdef    = "$" name ["(" placeholder { "," placeholder }  ")"] ~:DEF
+
+FOLLOW_UP  = `@` | `$` | modifier | symbol | EOF
+
+
+#: components
+
+expression = sequence { :OR~ sequence }
+sequence   = ["§"] ( interleave | lookaround )  # "§" means all following terms mandatory
+             { !`@` !(symbol :DEF) :AND~ ["§"] ( interleave | lookaround ) }
+interleave = difference { "°" ["§"] difference }
+lookaround = flowmarker § part
+difference = term [!`->` "-" § part]
+term       = (oneormore | counted | repetition | option | pure_elem) [ MOD_SYM~ drop ]
+part       = (oneormore | pure_elem) [ MOD_SYM~ drop ]
+
+
+#: tree-reduction-markers aka "AST-hints"
+
+drop       = "DROP" | "Drop" | "drop" | "SKIP" | "Skip" | "skip"
+hide       = "HIDE" | "Hide" | "hide" | "DISPOSE" | "Dispose" | "dispose"
+
+
+#: elements
+
+
+countable  = option | oneormore | element
+pure_elem  = element § !ANY_SUFFIX              # element strictly without a suffix
+element    = [retrieveop] symbol !is_def        # negative lookahead to be sure it's not a definition
+           | literal
+           | plaintext
+           | char_ranges
+           | regexp
+           | char_range
+           | character ~
+           | any_char
+           | whitespace
+           | group
+           | macro !is_def
+           | placeholder !is_def
+           | parser                             # a user-defined parser
+
+
+ANY_SUFFIX = /[?*+]/
+
+
+#: flow-operators
+
+flowmarker = "!"  | "&"                         # '!' negative lookahead, '&' positive lookahead
+           | "<-!" | "<-&"                      # '<-!' negative lookbehind, '<-&' positive lookbehind
+retrieveop = "::" | ":?" | ":"                  # '::' pop, ':?' optional pop, ':' retrieve
+
+
+#: groups
+
+group      = "(" no_range §expression ")"
+oneormore  = "{" no_range expression "}+" | element "+"
+repetition = "{" no_range §expression "}" | element "*" no_range
+option     = !char_range "[" §expression "]" | element "?"
+counted    = countable range | countable :TIMES~ multiplier | multiplier :TIMES~ §countable
+
+range      = RNG_BRACE~ multiplier [ :RNG_DELIM~ multiplier ] ::RNG_BRACE~
+no_range   = !multiplier | &multiplier :TIMES
+multiplier = /\d+/~
+
+
+#: leaf-elements
+
+parser     = "@" name "(" [argument] ")"        # a user defined parser
+  argument = literal | name~
+
+symbol     = SYM_REGEX ~                        # e.g. expression, term, parameter_list
+literal    = /"(?:(?<!\\)(?:\\\\)*\\"|[^"])*?"/~  # e.g. "(", '+', 'while'
+           | /'(?:(?<!\\)(?:\\\\)*\\'|[^'])*?'/~  # whitespace following literals will be ignored tacitly.
+           | /’(?:(?<!\\)(?:\\\\)*\\’|[^’])*?’/~
+plaintext  = /`(?:(?<!\\)(?:\\\\)*\\`|[^`])*?`/~  # like literal but does not eat whitespace
+           | /´(?:(?<!\\)(?:\\\\)*\\´|[^´])*?´/~
+regexp     = :RE_LEADIN RE_CORE :RE_LEADOUT ~   # e.g. /\w+/, ~/#.*(?:\n|$)/~
+# regexp     = /\/(?:(?<!\\)\\(?:\/)|[^\/])*?\//~     # e.g. /\w+/, ~/#.*(?:\n|$)/~
+
+char_range = `[` &char_range_heuristics [`^`] { range_desc }+ "]"
+char_ranges = RE_LEADIN range_chain { `|` range_chain } RE_LEADOUT ~
+  range_chain = `[` [`^`] { range_desc }+ `]`
+  range_desc = (character | free_char) [ [`-`] (character | free_char) ]
+
+character  = :CH_LEADIN HEXCODE
+free_char  = /[^\n\[\]\\]/ | /\\[nrtfv`´'"(){}\[\]\/\\]/
+any_char   = "."
+whitespace = /~/~                               # insignificant whitespace
+
+
+#: macros
+
+macro       = "$" name "(" no_range expression { "," no_range expression } ")"
+placeholder = "$" name !`(` ~
+
+name        = SYM_REGEX
+
+
+#: delimiters
+
+EOF = !/./ [:?ENDL] [:?DEF] [:?OR] [:?AND]      # [:?DEF], [:?OR], ... clear stack by eating stored value
+           [:?RNG_DELIM] [:?BRACE_SIGN] [:?CH_LEADIN] [:?TIMES] [:?RE_LEADIN] [:?RE_LEADOUT]
+
+DEF        = _DEF
+_DEF       = `=` | `:=` | `::=` | `<-` | /:\n/ | `: `  # with `: `, retrieve markers mustn't be followed by a blank!
+OR         = `|` | `/` !regex_heuristics
+AND        =  `,` | ``
+ENDL       = `;` | ``
+
+RNG_BRACE  = :BRACE_SIGN
+BRACE_SIGN = `{` | `(`
+RNG_DELIM  = `,`
+TIMES      = `*`
+
+RE_LEADIN  = `/` &regex_heuristics | `^/`
+RE_LEADOUT = `/`
+
+CH_LEADIN  = `0x` | `%x` | `U+` | `u+` | `#x` | `\x` | `\u` | `\U`
+
+MOD_SYM   = `->`
+
+#: heuristics
+
+char_range_heuristics  = ! ( /[\n]/ | more_than_one_blank
+                           | ~ literal_heuristics
+                           | ~ [`::`|`:?`|`:`] STRICT_SYM_REGEX /\s*\]/ )
+                         & ({ range_desc }+ `]`)
+  STRICT_SYM_REGEX     = /(?!\d)\w+/
+more_than_one_blank    = /[^ \]]*[ ][^ \]]*[ ]/
+literal_heuristics     = /~?\s*"(?:[\\]\]|[^\]]|[^\\]\[[^"]*)*"/
+                       | /~?\s*'(?:[\\]\]|[^\]]|[^\\]\[[^']*)*'/
+                       | /~?\s*`(?:[\\]\]|[^\]]|[^\\]\[[^`]*)*`/
+                       | /~?\s*´(?:[\\]\]|[^\]]|[^\\]\[[^´]*)*´/
+                       | /~?\s*\/(?:[\\]\]|[^\]]|[^\\]\[[^\/]*)*\//
+regex_heuristics       = ! ( / +`[^`]*` +\//
+                           | / +´[^´]*´ +\//
+                           | / +'[^']*' +\//
+                           | / +"[^"]*" +\//
+                           | / +\w+ +\// )
+                         ( /[^\/\n*?+\\]*[*?+\\][^\/\n]*\//
+                         | /[^\w]+\//
+                         | /[^ ]/ )
+
+#: basic-regexes
+
+RE_CORE    = /(?:(?<!\\)\\(?:\/)|[^\/])*/       # core of a regular expression, i.e. the dots in /.../
+SYM_REGEX  = /(?!\d)\w(?:-?\w)*/                # regular expression for symbols
+HEXCODE    = /(?:[A-Fa-f1-9]|0(?!x)){1,8}/
+
+
+#: error-markers
+
+RAISE_EXPR_WO_BRACKETS = ``
+'''
+
+
 class TestSerialization:
     def test_serialization_simple(self):
         gr = r"""document = { paragraph }
@@ -2947,6 +3151,47 @@ ws = / +/ -> DROP"""
         ast2 = transform_ebnf(cst2)
         assert ast2.equals(ast)
 
+    def test_counted(self):
+        gr = r'''documnt = x y z
+            x = "a"*3
+            y = 44*"b"
+            z = "cde"{4,21}
+        '''
+        cst = parse_ebnf(gr)
+        ast = transform_ebnf(cst)
+        ebnf = (ast.evaluate(EBNF_AST_Serialization_Table, path=[ast]))
+        ast2 = transform_ebnf(parse_ebnf(ebnf))
+        assert ast2.equals(ast)
+
+    def test_directives(self):
+        gr = r'''    @ comment    = /(?!#x[A-Fa-f0-9])#.*(?:\n|$)|\/\*(?:.|\n)*?\*\/|\(\*(?:.|\n)*?\*\)/
+            @ whitespace = /\s*/
+            @ literalws  = right
+            @ disposable = component, pure_elem, countable, FOLLOW_UP, SYM_REGEX, ANY_SUFFIX, EOF
+            @ drop       = whitespace, EOF
+            @ RNG_BRACE_filter = matching_bracket()
+            @ definition_resume = /\n\s*(?=@|\w+\w*\s*=)/
+            @ directive_resume  = /\n\s*(?=@|\w+\w*\s*=)/    
+            @ definition_error  = /,/, 'Delimiter "," not expected in definition!\nEither this was meant to '
+                                       'be a directive and the directive symbol @ is missing\nor the error is '
+                                       'due to inconsistent use of the comma as a delimiter\nfor the elements '
+                                       'of a sequence.'
+            syntax     = ~ { definition | directive } EOF
+            definition = "a" § "b"
+            directive = "c" § "d"'''
+        cst = parse_ebnf(gr)
+        ast = transform_ebnf(cst)
+        ebnf = ast.evaluate(EBNF_AST_Serialization_Table, path=[ast])
+        ast2 = transform_ebnf(parse_ebnf(ebnf))
+        assert ast2.equals(ast)
+
+    def test_ebnf(self):
+        cst = parse_ebnf(FlexibleEBNF)
+        ast = transform_ebnf(cst)
+        ebnf = ast.evaluate(EBNF_AST_Serialization_Table, path=[ast])
+        cst2 = parse_ebnf(ebnf)
+        ast2 = transform_ebnf(cst2)
+        assert ast2.equals(ast)
 
 if __name__ == "__main__":
     from DHParser.testing import runner
