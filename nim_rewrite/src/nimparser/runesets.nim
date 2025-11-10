@@ -91,23 +91,6 @@ func toRanges[T: Ordinal](s: set[T], RT: type): seq[(RT, RT)] =
     result.add((RT(a), RT(b)))
 
 
-# func toRanges[T: Ordinal](s: ref set[T], RT: type): seq[(RT, RT)] = toRanges(s[], RT)
-  # result = newSeq[RuneRange](0)
-  # if not isNil(s) and s[].len > 0:
-  #   var (a, b) = (T(0), T(0))
-  #   for i in s[]:
-  #     (a, b) = (i, i)
-  #     break
-  #   for i in s[]:
-  #     if i > b + 1:
-  #       result.add((RT(a), RT(b)))
-  #       (a, b) = (i, i)
-  #     else:
-  #       b = i
-  #   result.add((RT(a), RT(b)))
-
-
-
 func ranges*(rs: RuneSet): seq[RuneRange] =
   ## Returns the sequence of ranges that define the rune set.
   ## If the rune set was initialized with an empty sequence of ranges
@@ -424,31 +407,6 @@ func size*(R: seq[RuneRange]): uint32 =
   for rr in R:
     sum += size(rr)
   return sum
-
-
-# func inRuneRanges*(r: Rune, ranges: seq[RuneRange]): int32 =
-#   ## Binary search to find out if rune r falls within one of the sorted ranges
-#   ## Returns the index of the range or -1, if r does not fall into any range
-#   ## It is assumed that the ranges are sorted and do not overlap.
-#   let
-#     highest: int32 = ranges.len.int32 - 1'i32
-#   var
-#     a = 0'i32
-#     b = highest
-#     last_i = -1'i32
-#     i  = b div 2
-
-#   while i != last_i:
-#     if ranges[i].low <=% r:
-#       if r <=% ranges[i].high:
-#         return i
-#       else:
-#         a = min(i + 1, highest)
-#     else:
-#       b = max(i - 1, 0)
-#     last_i = i
-#     i = a + (b - a) div 2
-#   return -1
 
 
 ## RuneRange Combinators
