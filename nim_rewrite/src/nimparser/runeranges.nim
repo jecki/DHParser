@@ -123,6 +123,8 @@ func size*(R: seq[RuneRange]): uint32 =
   return sum
 
 
+# Rune Range algebraic operations
+
 func `+`*(A, B: seq[RuneRange]): seq[RuneRange] =
   result = newSeqOfCap[RuneRange](A.len + B.len)
   for r in A:  result.add(r)
@@ -130,7 +132,7 @@ func `+`*(A, B: seq[RuneRange]): seq[RuneRange] =
   sortAndMerge(result)
 
 
-proc `-`*(A, B: seq[RuneRange]): seq[RuneRange] =
+func `-`*(A, B: seq[RuneRange]): seq[RuneRange] =
   assert neverEmpty(A)
   assert neverEmpty(B)
   assert isSortedAndMerged(A)
@@ -180,13 +182,47 @@ proc `-`*(A, B: seq[RuneRange]): seq[RuneRange] =
   # assert isSortedAndMerged(result)
 
 
-proc `*`*(A, B: seq[RuneRange]): seq[RuneRange] = A - (A - B) - (B - A)
+func `*`*(A, B: seq[RuneRange]): seq[RuneRange] = A - (A - B) - (B - A)
 
+
+# Rune range algebraic operations with complement
+
+
+proc `+`*(Acompl, Bcompl: bool; A, B: seq[RuneRange]): (bool, seq[RuneRange]) =
+  let selector = (if Acompl: 2 else: 0) + (if Bcompl: 1 else: 0)
+  case selector:  # (A.negate, B.negate)
+    of 0b00:  # (false, false)
+      (false, A + B)
+    of 0b01:  # (false, true)
+      (true, B - A)
+    of 0b10:  # (true, false)
+      (true, A - B)
+    of 0b11:  # (true, true)
+      (true, A + B)
+    else:  
+      assert false
+      (false, @[])
+
+
+proc `-`*(Acompl, Bcompl: bool; A, B: seq[RuneRange]): (bool, seq[RuneRange]) = 
+  let selector = (if Acompl: 2 else: 0) + (if Bcompl: 1 else: 0)
+  case selector:  # (A.negate, B.negate)
+    of 0b00:  # (false, false)
+      (false, A - B)
+    of 0b01:  # (false, true)
+      (false, A * B)
+    of 0b10:  # (true, false)
+      (true, A + B)
+    of 0b11:  # (true, true)
+      (false, B - A)
+    else: 
+      assert false
+      (false, @[])
 
 
 # Rune Range parsers
 
-proc rr(rangesStr: string): seq[RuneRange] =
+func rrs(rangesStr: string): seq[RuneRange] =
   ## Parses "basic" rune ranges. The syntax for rangeStr is more or less the
   ## syntax you'd use inside rectangular brackets [ ] in regular expressions,
   ## only that the only allowed backslashed values are \s (whitespace)
