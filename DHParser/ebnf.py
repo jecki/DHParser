@@ -60,18 +60,20 @@ by a comment-block with a sections name:
    for the Python-parser code the compiler produces.
 
 The most notable difference to ordinary DHParser-projects is that
-the DHParser.ebnf-module contains two :py:class:`~parse.Grammar`-classes, one
-for parsing code that strictly follows DHParser's EBNF-syntax
-(:py:class:`ConfigurableEBNFGrammar`) and another one that is able to
-parse many different brands of EBNF-syntax
+DHParser offers two :py:class:`~parse.Grammar`-classes, one
+for parsing code that strictly follows DHParser's EBNF syntax
+(:py:class:`ConfigurableEBNFGrammar`) allowing only the delimiter signs
+(e.g. "=", "|" etc.) to be configured beforehand and
+another one that is able to parse many different brands of EBNF syntax
 (:py:class:`DHParser.ebnf_flavors.heuristic.HeuristicEBNFGrammar`)
-at the cost of parsing speed. When parsing or compiling an EBNF-grammar with
-any of the high-level functions into Python-code, the faster "configurable"
-EBNF-grammar is tried first, and, if that fails with particular errors which
+at the cost of parsing speed. When parsing or compiling an EBNF grammar with
+the very high-level functions from module :py:mod:`DHParser.dsl`
+into Python code, the faster "configurable"
+EBNF-grammar is tried first and, if that fails, with particular errors which
 suggest that the failure might be merely due to the use of a different brand
-of EBNF, a second attempt is made with the slower heuristic EBNF-parser.
+of EBNF, a second attempt is made with the slower heuristic EBNF parser.
 
-The EBNF-compiler is actually split into two classes, :py:class:`EBNFCompiler`,
+The EBNF compiler is actually split into two classes, :py:class:`EBNFCompiler`,
 which contains the EBNF-AST -> Python compiler proper, and
 :py:class:`EBNFDirectives` which is a helper class to keep track of the
 directives used to avoid overburdening the compiler-class with instance
@@ -81,7 +83,7 @@ Just as DHParser's (auto-)generated parser-scripts, the classes contained in
 :py:mod:`DHParser.ebnf` should not be instantiated directly. Other than
 the parser scripts, though, the ebnf-module does not provide Junctions
 with factory-functions for each stage from preprocessing to compiling.
-Instead it provides factory-functions that return one singleton instance
+Instead, it provides factory-functions that return one singleton instance
 per thread of each class, namely:
 
 * :py:func:`~ebnf.get_ebnf_parser`
@@ -97,7 +99,7 @@ These are supplemented by the quick-use-functions:
 
 The following example shows how the classes and functions of the
 ebnf-module can be connected to produce runnable Python-code from
-an EBNF-grammar. It is meant as a help to understand the role of
+an EBNF grammar. It is meant as a help to understand the role of
 these classes better as well as - in a simplified manner - the
 basic working mechanisms of higher level functions like
 :py:func:`DHParser.dsl.create_parser`. In any practical application,
@@ -247,7 +249,7 @@ except ImportError:
 
 from DHParser.compile import CompilerError, Compiler, CompilationResult, compile_source
 from DHParser.configuration import access_thread_locals, get_config_value, \
-    NEVER_MATCH_PATTERN, ALLOWED_PRESET_VALUES
+    set_config_value, NEVER_MATCH_PATTERN, ALLOWED_PRESET_VALUES
 from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_TOKEN_WARNING,\
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, NOTICE, \
     DIRECTIVE_FOR_NONEXISTANT_SYMBOL, UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING, \
@@ -323,7 +325,7 @@ get_ebnf_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory)
 
 
 def preprocess_ebnf(ebnf: str, source_name="source") -> PreprocessorResult:
-    r"""Preprocesses the @include-directives of an EBNF-source."""
+    r"""Preprocesses the @include-directives of an EBNF source."""
     return get_ebnf_preprocessor()(ebnf, source_name)
 
 
@@ -718,16 +720,23 @@ def get_ebnf_grammar() -> Grammar:
         update_scanner(grammar, get_config_value('delimiter_set'))
     grammar.mode__ = mode
     # We assume our EBNF-Grammars are well tested and never need the following
-    # which would only slow compiling EBNF-code down.
+    # which would only slow compiling EBNF code down.
     grammar.history_tracking__ = False
     grammar.resume_notices__ = False
     return grammar
 
 
-def parse_ebnf(ebnf: str) -> Node:
+def parse_ebnf(ebnf: str, syntax_variant: str = 'dhparser') -> RootNode:
     """Parses and EBNF-source-text and returns the concrete syntax tree
-    of the EBNF-code."""
-    return get_ebnf_grammar()(ebnf)
+    of the EBNF code."""
+    configured_syntax_variant = get_config_value('syntax_variant')
+    if syntax_variant != configured_syntax_variant:
+        set_config_value('syntax_variant', syntax_variant)
+        root = get_ebnf_grammar()(ebnf)
+        set_config_value('syntax_variant', configured_syntax_variant)
+    else:
+        root = get_ebnf_grammar()(ebnf)
+    return root
 
 
 ########################################################################
@@ -1033,11 +1042,48 @@ EBNF_AST_Serialization_Table = expand_table({
 })
 
 
-def ebnf_from_ast(EBNF_AST: Node):
+def ebnf_from_ast(ebnf_AST: Node, syntax: str = "DHParser") -> str:
+    """
+    Generates EBNF-code from the abstract syntax tree of an EBNF-grammar.
+
+    The syntax used is the DHParser standard syntax as described in the
+    `DHParser-documentation <https://dhparser.readthedocs.io/en/latest/Reference.html>`_
+    per default. Alternatively, the syntax of the ISO standard for EBNF
+    can be selected by setting the `syntax` parameter to "ISO".
+
+    Presently, there is no structural definition of the EBNF-AST. Rather,
+    it is implicitly defined by the EBNF-parser and EBNF-AST-transformer
+    in this module.
+
+    EXPERIMENTAL!!!
+
+    Parameters:
+        ebnf_AST (Node): The root node of the EBNF Abstract Syntax Tree to be
+            converted into EBNF notation.
+        syntax (str): The syntax-variant to be used for the EBNF-code, must be
+            either "DHParser" (default) or "ISO"
+
+    Raises:
+        ValueError: Raised if the input EBNF AST is determined invalid or if an
+            error occurs during the evaluation process.
+
+    Returns:
+        str: A string representation of the EBNF notation derived from the AST.
+    """
+    assert syntax in ("DHParser", "ISO")
     try:
-        ebnf = ast.evaluate(EBNF_AST_Serialization_Table, path=[EBNF_AST])
+        ebnf = ebnf_AST.evaluate(EBNF_AST_Serialization_Table, path=[ebnf_AST])
     except Exception as e:
         raise ValueError("EBNF_AST does not seem to be a valid EBNF AST: " + str(e))
+    if syntax == "ISO":
+        lines = ebnf.splitlines()
+        for n in range(len(lines)):
+            i = lines[n].find(' = ')
+            if i > 0 and lines[n].lstrip()[0:1] != "@":
+                lines[n] = ''.join([lines[n][:i], " ::= ", lines[n][i+3:], ';'])
+        ebnf = '\n'.join(lines)
+    return ebnf
+
 
 
 ########################################################################
@@ -1390,8 +1436,9 @@ def neutralize_unnamed_groups(rxp: str) -> str:
 
 
 class EBNFCompilerError(CompilerError):
-    r"""Error raised by :py:class:`EBNFCompiler` class. (Not compilation errors
-    in the strict sense, see :py:class:`~dsl.CompilationError` in module :py:mod:`~dsl`)"""
+    r"""the Error that is raised by :py:class:`EBNFCompiler` class.
+    (Not compilation errors in the strict sense,
+    see :py:class:`~dsl.CompilationError` in module :py:mod:`~dsl`)"""
     pass
 
 
@@ -1404,22 +1451,22 @@ class EBNFCompiler(Compiler):
     class be called directly. Rather high-level functions like
     :py:func:`~dsl.create_parser` or :py:func:`~dsl.compileEBNF`
     will be used to generate callable :py:class:`~parse.Grammar`-objects
-    or Python-source-code from an EBNF-grammar.
+    or Python-source-code from an EBNF grammar.
 
     Instances of this class must be called with the root-node of the
-    abstract syntax tree from an EBNF-specification of a formal language.
+    abstract syntax tree from an EBNF specification of a formal language.
     The returned value is the Python-source-code of a Grammar class for
     this language that can be used to parse texts in this language.
     See classes :py:class:`compile.Compiler` and :py:class:`parser.Grammar`
     for more information.
 
     Additionally, class EBNFCompiler provides helper methods to generate
-    code-skeletons for a preprocessor, AST-transformation and full
+    code-skeletons for a preprocessor, AST transformation and full
     compilation of the formal language. These method's names start with
     the prefix ``gen_``.
 
     :ivar current_symbols:  During compilation, a list containing the root
-            node of the currently compiled definition as first element
+            node of the currently compiled definition as the first element
             and then the nodes of the symbols that are referred to in
             the currently compiled definition.
 
@@ -1518,7 +1565,7 @@ class EBNFCompiler(Compiler):
             regular expressions found in the current parsing process
 
     :ivar python_src:  A string that contains the python source code that was
-            the outcome of the last EBNF-compilation.
+            the outcome of the last EBNF compilation.
 
     :ivar grammar_name:  The name of the grammar to be compiled
 

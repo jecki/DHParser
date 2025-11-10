@@ -97,7 +97,7 @@ class HeuristicEBNFGrammar(Grammar):
         - replace the regex_heuristics by an always matching parser
 
     Ambiguities can also be avoided by NOT using all the syntactic variants
-    made possible by this EBNF-grammar within one and the same EBNF-document.
+    made possible by this EBNF grammar within one and the same EBNF document.
 
     EBNF-definition of the Grammar::
 
@@ -522,27 +522,3 @@ class HeuristicEBNFGrammar(Grammar):
         else:
             raise ValueError('Mode must be one of: ' + ', '.join(
                 ALLOWED_PRESET_VALUES['syntax_variant']))
-
-
-#######################################################################
-#
-# AST SECTION - Can be edited. Changes will be preserved.
-#
-#######################################################################
-
-
-
-#######################################################################
-#
-# COMPILER SECTION - Can be edited. Changes will be preserved.
-#
-#######################################################################
-
-
-
-#######################################################################
-#
-# END OF DHPARSER-SECTIONS
-#
-#######################################################################
-

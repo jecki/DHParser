@@ -174,14 +174,15 @@ Or, in the more recent parsing expression grammar (PEG)-style::
 
 Mind that in PEG-style it can be difficult to avoid ambiguities when using
 regular expressions to define the atomic-expressions. This can lead to unexpected
-parser-errors. Therefore it is better to use the `|`-sign for denoting alternatives,
-rather than a slash `/`. The meaning is in any case the same, namely, that of
+parser-errors. Therefore it is better to use the vertical bar "|" for denoting alternatives,
+rather than a slash "/". The meaning is in any case the same, namely, that of
 PEG-grammars where the first alternative that matches is used rather than checking
 all alternatives (as Earley-parsers would do).
 
 Note that despite of being based on parsing expression grammars DHParser fully
 supports direct and indirect left recursion in the grammar-definition. In order
-to avoid endless-loops it employs the seed-and grow-algorithm.
+to avoid endless-loops it employs the `seed and grow algorithm`_ as described
+by van Rossum in his Blog-entry on `left-recursive PEG Grammars`_.
 
 
 .. _directives_reference:
@@ -548,3 +549,5 @@ Module ``versionnumber``
 .. _EBNF: https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form
 .. _`visitor pattern`: https://en.wikipedia.org/wiki/Visitor_pattern
 .. _pypy: https://www.pypy.org/
+.. _`seed and grow algorithm`: https://tinlizzie.org/VPRIPapers/tr2007002_packrat.pdf
+.. _`left-recursive PEG Grammars`: https://medium.com/@gvanrossum_83706/left-recursive-peg-grammars-65dab3c580e1

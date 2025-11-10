@@ -45,7 +45,8 @@ from DHParser.nodetree import WHITESPACE_PTYPE, flatten_sxpr, parse_sxpr, RootNo
 from DHParser.parse import Interleave
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
     EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS, \
-    WHITESPACE_TYPES, parse_ebnf, transform_ebnf, EBNF_AST_Serialization_Table
+    WHITESPACE_TYPES, parse_ebnf, transform_ebnf, EBNF_AST_Serialization_Table, \
+    ebnf_from_ast
 from DHParser.dsl import CompilationError, compileDSL, create_parser, grammar_provider
 from DHParser.testing import grammar_unit, clean_report, unique_name
 from DHParser.trace import set_tracer, trace_history
@@ -3192,6 +3193,13 @@ ws = / +/ -> DROP"""
         cst2 = parse_ebnf(ebnf)
         ast2 = transform_ebnf(cst2)
         assert ast2.equals(ast)
+        iso_ebnf = ebnf_from_ast(ast2, 'ISO')
+        print(iso_ebnf)
+        cst3 = parse_ebnf(iso_ebnf, "classic")
+        for e in cst3.errors_sorted:  print(e)
+        # ast3 = transform_ebnf(cst3)
+        # print(ast3.as_sxpr())
+        # assert ast3.equals(ast2)
 
 if __name__ == "__main__":
     from DHParser.testing import runner

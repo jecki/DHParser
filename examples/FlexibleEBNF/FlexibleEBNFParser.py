@@ -108,8 +108,8 @@ class FlexibleEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "a4731f8f7ef7c4eda5c9578d6e60d551"
-    disposable__ = re.compile('(?:is_mdef$|EOF$|MOD_SYM$|ANY_SUFFIX$|no_range$|FOLLOW_UP$|MOD_SEP$|countable$|component$|pure_elem$)')
+    source_hash__ = "433784c0e936c85668b687e20d1c1e92"
+    disposable__ = re.compile('(?:ANY_SUFFIX$|component$|FOLLOW_UP$|pure_elem$|EOF$|MOD_SEP$|countable$|MOD_SYM$|is_mdef$|no_range$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
@@ -181,7 +181,7 @@ class FlexibleEBNFGrammar(Grammar):
     lookaround = Series(flowmarker, part, mandatory=1)
     interleave = Series(difference, ZeroOrMore(Series(Series(Text("°"), dwsp__), Option(Series(Text("§"), dwsp__)), difference)))
     sequence = Series(Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(Series(NegativeLookahead(Text("@")), NegativeLookahead(Series(symbol, Retrieve(DEF))), Retrieve(AND), dwsp__, Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround))))
-    modifier = Series(Alternative(drop, Option(hide)), MOD_SEP)
+    modifier = Series(Alternative(drop, Option(hide)), NegativeLookahead(Retrieve(DEF)), MOD_SEP)
     FOLLOW_UP = Alternative(Text("@"), Text("$"), modifier, symbol, EOF)
     is_def = Alternative(Series(Option(Series(MOD_SEP, symbol)), Retrieve(DEF)), Series(MOD_SEP, is_mdef))
     macrobody = Synonym(expression)
