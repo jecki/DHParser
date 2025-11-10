@@ -90,8 +90,7 @@ func neverEmpty*(rr: seq[RuneRange]): bool =
 proc sortAndMerge*(R: var seq[RuneRange]) =
   ## Sorts the sequence of ranges and merges overlapping regions
   ## in place so that the ranges are in ascending order,
-  ## non-overlapping and non-adjacent. The sequence can be shortened
-  ## in the process.
+  ## non-overlapping and non-adjacent. 
   assert neverEmpty(R)
   R.sort(proc (a, b: RuneRange): int =
            if a.low <% b.low: -1 else: 1)
@@ -185,7 +184,7 @@ func `-`*(A, B: seq[RuneRange]): seq[RuneRange] =
 func `*`*(A, B: seq[RuneRange]): seq[RuneRange] = A - (A - B) - (B - A)
 
 
-# Rune range algebraic operations with complement
+# Rune range algebraic operations with complement ranges
 
 
 proc `+`*(Acompl, Bcompl: bool; A, B: seq[RuneRange]): (bool, seq[RuneRange]) =
