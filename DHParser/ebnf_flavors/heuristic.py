@@ -130,7 +130,7 @@ class HeuristicEBNFGrammar(Grammar):
         syntax     = ~ { definition | directive | macrodef } EOF
         definition = [modifier] symbol §:DEF~ [ :OR~ ] expression [ MOD_SYM~ hide ]
                      :ENDL~ & FOLLOW_UP  # [:OR~] to support v. Rossum's syntax
-          modifier = (drop | [hide]) MOD_SEP   # node LF after modifier allowed!
+          modifier = (drop | [hide]) !:DEF MOD_SEP   # node LF after modifier allowed!
           is_def   = [ MOD_SEP symbol ] :DEF | MOD_SEP is_mdef
           _is_def  = [ MOD_SEP symbol ] _DEF | MOD_SEP is_mdef
           MOD_SEP  = / *: */
@@ -303,9 +303,9 @@ class HeuristicEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "f28102ebed9fa2a532524a8a7fc322a7"
+    source_hash__ = "433784c0e936c85668b687e20d1c1e92"
     disposable__ = re.compile(
-        '(?:MOD_SEP$|ANY_SUFFIX$|no_range$|component$|EOF$|pure_elem$|countable$|MOD_SYM$|is_mdef$|FOLLOW_UP$)')
+        '(?:ANY_SUFFIX$|component$|FOLLOW_UP$|pure_elem$|EOF$|MOD_SEP$|countable$|MOD_SYM$|is_mdef$|no_range$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','),
@@ -426,7 +426,7 @@ class HeuristicEBNFGrammar(Grammar):
     sequence = Series(Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(
         Series(NegativeLookahead(Text("@")), NegativeLookahead(Series(symbol, Retrieve(DEF))), Retrieve(AND), dwsp__,
                Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround))))
-    modifier = Series(Alternative(drop, Option(hide)), MOD_SEP)
+    modifier = Series(Alternative(drop, Option(hide)), NegativeLookahead(Retrieve(DEF)), MOD_SEP)
     FOLLOW_UP = Alternative(Text("@"), Text("$"), modifier, symbol, EOF)
     is_def = Alternative(Series(Option(Series(MOD_SEP, symbol)), Retrieve(DEF)), Series(MOD_SEP, is_mdef))
     macrobody = Synonym(expression)

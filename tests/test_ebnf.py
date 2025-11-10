@@ -3194,12 +3194,10 @@ ws = / +/ -> DROP"""
         ast2 = transform_ebnf(cst2)
         assert ast2.equals(ast)
         iso_ebnf = ebnf_from_ast(ast2, 'ISO')
-        print(iso_ebnf)
         cst3 = parse_ebnf(iso_ebnf, "classic")
-        for e in cst3.errors_sorted:  print(e)
-        # ast3 = transform_ebnf(cst3)
-        # print(ast3.as_sxpr())
-        # assert ast3.equals(ast2)
+        assert not cst3.errors
+        ast3 = transform_ebnf(cst3)
+        assert ast3.equals(ast2)
 
 if __name__ == "__main__":
     from DHParser.testing import runner

@@ -78,16 +78,16 @@ def get_preprocessor() -> PreprocessorFunc:
 class FixedEBNFGrammar(Grammar):
     r"""Parser for a FixedEBNF document.
 
-    Instantiate this class and then call the instance with the
-    source code as argument in order to use the parser, e.g.:
+    Instantiate this class and then call the instance with the source
+    code as the single argument in order to use the parser, e.g.:
         parser = FixedEBNF()
         syntax_tree = parser(source_code)
     """
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "52c6eaae81e0b61cca9d0f7cb5b4b105"
-    disposable__ = re.compile('(?:no_range$|EOF$|pure_elem$|countable$|FOLLOW_UP$|MOD_SEP$|component$|is_mdef$|ANY_SUFFIX$|MOD_SYM$)')
+    source_hash__ = "67b5b3d311a9afa33ce94010274c9fec"
+    disposable__ = re.compile('(?:no_range$|pure_elem$|MOD_SEP$|EOF$|countable$|MOD_SYM$|FOLLOW_UP$|is_mdef$|ANY_SUFFIX$|component$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
@@ -121,7 +121,7 @@ class FixedEBNFGrammar(Grammar):
     any_char = Series(Text("."), dwsp__)
     free_char = SmartRE(f'([^\\n\\[\\]\\\\]|\\\\[nrtfv`´\'"(){{}}\\[\\]/\\\\])', '/[^\\n\\[\\]\\\\]/|/\\\\[nrtfv`´\'"(){}\\[\\]\\/\\\\]/')
     character = Series(Alternative(CH_LEADIN, Text("%x"), Text("U+"), Text("u+"), Text("\\x"), Text("\\u"), Text("\\U")), HEXCODE)
-    range_desc = Series(Alternative(character, free_char), Option(Series(Text("-"), Alternative(character, free_char))))
+    range_desc = Series(Alternative(character, free_char), Option(Series(Option(Text("-")), Alternative(character, free_char))))
     range_chain = Series(Text("["), Option(Text("^")), OneOrMore(range_desc), Text("]"))
     char_ranges = Series(RE_LEADIN, range_chain, ZeroOrMore(Series(Text("|"), range_chain)), RE_LEADOUT, dwsp__)
     restricted_range_desc = Series(character, Option(Series(Text("-"), character)))

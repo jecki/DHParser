@@ -144,8 +144,8 @@ from a grammar, step by step::
     class ArithmeticGrammar(Grammar):
         r"""Parser for an Arithmetic document.
     <BLANKLINE>
-        Instantiate this class and then call the instance with the
-        source code as argument in order to use the parser, e.g.:
+        Instantiate this class and then call the instance with the source
+        code as the single argument in order to use the parser, e.g.:
             parser = Arithmetic()
             syntax_tree = parser(source_code)
         """
@@ -377,7 +377,7 @@ class ConfigurableEBNFGrammar(Grammar):
         syntax     = ~ { definition | directive | macrodef } EOF
         definition = [modifier] symbol §DEF~ [ OR~ ] expression [MOD_SYM~ hide]
                      ENDL~ &FOLLOW_UP  # [OR~] to support v. Rossum's syntax
-          modifier = (drop | [hide]) MOD_SEP   # node LF after modifier allowed!
+          modifier = (drop | [hide]) !DEF MOD_SEP   # node LF after modifier allowed!
           is_def   = [MOD_SEP symbol] DEF | MOD_SEP is_mdef
           MOD_SEP  = / *: */
 
@@ -471,7 +471,7 @@ class ConfigurableEBNFGrammar(Grammar):
           restricted_range_desc = character [ `-` character ]
         char_ranges = RE_LEADIN range_chain { `|` range_chain } RE_LEADOUT ~
           range_chain = `[` [`^`] { range_desc }+ `]`
-          range_desc = (character | free_char) [ `-` (character | free_char) ]
+          range_desc = (character | free_char) [ [`-`] (character | free_char) ]
 
         character  = (CH_LEADIN | `\x` | `\u` | `\U`) HEXCODE
         free_char  = /[^\n\[\]\\]/ | /\\[nrtfv`´'"(){}\[\]\/\\]/
@@ -522,15 +522,15 @@ class ConfigurableEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "ce3d1cc534e8f0e1da4c557ee8ae87cd"
+    source_hash__ = "67b5b3d311a9afa33ce94010274c9fec"
     disposable__ = re.compile(
-        '(?:countable$|MOD_SYM$|FOLLOW_UP$|no_range$|ANY_SUFFIX$|EOF$|MOD_SEP$|pure_elem$|is_mdef$|component$)')
+        '(?:no_range$|pure_elem$|MOD_SEP$|EOF$|countable$|MOD_SYM$|FOLLOW_UP$|is_mdef$|ANY_SUFFIX$|component$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','),
                                         'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
     COMMENT__ = r'(?!#x[A-Fa-f0-9])#.*(?:\n|$)|/\*(?:.|\n)*?\*/|\(\*(?:.|\n)*?\*\)'
-    comment_rx__ = LazyRE(COMMENT__)
+    comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
@@ -561,7 +561,8 @@ class ConfigurableEBNFGrammar(Grammar):
                         '/[^\\n\\[\\]\\\\]/|/\\\\[nrtfv`´\'"(){}\\[\\]\\/\\\\]/')
     character = Series(
         Alternative(CH_LEADIN, Text("%x"), Text("U+"), Text("u+"), Text("\\x"), Text("\\u"), Text("\\U")), HEXCODE)
-    range_desc = Series(Alternative(character, free_char), Option(Series(Text("-"), Alternative(character, free_char))))
+    range_desc = Series(Alternative(character, free_char),
+                        Option(Series(Option(Text("-")), Alternative(character, free_char))))
     range_chain = Series(Text("["), Option(Text("^")), OneOrMore(range_desc), Text("]"))
     char_ranges = Series(RE_LEADIN, range_chain, ZeroOrMore(Series(Text("|"), range_chain)), RE_LEADOUT, dwsp__)
     restricted_range_desc = Series(character, Option(Series(Text("-"), character)))
@@ -618,7 +619,7 @@ class ConfigurableEBNFGrammar(Grammar):
                         ZeroOrMore(Series(Series(Text("°"), dwsp__), Option(Series(Text("§"), dwsp__)), difference)))
     sequence = Series(Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(
         Series(AND, dwsp__, Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround))))
-    modifier = Series(Alternative(drop, Option(hide)), MOD_SEP)
+    modifier = Series(Alternative(drop, Option(hide)), NegativeLookahead(DEF), MOD_SEP)
     FOLLOW_UP = Alternative(Text("@"), Text("$"), modifier, symbol, EOF)
     is_def = Alternative(Series(Option(Series(MOD_SEP, symbol)), DEF), Series(MOD_SEP, is_mdef))
     macrobody = Synonym(expression)
@@ -644,8 +645,8 @@ class ConfigurableEBNFGrammar(Grammar):
     countable.set(Alternative(option, oneormore, element))
     expression.set(Series(sequence, ZeroOrMore(Series(OR, dwsp__, sequence))))
     syntax = Series(dwsp__, ZeroOrMore(Alternative(definition, directive, macrodef)), EOF)
-    resume_rules__ = {'definition': [LazyRE(r'\n\s*(?=@|\w+\w*\s*=)')],
-                      'directive': [LazyRE(r'\n\s*(?=@|\w+\w*\s*=)')]}
+    resume_rules__ = {'definition': [re.compile(r'\n\s*(?=@|\w+\w*\s*=)')],
+                      'directive': [re.compile(r'\n\s*(?=@|\w+\w*\s*=)')]}
     root__ = syntax
 
     def __init__(self, root: Optional[Parser] = None, static_analysis: Optional[bool] = None) -> None:
@@ -2126,8 +2127,8 @@ class EBNFCompiler(Compiler):
         declarations = ['class ' + self.grammar_name
                         + 'Grammar(Grammar):',
                         'r"""Parser for ' + article + self.grammar_name + ' document.\n\n'
-                        + '    Instantiate this class and then call the instance with the\n'
-                        + '    source code as argument in order to use the parser, e.g.:\n'
+                        + '    Instantiate this class and then call the instance with the source\n'
+                        + '    code as the single argument in order to use the parser, e.g.:\n'
                         + f'        parser = {self.grammar_name}()\n'
                         + f'        syntax_tree = parser(source_code)'
                         + ('\n\n    Grammar:' if self.grammar_source and show_source else '')]
