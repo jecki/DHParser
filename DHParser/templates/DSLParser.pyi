@@ -50,7 +50,7 @@ serializations = expand_table(dict([('*', [get_config_value('default_serializati
 #######################################################################
 
 def pipeline(source: str,
-             target: str = "{NAME}",
+             target: Union[str, Set[str]] = "{NAME}",
              start_parser: str = "root_parser__",
              *, cancel_query: Optional[CancelQuery] = None) -> PipelineResult:
     """Runs the source code through the processing pipeline. If
@@ -59,7 +59,10 @@ def pipeline(source: str,
     explanation of the other parameters.
     """
     global targets
-    target_set = set([target]) if target else targets
+    if target:
+        target_set = set([target]) if isinstance(target, str) else target
+    else:
+        target_set = targets
     return full_pipeline(
         source, preprocessing.factory, parsing.factory, junctions, target_set,
         start_parser, cancel_query = cancel_query)

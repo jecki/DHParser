@@ -55,6 +55,7 @@ from DHParser.transform import TransformerFunc, TransformerFactory, transformer,
 __all__ = ('Junction',
            'PipelineResult',
            'end_points',
+           'connection',
            'extract_data',
            'run_pipeline',
            'full_pipeline',
@@ -84,13 +85,36 @@ PipelineResult = Dict[str, Tuple[Union[RootNode, Any], List[Error]]]
 def end_points(junctions: Iterable[Junction]) -> Set[str]:
     """Returns all "final" destination stages, i.e. destinations
     that are not a source of another junction."""
-    sources = { j.src for j in junctions }
+    try:
+        sources = { j.src for j in junctions }
+    except AttributeError:
+        # accept old-style tripples as well
+        junctions = [Junction(*t) for t in junctions]
+        sources = { j.src for j in junctions }
     return {j.dst for j in junctions if j.dst not in sources}
+
+
+def connection(junctions: Iterable[Junction], target: str, origin: str = "CST") -> List[Junction]:
+    """Returns the junctions that connect the target with its origin.
+    In case there is no such connection, a value error will be raised."""
+    result = []
+    junctions = set(junctions)
+    while target != origin:
+        for j in junctions:
+            if j.dst == target:
+                result.append(j)
+                target = j.src
+                break
+        else:
+            raise ValueError(f'No connection from {origin} to {target}!')
+        junctions.remove(j)
+    result.reverse()
+    return result
 
 
 def extract_data(tree_or_data: Union[RootNode, Node, Any]) -> Any:
     """Retrieves the data from the given tree or just passes the data through
-    if argument ``tree_or_data`` is not of type RootNode."""
+    if the argument ``tree_or_data`` is not of type RootNode."""
     if isinstance(tree_or_data, RootNode):
         return tree_or_data.data
     return tree_or_data

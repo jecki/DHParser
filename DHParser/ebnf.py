@@ -173,7 +173,7 @@ from a grammar, step by step::
         root__ = expression
     <BLANKLINE>
     parsing: PseudoJunction = create_parser_junction(ArithmeticGrammar)
-    get_grammar = parsing.factory # for backwards compatibility, only
+    get_grammar = parsing.factory  # for backwards compatibility, only
     <BLANKLINE>
 
     >>> # 2. Execution of the Python-source and extraction of the Grammar-class
@@ -1199,7 +1199,7 @@ def parse_word(s: StringView) -> Optional[Node]:
 
 GRAMMAR_FACTORY = r'''
 parsing: PseudoJunction = create_parser_junction({NAME}Grammar)
-get_grammar = parsing.factory # for backwards compatibility, only
+get_grammar = parsing.factory  # for backwards compatibility, only
 
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
@@ -1231,6 +1231,7 @@ def {NAME}Transformer() -> TransformerFunc:
 
 ASTTransformation: Junction = Junction(
     'CST', ThreadLocalSingletonFactory({NAME}Transformer), 'AST')
+get_transformer = ASTTransformation.factory  # for backwards compatibility, only
 '''
 
 
@@ -1238,6 +1239,7 @@ COMPILER_FACTORY = '''
 
 compiling: Junction = create_junction(
     {NAME}Compiler, "AST", "{NAME}")
+get_compiler = compiling.factory  # for backwards compatibility, only
 '''
 
 

@@ -7,7 +7,7 @@ from functools import partial
 import os
 import re
 import threading
-from typing import cast, Tuple
+from typing import cast, Tuple, Set
 
 import tkinter as tk
 import webbrowser
@@ -32,7 +32,7 @@ from DHParser.configuration import read_local_config, get_config_values, \
     get_config_value, dump_config_data
 from DHParser.error import Error, ERROR, PARSER_STOPPED_BEFORE_END_WARNING
 from DHParser.nodetree import Node, EMPTY_NODE
-from DHParser.pipeline import PipelineResult
+from DHParser.pipeline import PipelineResult, connection
 from DHParser.testing import merge_test_units
 from DHParser.toolkit import MultiCoreManager
 
@@ -92,13 +92,16 @@ class TextLineNumbers(tk.Canvas):
                 i = self.text_widget.index(f"{i}+1line")
 
 
+ALL_TARGETS_SPECIAL = "[all targets]"
+
+
 class DSLApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.withdraw()
         self.title('DSL App')
         self.minsize(920, 680)
-        self.geometry("980x880")
+        self.geometry("1040x880")
         self.option_add('*tearOff', False)
 
         self.protocol("WM_DELETE_WINDOW", self.on_close)
@@ -129,6 +132,7 @@ class DSLApp(tk.Tk):
 
         self.targets = [j.dst for j in DSLParser.junctions]
         self.targets.sort(key=lambda s: s in DSLParser.targets)
+        if len(self.targets) > 1:  self.targets.append(ALL_TARGETS_SPECIAL)
         self.compilation_target = list(DSLParser.targets)[0]
         self.target_name = tk.StringVar(value=self.compilation_target)
         self.target_format = tk.StringVar(
@@ -498,8 +502,17 @@ class DSLApp(tk.Tk):
         self.source.tag_add(typ, f'{line}.{col}', f'{line}.{col + 1}')
 
     def compile_single_unit(self, source, target, parser):
+        if target == ALL_TARGETS_SPECIAL:
+            path = DSLParser.junctions
+        else:
+            path = connection(DSLParser.junctions, target, "CST")
+        target_set: Set[str] = set(j.src for j in path)
+        if target == ALL_TARGETS_SPECIAL:
+            for j in path:  target_set.add(j.dst)
+        else:
+            target_set.add(target)
         results = DSLParser.pipeline(
-            source, target, parser, cancel_query=self.cancel_event.is_set)
+            source, target_set, parser, cancel_query=self.cancel_event.is_set)
         if not self.cancel_event.is_set():
             self.all_results = results
 
@@ -537,18 +550,32 @@ class DSLApp(tk.Tk):
         if target not in self.all_results:
             target = self.compilation_target
             self.target_name.set(target)
-        result, self.error_list = self.all_results[target]
+        targets, results = [], []
+        if target == ALL_TARGETS_SPECIAL:
+            self.error_list = []
+            for t, (result, error_list) in self.all_results.items():
+                targets.append(t)
+                results.append(result)
+                self.error_list.extend(error_list)
+        else:
+            result, self.error_list = self.all_results[target]
+            results = [result]
+            targets = [target]
         self.error_list = [e for e in self.error_list
                            if e.code != PARSER_STOPPED_BEFORE_END_WARNING]
         self.compile['state'] = tk.DISABLED
         self.result.delete("1.0", tk.END)
-        if isinstance(result, Node):
-            serialized = result.serialize(serialization_format)
-            self.target_choice['state'] = tk.NORMAL
-        else:
-            serialized = result
-            self.target_choice['state'] = tk.DISABLED
-        self.result.insert("1.0", serialized)
+        self.target_choice['state'] = tk.DISABLED
+        serialized = ''
+        for t, result in zip(targets, results):
+            if isinstance(result, Node):
+                serialized = result.serialize(serialization_format)
+                self.target_choice['state'] = tk.NORMAL
+            else:
+                serialized = result or ""
+            if len(targets) > 1:
+                self.result.insert(tk.END, ''.join([t, '\n', '='*len(t), '\n\n']))
+            self.result.insert(tk.END, serialized + '\n\n')
         if not re.fullmatch(r'\s*', serialized):
             self.save_result['state'] = tk.NORMAL
             self.file_menu.entryconfig("Save result...", state=tk.NORMAL)
@@ -596,6 +623,11 @@ class DSLApp(tk.Tk):
             if re.fullmatch(r'\s*', result_txt):
                 self.save_result['state'] = tk.DISABLED
                 self.file_menu.entryconfig("Save result...", state=tk.DISABLED)
+                if target not in self.all_results:
+                    self.result.insert(
+                        "1.0", f'Stage "{target}" has not been passed during compilation! '
+                               f'Try "{ALL_TARGETS_SPECIAL}" to ensure that every stage is '
+                               f'generated.')
             else:
                 self.save_result['state'] = tk.NORMAL
                 self.file_menu.entryconfig("Save result...", state=tk.NORMAL)

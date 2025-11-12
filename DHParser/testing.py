@@ -876,8 +876,9 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 for stage in transformation_stages:
                     try:
                         data = extract_data(targets[stage][0])
-                        for nd in data.select_if(lambda n: n.has_attr(), include_root=True):
-                            nd.attr = {k: str(v) for k, v in nd.attr.items()}
+                        if isinstance(data, Node):
+                            for nd in data.select_if(lambda n: n.has_attr(), include_root=True):
+                                nd.attr = {k: str(v) for k, v in nd.attr.items()}
                         if isinstance(data, Node):
                             compare = flat_string_test(tests, stage, data, test_name,
                                                        parser_name, test_code, errata)
