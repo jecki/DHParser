@@ -112,6 +112,46 @@ def connection(junctions: Iterable[Junction], target: str, origin: str = "CST") 
     return result
 
 
+def as_paths(junctions: Set[Junction]) -> Dict[str, List[str]]:
+    """Returns a dictionary that maps each end point to the path from the start
+    (usually "CST") to that end point."""
+    paths = dict()
+    remlist = set()
+    repeat = True
+    while repeat:
+        repeat = False
+        for j in junctions:
+            if j.src in paths:
+                head = paths[j.src]
+                remlist.add(head[-1])
+                new_path = head + [j.dst]
+                if j.dst not in paths or len(new_path) > len(paths[j.dst]):
+                    repeat = True
+                paths[j.dst] = paths[j.src] + [j.dst]
+            else:
+                paths[j.dst] = [j.src, j.dst]
+    for stage in remlist:
+        del paths[stage]
+    return paths
+
+
+def as_graph(junctions: Iterable[Junction]) -> Node:
+    def is_source_for(nd: Node) -> bool:
+        pass
+
+    fragments = [Node(j.src, j.dst) for j in junctions]
+    while len(fragments) > 1:
+        g = fragments.pop()
+        for i, f in enumerate(fragments):
+            l = f.pick(lambda nd: nd.result == g.name, include_root=True)
+            if l:
+                l.result = (g,)
+                break
+        else:
+            pass
+
+
+
 def extract_data(tree_or_data: Union[RootNode, Node, Any]) -> Any:
     """Retrieves the data from the given tree or just passes the data through
     if the argument ``tree_or_data`` is not of type RootNode."""

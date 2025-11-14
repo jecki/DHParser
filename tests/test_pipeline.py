@@ -37,7 +37,7 @@ from DHParser.parse import Grammar, Forward, CombinedParser, mixin_comment, Whit
     NegativeLookahead, RegExp, Synonym, Series, Alternative, Option, ZeroOrMore, Lookahead, \
     Lookbehind, Text, RX_NEVER_MATCH
 from DHParser.pipeline import create_parser_junction, create_junction, end_points, full_pipeline, \
-    create_preprocess_junction, PseudoJunction, Junction
+    create_preprocess_junction, PseudoJunction, Junction, as_paths, as_graph
 from DHParser.toolkit import ThreadLocalSingletonFactory, expand_table, Any, Tuple, List, \
     NEVER_MATCH_PATTERN, re, MultiCoreManager
 from DHParser.transform import merge_adjacent, is_one_of, apply_if, replace_by_single_child, \
@@ -406,6 +406,23 @@ class TestCancellation:
                 result = f.result()
         assert result[0] is None
         assert result[1][0].code == CANCELED
+
+
+class TestPiplineGraph:
+    def test_all_paths(self):
+        junctions = set()
+        junctions.add(Junction('CST', None, 'AST'))
+        junctions.add(Junction('AST', None, 'LST'))
+        junctions.add(Junction('AST', None, 'pm.tex'))
+        junctions.add(Junction('LST', None, 'modern'))
+        junctions.add(Junction('LST', None, 'modern.tex'))
+        paths = as_paths(junctions)
+        assert paths == {'pm.tex': ['CST', 'AST', 'pm.tex'],
+                         'modern.tex': ['CST', 'AST', 'LST', 'modern.tex'],
+                         'modern': ['CST', 'AST', 'LST', 'modern']}
+        print(as_graph(paths))
+
+
 
 if __name__ == "__main__":
     from DHParser.testing import runner
