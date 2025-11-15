@@ -135,20 +135,22 @@ def as_paths(junctions: Set[Junction]) -> Dict[str, List[str]]:
     return paths
 
 
-def as_graph(junctions: Iterable[Junction]) -> Node:
-    def is_source_for(nd: Node) -> bool:
-        pass
-
-    fragments = [Node(j.src, j.dst) for j in junctions]
-    while len(fragments) > 1:
-        g = fragments.pop()
-        for i, f in enumerate(fragments):
-            l = f.pick(lambda nd: nd.result == g.name, include_root=True)
-            if l:
-                l.result = (g,)
-                break
+def as_graph(junctions: Iterable[Junction]) -> Dict[str, List[Dict]]:
+    jdict = dict()
+    for j in junctions:
+        if j.src not in jdict:
+            jdict[j.src] = [j]
         else:
-            pass
+            jdict[j.src].append(j)
+    srcs = {j.src for j in junctions}
+    dsts = {j.dst for j in junctions}
+    src = (srcs - dsts).pop()
+    def subtree(j: Junction) -> Dict[str, List[Dict]]:
+        if j.dst not in jdict:
+            return {j.dst: []}
+        else:
+            return {j.dst: [subtree(d) for d in jdict[j.dst]]}
+    return {src: [subtree(j) for j in jdict[src]]}
 
 
 

@@ -420,8 +420,6 @@ class TestPiplineGraph:
         assert paths == {'pm.tex': ['CST', 'AST', 'pm.tex'],
                          'modern.tex': ['CST', 'AST', 'LST', 'modern.tex'],
                          'modern': ['CST', 'AST', 'LST', 'modern']}
-        print(as_graph(paths))
-
 
 
 if __name__ == "__main__":
