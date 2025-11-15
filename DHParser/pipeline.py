@@ -56,6 +56,9 @@ __all__ = ('Junction',
            'PipelineResult',
            'end_points',
            'connection',
+           'as_paths',
+           'PipeTree',
+           'as_graph',
            'extract_data',
            'run_pipeline',
            'full_pipeline',
@@ -135,7 +138,22 @@ def as_paths(junctions: Set[Junction]) -> Dict[str, List[str]]:
     return paths
 
 
-def as_graph(junctions: Iterable[Junction]) -> Dict[str, List[Dict]]:
+class PipeTree(NamedTuple):
+    src: str
+    desc: List[PipeTree]
+    depth: int
+
+    def __repr__(self):
+        return f"PipeTree({self.src}, {self.desc}, {self.depth})"
+
+    def __str__(self):
+        l = []
+        for ch in self.desc:
+            l.extend(["  " + cl for cl in str(ch).split('\n')])
+        return '\n'.join([self.src, *l])
+
+
+def as_graph(junctions: Iterable[Junction]) -> PipeTree:
     """Returns the junctions as a directed graph."""
     jdict = dict()
     for j in junctions:
@@ -145,14 +163,25 @@ def as_graph(junctions: Iterable[Junction]) -> Dict[str, List[Dict]]:
             jdict[j.src].append(j)
     srcs = {j.src for j in junctions}
     dsts = {j.dst for j in junctions}
-    src = (srcs - dsts).pop()
-    def subtree(j: Junction) -> Dict[str, List[Dict]]:
-        if j.dst not in jdict:
-            return {j.dst: []}
-        else:
-            return {j.dst: [subtree(d) for d in jdict[j.dst]]}
-    return {src: [subtree(j) for j in jdict[src]]}
+    diff = srcs - dsts
+    if len(diff) > 1:
+        raise ValueError('More than one origin stage within the set of junctions: '
+                         + str(diff))
+    elif len(diff) < 1:
+        raise ValueError('No origin stage found in the set of junctions! (The '
+                         'connected junctions should form a tree, but there '
+                         'seems to be a cycle somewhere...)')
+    src = diff.pop()
 
+    def subtree(j: Junction) -> PipeTree:
+        if j.dst not in jdict:
+            return PipeTree(j.dst, [], 1)
+        else:
+            desc = [subtree(d) for d in jdict[j.dst]]
+            desc.sort(key=lambda x: x.depth)
+            return PipeTree(j.dst, desc, max(child.depth for child in desc) + 1)
+
+    return subtree(Junction(src, None, src))
 
 
 def extract_data(tree_or_data: Union[RootNode, Node, Any]) -> Any:

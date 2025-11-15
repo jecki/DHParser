@@ -23,6 +23,7 @@ limitations under the License.
 import sys
 import os
 from functools import partial
+from typing import Set
 
 from DHParser import PickMultiCoreExecutor
 
@@ -409,17 +410,27 @@ class TestCancellation:
 
 
 class TestPiplineGraph:
-    def test_all_paths(self):
+    def junctions_set1(self) -> Set[Junction]:
         junctions = set()
         junctions.add(Junction('CST', None, 'AST'))
         junctions.add(Junction('AST', None, 'LST'))
         junctions.add(Junction('AST', None, 'pm.tex'))
         junctions.add(Junction('LST', None, 'modern'))
         junctions.add(Junction('LST', None, 'modern.tex'))
+        return junctions
+
+    def test_all_paths(self):
+        junctions = self.junctions_set1()
         paths = as_paths(junctions)
         assert paths == {'pm.tex': ['CST', 'AST', 'pm.tex'],
                          'modern.tex': ['CST', 'AST', 'LST', 'modern.tex'],
                          'modern': ['CST', 'AST', 'LST', 'modern']}
+
+    def test_graph(self):
+        junctions = self.junctions_set1()
+        graph = as_graph(junctions)
+        print()
+        print(graph)
 
 
 if __name__ == "__main__":
