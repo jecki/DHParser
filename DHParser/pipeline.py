@@ -178,6 +178,7 @@ def as_graph(junctions: Iterable[Junction]) -> PipeTree:
             return PipeTree(j.dst, [], 1)
         else:
             desc = [subtree(d) for d in jdict[j.dst]]
+            desc.sort()
             desc.sort(key=lambda x: x.depth)
             return PipeTree(j.dst, desc, max(child.depth for child in desc) + 1)
 

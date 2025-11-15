@@ -419,6 +419,16 @@ class TestPiplineGraph:
         junctions.add(Junction('LST', None, 'modern.tex'))
         return junctions
 
+    def junctions_set2(self) -> Set[Junction]:
+        j = set()
+        j.add(Junction('CST', None, 'AST'))
+        j.add(Junction('AST', None, 'xml'))
+        j.add(Junction('xml', None, 'ausgabe.xml'))
+        j.add(Junction('ausgabe.xml', None, 'html'))
+        j.add(Junction('ausgabe.xml', None, 'ausgabe.druck.xml'))
+        return j
+
+
     def test_all_paths(self):
         junctions = self.junctions_set1()
         paths = as_paths(junctions)
@@ -426,11 +436,29 @@ class TestPiplineGraph:
                          'modern.tex': ['CST', 'AST', 'LST', 'modern.tex'],
                          'modern': ['CST', 'AST', 'LST', 'modern']}
 
+        junctions = self.junctions_set2()
+        paths = as_paths(junctions)
+        assert paths == { 'html': ['CST', 'AST', 'xml', 'ausgabe.xml', 'html'],
+                          'ausgabe.druck.xml': ['CST', 'AST', 'xml', 'ausgabe.xml', 'ausgabe.druck.xml'] }
+
     def test_graph(self):
         junctions = self.junctions_set1()
         graph = as_graph(junctions)
-        print()
-        print(graph)
+        assert str(graph) == """CST
+  AST
+    pm.tex
+    LST
+      modern
+      modern.tex"""
+        junctions = self.junctions_set2()
+        graph = as_graph(junctions)
+        assert str(graph) == """CST
+  AST
+    xml
+      ausgabe.xml
+        ausgabe.druck.xml
+        html"""
+
 
 
 if __name__ == "__main__":
