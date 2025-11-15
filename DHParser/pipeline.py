@@ -136,6 +136,7 @@ def as_paths(junctions: Set[Junction]) -> Dict[str, List[str]]:
 
 
 def as_graph(junctions: Iterable[Junction]) -> Dict[str, List[Dict]]:
+    """Returns the junctions as a directed graph."""
     jdict = dict()
     for j in junctions:
         if j.src not in jdict:
