@@ -151,6 +151,19 @@ class PipeTree(NamedTuple):
         for ch in self.desc:
             l.extend(["  " + cl for cl in str(ch).split('\n')])
         return '\n'.join([self.src, *l])
+        # l = []
+        # for ch in self.desc:
+        #     l.extend(["├" + cl for cl in str(ch).split('\n')])
+        # for i, s in enumerate(l):
+        #     t = s.strip('│├')
+        #     indent = len(s) - len(t)
+        #     if indent > 1:
+        #         joint = "├"
+        #         l[i] = ''.join(['│' * (indent - 1), '├', t])
+        # return '\n'.join([self.src, *l])
+        # #   ├
+        # #   │
+        # #   └
 
 
 def as_graph(junctions: Iterable[Junction]) -> PipeTree:

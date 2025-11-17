@@ -444,6 +444,9 @@ class TestPiplineGraph:
     def test_graph(self):
         junctions = self.junctions_set1()
         graph = as_graph(junctions)
+        # print()
+        # print(str(graph))
+        # return
         assert str(graph) == """CST
   AST
     pm.tex
