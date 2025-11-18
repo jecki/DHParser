@@ -131,10 +131,20 @@ class DSLApp(tk.Tk):
 
         self.all_results: PipelineResult = {}
 
+        # Uncomment one of the following alternatives.
+        # The first two alternatives are helpful if the pipeline is very long
+        # and contains biufurcations.
+
+        # # 1. show the complete pipeline as a stylized tree
         # self.targets = pp_paths(DSLParser.junctions, vertical='┊', bifurcation='├').split('\n')[1:]
+
+        # # 2. show the complete pipeline as an indented tree
         # self.targets = str(as_graph(DSLParser.junctions)).split('\n')[1:]
+
+        # 3. show only final targets
         self.targets = [j.dst for j in DSLParser.junctions]
         self.targets.sort(key=lambda s: s in DSLParser.targets)
+
         if len(self.targets) > 1:  self.targets.append(ALL_TARGETS_SPECIAL)
         self.compilation_target = list(DSLParser.targets)[0]
         self.target_name = tk.StringVar(value=self.compilation_target)
