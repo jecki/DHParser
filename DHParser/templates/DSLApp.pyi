@@ -32,7 +32,8 @@ from DHParser.configuration import read_local_config, get_config_values, \
     get_config_value, dump_config_data
 from DHParser.error import Error, ERROR, PARSER_STOPPED_BEFORE_END_WARNING
 from DHParser.nodetree import Node, EMPTY_NODE
-from DHParser.pipeline import PipelineResult, connection
+from DHParser.pipeline import PipelineResult, connection, as_graph, pp_paths, \
+    PIPE_CHARS
 from DHParser.testing import merge_test_units
 from DHParser.toolkit import MultiCoreManager
 
@@ -130,6 +131,8 @@ class DSLApp(tk.Tk):
 
         self.all_results: PipelineResult = {}
 
+        # self.targets = pp_paths(DSLParser.junctions, vertical='┊', bifurcation='├').split('\n')[1:]
+        # self.targets = str(as_graph(DSLParser.junctions)).split('\n')[1:]
         self.targets = [j.dst for j in DSLParser.junctions]
         self.targets.sort(key=lambda s: s in DSLParser.targets)
         if len(self.targets) > 1:  self.targets.append(ALL_TARGETS_SPECIAL)
@@ -207,7 +210,7 @@ class DSLApp(tk.Tk):
         self.target_choice = ttk.Combobox(
             self, values=['XML', 'SXML', 'sxpr', 'xast', 'ndst', 'tree'],
             textvariable=self.target_format)
-        if self.target_name.get() not in ('AST', 'CST'):
+        if self.target_name.get().lstrip(PIPE_CHARS) not in ('AST', 'CST'):
             self.target_choice['state'] = tk.DISABLED
         self.result_info = ttk.Label(text='Result:', style="Bold.TLabel")
         self.result = scrolledtext.ScrolledText()
@@ -522,7 +525,7 @@ class DSLApp(tk.Tk):
             if re.fullmatch(r'\s*', source):  return
             source += '\n'
         parser = self.root_name.get()
-        self.compilation_target = self.target_name.get()
+        self.compilation_target = self.target_name.get().lstrip(PIPE_CHARS)
         self.compilation_units = 1
         # self.all_results = DSLParser.pipeline(source, self.compilation_target, parser)
         # self.finish_single_unit()
@@ -546,7 +549,7 @@ class DSLApp(tk.Tk):
         self.errors.tag_delete("currenterror")
         self.errors.tag_delete("error")
         serialization_format = self.target_format.get()
-        target = self.target_name.get()
+        target = self.target_name.get().lstrip(PIPE_CHARS)
         if target not in self.all_results:
             target = self.compilation_target
             self.target_name.set(target)
@@ -598,7 +601,7 @@ class DSLApp(tk.Tk):
         self.result.insert(tk.END, "Compilation finished.\n")
         self.result.insert(tk.END, f"Results written to {self.outdir}.\n")
         self.errors.insert(tk.END, f"Errors (if any) written to {self.outdir}.\n")
-        if self.target_name.get().lower() == 'html':
+        if self.target_name.get().lstrip(PIPE_CHARS).lower() == 'html':
             html_name = os.path.splitext(os.path.basename(self.names[0]))[0] + '.html'
             html_name = os.path.join(self.outdir, html_name)
             self.errors.insert(tk.END, html_name + "\n")
@@ -609,7 +612,7 @@ class DSLApp(tk.Tk):
                             if sys.platform == "darwin" else self.outdir)
 
     def update_result(self, if_tree=False) -> bool:
-        target = self.target_name.get()
+        target = self.target_name.get().lstrip(PIPE_CHARS)
         result = self.all_results.get(target, ("", []))
         result_txt = None
         if isinstance(result[0], Node):
@@ -634,7 +637,7 @@ class DSLApp(tk.Tk):
         return bool(result[0]) or bool(result[1])
 
     def on_target_stage(self, event):
-        target = self.target_name.get()
+        target = self.target_name.get().lstrip(PIPE_CHARS)
         if target in ('AST', 'CST') or isinstance(
                 self.all_results.get(target, (None, []))[0], Node):
             self.target_choice['state'] = tk.NORMAL
@@ -680,7 +683,7 @@ class DSLApp(tk.Tk):
                 tk.messagebox.showerror("IO Error", str(e))
 
     def on_save_result(self):
-        target = self.target_name.get()
+        target = self.target_name.get().lstrip(PIPE_CHARS)
         if self.target_choice['state'] == tk.NORMAL:
             format = 'in format ' + self.target_format.get()
         else:

@@ -38,7 +38,7 @@ from DHParser.parse import Grammar, Forward, CombinedParser, mixin_comment, Whit
     NegativeLookahead, RegExp, Synonym, Series, Alternative, Option, ZeroOrMore, Lookahead, \
     Lookbehind, Text, RX_NEVER_MATCH
 from DHParser.pipeline import create_parser_junction, create_junction, end_points, full_pipeline, \
-    create_preprocess_junction, PseudoJunction, Junction, as_paths, as_graph
+    create_preprocess_junction, PseudoJunction, Junction, as_paths, as_graph, pp_paths
 from DHParser.toolkit import ThreadLocalSingletonFactory, expand_table, Any, Tuple, List, \
     NEVER_MATCH_PATTERN, re, MultiCoreManager
 from DHParser.transform import merge_adjacent, is_one_of, apply_if, replace_by_single_child, \
@@ -428,6 +428,18 @@ class TestPiplineGraph:
         j.add(Junction('ausgabe.xml', None, 'ausgabe.druck.xml'))
         return j
 
+    def junctions_set3(self) -> Set[Junction]:
+        junctions = set()
+        junctions.add(Junction('CST', None, 'AST'))
+        junctions.add(Junction('AST', None, 'LST'))
+        junctions.add(Junction('AST', None, 'pm.tex'))
+        junctions.add(Junction('AST', None, 'pm.html'))
+        junctions.add(Junction('LST', None, 'modern.utf8'))
+        junctions.add(Junction('LST', None, 'modern.tex'))
+        junctions.add(Junction('LST', None, 'modern.html'))
+        junctions.add(Junction('LST', None, 'modern.xml'))
+        return junctions
+
 
     def test_all_paths(self):
         junctions = self.junctions_set1()
@@ -441,18 +453,23 @@ class TestPiplineGraph:
         assert paths == { 'html': ['CST', 'AST', 'xml', 'ausgabe.xml', 'html'],
                           'ausgabe.druck.xml': ['CST', 'AST', 'xml', 'ausgabe.xml', 'ausgabe.druck.xml'] }
 
+
     def test_graph(self):
         junctions = self.junctions_set1()
         graph = as_graph(junctions)
-        # print()
-        # print(str(graph))
-        # return
         assert str(graph) == """CST
   AST
     pm.tex
     LST
       modern
       modern.tex"""
+        assert pp_paths(junctions) == """CST
+AST
+├─LST
+│ ├─modern.tex
+│ modern
+pm.tex"""
+
         junctions = self.junctions_set2()
         graph = as_graph(junctions)
         assert str(graph) == """CST
@@ -461,6 +478,24 @@ class TestPiplineGraph:
       ausgabe.xml
         ausgabe.druck.xml
         html"""
+        assert pp_paths(junctions) == """CST
+AST
+xml
+ausgabe.xml
+├─html
+ausgabe.druck.xml"""
+
+        junctions = self.junctions_set3()
+        paths = as_paths(junctions)
+        assert pp_paths(paths) == """CST
+AST
+│ ├─LST
+│ │ │ │ ├─modern.xml
+│ │ │ │ modern.utf8
+│ │ │ modern.tex
+│ │ modern.html
+│ pm.tex
+pm.html"""
 
 
 

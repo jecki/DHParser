@@ -57,6 +57,8 @@ __all__ = ('Junction',
            'end_points',
            'connection',
            'as_paths',
+           'PIPE_CHARS',
+           'pp_paths',
            'PipeTree',
            'as_graph',
            'extract_data',
@@ -138,6 +140,36 @@ def as_paths(junctions: Set[Junction]) -> Dict[str, List[str]]:
     return paths
 
 
+PIPE_CHARS = ' ┊┆|│├─└┃┣┗━'  # {' ', '│', '├', '└', '─'}
+
+
+def pp_paths(paths: Union[Dict[str, List[str]], Set[Junction]],
+             vertical = '│ ', bifurcation = '├─') -> str:
+    if isinstance(paths, Set):
+        paths = as_paths(paths)
+    paths = list(paths.values())
+    paths.sort(reverse=True)
+    paths.sort(key=len, reverse=True)
+    l = []
+    for path in paths:
+        k = 0
+        i = 0
+        while k < len(path) and i < len(l):
+            if l[i][:1] in PIPE_CHARS or path[k] != l[i]:
+                if i > 0 and l[i - 1][:1] not in PIPE_CHARS:
+                    l[i] = (bifurcation + l[i]) if l[i][:1] not in PIPE_CHARS else (vertical + l[i])
+                else:
+                    l[i] = vertical + l[i]
+                i += 1
+            else:
+                k += 1
+                i += 1
+        while k < len(path):
+            l.append(path[k])
+            k += 1
+    return '\n'.join(l)
+
+
 class PipeTree(NamedTuple):
     src: str
     desc: List[PipeTree]
@@ -151,19 +183,6 @@ class PipeTree(NamedTuple):
         for ch in self.desc:
             l.extend(["  " + cl for cl in str(ch).split('\n')])
         return '\n'.join([self.src, *l])
-        # l = []
-        # for ch in self.desc:
-        #     l.extend(["├" + cl for cl in str(ch).split('\n')])
-        # for i, s in enumerate(l):
-        #     t = s.strip('│├')
-        #     indent = len(s) - len(t)
-        #     if indent > 1:
-        #         joint = "├"
-        #         l[i] = ''.join(['│' * (indent - 1), '├', t])
-        # return '\n'.join([self.src, *l])
-        # #   ├
-        # #   │
-        # #   └
 
 
 def as_graph(junctions: Iterable[Junction]) -> PipeTree:
