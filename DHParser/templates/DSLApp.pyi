@@ -96,6 +96,10 @@ class TextLineNumbers(tk.Canvas):
 ALL_TARGETS_SPECIAL = "[all targets]"
 
 
+DEMO_SRC = ""  # a piece of source code that is displayed as a demonstration
+               # example when starting the App
+
+
 class DSLApp(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -195,6 +199,7 @@ class DSLApp(tk.Tk):
 
         self.deiconify()
         self.create_widgets()
+        self.source.insert(tk.END, DEMO_SRC)
         self.connect_events()
         self.place_widgets()
 
@@ -213,13 +218,18 @@ class DSLApp(tk.Tk):
         self.source = scrolledtext.ScrolledText(undo=True)
         self.line_numbers = TextLineNumbers(self.source)
         self.root_info = ttk.Label(text="Parser:")
-        self.root_parser = ttk.Combobox(self, values=self.parser_names, textvariable=self.root_name)
+        self.root_parser = ttk.Combobox(self, values=self.parser_names,
+                                        textvariable=self.root_name,
+                                        state='readonly')
         self.compile = ttk.Button(text="Compile", style="BoldRed.TButton", command=self.on_compile)
         self.compile['state'] = tk.DISABLED
-        self.target_stage = ttk.Combobox(self, values=self.targets, textvariable=self.target_name)
+        self.target_stage = ttk.Combobox(self, values=self.targets,
+                                         textvariable=self.target_name,
+                                         state='readonly')
         self.target_choice = ttk.Combobox(
             self, values=['XML', 'SXML', 'sxpr', 'xast', 'ndst', 'tree'],
-            textvariable=self.target_format)
+            textvariable=self.target_format,
+            state='readonly')
         if self.target_name.get().lstrip(PIPE_CHARS) not in ('AST', 'CST'):
             self.target_choice['state'] = tk.DISABLED
         self.result_info = ttk.Label(text='Result:', style="Bold.TLabel")
@@ -524,10 +534,13 @@ class DSLApp(tk.Tk):
             for j in path:  target_set.add(j.dst)
         else:
             target_set.add(target)
-        results = DSLParser.pipeline(
-            source, target_set, parser, cancel_query=self.cancel_event.is_set)
-        if not self.cancel_event.is_set():
-            self.all_results = results
+        try:
+            results = DSLParser.pipeline(
+                source, target_set, parser, cancel_query=self.cancel_event.is_set)
+            if not self.cancel_event.is_set():
+                self.all_results = results
+        except AttributeError as e:
+            tk.messagebox.showerror("Compilation Error", str(e))
 
     def on_compile(self):
         source = self.source.get("1.0", tk.END)
@@ -535,7 +548,11 @@ class DSLApp(tk.Tk):
             if re.fullmatch(r'\s*', source):  return
             source += '\n'
         parser = self.root_name.get()
-        self.compilation_target = self.target_name.get().lstrip(PIPE_CHARS)
+        target = self.target_name.get().lstrip(PIPE_CHARS)
+        if target not in self.all_results:
+            tk.messagebox.showerror("Error", f"Unknown target: {target}")
+            return
+        self.compilation_target = target
         self.compilation_units = 1
         # self.all_results = DSLParser.pipeline(source, self.compilation_target, parser)
         # self.finish_single_unit()
@@ -583,7 +600,7 @@ class DSLApp(tk.Tk):
         for t, result in zip(targets, results):
             if isinstance(result, Node):
                 serialized = result.serialize(serialization_format)
-                self.target_choice['state'] = tk.NORMAL
+                self.target_choice['state'] = 'readonly'  # this implies tk.NORMAL
             else:
                 serialized = result or ""
             if len(targets) > 1:
@@ -650,7 +667,7 @@ class DSLApp(tk.Tk):
         target = self.target_name.get().lstrip(PIPE_CHARS)
         if target in ('AST', 'CST') or isinstance(
                 self.all_results.get(target, (None, []))[0], Node):
-            self.target_choice['state'] = tk.NORMAL
+            self.target_choice['state'] = 'readonly'  # this implies tk.NORMAL
         else:
             self.target_choice['state'] = tk.DISABLED
         if not self.update_result():
@@ -694,7 +711,7 @@ class DSLApp(tk.Tk):
 
     def on_save_result(self):
         target = self.target_name.get().lstrip(PIPE_CHARS)
-        if self.target_choice['state'] == tk.NORMAL:
+        if self.target_choice['state'] in ('readonly', tk.NORMAL):
             format = 'in format ' + self.target_format.get()
         else:
             format = ''
