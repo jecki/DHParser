@@ -28,7 +28,7 @@ proc `$`*(range: RuneRange): string =
   if min <= max:  fmt"{min}..{max}"  else: "EMPTY"
 
 
-func toRanges[T: Ordinal](s: set[T], RT: type): seq[(RT, RT)] =
+func toRanges*[T: Ordinal](s: set[T], RT: type): seq[(RT, RT)] =
   ## Converts a set to a sequence of ranges. The sequence is sorted in ascending order.
   result = newSeq[RuneRange](0)
   if s.len > 0:
@@ -187,7 +187,7 @@ func `*`*(A, B: seq[RuneRange]): seq[RuneRange] = A - (A - B) - (B - A)
 # Rune range algebraic operations with complement ranges
 
 
-proc `+`*(Acompl, Bcompl: bool; A, B: seq[RuneRange]): (bool, seq[RuneRange]) =
+proc add*(Acompl, Bcompl: bool; A, B: seq[RuneRange]): (bool, seq[RuneRange]) =
   let selector = (if Acompl: 2 else: 0) + (if Bcompl: 1 else: 0)
   case selector:  # (A.negate, B.negate)
     of 0b00:  # (false, false)
@@ -197,13 +197,13 @@ proc `+`*(Acompl, Bcompl: bool; A, B: seq[RuneRange]): (bool, seq[RuneRange]) =
     of 0b10:  # (true, false)
       (true, A - B)
     of 0b11:  # (true, true)
-      (true, A + B)
+      (true, A * B)
     else:  
       assert false
       (false, @[])
 
 
-proc `-`*(Acompl, Bcompl: bool; A, B: seq[RuneRange]): (bool, seq[RuneRange]) = 
+proc sub*(Acompl, Bcompl: bool; A, B: seq[RuneRange]): (bool, seq[RuneRange]) = 
   let selector = (if Acompl: 2 else: 0) + (if Bcompl: 1 else: 0)
   case selector:  # (A.negate, B.negate)
     of 0b00:  # (false, false)
@@ -221,15 +221,18 @@ proc `-`*(Acompl, Bcompl: bool; A, B: seq[RuneRange]): (bool, seq[RuneRange]) =
 
 # Rune Range parsers
 
-func rrs(rangesStr: string): seq[RuneRange] =
+func rrs*(rangesStr: string): seq[RuneRange] =
   ## Parses "basic" rune ranges. The syntax for rangeStr is more or less the
   ## syntax you'd use inside rectangular brackets [ ] in regular expressions,
   ## only that the only allowed backslashed values are \s (whitespace)
   ## and \n (linefeed).
-  ## Examples: rs0"a-z0-9\xc4-\xd6", rs0"^A-Z"
+  ## Examples: rrs"a-z0-9\xc4-\xd6", rrs"^A-Z"
   ##
   ## Hexadecimal codes are allowed. They may be introduced with any of the
-  ## following: "\x", "\u", "\U". Inverse sets are built with a leading "^"
+  ## following: "\x", "\u", "\U". 
+  ## 
+  ## A leading "^" is ignored. The caller will have to keep track of this
+  ## and negate the resulting rune ranges if needed.
   var
     buf: string = ""
     bi: int32 = 1
@@ -296,3 +299,13 @@ func rrs(rangesStr: string): seq[RuneRange] =
   sortAndMerge(runeRanges)
   return runeRanges
 
+proc rr*(rangeStr: string): RuneRange =
+  ## Parses a single rune range. Examples: rr"A-Z", rr"[a-z]".
+  ##
+  ## Inverse rune ranges are not possible. Neither are concatenations
+  ## of rune ranges. The rune range may be enclosed by rectangular
+  ## brackets, but does not need to be.
+  assert rangeStr.len == 0 or rangeStr[0] != '^'  
+  let ranges = rrs(rangeStr)
+  assert ranges.len == 1
+  return ranges[0]

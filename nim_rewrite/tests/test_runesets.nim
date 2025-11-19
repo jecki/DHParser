@@ -3,6 +3,7 @@
 
 import std/[unittest, strutils, unicode, algorithm, strformat]
 
+import nimparser/runeranges
 import nimparser/runesets
 
 test "String code for Rune-Ranges (rr and sr)":
@@ -81,7 +82,7 @@ test "RuneSet":
   assert (rs0"A-D" + rs0"^C-Z") == rs0"^E-Z"
   assert (rs0"^A-D" + rs0"^C-Z") == rs0"^C-D"
   assert rs0"A-C" != rs0"A-Z"
-  # assert (rs"^A-D" + rs"^X-Z") == rs"^C-D" -> Empty or All not allowed
+  # assert (rs"^A-D" + rs"^X-Z") == rs"^C-D"  # -> Empty or All not allowed
 
   assert (rs0"A-Z" - rs0"D-E") == rs0"A-CF-Z"
   assert (rs0"^A-Z" - rs0"B-E") == rs0"^A-Z"
