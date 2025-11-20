@@ -480,17 +480,18 @@ class DSLApp(tk.Tk):
         except tk.TclError:
             pass  # nothing to undo-error
 
-    def hilight_error_line(self, i):
+    def hilight_error_line(self, i, link_source=True):
         self.source.tag_delete("errorline")
         self.errors.tag_delete("currenterror")
         if 0 <= i < len(self.error_list):
             error = self.error_list[i]
             line, col = self.tk_error_pos(error)
-            self.source.see(f"{line}.{col}")
-            line_str = self.source.get(f'{line}.0', f'{line + 1}.0').strip('\n')
-            self.source.tag_add("errorline", f"{line}.{0}", f"{line}.{col}")
-            self.source.tag_add("errorline", f"{line}.{col + 1}", f"{line}.{len(line_str)}")
-            self.source.tag_config("errorline", background="yellow")
+            if link_source:
+                self.source.see(f"{line}.{col}")
+                line_str = self.source.get(f'{line}.0', f'{line + 1}.0').strip('\n')
+                self.source.tag_add("errorline", f"{line}.{0}", f"{line}.{col}")
+                self.source.tag_add("errorline", f"{line}.{col + 1}", f"{line}.{len(line_str)}")
+                self.source.tag_config("errorline", background="lightgrey")
             err_str = self.errors.get(f'{i + 1}.0', f'{i + 2}.0').strip('\n')
             self.errors.tag_add("currenterror", f"{i + 1}.{0}", f"{i + 1}.{len(err_str)}")
             self.errors.tag_config("currenterror", background="yellow")
@@ -501,7 +502,7 @@ class DSLApp(tk.Tk):
         if 'error' in tag_names or 'warning' in tag_names:
             for i, e in enumerate(self.error_list):
                 if e.line == l and abs(e.column - c) <= 2:
-                    self.hilight_error_line(i)
+                    self.hilight_error_line(i, link_source=False)
         elif not any(e.line == l for e in self.error_list):
             self.hilight_error_line(-1)  # stop highlighting
 
@@ -549,9 +550,6 @@ class DSLApp(tk.Tk):
             source += '\n'
         parser = self.root_name.get()
         target = self.target_name.get().lstrip(PIPE_CHARS)
-        if target not in self.all_results:
-            tk.messagebox.showerror("Error", f"Unknown target: {target}")
-            return
         self.compilation_target = target
         self.compilation_units = 1
         # self.all_results = DSLParser.pipeline(source, self.compilation_target, parser)
@@ -586,7 +584,9 @@ class DSLApp(tk.Tk):
             for t, (result, error_list) in self.all_results.items():
                 targets.append(t)
                 results.append(result)
-                self.error_list.extend(error_list)
+                for e in error_list:
+                    if e not in self.error_list:
+                        self.error_list.append(e)
         else:
             result, self.error_list = self.all_results[target]
             results = [result]
@@ -596,19 +596,21 @@ class DSLApp(tk.Tk):
         self.compile['state'] = tk.DISABLED
         self.result.delete("1.0", tk.END)
         self.target_choice['state'] = tk.DISABLED
-        serialized = ''
-        for t, result in zip(targets, results):
-            if isinstance(result, Node):
-                serialized = result.serialize(serialization_format)
-                self.target_choice['state'] = 'readonly'  # this implies tk.NORMAL
-            else:
-                serialized = result or ""
-            if len(targets) > 1:
-                self.result.insert(tk.END, ''.join([t, '\n', '='*len(t), '\n\n']))
-            self.result.insert(tk.END, serialized + '\n\n')
-        if not re.fullmatch(r'\s*', serialized):
-            self.save_result['state'] = tk.NORMAL
-            self.file_menu.entryconfig("Save result...", state=tk.NORMAL)
+        # serialized = ''
+        # for t, result in zip(targets, results):
+        #     if isinstance(result, Node):
+        #         serialized = result.serialize(serialization_format)
+        #         self.target_choice['state'] = 'readonly'  # tk.NORMAL
+        #     else:
+        #         serialized = result or ""
+        #     if not re.fullmatch(r'\s*', serialized):
+        #         if len(targets) > 1:
+        #             self.result.insert(tk.END, ''.join([t, '\n', '='*len(t), '\n\n']))
+        #         self.result.insert(tk.END, serialized + '\n\n')
+        # if not re.fullmatch(r'\s*', serialized):
+        #     self.save_result['state'] = tk.NORMAL
+        #     self.file_menu.entryconfig("Save result...", state=tk.NORMAL)
+        self.update_result()
         self.export_test['state'] = tk.NORMAL
         self.errors.delete("1.0", tk.END)
         for i, e in enumerate(self.error_list):
@@ -640,34 +642,52 @@ class DSLApp(tk.Tk):
 
     def update_result(self, if_tree=False) -> bool:
         target = self.target_name.get().lstrip(PIPE_CHARS)
-        result = self.all_results.get(target, ("", []))
-        result_txt = None
-        if isinstance(result[0], Node):
-            format = self.target_format.get()
-            result_txt = cast(Node, result[0]).serialize(format)
-        elif not if_tree:
-            result_txt = result[0]
-        if result_txt is not None:
-            self.result.delete('1.0', tk.END)
-            self.result.insert(tk.END, result_txt)
-            if re.fullmatch(r'\s*', result_txt):
-                self.save_result['state'] = tk.DISABLED
-                self.file_menu.entryconfig("Save result...", state=tk.DISABLED)
-                if target not in self.all_results:
-                    self.result.insert(
-                        "1.0", f'Stage "{target}" has not been passed during compilation! '
-                               f'Try "{ALL_TARGETS_SPECIAL}" to ensure that every stage is '
-                               f'generated.')
-            else:
-                self.save_result['state'] = tk.NORMAL
-                self.file_menu.entryconfig("Save result...", state=tk.NORMAL)
-        return bool(result[0]) or bool(result[1])
+        if target == ALL_TARGETS_SPECIAL:
+            results = list(self.all_results.items())
+            missing = [t for t in self.targets[:-1] if not self.all_results.get(t, (None, []))[0]]
+        else:
+            results = [(target, self.all_results.get(target, ("", [])))]
+            missing = [target] if not self.all_results.get(target, (None, []))[0] else []
+        format = self.target_format.get()
+        res_ser = []
+        for t, res in results:
+            if isinstance(res[0], Node):
+                res_ser.append((t, cast(Node, res[0]).serialize(format)))
+            elif not if_tree:
+                res_ser.append((t, res[0] or ''))
+        self.result.delete('1.0', tk.END)
+        for t, txt in res_ser:
+            if not re.fullmatch(r'\s*', txt):
+                if len(results) > 1:
+                    heading = ''.join([t, '\n', '='*len(t), '\n\n'])
+                    ending = '\n\n'
+                else:
+                    heading, ending = '', ''
+                self.result.insert(tk.END, ''.join([heading, txt, ending]))
+        if any(re.fullmatch(r'\s*', txt) for _, txt in res_ser) \
+                or target == ALL_TARGETS_SPECIAL and missing:
+            self.save_result['state'] = tk.DISABLED
+            self.file_menu.entryconfig("Save result...", state=tk.DISABLED)
+            if self.all_results:
+                entree = f"Stages {str(missing)[1:-1]} have" if len(missing) > 1 \
+                         else f"Stage {str(missing)[1:-1]} has"
+                self.result.insert(
+                    "1.0", f'{entree} not been passed during compilation! '
+                           f'Try "{ALL_TARGETS_SPECIAL}" to ensure that every stage is '
+                           f'generated.{"\n\n" if len(results) > 1 else ""}')
+            self.compile['state'] = tk.NORMAL
+        else:
+            if self.source_modified_sentinel == 0:
+                self.compile['state'] = tk.DISABLED
+            self.save_result['state'] = tk.NORMAL
+            self.file_menu.entryconfig("Save result...", state=tk.NORMAL)
+        return any(r[0] for r in results) or any(r[1] for r in results)
 
     def on_target_stage(self, event):
         target = self.target_name.get().lstrip(PIPE_CHARS)
-        if target in ('AST', 'CST') or isinstance(
+        if target in ('AST', 'CST', ALL_TARGETS_SPECIAL) or isinstance(
                 self.all_results.get(target, (None, []))[0], Node):
-            self.target_choice['state'] = 'readonly'  # this implies tk.NORMAL
+            self.target_choice['state'] = 'readonly'  # tk.NORMAL
         else:
             self.target_choice['state'] = tk.DISABLED
         if not self.update_result():
@@ -896,10 +916,10 @@ class DSLApp(tk.Tk):
         import random
         slogans = ("'cause it is the machines that bring order to life!",
                    "We work hard to make your job expendable!",
-                   "We program pig systems that make your life difficult!",
+                   "We program pig systems that make your life hell!",
                    "8 bit can do it all!",
                    "The apparatus is always right!",
-                   "Everyone is replacable and should be!")
+                   "Everyone is replaceable and should be!")
         tk.messagebox.showinfo(
             title="About DSL",
             message=("DSL was brought to you by:\n\n"

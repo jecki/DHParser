@@ -13,7 +13,7 @@ from functools import partial
 import os
 import sys
 from stringprep import b1_set
-from typing import Tuple, List, Union, Any, Optional, Callable, cast, NamedTuple
+from typing import Tuple, List, Set, Union, Any, Optional, Callable, cast, NamedTuple
 
 try:
     scriptdir = os.path.dirname(os.path.realpath(__file__))
@@ -48,13 +48,13 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, DropFro
     LateBindingUnary, mixin_comment, last_value, matching_bracket, optional_last_value, \
     PARSER_PLACEHOLDER, UninitializedError,  RX_NEVER_MATCH
 from DHParser.pipeline import end_points, full_pipeline, create_parser_junction, \
-    create_preprocess_junction, create_junction, PseudoJunction
+    create_preprocess_junction, create_junction, PseudoJunction, PipelineResult
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors, \
     SourceMap, source_map, result_from_mapping, gen_neutral_srcmap_func
 from DHParser.stringview import StringView
 from DHParser.toolkit import re, is_filename, load_if_file, cpu_count, \
-    ThreadLocalSingletonFactory, expand_table
+    ThreadLocalSingletonFactory, expand_table, CancelQuery
 from DHParser.trace import set_tracer, resume_notices_on, trace_history
 from DHParser.transform import is_empty, remove_if, TransformationDict, TransformerFunc, \
     transformation_factory, remove_children_if, move_fringes, normalize_whitespace, \
@@ -784,6 +784,25 @@ serializations = expand_table(dict([('*', [get_config_value('default_serializati
 # Main program
 #
 #######################################################################
+
+def pipeline(source: str,
+             target: Union[str, Set[str]] = "{NAME}",
+             start_parser: str = "root_parser__",
+             *, cancel_query: Optional[CancelQuery] = None) -> PipelineResult:
+    """Runs the source code through the processing pipeline. If
+    the parameter target is not the empty string, only the stages required
+    for the given target will be passed. See :py:func:`compile_src` for the
+    explanation of the other parameters.
+    """
+    global targets
+    if target:
+        target_set = set([target]) if isinstance(target, str) else target
+    else:
+        target_set = targets
+    return full_pipeline(
+        source, preprocessing.factory, parsing.factory, junctions, target_set,
+        start_parser, cancel_query = cancel_query)
+
 
 def compile_src(source: str, target: str = "flagsDone") -> Tuple[Any, List[Error]]:
     """Compiles the source to a single target and returns the result of the compilation
