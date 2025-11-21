@@ -1650,45 +1650,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # evaluation ##############################################################
 
-    def evaluate(self, actions: Dict[str, Callable], path: Path = []) -> Any:
-        """Simple tree evaluation: For each node the action associated with
-        the node's tag-name is called with either the tuple of the evaluated
-        children or, in case of a leaf-node, the result-string as parameter(s)::
-
-            >>> tree = parse_sxpr('(plus (number 3) (mul (number 5) (number 4)))')
-            >>> from operator import add, mul
-            >>> actions = {'plus': add, 'mul': mul, 'number': int}
-            >>> tree.evaluate(actions)
-            23
-
-        ``evaluate()`` can operate in two modes. In the basic mode, shown, in the
-        example, only the evaluated values of the children are passed to each
-        function in the action dictionary. However, if evaluate is called with
-        passing the beginning of the path to its ``path``-argument, each function
-        will be called with the current path as its first argument and the
-        evaluated values of its children as the following arguments,
-        e.g., ``result = node.evaluate(actions, path=[node])``.
-        This more sophisticated mode gives the action function access to the
-        nodes of the tree as well.
-
-        :param actions: A dictionary that maps node-names to action functions.
-        :param path: If not empty, the current tree-path will be passed as the first
-            argument (before the evaluation results of the children) to each action.
-            Start with a list of the node itself to trigger passing the path.
-        :raises KeyError: if an action is missing in the table, use the joker
-            '*' to void this error, e.g. ``{ ..., '*': lambda node: node.content, ...}``.
-        :raises ValueError: in case any of the action functions cannot handle the
-            passed arguments.
-        :return: the result of the evaluation
-        """
-        if path:
-            args = (path, *(child.evaluate(actions, path + [child])
-                            for child in self._children)) if self._children \
-                   else (path, self._result,)
-        else:
-            args = tuple(child.evaluate(actions, path)
-                         for child in self._children) if self._children \
-                   else (self._result,)
+    def _eval(self, actions, args):
         try:
             action = actions[self.name]
         except KeyError as ke:
@@ -1703,6 +1665,69 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         except TypeError as e:
             raise ValueError(f'Evaluation function for tag "{self.name}" failed with error {e}. '
                              f'Arguments: {args}.')
+
+    def _new_evaluate(self, actions: Dict[str, Callable]):
+        args = tuple(child._new_evaluate(actions)
+                     for child in self._children) if self._children \
+               else (self._result,)
+        return self._eval(actions, args)
+
+    def _inner_evaluate_path(self, actions: Dict[str, Callable], path: Path) -> Any:
+        args = (path, *(child._inner_evaluate_path(actions, path + [child])
+                        for child in self._children)) if self._children \
+                      else (path, self._result,)
+        return self._eval(actions, args)
+
+
+    def evaluate(self, actions: Dict[str, Callable], path: Path = []) -> Any:
+        """Simple tree evaluation: For each node the action associated with
+        the node's tag-name is called with either the tuple of the evaluated
+        children or, in the case of a leaf-node, the result-string as parameter(s)::
+
+            >>> tree = parse_sxpr('(plus (number 3) (mul (number 5) (number 4)))')
+            >>> from operator import add, mul
+            >>> actions = {'plus': add, 'mul': mul, 'number': int}
+            >>> tree.evaluate(actions)
+            23
+
+        :param actions: A dictionary that maps node-names to action functions.
+        :param path: This parameter is DEPRECATED! Use Node.evaluate_path() instead.
+        :raises KeyError: if an action is missing in the table, use the joker
+            '*' to void this error, e.g. ``{ ..., '*': lambda node: node.content, ...}``.
+        :raises ValueError: in case any of the action functions cannot handle the
+            passed arguments.
+        :return: the result of the evaluation
+        """
+        if path:
+            deprecation_warning('The parameter "path" is deprecated! '
+                                'Use Node.evaluate_path() instead.')
+            return self.evaluate_path(actions, path)
+        else:
+            return self._new_evaluate(actions)
+
+    def evaluate_path(self, actions: Dict[str, Callable], path: Path=[]) -> Any:
+        """Simple tree evaluation with path: For each node the action associated with
+        the node's tag-name is called with either the tuple of the evaluated
+        children or, in the case of a leaf-node, the result-string as parameter(s)
+        and the path from the root node to the current node.
+
+        In contrast to :py:meth:`evaluate`, each function
+        will be called with the current path as its first argument and the
+        evaluated values of its children as the following arguments,
+        e.g., ``result = node.evaluate(actions, path=[node])``.
+
+        :param actions: A dictionary that maps node-names to action functions.
+        :param path: The path up to and including self. If empty (default),
+            [self] will be used as starting path.
+        :raises KeyError: if an action is missing in the table, use the joker
+            '*' to void this error, e.g. ``{ ..., '*': lambda node: node.content, ...}``.
+        :raises ValueError: in case any of the action functions cannot handle the
+            passed arguments.
+        :return: the result of the evaluation
+        """
+        if not path:  path = [self]
+        return self._inner_evaluate_path(actions, path)
+
 
     # serialization ###########################################################
 

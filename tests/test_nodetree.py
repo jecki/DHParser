@@ -1312,6 +1312,49 @@ class TestEvaluation:
             'POS': lambda token: 1}
         assert tree.evaluate(actions) == -13
 
+    def test_evaluate_path(self):
+        set_config_value('syntax_variant', 'peg-like')
+        parser = create_parser(
+            r'''@disposable = Spacing, LPAR, RPAR, EOL, EOF
+            @drop = Spacing, LPAR, RPAR, EOL, EOF
+            Start   <- Spacing Expr EOL? EOF
+            Expr    <- Term ((PLUS / MINUS) Term)*
+            Term    <- Factor ((TIMES / DIVIDE) Factor)*
+            Factor  <- Sign* (LPAR Expr RPAR
+                             / INTEGER )
+            Sign    <- NEG / POS
+            INTEGER <- Spacing ( '0' / [1-9][0-9]* ) Spacing
+            PLUS    <- '+' Spacing
+            MINUS   <- '-' Spacing
+            TIMES   <- '*' Spacing
+            DIVIDE  <- '/' Spacing
+            LPAR    <- '(' Spacing
+            RPAR    <- ')' Spacing
+            NEG     <- '-' Spacing
+            POS     <- '+' Spacing
+            Spacing <- [ \t\n\f\v\r]*
+            EOL     <- '\r\n' / [\n\r]
+            EOF     <- !.
+            ''')
+        tree = parser('2 + 3 * -(7 - 2)')
+        from operator import add, sub, mul, truediv as div, neg
+        # the example does not make much sense as path is not really
+        # used, but should suffice for testing purposes
+        actions = {
+            'Start': lambda p, arg: arg,
+            'Expr': lambda p, *args: args[1](args[0], args[2]) if len(args) == 3 else args[0],
+            'Term': lambda p, *args: args[1](args[0], args[2]) if len(args) == 3 else args[0],
+            'Factor': lambda p, *args: mul(*args) if len(args) > 1 else args[0],
+            'Sign': lambda p, arg: arg,
+            'INTEGER': lambda p, arg: int(arg),
+            'PLUS': lambda p, token: add,
+            'MINUS': lambda p, token: sub,
+            'TIMES': lambda p, token: mul,
+            'DIVIDE': lambda p, token: div,
+            'NEG': lambda p, token: -1,
+            'POS': lambda p, token: 1}
+        assert tree.evaluate_path(actions) == -13
+
 
 class TestAttributeHandling:
     def test_attribute_handling(self):
