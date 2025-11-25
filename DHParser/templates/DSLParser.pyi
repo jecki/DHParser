@@ -190,7 +190,7 @@ def main(called_from_app=False) -> bool:
                             "specified with --out, the results will be written to the disk!"
                             " To directly process content, use a pipe | e.g. "
                             ' echo "..." | {NAME}Parser.py.')
-    parser.add_argument('files', nargs='*' if called_from_app else '+')
+    parser.add_argument('files', nargs='*' if called_from_app or piped_data else '+')
     parser.add_argument('-d', '--debug', action='store_const', const='debug',
                         help='Write debug information to LOGS subdirectory')
     parser.add_argument('-o', '--out', nargs=1, default=['out'],

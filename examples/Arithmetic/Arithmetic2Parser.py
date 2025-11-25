@@ -74,7 +74,7 @@ if DHParser.versionnumber.__version_info__ < (1, 9, 3):
 
 if sys.version_info >= (3, 14, 0):
     CONFIG_PRESET['multicore_pool'] = 'InterpreterPool'
-read_local_config(os.path.join(scriptdir, 'ArithmeticConfig.ini'))
+read_local_config(os.path.join(scriptdir, 'Arithmetic2Config.ini'))
 
 
 #######################################################################
@@ -88,16 +88,16 @@ read_local_config(os.path.join(scriptdir, 'ArithmeticConfig.ini'))
 # To capture includes, replace the NEVER_MATCH_PATTERN
 # by a pattern with group "name" here, e.g. r'\input{(?P<name>.*)}'
 RE_INCLUDE = NEVER_MATCH_PATTERN
-RE_COMMENT = '#.*'  # THIS MUST ALWAYS BE THE SAME AS ArithmeticGrammar.COMMENT__ !!!
+RE_COMMENT = '#.*'  # THIS MUST ALWAYS BE THE SAME AS Arithmetic2Grammar.COMMENT__ !!!
 
 
-def ArithmeticTokenizer(original_text) -> Tuple[str, List[Error]]:
+def Arithmetic2Tokenizer(original_text) -> Tuple[str, List[Error]]:
     # Here, a function body can be filled in that adds preprocessor tokens
     # to the source code and returns the modified source.
     return original_text, []
 
 preprocessing: PseudoJunction = create_preprocess_junction(
-    ArithmeticTokenizer, RE_INCLUDE, RE_COMMENT)
+    Arithmetic2Tokenizer, RE_INCLUDE, RE_COMMENT)
 
 
 #######################################################################
@@ -106,17 +106,17 @@ preprocessing: PseudoJunction = create_preprocess_junction(
 #
 #######################################################################
 
-class ArithmeticGrammar(Grammar):
-    r"""Parser for an Arithmetic document.
+class Arithmetic2Grammar(Grammar):
+    r"""Parser for an Arithmetic2 document.
 
     Instantiate this class and then call the instance with the source
     code as the single argument in order to use the parser, e.g.:
-        parser = Arithmetic()
+        parser = Arithmetic2()
         syntax_tree = parser(source_code)
     """
     expression = Forward()
-    source_hash__ = "f28af4dcd04f80303d2ae10b3e4a7e6c"
-    disposable__ = re.compile('$.')
+    source_hash__ = "ff9faa29081938d4a36e4985f5a4dbbd"
+    disposable__ = re.compile('(?:(?:(?:expression$))|(?:term$))|(?:factor$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'#.*'
@@ -127,32 +127,30 @@ class ArithmeticGrammar(Grammar):
     dwsp__ = Drop(Whitespace(WSP_RE__))
     VARIABLE = Series(RegExp('[A-Za-z]'), dwsp__)
     NUMBER = Series(RegExp('(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?'), dwsp__)
-    NEGATIVE = RegExp('[-]')
-    POSITIVE = RegExp('[+]')
-    DIV = Series(Text("/"), dwsp__)
-    MUL = Series(Text("*"), dwsp__)
-    MINUS = Series(Text("-"), dwsp__)
-    PLUS = Series(Text("+"), dwsp__)
     group = Series(Series(Drop(Text("(")), dwsp__), expression, Series(Drop(Text(")")), dwsp__))
-    sign = Alternative(POSITIVE, NEGATIVE)
-    factor = Series(Option(sign), Alternative(NUMBER, VARIABLE, group), ZeroOrMore(Alternative(VARIABLE, group)))
-    term = Series(factor, ZeroOrMore(Series(Alternative(DIV, MUL), factor)))
-    expression.set(Series(term, ZeroOrMore(Series(Alternative(PLUS, MINUS), term))))
+    sign = Alternative(Text("+"), Text("-"))
+    factor = Series(Option(Series(sign, dwsp__)), Alternative(NUMBER, VARIABLE, group))
+    div = Series(factor, ZeroOrMore(Series(Series(Drop(Text("/")), dwsp__), factor)))
+    mul = Series(factor, ZeroOrMore(Series(Series(Drop(Text("*")), dwsp__), factor)))
+    term = Alternative(mul, div)
+    minus = Series(term, ZeroOrMore(Series(Series(Drop(Text("-")), dwsp__), term)))
+    plus = Series(term, ZeroOrMore(Series(Series(Drop(Text("+")), dwsp__), term)))
+    expression.set(Alternative(plus, minus))
     root__ = expression
     
-parsing: PseudoJunction = create_parser_junction(ArithmeticGrammar)
+parsing: PseudoJunction = create_parser_junction(Arithmetic2Grammar)
 get_grammar = parsing.factory  # for backwards compatibility, only
 
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
-        RE_COMMENT in (ArithmeticGrammar.COMMENT__, NEVER_MATCH_PATTERN), \
-        "Please adjust the pre-processor-variable RE_COMMENT in file ArithmeticParser.py so that " \
+        RE_COMMENT in (Arithmetic2Grammar.COMMENT__, NEVER_MATCH_PATTERN), \
+        "Please adjust the pre-processor-variable RE_COMMENT in file Arithmetic2Parser.py so that " \
         "it either is the NEVER_MATCH_PATTERN or has the same value as the COMMENT__-attribute " \
-        "of the grammar class ArithmeticGrammar! " \
+        "of the grammar class Arithmetic2Grammar! " \
         'Currently, RE_COMMENT reads "%s" while COMMENT__ is "%s". ' \
-        % (RE_COMMENT, ArithmeticGrammar.COMMENT__) + \
+        % (RE_COMMENT, Arithmetic2Grammar.COMMENT__) + \
         "\n\nIf RE_COMMENT == NEVER_MATCH_PATTERN then includes will deliberately be " \
-        "processed, otherwise RE_COMMENT==ArithmeticGrammar.COMMENT__ allows the " \
+        "processed, otherwise RE_COMMENT==Arithmetic2Grammar.COMMENT__ allows the " \
         "preprocessor to ignore comments."
 except (AttributeError, NameError):
     pass
@@ -164,8 +162,8 @@ except (AttributeError, NameError):
 #
 #######################################################################
 
-Arithmetic_AST_transformation_table = {
-    # AST Transformations for the Arithmetic-grammar
+Arithmetic2_AST_transformation_table = {
+    # AST Transformations for the Arithmetic2-grammar
     # Special rules:
     # "<<<": [],  # called once before the tree-traversal starts
     # ">>>": [],  # called once after the tree-traversal has finished
@@ -173,16 +171,11 @@ Arithmetic_AST_transformation_table = {
     # "*": [],  # fallback for nodes that do not appear in this table
     # ">": [],   # called for each node after calling its specific rules
     "expression": [],
+    "plus, minus, mul, div": [replace_by_single_child],
     "term": [],
     "factor": [],
     "sign": [],
     "group": [],
-    "PLUS": [],
-    "MINUS": [],
-    "MUL": [],
-    "DIV": [],
-    "POSITIVE": [],
-    "NEGATIVE": [],
     "NUMBER": [],
     "VARIABLE": [],
 }
@@ -190,17 +183,17 @@ Arithmetic_AST_transformation_table = {
 
 # DEPRECATED, because it requires pickling the transformation-table, which rules out lambdas!
 # ASTTransformation: Junction = create_junction(
-#     Arithmetic_AST_transformation_table, "CST", "AST", "transtable")
+#     Arithmetic2_AST_transformation_table, "CST", "AST", "transtable")
 
-def ArithmeticTransformer() -> TransformerFunc:
+def Arithmetic2Transformer() -> TransformerFunc:
     return static(partial(
         transformer, 
-        transformation_table=Arithmetic_AST_transformation_table.copy(),
+        transformation_table=Arithmetic2_AST_transformation_table.copy(),
         src_stage='CST', 
         dst_stage='AST'))
 
 ASTTransformation: Junction = Junction(
-    'CST', ThreadLocalSingletonFactory(ArithmeticTransformer), 'AST')
+    'CST', ThreadLocalSingletonFactory(Arithmetic2Transformer), 'AST')
 get_transformer = ASTTransformation.factory  # for backwards compatibility, only
 
 
@@ -210,13 +203,13 @@ get_transformer = ASTTransformation.factory  # for backwards compatibility, only
 #
 #######################################################################
 
-class ArithmeticCompiler(Compiler):
+class Arithmetic2Compiler(Compiler):
     """Compiler for the abstract-syntax-tree of a 
-        Arithmetic source file.
+        Arithmetic2 source file.
     """
 
     def __init__(self):
-        super(ArithmeticCompiler, self).__init__()
+        super(Arithmetic2Compiler, self).__init__()
         self.forbid_returning_None = True  # set to False if any compilation-method is allowed to return None
 
     def reset(self):
@@ -225,14 +218,26 @@ class ArithmeticCompiler(Compiler):
 
     def prepare(self, root: RootNode) -> None:
         assert root.stage == "AST", f"Source stage `AST` expected, `but `{root.stage}` found."
-        root.stage = "Arithmetic"
+        root.stage = "Arithmetic2"
     def finalize(self, result: Any) -> Any:
         return result
 
     def on_expression(self, node):
         return self.fallback_compiler(node)
 
+    # def on_plus(self, node):
+    #     return node
+
+    # def on_minus(self, node):
+    #     return node
+
     # def on_term(self, node):
+    #     return node
+
+    # def on_div(self, node):
+    #     return node
+
+    # def on_mul(self, node):
     #     return node
 
     # def on_factor(self, node):
@@ -244,24 +249,6 @@ class ArithmeticCompiler(Compiler):
     # def on_group(self, node):
     #     return node
 
-    # def on_PLUS(self, node):
-    #     return node
-
-    # def on_MINUS(self, node):
-    #     return node
-
-    # def on_MUL(self, node):
-    #     return node
-
-    # def on_DIV(self, node):
-    #     return node
-
-    # def on_POSITIVE(self, node):
-    #     return node
-
-    # def on_NEGATIVE(self, node):
-    #     return node
-
     # def on_NUMBER(self, node):
     #     return node
 
@@ -271,7 +258,7 @@ class ArithmeticCompiler(Compiler):
 
 
 compiling: Junction = create_junction(
-    ArithmeticCompiler, "AST", "Arithmetic")
+    Arithmetic2Compiler, "AST", "Arithmetic2")
 get_compiler = compiling.factory  # for backwards compatibility, only
 
 
@@ -292,8 +279,8 @@ from DHParser import ALLOWED_PRESET_VALUES
 #     ...
 
 # # change the names of the source and destination stages. Source
-# # ("Arithmetic") in this example must be the name of some earlier stage, though.
-# postprocessing: Junction = create_junction(PostProcessing, "Arithmetic", "refined")
+# # ("Arithmetic2") in this example must be the name of some earlier stage, though.
+# postprocessing: Junction = create_junction(PostProcessing, "Arithmetic2", "refined")
 #
 # DON'T FORGET TO ADD ALL POSTPROCESSING-JUNCTIONS TO THE GLOBAL
 # "junctions"-set IN SECTION "Processing-Pipeline" BELOW!
@@ -333,7 +320,7 @@ serializations = expand_table(dict([('*', [get_config_value('default_serializati
 #######################################################################
 
 def pipeline(source: str,
-             target: Union[str, Set[str]] = "Arithmetic",
+             target: Union[str, Set[str]] = "Arithmetic2",
              start_parser: str = "root_parser__",
              *, cancel_query: Optional[CancelQuery] = None) -> PipelineResult:
     """Runs the source code through the processing pipeline. If
@@ -352,7 +339,7 @@ def pipeline(source: str,
 
 
 def compile_src(source: str,
-                target: str = "Arithmetic",
+                target: str = "Arithmetic2",
                 start_parser: str = "root_parser__",
                 *, cancel_query: Optional[CancelQuery] = None) -> Tuple[Any, List[Error]]:
     """Compiles the source to a single target and returns the result of the compilation
@@ -378,7 +365,7 @@ def compile_src(source: str,
 
 
 def compile_snippet(source_code: str,
-                    target: str = "Arithmetic",
+                    target: str = "Arithmetic2",
                     start_parser: str = "root_parser__",
                     *, cancel_query: Optional[CancelQuery] = None) -> Tuple[Any, List[Error]]:
     """Compiles a piece of source_code. In contrast to :py:func:`compile_src` the
@@ -406,7 +393,7 @@ def process_file(source: str, out_dir: str = '', target_set: Set[str]=frozenset(
     elif not target_set <= targets:
         raise AssertionError('Unknown compilation target(s): ' +
                              ', '.join(t for t in target_set - targets))
-    # serializations = get_config_value('Arithmetic_serializations', serializations)
+    # serializations = get_config_value('Arithmetic2_serializations', serializations)
     return dsl.process_file(source, out_dir, preprocessing.factory, parsing.factory,
                             junctions, target_set, serializations, cancel_query)
 
@@ -423,7 +410,7 @@ def batch_process(file_names: List[str], out_dir: str,
     error messages to the directory `our_dir`. Returns a list of error
     messages files.
     """
-    from ArithmeticParser import process_file_wrapper
+    from Arithmetic2Parser import process_file_wrapper
     return dsl.batch_process(file_names, out_dir, process_file_wrapper,
         submit_func=submit_func, log_func=log_func, cancel_func=cancel_func)
 
@@ -467,12 +454,12 @@ def main(called_from_app=False) -> bool:
 
     from argparse import ArgumentParser
     piped_data = '' if sys.stdin.isatty() else sys.stdin.read()
-    a = "an" if "Arithmetic"[0:1] in "AEIOUaeiou" else "a"
-    parser = ArgumentParser(description="Parses " + a + " Arithmetic file and shows its syntax-tree."
+    a = "an" if "Arithmetic2"[0:1] in "AEIOUaeiou" else "a"
+    parser = ArgumentParser(description="Parses " + a + " Arithmetic2 file and shows its syntax-tree."
                             " If several filenames are provided or an output directory is "
                             "specified with --out, the results will be written to the disk!"
                             " To directly process content, use a pipe | e.g. "
-                            ' echo "..." | ArithmeticParser.py.')
+                            ' echo "..." | Arithmetic2Parser.py.')
     parser.add_argument('files', nargs='*' if called_from_app or piped_data else '+')
     parser.add_argument('-d', '--debug', action='store_const', const='debug',
                         help='Write debug information to LOGS subdirectory')
@@ -497,7 +484,7 @@ def main(called_from_app=False) -> bool:
     file_names, out, log_dir = args.files, args.out[0], ''
     if piped_data: file_names.insert(0, '\ufeff' + piped_data)
 
-    read_local_config(os.path.join(scriptdir, 'ArithmeticConfig.ini'))
+    read_local_config(os.path.join(scriptdir, 'Arithmetic2Config.ini'))
 
     if args.serialize:
         if (args.serialize[0].lower() not in
@@ -508,7 +495,7 @@ def main(called_from_app=False) -> bool:
             sys.exit(1)
         serializations['*'] = args.serialize
         access_presets()
-        set_preset_value('Arithmetic_serializations', serializations, allow_new_key=True)
+        set_preset_value('Arithmetic2_serializations', serializations, allow_new_key=True)
         finalize_presets()
 
     if args.debug is not None:

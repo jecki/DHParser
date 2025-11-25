@@ -22,12 +22,13 @@ expression = plus | minus -> HIDE
   plus     = term  { "+" term }
   minus    = term  { "-" term }
 
-term       = div | mul -> HIDE
-  div       = factor { "/" factor }
+term       = mul | div -> HIDE
   mul       = factor { "*" factor }
-factor     = [ sign~ ] (NUMBER | VARIABLE | group)
+  div       = factor { "/" factor }
+factor     = [ sign~ ] (NUMBER | VARIABLE | group) -> HIDE
 sign       = `+` | `-`
 group      = "(" expression ")"
+
 
 #######################################################################
 #
