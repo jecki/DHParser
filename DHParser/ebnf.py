@@ -256,7 +256,7 @@ from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_
     UNCONNECTED_SYMBOL_WARNING, REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES, \
     EMPTY_GRAMMAR_ERROR, MALFORMED_REGULAR_EXPRESSION, PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS, \
     STRUCTURAL_ERROR_IN_AST, SYMBOL_NAME_IS_PYTHON_KEYWORD, UNDEFINED_SYMBOL, ERROR, FATAL, \
-    WRONG_NUMBER_OF_ARGUMENTS, UNKNOWN_MACRO_ARGUMENT, \
+    WRONG_NUMBER_OF_ARGUMENTS, UNKNOWN_MACRO_ARGUMENT, AMBIGUOUS_RANGE_EXPRESSION_WARNING, \
     UNDEFINED_MACRO, RECURSIVE_MACRO_CALL, UNUSED_MACRO_ARGUMENTS_WARNING, has_errors
 from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, SmartRE, \
     Drop, DropFrom, Lookahead, NegativeLookahead, Alternative, Series, Option, ZeroOrMore, OneOrMore, \
@@ -755,7 +755,8 @@ def get_globals(path: Path) -> Dict[str, Any]:
     root = path[0]
     globals = root.get_attr('globals', None)
     if globals is None:
-        globals = {'optimizations': get_config_value('optimizations')}
+        globals = {'optimizations': get_config_value('optimizations'),
+                   'syntax_variant': get_config_value('syntax_variant')}
         for item in root.children:
             if item.name == 'directive' and item[0].content == "literalws":
                 globals['literalws'] = item[1].content
@@ -774,7 +775,7 @@ def cleanup_globals(path: Path):
 def rearrange_expression(path: Path):
     r"""Rearrenges expressions with alternatives of literals or
     regexps with adjacent whitespace so as to append the whitespace
-    to the epxression rather than the individual alternatives. This
+    to the expression rather than the individual alternatives. This
     reduces the number of parsers and in particular parser calls
     for each alternative.
 
@@ -2208,9 +2209,26 @@ class EBNFCompiler(Compiler):
             if symbol in defined_symbols:
                 remove_connections(symbol)
         for leftover in defined_symbols - self.py_symbols:
+            ambiguity_notice = ''
+            if get_globals(self.path)['syntax_variant'] == 'heuristic':
+                for nd in self.path[0].select('char_range', include_root=True):
+                    rngexpr = nd.content
+                    if rngexpr.find(leftover) >= 0:
+                        self.tree.new_error(
+                            nd, f'The character range expression "[{rngexpr}]" looks '
+                            'conspiciously like an optional expression!!! '
+                            'To disambiguate, add whitespaces after the opening and '
+                            'before the closing bracket if it was really meant to be '
+                            f'the optional expression "[ {rngexpr} ]",  '
+                            'or reorder the letters in the range expression so that '
+                            f'they do not resemble the symbol "{leftover}", any more.',
+                            AMBIGUOUS_RANGE_EXPRESSION_WARNING)
+                        ambiguity_notice = ' This may be the result of an ambiguous ' \
+                            'expression containing "{leftover}" elsewhere...'
             self.tree.new_error(self.rules[leftover][0],
-                                'Rule "%s" is not connected to parser root "%s" !' %
-                                (leftover, self.root_symbol), UNCONNECTED_SYMBOL_WARNING)
+                                f'Rule "{leftover}" is not connected to parser root '
+                                f'"{self.root_symbol}"!' + ambiguity_notice,
+                                UNCONNECTED_SYMBOL_WARNING)
 
         # check for filters assigned to non-existing or uncaptured symbols
 

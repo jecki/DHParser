@@ -1,0 +1,39 @@
+# A variant of an Arithmetic-grammar
+
+#######################################################################
+#
+#  EBNF-Directives
+#
+#######################################################################
+
+@ whitespace  = vertical             # implicit whitespace, denoted by ~, includes any number of line feeds
+@ literalws   = right                # literals have implicit whitespace on the right hand side
+@ comment     = /#.*/                # comments range from a '#'-character to the end of the line
+@ ignorecase  = False                # literals and regular expressions are case-sensitive
+@ drop        = whitespace, strings  # drop anonymous whitespace and (anonymous) string literals
+
+#######################################################################
+#
+#: Structure and Components
+#
+#######################################################################
+
+expression = plus | minus -> HIDE
+  plus     = term  { "+" term }
+  minus    = term  { "-" term }
+
+term       = div | mul -> HIDE
+  div       = factor { "/" factor }
+  mul       = factor { "*" factor }
+factor     = [ sign~ ] (NUMBER | VARIABLE | group)
+sign       = `+` | `-`
+group      = "(" expression ")"
+
+#######################################################################
+#
+#: "Leaf"-Expressions
+#
+#######################################################################
+
+NUMBER     = /(?:0|(?:[1-9]\d*))(?:\.\d+)?/~
+VARIABLE   = /[A-Za-z]/~

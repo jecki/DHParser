@@ -466,7 +466,13 @@ def main(called_from_app=False) -> bool:
               'because grammar was not found at: ' + grammar_path)
 
     from argparse import ArgumentParser
-    parser = ArgumentParser(description="Parses a Arithmetic-file and shows its syntax-tree.")
+    piped_data = '' if sys.stdin.isatty() else sys.stdin.read()
+    a = "an" if "Arithmetic"[0:1] in "AEIOUaeiou" else "a"
+    parser = ArgumentParser(description="Parses " + a + " Arithmetic file and shows its syntax-tree."
+                            " If several filenames are provided or an output directory is "
+                            "specified with --out, the results will be written to the disk!"
+                            " Use a pipe to directly process content e.g. "
+                            ' echo "..." | ArithmeticParser.py.')
     parser.add_argument('files', nargs='*' if called_from_app else '+')
     parser.add_argument('-d', '--debug', action='store_const', const='debug',
                         help='Write debug information to LOGS subdirectory')
@@ -489,6 +495,7 @@ def main(called_from_app=False) -> bool:
 
     args = parser.parse_args()
     file_names, out, log_dir = args.files, args.out[0], ''
+    if piped_data: file_names.insert(0, '\ufeff' + piped_data)
 
     read_local_config(os.path.join(scriptdir, 'ArithmeticConfig.ini'))
 
