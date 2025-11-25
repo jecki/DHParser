@@ -115,8 +115,8 @@ class Arithmetic2Grammar(Grammar):
         syntax_tree = parser(source_code)
     """
     expression = Forward()
-    source_hash__ = "ff9faa29081938d4a36e4985f5a4dbbd"
-    disposable__ = re.compile('(?:(?:(?:expression$))|(?:term$))|(?:factor$)')
+    source_hash__ = "461f03c65742d47bfbc92c604c21b9a6"
+    disposable__ = re.compile('(?:(?:(?:(?:expression$))|(?:term$))|(?:factor$))|(?:group$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'#.*'
@@ -125,16 +125,16 @@ class Arithmetic2Grammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
-    VARIABLE = Series(RegExp('[A-Za-z]'), dwsp__)
-    NUMBER = Series(RegExp('(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?'), dwsp__)
+    var = Series(RegExp('[A-Za-z]'), dwsp__)
+    num = Series(RegExp('(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?'), dwsp__)
     group = Series(Series(Drop(Text("(")), dwsp__), expression, Series(Drop(Text(")")), dwsp__))
     sign = Alternative(Text("+"), Text("-"))
-    factor = Series(Option(Series(sign, dwsp__)), Alternative(NUMBER, VARIABLE, group))
-    div = Series(factor, ZeroOrMore(Series(Series(Drop(Text("/")), dwsp__), factor)))
-    mul = Series(factor, ZeroOrMore(Series(Series(Drop(Text("*")), dwsp__), factor)))
+    factor = Series(Option(Series(sign, dwsp__)), Alternative(num, var, group))
+    div = Series(factor, NegativeLookahead(Series(Drop(Text("*")), dwsp__)), ZeroOrMore(Series(Alternative(Series(Drop(Text("/")), dwsp__), Series(Drop(Text(":")), dwsp__)), factor)))
+    mul = Series(factor, NegativeLookahead(Alternative(Series(Drop(Text("/")), dwsp__), Series(Drop(Text(":")), dwsp__))), ZeroOrMore(Series(Series(Drop(Text("*")), dwsp__), factor)))
     term = Alternative(mul, div)
-    minus = Series(term, ZeroOrMore(Series(Series(Drop(Text("-")), dwsp__), term)))
-    plus = Series(term, ZeroOrMore(Series(Series(Drop(Text("+")), dwsp__), term)))
+    minus = Series(term, NegativeLookahead(Series(Drop(Text("+")), dwsp__)), ZeroOrMore(Series(Series(Drop(Text("-")), dwsp__), term)))
+    plus = Series(term, NegativeLookahead(Series(Drop(Text("-")), dwsp__)), ZeroOrMore(Series(Series(Drop(Text("+")), dwsp__), term)))
     expression.set(Alternative(plus, minus))
     root__ = expression
     
@@ -163,21 +163,7 @@ except (AttributeError, NameError):
 #######################################################################
 
 Arithmetic2_AST_transformation_table = {
-    # AST Transformations for the Arithmetic2-grammar
-    # Special rules:
-    # "<<<": [],  # called once before the tree-traversal starts
-    # ">>>": [],  # called once after the tree-traversal has finished
-    # "<": [],  # called for each node before calling its specific rules
-    # "*": [],  # fallback for nodes that do not appear in this table
-    # ">": [],   # called for each node after calling its specific rules
-    "expression": [],
     "plus, minus, mul, div": [replace_by_single_child],
-    "term": [],
-    "factor": [],
-    "sign": [],
-    "group": [],
-    "NUMBER": [],
-    "VARIABLE": [],
 }
 
 

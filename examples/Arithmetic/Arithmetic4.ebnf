@@ -10,7 +10,7 @@
 @ literalws   = right                # literals have implicit whitespace on the right hand side
 @ comment     = /#.*/                # comments range from a '#'-character to the end of the line
 @ ignorecase  = False                # literals and regular expressions are case-sensitive
-@ drop        = whitespace, strings  # drop anonymous whitespace and (anonymous) string literals
+@ drop        = whitespace           # drop anonymous whitespace and (anonymous) string literals
 
 #######################################################################
 #
@@ -18,17 +18,11 @@
 #
 #######################################################################
 
-expression = plus | minus -> HIDE
-  plus     = term !"-" { "+" term }
-  minus    = term !"+" { "-" term }
-
-term       = mul | div -> HIDE
-  mul       = factor !("/"|":") { "*"         factor }
-  div       = factor !"*"       { ("/" | ":") factor }
-factor     = [ sign~ ] (num | var | group) -> HIDE
-sign       = `+` | `-`
-group      = "(" expression ")" -> HIDE
-
+expression = term | expression "+" term | expression  "-" term
+term       = factor | term "*" factor | term "/" factor
+factor     = [ sign ] (num | var | group)
+sign       = "+" | "-"
+group      = "(" expression ")"
 
 #######################################################################
 #

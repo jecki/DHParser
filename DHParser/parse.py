@@ -1027,7 +1027,7 @@ class LeafParser(Parser):
             if location <= grammar.last_rb__loc__:
                 grammar.rollback_to__(location)
 
-            # if location has already been visited by the current parser, return saved result
+            # if location has already been visited by the current parser, return the saved result
             visited = self.visited  # using local variable for better performance
             if location in visited:
                 # Sorry, no history recording in case of memoized results!
@@ -1054,7 +1054,7 @@ class LeafParser(Parser):
 
 
 class BlackHoleDict(dict):
-    """A dictionary that always stays empty. Usae case:
+    """A dictionary that always stays empty. Use case:
     Disabling memoization."""
     def __setitem__(self, key, value):
         return
