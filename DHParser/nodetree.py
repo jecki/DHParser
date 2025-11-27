@@ -1951,7 +1951,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         as pseudo-attributes of the nodes where the error is located.
 
         :param src:  The source text or `None`. In case the source text is
-            given the position of the element in the text will be
+            given, the position of the element in the text will be
             reported as position, line, column. In case the empty string is
             given rather than None, only the position value will be
             reported in case it has been initialized, i.e. pos >= 0.
@@ -1980,7 +1980,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                              f"DHParser.nodetree.NO_MAPPING_SENTINEL, but not: {mapping}")
 
         left_bracket, right_bracket, density = ('(', ')', 1) if compact else ('(', ')', 0)
-        lbreaks = linebreaks(src) if src else []  # type: List[int]
+        if isinstance(self, RootNode) and (src == '' or src == self.source):
+            lbreaks = self.lbreaks
+        else:
+            lbreaks = [] if src is None else linebreaks(src)
         root = cast(RootNode, self) if isinstance(self, RootNode) \
             else None  # type: Optional[RootNode]
         inner_content: str = ""
@@ -2153,7 +2156,10 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         root = cast(RootNode, self) if isinstance(self, RootNode) \
             else None  # type: Optional[RootNode]
-        line_breaks = linebreaks(src) if src else []
+        if isinstance(self, RootNode) and (src == '' or src == self.source):
+            line_breaks = self.lbreaks
+        else:
+            line_breaks = [] if src is None else linebreaks(src)
         if empty_tags is AUTO_EMPTY_TAGS:
             _empty_tags = self.collect_empty_tags()
         else:
