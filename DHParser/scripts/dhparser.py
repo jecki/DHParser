@@ -63,6 +63,15 @@ def create_project(path: str):
     # SERVER_TEMPLATE = read_template('DSLServer.pyi')
 
     name = os.path.basename(path)
+    if name in ('.', ''):
+        for entry in os.listdir(os.path.dirname(path) or os.getcwd()):
+            if entry.endswith('.ebnf'):
+                name = entry
+                path = os.path.dirname(path) or os.getcwd()
+                break
+    if os.path.dirname(path) == '.':
+        path = os.getcwd()
+    if name.endswith('.ebnf'):  name = name[:-5]
     if not re.match(r'(?!\d)\w+', name):
         print('Project name "%s" is not a valid identifier! Aborting.' % name)
         sys.exit(1)
@@ -246,9 +255,10 @@ def main():
     else:
         print('dhparser version ' + versionnumber.__version__)
         print('Usage: \n'
-              '    dhparser.py PROJECTNAME  - to create a new project\n'
-              '    dhparser.py FILENAME.ebnf  - to produce a python-parser from an EBNF-grammar\n'
-              '    dhparser.py --selftest  - to run a self-test\n')
+              '    dhparser.py PROJECTNAME  - create a new project\n'
+              '    dhparser.py ./PROJECTNAME  - create a new project in the current directory\n'
+              '    dhparser.py FILENAME.ebnf  - produce a python-parser from an EBNF-grammar\n'
+              '    dhparser.py --selftest  - run a self-test\n')
         choice = input('\nWould you now like to ...\n'
                        '  [1] create a new project\n'
                        '  [2] compile an ebnf-grammar\n'
