@@ -1074,7 +1074,7 @@ def ebnf_from_ast(ebnf_AST: Node, syntax: str = "DHParser") -> str:
     """
     assert syntax in ("DHParser", "ISO")
     try:
-        ebnf = ebnf_AST.evaluate(EBNF_AST_Serialization_Table, path=[ebnf_AST])
+        ebnf = ebnf_AST.evaluate_path(EBNF_AST_Serialization_Table, path=[ebnf_AST])
     except Exception as e:
         raise ValueError("EBNF_AST does not seem to be a valid EBNF AST: " + str(e))
     if syntax == "ISO":

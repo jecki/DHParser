@@ -549,10 +549,10 @@ def create_transtable_transition(*args, **kwargs):
 
 def _make_evaluation(actions, supply_path_arg) -> Callable[[Node], Any]:
     def evaluate_with_path(node: Node) -> Any:
-        return node.evaluate(actions, [node])
+        return node.evaluate_path(actions, [node])
 
     def evaluate_without_path(node: Node) -> Any:
-        return node.evaluate(actions, path=[])
+        return node.evaluate(actions)
 
     return evaluate_with_path if supply_path_arg else evaluate_without_path
 

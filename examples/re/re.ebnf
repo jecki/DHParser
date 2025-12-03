@@ -38,44 +38,44 @@
 
 #: Regular Expressions
 
-regular_expression = [flagGroups] (regex | ")") EOF
-regex      = pattern { "|" pattern }
-pattern    = { repetition | _item }
-_item      = (_entity | _chars)
-_entity    = _special | _escape | charset | _group
+regular_expression = [flagGroups] (alternative| ")") EOF
+alternative = sequence { "|" sequence }
+sequence    = { repetition | _item }
+_item       = (_entity | _chars)
+_entity     = _special | _escape | charset | _group
 
-flagGroups = { "(?" flags § ")" }+
-flags      =  positive [negative] | negative
-  positive = /[aiLmsux]+/
-  negative = "-" /[imsx]+/
+flagGroups  = { "(?" flags § ")" }+
+flags       =  positive [negative] | negative
+  positive  = /[aiLmsux]+/
+  negative  = "-" /[imsx]+/
 
 
 #: repetition
 
-repetition = _item repType [ notGreedy | noBacktracking ]
-  repType = zeroOrOne | zeroOrMore | oneOrMore | range
-    zeroOrOne  = "?"
-    zeroOrMore = "*"
-    oneOrMore  = "+"
-    range      = "{" min ["," max] "}"
-      min      = _number
-      max      = _number
-      _number  = /[0-9]+/
+repetition       = _item repType [ notGreedy | noBacktracking ]
+  repType        = zeroOrOne | zeroOrMore | oneOrMore | range
+    zeroOrOne    = "?"
+    zeroOrMore   = "*"
+    oneOrMore    = "+"
+    range        = "{" min ["," max] "}"
+      min        = _number
+      max        = _number
+      _number    = /[0-9]+/
   notGreedy      = "?"
   noBacktracking = "+"
 
 
 #: special
 
-_special   = any | start | end
-  any      = "."
-  start    = "^"
-  end      = "$"
+_special = any | start | end
+  any    = "."
+  start  = "^"
+  end    = "$"
 
 #: escape
 
 _escape      = BS § ( bs | chCode | chName | groupId | _reEsc | specialEsc | error | escCh )
-  _reEsc      = &/[AbBdDsSwWZ]/ (fixedChSet | wordBorder | absStart | absEnd)
+  _reEsc     = &/[AbBdDsSwWZ]/ (fixedChSet | wordBorder | absStart | absEnd)
   specialEsc = /[afnrtv]/
   chCode     = "x" hex2 | "u" hex4 | "U" hex8 | oct
     hex2     = _nibble*2
@@ -99,7 +99,7 @@ absEnd       = /[zZ]/
 
 # What about https://unicode.org/reports/tr18/ ?
 
-charset    = "[" [complement] { _csEsc | chRange | _escapedCh | BS error | chSet }+ "]"
+charset      = "[" [complement] { _csEsc | chRange | _escapedCh | BS error | chSet }+ "]"
   complement = "^"
   chRange    = (_escapedCh | ch) "-" !_csEsc (_escapedCh | ch)
   chSet      = _ch  { !_csEsc !chRange !_escapedCh !BS _ch }
@@ -113,28 +113,28 @@ fixedChSet   = /[dDsSwW]/  # /lL/ for letters only occurs later in the pipeline
 
 #: group
 
-_group     = "(" § (_extension | capturing) ")"
-_extension = "?" § ( nonCapturing | subRegex | namedGroup | backRef
-                  | comment | lookaround | bifurcation)
+_group         = "(" § (_extension | capturing) ")"
+_extension     = "?" § ( nonCapturing | subRegex | namedGroup | backRef
+                       | comment | lookaround | bifurcation)
 
-capturing  = grpRegex
-nonCapturing = [flags] ":" § grpRegex
-subRegex   = ">" § grpRegex
-namedGroup = "P<" § groupName ">" grpRegex
-backRef    = "P=" § groupName
-comment    = "#" /(?:[\\]\)|[^)\\]+)+/
+capturing      = grpAlternative
+nonCapturing   = [flags] ":" § grpAlternative
+subRegex       = ">" § grpAlternative
+namedGroup     = "P<" § groupName ">" grpAlternative
+backRef        = "P=" § groupName
+comment        = "#" /(?:[\\]\)|[^)\\]+)+/
 
-lookaround = lrtype § grpRegex
-  lrtype   = `=` | `!` | `<=` | `<!`
+lookaround     = lrtype § grpAlternative
+  lrtype       = `=` | `!` | `<=` | `<!`
 
-bifurcation = "(" § (groupId | groupName) ")" pattern "|" grpPattern
+bifurcation    = "(" § (groupId | groupName) ")" sequence "|" grpSequence
 
-groupName  = /(?!\d)\w+/
+groupName      = /(?!\d)\w+/
 
-grpRegex   = grpPattern { "|" grpPattern }
-grpPattern = { grpRepetition | _grpItem }
-grpRepetition = _grpItem repType [ notGreedy | noBacktracking ]
-_grpItem   = (_entity  | _grpChars)
+grpAlternative = grpSequence { "|" grpSequence }
+grpSequence    = { grpRepetition | _grpItem }
+grpRepetition  = _grpItem repType [ notGreedy | noBacktracking ]
+_grpItem       = (_entity  | _grpChars)
 
 #: misc
 

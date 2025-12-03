@@ -3143,7 +3143,7 @@ class TestSerialization:
             ws = / +/ -> DROP"""
         cst = parse_ebnf(gr)
         ast = transform_ebnf(cst)
-        ebnf = ast.evaluate(EBNF_AST_Serialization_Table, path=[ast])
+        ebnf = ast.evaluate_path(EBNF_AST_Serialization_Table, path=[ast])
         assert ebnf == r"""document = { paragraph }
 paragraph = word { ws word }
 HIDE:word = /\w+/
@@ -3160,7 +3160,7 @@ ws = / +/ -> DROP"""
         '''
         cst = parse_ebnf(gr)
         ast = transform_ebnf(cst)
-        ebnf = (ast.evaluate(EBNF_AST_Serialization_Table, path=[ast]))
+        ebnf = (ast.evaluate_path(EBNF_AST_Serialization_Table, path=[ast]))
         ast2 = transform_ebnf(parse_ebnf(ebnf))
         assert ast2.equals(ast)
 
@@ -3182,14 +3182,14 @@ ws = / +/ -> DROP"""
             directive = "c" § "d"'''
         cst = parse_ebnf(gr)
         ast = transform_ebnf(cst)
-        ebnf = ast.evaluate(EBNF_AST_Serialization_Table, path=[ast])
+        ebnf = ast.evaluate_path(EBNF_AST_Serialization_Table, path=[ast])
         ast2 = transform_ebnf(parse_ebnf(ebnf))
         assert ast2.equals(ast)
 
     def test_ebnf(self):
         cst = parse_ebnf(FlexibleEBNF)
         ast = transform_ebnf(cst)
-        ebnf = ast.evaluate(EBNF_AST_Serialization_Table, path=[ast])
+        ebnf = ast.evaluate_path(EBNF_AST_Serialization_Table, path=[ast])
         cst2 = parse_ebnf(ebnf)
         ast2 = transform_ebnf(cst2)
         assert ast2.equals(ast)

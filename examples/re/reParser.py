@@ -185,17 +185,17 @@ preprocessing: PseudoJunction = create_preprocess_junction(
 class reGrammar(Grammar):
     r"""Parser for a re document.
 
-    Instantiate this class and then call the instance with the
-    source code as argument in order to use the parser, e.g.:
+    Instantiate this class and then call the instance with the source
+    code as the single argument in order to use the parser, e.g.:
         parser = re()
         syntax_tree = parser(source_code)
     """
     _entity = Forward()
     _item = Forward()
-    pattern = Forward()
-    source_hash__ = "0582068b2cc540cc0bc053926f85f098"
+    sequence = Forward()
+    source_hash__ = "ee46c7349b2904d5f334e561bc24ccc6"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:_grpChars$|_anyChar$|_illegal$|_chars$|BS$|_octal$|_entity$|_escape$|_nibble$|_escapedCh$|_ch$|_grpItem$|EOF$|_item$|_extension$|_reEsc$|_char$|_special$|_number$|_grpChar$|_group$)')
+    disposable__ = re.compile('(?:_octal$|_reEsc$|_char$|_number$|EOF$|_item$|_grpItem$|_special$|_entity$|_escape$|_nibble$|_ch$|_grpChar$|_illegal$|_escapedCh$|BS$|_grpChars$|_anyChar$|_chars$|_extension$|_group$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -267,27 +267,27 @@ class reGrammar(Grammar):
     noBacktracking = Text("+")
     notGreedy = Text("?")
     grpRepetition = Series(_grpItem, repType, Option(Alternative(notGreedy, noBacktracking)))
-    grpPattern = ZeroOrMore(Alternative(grpRepetition, _grpItem))
-    grpRegex = Series(grpPattern, ZeroOrMore(Series(Drop(Text("|")), grpPattern)))
-    lookaround = Series(lrtype, grpRegex, mandatory=1)
-    namedGroup = Series(Drop(Text("P<")), groupName, Drop(Text(">")), grpRegex, mandatory=1)
-    subRegex = Series(Drop(Text(">")), grpRegex, mandatory=1)
-    capturing = Synonym(grpRegex)
-    bifurcation = Series(Drop(Text("(")), Alternative(groupId, groupName), Drop(Text(")")), pattern, Drop(Text("|")), grpPattern, mandatory=1)
+    grpSequence = ZeroOrMore(Alternative(grpRepetition, _grpItem))
+    grpAlternative = Series(grpSequence, ZeroOrMore(Series(Drop(Text("|")), grpSequence)))
+    lookaround = Series(lrtype, grpAlternative, mandatory=1)
+    namedGroup = Series(Drop(Text("P<")), groupName, Drop(Text(">")), grpAlternative, mandatory=1)
+    subRegex = Series(Drop(Text(">")), grpAlternative, mandatory=1)
+    capturing = Synonym(grpAlternative)
+    bifurcation = Series(Drop(Text("(")), Alternative(groupId, groupName), Drop(Text(")")), sequence, Drop(Text("|")), grpSequence, mandatory=1)
     repetition = Series(_item, repType, Option(Alternative(notGreedy, noBacktracking)))
-    nonCapturing = Series(Option(flags), Drop(Text(":")), grpRegex, mandatory=2)
+    nonCapturing = Series(Option(flags), Drop(Text(":")), grpAlternative, mandatory=2)
     _extension = Series(Drop(Text("?")), Alternative(nonCapturing, subRegex, namedGroup, backRef, comment, lookaround, bifurcation), mandatory=1)
     _group = Series(Drop(Text("(")), Alternative(_extension, capturing), Drop(Text(")")), mandatory=1)
     flagGroups = OneOrMore(Series(Drop(Text("(?")), flags, Drop(Text(")")), mandatory=2))
-    regex = Series(pattern, ZeroOrMore(Series(Drop(Text("|")), pattern)))
+    alternative = Series(sequence, ZeroOrMore(Series(Drop(Text("|")), sequence)))
     _entity.set(Alternative(_special, _escape, charset, _group))
     _item.set(Alternative(_entity, _chars))
-    pattern.set(ZeroOrMore(Alternative(repetition, _item)))
-    regular_expression = Series(Option(flagGroups), Alternative(regex, Drop(Text(")"))), EOF)
+    sequence.set(ZeroOrMore(Alternative(repetition, _item)))
+    regular_expression = Series(Option(flagGroups), Alternative(alternative, Drop(Text(")"))), EOF)
     root__ = regular_expression
     
 parsing: PseudoJunction = create_parser_junction(reGrammar)
-get_grammar = parsing.factory # for backwards compatibility, only
+get_grammar = parsing.factory  # for backwards compatibility, only
 
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
@@ -340,8 +340,8 @@ re_AST_transformation_table = {
     # ">": [],  # called for each node after calling its specific rules
     "regular_expression": [],
     # "group": [replace_by_single_child],
-    "regex, grpRegex": [change_name('regex'), replace_by_single_child],
-    "pattern, grpPattern": [change_name('pattern'),
+    "alternative, grpAlternative": [change_name('alternative'), replace_by_single_child],
+    "sequence, grpSequence": [change_name('sequence'),
                             merge_adjacent(is_one_of('charSeq')),
                             replace_by_single_child],
     "grpRepetition": [change_name('repetition')],
@@ -376,7 +376,7 @@ ASTTransformation: Junction = Junction(
 
 #######################################################################
 #
-# COMPILER SECTION - Can be edited. Changes will be preserved.
+# COMPILER SECTION (Flags processing)
 #
 #######################################################################
 
@@ -600,7 +600,7 @@ class FlagProcessing(Compiler):
         chset = { 'd': 'decimal', 's': 'space', 'w': 'identifier' }[node.result.lower()]
         ascii = 'ascii_' if 'a' in self.effective_flags.positive else ''
         node.attr['set'] = ascii + chset
-        if node.result.islower():
+        if node.result.isupper():
             node.attr['complement'] = '^'
         node.attr['re'] = '\\' + node.result
         return node
@@ -709,7 +709,7 @@ class FlagProcessing(Compiler):
                            Node('ch', '\n').with_pos(node.pos))
         return node
 
-    def on_pattern(self, node):
+    def on_sequence(self, node):
         node = self.fallback_compiler(node)
         replace_by_single_child(self.path)
         return node
@@ -724,6 +724,20 @@ flagProcessing: Junction = create_junction(
 # END OF DHPARSER-SECTIONS
 #
 #######################################################################
+
+#######################################################################
+#
+# Re-serialization
+#
+#######################################################################
+
+re_serialization_table = expand_table({
+
+})
+
+def serialize_re(regex_AST: Node) -> str:
+    return regex_AST.evaluate_path(re_serialization_table, [regex_AST])
+
 
 #######################################################################
 #

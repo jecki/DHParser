@@ -332,11 +332,11 @@ def deprecation_warning(message: str):
                 deprecation_policy = get_config_value('deprecation_policy')
             except AssertionError as e:
                 deprecation_policy = 'warn'
-                print(e)
             if deprecation_policy == 'warn':
                 import traceback
-                stacktrace = traceback.format_exc()
-                print(stacktrace)
+                stack = traceback.extract_stack()
+                traceback.print_list(stack[:-1])
+                print(e)
             else:
                 raise e
 
