@@ -411,23 +411,23 @@ DUPLICATE_CHARACTERS = ErrorCode(2030)
 
 # default_start = parse_sxpr('(lookaround (lrtype "<!") (any "."))')
 # default_end = parse_sxpr('(lookaround (lrtype "!") (any "."))')
-# multiline_start = parse_sxpr('(regex (lookaround (lrtype "<=") (specialEsc "n")) (lookaround (lrtype "<!") (any ".")))')
-# multiline_end = parse_sxpr('(regex (lookaround (lrtype "=") (specialEsc "n")) (lookaround (lrtype "!") (any ".")))')
-# word_border = parse_sxpr('(regex (pattern (lookaround (lrtype "<!") (fixedChSet "L")) (lookaround (lrtype "=") (fixedChSet "L")))'
-#                                ' (pattern (lookaround (lrtype "<=") (fixedChSet "L")) (lookaround (lrtype "!") (fixedChSet "L"))))')
+# multiline_start = parse_sxpr('(alternative (lookaround (lrtype "<=") (specialEsc "n")) (lookaround (lrtype "<!") (any ".")))')
+# multiline_end = parse_sxpr('(alternative (lookaround (lrtype "=") (specialEsc "n")) (lookaround (lrtype "!") (any ".")))')
+# word_border = parse_sxpr('(alternative (sequence (lookaround (lrtype "<!") (fixedChSet "L")) (lookaround (lrtype "=") (fixedChSet "L")))'
+#                                ' (sequence (lookaround (lrtype "<=") (fixedChSet "L")) (lookaround (lrtype "!") (fixedChSet "L"))))')
 default_start = Node('lookaround', (Node('lrtype', '<!'), Node('any', '.')))
 default_end   = Node('lookaround', (Node('lrtype', '!'), Node('any', '.')))
-multiline_start = Node('regex', (Node('lookaround', (Node('lrtype', '<='), Node('specialEsc', 'n'))),
+multiline_start = Node('alternative', (Node('lookaround', (Node('lrtype', '<='), Node('specialEsc', 'n'))),
                                  Node('lookaround', (Node('lrtype', '<!'), Node('any', '.')))))
-multiline_end   = Node('regex', (Node('lookaround', (Node('lrtype', '='), Node('specialEsc', 'n'))),
+multiline_end   = Node('alternative', (Node('lookaround', (Node('lrtype', '='), Node('specialEsc', 'n'))),
                                  Node('lookaround', (Node('lrtype', '!'), Node('any', '.')))))
-word_border = Node('regex', (Node('pattern', (Node('lookaround', (Node('lrtype', '<!'), Node('fixedChSet', 'L'))),
+word_border = Node('alternative', (Node('sequence', (Node('lookaround', (Node('lrtype', '<!'), Node('fixedChSet', 'L'))),
                                               Node('lookaround', (Node('lrtype', '='), Node('fixedChSet', 'L'))))),
-                             Node('pattern', (Node('lookaround', (Node('lrtype', '<='), Node('fixedChSet', 'L'))),
+                             Node('sequence', (Node('lookaround', (Node('lrtype', '<='), Node('fixedChSet', 'L'))),
                                               Node('lookaround', (Node('lrtype', '!'), Node('fixedChSet', 'L')))))))
-no_word_border = Node('regex', (Node('pattern', (Node('lookaround', (Node('lrtype', '<='), Node('fixedChSet', 'L'))),
+no_word_border = Node('alternative', (Node('sequence', (Node('lookaround', (Node('lrtype', '<='), Node('fixedChSet', 'L'))),
                                                  Node('lookaround', (Node('lrtype', '='), Node('fixedChSet', 'L'))))),
-                                Node('pattern', (Node('lookaround', (Node('lrtype', '<!'), Node('fixedChSet', 'L'))),
+                                Node('sequence', (Node('lookaround', (Node('lrtype', '<!'), Node('fixedChSet', 'L'))),
                                                  Node('lookaround', (Node('lrtype', '!'), Node('fixedChSet', 'L')))))))
 
 
@@ -542,7 +542,7 @@ class FlagProcessing(Compiler):
         assert node.result in ('A', 'a')
         start = copy.deepcopy(default_start)
         for nd in start.walk_tree():  nd._pos = node._pos
-        node.name = 'regex'
+        node.name = 'lookaround'
         node.attr['re'] = r'\A'
         node.result = start.children
         return node
@@ -552,7 +552,7 @@ class FlagProcessing(Compiler):
         assert node.result in ('Z', 'Z')
         end = copy.deepcopy(default_end)
         for nd in end.walk_tree():  nd._pos = node._pos
-        node.name = 'regex'
+        node.name = 'lookaround'
         node.attr['re'] = r'\Z'
         node.result = end.children
         return node
@@ -563,7 +563,7 @@ class FlagProcessing(Compiler):
         start = copy.deepcopy(multiline_start) if 'm' in self.effective_flags.positive \
                                                 else copy.deepcopy(default_start)
         for nd in start.walk_tree():  nd._pos = node._pos
-        node.name = 'regex'
+        node.name = 'lookaround'
         node.attr['re'] = node.result
         node.result = start.children
         return node
@@ -574,7 +574,7 @@ class FlagProcessing(Compiler):
         end = copy.deepcopy(multiline_end) if 'm' in self.effective_flags.positive \
                                            else copy.deepcopy(default_end)
         for nd in end.walk_tree():  nd._pos = node._pos
-        node.name = 'regex'
+        node.name = 'lookaround'
         node.attr['re'] = node.result
         node.result = end.children
         return node
@@ -590,7 +590,7 @@ class FlagProcessing(Compiler):
                     nd.attr['set'] = 'ascii_alpha'
                 else:
                     nd.attr['set'] = 'alpha'
-        node.name = 'regex'
+        node.name = 'alternative'
         node.attr['re'] = '\\' + node.result
         return node
 
@@ -620,7 +620,7 @@ class FlagProcessing(Compiler):
                     chSet = Node('chSet', ch.upper() + ch.lower())
                     seq.append(Node('charset', chSet).with_pos(node.pos + d))
             if len(self.path) > 1 and (len(seq) > 1 or seq[-1].name != 'charSeq'):
-                node.name = 'pattern'
+                node.name = 'sequence'
                 node.attr['re'] = node.result
                 node.result = tuple(seq)
         return node
@@ -731,8 +731,42 @@ flagProcessing: Junction = create_junction(
 #
 #######################################################################
 
-re_serialization_table = expand_table({
+def ch_code(ch: str) -> str:
+    assert len(ch) == 1
+    n = ord(ch)
+    if 0x20 <= n <= 0x7f:
+        return ch
+    elif n <= 0xff:
+        return "\\x" + f"{n:#04x}"[2:]
+    elif n <= 0xffff:
+        return "\\u" + f"{n:#06x}"[2:]
+    elif n <= 0xffffff:
+        return "\\U" + f"{n:#08x}"[2:]
+    else:
+        raise ValueError(f"Illegal character code {n:#0Ax} for character '{ch}'")
 
+
+def group_if(cond: bool, delimiter: str, items: Tuple[str]) -> str
+    res = delimiter.join(items)
+    return ''.join(['(', res, ')']) if cond else res
+
+
+re_serialization_table = expand_table({
+    "fixedChSet": lambda _, s: "\\" + s,
+    "alternative":  lambda p, *ts:
+        group_if(p[-2].name in ("sequence", "repetition"), '|', ts),
+    "sequence": lambda p, *ts:
+        group_if(p[-2].name == "repetition", '', ts),
+    "repetition": lambda _, *ts: ''.join(ts),
+    "any": lambda _, s: '.',
+    "charset": lambda _, *ts: ''.join(['[', *ts, ']']),
+    "ch": lambda _, s: ch_code(s),
+    "chRange": lambda _, *ts: ''.join([ch_code(ts[0]), '-', ch_code(ts[1])]),
+    "lookaround": lambda _, *ts: ''.join(['(?', *ts, ')']),
+    "lrtype, complement, repType, zeroOrOne, zeroOrMore, oneOrMore, min, max":
+        lambda _, s: s,
+    "range": lambda _, *ts: ''.join(['{', ts[0], ',', ts[1], '}']),
+    "regular_expression": lambda _, s: s
 })
 
 def serialize_re(regex_AST: Node) -> str:

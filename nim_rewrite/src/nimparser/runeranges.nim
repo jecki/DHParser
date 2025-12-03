@@ -185,7 +185,7 @@ func `*`*(A, B: seq[RuneRange]): seq[RuneRange] = A - (A - B) - (B - A)
 
 
 # Rune range algebraic operations with complement ranges
-
+  
 
 proc add*(Acompl, Bcompl: bool; A, B: seq[RuneRange]): (bool, seq[RuneRange]) =
   let selector = (if Acompl: 2 else: 0) + (if Bcompl: 1 else: 0)
