@@ -1714,10 +1714,20 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         In contrast to :py:meth:`evaluate`, each function
         will be called with the current path as its first argument and the
         evaluated values of its children as the following arguments,
-        e.g., ``result = node.evaluate(actions, path=[node])``.
+        e.g., ``result = node.evaluate(actions, path=[node])``::
 
-        :param actions: A dictionary that maps node-names to action functions.
-        :param path: The path up to and including self. If empty (default),
+            >>> tree = parse_sxpr('(mul (number 3) (plus (number 5) (number 4)))')
+            >>> serialize = {'number': lambda _, s: s,
+            ...              'mul': lambda _, *ts: ' * '.join(ts),
+            ...              'plus': lambda p, *ts:
+            ...                  '(' + ' + '.join(ts) + ')'
+            ...                  if len(p) > 1 and p[-2].name in ('mul', 'div')
+            ...                  else ' + '.join(ts)}
+            >>> tree.evaluate_path(serialize)
+            '3 * (5 + 4)'
+
+        :param actions: a dictionary that maps node-names to action functions.
+        :param path: the path up to and including self. If empty (default),
             [self] will be used as starting path.
         :raises KeyError: if an action is missing in the table, use the joker
             '*' to void this error, e.g. ``{ ..., '*': lambda node: node.content, ...}``.
