@@ -746,7 +746,7 @@ def ch_code(ch: str) -> str:
         raise ValueError(f"Illegal character code {n:#0Ax} for character '{ch}'")
 
 
-def group_if(cond: bool, delimiter: str, items: Tuple[str]) -> str
+def group_if(cond: bool, delimiter: str, items: Tuple[str]) -> str:
     res = delimiter.join(items)
     return ''.join(['(', res, ')']) if cond else res
 
@@ -772,6 +772,8 @@ re_serialization_table = expand_table({
 def serialize_re(regex_AST: Node) -> str:
     return regex_AST.evaluate_path(re_serialization_table, [regex_AST])
 
+re_from_AST = create_junction(re_serialization_table, "AST", "regex",
+                          "evaluate_with_path")
 
 #######################################################################
 #
@@ -809,7 +811,7 @@ def serialize_re(regex_AST: Node) -> str:
 # (See DHParser.compile for a description of junctions)
 
 # ADD YOUR OWN POST-PROCESSING-JUNCTIONS HERE:
-junctions = set([ASTTransformation, flagProcessing])
+junctions = {ASTTransformation, re_from_AST, flagProcessing}
 
 # put your targets of interest, here. A target is the name of result (or stage)
 # of any transformation, compilation or postprocessing step after parsing.
