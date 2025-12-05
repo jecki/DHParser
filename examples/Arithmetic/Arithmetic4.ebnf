@@ -18,7 +18,7 @@
 #
 #######################################################################
 
-expression = term | expression "+" term | expression  "-" term
+expression = term | expression "+" term | expression "-" term
 term       = factor | term "*" factor | term "/" factor
 factor     = [ sign ] (num | var | group)
 sign       = "+" | "-"

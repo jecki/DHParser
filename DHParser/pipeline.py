@@ -500,15 +500,13 @@ def create_parser_junction(grammar_class: type) -> PseudoJunction:
 #         result.stage = dst_stage
 #     return result
 
-def create_compiler_junction(compile_class: type,
+def create_compiler_junction(compile_class: CompilerFactory,
                              src_stage: str,
                              dst_stage: str) -> Junction:
     """Creates a thread-safe transformation function and function-factory from
     a :py:class:`compile.Compiler` or another callable class.
     """
     assert callable(compile_class)
-    # assert src_stage and src_stage.islower()
-    # assert dst_stage and dst_stage.islower()
     factory = ThreadLocalSingletonFactory(compile_class)
     # process = partial(process_template, src_stage=src_stage, dst_stage=dst_stage,
     #                   factory_function=factory)
@@ -522,8 +520,10 @@ def _make_transformer(src_stage, dst_stage, table) -> TransformerFunc:
                                 src_stage=src_stage, dst_stage=dst_stage))
 
 
-@deprecated("DHParser.pipeline.create_transtable_transition() is deprecated, "
-            "because it does not work with lambdas as transformer functions!")
+@deprecated("DHParser.pipeline.create_transtable_junction() is deprecated, "
+            "because it does not work with lambdas as transformer functions! "
+            "Please, use a hardcoded factory function that refers to the transtable "
+            "directly instead.")
 def create_transtable_junction(table: TransformationDict,
                                src_stage: str,
                                dst_stage: str) -> Junction:
@@ -533,14 +533,15 @@ def create_transtable_junction(table: TransformationDict,
     TODO: This does not work if table contains functions that cannot be pickled (i.e. lambda-functions)!
     """
     assert isinstance(table, dict)
-    assert src_stage and src_stage.islower()
-    assert dst_stage and dst_stage.islower()
     make_transformer = partial(_make_transformer, src_stage, dst_stage, table)
     factory = ThreadLocalSingletonFactory(make_transformer, uniqueID=id(table))
     return Junction(src_stage, factory, dst_stage)
 
 
-@deprecated('The name "create_transtable_transition()" is deprecated. Use "create_transtable_junction()" instead.')
+@deprecated("DHParser.pipeline.create_transtable_transition() is deprecated, "
+            "because it does not work with lambdas as transformer functions! "
+            "Please, use a hardcoded factory function that refers to the transtable "
+            "directly instead.")
 def create_transtable_transition(*args, **kwargs):
     return   create_transtable_junction(*args, **kwargs)
 
@@ -557,6 +558,10 @@ def _make_evaluation(actions, supply_path_arg) -> Callable[[Node], Any]:
     return evaluate_with_path if supply_path_arg else evaluate_without_path
 
 
+@deprecated("DHParser.pipeline.create_evaluation_junction() is deprecated, "
+            "because it does not work with lambdas as transformer functions! "
+            "Please, use a hardcoded factory function that refers to the evaluation-table "
+            "directly instead.")
 def create_evaluation_junction(actions: Dict[str, Callable],
                                src_stage: str,
                                dst_stage: str,
@@ -565,8 +570,8 @@ def create_evaluation_junction(actions: Dict[str, Callable],
     an evaluation-table :py:meth:`nodetree.Node.evaluate`.
     """
     assert isinstance(actions, dict)
-    assert src_stage and src_stage.islower()
-    assert dst_stage and dst_stage.islower()
+    a = dir(actions)
+    n = actions.__class__
     make_evaluation = partial(
         _make_evaluation, actions=actions, supply_path_arg=supply_path_arg)
     factory = ThreadLocalSingletonFactory(make_evaluation, uniqueID=id(actions))
@@ -577,18 +582,26 @@ def create_evaluation_junction(actions: Dict[str, Callable],
 
 # generic tree-processing function
 
-def create_junction(tool: Union[dict, type],
+def create_junction(tool: CompilerFactory,
                     src_stage: str,
                     dst_stage: str,
-                    hint: str = '?') -> Junction:
+                    hint: str = '') -> Junction:
     """Generic stage-creation function for tree-transforming stages where a tree-transforming
-    stage is a stage which either reshapes a node-tree or transforms a nodetree into
+    stage is a stage that either reshapes a node-tree or transforms a nodetree into
     something else, but not a stage where something else (e.g. a text) is turned into
     a node-tree."""
-    if isinstance(tool, type):
+    if hint:
+        deprecation_warning("Parameter 'hint' of functsion DHParser.pipeline.create_junction() "
+                            "is deprecated and should not be used, any more!")
+
+    if callable(tool):
         return create_compiler_junction(tool, src_stage, dst_stage)
     else:
-        assert isinstance(tool, dict)
+        deprecation_warning("Parameter 'tool' DHParser.pipeline.create_junction() must be a "
+                            "CompilerFactory, i.e. a factory function or class that returns a "
+                            "transformation function or callable object. Dictionaries, and in"
+                            "particular transformation or evaluation tables are not supported, "
+                            "anymore. Please wrap your table into a factory function instead!")
         if any(isinstance(value, Sequence) for value in tool.values()) \
                 or hint == "transtable":
             return create_transtable_junction(tool, src_stage, dst_stage)

@@ -29,7 +29,7 @@ except (ImportError, ModuleNotFoundError):
         dhparserdir = scriptdir[:i + 10]  # 10 = len("/DHParser/")
         if dhparserdir not in sys.path:  sys.path.insert(0, dhparserdir)
 
-from DHParser.compile import Compiler, compile_source, Junction, full_compile
+from DHParser.compile import Compiler, CompilerFunc, compile_source, Junction, full_compile
 from DHParser.configuration import set_config_value, add_config_values, get_config_value, \
     access_thread_locals, access_presets, finalize_presets, set_preset_value, \
     get_preset_value, NEVER_MATCH_PATTERN
@@ -732,18 +732,21 @@ flagProcessing: Junction = create_junction(
 #######################################################################
 
 def ch_code(ch: str) -> str:
-    assert len(ch) == 1
-    n = ord(ch)
-    if 0x20 <= n <= 0x7f:
-        return ch
-    elif n <= 0xff:
-        return "\\x" + f"{n:#04x}"[2:]
-    elif n <= 0xffff:
-        return "\\u" + f"{n:#06x}"[2:]
-    elif n <= 0xffffff:
-        return "\\U" + f"{n:#08x}"[2:]
+    if len(ch) == 1:
+        n = ord(ch)
+        if 0x20 <= n <= 0x7f:
+            return ch
+        elif n <= 0xff:
+            return "\\x" + f"{n:#04x}"[2:]
+        elif n <= 0xffff:
+            return "\\u" + f"{n:#06x}"[2:]
+        elif n <= 0xffffff:
+            return "\\U" + f"{n:#08x}"[2:]
+        else:
+            raise ValueError(f"Illegal character code {n:#0Ax} for character '{ch}'")
     else:
-        raise ValueError(f"Illegal character code {n:#0Ax} for character '{ch}'")
+        assert ch[:2] in ("\\x", "\\u", "\\U")
+        return ch
 
 
 def group_if(cond: bool, delimiter: str, items: Tuple[str]) -> str:
@@ -754,9 +757,9 @@ def group_if(cond: bool, delimiter: str, items: Tuple[str]) -> str:
 re_serialization_table = expand_table({
     "fixedChSet": lambda _, s: "\\" + s,
     "alternative":  lambda p, *ts:
-        group_if(p[-2].name in ("sequence", "repetition"), '|', ts),
+        group_if(len(p) > 1 and p[-2].name in ("sequence", "repetition"), '|', ts),
     "sequence": lambda p, *ts:
-        group_if(p[-2].name == "repetition", '', ts),
+        group_if(len(p) > 1 and p[-2].name == "repetition", '', ts),
     "repetition": lambda _, *ts: ''.join(ts),
     "any": lambda _, s: '.',
     "charset": lambda _, *ts: ''.join(['[', *ts, ']']),
@@ -765,15 +768,19 @@ re_serialization_table = expand_table({
     "lookaround": lambda _, *ts: ''.join(['(?', *ts, ')']),
     "lrtype, complement, repType, zeroOrOne, zeroOrMore, oneOrMore, min, max":
         lambda _, s: s,
-    "range": lambda _, *ts: ''.join(['{', ts[0], ',', ts[1], '}']),
-    "regular_expression": lambda _, s: s
+    "range": lambda _, *ts: ''.join(['{', ', '.join(ts), '}']),
+    "regular_expression": lambda _, *ts: ''.join(ts),
+    "*": lambda p, *ts: f"(!{p[-1].name}:" + ''.join(ts) + ")"
 })
 
 def serialize_re(regex_AST: Node) -> str:
     return regex_AST.evaluate_path(re_serialization_table, [regex_AST])
 
-re_from_AST = create_junction(re_serialization_table, "AST", "regex",
-                          "evaluate_with_path")
+def reSerializer() -> CompilerFunc:
+    return serialize_re
+
+re_from_AST: Junction = Junction("AST", reSerializer, "regex")
+
 
 #######################################################################
 #

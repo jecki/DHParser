@@ -10,7 +10,8 @@ from DHParser import ALLOWED_PRESET_VALUES
 
 # # change the names of the source and destination stages. Source
 # # ("{NAME}") in this example must be the name of some earlier stage, though.
-# postprocessing: Junction = create_junction(PostProcessing, "{NAME}", "refined")
+# postprocessing: Junction = Junction(
+#     "{NAME}", ThreadLocalSingletonFactory(PostProcessing), "refined")
 #
 # DON'T FORGET TO ADD ALL POSTPROCESSING-JUNCTIONS TO THE GLOBAL
 # "junctions"-set IN SECTION "Processing-Pipeline" BELOW!

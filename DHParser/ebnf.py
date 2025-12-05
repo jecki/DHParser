@@ -1238,8 +1238,9 @@ get_transformer = ASTTransformation.factory  # for backwards compatibility, only
 
 COMPILER_FACTORY = '''
 
-compiling: Junction = create_junction(
-    {NAME}Compiler, "AST", "{NAME}")
+compiling: Junction = Junction(
+    'AST', ThreadLocalSingletonFactory({NAME}Compiler), '{NAME}')
+
 get_compiler = compiling.factory  # for backwards compatibility, only
 '''
 
