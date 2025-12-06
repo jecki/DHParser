@@ -1357,7 +1357,7 @@ class EBNFDirectives:
     REPEATABLE_DIRECTIVES = {'tokens', 'preprocessor_tokens', 'disposable', 'drop'}
 
     def __init__(self):
-        self.whitespace: str               = WHITESPACE_TYPES['linefeed']
+        self.whitespace: str               = WHITESPACE_TYPES['vertical']
         self.comment: str                  = ''
         self.literalws: MutableSet[str]    = literalws_set_from_value(
                                                 get_config_value('default_literalws'))

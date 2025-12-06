@@ -982,33 +982,56 @@ question-mark or, if you use classical EBNF-syntax, to enclose
 it with square brackets.
 
 The default regular expression for the tilde-whitespace captures
-arbitrarily many spaces and tabs and at most one linefeed, but
-not an empty line (``[ \\t]*(?:\\n[ \\t]*)?(?!\\n)``), as this is
-the most convenient way to define whitespace for text-data.
-However, the tilde whitespace can also be defined with any
-other regular expression with the ``@whitespace``-directive.
+any amount of contiguous horizontal or vertical whitespace,
+just like the regular exrpession ``\\s*``. Note, that other
+than is typically the case with explicit whitespace, insignificant
+whitespace is defined in such a ways that it always also matches
+the zero-length-string. This convention makes mangling the regular
+expression for implizit whitespace with that for comments a little
+easier.
 
-Let's go back to our JSON-grammar and define the optional
-insignificant whitespace marked by the tilde-character in such a
-way that it matches any amount of horizontal or vertical
-whitespace, which makes much more sense in the context of json
-than the default tilde-whitespace that is restricted vertically
-to at most a single linefeed::
+The tilde whitespace can also be defined with any
+other regular expression with the ``@whitespace``-directive.
+Let's for the sake of the example define the whitespace in such
+a way that it captures at most a sinlge linebreak but not empty
+lines. Because this is needed frequently for text-formats that
+mark paragraph-breaks by an empty line, there is a shorthand
+for this: ``@whitespace = linefeed``. In the explicit regular
+expression form it would read
+``@whitespace = /[ \\t]*(?:\\n[ \\t]*(?![ \\t]*\\n))?/``.
+
+Let's for the sake of an example try this with our JSON grammar,
+although in this context it does not make much sense (as we will
+see) because JSON is not line based. We do so by constructing
+a json-dataset that contains a couple of empty lines.::
 
     >>> testdata = '{"array": [1, 2.0, "a string"], \n\n\n "number": -1.3e+25, "bool": false}'
-    >>> syntax_tree = json_parser(testdata)
-    >>> print(syntax_tree.errors[0])
-    1:33: Error (1010): member expected by parser 'object', but »\n\n\n "numbe...« found instead!
-    >>> json_gr = '@whitespace = /\\s*/ \n' + json_gr
-    >>> json_parser = create_parser(json_gr, "JSON")
     >>> syntax_tree = json_parser(testdata)
     >>> print(syntax_tree.errors)
     []
 
-When redefining the tilde-whitespace, make sure that your regular expression
-also matches the empty string! There is no need to worry that the syntax tree
-get's cluttered by empty whitespace-nodes, because tilde-whitespace always
-yields anonymous nodes and DHParser drops empty anonymous nodes right away.
+As expected this is not a problem. However, if we (re-)define the explicit
+whitespace so to capture at most a single linefeed in sequence, our
+parser stops short:
+
+    >>> json_gr = '@whitespace = linefeed\n' + json_gr
+    >>> json_parser = create_parser(json_gr, "JSON")
+    >>> syntax_tree = json_parser(testdata)
+    >>> print(syntax_tree.errors[0])
+    1:33: Error (1010): member expected by parser 'object', but »\n\n\n "numbe...« found instead!
+
+While it does not make much sense with JSON, restricting the implicit
+whitespace to only certain kinds of whitespace, allows us to introduce other
+kinds of whitespace, say sequences of linefeeds as paragraph-breaks, as
+explicit whitespace with a different meaning, e.g. paragraph-breaks versus
+simple word delimiters. If your document-structure requires to distinguish
+different kinds of whitespace, it is often a reasonable strategy to
+use implicit whitespace for the most common kind of whitespace.
+
+In any case, when redefining the tilde-whitespace, make sure that your regular
+expression also matches the empty string! There is no need to worry that the
+syntax tree get's cluttered by empty whitespace-nodes, because tilde-whitespace
+always yields anonymous nodes and DHParser drops empty anonymous nodes right away.
 
 Comments can be defined using the ``@comment``-directive. DHParser
 automatically intermingles comments and whitespace so that where-ever
