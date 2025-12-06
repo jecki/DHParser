@@ -54,11 +54,11 @@ except ImportError:
 if sys.version_info >= (3, 12, 0):
     from collections.abc import Iterable, Sequence, Set, MutableSet, Callable, Container, Hashable
     from typing import Any, Type, Union, Optional, TypeAlias, Protocol
-    AbstractSet = Set
-    FrozenSet = frozenset
-    Dict = dict
-    List = list
-    Tuple = tuple
+    AbstractSet: TypeAlias = Set
+    FrozenSet: TypeAlias = frozenset
+    Dict: TypeAlias = dict
+    List: TypeAlias = list
+    Tuple: TypeAlias = tuple
     ByteString: TypeAlias = Union[bytes, bytearray]
     static = staticmethod
 else:

@@ -46,7 +46,7 @@ from DHParser.parse import Interleave
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
     EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS, \
     WHITESPACE_TYPES, parse_ebnf, transform_ebnf, EBNF_AST_Serialization_Table, \
-    ebnf_from_ast
+    ebnf_from_AST
 from DHParser.dsl import CompilationError, compileDSL, create_parser, grammar_provider
 from DHParser.testing import grammar_unit, clean_report, unique_name
 from DHParser.trace import set_tracer, trace_history
@@ -61,6 +61,11 @@ class TestDirectives:
         constant   =  digit { digit } [ ~ ]
         digit      = /0/ | /1/ | /2/ | /3/ | /4/ | /5/ | /6/ | /7/ | /8/ | /9/
         """
+
+    # def test_EBNF_parser(self):
+    #     cst = parse_ebnf(self.mini_language)
+    #     ast = transform_ebnf(cst)
+    #     print(ast.as_sxpr())
 
     def test_EBNFDirectives_object(self):
         directives = EBNFDirectives()
@@ -3193,7 +3198,7 @@ ws = / +/ -> DROP"""
         cst2 = parse_ebnf(ebnf)
         ast2 = transform_ebnf(cst2)
         assert ast2.equals(ast)
-        iso_ebnf = ebnf_from_ast(ast2, 'ISO')
+        iso_ebnf = ebnf_from_AST(ast2, 'ISO')
         cst3 = parse_ebnf(iso_ebnf, "classic")
         assert not cst3.errors
         ast3 = transform_ebnf(cst3)

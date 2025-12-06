@@ -1,0 +1,19 @@
+# A variant of an Arithmetic-grammar
+
+@drop = whitespace, strings
+
+formulae = ~ expression { expression }
+
+HIDE:expression = addition | subtraction | term
+  addition    = term "+"~ expression
+  subtraction = expression "-"~ term
+
+HIDE:term       = multiplication | division | factor
+  multiplication = term "*"~ factor
+  division       = term ":"~ factor
+
+HIDE:factor = group | number
+  group  = "("~ expression ")"~
+  number = /0/~ | /[1-9]/ { /[0-9]/ } ~
+
+

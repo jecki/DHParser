@@ -26,7 +26,7 @@ async def long_running():
 def read_from_stdin():
     log('enter read_from_stdin()\n')
     data = sys.stdin.read()
-    logfiel.write('read_from_stdin: read: ' + str(data) + '\n')
+    logfile.write('read_from_stdin: read: ' + str(data) + '\n')
     return data
 
 

@@ -1,3 +1,268 @@
+#!/usr/bin/env python3
+
+#######################################################################
+#
+# SYMBOLS SECTION - Can be edited. Changes will be preserved.
+#
+#######################################################################
+
+
+import collections
+from functools import partial
+import os
+import sys
+from typing import Tuple, List, Set, Union, Any, Optional, Callable, cast
+
+try:
+    scriptdir = os.path.dirname(os.path.realpath(__file__))
+except NameError:
+    scriptdir = ''
+if scriptdir and scriptdir not in sys.path: sys.path.append(scriptdir)
+
+try:
+    from DHParser import versionnumber
+except (ImportError, ModuleNotFoundError):
+    i = scriptdir.rfind("/DHParser/")
+    if i >= 0:
+        dhparserdir = scriptdir[:i + 10]  # 10 = len("/DHParser/")
+        if dhparserdir not in sys.path:  sys.path.insert(0, dhparserdir)
+
+from DHParser.compile import Compiler, compile_source, Junction, full_compile
+from DHParser.configuration import set_config_value, add_config_values, get_config_value, \
+    access_thread_locals, access_presets, finalize_presets, set_preset_value, \
+    get_preset_value, read_local_config, CONFIG_PRESET, NEVER_MATCH_PATTERN, ALLOWED_PRESET_VALUES
+from DHParser import dsl
+from DHParser.dsl import recompile_grammar
+from DHParser.ebnf import grammar_changed
+from DHParser.error import ErrorCode, Error, canonical_error_strings, has_errors, NOTICE, \
+    WARNING, ERROR, FATAL
+from DHParser.log import start_logging, suspend_logging, resume_logging
+from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode, Path, ZOMBIE_TAG
+from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, DropFrom, AnyChar, Parser, \
+    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, ERR, \
+    Option, NegativeLookbehind, OneOrMore, RegExp, SmartRE, Retrieve, Series, Capture, TreeReduction, \
+    ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, \
+    LateBindingUnary, mixin_comment, last_value, matching_bracket, optional_last_value, \
+    PARSER_PLACEHOLDER, RX_NEVER_MATCH, UninitializedError
+from DHParser.pipeline import end_points, full_pipeline, create_parser_junction, \
+    create_preprocess_junction, create_junction, PseudoJunction, PipelineResult
+from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
+    gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
+from DHParser.stringview import StringView
+from DHParser.toolkit import is_filename, load_if_file, cpu_count, \
+    ThreadLocalSingletonFactory, expand_table, static, CancelQuery, re
+from DHParser.trace import set_tracer, resume_notices_on, trace_history
+from DHParser.transform import is_empty, remove_if, TransformationDict, TransformerFunc, \
+    transformation_factory, remove_children_if, move_fringes, normalize_whitespace, \
+    is_anonymous, name_matches, reduce_single_child, replace_by_single_child, replace_or_reduce, \
+    remove_whitespace, replace_by_children, remove_empty, remove_tokens, flatten, all_of, \
+    any_of, transformer, merge_adjacent, collapse, collapse_children_if, transform_result, \
+    remove_children, remove_content, remove_brackets, change_name, remove_anonymous_tokens, \
+    keep_children, is_one_of, not_one_of, content_matches, apply_if, peek, \
+    remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
+    replace_content_with, forbid, assert_content, remove_infix_operator, add_error, error_on, \
+    left_associative, lean_left, node_maker, has_descendant, neg, has_ancestor, insert, \
+    positions_of, replace_child_names, add_attributes, delimit_children, merge_connected, \
+    has_attr, has_parent, has_children, has_child, apply_unless, apply_ifelse, traverse
+from DHParser import parse as parse_namespace__
+
+import DHParser.versionnumber
+if DHParser.versionnumber.__version_info__ < (1, 9, 3):
+    print(f'DHParser version {DHParser.versionnumber.__version__} is lower than the DHParser '
+          f'version 1.9.3, {os.path.basename(__file__)} has first been generated with. '
+          f'Please install a more recent version of DHParser to avoid unexpected errors!')
+
+if sys.version_info >= (3, 14, 0):
+    CONFIG_PRESET['multicore_pool'] = 'InterpreterPool'
+read_local_config(os.path.join(scriptdir, 'Arithmetic5Config.ini'))
+
+
+#######################################################################
+#
+# PREPROCESSOR SECTION - Can be edited. Changes will be preserved.
+#
+#######################################################################
+
+
+
+# To capture includes, replace the NEVER_MATCH_PATTERN
+# by a pattern with group "name" here, e.g. r'\input{(?P<name>.*)}'
+RE_INCLUDE = NEVER_MATCH_PATTERN
+RE_COMMENT = NEVER_MATCH_PATTERN  # THIS MUST ALWAYS BE THE SAME AS Arithmetic5Grammar.COMMENT__ !!!
+
+
+def Arithmetic5Tokenizer(original_text) -> Tuple[str, List[Error]]:
+    # Here, a function body can be filled in that adds preprocessor tokens
+    # to the source code and returns the modified source.
+    return original_text, []
+
+preprocessing: PseudoJunction = create_preprocess_junction(
+    Arithmetic5Tokenizer, RE_INCLUDE, RE_COMMENT)
+
+
+#######################################################################
+#
+# PARSER SECTION - Don't edit! CHANGES WILL BE OVERWRITTEN!
+#
+#######################################################################
+
+class Arithmetic5Grammar(Grammar):
+    r"""Parser for an Arithmetic5 document.
+
+    Instantiate this class and then call the instance with the source
+    code as the single argument in order to use the parser, e.g.:
+        parser = Arithmetic5()
+        syntax_tree = parser(source_code)
+    """
+    expression = Forward()
+    term = Forward()
+    source_hash__ = "423b4d43f583bcef0791739411390424"
+    disposable__ = re.compile('(?:(?:(?:expression$))|(?:term$))|(?:factor$)')
+    static_analysis_pending__ = []  # type: List[bool]
+    parser_initialization__ = ["upon instantiation"]
+    COMMENT__ = r''
+    comment_rx__ = RX_NEVER_MATCH
+    WHITESPACE__ = r'[ \t]*(?:\n[ \t]*(?![ \t]*\n))?'
+    WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
+    wsp__ = Whitespace(WSP_RE__)
+    dwsp__ = Drop(Whitespace(WSP_RE__))
+    number = Alternative(Series(RegExp('0'), dwsp__), Series(RegExp('[1-9]'), ZeroOrMore(RegExp('[0-9]')), dwsp__))
+    group = Series(Drop(Text("(")), dwsp__, expression, Drop(Text(")")), dwsp__)
+    factor = Alternative(group, number)
+    division = Series(term, Drop(Text(":")), dwsp__, factor)
+    multiplication = Series(term, Drop(Text("*")), dwsp__, factor)
+    addition = Series(expression, Drop(Text("+")), dwsp__, term)
+    subtraction = Series(expression, Drop(Text("-")), dwsp__, term)
+    term.set(Alternative(multiplication, division, factor))
+    expression.set(Alternative(addition, subtraction, term))
+    formulae = Series(dwsp__, expression, ZeroOrMore(expression))
+    root__ = formulae
+    
+parsing: PseudoJunction = create_parser_junction(Arithmetic5Grammar)
+get_grammar = parsing.factory  # for backwards compatibility, only
+
+try:
+    assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
+        RE_COMMENT in (Arithmetic5Grammar.COMMENT__, NEVER_MATCH_PATTERN), \
+        "Please adjust the pre-processor-variable RE_COMMENT in file Arithmetic5Parser.py so that " \
+        "it either is the NEVER_MATCH_PATTERN or has the same value as the COMMENT__-attribute " \
+        "of the grammar class Arithmetic5Grammar! " \
+        'Currently, RE_COMMENT reads "%s" while COMMENT__ is "%s". ' \
+        % (RE_COMMENT, Arithmetic5Grammar.COMMENT__) + \
+        "\n\nIf RE_COMMENT == NEVER_MATCH_PATTERN then includes will deliberately be " \
+        "processed, otherwise RE_COMMENT==Arithmetic5Grammar.COMMENT__ allows the " \
+        "preprocessor to ignore comments."
+except (AttributeError, NameError):
+    pass
+
+
+#######################################################################
+#
+# AST SECTION - Can be edited. Changes will be preserved.
+#
+#######################################################################
+
+Arithmetic5_AST_transformation_table = {
+    # AST Transformations for the Arithmetic5-grammar
+    # Special rules:
+    # "<<<": [],  # called once before the tree-traversal starts
+    # ">>>": [],  # called once after the tree-traversal has finished
+    # "<": [],  # called for each node before calling its specific rules
+    # "*": [],  # fallback for nodes that do not appear in this table
+    # ">": [],   # called for each node after calling its specific rules
+    "expression": [],
+    "addition": [],
+    "subtraction": [],
+    "term": [],
+    "multiplication": [],
+    "division": [],
+    "factor": [],
+    "group": [],
+    "number": [],
+}
+
+
+# DEPRECATED, because it requires pickling the transformation-table, which rules out lambdas!
+# ASTTransformation: Junction = create_junction(
+#     Arithmetic5_AST_transformation_table, "CST", "AST", "transtable")
+
+def Arithmetic5Transformer() -> TransformerFunc:
+    return static(partial(
+        transformer, 
+        transformation_table=Arithmetic5_AST_transformation_table.copy(),
+        src_stage='CST', 
+        dst_stage='AST'))
+
+ASTTransformation: Junction = Junction(
+    'CST', ThreadLocalSingletonFactory(Arithmetic5Transformer), 'AST')
+get_transformer = ASTTransformation.factory  # for backwards compatibility, only
+
+
+#######################################################################
+#
+# COMPILER SECTION - Can be edited. Changes will be preserved.
+#
+#######################################################################
+
+class Arithmetic5Compiler(Compiler):
+    """Compiler for the abstract-syntax-tree of a 
+        Arithmetic5 source file.
+    """
+
+    def __init__(self):
+        super(Arithmetic5Compiler, self).__init__()
+        self.forbid_returning_None = True  # set to False if any compilation-method is allowed to return None
+
+    def reset(self):
+        super().reset()
+        # initialize your variables here, not in the constructor!
+
+    def prepare(self, root: RootNode) -> None:
+        assert root.stage == "AST", f"Source stage `AST` expected, `but `{root.stage}` found."
+        root.stage = "Arithmetic5"
+    def finalize(self, result: Any) -> Any:
+        return result
+
+    def on_expression(self, node):
+        return self.fallback_compiler(node)
+
+    # def on_addition(self, node):
+    #     return node
+
+    # def on_subtraction(self, node):
+    #     return node
+
+    # def on_term(self, node):
+    #     return node
+
+    # def on_multiplication(self, node):
+    #     return node
+
+    # def on_division(self, node):
+    #     return node
+
+    # def on_factor(self, node):
+    #     return node
+
+    # def on_group(self, node):
+    #     return node
+
+    # def on_number(self, node):
+    #     return node
+
+
+
+compiling: Junction = create_junction(
+    Arithmetic5Compiler, "AST", "Arithmetic5")
+get_compiler = compiling.factory  # for backwards compatibility, only
+
+
+#######################################################################
+#
+# END OF DHPARSER-SECTIONS
+#
+#######################################################################
+
 #######################################################################
 #
 # Post-Processing-Stages [add one or more postprocessing stages, here]
@@ -9,9 +274,8 @@ from DHParser import ALLOWED_PRESET_VALUES
 #     ...
 
 # # change the names of the source and destination stages. Source
-# # ("{NAME}") in this example must be the name of some earlier stage, though.
-# postprocessing: Junction = Junction(
-#     "{NAME}", ThreadLocalSingletonFactory(PostProcessing), "refined")
+# # ("Arithmetic5") in this example must be the name of some earlier stage, though.
+# postprocessing: Junction = create_junction(PostProcessing, "Arithmetic5", "refined")
 #
 # DON'T FORGET TO ADD ALL POSTPROCESSING-JUNCTIONS TO THE GLOBAL
 # "junctions"-set IN SECTION "Processing-Pipeline" BELOW!
@@ -51,7 +315,7 @@ serializations = expand_table(dict([('*', [get_config_value('default_serializati
 #######################################################################
 
 def pipeline(source: str,
-             target: Union[str, Set[str]] = "{NAME}",
+             target: Union[str, Set[str]] = "Arithmetic5",
              start_parser: str = "root_parser__",
              *, cancel_query: Optional[CancelQuery] = None) -> PipelineResult:
     """Runs the source code through the processing pipeline. If
@@ -70,7 +334,7 @@ def pipeline(source: str,
 
 
 def compile_src(source: str,
-                target: str = "{NAME}",
+                target: str = "Arithmetic5",
                 start_parser: str = "root_parser__",
                 *, cancel_query: Optional[CancelQuery] = None) -> Tuple[Any, List[Error]]:
     """Compiles the source to a single target and returns the result of the compilation
@@ -96,7 +360,7 @@ def compile_src(source: str,
 
 
 def compile_snippet(source_code: str,
-                    target: str = "{NAME}",
+                    target: str = "Arithmetic5",
                     start_parser: str = "root_parser__",
                     *, cancel_query: Optional[CancelQuery] = None) -> Tuple[Any, List[Error]]:
     """Compiles a piece of source_code. In contrast to :py:func:`compile_src` the
@@ -124,7 +388,7 @@ def process_file(source: str, out_dir: str = '', target_set: Set[str]=frozenset(
     elif not target_set <= targets:
         raise AssertionError('Unknown compilation target(s): ' +
                              ', '.join(t for t in target_set - targets))
-    # serializations = get_config_value('{NAME}_serializations', serializations)
+    # serializations = get_config_value('Arithmetic5_serializations', serializations)
     return dsl.process_file(source, out_dir, preprocessing.factory, parsing.factory,
                             junctions, target_set, serializations, cancel_query)
 
@@ -141,7 +405,7 @@ def batch_process(file_names: List[str], out_dir: str,
     error messages to the directory `our_dir`. Returns a list of error
     messages files.
     """
-    from {NAME}Parser import process_file_wrapper
+    from Arithmetic5Parser import process_file_wrapper
     return dsl.batch_process(file_names, out_dir, process_file_wrapper,
         submit_func=submit_func, log_func=log_func, cancel_func=cancel_func)
 
@@ -184,12 +448,12 @@ def main(called_from_app=False) -> bool:
               'because grammar was not found at: ' + grammar_path)
 
     from argparse import ArgumentParser
-    a = "an" if "{NAME}"[0:1] in "AEIOUaeiou" else "a"
-    parser = ArgumentParser(description="Parses " + a + " {NAME} file and shows its syntax-tree."
+    a = "an" if "Arithmetic5"[0:1] in "AEIOUaeiou" else "a"
+    parser = ArgumentParser(description="Parses " + a + " Arithmetic5 file and shows its syntax-tree."
                             " If several filenames are provided or an output directory is "
                             "specified with --out, the results will be written to the disk!"
                             " To directly process content, use a pipe | e.g. "
-                            ' echo "..." | {NAME}Parser.py.')
+                            ' echo "..." | Arithmetic5Parser.py.')
     parser.add_argument('files', nargs='*')
     parser.add_argument('-p', '--parse', nargs=1, default=[],
                         help='Processes the given snippet directly (instead of a file).')
@@ -217,7 +481,6 @@ def main(called_from_app=False) -> bool:
     piped_data = '' if sys.stdin.isatty() else sys.stdin.read()
     if piped_data: file_names.insert(0, '\ufeff' + piped_data)
     if args.parse: file_names.insert(0, '\ufeff' + args.parse[0])
-
     if not file_names and not called_from_app:
         print("missing argument: files")
         sys.exit(1)
@@ -230,7 +493,7 @@ def main(called_from_app=False) -> bool:
                   '(Snippets that contain blanks need to be enclosed in quotes "..."')
             sys.exit(1)
 
-    read_local_config(os.path.join(scriptdir, '{NAME}Config.ini'))
+    read_local_config(os.path.join(scriptdir, 'Arithmetic5Config.ini'))
 
     if args.serialize:
         if (args.serialize[0].lower() not in
@@ -241,7 +504,7 @@ def main(called_from_app=False) -> bool:
             sys.exit(1)
         serializations['*'] = args.serialize
         access_presets()
-        set_preset_value('{NAME}_serializations', serializations, allow_new_key=True)
+        set_preset_value('Arithmetic5_serializations', serializations, allow_new_key=True)
         finalize_presets()
 
     if args.debug is not None:
@@ -272,7 +535,7 @@ def main(called_from_app=False) -> bool:
     if called_from_app and not file_names:  return False
 
     batch_processing = True
-    if len(file_names) <= 1:
+    if len(file_names) == 1:
         if os.path.isdir(file_names[0]):
             dir_name = file_names[0]
             echo('Processing all files in directory: ' + dir_name)

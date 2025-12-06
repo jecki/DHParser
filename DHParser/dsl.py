@@ -17,7 +17,7 @@
 
 """
 Module ``dsl`` contains high-level functions for the compilation
-of domain-specific languages based on an EBNF-grammar.
+of domain-specific languages based on an EBNF grammar.
 """
 
 from __future__ import annotations
@@ -324,7 +324,7 @@ def grammar_provider(ebnf_src: str,
                      additional_code: str = '',
                      fail_when: ErrorCode = ERROR) -> ParserFactory:
     """
-    Compiles an EBNF-grammar and returns a grammar-parser provider
+    Compiles an EBNF grammar and returns a grammar-parser provider
     function for that grammar.
 
     Args:
