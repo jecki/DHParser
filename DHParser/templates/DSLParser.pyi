@@ -257,7 +257,7 @@ def main(called_from_app=False) -> bool:
     if called_from_app and not file_names:  return False
 
     batch_processing = True
-    if len(file_names) == 1:
+    if len(file_names) <= 1:
         if os.path.isdir(file_names[0]):
             dir_name = file_names[0]
             echo('Processing all files in directory: ' + dir_name)
