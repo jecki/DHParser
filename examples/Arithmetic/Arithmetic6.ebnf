@@ -6,11 +6,11 @@ formulae = ~ expression { expression }
 
 HIDE:expression = addition | subtraction | term
   addition    = term "+"~ expression
-  subtraction = expression "-"~ term
+  subtraction = term "-"~ expression
 
 HIDE:term       = multiplication | division | factor
-  multiplication = term "*"~ factor
-  division       = term ":"~ factor
+  multiplication = factor "*"~ term
+  division       = factor ":"~ term
 
 HIDE:factor = group | number
   group  = "("~ expression ")"~
