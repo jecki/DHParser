@@ -1,9 +1,9 @@
 # @drop = whitespace
 
 formulae   = ~ expression { ~ expression } ~
-expression = term  { ("+" | "-" | "*" | ":") term }
-term       = number | group
+expression = term  { ("+" | "-" ) term }
+term       = factor { ("*" | ":" ) factor }
+factor     = number | group
 group      = "(" expression ")"
-
 number     = /0/ | /[1-9]/ { /[0-9]/ }
 
