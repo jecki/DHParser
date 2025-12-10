@@ -1,6 +1,7 @@
 # A variant of an Arithmetic-grammar
 
-# @drop = whitespace, strings
+@drop = whitespace, strings
+@hide = expression, term, factor
 
 formulae = ~ expression { expression }
 
@@ -15,5 +16,4 @@ term       = multiplication | division | factor
 factor = group | number
   group  = "("~ expression ")"~
   number = /0/~ | /[1-9]/ { /[0-9]/ } ~
-
 
