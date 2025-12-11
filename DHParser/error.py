@@ -80,6 +80,7 @@ __all__ = ('ErrorCode',
            'FATAL',
            'HIGHEST',
            'RESUME_NOTICE',
+           'NAME_SHADOWED_BY_DROP_CLASS_NOTICE',
            'REDECLARED_TOKEN_WARNING',
            'UNUSED_ERROR_HANDLING_WARNING',
            'LEFT_RECURSION_WARNING',
@@ -164,6 +165,7 @@ HIGHEST  = FATAL
 # notice codes
 
 RESUME_NOTICE                            = ErrorCode(50)
+NAME_SHADOWED_BY_DROP_CLASS_NOTICE       = ErrorCode(55)
 
 # warning codes
 

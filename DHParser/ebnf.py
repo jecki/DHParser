@@ -257,7 +257,8 @@ from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_
     EMPTY_GRAMMAR_ERROR, MALFORMED_REGULAR_EXPRESSION, PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS, \
     STRUCTURAL_ERROR_IN_AST, SYMBOL_NAME_IS_PYTHON_KEYWORD, UNDEFINED_SYMBOL, ERROR, FATAL, \
     WRONG_NUMBER_OF_ARGUMENTS, UNKNOWN_MACRO_ARGUMENT, AMBIGUOUS_RANGE_EXPRESSION_WARNING, \
-    UNDEFINED_MACRO, RECURSIVE_MACRO_CALL, UNUSED_MACRO_ARGUMENTS_WARNING, has_errors
+    UNDEFINED_MACRO, RECURSIVE_MACRO_CALL, UNUSED_MACRO_ARGUMENTS_WARNING, \
+    NAME_SHADOWED_BY_DROP_CLASS_NOTICE, has_errors
 from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, SmartRE, \
     Drop, DropFrom, Lookahead, NegativeLookahead, Alternative, Series, Option, ZeroOrMore, OneOrMore, \
     Text, Capture, Retrieve, Pop, optional_last_value, GrammarError, Whitespace, Always, Never, \
@@ -2403,9 +2404,9 @@ class EBNFCompiler(Compiler):
         if not drop_flag and rule in self.directives.drop:
             if rule in DROP_VALUES:
                 self.tree.new_error(node, f'Symbol name "{rule}" is shadowed by the class name '
-                                    f'{rule} in the @drop-directive, above. {rule}-nodes '
-                                    f'will not be dropped, unless the local drop-annotation '
-                                    f'(DROP:{rule} = ...) is used.', WARNING)
+                    f'{rule} in the @drop-directive, above. {rule}-nodes will not be dropped, '
+                    f'unless the local drop-annotation (DROP:{rule} = ...) is used.',
+                    NAME_SHADOWED_BY_DROP_CLASS_NOTICE)
             else:
                 drop_flag = True
 

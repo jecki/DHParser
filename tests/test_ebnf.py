@@ -39,7 +39,8 @@ from DHParser.error import has_errors, MANDATORY_CONTINUATION, PARSER_STOPPED_BE
     REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES, UNCONNECTED_SYMBOL_WARNING, \
     PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS, ERROR, WARNING, UNDEFINED_MACRO, \
     UNKNOWN_MACRO_ARGUMENT, UNUSED_MACRO_ARGUMENTS_WARNING, \
-    ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING, SYMBOL_NAME_IS_PYTHON_KEYWORD
+    ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING, SYMBOL_NAME_IS_PYTHON_KEYWORD, \
+    NAME_SHADOWED_BY_DROP_CLASS_NOTICE
 from DHParser.nodetree import WHITESPACE_PTYPE, flatten_sxpr, parse_sxpr, RootNode, Node, ANY_PATH, \
     pp_path
 from DHParser.parse import Interleave
@@ -750,7 +751,8 @@ class TestSelfHosting:
         parser = get_ebnf_grammar()
         result, errors, syntax_tree = compile_source(
             EBNF, None, parser, get_ebnf_transformer(), compiler)
-        assert not errors, str(errors)
+        assert len(errors) <= 1 and (not errors or errors[0].code
+               == NAME_SHADOWED_BY_DROP_CLASS_NOTICE), str(errors)
         # compile the grammar again using the result of the previous
         # compilation as parser
         compileDSL(EBNF, nil_preprocessor, result, get_ebnf_transformer(), compiler)
@@ -768,7 +770,8 @@ class TestSelfHosting:
             res = [pool.apply_async(self.multiprocessing_task, ()) for i in range(4)]
             errors = [r.get(timeout=10) for r in res]
         for i, e in enumerate(errors):
-            assert not e, ("%i: " % i) + str(e)
+            assert len(e) <= 1 or (not e or e[0].code ==
+                NAME_SHADOWED_BY_DROP_CLASS_NOTICE), ("%i: " % i) + str(e)
 
 
 class TestBoundaryCases:

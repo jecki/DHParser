@@ -120,6 +120,7 @@ def connection(junctions: Iterable[Junction], target: str, origin: str = "CST") 
 def as_paths(junctions: Set[Junction]) -> Dict[str, List[str]]:
     """Returns a dictionary that maps each end point to the path from the start
     (usually "CST") to that end point."""
+    # TODO: unit-test sometimes fails!!!
     paths = dict()
     remlist = set()
     repeat = True
@@ -187,12 +188,13 @@ class PipeTree(NamedTuple):
 
 def as_graph(junctions: Iterable[Junction]) -> PipeTree:
     """Returns the junctions as a directed graph."""
+    # TODO: unit-test sometimes fails!!!
     jdict = dict()
     for j in junctions:
         if j.src not in jdict:
-            jdict[j.src] = [j]
+            jdict[j.src] = {j}
         else:
-            jdict[j.src].append(j)
+            jdict[j.src].add(j)
     srcs = {j.src for j in junctions}
     dsts = {j.dst for j in junctions}
     diff = srcs - dsts
@@ -210,7 +212,7 @@ def as_graph(junctions: Iterable[Junction]) -> PipeTree:
             return PipeTree(j.dst, [], 1)
         else:
             desc = [subtree(d) for d in jdict[j.dst]]
-            desc.sort()
+            desc.sort(key=lambda x: x.src)
             desc.sort(key=lambda x: x.depth)
             return PipeTree(j.dst, desc, max(child.depth for child in desc) + 1)
 
