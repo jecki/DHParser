@@ -863,7 +863,7 @@ def rearrange_expression(path: Path):
 
 
 def pythonize_identifier(path: Path):
-    r"""A mekshift solution to allow identifiers with dashes:
+    r"""A makeshift solution to allow identifiers with dashes:
     replace minus with underscore"""
     assert not path[-1].children
     path[-1]._result = re.sub(r'(?<=\w)-(?=\w)', '_', path[-1]._result)
@@ -1555,7 +1555,7 @@ class EBNFCompiler(Compiler):
 
     :ivar consumed_custom_errors:  A set of symbols for which a custom error
             has been defined and(!) consumed during compilation. This
-            allows to add a compiler error in those cases where (i) an
+            allows adding a compiler error in those cases where (i) an
             error message has been defined but will never be used or (ii)
             an error message is accidentally used twice. For examples, see
             ``test_ebnf.TestErrorCustomization``.
@@ -2299,7 +2299,7 @@ class EBNFCompiler(Compiler):
         directivedefs, macrosyms, macrodefs, symdefs = [], [], [], []
         for nd in node.children:
             if nd.name == 'directive':
-                if nd[0].content == "disposable":
+                if nd[0].content in ("disposable", "hide"):
                     directivedefs.insert(0, nd)  # make sure that @disposable is always in front of @drop
                 else:
                     directivedefs.append(nd)
@@ -2400,9 +2400,14 @@ class EBNFCompiler(Compiler):
             body = node[1]
             if node.children[-1].name == 'hide':
                 self.directives.add_to_disposable_symbols(rule)
-        if not drop_flag:
-            drop_flag = rule in self.directives['drop'] \
-                             and rule not in DROP_VALUES
+        if not drop_flag and rule in self.directives.drop:
+            if rule in DROP_VALUES:
+                self.tree.new_error(node, f'Symbol name "{rule}" is shadowed by the class name '
+                                    f'{rule} in the @drop-directive, above. {rule}-nodes '
+                                    f'will not be dropped, unless the local drop-annotation '
+                                    f'(DROP:{rule} = ...) is used.', WARNING)
+            else:
+                drop_flag = True
 
         # check for various possible errors
         if rule.endswith('_error') or rule.endswith('_skip') \
@@ -2525,7 +2530,7 @@ class EBNFCompiler(Compiler):
         elif key in ('hide', 'disposable'):
             if node.children[1].name == "regexp":
                 if len(node.children) > 2:
-                    self.tree.new_error(node, 'Directive "@disposable" can only have one argument'
+                    self.tree.new_error(node, f'Directive "@{key}" can only have one argument'
                                         ' if specified as regexp and not as a list of symbols.')
                 re_pattern = node.children[1].content
                 if re.match(re_pattern, ''):
@@ -2571,7 +2576,7 @@ class EBNFCompiler(Compiler):
                             re.fullmatch(r'(?:\w+\$\|)*\w+\$', self.directives.disposable):
                         self.tree.new_error(node, 'Illegal value "%s" for Directive "@ drop"! '
                                             'Should be one of %s or a disposable parser, where '
-                                            'the "@disposable"-directive must precede the '
+                                            'the "@disposable"/"@hide"-directive must precede the '
                                             '@drop-directive.' % (content, str(DROP_VALUES)))
                     else:
                         self.tree.new_error(
@@ -3436,7 +3441,7 @@ class EBNFCompiler(Compiler):
 
 
     def prepare_literal(self, node: Node) -> Tuple[str, str, str]:
-        """Returns content, left_Whitespace, right_whitspace for a literal-node."""
+        """Returns content, left_whitespace, right_whitspace for a literal-node."""
         assert node.name == "literal"
         force = DROP_STRINGS in self.directives.drop
         lws = literalws_set_from_value(node.attr['literalws']) if node.has_attr('literalws') \
