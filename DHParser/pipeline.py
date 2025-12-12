@@ -120,24 +120,21 @@ def connection(junctions: Iterable[Junction], target: str, origin: str = "CST") 
 def as_paths(junctions: Set[Junction]) -> Dict[str, List[str]]:
     """Returns a dictionary that maps each end point to the path from the start
     (usually "CST") to that end point."""
-    # TODO: unit-test sometimes fails!!!
-    paths = dict()
-    remlist = set()
+    srcs = {j.src for j in junctions}
+    dsts = {j.dst for j in junctions}
+    endpoints = dsts - srcs
+    start = (srcs - dsts).pop()
+    dst_src = { j.dst: j.src for j in junctions }
+    paths = { d: [d, dst_src[d]] for d in endpoints }
     repeat = True
     while repeat:
         repeat = False
-        for j in junctions:
-            if j.src in paths:
-                head = paths[j.src]
-                remlist.add(head[-1])
-                new_path = head + [j.dst]
-                if j.dst not in paths or len(new_path) > len(paths[j.dst]):
-                    repeat = True
-                paths[j.dst] = paths[j.src] + [j.dst]
-            else:
-                paths[j.dst] = [j.src, j.dst]
-    for stage in remlist:
-        del paths[stage]
+        for endpoint, path in paths.items():
+            if path[-1] != start:
+                path.append(dst_src[path[-1]])
+                repeat = True
+    for path in paths.values():
+        path.reverse()
     return paths
 
 
