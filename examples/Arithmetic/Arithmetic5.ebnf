@@ -1,20 +1,21 @@
 # A variant of an Arithmetic-grammar
 
+@literalws = right
 @drop = whitespace, strings
 @hide = expression, term, factor
 
 formulae = ~ expression { expression }
 
 expression = addition | subtraction | term
-  addition    = expression "+"~ term
-  subtraction = expression "-"~ term
+  addition    = expression "+" term
+  subtraction = expression "-" term
 
 term       = multiplication | division | factor
-  multiplication = term "*"~ factor
-  division       = term ":"~ factor
+  multiplication = term "*" factor
+  division       = term ":" factor
 
 factor = group | number
-  group  = "("~ expression ")"~
+  group  = "(" expression ")"
   number = /0/~ | /[1-9]/ { /[0-9]/ } ~
 
 
