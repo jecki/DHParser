@@ -2237,7 +2237,7 @@ class Grammar:
         else:
             return str(result)
 
-    @deprecated("Grammar.fullmatch() is deprecated, use Grammar.match__() or fullmatch(grammar, ...) instead!")
+    @deprecated("Grammar.fullmatch() is deprecated, use Grammar.fullmatch__() or fullmatch(grammar, ...) instead!")
     def fullmatch(self,
                   parser: Union[str, Parser],
                   string: str,
