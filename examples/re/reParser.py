@@ -560,10 +560,11 @@ class FlagProcessing(Compiler):
     def on_start(self, node):
         assert not node.children
         assert node.result == '^'
-        start = copy.deepcopy(multiline_start) if 'm' in self.effective_flags.positive \
-                                                else copy.deepcopy(default_start)
+        multiline = 'm' in self.effective_flags.positive
+        start = copy.deepcopy(multiline_start) if multiline \
+            else copy.deepcopy(default_start)
         for nd in start.walk_tree():  nd._pos = node._pos
-        node.name = 'lookaround'
+        node.name = 'nonCapturing' if multiline else 'lookaround'
         node.attr['re'] = node.result
         node.result = start.children
         return node
@@ -571,10 +572,11 @@ class FlagProcessing(Compiler):
     def on_end(self, node):
         assert not node.children
         assert node.result == '$'
-        end = copy.deepcopy(multiline_end) if 'm' in self.effective_flags.positive \
-                                           else copy.deepcopy(default_end)
+        multiline = 'm' in self.effective_flags.positive
+        end = copy.deepcopy(multiline_end) if multiline \
+            else copy.deepcopy(default_end)
         for nd in end.walk_tree():  nd._pos = node._pos
-        node.name = 'lookaround'
+        node.name = 'nonCapturing' if multiline else 'lookaround'
         node.attr['re'] = node.result
         node.result = end.children
         return node
@@ -734,7 +736,7 @@ flagProcessing: Junction = create_junction(
 def ch_code(ch: str) -> str:
     if len(ch) == 1:
         n = ord(ch)
-        if 0x20 <= n <= 0x7f:
+        if 0x20 <= n < 0x7f:
             return ch
         elif n <= 0xff:
             return "\\x" + f"{n:#04x}"[2:]
@@ -763,11 +765,14 @@ re_serialization_table = expand_table({
     "repetition": lambda _, *ts: ''.join(ts),
     "any": lambda _, s: '.',
     "charset": lambda _, *ts: ''.join(['[', *ts, ']']),
-    "ch": lambda _, s: ch_code(s),
+    "ch, char": lambda _, s: ch_code(s),
     "chRange": lambda _, *ts: ''.join([ch_code(ts[0]), '-', ch_code(ts[1])]),
+    "chSet": lambda _, s: ''.join(ch_code(ch) for ch in s),
+    "specialEsc": lambda _, s: '\\' + s,
     "lookaround": lambda _, *ts: ''.join(['(?', *ts, ')']),
     "lrtype, complement, repType, zeroOrOne, zeroOrMore, oneOrMore, min, max":
         lambda _, s: s,
+    "nonCapturing": lambda _, *ts: ''.join(['(?:', *ts, ')']),
     "range": lambda _, *ts: ''.join(['{', ', '.join(ts), '}']),
     "regular_expression": lambda _, *ts: ''.join(ts),
     "*": lambda p, *ts: f"(!{p[-1].name}:" + ''.join(ts) + ")"
@@ -779,8 +784,8 @@ def serialize_re(regex_AST: Node) -> str:
 def reSerializer() -> CompilerFunc:
     return serialize_re
 
-re_from_AST: Junction = Junction("AST", reSerializer, "regex")
-
+re_from_AST = Junction("AST", reSerializer, "regex_AST")
+re_from_flagsDone = Junction("flagsDone", reSerializer, "regex_flagsDone")
 
 #######################################################################
 #
@@ -818,7 +823,7 @@ re_from_AST: Junction = Junction("AST", reSerializer, "regex")
 # (See DHParser.compile for a description of junctions)
 
 # ADD YOUR OWN POST-PROCESSING-JUNCTIONS HERE:
-junctions = {ASTTransformation, re_from_AST, flagProcessing}
+junctions = {ASTTransformation, re_from_AST, flagProcessing, re_from_flagsDone}
 
 # put your targets of interest, here. A target is the name of result (or stage)
 # of any transformation, compilation or postprocessing step after parsing.
