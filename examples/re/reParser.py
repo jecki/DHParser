@@ -753,14 +753,14 @@ def ch_code(ch: str) -> str:
 
 def group_if(cond: bool, delimiter: str, items: Tuple[str]) -> str:
     res = delimiter.join(items)
-    return ''.join(['(', res, ')']) if cond else res
+    return ''.join(['(?:', res, ')']) if cond else res
 
 
 re_serialization_table = expand_table({
     "fixedChSet": lambda _, s: "\\" + s,
     "alternative":  lambda p, *ts:
         group_if(len(p) > 1 and p[-2].name in ("sequence", "repetition"), '|', ts),
-    "sequence": lambda p, *ts:
+    "sequence, charSeq": lambda p, *ts:
         group_if(len(p) > 1 and p[-2].name == "repetition", '', ts),
     "repetition": lambda _, *ts: ''.join(ts),
     "any": lambda _, s: '.',
@@ -770,9 +770,10 @@ re_serialization_table = expand_table({
     "chSet": lambda _, s: ''.join(ch_code(ch) for ch in s),
     "specialEsc": lambda _, s: '\\' + s,
     "lookaround": lambda _, *ts: ''.join(['(?', *ts, ')']),
-    "lrtype, complement, repType, zeroOrOne, zeroOrMore, oneOrMore, min, max":
+    "lrtype, complement, repType, zeroOrOne, zeroOrMore, oneOrMore, min, max, groupName":
         lambda _, s: s,
     "nonCapturing": lambda _, *ts: ''.join(['(?:', *ts, ')']),
+    "capturing": lambda _, *ts: ''.join(['(', *ts, ')']),
     "range": lambda _, *ts: ''.join(['{', ', '.join(ts), '}']),
     "regular_expression": lambda _, *ts: ''.join(ts),
     "*": lambda p, *ts: f"(!{p[-1].name}:" + ''.join(ts) + ")"
