@@ -774,6 +774,7 @@ re_serialization_table = expand_table({
         lambda _, s: s,
     "nonCapturing": lambda _, *ts: ''.join(['(?:', *ts, ')']),
     "capturing": lambda _, *ts: ''.join(['(', *ts, ')']),
+    "namedGroup": lambda _, *ts: ''.join([f'(?P<{ts[0]}>', *ts[1:], ')']),
     "range": lambda _, *ts: ''.join(['{', ', '.join(ts), '}']),
     "regular_expression": lambda _, *ts: ''.join(ts),
     "*": lambda p, *ts: f"(!{p[-1].name}:" + ''.join(ts) + ")"
