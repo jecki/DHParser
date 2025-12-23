@@ -180,6 +180,7 @@ class TestLoggingAndLoading:
         assert f4.result()
 
 
+
 class TestStringHelpers:
     def test_lstrip_docstring(self):
         str1 = """line

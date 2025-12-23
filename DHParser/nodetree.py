@@ -908,10 +908,14 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         it should be preferred to querying node.attr when testing for the
         existence of any attributes.
         """
-        try:
+        if hasattr(self, '_attributes'):
             return attr in self._attributes if attr else bool(self._attributes)
-        except (AttributeError, TypeError):
+        else:
             return False
+        # try:
+        #     return attr in self._attributes if attr else bool(self._attributes)
+        # except (AttributeError, TypeError):
+        #     return False
 
     @property
     def attr(self):
@@ -2963,7 +2967,7 @@ class RootNode(Node):
             duplicate._children = tuple()
             duplicate._result = self._result
         duplicate._pos = self._pos
-        new_node_ids = [id(nd) for nd in duplicate.select_if(lambda n: True, include_root=True)]
+        new_node_ids = [id(nd) for nd in duplicate.walk_tree(include_root=True)]
         map_id = dict(zip(old_node_ids, new_node_ids))
         if self.has_attr():
             duplicate.attr.update(self._attributes)
