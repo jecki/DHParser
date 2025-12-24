@@ -547,6 +547,12 @@ ALLOWED_PRESET_VALUES['multicore_pool'] = frozenset({'ProcessPool',
                                                      'InterpreterPool'})
 CONFIG_PRESET['multicore_pool'] = "InterpreterPool"
 
+# PID of the main programm that is passed on to all spawned tasks, i.e.
+# threads, processes, interpreters (only Python 3.14 and above)
+# If the value is the empty string, the current task is still the main
+# process and the pid can be determined by calling os.getpid()
+# Default value: empty string
+CONFIG_PRESET['main_pid'] = ''
 
 ########################################################################
 #

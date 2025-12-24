@@ -1845,6 +1845,39 @@ class SingleThreadExecutor:
         return None
 
 
+def submit_wrapper(fn, pid, args, kwargs):
+    if CONFIG_PRESET['main_pid']:
+        assert CONFIG_PRESET['main_pid'] == pid
+    else:
+        CONFIG_PRESET['main_pid'] = pid
+    return fn(*args, **kwargs)
+
+
+class ExecutorWrapper:
+    def __init__(self, executor):
+        assert not isinnstance(executor, ExecutorWrapper)
+        self.executor = executor
+
+    def submit(self, fn, *args, **kwargs):  # -> concurrent.futures.Future:
+        pid = CONFIG_PRESET['main_pid'] or str(os.getpid())
+        return self.executor.submit(submit_wrapper, submit_wrapper, fn, pid, *args, **kwargs)
+
+    def map(self, fn, *iterables, timeout=None, chunksize=1):
+        pid = CONFIG_PRESET['main_pid'] or str(os.getpid())
+        return self.executor.map(partial(submit_wrapper, fn=fn, pid=pid), *iterables)
+
+    def shutdown(self, wait=True, *, cancel_futures=False):
+        return self.executor.shutdown(wait=wait, cancel_futures=cancel_futures)
+
+        # context-manager
+
+    def __enter__(self):
+        return self.executor.__enter__()
+
+    def __exit__(self, *args, **kwargs):
+        return self.executor.__exit__(*args, **kwargs)
+
+
 @functools.lru_cache(None)
 def multiprocessing_broken() -> str:
     """Returns an error message, if, for any reason, multiprocessing is not safe
