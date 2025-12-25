@@ -165,6 +165,7 @@ __all__ = ('re',
            'deprecation_warning',
            'ThreadLocalSingletonFactory',
            'SingleThreadExecutor',
+           'ExecutorWrapper',
            'multiprocessing_broken',
            'MultiCoreManager',
            'PickMultiCoreExecutor',
@@ -1855,12 +1856,12 @@ def submit_wrapper(fn, pid, args, kwargs):
 
 class ExecutorWrapper:
     def __init__(self, executor):
-        assert not isinnstance(executor, ExecutorWrapper)
+        assert not isinstance(executor, ExecutorWrapper)
         self.executor = executor
 
     def submit(self, fn, *args, **kwargs):  # -> concurrent.futures.Future:
         pid = CONFIG_PRESET['main_pid'] or str(os.getpid())
-        return self.executor.submit(submit_wrapper, submit_wrapper, fn, pid, *args, **kwargs)
+        return self.executor.submit(submit_wrapper, fn, pid, *args, **kwargs)
 
     def map(self, fn, *iterables, timeout=None, chunksize=1):
         pid = CONFIG_PRESET['main_pid'] or str(os.getpid())

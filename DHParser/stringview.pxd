@@ -10,6 +10,10 @@ import cython
 # critical code paths of stringview.py.
 # see https://cython.readthedocs.io/en/latest/src/tutorial/pure.html
 
+# for compatibility with Python 3.14s InterpreterPoolExecutor, see:
+# https://github.com/cython/cython/issues/6445
+
+
 cdef int first_char(str text, int begin, int end, str chars) noexcept
 
 cdef int last_char(str text, int begin, int end, str chars) noexcept

@@ -33,15 +33,17 @@ import time
 import typing
 
 scriptpath = os.path.dirname(__file__) or '.'
+sys.path.append(scriptpath)
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 
+from DHParser.configuration import CONFIG_PRESET
 from DHParser.nodetree import parse_sxpr
 from DHParser.testing import unique_name
 from DHParser.toolkit import has_fenced_code, load_if_file, re, normalize_docstring, \
     issubtype, concurrent_ident, JSONstr, JSONnull, json_dumps, json_rpc, \
     matching_brackets, RX_ENTITY, validate_XML_attribute_value, fix_XML_attribute_value, \
-    cached_load, clear_from_cache, PickMultiCoreExecutor
+    cached_load, clear_from_cache, PickMultiCoreExecutor, ExecutorWrapper
 from DHParser.log import log_dir, start_logging, is_logging, suspend_logging, resume_logging
 
 from DHParser.configuration import CONFIG_PRESET
@@ -422,6 +424,34 @@ class TestCachedDeserialization:
         clear_from_cache(file_name, self.dirname)
         after = os.listdir(self.dirname)
         assert before != after
+
+
+def tc_task(s):
+    # from DHParsr.configuration import CONFIG_PRESET
+    pid = CONFIG_PRESET['main_pid']
+    print(s, 'pid:', CONFIG_PRESET['main_pid'])
+    return pid
+
+class TestConcurrency:
+    def setup_method(self):
+        self.cwd = os.getcwd()
+
+    def teardown_method(self):
+        os.chdir(self.cwd)
+
+    def test_global_pid(self):
+        if sys.version_info >= (3, 14):
+            # print(tc_task.__module__)
+            from concurrent.futures import InterpreterPoolExecutor
+            if __name__ != '__main__':
+                os.chdir('..')
+                import tests.test_toolkit as test_toolkit
+            else:
+                import test_toolkit
+            print(os.getpid(), CONFIG_PRESET['main_pid'])
+            with ExecutorWrapper(InterpreterPoolExecutor()) as ex:
+                f = ex.submit(test_toolkit.tc_task, 'alpha')
+                print(f.result())
 
 
 if __name__ == "__main__":
