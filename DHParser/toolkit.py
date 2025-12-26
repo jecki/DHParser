@@ -168,6 +168,7 @@ __all__ = ('re',
            'ExecutorWrapper',
            'multiprocessing_broken',
            'MultiCoreManager',
+           'disable_multi_interp_extensions_check',
            'PickMultiCoreExecutor',
            'instantiate_executor',
            'cpu_count',
@@ -368,10 +369,10 @@ def deprecated(message: str) -> Callable:
 
 
 def get_annotations(item):
-    if sys.version_info >= (3, 14):
+    if sys.version_info >= (3, 14, 0):
         from annotationlib import get_annotations, Format
         return get_annotations(item, format=Format.VALUE)
-    elif sys.version_info >= (3, 10):
+    elif sys.version_info >= (3, 10, 0):
         import inspect
         return inspect.get_annotations(item)
     else:
@@ -1846,12 +1847,20 @@ class SingleThreadExecutor:
         return None
 
 
-def submit_wrapper(fn, pid, args, kwargs):
+def submit_wrapper(fn, pid, args=(), kwargs={}):
     if CONFIG_PRESET['main_pid']:
         assert CONFIG_PRESET['main_pid'] == pid
     else:
         CONFIG_PRESET['main_pid'] = pid
     return fn(*args, **kwargs)
+
+
+def mapped_wrapper(*args, fn=None, pid=''):
+    if CONFIG_PRESET['main_pid']:
+        assert CONFIG_PRESET['main_pid'] == pid
+    else:
+        CONFIG_PRESET['main_pid'] = pid
+    return fn(*args)
 
 
 class ExecutorWrapper:
@@ -1861,11 +1870,12 @@ class ExecutorWrapper:
 
     def submit(self, fn, *args, **kwargs):  # -> concurrent.futures.Future:
         pid = CONFIG_PRESET['main_pid'] or str(os.getpid())
-        return self.executor.submit(submit_wrapper, fn, pid, *args, **kwargs)
+        return self.executor.submit(submit_wrapper, fn, pid, args, kwargs)
 
     def map(self, fn, *iterables, timeout=None, chunksize=1):
         pid = CONFIG_PRESET['main_pid'] or str(os.getpid())
-        return self.executor.map(partial(submit_wrapper, fn=fn, pid=pid), *iterables)
+        wrapper = functools.partial(mapped_wrapper, fn=fn, pid=pid)
+        return self.executor.map(wrapper, *iterables)
 
     def shutdown(self, wait=True, *, cancel_futures=False):
         return self.executor.shutdown(wait=wait, cancel_futures=cancel_futures)
@@ -1873,7 +1883,8 @@ class ExecutorWrapper:
         # context-manager
 
     def __enter__(self):
-        return self.executor.__enter__()
+        self.executor.__enter__()
+        return self
 
     def __exit__(self, *args, **kwargs):
         return self.executor.__exit__(*args, **kwargs)
@@ -2065,6 +2076,16 @@ def MultiCoreManager():
 #         self.pool.shutdown(wait, cancel_futures=cancel_futures)
 
 
+def disable_multi_interp_extensions_check():
+    """Disables compatibility check of Python >= 3.14 InterpreterPoolExecutor.
+    See: https://github.com/cython/cython/issues/6445
+    DANGEROUS!!!"""
+    import sys
+    if sys.version_info >= (3, 14, 0):
+        import _imp
+        _imp._override_multi_interp_extensions_check(-1)
+
+
 class PickMultiCoreExecutorShim:
     def __call__(self):  # -> Type[concurrent.futures.Executor]:
         """Returns an instance of the most lightweight
@@ -2089,9 +2110,9 @@ class PickMultiCoreExecutorShim:
         if sys.version_info >= (3, 14, 0) \
                 and CONFIG_PRESET['multicore_pool'] == 'InterpreterPool' \
                 and not getattr(DHParser.stringview, 'cython_optimized', False):
-            return concurrent.futures.InterpreterPoolExecutor()
+            return ExecutorWrapper(concurrent.futures.InterpreterPoolExecutor())
         else:
-            return concurrent.futures.ProcessPoolExecutor()
+            return ExecutorWrapper(concurrent.futures.ProcessPoolExecutor())
 
 
 PickMultiCoreExecutor = PickMultiCoreExecutorShim()
@@ -2133,7 +2154,7 @@ def instantiate_executor(allow_parallel: bool,
         if mode == "singlethread":
             return SingleThreadExecutor()
         elif mode == "multithreading" or multiprocessing_broken():
-            if not issubclass(preferred_executor, concurrent.futures.ThreadPoolExecutor):
+            if not (issubclass(preferred_executor, concurrent.futures.ThreadPoolExecutor)):
                 return concurrent.futures.ThreadPoolExecutor(*args, **kwargs)
         else:
             assert mode in ("multicore", "multiprocessing"), \

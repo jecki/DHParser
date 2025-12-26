@@ -325,25 +325,25 @@ KeepMultilineComments = {get_config_value('ts2python.KeepMultilineComments', Fal
 def required_python_version(ts2python_cfg: Dict[str, bool],
                             purpose: str = "compatibility") -> Tuple[int, int]:
     assert purpose in ("compatibility", "features")
-    min_version = (3, 7)
+    min_version = (3, 7, 0)
     if ts2python_cfg.get('ts2python.UseLiteralType', False):
-        min_version = (3, 8)
+        min_version = (3, 8, 0)
     if ts2python_cfg.get('ts2python.UseTypeUnion', False):
-        min_version = (3, 10)
+        min_version = (3, 10, 0)
     elif ts2python_cfg.get('ts2python.UseExplicitTypeAlias', False):
-        min_version = (3, 10)
+        min_version = (3, 10, 0)
     if ts2python_cfg.get('ts2python.UseVariadicGenerics', False):
-        min_version = (3, 11)
+        min_version = (3, 11, 0)
     elif ts2python_cfg.get('ts2python.UseNotRequired', False) \
             and purpose == "features":
-        min_version = (3, 11)
+        min_version = (3, 11, 0)
     if ts2python_cfg.get('ts2python.UseTypeParameters', False):
-        min_version = (3, 12)
+        min_version = (3, 12, 0)
     if ts2python_cfg.get('ts2python.AllowReadOnly', False) \
             and purpose == "features":
-        min_version = (3, 13)
+        min_version = (3, 13, 0)
     if ts2python_cfg.get('ts2python.AssumeDeferredEvaluation', False):
-        min_version = (3, 14)
+        min_version = (3, 14, 0)
     # Neither UseReadOnly nor UseNotRequired place any demand on the
     # Python version, because:
     # ReadOnly can be defined as Union for Python-version < 3.13
@@ -351,30 +351,30 @@ def required_python_version(ts2python_cfg: Dict[str, bool],
     return min_version
 
 
-def set_compatibility_level(version_info: Tuple[int, ...] = (3, 7),
+def set_compatibility_level(version_info: Tuple[int, ...] = (3, 7, 0),
                             config_or_preset: str = "preset"):
     if config_or_preset == "preset":
         set_value = set_preset_value
     else:
         assert config_or_preset == "config"
         set_value = set_config_value
-    if not version_info >= (3, 7):
+    if not version_info >= (3, 7, 0):
         print('Compatibility version must be >= 3.7')
         sys.exit(1)
-    if version_info >= (3, 8):
+    if version_info >= (3, 8, 0):
         set_value('ts2python.UseLiteralType', True, allow_new_key=True)
-    if version_info >= (3, 10):
+    if version_info >= (3, 10, 0):
         set_value('ts2python.UseTypeUnion', True, allow_new_key=True)
-        if version_info < (3, 12):
+        if version_info < (3, 12, 0):
             set_value('ts2python.UseExplicitTypeAlias', True, allow_new_key=True)
-    if version_info >= (3, 11):
+    if version_info >= (3, 11, 0):
         set_value('ts2python.UseNotRequired', True, allow_new_key=True)
         set_value('ts2python.UseVariadicGenerics', True, allow_new_key=True)
-    if version_info >= (3, 12):
+    if version_info >= (3, 12, 0):
         set_value('ts2python.UseTypeParameters', True, allow_new_key=True)
-    if version_info >= (3, 13):
+    if version_info >= (3, 13, 0):
         set_value('ts2python.AllowReadOnly', True, allow_new_key=True)
-    if version_info >= (3, 14):
+    if version_info >= (3, 14, 0):
         set_value('ts2python.AssumeDeferredEvaluation', True, allow_new_key=True)
         set_value('ts2python.UsePostponedEvaluation', False, allow_new_key=True)
 
@@ -442,10 +442,10 @@ except ImportError:
     GenericTypedDict = _GenericTypedDictMeta('TypedDict', (dict,), {})
     GenericTypedDict.__module__ = __name__"""
 
-TYPE_IMPORTS_MAPPING = {(3, 13): [TYPE_IMPORTS_313],
-                        (3, 11): [TYPE_IMPORTS_311],
-                        (3,  9): [TYPE_IMPORTS_37, TYPEDDICT_IMPORTS_37],
-                        (3,  7): [TYPE_IMPORTS_37, TYPEDDICT_IMPORTS_37]}
+TYPE_IMPORTS_MAPPING = {(3, 13, 0): [TYPE_IMPORTS_313],
+                        (3, 11, 0): [TYPE_IMPORTS_311],
+                        (3,  9, 0): [TYPE_IMPORTS_37, TYPEDDICT_IMPORTS_37],
+                        (3,  7, 0): [TYPE_IMPORTS_37, TYPEDDICT_IMPORTS_37]}
 
 FUNCTOOLS_IMPORTS = """
 try:

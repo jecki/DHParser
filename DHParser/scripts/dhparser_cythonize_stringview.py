@@ -69,13 +69,9 @@ def build(setup_kwargs={}):
 
         # build cyhton modules inplace
         sys.argv.extend(['build_ext', '--inplace'])
-        # Where must this be put?
-        # ext = Extension(
-        #     name="cytest.mycythonmodule",
-        #     sources=["cytest/mycythonmodule.pyx"],
-        #     define_macros=[("CYTHON_USE_MODULE_STATE", "1")]
-        # )
-        ext_modules=cythonize(cythonize_modules, nthreads=0, annotate=False)
+        ext_modules=cythonize(cythonize_modules, nthreads=0, annotate=False,
+                              compiler_directives={# 'module_state': True,
+                                                   'subinterpreters_compatible': 'own_gil'})
         setup(
             name='DHParser',
             ext_modules=ext_modules,

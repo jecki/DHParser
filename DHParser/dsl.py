@@ -949,7 +949,7 @@ def batch_process(file_names: List[str], out_dir: str,
             res_iter = pool.map(process_file, ((name, out_dir) for name in file_names),
                                 chunksize=chunksize)
         error_files = collect_results(res_iter, file_names, log_func, cancel_query or never_cancel)
-        if sys.version_info >= (3, 9):
+        if sys.version_info >= (3, 9, 0):
             pool.shutdown(wait=True, cancel_futures=True)
         else:
             pool.shutdown(wait=True)

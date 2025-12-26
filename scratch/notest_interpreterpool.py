@@ -89,7 +89,7 @@ class TestLoggingAndLoading:  # addition to test_toolkit
 
 
 def evaluate_presets():
-    from DHParser.configuration import os_getpid
+    # from DHParser.configuration import os_getpid
     access_presets()
     if get_preset_value('test', 'failure') != 'failure' and \
             get_preset_value('test2', 'failure') != 'failure':
@@ -120,7 +120,7 @@ class TestConfigMultiprocessing:
         global PYTEST, evaluate_presets
         if sys.version_info >= (3, 14, 0):
             import concurrent.futures
-            from DHParser.configuration import CONFIG_PRESET, os_getpid
+            from DHParser.configuration import CONFIG_PRESET # os_getpid
             CONFIG_PRESET['multicore_pool'] = 'ProcessPool'
             if __name__ == '__main__':
                 import notest_interpreterpool
@@ -149,7 +149,7 @@ class TestConfigMultiprocessing:
         global PYTEST, evaluate_presets
         if sys.version_info >= (3, 14, 0):
             import concurrent.futures
-            from DHParser.configuration import CONFIG_PRESET, os_getpid
+            from DHParser.configuration import CONFIG_PRESET  #  os_getpid
             CONFIG_PRESET['multicore_pool'] = 'InterpreterPool'
             if __name__ == '__main__':
                 import notest_interpreterpool

@@ -138,29 +138,25 @@ def get_forkserver_pid():
     return forkserver_pid
 
 
-def os_getpid(mp_method = None):
+def get_main_pid(mp_method = None):
+    """Returns the pis of the main process, i.e. the process or interpreter that
+    has not been spawned by any other process."""
     import os
-    if sys.version_info < (3, 14, 0) \
-            or CONFIG_PRESET['multicore_pool'] == 'ProcessPool':
-        # TODO chose this path also, if this has not been called inside an InterpreterPool!!!
-        import multiprocessing
-        if mp_method is None:
-            mp_method = multiprocessing.get_start_method()
-        if mp_method == "forkserver":
-            return get_forkserver_pid()
-    return os.getpid()
+    return CONFIG_PRESET['main_pid'] or os.getpid()
 
 
 def get_syncfile_path(mp_method: str) -> str:
     import os
     import tempfile
-    syncfile_path = CONFIG_PRESET['syncfile_path']
-    if not syncfile_path:
-        for getpid in (os.getpid, os.getppid, os_getpid):
-            pid = getpid()
-            syncfile_path = os.path.join(tempfile.gettempdir(), f'DHParser_{pid}.cfg')
-            if os.path.exists(syncfile_path):
-                break
+    # syncfile_path = CONFIG_PRESET['syncfile_path']
+    # if not syncfile_path:
+    #     for getpid in (os.getpid, os.getppid, get_main_pid):
+    #         pid = getpid()
+    #         syncfile_path = os.path.join(tempfile.gettempdir(), f'DHParser_{pid}.cfg')
+    #         if os.path.exists(syncfile_path):
+    #             break
+    pid = get_main_pid()
+    syncfile_path = os.path.join(tempfile.gettempdir(), f'DHParser_{pid}.cfg')
     return syncfile_path
 
 
@@ -549,10 +545,10 @@ CONFIG_PRESET['multicore_pool'] = "InterpreterPool"
 
 # PID of the main programm that is passed on to all spawned tasks, i.e.
 # threads, processes, interpreters (only Python 3.14 and above)
-# If the value is the empty string, the current task is still the main
+# If the value is 0, the current task is still the main
 # process and the pid can be determined by calling os.getpid()
-# Default value: empty string
-CONFIG_PRESET['main_pid'] = ''
+# Default value: 0
+CONFIG_PRESET['main_pid'] = 0
 
 ########################################################################
 #

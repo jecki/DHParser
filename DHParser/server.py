@@ -216,7 +216,7 @@ SERVER_REPLY_TIMEOUT = 3  # seconds
 
 def asyncio_run(coroutine: Awaitable, loop=None) -> Any:
     """Backward compatible version of Pyhon3.7's `asyncio.run()`"""
-    if sys.version_info >= (3, 7):
+    if sys.version_info >= (3, 7, 0):
         return asyncio.run(coroutine)
     else:
         if loop is None:
@@ -648,7 +648,7 @@ class StreamReaderProxy:
         try:
             return await self._read(n)
         except AttributeError:
-            self.loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
+            self.loop = asyncio.get_running_loop() if sys.version_info >= (3, 7, 0) \
                 else asyncio.get_event_loop()
             return await self._read(n)
 
@@ -745,7 +745,7 @@ class StreamWriterProxy:
             try:
                 await self.loop.run_in_executor(self.exec, self._drain, data)
             except AttributeError:
-                self.loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
+                self.loop = asyncio.get_running_loop() if sys.version_info >= (3, 7, 0) \
                     else asyncio.get_event_loop()
                 await self.loop.run_in_executor(self.exec, self._drain, data)
 
@@ -810,7 +810,7 @@ class Connection:
     def create_task(self, json_id: int, coroutine: Coroutine) -> asyncio.futures.Future:
         assert json_id not in self.active_tasks, \
             "JSON-id {} already used!".format(json_id)
-        task = asyncio.create_task(coroutine) if sys.version_info >= (3, 7) \
+        task = asyncio.create_task(coroutine) if sys.version_info >= (3, 7, 0) \
             else asyncio.ensure_future(coroutine)
         self.active_tasks[json_id] = task
         return task
@@ -1726,7 +1726,7 @@ class Server:
 
                 if rpc_error is None:
                     try:
-                        raw = json.loads(data) if sys.version_info >= (3, 6) \
+                        raw = json.loads(data) if sys.version_info >= (3, 6, 0) \
                             else json.loads(data.decode())
                     except json.decoder.JSONDecodeError as e:
                         rpc_error = -32700, "JSONDecodeError: " \
@@ -1782,7 +1782,7 @@ class Server:
                     writer.write_eof()
                     await writer.drain()
                     writer.close()
-                    # if sys.version_info >= (3, 7):  await writer.wait_closed()
+                    # if sys.version_info >= (3, 7, 0):  await writer.wait_closed()
                 except (ConnectionError, OSError) as err:
                     self.log('ERROR during shutdown of service connection: ', str(err), '\n')
                 self.log('SERVER MESSAGE: Closing service-connection.')
@@ -1803,13 +1803,13 @@ class Server:
             # TODO: terminate processes and threads! Is this needed?
             #       terminate all connections
             self.stage.value = SERVER_TERMINATING
-            if sys.version_info >= (3, 7):
+            if sys.version_info >= (3, 7, 0):
                 await writer.wait_closed()
                 if self.serving_task:
                     self.serving_task.cancel()
             elif self.server:
                 self.server.close()  # break self.server.serve_forever()
-            if sys.version_info < (3, 7) and self.loop is not None:
+            if sys.version_info < (3, 7, 0) and self.loop is not None:
                 self.loop.stop()
             self.log('SERVER MESSAGE: Stopping server: {}.\n\n'.format(id_connection))
             self.kill_switch = False  # reset flag
@@ -1820,7 +1820,7 @@ class Server:
         self.stop_response = "DHParser server at {}:{} stopped!".format(host, port)
         self.host.value = host.encode()
         self.port.value = port
-        self.loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
+        self.loop = asyncio.get_running_loop() if sys.version_info >= (3, 7, 0) \
             else asyncio.get_event_loop()
         try:
             self.exec = ExecutionEnvironment(self.loop)
@@ -1833,7 +1833,7 @@ class Server:
                 self.serving_task = asyncio.create_task(self.server.serve_forever())
                 await self.serving_task
         finally:
-            if self.server is not None and sys.version_info < (3, 8):
+            if self.server is not None and sys.version_info < (3, 8, 0):
                 await self.server.wait_closed()
             if self.exec:
                 self.exec.shutdown()
@@ -1865,7 +1865,7 @@ class Server:
         assert self.loop is None
         assert self.exec is None
 
-        self.loop = asyncio.get_running_loop() if sys.version_info >= (3, 7) \
+        self.loop = asyncio.get_running_loop() if sys.version_info >= (3, 7, 0) \
             else asyncio.get_event_loop()
         self.log('\nLOOP: ' + str(self.loop) + '\n\n')
 
@@ -2066,7 +2066,7 @@ def detach_server(host: str = USE_DEFAULT_HOST,
     async def wait_for_connection(host, port):
         _, writer = await asyncio_connect(host, port)  # wait until server online
         writer.close()
-        # if sys.version_info >= (3, 7):
+        # if sys.version_info >= (3, 7, 0):
         #     await writer.wait_closed()
 
     # global python_interpreter_name_cached
@@ -2079,7 +2079,7 @@ def detach_server(host: str = USE_DEFAULT_HOST,
     run_server_script = RUN_SERVER_SCRIPT_TEMPLATE.format(
         HOST=host, PORT=port, INITIALIZATION=initialization, LOGGING=logging,
         PARAMETERS=parameters, IMPORT_PATH=import_path.replace('\\', '\\\\'))
-    if sys.version_info >= (3, 6):
+    if sys.version_info >= (3, 6, 0):
         subprocess.Popen([interpreter, '-c', run_server_script], encoding="utf-8")
     else:
         subprocess.Popen([interpreter, '-c', run_server_script])
@@ -2100,7 +2100,7 @@ async def has_server_stopped(host: str = USE_DEFAULT_HOST,
         while delay < timeout:
             _, writer = await asyncio_connect(host, port, retry_timeout=0.0)
             writer.close()
-            if sys.version_info >= (3, 7):
+            if sys.version_info >= (3, 7, 0):
                 await writer.wait_closed()
             if delay > 0.0:
                 await asyncio.sleep(delay)
@@ -2124,7 +2124,7 @@ async def send_stop_request(reader: StreamReaderType, writer: StreamWriterType):
     writer.write_eof()
     await writer.drain()
     writer.close()
-    if sys.version_info >= (3, 7):
+    if sys.version_info >= (3, 7, 0):
         await writer.wait_closed()
 
 

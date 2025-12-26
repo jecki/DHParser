@@ -123,7 +123,7 @@ def retrieve_host_and_port():
 
 def asyncio_run(coroutine):
     """Backward compatible version of Pyhon3.7's `asyncio.run()`"""
-    if sys.version_info >= (3, 7):
+    if sys.version_info >= (3, 7, 0):
         return asyncio.run(coroutine)
     else:
         try:
@@ -400,7 +400,7 @@ async def send_request(reader, writer, request, timeout=SERVER_REPLY_TIMEOUT) ->
 async def close_connection(writer):
     """Closes the communication-channel."""
     writer.close()
-    if sys.version_info >= (3, 7):
+    if sys.version_info >= (3, 7, 0):
         await writer.wait_closed()
 
 

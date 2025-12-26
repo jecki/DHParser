@@ -165,12 +165,12 @@ def _check_generic(cls, parameters, elen=_marker):
                         f" actual {alen}, expected {elen}")
 
 
-if sys.version_info >= (3, 10):
+if sys.version_info >= (3, 10, 0):
     def _should_collect_from_parameters(t):
         return isinstance(
             t, (typing._GenericAlias, _types.GenericAlias, _types.UnionType)
         )
-elif sys.version_info >= (3, 9):
+elif sys.version_info >= (3, 9, 0):
     def _should_collect_from_parameters(t):
         return isinstance(t, (typing._GenericAlias, _types.GenericAlias))
 else:
@@ -210,7 +210,7 @@ T_co = typing.TypeVar('T_co', covariant=True)  # Any type covariant containers.
 T_contra = typing.TypeVar('T_contra', contravariant=True)  # Ditto contravariant.
 
 
-if sys.version_info >= (3, 11):
+if sys.version_info >= (3, 11, 0):
     from typing import Any
 else:
 
@@ -250,7 +250,7 @@ class _ExtensionsSpecialForm(typing._SpecialForm, _root=True):
 
 # On older versions of typing there is an internal class named "Final".
 # 3.8+
-if hasattr(typing, 'Final') and sys.version_info[:2] >= (3, 7):
+if hasattr(typing, 'Final') and sys.version_info[:2] >= (3, 7, 0):
     Final = typing.Final
 # 3.7
 else:
@@ -275,7 +275,7 @@ else:
 
                        There is no runtime checking of these properties.""")
 
-if sys.version_info >= (3, 11):
+if sys.version_info >= (3, 11, 0):
     final = typing.final
 else:
     # @final exists in 3.8+, but we backport it for all versions
@@ -508,16 +508,16 @@ _EXCLUDED_ATTRS = {
     "__protocol_attrs__", "__callable_proto_members_only__",
 }
 
-if sys.version_info < (3, 8):
+if sys.version_info < (3, 8, 0):
     _EXCLUDED_ATTRS |= {
         "_gorg", "__next_in_mro__", "__extra__", "__tree_hash__", "__args__",
         "__origin__"
     }
 
-if sys.version_info >= (3, 9):
+if sys.version_info >= (3, 9, 0):
     _EXCLUDED_ATTRS.add("__class_getitem__")
 
-if sys.version_info >= (3, 12):
+if sys.version_info >= (3, 12, 0):
     _EXCLUDED_ATTRS.add("__type_params__")
 
 _EXCLUDED_ATTRS = frozenset(_EXCLUDED_ATTRS)
@@ -584,7 +584,7 @@ def _caller(depth=2):
 
 # The performance of runtime-checkable protocols is significantly improved on Python 3.12,
 # so we backport the 3.12 version of Protocol to Python <=3.11
-if sys.version_info >= (3, 12):
+if sys.version_info >= (3, 12, 0):
     Protocol = typing.Protocol
 else:
     def _allow_reckless_class_checks(depth=3):
@@ -598,7 +598,7 @@ else:
         if type(self)._is_protocol:
             raise TypeError('Protocols cannot be instantiated')
 
-    if sys.version_info >= (3, 8):
+    if sys.version_info >= (3, 8, 0):
         # Inheriting from typing._ProtocolMeta isn't actually desirable,
         # but is necessary to allow typing.Protocol and typing_extensions.Protocol
         # to mix without getting TypeErrors about "metaclass conflict"
@@ -737,7 +737,7 @@ else:
                 return NotImplemented
         return True
 
-    if sys.version_info >= (3, 8):
+    if sys.version_info >= (3, 8, 0):
         class Protocol(typing.Generic, metaclass=_ProtocolMeta):
             __doc__ = typing.Protocol.__doc__
             __slots__ = ()
@@ -851,7 +851,7 @@ else:
                     cls.__init__ = _no_init
 
 
-if sys.version_info >= (3, 8):
+if sys.version_info >= (3, 8, 0):
     runtime_checkable = typing.runtime_checkable
 else:
     def runtime_checkable(cls):
@@ -877,7 +877,7 @@ runtime = runtime_checkable
 
 
 # Our version of runtime-checkable protocols is faster on Python 3.7-3.11
-if sys.version_info >= (3, 12):
+if sys.version_info >= (3, 12, 0):
     SupportsInt = typing.SupportsInt
     SupportsFloat = typing.SupportsFloat
     SupportsComplex = typing.SupportsComplex
@@ -955,7 +955,7 @@ else:
 
 def _ensure_subclassable(mro_entries):
     def inner(func):
-        if sys.implementation.name == "pypy" and sys.version_info < (3, 9):
+        if sys.implementation.name == "pypy" and sys.version_info < (3, 9, 0):
             cls_dict = {
                 "__call__": staticmethod(func),
                 "__mro_entries__": staticmethod(mro_entries)
@@ -968,7 +968,7 @@ def _ensure_subclassable(mro_entries):
     return inner
 
 
-if sys.version_info >= (3, 13):
+if sys.version_info >= (3, 13, 0):
     # The standard library TypedDict in Python 3.8 does not store runtime information
     # about which (if any) keys are optional.  See https://bugs.python.org/issue38834
     # The standard library TypedDict in Python 3.9.0/1 does not honour the "total"
@@ -986,7 +986,7 @@ else:
     # 3.10.0 and later
     _TAKES_MODULE = "module" in inspect.signature(typing._type_check).parameters
 
-    if sys.version_info >= (3, 8):
+    if sys.version_info >= (3, 8, 0):
         _fake_name = "Protocol"
     else:
         _fake_name = "_Protocol"

@@ -87,7 +87,7 @@ test.beta = 'beta'
 
 
 def evaluate_presets():
-    from DHParser.configuration import os_getpid
+    # from DHParser.configuration import os_getpid
     access_presets()
     if get_preset_value('test', 'failure') != 'failure' and \
             get_preset_value('test2', 'failure') != 'failure':
@@ -129,7 +129,7 @@ class TestConfigMultiprocessing:
         if sys.version_info >= (3, 14, 0) \
                 and not getattr(DHParser.stringview, 'cython_optimized', False):
             import concurrent.futures
-            from DHParser.configuration import CONFIG_PRESET, os_getpid
+            # from DHParser.configuration import CONFIG_PRESET, os_getpid
             if __name__ == '__main__':
                 import test_configuration
             else:

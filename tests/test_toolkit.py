@@ -43,7 +43,8 @@ from DHParser.testing import unique_name
 from DHParser.toolkit import has_fenced_code, load_if_file, re, normalize_docstring, \
     issubtype, concurrent_ident, JSONstr, JSONnull, json_dumps, json_rpc, \
     matching_brackets, RX_ENTITY, validate_XML_attribute_value, fix_XML_attribute_value, \
-    cached_load, clear_from_cache, PickMultiCoreExecutor, ExecutorWrapper
+    cached_load, clear_from_cache, PickMultiCoreExecutor, ExecutorWrapper, \
+    disable_multi_interp_extensions_check
 from DHParser.log import log_dir, start_logging, is_logging, suspend_logging, resume_logging
 
 from DHParser.configuration import CONFIG_PRESET
@@ -429,7 +430,7 @@ class TestCachedDeserialization:
 def tc_task(s):
     # from DHParsr.configuration import CONFIG_PRESET
     pid = CONFIG_PRESET['main_pid']
-    print(s, 'pid:', CONFIG_PRESET['main_pid'])
+    print(s, os.getpid(), 'pid:', CONFIG_PRESET['main_pid'])
     return pid
 
 class TestConcurrency:
@@ -448,8 +449,8 @@ class TestConcurrency:
                 import tests.test_toolkit as test_toolkit
             else:
                 import test_toolkit
-            print(os.getpid(), CONFIG_PRESET['main_pid'])
-            with ExecutorWrapper(InterpreterPoolExecutor()) as ex:
+            pid = os.getpid()
+            with ExecutorWrapper(InterpreterPoolExecutor(initializer=disable_multi_interp_extensions_check)) as ex:
                 f = ex.submit(test_toolkit.tc_task, 'alpha')
                 print(f.result())
 
