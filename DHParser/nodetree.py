@@ -908,14 +908,15 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         it should be preferred to querying node.attr when testing for the
         existence of any attributes.
         """
-        if hasattr(self, '_attributes'):
-            return attr in self._attributes if attr else bool(self._attributes)
-        else:
-            return False
-        # try:
+        # This code is not cython-compatible!
+        # if hasattr(self, '_attributes'):
         #     return attr in self._attributes if attr else bool(self._attributes)
-        # except (AttributeError, TypeError):
+        # else:
         #     return False
+        try:
+            return attr in self._attributes if attr else bool(self._attributes)
+        except (AttributeError, TypeError):
+            return False
 
     @property
     def attr(self):

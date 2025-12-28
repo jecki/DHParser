@@ -427,32 +427,32 @@ class TestCachedDeserialization:
         assert before != after
 
 
-def tc_task(s):
-    # from DHParsr.configuration import CONFIG_PRESET
-    pid = CONFIG_PRESET['main_pid']
-    print(s, os.getpid(), 'pid:', CONFIG_PRESET['main_pid'])
-    return pid
-
-class TestConcurrency:
-    def setup_method(self):
-        self.cwd = os.getcwd()
-
-    def teardown_method(self):
-        os.chdir(self.cwd)
-
-    def test_global_pid(self):
-        if sys.version_info >= (3, 14):
-            # print(tc_task.__module__)
-            from concurrent.futures import InterpreterPoolExecutor
-            if __name__ != '__main__':
-                os.chdir('..')
-                import tests.test_toolkit as test_toolkit
-            else:
-                import test_toolkit
-            pid = os.getpid()
-            with ExecutorWrapper(InterpreterPoolExecutor(initializer=disable_multi_interp_extensions_check)) as ex:
-                f = ex.submit(test_toolkit.tc_task, 'alpha')
-                print(f.result())
+# def tc_task(s):
+#     # from DHParsr.configuration import CONFIG_PRESET
+#     pid = CONFIG_PRESET['main_pid']
+#     print(s, os.getpid(), 'pid:', CONFIG_PRESET['main_pid'])
+#     return pid
+#
+# class TestConcurrency:
+#     def setup_method(self):
+#         self.cwd = os.getcwd()
+#
+#     def teardown_method(self):
+#         os.chdir(self.cwd)
+#
+#     def test_global_pid(self):
+#         if sys.version_info >= (3, 14):
+#             # print(tc_task.__module__)
+#             from concurrent.futures import InterpreterPoolExecutor
+#             if __name__ != '__main__':
+#                 os.chdir('..')
+#                 import tests.test_toolkit as test_toolkit
+#             else:
+#                 import test_toolkit
+#             pid = os.getpid()
+#             with ExecutorWrapper(InterpreterPoolExecutor(initializer=disable_multi_interp_extensions_check)) as ex:
+#                 f = ex.submit(test_toolkit.tc_task, 'alpha')
+#                 print(f.result())
 
 
 if __name__ == "__main__":

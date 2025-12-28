@@ -15,6 +15,9 @@ if platform.system().lower() == "linux":
 
 if sys.version_info >= (3, 14, 0):
     os.environ['CYTHON_USE_MODULE_STATE'] = '1'
+    print('WARNING: Speeding DHParser with cython does not work properly with '
+          'InterpreterPoolExecutors. Set CONFIG_PRESET["multicore_pool"] = "ProcessPool" '
+          'to stay on the safe side!')
 
 try:
     from Cython.Build import cythonize
