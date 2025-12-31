@@ -3199,7 +3199,6 @@ ws = / +/ -> DROP"""
         ast = transform_ebnf(cst)
         ebnf = ast.evaluate_path(get_EBNF_AST_Serialization_Table(), path=[ast])
         cst2 = parse_ebnf(ebnf)
-        print(cst2.as_sxpr())
         ast2 = transform_ebnf(cst2)
         assert ast2.equals(ast)
 
@@ -3213,12 +3212,7 @@ ws = / +/ -> DROP"""
         print(peg_ebnf)
         cst3 = parse_ebnf(peg_ebnf)  # , "classic")
         assert not cst3.errors
-        print(cst3.as_sxpr())
         ast3 = transform_ebnf(cst3)
-        print('+++++++++++++')
-        print(ast2.as_sxpr())
-        print('-------------')
-        print(ast3.as_sxpr())
         assert ast3.equals(ast2)
 
 if __name__ == "__main__":

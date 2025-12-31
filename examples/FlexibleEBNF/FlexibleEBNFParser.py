@@ -100,8 +100,8 @@ def preprocess_new(source):
 class FlexibleEBNFGrammar(Grammar):
     r"""Parser for a FlexibleEBNF document.
 
-    Instantiate this class and then call the instance with the
-    source code as argument in order to use the parser, e.g.:
+    Instantiate this class and then call the instance with the source
+    code as the single argument in order to use the parser, e.g.:
         parser = FlexibleEBNF()
         syntax_tree = parser(source_code)
     """
@@ -109,7 +109,7 @@ class FlexibleEBNFGrammar(Grammar):
     element = Forward()
     expression = Forward()
     source_hash__ = "433784c0e936c85668b687e20d1c1e92"
-    disposable__ = re.compile('(?:ANY_SUFFIX$|component$|FOLLOW_UP$|pure_elem$|EOF$|MOD_SEP$|countable$|MOD_SYM$|is_mdef$|no_range$)')
+    disposable__ = re.compile('(?:pure_elem$|ANY_SUFFIX$|countable$|MOD_SYM$|MOD_SEP$|no_range$|FOLLOW_UP$|EOF$|component$|is_mdef$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
@@ -201,7 +201,7 @@ class FlexibleEBNFGrammar(Grammar):
     root__ = syntax
     
 parsing: PseudoJunction = create_parser_junction(FlexibleEBNFGrammar)
-get_grammar = parsing.factory # for backwards compatibility, only
+get_grammar = parsing.factory  # for backwards compatibility, only
 
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \

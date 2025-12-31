@@ -105,13 +105,13 @@ preprocessing: PseudoJunction = create_preprocess_junction(
 class LyrikGrammar(Grammar):
     r"""Parser for a Lyrik document.
 
-    Instantiate this class and then call the instance with the
-    source code as argument in order to use the parser, e.g.:
+    Instantiate this class and then call the instance with the source
+    code as the single argument in order to use the parser, e.g.:
         parser = Lyrik()
         syntax_tree = parser(source_code)
     """
     source_hash__ = "d081534dd330fa9c7310ea2bda1831fa"
-    disposable__ = re.compile('(?:JAHRESZAHL$|ziel$|ENDE$|LEERRAUM$|wortfolge$|ZEICHENFOLGE$)')
+    disposable__ = re.compile('(?:ZEICHENFOLGE$|LEERRAUM$|wortfolge$|ENDE$|ziel$|JAHRESZAHL$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -153,7 +153,7 @@ class LyrikGrammar(Grammar):
     root__ = Dokument
     
 parsing: PseudoJunction = create_parser_junction(LyrikGrammar)
-get_grammar = parsing.factory # for backwards compatibility, only
+get_grammar = parsing.factory  # for backwards compatibility, only
 
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \

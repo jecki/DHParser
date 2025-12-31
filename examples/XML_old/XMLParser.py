@@ -77,15 +77,15 @@ def get_preprocessor() -> PreprocessorFunc:
 class XMLGrammar(Grammar):
     r"""Parser for a XML document.
 
-    Instantiate this class and then call the instance with the
-    source code as argument in order to use the parser, e.g.:
+    Instantiate this class and then call the instance with the source
+    code as the single argument in order to use the parser, e.g.:
         parser = XML()
         syntax_tree = parser(source_code)
     """
     element = Forward()
     source_hash__ = "d442ab43dae4dd61e13ac6f5284f450b"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:NameStartChar$|VersionNum$|NameChars$|PubidCharsSingleQuoted$|CData$|PubidChars$|Misc$|EOF$|EncName$|CommentChars$|Reference$)')
+    disposable__ = re.compile('(?:CData$|EOF$|Misc$|VersionNum$|EncName$|NameStartChar$|CommentChars$|PubidCharsSingleQuoted$|Reference$|NameChars$|PubidChars$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -149,7 +149,7 @@ class XMLGrammar(Grammar):
     root__ = document
     
 parsing: PseudoJunction = create_parser_junction(XMLGrammar)
-get_grammar = parsing.factory # for backwards compatibility, only
+get_grammar = parsing.factory  # for backwards compatibility, only
 
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \

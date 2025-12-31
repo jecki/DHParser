@@ -102,15 +102,15 @@ def preprocess_HTML(source):
 class HTMLGrammar(Grammar):
     r"""Parser for a HTML document.
 
-    Instantiate this class and then call the instance with the
-    source code as argument in order to use the parser, e.g.:
+    Instantiate this class and then call the instance with the source
+    code as the single argument in order to use the parser, e.g.:
         parser = HTML()
         syntax_tree = parser(source_code)
     """
     element = Forward()
     source_hash__ = "dc09dfe53db82fe88eae68261b92cf91"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:NameChars$|NameStartChar$|PubidCharsSingleQuoted$|CommentChars$|PubidChars$|EOF$|prolog$|CData$|VersionNum$|EncName$|Misc$|tagContent$|Reference$|BOM$)')
+    disposable__ = re.compile('(?:PubidChars$|prolog$|NameStartChar$|EncName$|PubidCharsSingleQuoted$|EOF$|tagContent$|CommentChars$|Misc$|CData$|Reference$|BOM$|VersionNum$|NameChars$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'tagContent': [('', "syntax error in tag-name of opening or empty tag:  {1}")],
@@ -182,7 +182,7 @@ class HTMLGrammar(Grammar):
     root__ = document
     
 parsing: PseudoJunction = create_parser_junction(HTMLGrammar)
-get_grammar = parsing.factory # for backwards compatibility, only
+get_grammar = parsing.factory  # for backwards compatibility, only
 
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \

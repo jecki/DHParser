@@ -195,7 +195,7 @@ class reGrammar(Grammar):
     sequence = Forward()
     source_hash__ = "ee46c7349b2904d5f334e561bc24ccc6"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:_octal$|_reEsc$|_char$|_number$|EOF$|_item$|_grpItem$|_special$|_entity$|_escape$|_nibble$|_ch$|_grpChar$|_illegal$|_escapedCh$|BS$|_grpChars$|_anyChar$|_chars$|_extension$|_group$)')
+    disposable__ = re.compile('(?:_grpItem$|_reEsc$|_anyChar$|_group$|_nibble$|_escapedCh$|_entity$|_octal$|EOF$|_illegal$|_chars$|_grpChar$|_number$|_char$|_item$|_escape$|_grpChars$|_ch$|_special$|BS$|_extension$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -376,7 +376,7 @@ ASTTransformation: Junction = Junction(
 
 #######################################################################
 #
-# COMPILER SECTION (Flags processing)
+# COMPILER SECTION - Can be edited. Changes will be preserved.
 #
 #######################################################################
 

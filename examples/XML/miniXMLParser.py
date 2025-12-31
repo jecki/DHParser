@@ -107,8 +107,8 @@ def preprocess_miniXML(source):
 class miniXMLGrammar(Grammar):
     r"""Parser for a miniXML document.
 
-    Instantiate this class and then call the instance with the
-    source code as argument in order to use the parser, e.g.:
+    Instantiate this class and then call the instance with the source
+    code as the single argument in order to use the parser, e.g.:
         parser = miniXML()
         syntax_tree = parser(source_code)
     """
@@ -141,7 +141,7 @@ class miniXMLGrammar(Grammar):
     root__ = document
     
 parsing: PseudoJunction = create_parser_junction(miniXMLGrammar)
-get_grammar = parsing.factory # for backwards compatibility, only
+get_grammar = parsing.factory  # for backwards compatibility, only
 
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \

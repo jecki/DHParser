@@ -100,15 +100,15 @@ def preprocess_XML(source):
 class XMLGrammar(Grammar):
     r"""Parser for a XML document.
 
-    Instantiate this class and then call the instance with the
-    source code as argument in order to use the parser, e.g.:
+    Instantiate this class and then call the instance with the source
+    code as the single argument in order to use the parser, e.g.:
         parser = XML()
         syntax_tree = parser(source_code)
     """
     element = Forward()
     source_hash__ = "e5a0167ba5c28399d9e21cf87371a829"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:NameChars$|PubidChars$|EncName$|EOF$|prolog$|VersionNum$|BOM$|Misc$|PubidCharsSingleQuoted$|tagContent$|Reference$|CData$|CommentChars$|XmlPIAtts$|NameStartChar$)')
+    disposable__ = re.compile('(?:Reference$|CommentChars$|tagContent$|prolog$|PubidCharsSingleQuoted$|CData$|XmlPIAtts$|VersionNum$|NameStartChar$|Misc$|PubidChars$|NameChars$|BOM$|EncName$|EOF$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'tagContent': [('', "syntax error in tag-name of opening or empty tag:  {1}")],
@@ -189,7 +189,7 @@ class XMLGrammar(Grammar):
     root__ = document
     
 parsing: PseudoJunction = create_parser_junction(XMLGrammar)
-get_grammar = parsing.factory # for backwards compatibility, only
+get_grammar = parsing.factory  # for backwards compatibility, only
 
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \

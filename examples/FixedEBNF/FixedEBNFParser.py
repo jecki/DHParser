@@ -87,7 +87,7 @@ class FixedEBNFGrammar(Grammar):
     element = Forward()
     expression = Forward()
     source_hash__ = "67b5b3d311a9afa33ce94010274c9fec"
-    disposable__ = re.compile('(?:no_range$|pure_elem$|MOD_SEP$|EOF$|countable$|MOD_SYM$|FOLLOW_UP$|is_mdef$|ANY_SUFFIX$|component$)')
+    disposable__ = re.compile('(?:EOF$|no_range$|MOD_SYM$|MOD_SEP$|pure_elem$|ANY_SUFFIX$|FOLLOW_UP$|countable$|component$|is_mdef$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
@@ -173,7 +173,7 @@ class FixedEBNFGrammar(Grammar):
     root__ = syntax
     
 parsing: PseudoJunction = create_parser_junction(FixedEBNFGrammar)
-get_grammar = parsing.factory # for backwards compatibility, only
+get_grammar = parsing.factory  # for backwards compatibility, only
 
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \

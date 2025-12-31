@@ -92,8 +92,8 @@ get_preprocessor = ThreadLocalSingletonFactory(preprocessor_factory)
 class LaTeXGrammar(Grammar):
     r"""Parser for a LaTeX document.
 
-    Instantiate this class and then call the instance with the
-    source code as argument in order to use the parser, e.g.:
+    Instantiate this class and then call the instance with the source
+    code as the single argument in order to use the parser, e.g.:
         parser = LaTeX()
         syntax_tree = parser(source_code)
     """
@@ -277,7 +277,7 @@ class LaTeXGrammar(Grammar):
     root__ = latexdoc
     
 parsing: PseudoJunction = create_parser_junction(LaTeXGrammar)
-get_grammar = parsing.factory # for backwards compatibility, only
+get_grammar = parsing.factory  # for backwards compatibility, only
 
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \

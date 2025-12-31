@@ -78,8 +78,8 @@ def get_preprocessor() -> PreprocessorFunc:
 class readme_exampleGrammar(Grammar):
     r"""Parser for a readme_example document.
 
-    Instantiate this class and then call the instance with the
-    source code as argument in order to use the parser, e.g.:
+    Instantiate this class and then call the instance with the source
+    code as the single argument in order to use the parser, e.g.:
         parser = readme_example()
         syntax_tree = parser(source_code)
     """
@@ -100,7 +100,7 @@ class readme_exampleGrammar(Grammar):
     root__ = key_store
     
 parsing: PseudoJunction = create_parser_junction(readme_exampleGrammar)
-get_grammar = parsing.factory # for backwards compatibility, only
+get_grammar = parsing.factory  # for backwards compatibility, only
 
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \

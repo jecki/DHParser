@@ -107,8 +107,8 @@ def preprocess_XML_W3C_SPEC(source):
 class XML_W3C_SPECGrammar(Grammar):
     r"""Parser for a XML_W3C_SPEC document.
 
-    Instantiate this class and then call the instance with the
-    source code as argument in order to use the parser, e.g.:
+    Instantiate this class and then call the instance with the source
+    code as the single argument in order to use the parser, e.g.:
         parser = XML_W3C_SPEC()
         syntax_tree = parser(source_code)
     """
@@ -123,7 +123,7 @@ class XML_W3C_SPECGrammar(Grammar):
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
     comment_rx__ = RX_NEVER_MATCH
-    WHITESPACE__ = r'[ \t]*(?:\n[ \t]*(?![ \t]*\n))?'
+    WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     PubidChar = Alternative(RegExp('[\x20]'), RegExp('[\x0D]'), RegExp('[\x0A]'), RegExp('[a-zA-Z0-9]'), RegExp('[-\'()+,./:=?;!*#@$_%]'))
@@ -214,7 +214,7 @@ class XML_W3C_SPECGrammar(Grammar):
     root__ = document
     
 parsing: PseudoJunction = create_parser_junction(XML_W3C_SPECGrammar)
-get_grammar = parsing.factory # for backwards compatibility, only
+get_grammar = parsing.factory  # for backwards compatibility, only
 
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \

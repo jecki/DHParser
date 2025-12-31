@@ -914,7 +914,8 @@ EBNF_AST_transformation_table = {
     "group":
         [remove_brackets], # don't replace by single child or interleave and terms annotated with ->drop might break!
     "oneormore, repetition, option":
-        [reduce_single_child, remove_brackets,  # remove_tokens('?', '*', '+'),
+        [remove_tokens('?', '*', '+'), apply_if(reduce_single_child, has_child('group')),
+         remove_brackets,  # remove_tokens('?', '*', '+'),
          forbid('repetition', 'option', 'oneormore'), assert_content(r'(?!§)(?:.|\n)*')],
     "counted":
         [remove_children('TIMES')],
