@@ -3199,7 +3199,7 @@ ws = / +/ -> DROP"""
         ast = transform_ebnf(cst)
         ebnf = ast.evaluate_path(get_EBNF_AST_Serialization_Table(), path=[ast])
         cst2 = parse_ebnf(ebnf)
-        # print(cst2.as_sxpr())
+        print(cst2.as_sxpr())
         ast2 = transform_ebnf(cst2)
         assert ast2.equals(ast)
 
