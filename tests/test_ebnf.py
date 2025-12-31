@@ -46,8 +46,8 @@ from DHParser.nodetree import WHITESPACE_PTYPE, flatten_sxpr, parse_sxpr, RootNo
 from DHParser.parse import Interleave
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
     EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS, \
-    WHITESPACE_TYPES, parse_ebnf, transform_ebnf, EBNF_AST_Serialization_Table, \
-    ebnf_from_AST
+    WHITESPACE_TYPES, parse_ebnf, transform_ebnf, get_EBNF_AST_Serialization_Table, \
+    EBNF_from_AST
 from DHParser.dsl import CompilationError, compileDSL, create_parser, grammar_provider
 from DHParser.testing import grammar_unit, clean_report, unique_name
 from DHParser.trace import set_tracer, trace_history
@@ -3151,7 +3151,7 @@ class TestSerialization:
             ws = / +/ -> DROP"""
         cst = parse_ebnf(gr)
         ast = transform_ebnf(cst)
-        ebnf = ast.evaluate_path(EBNF_AST_Serialization_Table, path=[ast])
+        ebnf = ast.evaluate_path(get_EBNF_AST_Serialization_Table(), path=[ast])
         assert ebnf == r"""document = { paragraph }
 paragraph = word { ws word }
 HIDE:word = /\w+/
@@ -3168,7 +3168,7 @@ ws = / +/ -> DROP"""
         '''
         cst = parse_ebnf(gr)
         ast = transform_ebnf(cst)
-        ebnf = (ast.evaluate_path(EBNF_AST_Serialization_Table, path=[ast]))
+        ebnf = (ast.evaluate_path(get_EBNF_AST_Serialization_Table(), path=[ast]))
         ast2 = transform_ebnf(parse_ebnf(ebnf))
         assert ast2.equals(ast)
 
@@ -3190,21 +3190,33 @@ ws = / +/ -> DROP"""
             directive = "c" § "d"'''
         cst = parse_ebnf(gr)
         ast = transform_ebnf(cst)
-        ebnf = ast.evaluate_path(EBNF_AST_Serialization_Table, path=[ast])
+        ebnf = ast.evaluate_path(get_EBNF_AST_Serialization_Table(), path=[ast])
         ast2 = transform_ebnf(parse_ebnf(ebnf))
         assert ast2.equals(ast)
 
     def test_ebnf(self):
         cst = parse_ebnf(FlexibleEBNF)
         ast = transform_ebnf(cst)
-        ebnf = ast.evaluate_path(EBNF_AST_Serialization_Table, path=[ast])
+        ebnf = ast.evaluate_path(get_EBNF_AST_Serialization_Table(), path=[ast])
         cst2 = parse_ebnf(ebnf)
         ast2 = transform_ebnf(cst2)
         assert ast2.equals(ast)
-        iso_ebnf = ebnf_from_AST(ast2, 'ISO')
+
+        iso_ebnf = EBNF_from_AST(ast2, 'ISO')
         cst3 = parse_ebnf(iso_ebnf, "classic")
         assert not cst3.errors
         ast3 = transform_ebnf(cst3)
+        assert ast3.equals(ast2)
+
+        peg_ebnf = EBNF_from_AST(ast2, 'PEG')
+        print(peg_ebnf)
+        cst3 = parse_ebnf(peg_ebnf)  # , "classic")
+        assert not cst3.errors
+        ast3 = transform_ebnf(cst3)
+        print('+++++++++++++')
+        print(ast2.as_sxpr())
+        print('-------------')
+        print(ast3.as_sxpr())
         assert ast3.equals(ast2)
 
 if __name__ == "__main__":

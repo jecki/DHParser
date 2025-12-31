@@ -292,8 +292,8 @@ __all__ = ('DHPARSER_IMPORTS',
            'compile_ebnf_ast',
            'ConfigurableEBNFGrammar',
            'EBNFTransform',
-           'EBNF_AST_Serialization_Table',
-           'ebnf_from_AST',
+           'get_EBNF_AST_Serialization_Table',
+           'EBNF_from_AST',
            'EBNFCompilerError',
            'EBNFDirectives',
            'WHITESPACE_TYPES',
@@ -1004,7 +1004,7 @@ def serialize_definition(path: Path, *strings) -> str:
     return ''.join([modifier, definiens, ' = ', definiendum])
 
 
-EBNF_AST_Serialization_Table = expand_table({
+EBNF_AST_Serialization_Table = {
     "symbol, literal, plaintext, free_char, any_char, flowmarker, :Text, " \
     "RE_LEADIN, RE_LEADOUT, :MOD_SEP, whitespace, retrieveop, name, multiplier":
         lambda p, s: s,
@@ -1042,10 +1042,53 @@ EBNF_AST_Serialization_Table = expand_table({
     "syntax": lambda p, *ts: '\n'.join(ts),
     "term": lambda p, *ts: ts[0] + (' -> ' + ts[1] if len(ts) > 1 else ''),
     "modifier": lambda p, *ts: ''.join(ts)
-})
+}
 
 
-def ebnf_from_AST(ebnf_AST: Node, syntax: str = "DHParser") -> str:
+EBNF_Serialization_Table = None
+PEG_Serialization_Table = None
+
+
+def gen_postfix(path: Path, s: str, sign: str) -> str:
+    node = path[-1]
+    if (len(node.children) > 1 or node[0].name not in
+            ('symbol', 'literal', 'plaintext', 'group')):
+        return ''.join(["(", s, ')' + sign])
+    else:
+        return s + sign
+
+
+def get_EBNF_AST_Serialization_Table(flavor: str = "EBNF") -> Dict[str, Callable]:
+    """Returns the (laziliy initialized) evaluation table for serializing
+    EBNF-ASTs back to EBNF.
+
+    :param flavor: Either "EBNF" (braces notation) or "PEG" (postfix notation)
+    :returns: A table that can be passed to :py:method:`nodetree.Node.evaluate_path`.
+    """
+    global EBNF_Serialization_Table, PEG_Serialization_Table
+
+    paren_needed = lambda nd: (len(nd.children) > 1 or nd[0].name not in
+                               ('symbol', 'literal', 'plaintext', 'group'))
+
+    if flavor == "EBNF":
+        if EBNF_Serialization_Table is None:
+            EBNF_Serialization_Table = expand_table(EBNF_AST_Serialization_Table)
+        return EBNF_Serialization_Table
+    elif flavor == "PEG":
+        if PEG_Serialization_Table is None:
+            table = EBNF_AST_Serialization_Table.copy()
+            table.update({
+                "repetition": partial(gen_postfix, sign='*'),
+                "oneormore": partial(gen_postfix, sign='+'),
+                "option": partial(gen_postfix, sign='?')})
+            PEG_Serialization_Table = expand_table(table)
+        return PEG_Serialization_Table
+    else:
+        raise ValueError(f'Allowed values for parameter flavor are: "EBNF" or "PEG", '
+                         f'but not "{flavor}"!')
+
+
+def EBNF_from_AST(ebnf_AST: Node, syntax: str = "DHParser") -> str:
     """
     Generates EBNF-code from the abstract syntax tree of an EBNF-grammar.
 
@@ -1064,7 +1107,7 @@ def ebnf_from_AST(ebnf_AST: Node, syntax: str = "DHParser") -> str:
         ebnf_AST (Node): The root node of the EBNF Abstract Syntax Tree to be
             converted into EBNF notation.
         syntax (str): The syntax-variant to be used for the EBNF-code, must be
-            either "DHParser" (default) or "ISO"
+            either "DHParser" (default), "ISO" or "PEG" (Postfix-Notation)
 
     Raises:
         ValueError: Raised if the input EBNF AST is determined invalid or if an
@@ -1073,9 +1116,10 @@ def ebnf_from_AST(ebnf_AST: Node, syntax: str = "DHParser") -> str:
     Returns:
         str: A string representation of the EBNF notation derived from the AST.
     """
-    assert syntax in ("DHParser", "ISO")
+    assert syntax in ("DHParser", "ISO", "EBNF", "PEG")
     try:
-        ebnf = ebnf_AST.evaluate_path(EBNF_AST_Serialization_Table, path=[ebnf_AST])
+        table = get_EBNF_AST_Serialization_Table("PEG" if syntax == "PEG" else "EBNF")
+        ebnf = ebnf_AST.evaluate_path(table, path=[ebnf_AST])
     except Exception as e:
         raise ValueError("EBNF_AST does not seem to be a valid EBNF AST: " + str(e))
     if syntax == "ISO":
