@@ -193,9 +193,9 @@ class reGrammar(Grammar):
     _entity = Forward()
     _item = Forward()
     sequence = Forward()
-    source_hash__ = "ee46c7349b2904d5f334e561bc24ccc6"
+    source_hash__ = "2aa099e7a5522d823b0d97eb777b5558"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:_grpItem$|_reEsc$|_anyChar$|_group$|_nibble$|_escapedCh$|_entity$|_octal$|EOF$|_illegal$|_chars$|_grpChar$|_number$|_char$|_item$|_escape$|_grpChars$|_ch$|_special$|BS$|_extension$)')
+    disposable__ = re.compile('(?:BS$|_nibble$|_escapedCh$|_escape$|_grpChar$|_illegal$|_chars$|_anyChar$|_extension$|_special$|_number$|_reEsc$|_entity$|_item$|_grpItem$|_group$|EOF$|_grpChars$|_ch$|_char$|_octal$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -221,6 +221,7 @@ class reGrammar(Grammar):
     zeroOrMore = Text("*")
     _number = RegExp('[0-9]+')
     groupName = RegExp('(?!\\d)\\w+')
+    groupId = RegExp('\\d\\d?')
     oneOrMore = Text("+")
     lrtype = Alternative(Text("="), Text("!"), Text("<="), Text("<!"))
     min = Synonym(_number)
@@ -247,7 +248,7 @@ class reGrammar(Grammar):
     wordBorder = RegExp('[bB]')
     _illegal = RegExp('[a-zA-Z]')
     error = Series(Lookahead(_illegal), Custom(ERR("Unknown escape sequence")), _illegal)
-    groupId = RegExp('\\d\\d?')
+    groupRef = RegExp('\\d\\d?')
     escCh = Alternative(_anyChar, RegExp('[)|+*?]'))
     chName = Series(Drop(Text("N{")), RegExp('[\\w ]+'), Drop(Text("}")))
     _octal = RegExp('[0-7]')
@@ -259,7 +260,7 @@ class reGrammar(Grammar):
     charset = Series(Drop(Text("[")), Option(complement), OneOrMore(Alternative(_csEsc, chRange, _escapedCh, Series(BS, error), chSet)), Drop(Text("]")))
     specialEsc = RegExp('[afnrtv]')
     _reEsc = Series(Lookahead(RegExp('[AbBdDsSwWZ]')), Alternative(fixedChSet, wordBorder, absStart, absEnd))
-    _escape = Series(BS, Alternative(bs, chCode, chName, groupId, _reEsc, specialEsc, error, escCh), mandatory=1)
+    _escape = Series(BS, Alternative(bs, chCode, chName, groupRef, _reEsc, specialEsc, error, escCh), mandatory=1)
     end = Text("$")
     start = Text("^")
     any = Text(".")
@@ -770,14 +771,20 @@ re_serialization_table = expand_table({
     "chSet": lambda _, s: ''.join(ch_code(ch) for ch in s),
     "specialEsc": lambda _, s: '\\' + s,
     "lookaround": lambda _, *ts: ''.join(['(?', *ts, ')']),
-    "lrtype, complement, repType, zeroOrOne, zeroOrMore, oneOrMore, min, max, groupName":
+    "lrtype, complement, repType, zeroOrOne, zeroOrMore, oneOrMore, min, max, groupId, groupName":
         lambda _, s: s,
     "nonCapturing": lambda _, *ts: ''.join(['(?:', *ts, ')']),
     "capturing": lambda _, *ts: ''.join(['(', *ts, ')']),
     "namedGroup": lambda _, *ts: ''.join([f'(?P<{ts[0]}>', *ts[1:], ')']),
     "range": lambda _, *ts: ''.join(['{', ', '.join(ts), '}']),
     "regular_expression": lambda _, *ts: ''.join(ts),
+    "subRegex": lambda _, *ts: ''.join(['(?>', ', '.join(ts), ')']),
+    "notGreedy": lambda _, s: '?',
+    "groupRef": lambda _, s: '\\' + s,
+    "backRef": lambda _, s: f"(?P={s})",
+    "bifurcation": lambda _, *ts: f"(?({ts[0]}){ts[1]}|{ts[2]})",
     "*": lambda p, *ts: f"(!{p[-1].name}:" + ''.join(ts) + ")"
+    # notGreedy, backref, bifurcation, groupId...
 })
 
 def serialize_re(regex_AST: Node) -> str:

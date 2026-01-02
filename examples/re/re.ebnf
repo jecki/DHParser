@@ -74,7 +74,7 @@ _special = any | start | end
 
 #: escape
 
-_escape      = BS § ( bs | chCode | chName | groupId | _reEsc | specialEsc | error | escCh )
+_escape      = BS § ( bs | chCode | chName | groupRef | _reEsc | specialEsc | error | escCh )
   _reEsc     = &/[AbBdDsSwWZ]/ (fixedChSet | wordBorder | absStart | absEnd)
   specialEsc = /[afnrtv]/
   chCode     = "x" hex2 | "u" hex4 | "U" hex8 | oct
@@ -86,7 +86,7 @@ _escape      = BS § ( bs | chCode | chName | groupId | _reEsc | specialEsc | er
     _octal   = /[0-7]/
   chName     = "N{" /[\w ]+/ "}"
   escCh      = _anyChar | /[)|+*?]/
-  groupId    = /\d\d?/
+  groupRef   = /\d\d?/
   error      = &_illegal @Error("Unknown escape sequence") _illegal
     _illegal = /[a-zA-Z]/
 
@@ -128,7 +128,7 @@ lookaround     = lrtype § grpAlternative
   lrtype       = `=` | `!` | `<=` | `<!`
 
 bifurcation    = "(" § (groupId | groupName) ")" sequence "|" grpSequence
-
+  groupId      = /\d\d?/
 groupName      = /(?!\d)\w+/
 
 grpAlternative = grpSequence { "|" grpSequence }
