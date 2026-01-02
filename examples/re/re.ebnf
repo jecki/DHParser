@@ -28,7 +28,8 @@
 # Tags that may be replaced with their content while parsing
 @ disposable  = EOF, BS, _number, _illegal, _entity, _escape, _special, _item,
                 _group, _grpItem, _extension, _char, _anyChar, _grpChar,
-                _chars, _grpChars, _octal, _nibble, _escapedCh, _ch, _reEsc
+                _chars, _grpChars, _octal, _nibble, _escapedCh, _ch, _reEsc,
+                _csEsc
 
 # Tags that will be dropped with all their content while parsing or any of
 # the special values: strings, backticked, whitespace, regexps
