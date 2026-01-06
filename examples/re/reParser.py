@@ -767,7 +767,8 @@ re_serialization_table = expand_table({
     "any": lambda _, s: '.',
     "charset": lambda _, *ts: ''.join(['[', *ts, ']']),
     "ch, char": lambda _, s: ch_code(s),
-    "chRange": lambda _, *ts: ''.join([ch_code(ts[0]), '-', ch_code(ts[1])]),
+    "chRange": lambda _, *ts: ''.join([ch_code(ts[0]), '-', ch_code(ts[1])])
+                              if ts[0] != ts[1] else ch_code(ts[0]),
     "chSet": lambda _, s: ''.join(ch_code(ch) for ch in s),
     "specialEsc": lambda _, s: '\\' + s,
     "lookaround": lambda _, *ts: ''.join(['(?', *ts, ')']),
@@ -784,7 +785,6 @@ re_serialization_table = expand_table({
     "backRef": lambda _, s: f"(?P={s})",
     "bifurcation": lambda _, *ts: f"(?({ts[0]}){ts[1]}|{ts[2]})",
     "*": lambda p, *ts: f"(!{p[-1].name}:" + ''.join(ts) + ")"
-    # notGreedy, backref, bifurcation, groupId...
 })
 
 def serialize_re(regex_AST: Node) -> str:
@@ -795,6 +795,66 @@ def reSerializer() -> CompilerFunc:
 
 re_from_AST = Junction("AST", reSerializer, "regex_AST")
 re_from_flagsDone = Junction("flagsDone", reSerializer, "regex_flagsDone")
+
+
+#######################################################################
+#
+# Normalize CharSets
+#
+#######################################################################
+
+class NormalizeCharsets(Compiler):
+    """Normalizes and Optimizies character sets as well as alternatives
+    of character sets and character set differences (e.g. (?![aeiou][a-z]))
+    """
+
+    def __init__(self):
+        super(NormalizeCharsets, self).__init__()
+        self.forbid_returning_None = True  # set to False if any compilation-method is allowed to return None
+
+    def reset(self):
+        super().reset()
+        # initialize your variables here, not in the constructor!
+
+    def prepare(self, root: RootNode) -> None:
+        assert root.stage == "flagsDone", f"Source stage `flagsDone` expected, " \
+                f"`but `{root.stage}` found."
+        root.stage = "normalizedCharSets"
+
+    def finalize(self, result: Any) -> Any:
+        return result
+
+    def on_ch(self, node: Node) -> Node:
+        """convert ch-node to char-range"""
+        ch = node.content
+        return Node('chRange', (Node('ch', ch), Node('ch', ch))).with_pos(node.pos)
+
+    def on_chSet(self, node: Node) -> Node:
+        """convert ch-set node to char-range"""
+        ranges = tuple(Node('chRange', (Node('ch', ch), Node('ch', ch)))
+                       for ch in node.content)
+        return Node('charset', ranges).with_pos(node.pos)
+
+    def on_fixedChSet(self, node: Node) -> Node:
+        r"""convert fixed characters sets (e.g. \s) to char-ranges"""
+        raise NotImplementedError()
+
+    def on_charset(self, node: Node) -> Node:
+        """Replace nested charset-nodes, wich always stem from converted chSet-Nodes
+        by their children."""
+        assert node.children
+        new_result = []
+        for child in node.children:
+            if child.name == "charset":
+                assert all(nd.name == "chRange" for nd in child.children)
+                new_result.extend(child.children)
+            else:
+                new_result.append(child)
+        node.result = tuple(new_result)
+        return node
+
+
+
 
 #######################################################################
 #
