@@ -605,6 +605,7 @@ class FlagProcessing(Compiler):
         node.attr['set'] = ascii + chset
         if node.result.isupper():
             node.attr['complement'] = '^'
+            node.result = node.result.lower()
         node.attr['re'] = '\\' + node.result
         return node
 
@@ -758,14 +759,14 @@ def group_if(cond: bool, delimiter: str, items: Tuple[str]) -> str:
 
 
 re_serialization_table = expand_table({
-    "fixedChSet": lambda _, s: "\\" + s,
+    "fixedChSet": lambda p, s: "\\" + (s.upper() if p[-1].has_attr('complement') else s),
     "alternative":  lambda p, *ts:
         group_if(len(p) > 1 and p[-2].name in ("sequence", "repetition"), '|', ts),
     "sequence, charSeq": lambda p, *ts:
         group_if(len(p) > 1 and p[-2].name == "repetition", '', ts),
     "repetition": lambda _, *ts: ''.join(ts),
     "any": lambda _, s: '.',
-    "charset": lambda _, *ts: ''.join(['[', *ts, ']']),
+    "charset": lambda p, *ts: ''.join([('[^' if p[-1].has_attr('complement') else '['), *ts, ']']),
     "ch, char": lambda _, s: ch_code(s),
     "chRange": lambda _, *ts: ''.join([ch_code(ts[0]), '-', ch_code(ts[1])])
                               if ts[0] != ts[1] else ch_code(ts[0]),
@@ -837,6 +838,32 @@ class NormalizeCharsets(Compiler):
 
     def on_fixedChSet(self, node: Node) -> Node:
         r"""convert fixed characters sets (e.g. \s) to char-ranges"""
+        if node.has_attr('complement') and len(self.path) >= 2:
+            # complemented sub-sets must be moved out of the charset
+            parent = self.path[-2]
+            assert parent.name == "charset"
+            gp = self.path[-2] if len(self.path) >= 3 else EMPTY_NODE
+            if parent[0].name == "complement" or parent.has_attr('complement'):
+                assert node.content.islower()
+                del node.attr['complement']
+            parent.result = tuple(child for child in parent.result if child is not node)
+            if gp.name not in ('alternative', 'difference'):
+                head = Node('charset', parent.result).with_pos(parent.pos).with_attr(parent.attr)
+                tail = Node('charset', node)
+                parent.name = "alternative"
+                parent.result = (head, tail)
+            elif gp.name == "alternative":
+                i = gp.index(parent)
+                gp.insert(i + 1, Node('charset', node))
+            elif gp.name == "difference":
+                if node.has_attr('complement'):
+                    del node.attr['complement']
+                else:
+                    node.attr['complement'] = '^'
+                i = gp.index(parent)
+                gp.insert(i + 1, Node('charset', node))
+
+        # TODO: convert node to a charset with ranges
         raise NotImplementedError()
 
     def on_charset(self, node: Node) -> Node:
