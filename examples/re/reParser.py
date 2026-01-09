@@ -98,6 +98,7 @@ INVALID_REGULAR_EXPRESSION = ErrorCode(20010)  # fatal
 def reValidate(original_text, original_name) -> PreprocessorResult:
     import re  # be sure to use Python STL re, not regex, here!
     try:
+        i = len(original_text)
         _ = re.compile(original_text)
         return nil_preprocessor(original_text, original_name)
     except Exception as err:
@@ -648,7 +649,7 @@ class FlagProcessing(Compiler):
 
     def on_chSet(self, node):
         """Check for duplicate characters and emit an error. If the ignore case
-        flag is set add the missing case for each character. Finally, normalize
+        flag is set, add the missing case for each character. Finally, normalize
         the character set by sorting the characters in ascending order according
         to their ordinal value (i.e. Unicode code point).
         """
@@ -704,6 +705,13 @@ class FlagProcessing(Compiler):
                     parent.insert(i + 1, nd)
         return node
 
+    def on_charset(self, node):
+        node = self.fallback_compiler(node)
+        if node[0].name == 'complement':
+            node.result = node[1:]
+            node.attr['complement'] = '^'
+        return node
+
     def on_any(self, node):
         assert not node.children
         assert node.result == '.'
@@ -728,6 +736,108 @@ flagProcessing: Junction = create_junction(
 # END OF DHPARSER-SECTIONS
 #
 #######################################################################
+
+
+#######################################################################
+#
+# Normalize CharSets
+#
+#######################################################################
+
+
+class NormalizeCharsets(Compiler):
+    """Normalizes and Optimizies character sets as well as alternatives
+    of character sets and character set differences (e.g. (?![aeiou][a-z]))
+    """
+
+    def __init__(self):
+        super(NormalizeCharsets, self).__init__()
+        self.forbid_returning_None = True  # set to False if any compilation-method is allowed to return None
+
+    def reset(self):
+        super().reset()
+        # initialize your variables here, not in the constructor!
+
+    def prepare(self, root: RootNode) -> None:
+        assert root.stage == "flagsDone", f"Source stage `flagsDone` expected, " \
+                f"`but `{root.stage}` found."
+        root.stage = "normalized"
+
+    def finalize(self, result: Any) -> Any:
+        return result
+
+    def on_ch(self, node: Node) -> Node:
+        """convert ch-node to char-range"""
+        ch = node.content
+        node.name = 'chRange'
+        node.result = (Node('ch', ch).with_pos(node.pos),
+                       Node('ch', ch).with_pos(node.pos))
+        return node
+
+    def on_chSet(self, node: Node) -> Node:
+        """convert ch-set node to char-range"""
+        ranges = tuple(Node('chRange', (Node('ch', ch).with_pos(node.pos + i),
+                                        Node('ch', ch).with_pos(node.pos + i)))
+                       for i, ch in enumerate(node.content))
+        node.name = 'charset'
+        node.result = ranges
+        return node
+
+    def on_chRange(self, node: Node) -> Node:
+        # do not compile children!
+        return node
+
+    def on_fixedChSet(self, node: Node) -> Node:
+        r"""convert fixed characters sets (e.g. \s) to char-ranges"""
+        import unicodeCharSets
+        chRange = lambda t: \
+            Node('chRange', (Node('ch', chr(t[0])), Node('ch', chr(t[1])))).with_pos(node.pos)
+        node.name = 'charset'
+        node.result = tuple(chRange(t) for t in getattr(unicodeCharSets, node.attr['set']))
+        return node
+
+    def on_charset(self, node: Node) -> Node:
+        """Replace nested charset-nodes, which always stem from converted chSet-
+        or fixedChSet-Nodes by their children."""
+        assert node.children
+        needs_to_move = lambda nd: nd.name == 'fixedChSet' and nd.has_attr('complement')
+        move = []
+        if node.pick_child(needs_to_move):
+            stay = []
+            for child in node.children:
+                if needs_to_move(child):
+                    move.append(self.compile(child))
+                else:
+                    stay.append(child)
+            node.result = tuple(stay)
+
+        node = self.fallback_compiler(node)
+        new_result = []
+        for child in node.children:
+            if child.name == "charset":
+                assert all(nd.name == "chRange" for nd in child.children)
+                new_result.extend(child.children)
+            else:
+                new_result.append(child)
+
+        if move:
+            head = Node('charset', tuple(new_result)).with_pos(node.pos)
+            if node.has_attr('complement'):
+                for m in move:  del m.attr['complement']
+                node.name = 'intersection'
+                head.attr['complement'] = '^'
+                del node.attr['complement']
+            else:
+                node.name = 'alternative'
+            node.result = (head, *move)
+        else:
+            node.result = tuple(new_result)
+        return node
+
+
+normalizeCharsets: Junction = create_junction(
+    NormalizeCharsets, "flagsDone", "normalized")
+
 
 #######################################################################
 #
@@ -785,6 +895,7 @@ re_serialization_table = expand_table({
     "groupRef": lambda _, s: '\\' + s,
     "backRef": lambda _, s: f"(?P={s})",
     "bifurcation": lambda _, *ts: f"(?({ts[0]}){ts[1]}|{ts[2]})",
+    "intersection": lambda _, *ts: ''.join(['[', '&&'.join(ts), ']']),
     "*": lambda p, *ts: f"(!{p[-1].name}:" + ''.join(ts) + ")"
 })
 
@@ -796,91 +907,7 @@ def reSerializer() -> CompilerFunc:
 
 re_from_AST = Junction("AST", reSerializer, "regex_AST")
 re_from_flagsDone = Junction("flagsDone", reSerializer, "regex_flagsDone")
-
-
-#######################################################################
-#
-# Normalize CharSets
-#
-#######################################################################
-
-class NormalizeCharsets(Compiler):
-    """Normalizes and Optimizies character sets as well as alternatives
-    of character sets and character set differences (e.g. (?![aeiou][a-z]))
-    """
-
-    def __init__(self):
-        super(NormalizeCharsets, self).__init__()
-        self.forbid_returning_None = True  # set to False if any compilation-method is allowed to return None
-
-    def reset(self):
-        super().reset()
-        # initialize your variables here, not in the constructor!
-
-    def prepare(self, root: RootNode) -> None:
-        assert root.stage == "flagsDone", f"Source stage `flagsDone` expected, " \
-                f"`but `{root.stage}` found."
-        root.stage = "normalizedCharSets"
-
-    def finalize(self, result: Any) -> Any:
-        return result
-
-    def on_ch(self, node: Node) -> Node:
-        """convert ch-node to char-range"""
-        ch = node.content
-        return Node('chRange', (Node('ch', ch), Node('ch', ch))).with_pos(node.pos)
-
-    def on_chSet(self, node: Node) -> Node:
-        """convert ch-set node to char-range"""
-        ranges = tuple(Node('chRange', (Node('ch', ch), Node('ch', ch)))
-                       for ch in node.content)
-        return Node('charset', ranges).with_pos(node.pos)
-
-    def on_fixedChSet(self, node: Node) -> Node:
-        r"""convert fixed characters sets (e.g. \s) to char-ranges"""
-        if node.has_attr('complement') and len(self.path) >= 2:
-            # complemented sub-sets must be moved out of the charset
-            parent = self.path[-2]
-            assert parent.name == "charset"
-            gp = self.path[-2] if len(self.path) >= 3 else EMPTY_NODE
-            if parent[0].name == "complement" or parent.has_attr('complement'):
-                assert node.content.islower()
-                del node.attr['complement']
-            parent.result = tuple(child for child in parent.result if child is not node)
-            if gp.name not in ('alternative', 'difference'):
-                head = Node('charset', parent.result).with_pos(parent.pos).with_attr(parent.attr)
-                tail = Node('charset', node)
-                parent.name = "alternative"
-                parent.result = (head, tail)
-            elif gp.name == "alternative":
-                i = gp.index(parent)
-                gp.insert(i + 1, Node('charset', node))
-            elif gp.name == "difference":
-                if node.has_attr('complement'):
-                    del node.attr['complement']
-                else:
-                    node.attr['complement'] = '^'
-                i = gp.index(parent)
-                gp.insert(i + 1, Node('charset', node))
-
-        # TODO: convert node to a charset with ranges
-        raise NotImplementedError()
-
-    def on_charset(self, node: Node) -> Node:
-        """Replace nested charset-nodes, wich always stem from converted chSet-Nodes
-        by their children."""
-        assert node.children
-        new_result = []
-        for child in node.children:
-            if child.name == "charset":
-                assert all(nd.name == "chRange" for nd in child.children)
-                new_result.extend(child.children)
-            else:
-                new_result.append(child)
-        node.result = tuple(new_result)
-        return node
-
-
+re_from_normalized = Junction("normalized", reSerializer, "regex_normalized")
 
 
 #######################################################################
@@ -919,7 +946,8 @@ class NormalizeCharsets(Compiler):
 # (See DHParser.compile for a description of junctions)
 
 # ADD YOUR OWN POST-PROCESSING-JUNCTIONS HERE:
-junctions = {ASTTransformation, re_from_AST, flagProcessing, re_from_flagsDone}
+junctions = {ASTTransformation, re_from_AST, flagProcessing, re_from_flagsDone,
+             normalizeCharsets, re_from_normalized}
 
 # put your targets of interest, here. A target is the name of result (or stage)
 # of any transformation, compilation or postprocessing step after parsing.

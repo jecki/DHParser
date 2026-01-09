@@ -3,6 +3,7 @@
 
 import std/[unittest, strutils, unicode, algorithm, strformat]
 
+import nimparser/runeranges
 import nimparser/runesets
 import nimparser/strslice
 import nimparser/error

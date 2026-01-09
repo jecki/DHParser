@@ -340,8 +340,9 @@ def run_pipeline(junctions: Set[Junction],
                     errata[t] = errata[s]
                 else:
                     if not isinstance(tree, RootNode):
-                        raise ValueError(f'Object in stage "{s}" is not a tree but a {type(tree)}'
-                                         f' and, therefore, cannot be processed to {t}')
+                        raise ValueError(f'Object in stage "{s}" is not a tree (RootNode) '
+                                         f'but a {type(tree)} '
+                                         f'and, therefore, cannot be processed to {t}')
                     verify_stage(tree.stage, junction, 0)
                     transformation = junction[1]()
                     if hasattr(transformation, 'cancel_query'):

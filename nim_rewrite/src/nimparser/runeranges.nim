@@ -181,7 +181,7 @@ func `-`*(A, B: seq[RuneRange]): seq[RuneRange] =
   # assert isSortedAndMerged(result)
 
 
-func `*`*(A, B: seq[RuneRange]): seq[RuneRange] = A - (A - B) - (B - A)
+func `*`*(A, B: seq[RuneRange]): seq[RuneRange] = A - (A - B)  # or B - (B - A)
 
 
 # Rune range algebraic operations with complement ranges
