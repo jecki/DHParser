@@ -789,11 +789,12 @@ class NormalizeCharsets(Compiler):
 
     def on_fixedChSet(self, node: Node) -> Node:
         r"""convert fixed characters sets (e.g. \s) to char-ranges"""
-        import unicodeCharSets
-        chRange = lambda t: \
-            Node('chRange', (Node('ch', chr(t[0])), Node('ch', chr(t[1])))).with_pos(node.pos)
-        node.name = 'charset'
-        node.result = tuple(chRange(t) for t in getattr(unicodeCharSets, node.attr['set']))
+        if not get_config_value('re.KeepFixedCharSets'):
+            import unicodeCharSets
+            chRange = lambda t: \
+                Node('chRange', (Node('ch', chr(t[0])), Node('ch', chr(t[1])))).with_pos(node.pos)
+            node.name = 'charset'
+            node.result = tuple(chRange(t) for t in getattr(unicodeCharSets, node.attr['set']))
         return node
 
     def on_charset(self, node: Node) -> Node:
@@ -1085,6 +1086,8 @@ def main(called_from_app=False) -> bool:
 
     args = parser.parse_args()
     file_names, out, log_dir = args.files, args.out[0], ''
+
+    read_local_config(os.path.join(scriptpath, 'reConfig.ini'))
 
     if args.serialize:
         serializations['*'] = args.serialize
