@@ -789,7 +789,7 @@ class NormalizeCharsets(Compiler):
 
     def on_fixedChSet(self, node: Node) -> Node:
         r"""convert fixed characters sets (e.g. \s) to char-ranges"""
-        if not get_config_value('re.KeepFixedCharSets'):
+        if not get_config_value('re.KeepFixedCharSets', False):
             import unicodeCharSets
             chRange = lambda t: \
                 Node('chRange', (Node('ch', chr(t[0])), Node('ch', chr(t[1])))).with_pos(node.pos)
