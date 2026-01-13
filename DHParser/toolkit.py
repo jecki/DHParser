@@ -1171,7 +1171,7 @@ def load_if_file(text_or_file) -> str:
     else:
         if text_or_file[0:1] in ('\ufeff', '\ufffe'):
             text_or_file = text_or_file[1:]
-        elif text_or_file[0:3] not in ('\xef\xbb\xbf', '\x00\x00\ufeff', '\x00\x00\ufffe'):
+        elif text_or_file[0:3] in ('\xef\xbb\xbf', '\x00\x00\ufeff', '\x00\x00\ufffe'):
             text_or_file = text_or_file[3:]
         return text_or_file
 

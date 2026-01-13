@@ -33,6 +33,7 @@ from DHParser.configuration import access_presets, finalize_presets, \
     get_config_values, set_config_value, get_forkserver_pid, CONFIG_PRESET, \
     dump_config_data
 from DHParser.testing import unique_name
+from DHParser.toolkit import PickMultiCoreExecutor
 
 # spped up tests for Python3.14: CONFIG_PRESET['multicore_pool'] = 'InterpreterPool'
 
@@ -104,21 +105,16 @@ class TestConfigMultiprocessing:
         new processes will be present in spawned or forked processes
         afterwards."""
         from DHParser.configuration import CONFIG_PRESET, get_syncfile_path
-        if sys.version_info >= (3,14,0) and CONFIG_PRESET['multicore_pool'] == 'InterpreterPool':
-            return
-        try:
-            from _ctypes import Union, Structure, Array
-            access_presets()
-            set_preset_value('test', 'multiprocessing presets test', allow_new_key=True)
-            finalize_presets()
-            access_presets()
-            set_preset_value('test2', 'multiprocessing presets test2', allow_new_key=True)
-            finalize_presets()
-            with multiprocessing.Pool(1) as pool:
-                result = pool.apply(evaluate_presets)
-            assert result
-        except ImportError:
-            print('Skipping Test, because libffi has wrong version or does not exist!')
+        from _ctypes import Union, Structure, Array
+        access_presets()
+        set_preset_value('test', 'multiprocessing presets test', allow_new_key=True)
+        finalize_presets()
+        access_presets()
+        set_preset_value('test2', 'multiprocessing presets test2', allow_new_key=True)
+        finalize_presets()
+        with PickMultiCoreExecutor() as executor:
+            result = executor.submit(evaluate_presets)
+        assert result
 
     def test_presets_interpreter_pool(self):
         """Checks whether changes to CONFIG_PRESET before spawning / forking

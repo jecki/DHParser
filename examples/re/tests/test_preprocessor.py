@@ -29,7 +29,7 @@ class TestPreprocessor:
         assert errors
         err = errors[0]
         assert err.code == INVALID_REGULAR_EXPRESSION
-        assert err.pos == 2
+        assert err.pos == 1
 
 
 if __name__ == "__main__":

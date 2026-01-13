@@ -802,17 +802,22 @@ class NormalizeCharsets(Compiler):
         or fixedChSet-Nodes by their children."""
         assert node.children
         needs_to_move = lambda nd: nd.name == 'fixedChSet' and nd.has_attr('complement')
+        stay = []
+        end = []
         move = []
-        if node.pick_child(needs_to_move):
-            stay = []
-            for child in node.children:
-                if needs_to_move(child):
-                    move.append(self.compile(child))
+        stay = []
+        for child in node.children:
+            child = self.compile(child)
+            if child.name == 'fixedChSet':
+                if child.has_attr('complement'):
+                    move.append(child)
                 else:
-                    stay.append(child)
-            node.result = tuple(stay)
+                    end.append(child)
+            else:
+                stay.append(child)
+        stay.extend(end)
+        node.result = tuple(stay)
 
-        node = self.fallback_compiler(node)
         new_result = []
         for child in node.children:
             if child.name == "charset":
