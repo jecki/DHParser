@@ -745,6 +745,155 @@ flagProcessing: Junction = create_junction(
 #######################################################################
 
 
+# Character ranges algebra...
+
+def low(chR: Node) -> int:
+    return ord(chR._result[0]._result)
+
+
+def high(chR: Node) -> int:
+    return ord(chR._result[1]._result)
+
+
+def isSortedAndMerged(chRanges: Tuple[Node, ...]) -> bool:
+    """Checks whether a sequence of ChRanges at the beginning of the tuple
+    is sorted and has been merged where possible, already."""
+    for i in range(1, len(chRanges)):
+        if chRanges[i].name != "chRange":
+            if all(r.name == "chRange" for r in chRanges[:i]):
+                return True
+            else:
+                return False   # not all non-chRange elements are at the end!
+        if low(chRanges[i]) <= high(chRanges[i - 1]):
+            return False
+    return True
+
+
+def neverEmpty(chRanges: Tuple[Node, ...]) -> bool:
+    if len(chRanges) <= 0 or chRanges[0].name != 'chRange':
+        return False
+    for r in chRanges:
+        if r.name != 'chRange': return True
+        if high(r) < low(r):
+            return False
+    return True
+
+
+def sortAndMergeInPlace(R: List[Node]):
+    Rlen = len(R)
+    R.sort(key=lambda nd: low(nd))
+    a = 0
+    b = 1
+    while b < Rlen:
+        if low(R[b]) <= high(R[a]) + 1:
+            if high(R[a]) <= high(R[b]):
+                # high(R[a]) := high(R[b])
+                R[a]._result[1].result = R[b]._result[1]._result
+        else:
+            a += 1
+            if a != b: R[a] = R[b]
+        b += 1
+    del R[a + 1:]
+
+
+def sortAndMerge(chRanges: Tuple[Node, ...]) -> Tuple[Node, ...]:
+    """Sorts and merges a sequence of ChRanges at the beginning of the tuple."""
+    Rlen = len(chRanges) - 1
+    try:
+        while chRanges[Rlen].name != 'chRange':
+            Rlen -= 1
+    except IndexError:
+        raise ValueError('Tuple of chRange-Node objects does not contain '
+                         'a single chRange-Node object!?')
+    Rlen += 1
+    R = list(chRanges[:Rlen])
+    sortAndMergeInPlace(R)
+    return tuple(R)
+
+
+def mkRange(low: int, high: int) -> Node:
+    return Node('chRange', (Node('ch', chr(low)), Node('ch', chr(high))))
+
+
+def mkR(s: str) -> Node:
+    """mkR('a-z') == Node('chRange', (Node('ch', 'a'), Node('ch', 'z')))"""
+    assert len(s) == 3 and s[1] == '-'
+    return Node('chRange', (Node('ch', s[0]), Node('ch', s[2])))
+
+
+def rangeUnion(A: Tuple[Node, ...], B: Tuple[Node, ...]) -> Tuple[Node, ...]:
+    R = list(A)
+    R.extend(B)
+    sortAndMergeInPlace(R)
+    return tuple(R)
+
+
+def rangeDifference(A: Tuple[Node, ...], B: Tuple[Node, ...]) -> Tuple[Node, ...]:
+    assert neverEmpty(A) and neverEmpty(B)
+    assert isSortedAndMerged(A) and isSortedAndMerged(B)
+
+    result = []
+    lenB = len(B)
+    lenA = len(A)
+    i = 1
+    k = 0
+    M = copy.deepcopy(A[0])
+    S = copy.deepcopy(B[0])
+
+    def nextA() -> bool:
+        nonlocal i, A, M, lenA
+        if i < lenA:
+            M.result = copy.deepcopy(A[i]._result)
+            i += 1
+            return False
+        return True
+
+    def nextB():
+        nonlocal k, B, S, lenB
+        k += 1
+        if k < lenB:
+            S.result = copy.deepcopy(B[k]._result)
+
+    while k < lenB:
+        if low(S) <= high(M) and low(M) <= high(S):
+            if low(M) < low(S):
+                result.append(mkRange(low(M), low(S) - 1))
+                if high(S) < high(M):
+                    M.result[0]._result = chr(high(S) + 1)  # need to create a new object, here!
+                    nextB()
+                elif nextA():
+                    return tuple(result)
+            elif high(S) < high(M):
+                M.result[0]._result = chr(high(S) + 1)  # need to create a new object, here!
+                nextB()
+            elif nextA():
+                return tuple(result)
+        elif high(M) < low(S):
+            result.append(M)
+            if nextA():
+                return tuple(result)
+        else:
+            assert high(S) < low(M)
+            nextB()
+        result.append(M)
+        while i < lenA:
+            result.append(A[i])
+            i += 1
+    ret = tuple(result)
+    assert isSortedAndMerged(ret)
+    return ret
+
+
+def rangeIntersection(A: Tuple[Node, ...], B: Tuple[Node, ...]) -> Tuple[Node, ...]:
+    C = rangeDifference(A, B)
+    return rangeDifference(A, C)
+
+
+
+
+# NormalizeCharsets
+
+
 class NormalizeCharsets(Compiler):
     """Normalizes and Optimizies character sets as well as alternatives
     of character sets and character set differences (e.g. (?![aeiou][a-z]))
