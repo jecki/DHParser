@@ -31,7 +31,7 @@ except (ImportError, ModuleNotFoundError):
 from DHParser.compile import Compiler, CompilerFunc, compile_source, Junction, full_compile
 from DHParser.configuration import set_config_value, add_config_values, get_config_value, \
     access_thread_locals, access_presets, finalize_presets, set_preset_value, \
-    get_preset_value, NEVER_MATCH_PATTERN
+    get_preset_value, read_local_config, NEVER_MATCH_PATTERN
 from DHParser import dsl
 from DHParser.dsl import recompile_grammar, never_cancel
 from DHParser.ebnf import grammar_changed
@@ -755,36 +755,19 @@ def chRanges(rr: Sequence[RuneRange]) -> Tuple[Node, ...]:
     return tuple(Node('chRange', (Node('ch', chr(r.low)), Node('ch', chr(r.high)))) for r in rr)
 
 
-def runeRanges(chR: Tuple[Node, ...]) -> Tuple[List[RuneRange], Tuple[Node, ...]]:
-    rr = []
-    i = 0
-    for i, nd in enumerate(chR):
-        if nd.name != 'chRange':
-            break
-        rr.append(RuneRange(ord(nd[0].result), ord(nd[1].result)))
-    return (rr, chR[i:])
+def runeRanges(chR: Tuple[Node, ...]) -> List[RuneRange]:
+    return [RuneRange(ord(nd[0].result), ord(nd[1].result)) for nd in chR]
 
 
-def merge_charsets(chunk: Sequence[Node]) -> List[Node]:
-    assert all(chset.name == 'charset' for chset in chunk)
-    tail = []
-    for charset in chunk:
-        new_result = []
-        for nd in charset.children:
-            if nd.name == 'fixedChSet':
-                tail.append(nd)
-            else:
-                assert nd.name == 'chRange'
-                new_result.append(nd)
-        if len(new_result) != len(charset.result):
-            charset.result = tuple(new_result)
-    rr_list = [(charset.has_attr('complement'), runeRanges(charset.result)) for charset in chunk]
+def merge_charsets(charsets: Sequence[Node]) -> Node:
+    assert all(cset.name == 'charset' for cset in charsets)
+    rr_list = [(cset.has_attr('complement'), runeRanges(cset.result))  for cset in charsets]
     merged = rr_list[0]
     for rr in rr_list[1:]:
         merged = union_with_compl(merged, rr)
     attr = {'complement': '^'} if merged[0] else {}
-    chset = Node('charset', chRanges(merged[1])[0]).with_attr(attr).with_pos(chunk[0].pos)
-    return [chset] + tail
+    node = Node('charset', chRanges(merged[1])[0]).with_attr(attr).with_pos(charsets[0].pos)
+    return node
 
 
 class NormalizeCharsets(Compiler):
@@ -843,21 +826,14 @@ class NormalizeCharsets(Compiler):
         """Replace nested charset-nodes, which always stem from converted chSet-
         or fixedChSet-Nodes by their children."""
         assert node.children
-        needs_to_move = lambda nd: nd.name == 'fixedChSet' and nd.has_attr('complement')
-        stay = []
-        end = []
         move = []
         stay = []
         for child in node.children:
             child = self.compile(child)
             if child.name == 'fixedChSet':
-                if child.has_attr('complement'):
-                    move.append(child)
-                else:
-                    end.append(child)
+                move.append(child)
             else:
                 stay.append(child)
-        stay.extend(end)
         node.result = tuple(stay)
 
         new_result = []
@@ -871,7 +847,11 @@ class NormalizeCharsets(Compiler):
         if move:
             head = Node('charset', tuple(new_result)).with_pos(node.pos)
             if node.has_attr('complement'):
-                for m in move:  del m.attr['complement']
+                for m in move:
+                    if m.has_attr('complement'):
+                        del m.attr['complement']
+                    else:
+                        m.attr['complement'] = '^'
                 node.name = 'intersection'
                 head.attr['complement'] = '^'
                 del node.attr['complement']
@@ -887,20 +867,36 @@ class NormalizeCharsets(Compiler):
 
     def on_alternative(self, node: Node) -> Node:
         node = self.fallback_compiler(node)
+        # dissolve nested alternatives
+        new_result = []
+        for child in node.children:
+            if child.name == 'alternative':
+                new_result.extend(child.children)
+            else:
+                new_result.append(child)
+        node.result = tuple(new_result)
+        i = 0
+        new_result = []
         head = []
         tail = []
-        leftovers = []
-        for i, child in enumerate(node.children):
-            if child.name == 'charset':
-                head.append(child)
-            elif child.name =='fixedChSet':
-                tail.append(child)
+        for nd in node.children:
+            if nd.name == 'charset':
+                head.append(nd)
+            elif nd.name == 'fixedChSet':
+                tail.append(nd)
             else:
                 if head:
-                    leftovers.extend(child.children[i:])
-                    break
-                else:
-                    return node
+                    new_result.append(merge_charsets(head))
+                    new_result.extend(tail)
+                    head = []
+                    tail = []
+                new_result.append(nd)
+        if head:
+            new_result.append(merge_charsets(head))
+            new_result.extend(tail)
+        node.result = tuple(new_result)
+        replace_by_single_child([node])
+        return node
 
 
 normalizeCharsets: Junction = create_junction(

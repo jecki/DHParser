@@ -39,11 +39,11 @@ class TestNormalizer:
     def test_normalizer(self):
         result, errors = compile_src('\ufeff(?a)[^a\d\S]', 'normalized')
         assert not errors
-        assert serialize_re(result) == '[[^a\d]&&\s]'
+        assert serialize_re(result) == r'[[^a]&&\D&&\s]', serialize_re(result)
 
         result, errors = compile_src('\ufeff(?a)[a\d\S]', 'normalized')
         assert not errors
-        assert serialize_re(result) == '[a\d]|\S'
+        assert serialize_re(result) == r'[a]|\d|\S', serialize_re(result)
 
 
 
