@@ -11,26 +11,25 @@ scriptpath = os.path.abspath(scriptpath)
 
 from DHParser.configuration import set_config_value, read_local_config
 from DHParser.nodetree import Node
-from reParser import compile_src, mkR, sortAndMerge, sortAndMergeInPlace, \
-    rangeUnion, rangeDifference, rangeIntersection, serialize_re
+from reParser import compile_src, chRanges, serialize_re
+from runeranges import RRstr, sort_and_merge, range_intersection
 
 # read_local_config(os.path.join(scriptpath, 'reConfig.ini'))
 
 class TestChRanages:
     def test_ch_ranges(self):
-        rr = [mkR("2-5"), mkR("B-E"), mkR("H-K"), mkR("b-e"), mkR("h-p")]
-        sortAndMergeInPlace(rr)
-        assert serialize_re(Node('charset', tuple(rr))) == "[2-5B-EH-Kb-eh-p]"
+        rr = [RRstr("2-5"), RRstr("B-E"), RRstr("H-K"), RRstr("b-e"), RRstr("h-p")]
+        sort_and_merge(rr)
+        assert serialize_re(Node('charset', chRanges(rr))) == "[2-5B-EH-Kb-eh-p]"
 
-        rr = [mkR("b-e"), mkR("2-5"), mkR("B-E"), mkR("C-K"), mkR("f-p")]
-        sortAndMergeInPlace(rr)
-        assert serialize_re(Node('charset', tuple(rr))) == "[2-5B-Kb-p]"
+        rr = [RRstr("b-e"), RRstr("2-5"), RRstr("B-E"), RRstr("C-K"), RRstr("f-p")]
+        sort_and_merge(rr)
+        assert serialize_re(Node('charset', chRanges(rr))) == "[2-5B-Kb-p]"
 
-        rrA = (mkR("0-4"), mkR("F-H"), mkR("a-c"))
-        rrB = (mkR("2-7"), mkR("B-G"), mkR("b-b"))
-        rrC = rangeIntersection(rrA, rrB)
-        print(serialize_re(Node('charset', tuple(rrC))))
-
+        rrA = (RRstr("0-4"), RRstr("F-H"), RRstr("a-c"))
+        rrB = (RRstr("2-7"), RRstr("B-G"), RRstr("b-b"))
+        rrC = range_intersection(rrA, rrB)
+        assert serialize_re(Node('charset', chRanges(rrC))) == "[2-4F-Gb]"
 
 
 class TestNormalizer:
@@ -40,13 +39,13 @@ class TestNormalizer:
     def test_normalizer(self):
         result, errors = compile_src('\ufeff(?a)[^a\d\S]', 'normalized')
         assert not errors
-        print()
-        print(result.as_sxpr())
+        assert serialize_re(result) == '[[^a\d]&&\s]'
 
         result, errors = compile_src('\ufeff(?a)[a\d\S]', 'normalized')
         assert not errors
-        print()
-        print(result.as_sxpr())
+        assert serialize_re(result) == '[a\d]|\S'
+
+
 
 if __name__ == "__main__":
     from DHParser.testing import runner

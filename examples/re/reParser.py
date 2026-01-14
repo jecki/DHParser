@@ -7,13 +7,12 @@
 #######################################################################
 
 
-import collections
 import copy
 from functools import partial
 import os
 import sys
-from stringprep import b1_set
-from typing import Tuple, List, Set, Union, Any, Optional, Callable, cast, NamedTuple
+from typing import Tuple, List, Set, Union, Any, Optional, Callable, cast, \
+    NamedTuple, Sequence
 
 try:
     scriptdir = os.path.dirname(os.path.realpath(__file__))
@@ -75,6 +74,10 @@ if DHParser.versionnumber.__version_info__ < (1, 8, 0):
     print(f'DHParser version {DHParser.versionnumber.__version__} is lower than the DHParser '
           f'version 1.8.0, {os.path.basename(__file__)} has first been generated with. '
           f'Please install a more recent version of DHParser to avoid unexpected errors!')
+
+
+from runeranges import RuneRange, sort_and_merge, range_union, range_difference, range_intersection, \
+    union_with_compl, diff_with_compl
 
 
 #######################################################################
@@ -745,153 +748,43 @@ flagProcessing: Junction = create_junction(
 #######################################################################
 
 
-# Character ranges algebra...
-
-def low(chR: Node) -> int:
-    return ord(chR._result[0]._result)
-
-
-def high(chR: Node) -> int:
-    return ord(chR._result[1]._result)
-
-
-def isSortedAndMerged(chRanges: Tuple[Node, ...]) -> bool:
-    """Checks whether a sequence of ChRanges at the beginning of the tuple
-    is sorted and has been merged where possible, already."""
-    for i in range(1, len(chRanges)):
-        if chRanges[i].name != "chRange":
-            if all(r.name == "chRange" for r in chRanges[:i]):
-                return True
-            else:
-                return False   # not all non-chRange elements are at the end!
-        if low(chRanges[i]) <= high(chRanges[i - 1]):
-            return False
-    return True
-
-
-def neverEmpty(chRanges: Tuple[Node, ...]) -> bool:
-    if len(chRanges) <= 0 or chRanges[0].name != 'chRange':
-        return False
-    for r in chRanges:
-        if r.name != 'chRange': return True
-        if high(r) < low(r):
-            return False
-    return True
-
-
-def sortAndMergeInPlace(R: List[Node]):
-    Rlen = len(R)
-    R.sort(key=lambda nd: low(nd))
-    a = 0
-    b = 1
-    while b < Rlen:
-        if low(R[b]) <= high(R[a]) + 1:
-            if high(R[a]) <= high(R[b]):
-                # high(R[a]) := high(R[b])
-                R[a]._result[1].result = R[b]._result[1]._result
-        else:
-            a += 1
-            if a != b: R[a] = R[b]
-        b += 1
-    del R[a + 1:]
-
-
-def sortAndMerge(chRanges: Tuple[Node, ...]) -> Tuple[Node, ...]:
-    """Sorts and merges a sequence of ChRanges at the beginning of the tuple."""
-    Rlen = len(chRanges) - 1
-    try:
-        while chRanges[Rlen].name != 'chRange':
-            Rlen -= 1
-    except IndexError:
-        raise ValueError('Tuple of chRange-Node objects does not contain '
-                         'a single chRange-Node object!?')
-    Rlen += 1
-    R = list(chRanges[:Rlen])
-    sortAndMergeInPlace(R)
-    return tuple(R)
-
-
-def mkRange(low: int, high: int) -> Node:
-    return Node('chRange', (Node('ch', chr(low)), Node('ch', chr(high))))
-
-
-def mkR(s: str) -> Node:
-    """mkR('a-z') == Node('chRange', (Node('ch', 'a'), Node('ch', 'z')))"""
-    assert len(s) == 3 and s[1] == '-'
-    return Node('chRange', (Node('ch', s[0]), Node('ch', s[2])))
-
-
-def rangeUnion(A: Tuple[Node, ...], B: Tuple[Node, ...]) -> Tuple[Node, ...]:
-    R = list(A)
-    R.extend(B)
-    sortAndMergeInPlace(R)
-    return tuple(R)
-
-
-def rangeDifference(A: Tuple[Node, ...], B: Tuple[Node, ...]) -> Tuple[Node, ...]:
-    assert neverEmpty(A) and neverEmpty(B)
-    assert isSortedAndMerged(A) and isSortedAndMerged(B)
-
-    result = []
-    lenB = len(B)
-    lenA = len(A)
-    i = 1
-    k = 0
-    M = copy.deepcopy(A[0])
-    S = copy.deepcopy(B[0])
-
-    def nextA() -> bool:
-        nonlocal i, A, M, lenA
-        if i < lenA:
-            M.result = copy.deepcopy(A[i]._result)
-            i += 1
-            return False
-        return True
-
-    def nextB():
-        nonlocal k, B, S, lenB
-        k += 1
-        if k < lenB:
-            S.result = copy.deepcopy(B[k]._result)
-
-    while k < lenB:
-        if low(S) <= high(M) and low(M) <= high(S):
-            if low(M) < low(S):
-                result.append(mkRange(low(M), low(S) - 1))
-                if high(S) < high(M):
-                    M.result[0]._result = chr(high(S) + 1)  # need to create a new object, here!
-                    nextB()
-                elif nextA():
-                    return tuple(result)
-            elif high(S) < high(M):
-                M.result[0]._result = chr(high(S) + 1)  # need to create a new object, here!
-                nextB()
-            elif nextA():
-                return tuple(result)
-        elif high(M) < low(S):
-            result.append(M)
-            if nextA():
-                return tuple(result)
-        else:
-            assert high(S) < low(M)
-            nextB()
-        result.append(M)
-        while i < lenA:
-            result.append(A[i])
-            i += 1
-    ret = tuple(result)
-    assert isSortedAndMerged(ret)
-    return ret
-
-
-def rangeIntersection(A: Tuple[Node, ...], B: Tuple[Node, ...]) -> Tuple[Node, ...]:
-    C = rangeDifference(A, B)
-    return rangeDifference(A, C)
-
-
-
-
 # NormalizeCharsets
+
+
+def chRanges(rr: Sequence[RuneRange]) -> Tuple[Node, ...]:
+    return tuple(Node('chRange', (Node('ch', chr(r.low)), Node('ch', chr(r.high)))) for r in rr)
+
+
+def runeRanges(chR: Tuple[Node, ...]) -> Tuple[List[RuneRange], Tuple[Node, ...]]:
+    rr = []
+    i = 0
+    for i, nd in enumerate(chR):
+        if nd.name != 'chRange':
+            break
+        rr.append(RuneRange(ord(nd[0].result), ord(nd[1].result)))
+    return (rr, chR[i:])
+
+
+def merge_charsets(chunk: Sequence[Node]) -> List[Node]:
+    assert all(chset.name == 'charset' for chset in chunk)
+    tail = []
+    for charset in chunk:
+        new_result = []
+        for nd in charset.children:
+            if nd.name == 'fixedChSet':
+                tail.append(nd)
+            else:
+                assert nd.name == 'chRange'
+                new_result.append(nd)
+        if len(new_result) != len(charset.result):
+            charset.result = tuple(new_result)
+    rr_list = [(charset.has_attr('complement'), runeRanges(charset.result)) for charset in chunk]
+    merged = rr_list[0]
+    for rr in rr_list[1:]:
+        merged = union_with_compl(merged, rr)
+    attr = {'complement': '^'} if merged[0] else {}
+    chset = Node('charset', chRanges(merged[1])[0]).with_attr(attr).with_pos(chunk[0].pos)
+    return [chset] + tail
 
 
 class NormalizeCharsets(Compiler):
@@ -987,7 +880,27 @@ class NormalizeCharsets(Compiler):
             node.result = (head, *move)
         else:
             node.result = tuple(new_result)
+        rr, tail = runeRanges(node.result)
+        sort_and_merge(rr)
+        node.result = tuple(chRanges(rr)) + tail
         return node
+
+    def on_alternative(self, node: Node) -> Node:
+        node = self.fallback_compiler(node)
+        head = []
+        tail = []
+        leftovers = []
+        for i, child in enumerate(node.children):
+            if child.name == 'charset':
+                head.append(child)
+            elif child.name =='fixedChSet':
+                tail.append(child)
+            else:
+                if head:
+                    leftovers.extend(child.children[i:])
+                    break
+                else:
+                    return node
 
 
 normalizeCharsets: Junction = create_junction(
@@ -1051,6 +964,7 @@ re_serialization_table = expand_table({
     "backRef": lambda _, s: f"(?P={s})",
     "bifurcation": lambda _, *ts: f"(?({ts[0]}){ts[1]}|{ts[2]})",
     "intersection": lambda _, *ts: ''.join(['[', '&&'.join(ts), ']']),
+    "difference": lambda _, *ts: ''.join(['[', '--'.join(ts), ']']),
     "*": lambda p, *ts: f"(!{p[-1].name}:" + ''.join(ts) + ")"
 })
 
