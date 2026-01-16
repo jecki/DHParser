@@ -769,6 +769,15 @@ def merge_charsets(charsets: Sequence[Node]) -> Node:
     node = Node('charset', chRanges(merged[1])[0]).with_attr(attr).with_pos(charsets[0].pos)
     return node
 
+# def intersect_charsets(charsets: Sequence[Node]) -> Node:
+#     assert all(cset.name == 'charset' for cset in charsets)
+#     rr_list = [(cset.has_attr('complement'), runeRanges(cset.result))  for cset in charsets]
+#     intersection = rr_list[0]
+#     for rr in rr_list[1:]:
+#         intersection = intersect_with_compl(intersection, rr)
+#     attr = {'complement': '^'} if intersection[0] else {}
+#     node = Node('charset', chRanges(intersection[1])[0]).with_attr(attr).with_pos(charsets[0].pos)
+#     return node
 
 class NormalizeCharsets(Compiler):
     """Normalizes and Optimizies character sets as well as alternatives
@@ -868,16 +877,20 @@ class NormalizeCharsets(Compiler):
             node.result = result
         return node
 
-    def on_alternative(self, node: Node) -> Node:
-        node = self.fallback_compiler(node)
-        # dissolve nested alternatives
+    @staticmethod
+    def dissolve_nesting(self, node: Node) -> Node:
         new_result = []
         for child in node.children:
-            if child.name == 'alternative':
+            if child.name == node.name:
                 new_result.extend(child.children)
             else:
                 new_result.append(child)
         node.result = tuple(new_result)
+        return node
+
+    def on_alternative(self, node: Node) -> Node:
+        node = self.fallback_compiler(node)
+        node = self.dissolve_nesting(node)
         new_result = []
         head = []
         tail = []
@@ -899,6 +912,14 @@ class NormalizeCharsets(Compiler):
         node.result = tuple(new_result)
         replace_by_single_child([node])
         return node
+
+    def on_intersection(self, node: Node) -> Node:
+        node = self.fallback_compiler(node)
+        node = self.dissolve_nesting(node)
+        return node
+
+    def on_difference(self, node: Node) -> Node:
+        pass
 
 
 normalizeCharsets: Junction = create_junction(

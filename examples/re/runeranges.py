@@ -178,3 +178,16 @@ def diff_with_compl(A: Tuple[bool, Sequence[RuneRange]], B: Tuple[bool, Sequence
         else:
             return False, range_difference(A[1], B[1])
 
+
+def intersect_with_compl(A: Tuple[bool, Sequence[RuneRange]], B: Tuple[bool, Sequence[RuneRange]]) \
+        -> Tuple[bool, List[RuneRange]]:
+    if A[0]:
+        if B[0]:
+            return True, range_union(B[1], A[1])
+        else:
+            return False, range_difference(B[1], A[1])
+    else:
+        if B[0]:
+            return False, range_difference(A[1], B[1])
+        else:
+            return False, range_intersection(A[1], B[1])

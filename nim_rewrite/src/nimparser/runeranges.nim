@@ -219,6 +219,23 @@ proc sub*(Acompl, Bcompl: bool; A, B: seq[RuneRange]): (bool, seq[RuneRange]) =
       (false, @[])
 
 
+# UNTESTED, so far!!!
+proc intersect*(Acompl, Bcompl: bool; A, B: seq[RuneRange]): (bool, seq[RuneRange]) =
+  let selector = (if Acompl: 2 else: 0) + (if Bcompl: 1 else: 0)
+  case selector:  # (A.negate, B.negate)
+    of 0b00:  # (false, false)
+      (false, A * B)
+    of 0b01:  # (false, true)
+      (false, A - B)
+    of 0b10:  # (true, false)
+      (false, B - A)
+    of 0b11:  # (true, true)
+      (true, A + B)
+    else:
+      assert false
+      (false, @[])
+
+
 # Rune Range parsers
 
 func rrs*(rangesStr: string): seq[RuneRange] =
