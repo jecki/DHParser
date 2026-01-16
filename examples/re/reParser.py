@@ -755,7 +755,7 @@ def chRanges(rr: Sequence[RuneRange]) -> Tuple[Node, ...]:
     return tuple(Node('chRange', (Node('ch', chr(r.low)), Node('ch', chr(r.high)))) for r in rr)
 
 
-def runeRanges(chR: Tuple[Node, ...]) -> List[RuneRange]:
+def runeRanges(chR: Sequence[Node]) -> List[RuneRange]:
     return [RuneRange(ord(nd[0].result), ord(nd[1].result)) for nd in chR]
 
 
@@ -826,6 +826,9 @@ class NormalizeCharsets(Compiler):
         """Replace nested charset-nodes, which always stem from converted chSet-
         or fixedChSet-Nodes by their children."""
         assert node.children
+        if node[0].name == 'complement':
+            node.result = node[1:]
+            node.attr['complement'] = '^'
         move = []
         stay = []
         for child in node.children:
@@ -836,16 +839,19 @@ class NormalizeCharsets(Compiler):
                 stay.append(child)
         node.result = tuple(stay)
 
-        new_result = []
+        new_result: list[Node] = []
         for child in node.children:
             if child.name == "charset":
                 assert all(nd.name == "chRange" for nd in child.children)
                 new_result.extend(child.children)
             else:
                 new_result.append(child)
+        rr = runeRanges(new_result)
+        sort_and_merge(rr)
+        result = chRanges(rr)
 
         if move:
-            head = Node('charset', tuple(new_result)).with_pos(node.pos)
+            head = Node('charset', result).with_pos(node.pos)
             if node.has_attr('complement'):
                 for m in move:
                     if m.has_attr('complement'):
@@ -859,10 +865,7 @@ class NormalizeCharsets(Compiler):
                 node.name = 'alternative'
             node.result = (head, *move)
         else:
-            node.result = tuple(new_result)
-        rr, tail = runeRanges(node.result)
-        sort_and_merge(rr)
-        node.result = tuple(chRanges(rr)) + tail
+            node.result = result
         return node
 
     def on_alternative(self, node: Node) -> Node:
@@ -875,7 +878,6 @@ class NormalizeCharsets(Compiler):
             else:
                 new_result.append(child)
         node.result = tuple(new_result)
-        i = 0
         new_result = []
         head = []
         tail = []
