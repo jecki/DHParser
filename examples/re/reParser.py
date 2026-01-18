@@ -769,15 +769,28 @@ def merge_charsets(charsets: Sequence[Node]) -> Node:
     node = Node('charset', chRanges(merged[1])[0]).with_attr(attr).with_pos(charsets[0].pos)
     return node
 
-# def intersect_charsets(charsets: Sequence[Node]) -> Node:
-#     assert all(cset.name == 'charset' for cset in charsets)
-#     rr_list = [(cset.has_attr('complement'), runeRanges(cset.result))  for cset in charsets]
-#     intersection = rr_list[0]
-#     for rr in rr_list[1:]:
-#         intersection = intersect_with_compl(intersection, rr)
-#     attr = {'complement': '^'} if intersection[0] else {}
-#     node = Node('charset', chRanges(intersection[1])[0]).with_attr(attr).with_pos(charsets[0].pos)
-#     return node
+
+def intersect_charsets(charsets: Sequence[Node]) -> Node:
+    assert all(cset.name == 'charset' for cset in charsets)
+    rr_list = [(cset.has_attr('complement'), runeRanges(cset.result))  for cset in charsets]
+    intersection = rr_list[0]
+    for rr in rr_list[1:]:
+        intersection = intersect_with_compl(intersection, rr)
+    attr = {'complement': '^'} if intersection[0] else {}
+    node = Node('charset', chRanges(intersection[1])[0]).with_attr(attr).with_pos(charsets[0].pos)
+    return node
+
+
+def diff_charsets(A: Sequence[Node], B: Sequence[Node]) -> Node:
+    assert A.name == 'charset'
+    assert B.name == 'charset'
+    Ar = (A.has_attr('complement'), runeRange(A.result))
+    Br = (A.has_attr('complement'), runeRange(B.result))
+    compl, diff = diff_with_compl(Ar, Br)
+    attr = {'complement', '^'} if compl else {}
+    node = Node('charset', chRanges(diff).with_attr(attr).with_pos(A.pos))
+    return node
+
 
 class NormalizeCharsets(Compiler):
     """Normalizes and Optimizies character sets as well as alternatives
@@ -888,9 +901,7 @@ class NormalizeCharsets(Compiler):
         node.result = tuple(new_result)
         return node
 
-    def on_alternative(self, node: Node) -> Node:
-        node = self.fallback_compiler(node)
-        node = self.dissolve_nesting(node)
+    def apply_set_op(self, node: Node, op: Callable):
         new_result = []
         head = []
         tail = []
@@ -901,25 +912,36 @@ class NormalizeCharsets(Compiler):
                 tail.append(nd)
             else:
                 if head:
-                    new_result.append(merge_charsets(head))
+                    new_result.append(op(head))
                     new_result.extend(tail)
                     head = []
                     tail = []
                 new_result.append(nd)
         if head:
-            new_result.append(merge_charsets(head))
+            new_result.append(op(head))
             new_result.extend(tail)
         node.result = tuple(new_result)
-        replace_by_single_child([node])
+        replace_by_single_child([node])        
+
+    def on_alternative(self, node: Node) -> Node:
+        node = self.fallback_compiler(node)
+        node = self.dissolve_nesting(node)
+        self.apply_set_op(node, merge_charsets)
         return node
 
     def on_intersection(self, node: Node) -> Node:
         node = self.fallback_compiler(node)
         node = self.dissolve_nesting(node)
+        self.apply_set_op(node, intersect_charsets)
         return node
 
     def on_difference(self, node: Node) -> Node:
-        pass
+        assert len(node.children) == 2
+        assert all(nd.name == 'chRange' for nd in node[0].children)
+        assert all(nd.name == 'chRange' for nd in node[1].children)
+        node.result = diff_charsets(node[0], node[1])
+        replace_by_single_child([node])
+        return node
 
 
 normalizeCharsets: Junction = create_junction(
