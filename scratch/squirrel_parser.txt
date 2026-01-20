@@ -1,0 +1,13 @@
+
+The Squirrel Parser: A Linear-Time PEG Packrat Parser Capable of Left Recursion and Optimal Error Recovery
+Luke Hutchison <luke.hutch@alum.mit.edu>
+Do 08.01, 16:24 peg@lists.csail.mit.edu
+I just published a brand new PEG parsing algorithm that handles all forms of left recursion without ugly hacks, and also has optimal and robust error recovery, maintaining linear performance in the length of the input regardless of the number of syntax errors encountered.
+
+https://github.com/lukehutch/squirrelparser
+
+A preprint of the associated paper is at:
+
+https://github.com/lukehutch/squirrelparser/blob/main/paper/squirrel_parser.pdf
+
+Would love this to see some serious testing!
