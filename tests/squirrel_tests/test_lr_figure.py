@@ -29,7 +29,7 @@ class TestFigureADirectLeftRecursion:
         # A appears 3 times: 0+3, 0+2, 0+1
         a_depth = count_rule_depth(result, 'A')
         assert a_depth == 3, f"A depth should be 3, got {a_depth}"
-        # assert is_left_associative(result, 'A'), "should be left-associative"
+        assert is_left_associative(result, 'A'), "should be left-associative"
 
     def test_figa_direct_lr_x(self):
         result = parse_for_tree(FIGURE_A_GRAMMAR, 'x')
@@ -65,6 +65,7 @@ class TestFigureBIndirectLeftRecursion:
         """NOTE: This grammar has complex indirect LR that may not parse all inputs."""
         result = parse_for_tree(FIGURE_B_GRAMMAR, 'xxyx')
         # If parsing fails, it's because of complex indirect LR interaction
+        print(result.root_node.as_sxpr())
         if result is not None:
             a_depth = count_rule_depth(result, 'A')
             assert a_depth >= 2, f"A depth should be >= 2, got {a_depth}"

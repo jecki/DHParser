@@ -70,14 +70,14 @@ def count_rule_depth(result: MatchResult | None, rule_name: str) -> int:
     return count
 
 
-def _get_first_semantic_child(result: MatchResult, rule_name: str) -> tuple[MatchResult | None, bool]:
-    children = [c for c in result.root_node if c.name != ZOMBIE_TAG]
-    if not children:
-        return (None, False)
-    ...
+
 
 def is_left_associative(result: MatchResult | None, rule_name: str) -> bool:
     if result is None or result.root_node.errors:
         return False
 
-    instances = list(result.root_node.select(rule_name, include_root=True))
+    for nd in result.root_node.select(rule_name, include_root=True):
+        if len(nd.children) >= 2:
+            if nd[1].name == rule_name and not nd[0].children:
+                return False
+    return True
