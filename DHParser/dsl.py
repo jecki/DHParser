@@ -167,7 +167,7 @@ def grammar_instance(grammar_representation) -> Tuple[Grammar, str]:
             lg_dir = suspend_logging()
             result, messages, _ = compile_source(
                 grammar_src, None,
-                get_ebnf_grammar(), get_ebnf_transformer(), get_ebnf_compiler())
+                get_ebnf_grammar(grammar_src), get_ebnf_transformer(), get_ebnf_compiler())
             parser_py = cast(str, result)
             resume_logging(lg_dir)
         if has_errors(messages):
@@ -266,7 +266,7 @@ def raw_compileEBNF(ebnf_src: str, branding="DSL", fail_when: ErrorCode = ERROR)
     Raises:
         CompilationError if any errors occurred during compilation
     """
-    grammar = get_ebnf_grammar()
+    grammar = get_ebnf_grammar(ebnf_src)
     compiler = get_ebnf_compiler(branding, ebnf_src)
     transformer = get_ebnf_transformer()
     compileDSL(ebnf_src, nil_preprocessor, grammar, transformer, compiler, fail_when)
@@ -341,7 +341,7 @@ def grammar_provider(ebnf_src: str,
         language defined by ``ebnf_src``.
     """
     grammar_src = compileDSL(
-        ebnf_src, get_ebnf_preprocessor(), get_ebnf_grammar(), get_ebnf_transformer(),
+        ebnf_src, get_ebnf_preprocessor(), get_ebnf_grammar(ebnf_src), get_ebnf_transformer(),
         get_ebnf_compiler(branding, ebnf_src), fail_when)
     log_name = get_config_value('compiled_EBNF_log')
     if log_name and is_logging():  append_log(log_name, grammar_src)
@@ -517,10 +517,12 @@ def compile_on_disk(source_file: str,
     compiler_name = as_identifier(os.path.basename(rootname))
     if compiler_suite:
         sfactory, pfactory, tfactory, cfactory = load_compiler_suite(compiler_suite)
+        parser = pfactory()
         compiler1 = cfactory()
     else:
         sfactory = get_ebnf_preprocessor  # PreprocessorFactory
         pfactory = get_ebnf_grammar       # ParserFactory
+        parser = pfactory(source)         # EBNF-Parser will be selected to fit the flavor
         tfactory = get_ebnf_transformer   # TransformerFactory
         cfactory = get_ebnf_compiler      # CompilerFactory
         compiler1 = cfactory()            # CompilerFunc
@@ -530,7 +532,7 @@ def compile_on_disk(source_file: str,
         is_ebnf_compiler = True
         compiler1.set_grammar_name(compiler_name, source_file)
 
-    result, messages, _ = compile_source(source, sfactory(), pfactory(), tfactory(), compiler1)
+    result, messages, _ = compile_source(source, sfactory(), parser, tfactory(), compiler1)
 
     if has_errors(messages):
         return messages

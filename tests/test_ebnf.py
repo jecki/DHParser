@@ -251,6 +251,12 @@ class TestDirectives:
         parser=create_parser(lang)
         assert parser.python_src__.find(r'(?:_\\w+)|(?:_\\w+)') < 0
 
+    def test_heuristic(self):
+        grammar = r"""@flavor=heuristic    
+            S <- S "+" T / T ;
+            T <- [0-9]+ ;"""
+        _ = create_parser(grammar) # raises an error, in case @flavor was ignored
+
 
 class TestReservedSymbols:
     def test_comment_usage(self):

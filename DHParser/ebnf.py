@@ -690,10 +690,22 @@ def grammar_changed(grammar_class, grammar_source: str) -> bool:
         return chksum != grammar_class.source_hash__
 
 
-def get_ebnf_grammar() -> Grammar:
-    """Returns a thread-local EBNF-Grammar-object for parsing EBNF sources."""
+def get_ebnf_grammar(grammar_src: str = '') -> Grammar:
+    """Returns a thread-local EBNF-Grammar-object for parsing EBNF sources.
+    If grammar_src is given, get_ebnf_grammar() will search for the
+    "@flavor=heuristic" or "@flavor=dhparser" and select the EBENF-parser
+    accorgingly. The heuristic parser is much more liberal with respect to
+    different EBNF-dialects, but slower. The "@flavor"-directive overrides
+    the "syntax_variant" config variable.
+    """
     THREAD_LOCALS = access_thread_locals()
-    mode = get_config_value('syntax_variant')
+    mode = None
+    if grammar_src:
+        m = re.search(r'(?:^|\n)@[ ]*flavor\s*=\s*(\w+)', grammar_src)
+        if m:
+            mode = m.groups()[0]
+    if mode not in ('dhparser', 'fixed', 'configurable', 'heuristic'):
+        mode = get_config_value('syntax_variant')
     try:
         grammar = THREAD_LOCALS.ebnf_grammar_singleton
         if mode in ('dhparser', 'fixed', 'configurable'):
