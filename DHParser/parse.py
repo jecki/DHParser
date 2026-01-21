@@ -738,8 +738,8 @@ class Parser:
         grammar = self._grammar
 
         try:
-            # rollback variable changing operation if parser backtracks to a position
-            # before or at the location where the variable changing operation occurred
+            # rollback variable changing operation if the parser backtracks to a position
+            # before or at the location where the variable-changing operation occurred
             if location <= grammar.last_rb__loc__:
                 grammar.rollback_to__(location)
 
@@ -1022,12 +1022,12 @@ class LeafParser(Parser):
         grammar = self._grammar
 
         try:
-            # rollback variable changing operation if parser backtracks to a position
-            # before or at the location where the variable changing operation occurred
+            # rollback variable changing operation if the parser backtracks to a position
+            # before or at the location where the variable-changing operation occurred
             if location <= grammar.last_rb__loc__:
                 grammar.rollback_to__(location)
 
-            # if location has already been visited by the current parser, return the saved result
+            # if the location has already been visited by, return the saved result
             visited = self.visited  # using local variable for better performance
             if location in visited:
                 # Sorry, no history recording in case of memoized results!
