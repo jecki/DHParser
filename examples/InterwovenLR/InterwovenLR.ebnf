@@ -1,0 +1,9 @@
+@flavor=heuristic
+
+S <- E ;
+E <- F "n" / "n" ;
+F <- E "+" I* / G "-" ;
+G <- H "m" / E ;
+H <- G "l" ;
+I <- "(" AA+ ")" ;
+AA <- "a" ;
