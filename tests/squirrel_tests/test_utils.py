@@ -55,6 +55,7 @@ def parse_for_tree(grammar_spec: str, input_str: str, top_rule = 'S') -> MatchRe
     root_node = grammar(input_str, start_parser=top_rule)
     result = MatchResult()
     result.root_node = root_node
+    for e in root_node.errors_sorted:  print(e)
     return result if result.root_node.name != ZOMBIE_TAG else None
 
 
