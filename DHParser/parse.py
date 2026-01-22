@@ -4095,7 +4095,11 @@ class Alternative(NaryParser):
         # WARNING: This can become time-consuming!!!
         # EXPERIMENTAL
 
-        def does_preempt(start, parser):
+        def does_preempt(start, parser) -> bool:
+            if isinstance(parser, Forward):
+                if self in parser.descendants:
+                    # In case of recursive parsers, the test is not reliable!
+                    return False
             cst = self.grammar(start, parser, complete_match=False)
             return not cst.errors and cst.strlen() >= 1
 

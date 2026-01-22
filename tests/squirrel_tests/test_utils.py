@@ -17,7 +17,7 @@ LOG_DIR = os.path.abspath(os.path.join(scriptpath, "LOGS"))
 
 from DHParser.dsl import create_parser
 from DHParser.error import FATAL
-from DHParser.nodetree import WHITESPACE_PTYPE, ZOMBIE_TAG, RootNode
+from DHParser.nodetree import WHITESPACE_PTYPE, ZOMBIE_TAG, LEAF_PATH, RootNode
 
 
 @dataclass
@@ -59,17 +59,14 @@ def parse_for_tree(grammar_spec: str, input_str: str, top_rule = 'S') -> MatchRe
 
 
 def count_rule_depth(result: MatchResult | None, rule_name: str) -> int:
-    nd = result.root_node
-    count = 0
-    while nd and nd.children:
-        if nd.name == rule_name:
-            count += 1
-        nd = nd.pick_child(rule_name)
-    if nd and nd.name == rule_name:
-        count += 1
-    return count
-
-
+    counts = [0]
+    for path in result.root_node.select_path(LEAF_PATH):
+        counter = 0
+        for nd in path:
+            if nd.name == rule_name:
+                counter += 1
+        counts.append(counter)
+    return max(counts)
 
 
 def is_left_associative(result: MatchResult | None, rule_name: str) -> bool:
