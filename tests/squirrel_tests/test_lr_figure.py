@@ -134,7 +134,6 @@ class TestFigureDOptionalBasedLeftRecursion:
     def test_figd_optional_dependent_xxyyy(self):
         result = parse_for_tree(FIGURE_D_GRAMMAR, 'xxyyy')
         assert result is not None, "should parse xxyyy"
-        print(result.root_node.as_sxpr())
         a_depth = count_rule_depth(result, 'A')
         assert a_depth >= 4, f"A depth should be >= 4, got {a_depth}"
 
