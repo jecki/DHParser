@@ -1685,8 +1685,11 @@ class Grammar:
                     anonymous = ":" if is_disposable(entry, cls.disposable__) else ""
                     assert anonymous or not parser.drop_content, entry
                     if isinstance(parser, Forward):
-                        if not cast(Forward, parser).parser.pname:
-                            cast(Forward, parser).parser.name(anonymous + entry)
+                        fw = cast(Forward, parser)
+                        delegate = cdict[fw.fw_name] if fw.fw_name else fw.parser
+                        if not delegate.pname:
+                            fw.fw_name = anonymous + entry
+                            delegate.name(anonymous + entry)
                     else:
                         parser.name(anonymous + entry)
                     cls.parser_names__.append(entry)
@@ -1721,6 +1724,7 @@ class Grammar:
                 else:
                     setattr(self, parser.pname, parser)
             elif isinstance(parser, Forward):
+                parser.set(getattr(self, cast(Forward, parser).fw_name))
                 setattr(self, cast(Forward, parser).parser.pname, parser)
             self.all_parsers__.add(parser)
             # parser.grammar = self  # moved to parser.descendants
@@ -1730,8 +1734,8 @@ class Grammar:
         """Constructor of class Grammar.
 
         :param root: If not None, this is going to be the root parser of the grammar.
-            This allows to first construct an ensemble of parser objects and then
-            link those objects in a grammar-object, rather than adding the parsers
+            This allows constructing an ensemble of parser objects, first, and then
+            linking those objects in a grammar-object, rather than adding the parsers
             as fields to a derived class of class Grammar. (See the doc-tests in this
             module for examples.)
         :param static_analysis: If not None, this overrides the config value
@@ -5119,7 +5123,7 @@ class Synonym(UnaryParser):
 
 class Forward(UnaryParser):
     r"""
-    Forward allows to declare a parser before it is actually defined.
+    Forward allows declaring a parser before it is actually defined.
     Forward declarations are needed for parsers that are recursively
     nested, e.g.::
 
@@ -5146,10 +5150,11 @@ class Forward(UnaryParser):
     grammars. See it's __call__()-method.
     """
 
-    def __init__(self):
+    def __init__(self, fw_name: str = ''):
         super().__init__(get_parser_placeholder())
         # self.parser = get_parser_placeholder  # type: Parser
         self.cycle_reached: bool = False
+        self.fw_name = fw_name
         self.sub_parsers = frozenset()
 
     def reset(self):
@@ -5306,6 +5311,7 @@ class Forward(UnaryParser):
         shall be delegated.
         """
         self.parser = parser
+        self.fw_name = parser.pname
         self.sub_parsers = frozenset({parser})
         if self.pname and not parser.pname:  parser.name(self.pname, self.disposable)
         if not parser.drop_content:  parser.disposable = self.disposable
