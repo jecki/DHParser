@@ -60,7 +60,8 @@ from DHParser.nodetree import Node, RootNode, WHITESPACE_PTYPE, \
     EMPTY_PTYPE, LEAF_NODE, ChildrenType, ResultType
 from DHParser.toolkit import sane_parser_name, escape_ctrl_chars, re, matching_brackets, \
     abbreviate_middle, RxPatternType, linebreaks, line_col, TypeAlias, List, Tuple, \
-    MutableSet, AbstractSet, FrozenSet, Dict, INFINITE, LazyRE, CancelQuery, deprecated
+    MutableSet, AbstractSet, FrozenSet, Dict, INFINITE, LazyRE, CancelQuery, deprecated , \
+    deprecation_warning
 
 try:
     import cython
@@ -545,10 +546,10 @@ class Parser:
                 than a property. This property should always be equal to
                 ``self.name[0] == ":"``.
 
-    :ivar drop_content: A property (for performance reasons implemented as
+    :ivar drop_content: A property (for performance reasons implemented as a
                 simple field) that, if set, induces the parser not to return
                 the parsed content or subtree if it has matched but the
-                dummy ``EMPTY_NODE``. In effect the parsed content will be
+                dummy ``EMPTY_NODE``. In effect, the parsed content will be
                 dropped from the concrete syntax tree already. Only
                 anonymous (or pseudo-anonymous) parsers are allowed to
                 drop content.
@@ -1724,8 +1725,12 @@ class Grammar:
                 else:
                     setattr(self, parser.pname, parser)
             elif isinstance(parser, Forward):
-                parser.set(getattr(self, cast(Forward, parser).fw_name))
-                setattr(self, cast(Forward, parser).parser.pname, parser)
+                fw = cast(Forward, parser)
+                if fw.fw_name:
+                    parser.set(getattr(self, fw.fw_name))
+                else:
+                    fw.fw_name = fw.parser.pname
+                setattr(self, fw.parser.pname, parser)
             self.all_parsers__.add(parser)
             # parser.grammar = self  # moved to parser.descendants
 
@@ -5121,6 +5126,26 @@ class Synonym(UnaryParser):
         return self.pname or self.parser.repr
 
 
+forward_deprecation_message = r"""You are using a deprecated pattern for the 
+forward-declaration of parsers. Please use the new inline-syntax (
+e.g. `Forward("expression") ... expression = ...` for, formerly and now deprecated 
+`expression = Forward() ... expression.set(...)`) instead! Full example:
+
+    class Arithmetic(Grammar):
+        r'''
+        expression =  term  { ("+" | "-") term }
+        term       =  factor  { ("*" | "/") factor }
+        factor     =  INTEGER | "("  expression  ")"
+        INTEGER    =  /\d+/~
+        '''
+        INTEGER    = RE('\\d+')
+        factor     = INTEGER | TKN("(") + Forward("expression") + TKN(")")
+        term       = factor + ZeroOrMore((TKN("*") | TKN("/")) + factor)
+        expression = term + ZeroOrMore((TKN("+") | TKN("-")) + term)
+        root__     = expression
+"""
+
+
 class Forward(UnaryParser):
     r"""
     Forward allows declaring a parser before it is actually defined.
@@ -5134,11 +5159,10 @@ class Forward(UnaryParser):
         ...     factor     =  INTEGER | "("  expression  ")"
         ...     INTEGER    =  /\d+/~
         ...     '''
-        ...     expression = Forward()
         ...     INTEGER    = RE('\\d+')
-        ...     factor     = INTEGER | TKN("(") + expression + TKN(")")
+        ...     factor     = INTEGER | TKN("(") + Forward("expression") + TKN(")")
         ...     term       = factor + ZeroOrMore((TKN("*") | TKN("/")) + factor)
-        ...     expression.set(term + ZeroOrMore((TKN("+") | TKN("-")) + term))
+        ...     expression = term + ZeroOrMore((TKN("+") | TKN("-")) + term)
         ...     root__     = expression
 
     :ivar recursion_counter:  Mapping of places to how often the parser
@@ -5153,6 +5177,8 @@ class Forward(UnaryParser):
     def __init__(self, fw_name: str = ''):
         super().__init__(get_parser_placeholder())
         # self.parser = get_parser_placeholder  # type: Parser
+        if not fw_name:
+            deprecation_warning(forward_deprecation_message)
         self.cycle_reached: bool = False
         self.fw_name = fw_name
         self.sub_parsers = frozenset()
@@ -5306,9 +5332,8 @@ class Forward(UnaryParser):
         """Returns the parser's name if it has a name or ``repr(self)`` if not."""
         return self.parser.pname if self.parser.pname else self.__repr__()
 
-    def set(self, parser: Parser):
-        """Sets the parser to which the calls to this Forward-object
-        shall be delegated.
+    def _set(self, parser: Parser):
+        """Sets the parser to which the calls to shall be delegated.
         """
         self.parser = parser
         self.fw_name = parser.pname
@@ -5317,3 +5342,7 @@ class Forward(UnaryParser):
         if not parser.drop_content:  parser.disposable = self.disposable
         self.drop_content = parser.drop_content
         self.pname = ""
+
+    @deprecated(forward_deprecation_message)
+    def set(self, parser: Parser):
+        self._set(parser)
