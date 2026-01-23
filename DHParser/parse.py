@@ -5201,10 +5201,11 @@ class Forward(UnaryParser):
         copy_parser_base_attrs(self, duplicate)
         parser = copy.deepcopy(self.parser, memo)
         duplicate.parser = parser
-        duplicate.pname = self.pname        # Forward-Parsers should not have a name!
-        duplicate.disposable = self.disposable
-        duplicate.node_name = self.node_name  # Forward-Parser should not have a tag name!
-        duplicate.drop_content = parser.drop_content
+        duplicate.fw_name = self.fw_name
+        # duplicate.pname = self.pname        # Forward-Parsers should not have a name!
+        # duplicate.disposable = self.disposable
+        # duplicate.node_name = self.node_name  # Forward-Parser should not have a tag name!
+        # duplicate.drop_content = parser.drop_content
         duplicate.sub_parsers = frozenset({parser})
         return duplicate
 
