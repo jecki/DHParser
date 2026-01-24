@@ -60,7 +60,8 @@ from DHParser.nodetree import Node, RootNode, WHITESPACE_PTYPE, \
     EMPTY_PTYPE, LEAF_NODE, ChildrenType, ResultType
 from DHParser.toolkit import sane_parser_name, escape_ctrl_chars, re, matching_brackets, \
     abbreviate_middle, RxPatternType, linebreaks, line_col, TypeAlias, List, Tuple, \
-    MutableSet, AbstractSet, FrozenSet, Dict, INFINITE, LazyRE, CancelQuery, deprecated
+    MutableSet, AbstractSet, FrozenSet, Dict, INFINITE, LazyRE, CancelQuery, deprecated , \
+    deprecation_warning
 
 try:
     import cython
@@ -545,10 +546,10 @@ class Parser:
                 than a property. This property should always be equal to
                 ``self.name[0] == ":"``.
 
-    :ivar drop_content: A property (for performance reasons implemented as
+    :ivar drop_content: A property (for performance reasons implemented as a
                 simple field) that, if set, induces the parser not to return
                 the parsed content or subtree if it has matched but the
-                dummy ``EMPTY_NODE``. In effect the parsed content will be
+                dummy ``EMPTY_NODE``. In effect, the parsed content will be
                 dropped from the concrete syntax tree already. Only
                 anonymous (or pseudo-anonymous) parsers are allowed to
                 drop content.
@@ -564,8 +565,8 @@ class Parser:
                 is used to implement memoizing.
 
     :ivar \_parse_proxy: Usually, just a reference to ``self._parse``, but can
-                be overwritten to run th call to the ``_parse``-method
-                through a proxy like, for example, a tracing debugger.
+                be overwritten to run the call to the ``_parse``-method
+                through a proxy, like, for example, a tracing debugger.
                 See :py:mod:`~DHParser.trace`
 
     :ivar \_sub_parsers: Set of parsers that are directly referred to by
@@ -1685,8 +1686,11 @@ class Grammar:
                     anonymous = ":" if is_disposable(entry, cls.disposable__) else ""
                     assert anonymous or not parser.drop_content, entry
                     if isinstance(parser, Forward):
-                        if not cast(Forward, parser).parser.pname:
-                            cast(Forward, parser).parser.name(anonymous + entry)
+                        fw = cast(Forward, parser)
+                        delegate = cdict[fw.parser_name] if fw.parser_name else fw.parser
+                        if not delegate.pname:
+                            fw.parser_name = anonymous + entry
+                            delegate.name(anonymous + entry)
                     else:
                         parser.name(anonymous + entry)
                     cls.parser_names__.append(entry)
@@ -1721,7 +1725,12 @@ class Grammar:
                 else:
                     setattr(self, parser.pname, parser)
             elif isinstance(parser, Forward):
-                setattr(self, cast(Forward, parser).parser.pname, parser)
+                fw = cast(Forward, parser)
+                if fw.parser_name:
+                    parser.set(getattr(self, fw.parser_name))
+                else:
+                    fw.parser_name = fw.parser.pname
+                setattr(self, fw.parser.pname, parser)
             self.all_parsers__.add(parser)
             # parser.grammar = self  # moved to parser.descendants
 
@@ -1730,8 +1739,8 @@ class Grammar:
         """Constructor of class Grammar.
 
         :param root: If not None, this is going to be the root parser of the grammar.
-            This allows to first construct an ensemble of parser objects and then
-            link those objects in a grammar-object, rather than adding the parsers
+            This allows constructing an ensemble of parser objects, first, and then
+            linking those objects in a grammar-object, rather than adding the parsers
             as fields to a derived class of class Grammar. (See the doc-tests in this
             module for examples.)
         :param static_analysis: If not None, this overrides the config value
@@ -3639,8 +3648,9 @@ class LateBindingUnary(UnaryParser):
 
     def  __deepcopy__(self, memo):
         duplicate = self.__class__(self.parser_name)
-        # duplicate.parser = copy.deepcopy(self.resolve(), memo)
-        # duplicate.sub_parsers = frozenset({duplicate.parser})
+        if not is_parser_placeholder(self.parser):
+            duplicate.parser = copy.deepcopy(self.parser, memo)
+            duplicate.sub_parsers = frozenset({duplicate.parser})
         copy_combined_parser_attrs(self, duplicate)
         return duplicate
 
@@ -5117,9 +5127,40 @@ class Synonym(UnaryParser):
         return self.pname or self.parser.repr
 
 
-class Forward(UnaryParser):
+forward_deprecation_message = r"""You are using a deprecated pattern for the 
+forward-declaration of parsers. Please use the new inline-syntax (e.g.
+`Forward("expression") ... expression = ...` for, formerly and now deprecated 
+`expression = Forward() ... expression.set(...)`) instead! 
+
+If your parser has been autogenerated from an EBFN-grammar, it suffices to 
+recreate the parser with `dhparser GRAMMAR.ebnf` to update the usage pattern
+of Forward-references.
+
+The reson for this change is that the old pattern does not work with 
+interwoven left-recursion, which requires that each Forward-object is
+referenced only once in the grammar.
+
+Full example for the correct usage pattern:
+
+    class Arithmetic(Grammar):
+        r'''
+        expression =  term  { ("+" | "-") term }
+        term       =  factor  { ("*" | "/") factor }
+        factor     =  INTEGER | "("  expression  ")"
+        INTEGER    =  /\d+/~
+        '''
+        INTEGER    = RE('\\d+')
+        factor     = INTEGER | TKN("(") + Forward("expression") + TKN(")")
+        term       = factor + ZeroOrMore((TKN("*") | TKN("/")) + factor)
+        expression = term + ZeroOrMore((TKN("+") | TKN("-")) + term)
+        root__     = expression
+        
+"""
+
+
+class Forward(LateBindingUnary):
     r"""
-    Forward allows to declare a parser before it is actually defined.
+    Forward allows declaring a parser before it is actually defined.
     Forward declarations are needed for parsers that are recursively
     nested, e.g.::
 
@@ -5130,11 +5171,10 @@ class Forward(UnaryParser):
         ...     factor     =  INTEGER | "("  expression  ")"
         ...     INTEGER    =  /\d+/~
         ...     '''
-        ...     expression = Forward()
         ...     INTEGER    = RE('\\d+')
-        ...     factor     = INTEGER | TKN("(") + expression + TKN(")")
+        ...     factor     = INTEGER | TKN("(") + Forward("expression") + TKN(")")
         ...     term       = factor + ZeroOrMore((TKN("*") | TKN("/")) + factor)
-        ...     expression.set(term + ZeroOrMore((TKN("+") | TKN("-")) + term))
+        ...     expression = term + ZeroOrMore((TKN("+") | TKN("-")) + term)
         ...     root__     = expression
 
     :ivar recursion_counter:  Mapping of places to how often the parser
@@ -5146,9 +5186,11 @@ class Forward(UnaryParser):
     grammars. See it's __call__()-method.
     """
 
-    def __init__(self):
-        super().__init__(get_parser_placeholder())
+    def __init__(self, parser_name: str = ''):
+        super().__init__(parser_name)
         # self.parser = get_parser_placeholder  # type: Parser
+        if not parser_name:
+            deprecation_warning(forward_deprecation_message)
         self.cycle_reached: bool = False
         self.sub_parsers = frozenset()
 
@@ -5158,12 +5200,13 @@ class Forward(UnaryParser):
         assert not self.pname, "Forward-Parsers mustn't have a name!"
 
     def __deepcopy__(self, memo):
-        duplicate = self.__class__()
+        duplicate = self.__class__(self.parser_name)
         memo[id(self)] = duplicate
         copy_parser_base_attrs(self, duplicate)
-        parser = copy.deepcopy(self.parser, memo)
-        duplicate.parser = parser
-        duplicate.sub_parsers = frozenset({parser})
+        if not is_parser_placeholder(self.parser):
+            parser = copy.deepcopy(self.parser, memo)
+            duplicate.parser = parser
+            duplicate._sub_parsers = frozenset({parser})
         return duplicate
 
     @cython.locals(ldepth=cython.int, rb_stack_size=cython.int)
@@ -5297,13 +5340,18 @@ class Forward(UnaryParser):
         """Returns the parser's name if it has a name or ``repr(self)`` if not."""
         return self.parser.pname if self.parser.pname else self.__repr__()
 
-    def set(self, parser: Parser):
-        """Sets the parser to which the calls to this Forward-object
-        shall be delegated.
+    def _set(self, parser: Parser):
+        """Sets the parser to which the calls to shall be delegated.
         """
+        assert not is_parser_placeholder(parser)
         self.parser = parser
+        self.parser_name = parser.pname
         self.sub_parsers = frozenset({parser})
         if self.pname and not parser.pname:  parser.name(self.pname, self.disposable)
         if not parser.drop_content:  parser.disposable = self.disposable
         self.drop_content = parser.drop_content
         self.pname = ""
+
+    @deprecated(forward_deprecation_message)
+    def set(self, parser: Parser):
+        self._set(parser)
