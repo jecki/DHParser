@@ -19,7 +19,8 @@ DHParser offers:
 * Macros to reduce code repetition within grammars and includes to
   avoid code repetition between grammars.
 * Parsing Expression Grammar (PEG) parser with memoization
-  and full left recursion support
+  and strong left recursion support (direct and indirect,
+  but not interwoven left recursion)
 * unit testing framework for grammars
 * post mortem debugger for generated parsers
 * support for fail tolerant parsing
