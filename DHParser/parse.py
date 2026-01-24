@@ -5202,9 +5202,10 @@ class Forward(LateBindingUnary):
         duplicate = self.__class__(self.parser_name)
         memo[id(self)] = duplicate
         copy_parser_base_attrs(self, duplicate)
-        parser = copy.deepcopy(self.parser, memo)
-        duplicate.parser = parser
-        duplicate._sub_parsers = frozenset({parser})
+        # parser = copy.deepcopy(self.parser, memo)
+        # duplicate.parser = parser
+        # if not is_parser_placeholder(parser):
+        #     duplicate._sub_parsers = frozenset({parser})
         return duplicate
 
     @cython.locals(ldepth=cython.int, rb_stack_size=cython.int)
@@ -5341,6 +5342,7 @@ class Forward(LateBindingUnary):
     def _set(self, parser: Parser):
         """Sets the parser to which the calls to shall be delegated.
         """
+        assert not is_parser_placeholder(parser)
         self.parser = parser
         self.parser_name = parser.pname
         self.sub_parsers = frozenset({parser})
