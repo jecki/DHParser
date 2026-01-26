@@ -2221,7 +2221,6 @@ class EBNFCompiler(Compiler):
         # TODO: Use "Ref" instead of the dprecated "Forward"-parser
 
         definitions.reverse()
-
         declarations += [symbol + ' = Forward()'
                          for symbol in sorted(list(self.forward))]
         for symbol, statement in definitions:
@@ -3462,8 +3461,8 @@ class EBNFCompiler(Compiler):
                 return keyword
             elif symbol.endswith('__'):
                 self.tree.new_error(node, 'Illegal use of reserved symbol name "%s"!' % symbol)
-            return f"Ref({symbol})"  # Delete non-recursive Refs later
-            # return symbol  # return f"Ref(symbol)" and delete als non-recursive Refs later?
+            # return f"Ref({symbol})"
+            return symbol  # return f"Ref(symbol)" and delete als non-recursive Refs later?
 
 
     def drop_on(self, category):
