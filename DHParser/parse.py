@@ -154,7 +154,8 @@ __all__ = ('parser_names',
            'last_value',
            'optional_last_value',
            'matching_bracket',
-           'Forward')
+           'Forward',
+           'Ref')
 
 
 # Names of all parser classes and functions that can directly be used
@@ -195,7 +196,8 @@ parser_names = ('Always',
                 'Capture',
                 'Retrieve',
                 'Pop',
-                'Forward')
+                'Forward',
+                'Ref')
 
 
 ########################################################################
