@@ -127,8 +127,8 @@ class InterwovenLRGrammar(Grammar):
     I = Series(Text("("), OneOrMore(AA), Text(")"))
     H = Series(Ref("G"), Text("l"))
     F = Alternative(Series(Ref("E"), Text("+"), ZeroOrMore(I)), Series(Ref("G"), Text("-")))
-    G = Alternative(Series(H, Text("m")), Ref("E"))
-    E = Alternative(Series(F, Text("n")), Text("n"))
+    G = Alternative(Series(Ref("H"), Text("m")), Ref("E"))
+    E = Alternative(Series(Ref("F"), Text("n")), Text("n"))
     S = Synonym(E)
     root__ = S
     
