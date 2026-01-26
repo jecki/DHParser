@@ -3642,8 +3642,9 @@ class LateBindingUnary(UnaryParser):
 
     def  __deepcopy__(self, memo):
         duplicate = self.__class__(self.parser_name)
-        # duplicate.parser = copy.deepcopy(self.resolve(), memo)
-        # duplicate.sub_parsers = frozenset({duplicate.parser})
+        if not is_parser_placeholder(self.parser):
+            duplicate.parser = copy.deepcopy(self.parser, memo)
+            duplicate.sub_parsers = frozenset({duplicate.parser})
         copy_combined_parser_attrs(self, duplicate)
         return duplicate
 
