@@ -905,13 +905,14 @@ class Parser:
         return self._sub_parsers
 
     @sub_parsers.setter
-    def sub_parsers(self, f: FrozenSet):
+    def sub_parsers(self, f: FrozenSet[Parser]):
         self._sub_parsers = f
 
     def descendants(self, grammar = _GRAMMAR_PLACEHOLDER) -> AbstractSet[Parser]:
         """Returns a set of self and all descendant parsers,
         avoiding circles."""
         if self._descendants_cache is None:
+            # Caches descendants, avoiding cycles; updates grammar if needed
             if self._desc_trails_cache:
                 self._descendants_cache = tuple(pt[-1] for pt in self._desc_trails_cache)
             else:
@@ -1327,6 +1328,7 @@ def _propagate_drop(p: Parser):
             _propagate_drop(c)
 
 def ensure_drop_propagation(p: Parser):
+    """propagates the drop_content flag to all unnamed children."""
     if p.drop_content:
         _propagate_drop(p)
     else:
@@ -3636,6 +3638,7 @@ class LateBindingUnary(UnaryParser):
     def __init__(self, parser_name: str) -> None:
         super().__init__(get_parser_placeholder())
         self.parser_name: str = parser_name
+        self._sub_parsers = frozenset()
 
     def  __deepcopy__(self, memo):
         duplicate = self.__class__(self.parser_name)
@@ -3644,24 +3647,28 @@ class LateBindingUnary(UnaryParser):
         copy_combined_parser_attrs(self, duplicate)
         return duplicate
 
-    def resolve_parser_name(self) -> Parser:
-        if self.parser is PARSER_PLACEHOLDER:
+    def _resolve_parser_name(self) -> Parser:
+        assert self.parser
+        if is_parser_placeholder(self.parser):
             if is_grammar_placeholder(self._grammar):
                 raise UninitializedError(
                     f'Grammar hast not yet been set in LateBindingUnary "{self}"')
             self.parser = getattr(self.grammar, self.parser_name)
-            self.sub_parsers = frozenset({self.parser})
         return self.parser
 
     @property
     def sub_parsers(self) -> FrozenSet[Parser]:
         if not self._sub_parsers:
-            self._sub_parsers = frozenset({self.resolve_parser_name()})
+            self._sub_parsers = frozenset({self._resolve_parser_name()})
         return self._sub_parsers
 
     @sub_parsers.setter
-    def sub_parsers(self, f: FrozenSet):
-        pass
+    def sub_parsers(self, f: FrozenSet[Parser]):
+        """Sets sub‑parsers unless placeholder is present"""
+        if len(f) == 1 and is_parser_placeholder(list(f)[0]):
+            self._sub_parsers = frozenset()
+        else:
+            self._sub_parsers = f
 
 
 class Option(UnaryParser):
