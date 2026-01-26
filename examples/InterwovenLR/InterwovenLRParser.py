@@ -43,7 +43,7 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, DropFro
     Option, NegativeLookbehind, OneOrMore, RegExp, SmartRE, Retrieve, Series, Capture, TreeReduction, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, \
     LateBindingUnary, mixin_comment, last_value, matching_bracket, optional_last_value, \
-    PARSER_PLACEHOLDER, RX_NEVER_MATCH, UninitializedError
+    PARSER_PLACEHOLDER, RX_NEVER_MATCH, UninitializedError, Ref
 from DHParser.pipeline import end_points, full_pipeline, create_parser_junction, \
     create_preprocess_junction, create_junction, PseudoJunction, PipelineResult
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
@@ -114,8 +114,6 @@ class InterwovenLRGrammar(Grammar):
         parser = InterwovenLR()
         syntax_tree = parser(source_code)
     """
-    E = Forward()
-    G = Forward()
     source_hash__ = "0dfb47c4826f11463ad0b2e32771d08a"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
@@ -127,10 +125,10 @@ class InterwovenLRGrammar(Grammar):
     wsp__ = Whitespace(WSP_RE__)
     AA = Text("a")
     I = Series(Text("("), OneOrMore(AA), Text(")"))
-    H = Series(G, Text("l"))
-    F = Alternative(Series(E, Text("+"), ZeroOrMore(I)), Series(G, Text("-")))
-    G.set(Alternative(Series(H, Text("m")), E))
-    E.set(Alternative(Series(F, Text("n")), Text("n")))
+    H = Series(Ref("G"), Text("l"))
+    F = Alternative(Series(Ref("E"), Text("+"), ZeroOrMore(I)), Series(Ref("G"), Text("-")))
+    G = Alternative(Series(Ref("H"), Text("m")), Ref("E"))
+    E = Alternative(Series(Ref("F"), Text("n")), Text("n"))
     S = Synonym(E)
     root__ = S
     

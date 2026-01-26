@@ -321,7 +321,10 @@ def deprecation_warning(message: str):
             if deprecation_policy == 'warn':
                 import traceback
                 stack = traceback.extract_stack()
-                traceback.print_list(stack[:-1])
+                for i in range(len(stack) - 1, -1, -1):
+                    if stack[i].filename.startswith('<frozen importlib._bootstrap'):
+                        del stack[i]
+                traceback.print_list(stack[:-1])  # '\n'.join(traceback_format_list(stack[:-1]
                 print(e)
             else:
                 raise e

@@ -108,6 +108,7 @@ class TestParserClass:
         assert s1 == s2 == s3
 
     def test_symbol(self):
+        g = Grammar
         class MyGrammar(Grammar):
             wrong = Text('wrong')
             word = OneOrMore(wrong) + Whitespace(r'\s*') + OneOrMore(RegExp(r'\w+'))
