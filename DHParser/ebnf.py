@@ -1499,6 +1499,9 @@ def neutralize_unnamed_groups(rxp: str) -> str:
     return '?:'.join(al)
 
 
+RX_REF = LazyRE(r'Ref\(\w+\)')
+
+
 class EBNFCompilerError(CompilerError):
     r"""the Error that is raised by :py:class:`EBNFCompiler` class.
     (Not compilation errors in the strict sense,
@@ -2213,7 +2216,9 @@ class EBNFCompiler(Compiler):
                 declarations = declarations[:-1]
         declarations.append('"""')
 
-        # turn definitions into declarations in reverse order
+        # turn definitions into declarations in reverse order and
+        # add forward declarations/definitions
+        # TODO: Use "Ref" instead of the dprecated "Forward"-parser
 
         definitions.reverse()
         declarations += [symbol + ' = Forward()'
@@ -3456,7 +3461,8 @@ class EBNFCompiler(Compiler):
                 return keyword
             elif symbol.endswith('__'):
                 self.tree.new_error(node, 'Illegal use of reserved symbol name "%s"!' % symbol)
-            return symbol
+            # return f"Ref({symbol})"
+            return symbol  # return f"Ref(symbol)" and delete als non-recursive Refs later?
 
 
     def drop_on(self, category):

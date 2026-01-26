@@ -1870,6 +1870,7 @@ class TestAlternativeReordering:
         src, errors, ast = compile_ebnf(lang, preserve_AST=True)
         i = src.find('TokenizedType')
         k = src.find('\n', i)
+        print(src)
         assert src[i:k].find("IDREFS,") < src[i:k].find("IDREF,") < src[i:k].find("'ID'")
         assert src[i:k].find("'NMTOKENS'") < src[i:k].find("NMTOKEN")
         assert errors and all(e.code == REORDERING_OF_ALTERNATIVES_REQUIRED for e in errors)
