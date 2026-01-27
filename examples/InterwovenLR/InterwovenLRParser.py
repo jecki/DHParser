@@ -125,10 +125,10 @@ class InterwovenLRGrammar(Grammar):
     wsp__ = Whitespace(WSP_RE__)
     AA = Text("a")
     I = Series(Text("("), OneOrMore(AA), Text(")"))
-    H = Series(Ref("G"), Text("l"))
-    F = Alternative(Series(Ref("E"), Text("+"), ZeroOrMore(I)), Series(Ref("G"), Text("-")))
-    G = Alternative(Series(Ref("H"), Text("m")), Ref("E"))
     E = Alternative(Series(Ref("F"), Text("n")), Text("n"))
+    G = Alternative(Series(Ref("H"), Text("m")), E)
+    F = Alternative(Series(Ref("E"), Text("+"), ZeroOrMore(I)), Series(G, Text("-")))
+    H = Series(G, Text("l"))
     S = Synonym(E)
     root__ = S
     
