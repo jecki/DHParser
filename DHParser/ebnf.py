@@ -1499,7 +1499,7 @@ def neutralize_unnamed_groups(rxp: str) -> str:
     return '?:'.join(al)
 
 
-RX_REF = LazyRE(r'Ref\(\w+\)')
+RX_REF = LazyRE(r'Ref__\((\w+)\)')
 
 
 class EBNFCompilerError(CompilerError):
@@ -3462,7 +3462,7 @@ class EBNFCompiler(Compiler):
                 return keyword
             elif symbol.endswith('__'):
                 self.tree.new_error(node, 'Illegal use of reserved symbol name "%s"!' % symbol)
-            return f"Ref({symbol})"  # Delete non-recursive Refs later
+            return f"Ref__({symbol})"  # Delete non-recursive Refs later
             # return symbol  # return f"Ref(symbol)" and delete als non-recursive Refs later?
 
 

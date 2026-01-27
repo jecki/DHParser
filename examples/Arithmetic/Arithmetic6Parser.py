@@ -43,7 +43,7 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, DropFro
     Option, NegativeLookbehind, OneOrMore, RegExp, SmartRE, Retrieve, Series, Capture, TreeReduction, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, \
     LateBindingUnary, mixin_comment, last_value, matching_bracket, optional_last_value, \
-    PARSER_PLACEHOLDER, RX_NEVER_MATCH, UninitializedError
+    PARSER_PLACEHOLDER, RX_NEVER_MATCH, UninitializedError, Ref
 from DHParser.pipeline import end_points, full_pipeline, create_parser_junction, \
     create_preprocess_junction, create_junction, PseudoJunction, PipelineResult
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
@@ -114,8 +114,6 @@ class Arithmetic6Grammar(Grammar):
         parser = Arithmetic6()
         syntax_tree = parser(source_code)
     """
-    expression = Forward()
-    term = Forward()
     source_hash__ = "76cfe945a95fa86cd9febca5f1d8ff54"
     disposable__ = re.compile('(?:(?:(?:expression$))|(?:term$))|(?:factor$)')
     static_analysis_pending__ = []  # type: List[bool]
@@ -127,14 +125,14 @@ class Arithmetic6Grammar(Grammar):
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
     number = Alternative(Series(RegExp('0'), dwsp__), Series(RegExp('[1-9]'), ZeroOrMore(RegExp('[0-9]')), dwsp__))
-    group = Series(Drop(Text("(")), dwsp__, expression, Drop(Text(")")), dwsp__)
+    group = Series(Drop(Text("(")), dwsp__, Ref("expression"), Drop(Text(")")), dwsp__)
     factor = Alternative(group, number)
-    division = Series(factor, Drop(Text(":")), dwsp__, term)
-    multiplication = Series(factor, Drop(Text("*")), dwsp__, term)
-    addition = Series(term, Drop(Text("+")), dwsp__, expression)
-    subtraction = Series(term, Drop(Text("-")), dwsp__, expression)
-    term.set(Alternative(multiplication, division, factor))
-    expression.set(Alternative(addition, subtraction, term))
+    division = Series(factor, Drop(Text(":")), dwsp__, Ref("term"))
+    multiplication = Series(factor, Drop(Text("*")), dwsp__, Ref("term"))
+    addition = Series(Ref("term"), Drop(Text("+")), dwsp__, Ref("expression"))
+    subtraction = Series(Ref("term"), Drop(Text("-")), dwsp__, Ref("expression"))
+    term = Alternative(multiplication, division, factor)
+    expression = Alternative(addition, subtraction, term)
     formulae = Series(dwsp__, expression, ZeroOrMore(expression))
     root__ = formulae
     
