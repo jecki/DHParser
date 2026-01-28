@@ -2225,7 +2225,7 @@ class EBNFCompiler(Compiler):
         declarations += [symbol + ' = Forward()'
                          for symbol in sorted(list(self.forward))]
         for symbol, statement in definitions:
-            statement = statement.replace('Ref__(', 'Ref(')
+            statement = RX_REF.sub(r'Ref("\1")', statement)
             if symbol in self.forward:
                 declarations += [symbol + '.set(' + statement + ')']
             else:
@@ -2396,6 +2396,7 @@ class EBNFCompiler(Compiler):
 
         # derive Python-parser and run static analysis of the Python-parser
         python_src = self.assemble_parser(list(self.definitions.items()), root_symbol)
+        print(python_src)
         if get_config_value('static_analysis') == 'early' and not \
                 any((e.code >= FATAL or e.code in
                      (MALFORMED_REGULAR_EXPRESSION, SYMBOL_NAME_IS_PYTHON_KEYWORD,
