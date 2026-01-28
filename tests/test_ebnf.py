@@ -1963,7 +1963,7 @@ class TestRuleOrder:
         parser = create_parser(normal_order)
         assert parser.B.__class__.__name__ != "Forward"
 
-        # Now B, should not be a Forward-Parser
+        # Now, B should not be a Forward-Parser
         reverse_order = """
             document = A
             C = "Hallo Welt"
@@ -1971,7 +1971,7 @@ class TestRuleOrder:
             A = B
             """
         parser = create_parser(reverse_order)
-        # If order of rule specification did not matter,
+        # If the order of rule specification did not matter,
         # B should not be a Forward-parser:
         assert parser.B.__class__.__name__ != "Forward"
 

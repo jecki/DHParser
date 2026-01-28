@@ -1190,7 +1190,7 @@ from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode, Pat
 from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, DropFrom, AnyChar, Parser, \\
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, ERR, \\
     Option, NegativeLookbehind, OneOrMore, RegExp, SmartRE, Retrieve, Series, Capture, TreeReduction, \\
-    ZeroOrMore, Ref, NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, \\
+    ZeroOrMore, Ref, Forward, NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, \\
     LateBindingUnary, mixin_comment, last_value, matching_bracket, optional_last_value, \\
     PARSER_PLACEHOLDER, RX_NEVER_MATCH, UninitializedError
 from DHParser.pipeline import end_points, full_pipeline, create_parser_junction, \\
@@ -1966,7 +1966,7 @@ class EBNFCompiler(Compiler):
 
 
     def recursive_paths(self, symbol: str) -> FrozenSet[Tuple[str, ...]]:
-        """Returns the recursive paths from symbol to itself. If
+        """Returns the recursive paths from the symbol to itself. If
         sym is not recursive, the returned tuple (of paths) will be empty.
         This method exists only for debugging (so far...)."""
         path = []  # type: List[str]
@@ -2225,6 +2225,7 @@ class EBNFCompiler(Compiler):
         declarations += [symbol + ' = Forward()'
                          for symbol in sorted(list(self.forward))]
         for symbol, statement in definitions:
+            statement = statement.replace('Ref__(', 'Ref(')
             if symbol in self.forward:
                 declarations += [symbol + '.set(' + statement + ')']
             else:

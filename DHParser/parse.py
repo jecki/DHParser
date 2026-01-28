@@ -3638,7 +3638,8 @@ class LateBindingUnary(UnaryParser):
     not be abused for recursive parser calls either!"""
 
     def __init__(self, parser_name: str) -> None:
-        assert parser_name
+        assert isinstance(parser_name, str), f"Not a string: {parser_name} but {type(parser_name)}"
+        assert parser_name, "parser_name must not be empty"
         super().__init__(get_parser_placeholder())
         self.parser_name: str = parser_name
         self._sub_parsers = frozenset()
