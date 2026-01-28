@@ -2084,8 +2084,12 @@ class EBNFCompiler(Compiler):
         for task in self.deferred_tasks:
             task()
 
-        # minimize the necessary number of forward declarations
-        self.optimize_definitions_order(definitions)
+        left_recursion = get_config_value('left_recursion')
+        if left_recursion == 'Full':
+            pass  # TODO: optiized order definition for Left recursion
+        else:
+            # minimize the necessary number of forward declarations
+            self.optimize_definitions_order(definitions)
         self.root_symbol = root_symbol
 
         # provide for capturing of symbols that are variables, i.e. the
@@ -2222,10 +2226,11 @@ class EBNFCompiler(Compiler):
 
         definitions.reverse()
 
+        # statement = RX_REF.sub(r'Ref("\1")', statement)
+
         declarations += [symbol + ' = Forward()'
                          for symbol in sorted(list(self.forward))]
         for symbol, statement in definitions:
-            statement = RX_REF.sub(r'Ref("\1")', statement)
             if symbol in self.forward:
                 declarations += [symbol + '.set(' + statement + ')']
             else:

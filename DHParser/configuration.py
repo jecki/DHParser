@@ -589,12 +589,6 @@ CONFIG_PRESET['history_tracking'] = False
 # Default value: False
 CONFIG_PRESET['resume_notices'] = False
 
-# Turns on the left-recursion-handling algorithm. This allows the use
-# of left-recursion in grammars, which otherwise would run a recursive
-# descent parser into an infinite-loop.
-# Default value: True
-CONFIG_PRESET['left_recursion'] = True
-
 # Warn about pending infinite loops which would occur if a repeating
 # parser like "zero or more" calls another parser that matches but
 # does not move the location pointer forward, i.e. { /(?=.)|$/ }.
@@ -819,6 +813,17 @@ ALLOWED_PRESET_VALUES['optimizations'] = frozenset({
     'sequence'})
 CONFIG_PRESET['optimizations'] = frozenset()
     # {'literal', 'lookahead', 'alternative', 'sequence'})
+
+
+# Chooses the left-recursion-handling. Possible Values are:
+# "None" - No left-recursion-handling. May lead to infinite loops while parsing!
+# "Forward" - Left-recursion check on Forward references. Covers direct and
+#     indirect left recursion but yields wrong parsing results with intervowen
+#     left recursion!
+# "Full" - Full left-recursion-handling.
+# Default value: "Full"
+ALLOWED_PRESET_VALUES['left_recursion'] = frozenset({'None', 'Forward', 'Full'})
+CONFIG_PRESET['left_recursion'] = 'Full'
 
 
 ########################################################################

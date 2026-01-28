@@ -1565,11 +1565,6 @@ class Grammar:
                 and :py:meth:`Forward.__call__`) as well as the context-sensitive
                 parsers (see function :py:meth:`Grammar.push_rollback__`).
 
-    :ivar left_recursion\__: Turns on left-recursion handling. This prevents the
-                recursive descent parser to get caught in an infinite loop
-                (resulting in a maximum recursion depth reached error) when
-                the grammar definition contains left recursions.
-
     :ivar associated_symbol_cache\__: A cache for the :py:meth:`associated_symbol__` -method.
 
         # mirrored class attributes:
@@ -1755,7 +1750,6 @@ class Grammar:
                         self.comment_rx__.pattern == RX_NEVER_MATCH.pattern))
         self.start_parser__: Optional[Parser] = None
         self._dirty_flag__: bool = False
-        self.left_recursion__: bool = get_config_value('left_recursion')
         self.history_tracking__: bool = get_config_value('history_tracking')
         self.resume_notices__: bool = get_config_value('resume_notices')
         self.max_parser_dropouts__: int = get_config_value('max_parser_dropouts')
@@ -5197,8 +5191,6 @@ class Forward(UnaryParser):
         https://tinlizzie.org/VPRIPapers/tr2007002_packrat.pdf
         """
         grammar = self._grammar
-        if not grammar.left_recursion__:
-            return self.parser(location)
 
         # rollback variable changing operation if the parser backtracks
         # to a position before the variable-changing operation occurred
@@ -5322,6 +5314,7 @@ class Forward(UnaryParser):
         self.pname = ""
 
 
+# Distinguish between plain (forward) Ref and LRRef that handles left recursion
 
 class Ref(LateBindingUnary):
     r"""
@@ -5372,8 +5365,6 @@ class Ref(LateBindingUnary):
         https://tinlizzie.org/VPRIPapers/tr2007002_packrat.pdf
         """
         grammar = self._grammar
-        if not grammar.left_recursion__:
-            return self.parser(location)
 
         # rollback variable changing operation if the parser backtracks
         # to a position before the variable-changing operation occurred
