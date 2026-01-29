@@ -541,7 +541,7 @@ def dump_config_data(*key_patterns, use_headings: bool = True) -> str:
 # Default value: "InterpreterPool"
 ALLOWED_PRESET_VALUES['multicore_pool'] = frozenset({'ProcessPool',
                                                      'InterpreterPool'})
-CONFIG_PRESET['multicore_pool'] = "InterpreterPool"
+CONFIG_PRESET['multicore_pool'] = "ProcessPool"
 
 # PID of the main programm that is passed on to all spawned tasks, i.e.
 # threads, processes, interpreters (only Python 3.14 and above)

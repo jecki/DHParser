@@ -114,6 +114,8 @@ class InterwovenLRGrammar(Grammar):
         parser = InterwovenLR()
         syntax_tree = parser(source_code)
     """
+    E = Forward()
+    G = Forward()
     source_hash__ = "0dfb47c4826f11463ad0b2e32771d08a"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
@@ -125,10 +127,10 @@ class InterwovenLRGrammar(Grammar):
     wsp__ = Whitespace(WSP_RE__)
     AA = Text("a")
     I = Series(Text("("), OneOrMore(AA), Text(")"))
-    H = Series(Ref("G"), Text("l"))
-    F = Alternative(Series(Ref("E"), Text("+"), ZeroOrMore(I)), Series(Ref("G"), Text("-")))
-    G = Alternative(Series(Ref("H"), Text("m")), Ref("E"))
-    E = Alternative(Series(Ref("F"), Text("n")), Text("n"))
+    H = Series(G, Text("l"))
+    F = Alternative(Series(E, Text("+"), ZeroOrMore(I)), Series(G, Text("-")))
+    G.set(Alternative(Series(H, Text("m")), E))
+    E.set(Alternative(Series(F, Text("n")), Text("n")))
     S = Synonym(E)
     root__ = S
     

@@ -111,7 +111,7 @@ class LyrikGrammar(Grammar):
         syntax_tree = parser(source_code)
     """
     source_hash__ = "d081534dd330fa9c7310ea2bda1831fa"
-    disposable__ = re.compile('(?:ZEICHENFOLGE$|LEERRAUM$|wortfolge$|ENDE$|ziel$|JAHRESZAHL$)')
+    disposable__ = re.compile('(?:ENDE$|ziel$|ZEICHENFOLGE$|wortfolge$|LEERRAUM$|JAHRESZAHL$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''

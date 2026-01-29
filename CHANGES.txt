@@ -1,3 +1,27 @@
+DHParser Version 1.9.4 (29.1.2026)
+..................................
+
+- ebnf.py: new function EBNF_from_AST(). (Re-)serializes the abstract syntax
+  tree of an EBNF grammar to EBNF code.
+- ebnf.py: default for impolicit whitespace is now vertical whitespace as this
+  is the most salient case.
+- ebnf.py: parse_ebnf now takes a syntax-variant-parameter
+- dhparser-script can now create new projects in current directory
+- nodetree.py: Node.evaluate now split into two methods: evaluate() and
+  evaluate_path()
+- better App-template
+- Documentation does not claim full left-recursion support, any more, as
+  DHParser's algorithm fails on certain interwoven left-recursion scenarios.
+  (Thanks to Luke Hutchinson's squirrel-parser test-suite!)
+- Regular expression engine is now always the STL-re-module, not regex, anymore
+  (Only re is compatible with Pyhton 3.14's interpreter pool parallelization.)
+- configuration.py: Finally, a reliable method to determine main pid. This
+  cures a few obscure multiprocessing related errors
+- default multicore mode is ProcessPool, not InterpreterPool (in order to
+  keep Cython-compilates working etc.) Can be changed in configuration
+
+
+
 DHParser Verions 1.9.3 (30.10.2025)
 ...................................
 
