@@ -1259,20 +1259,6 @@ def parse_word(s: StringView) -> Optional[Node]:
 GRAMMAR_FACTORY = r'''
 parsing: PseudoJunction = create_parser_junction({NAME}Grammar)
 get_grammar = parsing.factory  # for backwards compatibility, only
-
-try:
-    assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
-        RE_COMMENT in ({NAME}Grammar.COMMENT__, NEVER_MATCH_PATTERN), \
-        "Please adjust the pre-processor-variable RE_COMMENT in file {NAME}Parser.py so that " \
-        "it either is the NEVER_MATCH_PATTERN or has the same value as the COMMENT__-attribute " \
-        "of the grammar class {NAME}Grammar! " \
-        'Currently, RE_COMMENT reads "%s" while COMMENT__ is "%s". ' \
-        % (RE_COMMENT, {NAME}Grammar.COMMENT__) + \
-        "\n\nIf RE_COMMENT == NEVER_MATCH_PATTERN then includes will deliberately be " \
-        "processed, otherwise RE_COMMENT=={NAME}Grammar.COMMENT__ allows the " \
-        "preprocessor to ignore comments."
-except (AttributeError, NameError):
-    pass
 '''
 
 
@@ -1637,6 +1623,9 @@ class EBNFCompiler(Compiler):
     :ivar grammar_name:  The name of the grammar to be compiled
 
     :ivar grammar_source:  The source code of the grammar to be compiled.
+
+    :ivar left_recursion: Determine the kind of left-recursion-handling. Value
+            is read from congiuration and is eithet "None", "Forward", "Full"
     """
     COMMENT_KEYWORD = "COMMENT__"
     COMMENT_PARSER_KEYWORD = "comment__"
@@ -1702,6 +1691,7 @@ class EBNFCompiler(Compiler):
         self.consumed_custom_errors = set()    # type: MutableSet[str]
         self.consumed_skip_rules = set()       # type: MutableSet[str]
         self.P = {p: p for p in parser_names}  # type: Dict[str, str]
+        self.left_recursion = get_config_value('left_recursion')
 
 
     @property
@@ -2084,7 +2074,6 @@ class EBNFCompiler(Compiler):
         for task in self.deferred_tasks:
             task()
 
-        left_recursion = get_config_value('left_recursion')
         self.optimize_definitions_order(definitions)
         self.root_symbol = root_symbol
 
@@ -2222,7 +2211,7 @@ class EBNFCompiler(Compiler):
 
         definitions.reverse()
 
-        if left_recursion == 'Full':
+        if self.left_recursion == 'Full':
             for symbol, statement in definitions:
                 statement = RX_REF.sub(r'Ref("\1")', statement)
                 declarations += [symbol + ' = ' + statement]
@@ -2400,7 +2389,6 @@ class EBNFCompiler(Compiler):
 
         # derive Python-parser and run static analysis of the Python-parser
         python_src = self.assemble_parser(list(self.definitions.items()), root_symbol)
-        print(python_src)
         if get_config_value('static_analysis') == 'early' and not \
                 any((e.code >= FATAL or e.code in
                      (MALFORMED_REGULAR_EXPRESSION, SYMBOL_NAME_IS_PYTHON_KEYWORD,
@@ -2511,7 +2499,8 @@ class EBNFCompiler(Compiler):
             self.rules[rule] = self.current_symbols
             defn = self.compile(body)
             if isinstance(defn, str):
-                if defn.find("(") < 0 or RX_REF.fullmatch(defn):
+                m = None
+                if defn.find("(") < 0 or (m := RX_REF.fullmatch(defn)):
                     # assume it's a synonym, like 'page = REGEX_PAGE_NR'
                     if not drop_flag and defn in self.directives['drop'] \
                             and re.match(self.directives['disposable'], rule):
@@ -2519,7 +2508,7 @@ class EBNFCompiler(Compiler):
                             f'it is a Synonym for the dropped symbol "{defn}". If this behaviour '
                             f'is undesired, swap the definitions of both symbols. Otherwise, add '
                             f'"{rule}" to the @drop-directive to avoid this warning.', ERROR)
-                    defn = f'{self.P["Synonym"]}({defn})'
+                    defn = f'{self.P["Synonym"]}({defn if m is None else m.group(1)})'
                 if drop_flag and not defn.startswith(self.P["Drop"] + "("):
                     defn = f'{self.P["Drop"]}({defn})'
             else:
@@ -3468,7 +3457,7 @@ class EBNFCompiler(Compiler):
                 return keyword
             elif symbol.endswith('__'):
                 self.tree.new_error(node, 'Illegal use of reserved symbol name "%s"!' % symbol)
-            return f"Ref__({symbol})"  # Delete non-recursive Refs later
+            return f"Ref__({symbol})" if self.left_recursion == "Full" else symbol
             # return symbol  # return f"Ref(symbol)" and delete als non-recursive Refs later?
 
 

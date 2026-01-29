@@ -85,6 +85,22 @@ SECTION_MARKER = """\n
 #######################################################################
 \n"""
 
+CONSISTENCY_CHECK = """\n
+try:
+    assert RE_INCLUDE == NEVER_MATCH_PATTERN or \\
+        RE_COMMENT in ({NAME}Grammar.COMMENT__, NEVER_MATCH_PATTERN), \\
+        "Please adjust the pre-processor-variable RE_COMMENT in file {NAME}Parser.py so that " \\
+        "it either is the NEVER_MATCH_PATTERN or has the same value as the COMMENT__-attribute " \\
+        "of the grammar class {NAME}Grammar! " \\
+        'Currently, RE_COMMENT reads "%s" while COMMENT__ is "%s". ' \\
+        % (RE_COMMENT, {NAME}Grammar.COMMENT__) + \\
+        "\\n\\nIf RE_COMMENT == NEVER_MATCH_PATTERN then includes will deliberately be " \\
+        "processed, otherwise RE_COMMENT=={NAME}Grammar.COMMENT__ allows the " \\
+        "preprocessor to ignore comments."
+except (AttributeError, NameError):
+    pass
+\n"""
+
 RX_SECTION_MARKER = LazyRE(SECTION_MARKER.format(marker=r'.*?SECTION.*?'))
 RX_WHITESPACE = re.compile(r'\s*')
 
@@ -311,6 +327,7 @@ def compileEBNF(ebnf_src: str, branding="DSL") -> str:
            SECTION_MARKER.format(marker=PREPROCESSOR_SECTION), compiler.gen_preprocessor_skeleton(),
            SECTION_MARKER.format(marker=CUSTOM_PARSER_SECTION), compiler.gen_custom_parser_example(),
            SECTION_MARKER.format(marker=PARSER_SECTION), compiler.result,
+           CONSISTENCY_CHECK.format(NAME=branding),
            SECTION_MARKER.format(marker=AST_SECTION), compiler.gen_transformer_skeleton(),
            SECTION_MARKER.format(marker=COMPILER_SECTION), compiler.gen_compiler_skeleton(),
            SECTION_MARKER.format(marker=END_SECTIONS_MARKER),
@@ -585,6 +602,7 @@ def compile_on_disk(source_file: str,
             f.write(preprocessor)
             f.write(SECTION_MARKER.format(marker=PARSER_SECTION))
             f.write(cast(str, result))
+            f.write(CONSISTENCY_CHECK.format(NAME=compiler_name),)
             f.write(SECTION_MARKER.format(marker=AST_SECTION))
             f.write(ast)
             f.write(SECTION_MARKER.format(marker=COMPILER_SECTION))

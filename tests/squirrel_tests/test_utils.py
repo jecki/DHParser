@@ -39,6 +39,7 @@ def run_test_parse(grammar_spec: str, input_str: str) -> ParseTestResult:
     root_node = grammar(input_str)
     ok = not any(e.code >= FATAL for e in root_node.errors)
     error_count = len(root_node.errors)
+    for e in root_node.errors_sorted:  print(e)
     skipped_strings = [nd.content for nd in root_node.walk_tree(include_root=True)
                        if nd.name == WHITESPACE_PTYPE]
     return ParseTestResult(ok, error_count, skipped_strings, root_node)
