@@ -2511,7 +2511,7 @@ class EBNFCompiler(Compiler):
             self.rules[rule] = self.current_symbols
             defn = self.compile(body)
             if isinstance(defn, str):
-                if defn.find("(") < 0:
+                if defn.find("(") < 0 or RX_REF.fullmatch(defn):
                     # assume it's a synonym, like 'page = REGEX_PAGE_NR'
                     if not drop_flag and defn in self.directives['drop'] \
                             and re.match(self.directives['disposable'], rule):
