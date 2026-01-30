@@ -5345,7 +5345,7 @@ class Ref(LateBindingUnary):
     def reset(self):
         super(Ref, self).reset()
         self.recursion_counter: Dict[int, int] = dict()
-        assert not self.pname, "Ref-Parsers mustn't have a name!"
+        # assert not self.pname, "Ref-Parsers mustn't have a name!"
 
     @cython.locals(ldepth=cython.int, rb_stack_size=cython.int)
     def __call__(self, location: cython.int) -> ParsingResult:

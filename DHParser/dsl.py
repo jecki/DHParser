@@ -32,8 +32,8 @@ from typing import Any, cast, List, Tuple, Union, Iterator, Iterable, Optional, 
 import DHParser.ebnf
 from DHParser.compile import Compiler, compile_source, CompilerFactory
 from DHParser.pipeline import full_pipeline, Junction
-from DHParser.configuration import get_config_value, set_config_value
-from DHParser.ebnf import EBNFCompiler, DHPARSER_IMPORTS, \
+from DHParser.configuration import get_config_value, set_config_value, get_config_values
+from DHParser.ebnf import EBNFCompiler, DHPARSER_IMPORTS, grammar_chksum, \
     get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.error import Error, is_error, has_errors, only_errors, canonical_error_strings, \
     ErrorCode, ERROR
@@ -44,7 +44,7 @@ from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, \
     PreprocessorFactory
 from DHParser.transform import TransformerFunc, TransformerFactory
 from DHParser.toolkit import DHPARSER_DIR, load_if_file, is_python_code, is_filename, \
-    compile_python_object, re, as_identifier, cpu_count, LazyRE, CancelQuery, md5, \
+    compile_python_object, re, as_identifier, cpu_count, LazyRE, CancelQuery, \
     deprecated, deprecation_warning, instantiate_executor, PickMultiCoreExecutor
 from DHParser.versionnumber import __version__, __version_info__
 
@@ -222,7 +222,7 @@ def grammar_changed(grammar_class, grammar_source: str) -> bool:
         source from which the grammar class was generated
     """
     grammar = load_if_file(grammar_source)
-    chksum = md5(grammar, __version__)
+    chksum = grammar_chksum(grammar)
     if isinstance(grammar_class, str):
         # grammar_class = load_compiler_suite(grammar_class)[1]
         with open(grammar_class, 'r', encoding='utf8') as f:

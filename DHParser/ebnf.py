@@ -249,7 +249,7 @@ except ImportError:
 
 from DHParser.compile import CompilerError, Compiler, CompilationResult, compile_source
 from DHParser.configuration import access_thread_locals, get_config_value, \
-    set_config_value, NEVER_MATCH_PATTERN, ALLOWED_PRESET_VALUES
+    get_config_values, set_config_value, NEVER_MATCH_PATTERN, ALLOWED_PRESET_VALUES
 from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_TOKEN_WARNING,\
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, NOTICE, \
     DIRECTIVE_FOR_NONEXISTANT_SYMBOL, UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING, \
@@ -283,6 +283,7 @@ from DHParser.versionnumber import __version__
 
 __all__ = ('DHPARSER_IMPORTS',
            'get_ebnf_preprocessor',
+           'grammar_chksum',
            'get_ebnf_grammar',
            'get_ebnf_transformer',
            'get_ebnf_compiler',
@@ -655,6 +656,17 @@ class ConfigurableEBNFGrammar(Grammar):
         self.mode__ = 'fixed'
 
 
+def grammar_chksum(grammar_source: str) -> str:
+    """Creates a chksum from the grammar source, the DHParser version
+    and the configuration. This checksum can be added to the Python
+    source file generated from the grammar in order to determine
+    whether the grammar it needs to be regenerated.
+    """
+    config = get_config_values()
+    del config['syncfile_path']
+    return md5(grammar_source, __version__, str(config))
+
+
 @deprecated(f"grammar_changed() has been moved from DHParser.ebnf to DHParser.dsl. Please, update your imports.")
 def grammar_changed(grammar_class, grammar_source: str) -> bool:
     """
@@ -672,7 +684,7 @@ def grammar_changed(grammar_class, grammar_source: str) -> bool:
         source from which the grammar class was generated
     """
     grammar = load_if_file(grammar_source)
-    chksum = md5(grammar, __version__)
+    chksum = grammar_chksum(grammar)
     if isinstance(grammar_class, str):
         # grammar_class = load_compiler_suite(grammar_class)[1]
         with open(grammar_class, 'r', encoding='utf8') as f:
@@ -2196,8 +2208,8 @@ class EBNFCompiler(Compiler):
                                        'MERGE_LEAVES')[self.directives.reduction]
             definitions.append(('early_tree_reduction__', opt))
         if self.grammar_source:
-            definitions.append(('source_hash__',
-                                '"%s"' % md5(self.grammar_source, __version__)))
+            chksum = grammar_chksum(self.grammar_source)
+            definitions.append(('source_hash__', f'"{chksum}"'))
             declarations.append('')
             if show_source:
                 declarations += [line for line in self.grammar_source.split('\n')]
