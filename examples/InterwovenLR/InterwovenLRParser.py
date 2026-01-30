@@ -135,6 +135,7 @@ class InterwovenLRGrammar(Grammar):
 parsing: PseudoJunction = create_parser_junction(InterwovenLRGrammar)
 get_grammar = parsing.factory  # for backwards compatibility, only
 
+
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
         RE_COMMENT in (InterwovenLRGrammar.COMMENT__, NEVER_MATCH_PATTERN), \
@@ -148,6 +149,7 @@ try:
         "preprocessor to ignore comments."
 except (AttributeError, NameError):
     pass
+
 
 
 #######################################################################
