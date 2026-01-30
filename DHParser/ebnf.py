@@ -2220,6 +2220,12 @@ class EBNFCompiler(Compiler):
         # turn definitions into declarations in reverse order and
         # add forward declarations/definitions
         # TODO: Use "Ref" instead of the dprecated "Forward"-parser
+        #       Add wrappers for left-recursive symbols in case parsing
+        #       starts with an LR-symbols:
+        #           T = OneOrMore(RegExp('[0-9]'))
+        #           S.set(Alternative(Series(S, Text("+"), T), T))
+        #           __S = Ref('S')
+        #           root__ = __S
 
         definitions.reverse()
 
