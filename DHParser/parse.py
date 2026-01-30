@@ -617,7 +617,7 @@ class Parser:
         self._descendants_cache = None  # type: Optional[AbstractSet[Parser]]
         self._anon_desc_cache = None    # type: Optional[AbstractSet[Parser]]
         self._desc_trails_cache = None  # type: Optional[AbstractSet[ParserTrail]]
-        self.reset()
+        # self.reset()
 
     def __deepcopy__(self, memo):
         """Deepcopy method of the parser. Upon instantiation of a Grammar-object,
@@ -5342,8 +5342,24 @@ class Ref(LateBindingUnary):
     left-recursive grammars. See it's __call__()-method.
     """
 
+    def __init__(self, parser_name: str) -> None:
+        self.pivot: Optional[Ref] = None
+        super().__init__(parser_name)
+
     def reset(self):
-        super(Ref, self).reset()
+        # super(Ref, self).reset()
+        if self.pivot is None:
+            for d in self.grammar.all_parsers__:
+                if isinstance(d, Ref) and d.parser_name == self.parser_name:
+                    if d.pivot is not None:
+                        self.pivot = d.pivot
+                        self.visited = self.pivot.visited
+                        break
+            else:
+                self.pivot = self
+                self.visited: MemoizationDict = dict()
+        if self.pivot is self:
+            self.visited.clear()
         self.recursion_counter: Dict[int, int] = dict()
         assert not self.pname, "Ref-Parsers mustn't have a name!"
 
@@ -5445,7 +5461,7 @@ class Ref(LateBindingUnary):
             #     or location <= (grammar.last_rb__loc__ + int(text._len == result[1]._len))
             grammar.suspend_memoization__ = save_suspend_memoization  #  = is_context_sensitive(self.parser)
             if not grammar.suspend_memoization__:
-                visited[location] = result
+                visited[location] = result  # TODO: Do not overwrite a longer result with a shorter result?
         return result
 
     def set_proxy(self, proxy: Optional[ParseFunc]):
