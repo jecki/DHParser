@@ -114,7 +114,7 @@ class InterwovenLRGrammar(Grammar):
         parser = InterwovenLR()
         syntax_tree = parser(source_code)
     """
-    source_hash__ = "a243d11036191cc897ae6e7f3e70b98f"
+    source_hash__ = "70767cd1b54ff3f7edfa1d056dbb3695"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
