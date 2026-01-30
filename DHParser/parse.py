@@ -5372,6 +5372,7 @@ class Ref(LateBindingUnary):
             grammar.rollback_to__(location)
 
         # if the location has already been visited by the current parser, return the saved result
+        # TODO: Check whether visited dict should be shared between references to the same target or not
         visited = self.visited  # using local variable for better performance
         if location in visited:
             # Sorry, no history recording in case of memoized results!
