@@ -124,8 +124,9 @@ class LRGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     T = OneOrMore(RegExp('[0-9]'))
-    S = Alternative(Series(Ref("S"), Text("+"), Ref("T")), Ref("T"))
-    U = Ref('S')
+    S = Ref('SDef__')
+    SDef__ = Alternative(Series(Ref('SDef__'), Text("+"), T), T)
+    U = Synonym(S)
     root__ = U
     
 parsing: PseudoJunction = create_parser_junction(LRGrammar)

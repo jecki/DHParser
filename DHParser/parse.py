@@ -5359,7 +5359,7 @@ class Ref(LateBindingUnary):
             else:
                 self.pivot = self
                 self.visited: MemoizationDict = dict()
-        if self.pivot is self:
+        if self.visited:
             self.visited.clear()
         self.recursion_counter: Dict[int, int] = dict()
         # assert not self.pname, "Ref-Parsers mustn't have a name!"
