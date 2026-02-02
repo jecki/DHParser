@@ -5348,6 +5348,7 @@ class Ref(LateBindingUnary):
 
     def reset(self):
         # super(Ref, self).reset()
+        # self.visited: MemoizationDict = dict()
         if self.pivot is None:
             # TODO: Testing of Reursive Symbols should add a Ref before calling a recursive Symbol!
             for d in self.grammar.all_parsers__:   # TODO: Performance: Build dictionaries for references at grammar initialization!
@@ -5392,6 +5393,7 @@ class Ref(LateBindingUnary):
         visited = self.visited  # using local variable for better performance
         if location in visited:
             # Sorry, no history recording in case of memoized results!
+            # TODO: This returns too early in some cases.
             return visited[location]
 
         if location in self.recursion_counter:
