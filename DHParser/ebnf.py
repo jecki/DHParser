@@ -294,11 +294,14 @@ __all__ = ('DHPARSER_IMPORTS',
            'ConfigurableEBNFGrammar',
            'EBNFTransform',
            'get_EBNF_AST_Serialization_Table',
-           'EBNF_from_AST',
+           # 'EBNF_from_AST',
            'EBNFCompilerError',
            'EBNFDirectives',
            'WHITESPACE_TYPES',
            'EBNFCompiler',
+           'ebnf_to_ast',
+           'ebnf_from_ast',
+           'compile_ebnf_ast',
            'compile_ebnf')
 
 
@@ -1113,7 +1116,7 @@ def get_EBNF_AST_Serialization_Table(flavor: str = "EBNF") -> Dict[str, Callable
                          f'but not "{flavor}"!')
 
 
-def EBNF_from_AST(ebnf_AST: Node, syntax: str = "DHParser") -> str:
+def serialize_AST(ebnf_AST: Node, syntax: str = "DHParser") -> str:
     """
     Generates EBNF-code from the abstract syntax tree of an EBNF-grammar.
 
@@ -1156,6 +1159,10 @@ def EBNF_from_AST(ebnf_AST: Node, syntax: str = "DHParser") -> str:
         ebnf = '\n'.join(lines)
     return ebnf
 
+
+@deprecated('EBNF_from_AST() is dprecated, please use DHParser.ebnf.ebnf_from_ast()')
+def EBNF_from_AST(ebnf_AST: Node, syntax: str = "DHParser") -> str:
+    return serialize_AST(ebnf_AST, syntax)
 
 
 ########################################################################
@@ -3762,18 +3769,37 @@ def get_ebnf_compiler(grammar_name="", grammar_source="") -> EBNFCompiler:
         return compiler
 
 
+########################################################################
+#
+# EBNF compiler
+#
+########################################################################
+
+
+def ebnf_to_ast(ebnf_source: str) -> RootNode:
+    """Compiles EBNF-code into an EBNF-AST."""
+    prep = get_ebnf_preprocessor()(ebnf_source)
+    cst = get_ebnf_grammar()(prep)
+    ast = get_ebnf_transformer(cst)
+    return ast
+
+
+def ebnf_from_ast(ebnf_AST: Node, syntax: str = "DHParser") -> str:
+    """Serializes and EBNF-AST back to ebnf code.
+
+    :param ebnf_AST: EBNF-AST to serialize.
+    :param syntax: syntax-style for serializing, must be one
+        of 'DHParser', 'ISO' or 'PEG' (parsing-expression-grammar-style)
+    """
+    return serialize_AST(ebnf_AST, syntax)
+
+
 def compile_ebnf_ast(ast: RootNode) -> str:
     """Compiles the abstract-syntax-tree of an EBNF-source-text into
     python code of a class derived from `parse.Grammar` that can
     parse text following the grammar described with the EBNF-code."""
     return get_ebnf_compiler()(ast)
 
-
-########################################################################
-#
-# EBNF compiler
-#
-########################################################################
 
 def compile_ebnf(ebnf_source: str, branding: str = 'DSL', *, preserve_AST: bool = False) \
         -> CompilationResult:   # -> (result, messages, AST)
