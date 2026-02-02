@@ -5349,7 +5349,8 @@ class Ref(LateBindingUnary):
     def reset(self):
         # super(Ref, self).reset()
         if self.pivot is None:
-            for d in self.grammar.all_parsers__:
+            # TODO: Testing of Reursive Symbols should add a Ref before calling a recursive Symbol!
+            for d in self.grammar.all_parsers__:   # TODO: Performance: Build dictionaries for references at grammar initialization!
                 if isinstance(d, Ref) and d.parser_name == self.parser_name:
                     if d.pivot is not None:
                         self.pivot = d.pivot
@@ -5388,7 +5389,6 @@ class Ref(LateBindingUnary):
             grammar.rollback_to__(location)
 
         # if the location has already been visited by the current parser, return the saved result
-        # TODO: Check whether visited dict should be shared between references to the same target or not
         visited = self.visited  # using local variable for better performance
         if location in visited:
             # Sorry, no history recording in case of memoized results!
@@ -5460,8 +5460,10 @@ class Ref(LateBindingUnary):
             # grammar.suspend_memoization__ = save_suspend_memoization \
             #     or location <= (grammar.last_rb__loc__ + int(text._len == result[1]._len))
             grammar.suspend_memoization__ = save_suspend_memoization  #  = is_context_sensitive(self.parser)
-            if not grammar.suspend_memoization__:
-                visited[location] = result  # TODO: Do not overwrite a longer result with a shorter result?
+            if location in visited and result[1] < visited[location][1]:
+                result = visited[location]
+            elif not save_suspend_memoization:
+                visited[location] = result
         return result
 
     def set_proxy(self, proxy: Optional[ParseFunc]):
