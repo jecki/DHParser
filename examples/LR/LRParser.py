@@ -125,7 +125,7 @@ class LRGrammar(Grammar):
     wsp__ = Whitespace(WSP_RE__)
     T = OneOrMore(RegExp('[0-9]'))
     S = Alternative(Series(Ref("S"), Text("+"), Ref("T")), Ref("T"))
-    U = Series(Ref('S'))
+    U = Ref('S')
     root__ = U
     
 parsing: PseudoJunction = create_parser_junction(LRGrammar)
