@@ -366,7 +366,10 @@ def grammar_provider(ebnf_src: str,
     parsing_stage = compile_python_object('\n'.join([imports, additional_code, grammar_src]),
                                           r'parsing')  # r'get_(?:\w+_)?grammar$'
     if callable(parsing_stage.factory):
-        parsing_stage.factory.python_src__ = grammar_src
+        if hasattr(parsing_stage.factory, 'keywords'):
+            parsing_stage.factory.keywords['python_src'] = grammar_src
+        else:
+            parsing_stage.factory.python_src__ = grammar_src
         return parsing_stage.factory
     raise ValueError('Could not compile grammar provider!')
 
