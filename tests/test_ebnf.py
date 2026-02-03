@@ -47,7 +47,7 @@ from DHParser.parse import Interleave
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
     EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS, \
     WHITESPACE_TYPES, parse_ebnf, transform_ebnf, get_EBNF_AST_Serialization_Table, \
-    EBNF_from_AST
+    ebnf_from_ast
 from DHParser.dsl import CompilationError, compileDSL, create_parser, grammar_provider
 from DHParser.testing import grammar_unit, clean_report, unique_name
 from DHParser.trace import set_tracer, trace_history
@@ -1870,7 +1870,7 @@ class TestAlternativeReordering:
         src, errors, ast = compile_ebnf(lang, preserve_AST=True)
         i = src.find('TokenizedType')
         k = src.find('\n', i)
-        print(src)
+        # print(src)
         assert src[i:k].find("IDREFS,") < src[i:k].find("IDREF,") < src[i:k].find("'ID'")
         assert src[i:k].find("'NMTOKENS'") < src[i:k].find("NMTOKEN")
         assert errors and all(e.code == REORDERING_OF_ALTERNATIVES_REQUIRED for e in errors)
@@ -3175,13 +3175,13 @@ ws = / +/ -> DROP"""
         ast2 = transform_ebnf(cst2)
         assert ast2.equals(ast)
 
-        iso_ebnf = EBNF_from_AST(ast2, 'ISO')
+        iso_ebnf = ebnf_from_ast(ast2, 'ISO')
         cst3 = parse_ebnf(iso_ebnf, "classic")
         assert not cst3.errors
         ast3 = transform_ebnf(cst3)
         assert ast3.equals(ast2)
 
-        peg_ebnf = EBNF_from_AST(ast2, 'PEG')
+        peg_ebnf = ebnf_from_ast(ast2, 'PEG')
         # print(peg_ebnf)
         cst3 = parse_ebnf(peg_ebnf)  # , "classic")
         assert not cst3.errors
