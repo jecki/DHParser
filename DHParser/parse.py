@@ -5061,7 +5061,7 @@ class Pop(Retrieve):
     @cython.locals(location_=cython.int)
     def _parse(self, location: cython.int) -> ParsingResult:
         node, location_ = self.retrieve_and_match(location)
-        if node is not None and not id(node) in self._grammar.tree__.error_nodes:
+        if node is not None and id(node) not in self._grammar.tree__.error_nodes:
             self.values.append(self._grammar.variables__[self.symbol_pname].pop())
             self._grammar.push_rollback__(self._rollback_location(location, location_), self._rollback)
         else:
@@ -5399,6 +5399,7 @@ class Ref(LateBindingUnary):
         if location in self.recursion_counter:
             depth = self.recursion_counter[location]
             if depth == 0:
+                # TODO: grammar suspend memoization should be stacked.
                 grammar.suspend_memoization__ = id(self)
                 result = None, location
             else:

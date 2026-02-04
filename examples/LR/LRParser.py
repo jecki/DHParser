@@ -114,7 +114,7 @@ class LRGrammar(Grammar):
         parser = LR()
         syntax_tree = parser(source_code)
     """
-    source_hash__ = "7fecadf06435064abc32d834a4341b31"
+    source_hash__ = "df2d39c1a8691a6eebc87a05d5b9dcee"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -123,9 +123,9 @@ class LRGrammar(Grammar):
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
-    T = OneOrMore(RegExp('[0-9]'))
     S = Ref("SDef__")
-    SDef__ = Alternative(Series(Ref("SDef__"), Text("+"), Ref("T")), Ref("T"))
+    T = OneOrMore(RegExp('[0-9]'))
+    SDef__ = Alternative(Series(Ref("SDef__"), Text("+"), T), T)
     U = Synonym(S)
     root__ = U
     
