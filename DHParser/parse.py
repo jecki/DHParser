@@ -5399,7 +5399,7 @@ class Ref(LateBindingUnary):
         if location in self.recursion_counter:
             depth = self.recursion_counter[location]
             if depth == 0:
-                grammar.suspend_memoization__ = self.parser_name
+                grammar.suspend_memoization__ = id(self)
                 result = None, location
             else:
                 self.recursion_counter[location] = depth - 1
@@ -5461,7 +5461,7 @@ class Ref(LateBindingUnary):
                     depth += 1
             # grammar.suspend_memoization__ = save_suspend_memoization \
             #     or location <= (grammar.last_rb__loc__ + int(text._len == result[1]._len))
-            if grammar.suspend_memoization__ == self.parser_name:
+            if grammar.suspend_memoization__ == id(self):
                 grammar.suspend_memoization__ = save_suspend_memoization  #  = is_context_sensitive(self.parser)
             if location in visited and result[1] < visited[location][1]:
                 result = visited[location]
