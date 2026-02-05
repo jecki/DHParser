@@ -5462,7 +5462,7 @@ class Ref(LateBindingUnary):
                     depth += 1
             # grammar.suspend_memoization__ = save_suspend_memoization \
             #     or location <= (grammar.last_rb__loc__ + int(text._len == result[1]._len))
-            if grammar.suspend_memoization__ == id(self):
+            if grammar.suspend_memoization__ == id(self) or isinstance(grammar.suspend_memoization__, bool):
                 grammar.suspend_memoization__ = save_suspend_memoization  #  = is_context_sensitive(self.parser)
             if location in visited and result[1] < visited[location][1]:
                 result = visited[location]

@@ -123,14 +123,12 @@ class InterwovenLRGrammar(Grammar):
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
-    G = Ref('GDef__')
-    E = Ref('EDef__')
     AA = Text("a")
     I = Series(Text("("), OneOrMore(Ref("AA")), Text(")"))
-    H = Series(Ref("GDef__"), Text("l"))
-    F = Alternative(Series(Ref("EDef__"), Text("+"), ZeroOrMore(Ref("I"))), Series(Ref("GDef__"), Text("-")))
-    GDef__ = Alternative(Series(Ref("H"), Text("m")), Ref("EDef__"))
-    EDef__ = Alternative(Series(Ref("F"), Text("n")), Text("n"))
+    H = Series(Ref("G"), Text("l"))
+    F = Alternative(Series(Ref("E"), Text("+"), ZeroOrMore(Ref("I"))), Series(Ref("G"), Text("-")))
+    G = Alternative(Series(Ref("H"), Text("m")), Ref("E"))
+    E = Alternative(Series(Ref("F"), Text("n")), Text("n"))
     S = Synonym(E)
     root__ = S
     
