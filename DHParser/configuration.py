@@ -63,6 +63,7 @@ __all__ = ('CONFIG_PRESET',
            'NO_DEFAULT',
            'THREAD_LOCALS',
            'access_thread_locals',
+           'reset_config_dict',
            'get_config_value',
            'get_config_values',
            'set_config_value',
@@ -142,6 +143,7 @@ def get_main_pid(mp_method = None):
     """Returns the pis of the main process, i.e. the process or interpreter that
     has not been spawned by any other process."""
     import os
+    # x = CONFIG_PRESET.get('main_pid', -1)
     return CONFIG_PRESET['main_pid'] or os.getpid()
 
 
@@ -417,6 +419,13 @@ def _config_dict():
         THREAD_LOCALS.config = dict()
         cfg = THREAD_LOCALS.config
     return cfg
+
+
+def reset_config_dict():
+    """Empties the configuration dictionary so that it will be reloaded
+    from the presets the next time it will be accessed. Use with care!"""
+    cfg = _config_dict()
+    cfg.clear()
 
 
 def get_config_value(key: str, default: Any = NO_DEFAULT) -> Any:

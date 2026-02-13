@@ -875,7 +875,7 @@ Future = object  # to save the import of concurrent.futures when not needed!
 def batch_process(file_names: List[str], out_dir: str,
                   process_file: Union[Callable[[Tuple[str, str, CancelQuery]], str],
                                       Callable[[Tuple[str, str]], str]],
-                  *, submit_func: Optional[Callable[[Callable, str, str], Future]] = None,
+                  *, submit_func: Optional[Callable[[Callable, str, str, Callable], Future]] = None,
                   log_func: Optional[Callable[[str], None]] = None,
                   cancel_query: Optional[CancelQuery] = None,
                   cancel_func: Optional[CancelQuery] = None) -> List[str]:

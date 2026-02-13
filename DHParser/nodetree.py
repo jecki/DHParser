@@ -2183,6 +2183,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         def attr_err_ignore(value: str) -> str:
             return ("'%s'" % value) if value.find('"') >= 0 else '"%s"' % value
 
+        from DHParser.configuration import CONFIG_PRESET
         attr_err_handling = get_config_value('xml_attribute_error_handling')
         if attr_err_handling == 'fail':
             attr_filter = validate_XML_attribute_value

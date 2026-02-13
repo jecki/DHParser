@@ -72,7 +72,7 @@ except (NameError, ImportError):
     import DHParser.externallibs.shadow_cython as cython
 
 from DHParser.configuration import access_thread_locals, get_config_value, set_config_value, \
-    CONFIG_PRESET, NEVER_MATCH_PATTERN
+    reset_config_dict, CONFIG_PRESET, NEVER_MATCH_PATTERN
 from DHParser.stringview import StringView
 
 
@@ -1843,6 +1843,7 @@ def submit_wrapper(fn, pid, args=(), kwargs={}):
         assert CONFIG_PRESET['main_pid'] == pid
     else:
         CONFIG_PRESET['main_pid'] = pid
+        reset_config_dict()
     return fn(*args, **kwargs)
 
 
@@ -1851,6 +1852,7 @@ def mapped_wrapper(*args, fn=None, pid=''):
         assert CONFIG_PRESET['main_pid'] == pid
     else:
         CONFIG_PRESET['main_pid'] = pid
+        reset_config_dict()
     return fn(*args)
 
 
@@ -2153,7 +2155,10 @@ def instantiate_executor(allow_parallel: bool,
             if mode == "multiprocessing":
                 print('Value "multiprocessing" for config-variable "debug_parallel_execution"'
                       ' is deprecated. Please, use "multicore", instead!')
-        return preferred_executor(*args, **kwargs)
+        if not isinstance(preferred_executor, (ExecutorWrapper, PickMultiCoreExecutorShim)):
+            return ExecutorWrapper(preferred_executor(*args, **kwargs))
+        else:
+            return preferred_executor(*args, **kwargs)
     return SingleThreadExecutor()
 
 
