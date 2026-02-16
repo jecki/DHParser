@@ -249,7 +249,7 @@ except ImportError:
 
 from DHParser.compile import CompilerError, Compiler, CompilationResult, compile_source
 from DHParser.configuration import access_thread_locals, get_config_value, \
-    set_config_value, NEVER_MATCH_PATTERN, ALLOWED_PRESET_VALUES
+    get_config_values, set_config_value, NEVER_MATCH_PATTERN, ALLOWED_PRESET_VALUES
 from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_TOKEN_WARNING,\
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, NOTICE, \
     DIRECTIVE_FOR_NONEXISTANT_SYMBOL, UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING, \
@@ -283,6 +283,7 @@ from DHParser.versionnumber import __version__
 
 __all__ = ('DHPARSER_IMPORTS',
            'get_ebnf_preprocessor',
+           'grammar_chksum',
            'get_ebnf_grammar',
            'get_ebnf_transformer',
            'get_ebnf_compiler',
@@ -293,11 +294,14 @@ __all__ = ('DHPARSER_IMPORTS',
            'ConfigurableEBNFGrammar',
            'EBNFTransform',
            'get_EBNF_AST_Serialization_Table',
-           'EBNF_from_AST',
+           # 'EBNF_from_AST',
            'EBNFCompilerError',
            'EBNFDirectives',
            'WHITESPACE_TYPES',
            'EBNFCompiler',
+           'ebnf_to_ast',
+           'ebnf_from_ast',
+           'compile_ebnf_ast',
            'compile_ebnf')
 
 
@@ -655,6 +659,17 @@ class ConfigurableEBNFGrammar(Grammar):
         self.mode__ = 'fixed'
 
 
+def grammar_chksum(grammar_source: str) -> str:
+    """Creates a chksum from the grammar source, the DHParser version
+    and the configuration. This checksum can be added to the Python
+    source file generated from the grammar in order to determine
+    whether the grammar it needs to be regenerated.
+    """
+    config = get_config_values()
+    del config['syncfile_path']
+    return md5(grammar_source, __version__, str(config))
+
+
 @deprecated(f"grammar_changed() has been moved from DHParser.ebnf to DHParser.dsl. Please, update your imports.")
 def grammar_changed(grammar_class, grammar_source: str) -> bool:
     """
@@ -672,7 +687,7 @@ def grammar_changed(grammar_class, grammar_source: str) -> bool:
         source from which the grammar class was generated
     """
     grammar = load_if_file(grammar_source)
-    chksum = md5(grammar, __version__)
+    chksum = grammar_chksum(grammar)
     if isinstance(grammar_class, str):
         # grammar_class = load_compiler_suite(grammar_class)[1]
         with open(grammar_class, 'r', encoding='utf8') as f:
@@ -1080,8 +1095,11 @@ def get_EBNF_AST_Serialization_Table(flavor: str = "EBNF") -> Dict[str, Callable
     """
     global EBNF_Serialization_Table, PEG_Serialization_Table
 
-    paren_needed = lambda nd: (len(nd.children) > 1 or nd[0].name not in
-                               ('symbol', 'literal', 'plaintext', 'group'))
+    # paren_needed = lambda nd: (len(nd.children) > 1 or nd[0].name not in
+    #                            ('symbol', 'literal', 'plaintext', 'group'))
+    def paren_needed(nd: Node) -> bool:
+        return (len(nd.children) > 1 or nd[0].name not in
+                ('symbol', 'literal', 'plaintext', 'group'))
 
     if flavor == "EBNF":
         if EBNF_Serialization_Table is None:
@@ -1101,7 +1119,7 @@ def get_EBNF_AST_Serialization_Table(flavor: str = "EBNF") -> Dict[str, Callable
                          f'but not "{flavor}"!')
 
 
-def EBNF_from_AST(ebnf_AST: Node, syntax: str = "DHParser") -> str:
+def serialize_AST(ebnf_AST: Node, syntax: str = "DHParser") -> str:
     """
     Generates EBNF-code from the abstract syntax tree of an EBNF-grammar.
 
@@ -1145,6 +1163,10 @@ def EBNF_from_AST(ebnf_AST: Node, syntax: str = "DHParser") -> str:
     return ebnf
 
 
+@deprecated('EBNF_from_AST() is dprecated, please use DHParser.ebnf.ebnf_from_ast()')
+def EBNF_from_AST(ebnf_AST: Node, syntax: str = "DHParser") -> str:
+    return serialize_AST(ebnf_AST, syntax)
+
 
 ########################################################################
 #
@@ -1176,7 +1198,7 @@ except (ImportError, ModuleNotFoundError):
         dhparserdir = scriptdir[:i + 10]  # 10 = len("/DHParser/")
         if dhparserdir not in sys.path:  sys.path.insert(0, dhparserdir)
 
-from DHParser.compile import Compiler, compile_source, Junction, full_compile
+from DHParser.compile import Compiler, compile_source, full_compile
 from DHParser.configuration import set_config_value, add_config_values, get_config_value, \\
     access_thread_locals, access_presets, finalize_presets, set_preset_value, \\
     get_preset_value, read_local_config, CONFIG_PRESET, NEVER_MATCH_PATTERN, ALLOWED_PRESET_VALUES
@@ -1190,11 +1212,11 @@ from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode, Pat
 from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, DropFrom, AnyChar, Parser, \\
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, ERR, \\
     Option, NegativeLookbehind, OneOrMore, RegExp, SmartRE, Retrieve, Series, Capture, TreeReduction, \\
-    ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, \\
+    ZeroOrMore, Ref, Forward, NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, \\
     LateBindingUnary, mixin_comment, last_value, matching_bracket, optional_last_value, \\
     PARSER_PLACEHOLDER, RX_NEVER_MATCH, UninitializedError
 from DHParser.pipeline import end_points, full_pipeline, create_parser_junction, \\
-    create_preprocess_junction, create_junction, PseudoJunction, PipelineResult
+    create_preprocess_junction, create_junction, Junction, PseudoJunction, PipelineResult
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \\
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.stringview import StringView
@@ -1963,9 +1985,9 @@ class EBNFCompiler(Compiler):
 
 
     def recursive_paths(self, symbol: str) -> FrozenSet[Tuple[str, ...]]:
-        """Returns the recursive paths from symbol to itself. If
+        """Returns the recursive paths from the symbol to itself. If
         sym is not recursive, the returned tuple (of paths) will be empty.
-        This method exists only for debugging (so far...)."""
+        This method exists only for testing and debugging (so far...)."""
         path = []  # type: List[str]
         recursive_paths = set()  # type: MutableSet[Tuple[str, ...]]
 
@@ -2045,6 +2067,15 @@ class EBNFCompiler(Compiler):
                         pass
             i += 1
         self.forward = recursive
+
+
+    def recursive_symbols(self) -> Set[str]:
+        """Returns all recursive symbols. Must be called after optimize_definitions_order()!"""
+        recursive = set()
+        for sym in self.forward:
+            for path in self.recursive_paths(sym):
+                recursive.update(path)
+        return recursive
 
 
     def assemble_parser(self, definitions: List[Tuple[str, str]], root_symbol: str) -> str:
@@ -2204,8 +2235,8 @@ class EBNFCompiler(Compiler):
                                        'MERGE_LEAVES')[self.directives.reduction]
             definitions.append(('early_tree_reduction__', opt))
         if self.grammar_source:
-            definitions.append(('source_hash__',
-                                '"%s"' % md5(self.grammar_source, __version__)))
+            chksum = grammar_chksum(self.grammar_source)
+            definitions.append(('source_hash__', f'"{chksum}"'))
             declarations.append('')
             if show_source:
                 declarations += [line for line in self.grammar_source.split('\n')]
@@ -2426,7 +2457,8 @@ class EBNFCompiler(Compiler):
                     raise te_ae  # not merely a consequntial error of another reported error
             except SyntaxError as se:
                 src_lines = probe_src.split('\n')
-                se.msg += f' "{src_lines[se.lineno - 1]}" '
+                if se.lineno is not None:
+                    se.msg += f' "{src_lines[se.lineno - 1]}" '
                 raise se
             for sym, parser, err in errors:
                 psym = parser.symbol
@@ -2474,7 +2506,7 @@ class EBNFCompiler(Compiler):
                                 'but directive marker @ is missing...', WARNING)
         if rule in self.rules:
             first = self.rules[rule][0]
-            if not id(first) in self.tree.error_nodes:
+            if id(first) not in self.tree.error_nodes:
                 self.tree.new_error(first, 'First definition of rule "%s" '
                                     'followed by illegal redefinitions.' % rule)
             self.tree.new_error(node, 'A rule "%s" has already been defined earlier.' % rule)
@@ -3095,7 +3127,7 @@ class EBNFCompiler(Compiler):
             else:
                 filtered_children.append(nd)
         custom_args = ['mandatory=%i' % mandatory_marker[0]] if mandatory_marker else []
-        # add custom error message if it has been declared for the current definition
+        # add a custom error-message if it has been declared for the current definition
         if custom_args:
             try:
                 current_symbol = next(reversed(list(self.rules.keys())))   # list() needed for Python < 3.8
@@ -3474,7 +3506,7 @@ class EBNFCompiler(Compiler):
         pattern = repr(pattern)
         if pattern.find('(?x)') >= 0:
             m = re.search(r'\\n[ \t]*', pattern)
-            indent = len(m.group(0)) - 2
+            indent = (len(m.group(0)) - 2) if m else -2 # TODO: is -2 correct?
             pattern = re.sub(r'\\n[ \t]*', '\\\\n\n', pattern)
             parts = pattern.split('\n')
             pattern = wrap_str_literal(parts, offset = len(REClass) + 1 + indent)
@@ -3740,6 +3772,31 @@ def get_ebnf_compiler(grammar_name="", grammar_source="") -> EBNFCompiler:
         compiler = EBNFCompiler(grammar_name, grammar_source)
         THREAD_LOCALS.ebnf_compiler_singleton = compiler
         return compiler
+
+
+########################################################################
+#
+# EBNF compiler
+#
+########################################################################
+
+
+def ebnf_to_ast(ebnf_source: str) -> RootNode:
+    """Compiles EBNF-code into an EBNF-AST."""
+    prep = get_ebnf_preprocessor()(ebnf_source)
+    cst = get_ebnf_grammar()(prep)
+    ast = get_ebnf_transformer(cst)
+    return ast
+
+
+def ebnf_from_ast(ebnf_AST: Node, syntax: str = "DHParser") -> str:
+    """Serializes and EBNF-AST back to ebnf code.
+
+    :param ebnf_AST: EBNF-AST to serialize.
+    :param syntax: the syntax-style for the serialization, must be one
+        of 'DHParser', 'ISO' or 'PEG' (parsing-expression-grammar-style)
+    """
+    return serialize_AST(ebnf_AST, syntax)
 
 
 def compile_ebnf_ast(ast: RootNode) -> str:

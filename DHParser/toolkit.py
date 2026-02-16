@@ -37,13 +37,8 @@ import sys
 
 if sys.version_info >= (3, 12, 0):
     from collections.abc import Iterable, Sequence, Set, MutableSet, Callable, Container, Hashable
-    from typing import Any, Type, Union, Optional, TypeAlias, Protocol
-    AbstractSet: TypeAlias = Set
-    FrozenSet: TypeAlias = frozenset
-    Dict: TypeAlias = dict
-    List: TypeAlias = list
-    Tuple: TypeAlias = tuple
-    ByteString: TypeAlias = Union[bytes, bytearray]
+    from typing import Any, Type, Union, Optional, TypeAlias, Protocol, AbstractSet, FrozenSet, \
+        Dict, List, Tuple, ByteString
     static = staticmethod
 else:
     from typing import Any, Iterable, Sequence, Set, AbstractSet, Union, Dict, List, Tuple, \
@@ -316,7 +311,7 @@ def deprecation_warning(message: str):
         except DeprecationWarning as e:
             try:
                 deprecation_policy = get_config_value('deprecation_policy')
-            except AssertionError as e:
+            except AssertionError:
                 deprecation_policy = 'warn'
             if deprecation_policy == 'warn':
                 import traceback
@@ -444,7 +439,7 @@ def is_filename(strg: str) -> bool:
     byteorder-mark to the beginning of the string, because this
     will be stripped by the DHParser's parser, anyway!
     """
-    return strg and strg[0:1] not in ('\ufeff', '\ufffe') \
+    return bool(strg) and strg[0:1] not in ('\ufeff', '\ufffe') \
         and strg[0:3] not in ('\xef\xbb\xbf', '\x00\x00\ufeff', '\x00\x00\ufffe') \
         and strg.find('\n') < 0 \
         and strg[:1] != " " and strg[-1:] != " " \
@@ -486,7 +481,7 @@ def split_path(path: str) -> Tuple[str, ...]:
         >>> os.path.split('a/b/c')  # for comparison.
         ('a/b', 'c')
     """
-    split = os.path.split(path)
+    split: Tuple[str, ...] = os.path.split(path)
     while split[0]:
         split = os.path.split(split[0]) + split[1:]
     return split[1:]
@@ -1291,7 +1286,10 @@ def has_fenced_code(text_or_file: str, info_strings=('ebnf', 'test')) -> bool:
     rx_fence = re.compile(fence_tmpl % (label_re, label_re), flags=re.IGNORECASE)
 
     for match in rx_fence.finditer(markdown):
-        matched_string = re.match(r'\n`+|\n~+', match.group(0)).group(0)
+        m = re.match(r'\n`+|\n~+', match.group(0))
+        if m is None:
+            continue
+        matched_string = m.group(0)
         if markdown.find(matched_string, match.end()) >= 0:
             return True
         else:

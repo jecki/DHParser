@@ -79,7 +79,7 @@ __all__ = ('CONFIG_PRESET',
 ########################################################################
 
 
-CONFIG_PRESET = dict()  # type: Dict[str, Any]
+CONFIG_PRESET: Dict[str, Any] = dict()
 CONFIG_PRESET['syncfile_path'] = ''
 ACCESSING_PRESETS = False
 PRESETS_CHANGED = False
@@ -143,7 +143,6 @@ def get_main_pid(mp_method = None):
     """Returns the pis of the main process, i.e. the process or interpreter that
     has not been spawned by any other process."""
     import os
-    # x = CONFIG_PRESET.get('main_pid', -1)
     return CONFIG_PRESET['main_pid'] or os.getpid()
 
 
@@ -598,12 +597,6 @@ CONFIG_PRESET['history_tracking'] = False
 # Default value: False
 CONFIG_PRESET['resume_notices'] = False
 
-# Turns on the left-recursion-handling algorithm. This allows the use
-# of left-recursion in grammars, which otherwise would run a recursive
-# descent parser into an infinite-loop.
-# Default value: True
-CONFIG_PRESET['left_recursion'] = True
-
 # Warn about pending infinite loops which would occur if a repeating
 # parser like "zero or more" calls another parser that matches but
 # does not move the location pointer forward, i.e. { /(?=.)|$/ }.
@@ -828,6 +821,17 @@ ALLOWED_PRESET_VALUES['optimizations'] = frozenset({
     'sequence'})
 CONFIG_PRESET['optimizations'] = frozenset()
     # {'literal', 'lookahead', 'alternative', 'sequence'})
+
+
+# Chooses the left-recursion-handling. Possible Values are:
+# "None" - No left-recursion-handling. May lead to infinite loops while parsing!
+# "Forward" - Left-recursion check on Forward references. Covers direct and
+#     indirect left recursion but yields wrong parsing results with intervowen
+#     left recursion!
+# "Full" - Full left-recursion-handling.
+# Default value: "Full"
+ALLOWED_PRESET_VALUES['left_recursion'] = frozenset({'None', 'Forward', 'Full'})
+CONFIG_PRESET['left_recursion'] = 'Full'
 
 
 ########################################################################

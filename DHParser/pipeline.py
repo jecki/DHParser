@@ -461,7 +461,7 @@ def create_preprocess_junction(prep_func: Union[PreprocessorFunc, Tokenizer],
 #                 *, complete_match=True):
 #     return parser_factory()(document, start_parser, complete_match=complete_match)
 
-def _parser_factory(raw_grammar) -> Grammar:
+def _parser_factory(raw_grammar, python_src='') -> Grammar:
     grammar = raw_grammar()
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
@@ -469,7 +469,7 @@ def _parser_factory(raw_grammar) -> Grammar:
         set_tracer(grammar, trace_history)
     try:
         if not grammar.__class__.python_src__:
-            grammar.__class__.python_src__ = getattr(_parser_factory, 'python_src__','')
+            grammar.__class__.python_src__ = python_src
     except AttributeError:
         pass
     return grammar
