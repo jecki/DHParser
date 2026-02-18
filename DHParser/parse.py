@@ -5115,7 +5115,7 @@ class Synonym(UnaryParser):
                     return Node(self.node_name, '', True), location
                 if node.name[0] == ':':  # node.anonymous:
                     # eliminate anonymous child-node on the fly
-                    # node.name = self.node_name   # Bit mistake: this can spoil the memo-cache
+                    # node.name = self.node_name   # Big mistake: this can spoil the memo-cache
                     return Node(self.node_name, node._result), location
                 else:
                     return Node(self.node_name, (node,)), location
@@ -5196,8 +5196,6 @@ class Forward(UnaryParser):
         https://tinlizzie.org/VPRIPapers/tr2007002_packrat.pdf
         """
         grammar = self._grammar
-        if not grammar.left_recursion__:
-            return self.parser(location)
 
         # rollback variable changing operation if the parser backtracks
         # to a position before the variable-changing operation occurred
@@ -5213,7 +5211,7 @@ class Forward(UnaryParser):
         if location in self.recursion_counter:
             depth = self.recursion_counter[location]
             if depth == 0:
-                grammar.suspend_memoization__ = True
+                grammar.suspend_memoization__ = id(self)
                 result = None, location
             else:
                 self.recursion_counter[location] = depth - 1
@@ -5275,8 +5273,14 @@ class Forward(UnaryParser):
                     depth += 1
             # grammar.suspend_memoization__ = save_suspend_memoization \
             #     or location <= (grammar.last_rb__loc__ + int(text._len == result[1]._len))
-            grammar.suspend_memoization__ = save_suspend_memoization  #  = is_context_sensitive(self.parser)
-            if not grammar.suspend_memoization__:
+            # both checks in the following are necessary:
+            # 1. id(self)-check in order not to interfere with interwoven recursive parser calls
+            # 2. isinstance check for referenced parsers that are not in fact recursive
+            if grammar.suspend_memoization__ == id(self) or isinstance(grammar.suspend_memoization__, bool):
+                grammar.suspend_memoization__ = save_suspend_memoization  #  = is_context_sensitive(self.parser)
+            if location in visited and result[1] < visited[location][1]:
+                result = visited[location]
+            elif not grammar.suspend_memoization__:
                 visited[location] = result
         return result
 
