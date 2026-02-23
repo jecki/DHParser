@@ -2244,7 +2244,24 @@ class EBNFCompiler(Compiler):
         definitions.reverse()
         declarations += [symbol + ' = Forward()'
                          for symbol in sorted(list(self.forward))]
+
+        if self.left_recursion == 'Full':
+            recursive = self.recursive_symbols()
+            # TODO: Sort out purely right-recursive symbols
+            symstr = '|'.join(recursive)
+            recursive_ref_pattern = RX_REF_TMPL.format(symbols = symstr)
+            synonym_pattern = RX_SYNONYM_TMPL.format(symbols = symstr)
+            rx_recursive_ref = re.compile(recursive_ref_pattern)
+            rx_synonym = re.compile(synonym_pattern)
+        else:
+            recursive_ref_pattern = NEVER_MATCH_PATTERN
         for symbol, statement in definitions:
+            if symbol[-2:] != '__' or (symbol.find('_skip_') >= 0 or symbol.find('_resume_') >= 0):
+                # TODO: Except uses at the very end of the rule (i.e. right recursion),
+                #       unless it's forward references (pre-sort the self.forward-references accordingly)
+                statement = rx_recursive_ref.sub(r'Ref("\1")', statement)
+                # statement = rx_synonym.sub(rf'Synonym(\1{RECURSIVE_SUFFIX})', statement)
+                statement = RX_REF.sub(r'\1', statement)
             if symbol in self.forward:
                 declarations += [symbol + '.set(' + statement + ')']
             else:
