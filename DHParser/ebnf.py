@@ -1507,6 +1507,7 @@ def neutralize_unnamed_groups(rxp: str) -> str:
     return '?:'.join(al)
 
 
+REF_TMPL = 'Ref__({symbol})'
 RX_REF_TMPL = r'Ref__\(({symbols})\)'
 RX_SYNONYM_TMPL = r'Synonym\(({symbols})\)'  # Really needed?
 RX_REF = LazyRE(r'Ref__\((\w+)\)')
@@ -2259,6 +2260,7 @@ class EBNFCompiler(Compiler):
             if symbol[-2:] != '__' or (symbol.find('_skip_') >= 0 or symbol.find('_resume_') >= 0):
                 # TODO: Except uses at the very end of the rule (i.e. right recursion),
                 #       unless it's forward references (pre-sort the self.forward-references accordingly)
+                statement = statement.replace(REF_TMPL.format(symbol = symbol), symbol)
                 statement = rx_recursive_ref.sub(r'Ref("\1")', statement)
                 # statement = rx_synonym.sub(rf'Synonym(\1{RECURSIVE_SUFFIX})', statement)
                 statement = RX_REF.sub(r'\1', statement)

@@ -114,11 +114,9 @@ class InterwovenLRGrammar(Grammar):
         parser = InterwovenLR()
         syntax_tree = parser(source_code)
     """
-    E__Recursive__ = Ref("E")
-    F__Recursive__ = Ref("F")
-    G__Recursive__ = Ref("G")
-    H__Recursive__ = Ref("H")
-    source_hash__ = "16489e3b6ba2a616b6d36acc5cf7c795"
+    E = Forward()
+    G = Forward()
+    source_hash__ = "cf2f4667d8a1183fb7c3c97534e231df"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -131,9 +129,9 @@ class InterwovenLRGrammar(Grammar):
     I = Series(Text("("), OneOrMore(AA), Text(")"))
     H = Series(Ref("G"), Text("l"))
     F = Alternative(Series(Ref("E"), Text("+"), ZeroOrMore(I)), Series(Ref("G"), Text("-")))
-    G = Alternative(Series(Ref("H"), Text("m")), Ref("E"))
-    E = Alternative(Series(Ref("F"), Text("n")), Text("n"))
-    S = Synonym(E__Recursive__)
+    G.set(Alternative(Series(Ref("H"), Text("m")), Ref("E")))
+    E.set(Alternative(Series(Ref("F"), Text("n")), Text("n")))
+    S = Synonym(E)
     root__ = S
     
 parsing: PseudoJunction = create_parser_junction(InterwovenLRGrammar)

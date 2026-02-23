@@ -3637,11 +3637,19 @@ class LateBindingUnary(UnaryParser):
     LateBindingUnary is not to be confused with :py:class:`Forward` and should
     not be abused for recursive parser calls either!"""
 
-    def __init__(self, parser_name: str) -> None:
+    def __init__(self, parser_name: Union[str, Parser]) -> None:
         assert parser_name
-        super().__init__(get_parser_placeholder())
-        self.parser_name: str = parser_name
-        self._sub_parsers = frozenset()
+        if isinstance(parser_name, Parser):
+            parser = cast(Parser, parser_name)
+            assert parser.pname, \
+                f'LateBindingUnary must bet initialized with named parser, not {parser}!'
+            super().__init__(parser)
+            self.parser_name = parser.name
+            self.sub_parsers = frozenset({parser})
+        else:
+            super().__init__(get_parser_placeholder())
+            self.parser_name: str = parser_name
+            self._sub_parsers = frozenset()
 
     def  __deepcopy__(self, memo):
         duplicate = self.__class__(self.parser_name)
@@ -5325,7 +5333,7 @@ class Forward(UnaryParser):
         self.pname = ""
 
 
-
+#TODO: Turn this into pöassive References!
 class Ref(LateBindingUnary):
     r"""
     Ref allows declaring forward-referecnes in a grammar, e.g.::
