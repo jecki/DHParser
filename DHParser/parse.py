@@ -3640,15 +3640,15 @@ class LateBindingUnary(UnaryParser):
     def __init__(self, parser_name: Union[str, Parser]) -> None:
         assert parser_name
         if isinstance(parser_name, Parser):
-            parser = cast(Parser, parser_name)
+            parser = parser_name
             assert parser.pname, \
                 f'LateBindingUnary must bet initialized with named parser, not {parser}!'
             super().__init__(parser)
-            self.parser_name = parser.name
+            self.parser_name = parser.pname
             self.sub_parsers = frozenset({parser})
         else:
             super().__init__(get_parser_placeholder())
-            self.parser_name: str = parser_name
+            self.parser_name = parser_name
             self._sub_parsers = frozenset()
 
     def  __deepcopy__(self, memo):
@@ -5254,6 +5254,7 @@ class Forward(UnaryParser):
                     # grammar.most_recent_error__ = None
                     next_result = self.parser(location)
 
+
                     # discard next_result if it is not the longest match and return
                     if next_result[1] <= result[1]:  # also true, if no match
                         # Since the result of the last parser call (``next_result``) is discarded,
@@ -5335,54 +5336,17 @@ class Forward(UnaryParser):
 
 
 class Ref(LateBindingUnary):
-    r"""
-    Ref allows declaring forward-referecnes in a grammar, e.g.::
-
-        >>> class Arithmetic(Grammar):
-        ...     r'''
-        ...     expression =  term  { ("+" | "-") term }
-        ...     term       =  factor  { ("*" | "/") factor }
-        ...     factor     =  INTEGER | "("  expression  ")"
-        ...     INTEGER    =  /\d+/~
-        ...     '''
-        ...     INTEGER    = RE('\\d+')
-        ...     factor     = INTEGER | TKN("(") + Ref('expression') + TKN(")")
-        ...     term       = factor + ZeroOrMore((TKN("*") | TKN("/")) + factor)
-        ...     expression = term + ZeroOrMore((TKN("+") | TKN("-")) + term)
-        ...     root__     = expression
-
-    :ivar recursion_counter:  Mapping of places to how often the parser
-            has already been called recursively at this place. This
-            is needed to implement left recursion. The number of
-            calls becomes irrelevant once a result has been memoized.
-
-    The Ref-parser class implements a seed-and-grow algorithm to handle
-    left-recursive grammars. See it's __call__()-method.
-    """
-
     def reset(self):
         super(Ref, self).reset()
         assert not self.pname, "Ref-Parsers mustn't have a name!"
 
     @cython.locals(ldepth=cython.int, rb_stack_size=cython.int)
     def __call__(self, location: cython.int) -> ParsingResult:
-        """
-        Overrides :py:meth:`Parser.__call__`, because Forward is not an independent parser
-        but merely redirects the call to another parser. Other than parser
-        :py:class:`Synonym`, which might be a meaningful marker for the syntax tree,
-        parser Forward should never appear in the syntax tree.
-
-        :py:meth:`Forward.__call__` also takes care of (most of) the left recursion
-        handling. In order to do so it (unfortunately) has to duplicate some code
-        from :py:meth:`Parser.__call__`.
-
-        The algorithm for avoiding infinite loops in left-recursive grammars roughly follows:
-        https://medium.com/@gvanrossum_83706/left-recursive-peg-grammars-65dab3c580e1
-        See also:
-        https://tinlizzie.org/VPRIPapers/tr2007002_packrat.pdf
-        """
         result = self.parser(location)
         return result
+
+    # def _parse(self, location: cython.int) -> ParsingResult:
+    #     return self.parser(location)
 
     def set_proxy(self, proxy: Optional[ParseFunc]):
         """``set_proxy`` has no effects on Ref-objects!"""

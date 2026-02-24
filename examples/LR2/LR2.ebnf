@@ -1,6 +1,6 @@
 # LR2-grammar
 
-@literalws =  right
+@literalws = right
 expr = ex
 ex   = expr ("+"|"-") term | term
 term = tr
