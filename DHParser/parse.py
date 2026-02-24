@@ -1776,7 +1776,7 @@ class Grammar:
         # during testing and development this does not need to be the case.)
         if root:
             self.root_parser__ = copy.deepcopy(root)
-            if not self.root_parser__.pname:
+            if not self.root_parser__.pname and not isinstance(self.root_parser__, Forward):
                 self.root_parser__.name("root")
             self.root_parser__.disposable = False
             self.static_analysis_pending__ = [True]  # type: List[bool]
