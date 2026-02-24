@@ -539,7 +539,10 @@ class Parser:
     can, for example, be returned by the :py:class:`ZeroOrMore`-parser in case
     the contained parser is repeated zero times.
 
-    :ivar pname:  The parser's name.
+    :ivar pname:  The parser's name. Hint: Forward-parsers do not have a
+        pname, even though they are always associated with a symbol.
+        Be sure, to test for Forward-parsers where needed and then pick
+        cast(Forward, parser).parser.pname !
 
     :ivar disposable: A property indicating that the parser returns
                 anonymous nodes. For performance
