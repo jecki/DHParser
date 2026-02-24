@@ -248,8 +248,8 @@ except ImportError:
     import DHParser.externallibs.shadow_cython as cython
 
 from DHParser.compile import CompilerError, Compiler, CompilationResult, compile_source
-from DHParser.configuration import access_thread_locals, get_config_value, \
-    get_config_values, set_config_value, NEVER_MATCH_PATTERN, ALLOWED_PRESET_VALUES
+from DHParser.configuration import access_thread_locals, get_config_value, get_config_values, \
+    set_config_value, NEVER_MATCH_PATTERN, ALLOWED_PRESET_VALUES
 from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_TOKEN_WARNING,\
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, NOTICE, \
     DIRECTIVE_FOR_NONEXISTANT_SYMBOL, UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING, \
@@ -270,9 +270,9 @@ from DHParser.nodetree import Node, RootNode, Path, WHITESPACE_PTYPE, KEEP_COMME
     TOKEN_PTYPE, ZOMBIE_TAG, flatten_sxpr, parse_sxpr
 from DHParser.toolkit import load_if_file, wrap_str_literal, escape_ctrl_chars, md5, \
     sane_parser_name, re, expand_table, unrepr, compile_python_object, deprecated, \
-    ThreadLocalSingletonFactory, Any, Iterable, Sequence, Set, AbstractSet, Union, Dict, List, \
+    ThreadLocalSingletonFactory, Any, Iterable, Sequence, Set, Set, Union, Dict, List, \
     Tuple, FrozenSet, MutableSet, Optional, Type, Callable, Container, TypeAlias, \
-    matching_brackets, INFINITE, LazyRE, static
+    matching_brackets, INFINITE, LazyRE, static, RX_NEVER_MATCH
 from DHParser.transform import TransformerFunc, transformer, remove_brackets, change_name, \
     reduce_single_child, replace_by_single_child, is_empty, remove_children, add_error, \
     remove_tokens, remove_anonymous_tokens, flatten, forbid, assert_content, remove_children_if, \
@@ -2251,11 +2251,12 @@ class EBNFCompiler(Compiler):
             # TODO: Sort out purely right-recursive symbols
             symstr = '|'.join(recursive)
             recursive_ref_pattern = RX_REF_TMPL.format(symbols = symstr)
-            synonym_pattern = RX_SYNONYM_TMPL.format(symbols = symstr)
             rx_recursive_ref = re.compile(recursive_ref_pattern)
+            synonym_pattern = RX_SYNONYM_TMPL.format(symbols = symstr)
             rx_synonym = re.compile(synonym_pattern)
         else:
-            recursive_ref_pattern = NEVER_MATCH_PATTERN
+            recursive_ref_pattern: str = '(' + NEVER_MATCH_PATTERN + ')'
+            rx_recursive_ref = re.compile(recursive_ref_pattern)
         for symbol, statement in definitions:
             if symbol[-2:] != '__' or (symbol.find('_skip_') >= 0 or symbol.find('_resume_') >= 0):
                 # TODO: Except uses at the very end of the rule (i.e. right recursion),

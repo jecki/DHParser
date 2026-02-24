@@ -59,8 +59,8 @@ from DHParser.nodetree import Node, RootNode, WHITESPACE_PTYPE, \
     KEEP_COMMENTS_PTYPE, TOKEN_PTYPE, MIXED_CONTENT_TEXT_PTYPE, ZOMBIE_TAG, EMPTY_NODE, \
     EMPTY_PTYPE, LEAF_NODE, ChildrenType, ResultType
 from DHParser.toolkit import sane_parser_name, escape_ctrl_chars, re, matching_brackets, \
-    abbreviate_middle, RxPatternType, linebreaks, line_col, TypeAlias, List, Tuple, \
-    MutableSet, AbstractSet, FrozenSet, Dict, INFINITE, LazyRE, CancelQuery, deprecated
+    abbreviate_middle, RxPatternType, RxType, linebreaks, line_col, TypeAlias, List, Tuple, \
+    MutableSet, Set, FrozenSet, Dict, INFINITE, LazyRE, CancelQuery, deprecated
 
 try:
     import cython
@@ -291,7 +291,7 @@ class ParserError(Exception):
         return pe
 
 
-PatternMatchType: TypeAlias = Union[RxPatternType, str, Callable, 'Parser']
+PatternMatchType: TypeAlias = Union[RxType, str, Callable, 'Parser']
 ErrorMessagesType: TypeAlias = List[Tuple[PatternMatchType, str]]
 ResumeList: TypeAlias = Sequence[PatternMatchType]  # list of strings or regular expressions
 ReentryPointAlgorithm: TypeAlias = Callable[[StringView, int, int], Tuple[int, int]]
@@ -493,7 +493,7 @@ ParsingResult: TypeAlias = Tuple[Optional[Node], int]
 MemoizationDict: TypeAlias = Dict[int, ParsingResult]
 
 ApplyFunc: TypeAlias = Callable[['Parser'], Optional[bool]]
-ParserTrail: TypeAlias = Tuple['Parser']
+ParserTrail: TypeAlias = Tuple['Parser', ...]
 ApplyToTrailFunc: TypeAlias = Callable[[ParserTrail], Optional[bool]]
 # The return value of ``True`` stops any further application
 FlagFunc: TypeAlias = Callable[[ApplyFunc, MutableSet[ApplyFunc]], bool]
@@ -601,22 +601,22 @@ class Parser:
 
     def __init__(self) -> None:
         # assert isinstance(name, str), str(name)
-        self.pname = ''               # type: str
-        self.ptype = ':' + self.__class__.__name__  # type: str  # must never be changed
-        self.node_name = self.ptype   # type: str   # can be changed later
-        self.disposable = True        # type: bool
-        self.drop_content = False     # type: bool
-        self._sub_parsers = frozenset()  # type: FrozenSet[Parser]
+        self.pname: str = ''
+        self.ptype: str = ':' + self.__class__.__name__
+        self.node_name: str = self.ptype
+        self.disposable: bool = True
+        self.drop_content: bool = False
+        self._sub_parsers: FrozenSet[Parser] = frozenset()
         # this indirection is required for Cython-compatibility
-        self._parse_proxy = self._parse  # type: BoundParseFunc
+        self._parse_proxy: BoundParseFunc = self._parse
         try:
-            self._grammar = get_grammar_placeholder()  # type: Grammar
+            self._grammar: Grammar = get_grammar_placeholder()
         except NameError:
             pass                        # ensures Cython-compatibility
         self._symbol = ''               # type: str
-        self._descendants_cache = None  # type: Optional[AbstractSet[Parser]]
-        self._anon_desc_cache = None    # type: Optional[AbstractSet[Parser]]
-        self._desc_trails_cache = None  # type: Optional[AbstractSet[ParserTrail]]
+        self._descendants_cache: Optional[Set[Parser]] = None
+        self._anon_desc_cache: Optional[Set[Parser]] = None
+        self._desc_trails_cache: Optional[Set[ParserTrail]] = None
         self.reset()
 
     def __deepcopy__(self, memo):
@@ -910,13 +910,13 @@ class Parser:
     def sub_parsers(self, f: FrozenSet[Parser]):
         self._sub_parsers = f
 
-    def descendants(self, grammar = _GRAMMAR_PLACEHOLDER) -> AbstractSet[Parser]:
+    def descendants(self, grammar = _GRAMMAR_PLACEHOLDER) -> Set[Parser]:
         """Returns a set of self and all descendant parsers,
         avoiding circles."""
         if self._descendants_cache is None:
             # Caches descendants, avoiding cycles; updates grammar if needed
             if self._desc_trails_cache:
-                self._descendants_cache = tuple(pt[-1] for pt in self._desc_trails_cache)
+                self._descendants_cache = set(pt[-1] for pt in self._desc_trails_cache)
             else:
                 if  is_grammar_placeholder(grammar):   grammar = self._grammar
                 visited = set()
@@ -932,14 +932,14 @@ class Parser:
                 self._descendants_cache = frozenset(visited)  # tuple(p for p in collect(self))
         return self._descendants_cache
 
-    def descendant_trails(self) -> AbstractSet[ParserTrail]:
+    def descendant_trails(self) -> Set[ParserTrail]:
         """Returns a set of the trails of self and all descendant
         parsers, avoiding circles. NOTE: The algorithm is rather sloppy and
-        the returned set is not really comprehensive, but sufficient to trace
+        the returned set is not really comprehensive but sufficient to trace
         anonymous parsers to their nearest named ancestor."""
         if self._desc_trails_cache is None:
-            visited = set()
-            trails = set()
+            visited: MutableSet[Parser] = set()
+            trails: MutableSet[Tuple[Parser, ...]] = set()
 
             def collect_trails(parser: Parser, ptrl: List[Parser]):
                 nonlocal visited, trails
@@ -1343,12 +1343,12 @@ def ensure_drop_propagation(p: Parser):
                 raise e
 
 
-def is_disposable(name: str, disposables: AbstractSet[str]|RxPatternType) -> bool:
+def is_disposable(name: str, disposables: Set[str]|RxType) -> bool:
     if name[0:1] == ':':
         return True
-    elif isinstance(disposables, AbstractSet):
+    elif isinstance(disposables, Set):
         return name in disposables
-    elif isinstance(disposables, RxPatternType):
+    elif isinstance(disposables, RxType):
         return bool(disposables.match(name))
     else:
         assert isinstance(disposables, str), type(disposables)
@@ -1640,13 +1640,13 @@ class Grammar:
                 has been encountered. Default is 10.000 characters.
     """
     python_src__ = ''  # type: str
-    root__ = get_parser_placeholder()   # type: Parser
+    root__: Parser = get_parser_placeholder()
     # root__ must be overwritten with the root-parser by grammar subclass
-    parser_initialization__ = ["pending"]  # type: List[str]
-    resume_rules__ = dict()        # type: Dict[str, ResumeList]
-    skip_rules__ = dict()          # type: Dict[str, ResumeList]
-    error_messages__ = dict()      # type: Dict[str, Tuple[PatternMatchType, str]]
-    disposable__ = frozenset()     # type: FrozenSet[str]|RxPatternType
+    parser_initialization__: List[str] = ["pending"]
+    resume_rules__: Dict[str, ResumeList] = dict()
+    skip_rules__: Dict[str, ResumeList] = dict()
+    error_messages__: Dict[str, Tuple[PatternMatchType, str]] = dict()
+    disposable__: Union[FrozenSet[str], RxType] = frozenset()
     # some default values
     COMMENT__ = r''  # type: str  # r'#.*'  or r'#.*(?:\n|$)' if combined with horizontal wspc
     WHITESPACE__ = r'[ \t]*(?:\n[ \t]*)?(?!\n)'  # spaces plus at most a single linefeed
@@ -1745,7 +1745,7 @@ class Grammar:
         # add compiled regular expression for comments if it does not already exist
         if not hasattr(self, 'comment_rx__') or self.comment_rx__ is None:
             if hasattr(self.__class__, 'COMMENT__') and self.__class__.COMMENT__:
-                self.comment_rx__ = re.compile(self.__class__.COMMENT__)
+                self.comment_rx__: RxType = re.compile(self.__class__.COMMENT__)
             else:
                 self.comment_rx__ = RX_NEVER_MATCH
         else:
@@ -3186,7 +3186,7 @@ class CombinedParser(Parser):
                     if tail_is_anonymous_leaf:
                         if head_is_anonymous_leaf:
                             bunch.append(tail._result)
-                            tail = nd
+                            tail: Node = nd
                         else:
                             if bunch:
                                 bunch.append(tail._result)
@@ -5333,7 +5333,7 @@ class Forward(UnaryParser):
         self.pname = ""
 
 
-#TODO: Turn this into pöassive References!
+
 class Ref(LateBindingUnary):
     r"""
     Ref allows declaring forward-referecnes in a grammar, e.g.::
@@ -5362,7 +5362,6 @@ class Ref(LateBindingUnary):
 
     def reset(self):
         super(Ref, self).reset()
-        self.recursion_counter: Dict[int, int] = dict()
         assert not self.pname, "Ref-Parsers mustn't have a name!"
 
     @cython.locals(ldepth=cython.int, rb_stack_size=cython.int)
@@ -5382,93 +5381,11 @@ class Ref(LateBindingUnary):
         See also:
         https://tinlizzie.org/VPRIPapers/tr2007002_packrat.pdf
         """
-        grammar = self._grammar
-        if not grammar.left_recursion__:
-            return self.parser(location)
-
-        # rollback variable changing operation if the parser backtracks
-        # to a position before the variable-changing operation occurred
-        if location <= grammar.last_rb__loc__:
-            grammar.rollback_to__(location)
-
-        # if the location has already been visited by the current parser, return the saved result
-        visited = self.visited  # using local variable for better performance
-        if location in visited:
-            # Sorry, no history recording in case of memoized results!
-            return visited[location]
-
-        if location in self.recursion_counter:
-            depth = self.recursion_counter[location]
-            if depth == 0:
-                grammar.suspend_memoization__ = True
-                result = None, location
-            else:
-                self.recursion_counter[location] = depth - 1
-                result = self.parser(location)
-                self.recursion_counter[location] = depth  # allow moving back and forth
-        else:
-            self.recursion_counter[location] = 0  # fail on the first recursion
-            save_suspend_memoization = grammar.suspend_memoization__
-            grammar.suspend_memoization__ = False
-            history_pointer = len(grammar.history__)
-
-            result = self.parser(location)
-
-            if result[0] is not None:
-                # keep calling the (potentially left-)recursive parser and increase
-                # the recursion depth by 1 for each call as long as the length of
-                # the match increases.
-                last_history_state = grammar.history__[history_pointer:len(grammar.history__)]
-                depth = 1
-                while True:
-                    self.recursion_counter[location] = depth
-                    grammar.suspend_memoization__ = False
-                    rb_stack_size = len(grammar.rollback__)
-                    grammar.history__ = grammar.history__[:history_pointer]
-                    # reduplication of error messages will be caught by nodetree.RootNode.add_error()
-                    # saving and restoring the errors-messages state on each iteration presupposes
-                    # that error messages will be recreated every time, which, however, does not
-                    # happen because of memoization. (This is a downside of global error-reporting
-                    # in contrast to attaching error-messages locally to the node where they
-                    # occurred. Big topic...)
-                    # don't carry error/resumption-messages over to the next iteration
-                    # grammar.most_recent_error__ = None
-                    next_result = self.parser(location)
-
-                    # discard next_result if it is not the longest match and return
-                    if next_result[1] <= result[1]:  # also true, if no match
-                        # Since the result of the last parser call (``next_result``) is discarded,
-                        # any variables captured by this call should be "rolled back", too.
-                        while len(grammar.rollback__) > rb_stack_size:
-                            _, rb_func = grammar.rollback__.pop()
-                            rb_func()
-                            grammar.last_rb__loc__ = grammar.rollback__[-1][0] \
-                                if grammar.rollback__ else -2
-                        # Finally, overwrite the discarded result in the last history record with
-                        # the accepted result, i.e. the longest match.
-                        # TODO: Move this to trace.py, somehow... and make it less confusing
-                        #       that the result is not the last but the longest match...
-                        grammar.history__ = grammar.history__[:history_pointer] + last_history_state
-                        # record = grammar.history__[-1]
-                        # if record.call_stack[-1] == (self.parser.pname, location):
-                        #     record.text = result[1]
-                        #     delta = len(text) - len(result[1])
-                        #     assert record.node.name != ':None'
-                        #     record.node.result = text[:delta]
-                        break
-
-                    last_history_state = grammar.history__[history_pointer:len(grammar.history__)]
-                    result = next_result
-                    depth += 1
-            # grammar.suspend_memoization__ = save_suspend_memoization \
-            #     or location <= (grammar.last_rb__loc__ + int(text._len == result[1]._len))
-            grammar.suspend_memoization__ = save_suspend_memoization  #  = is_context_sensitive(self.parser)
-            if not grammar.suspend_memoization__:
-                visited[location] = result
+        result = self.parser(location)
         return result
 
     def set_proxy(self, proxy: Optional[ParseFunc]):
-        """``set_proxy`` has no effects on Forward-objects!"""
+        """``set_proxy`` has no effects on Ref-objects!"""
         return
 
     def __repr__(self):
