@@ -1776,7 +1776,7 @@ class Grammar:
         # during testing and development this does not need to be the case.)
         if root:
             self.root_parser__ = copy.deepcopy(root)
-            if not self.root_parser__.pname:
+            if not self.root_parser__.pname and not isinstance(root, Forward):
                 self.root_parser__.name("root")
             self.root_parser__.disposable = False
             self.static_analysis_pending__ = [True]  # type: List[bool]
@@ -1805,7 +1805,7 @@ class Grammar:
         for l in resume_lists:
             for i in range(len(l)):
                 if isinstance(l[i], Parser):
-                    p = self[l[i].pname]  # deep-copy and initialize with grammar-object
+                    p = self[l[i].pname or l[i].parser.pname]  # deep-copy and initialize with grammar-object; 2n clase for Forward parsers
                     l[i] = p
                     if p not in root_connected:
                         self.unconnected_parsers__.add(p)
@@ -1845,7 +1845,8 @@ class Grammar:
         except KeyError:
             parser_template = getattr(self.__class__, key, None)
             if parser_template:
-                if key != parser_template.pname:
+                if key != parser_template.pname or (parser_template.parser.pname
+                                                    if isinstance(parser_template, Forward) else ''):
                     raise AttributeError(
                         f'Illegal parser-name "{key}" for grammar {self.__class__.__name__}!')
                 # add parser to grammar-object on the fly...
@@ -2163,8 +2164,8 @@ class Grammar:
                     # match was complete except for trailing whitespace
                     if result is None: result = Node(EMPTY_PTYPE, '').with_pos(0)
                     self.tree__.add_error(result, Error(
-                        f'Parser "{parser.pname}" stopped before end, '
-                        f'because of trailing whitespace.',
+                        f'Parser "{parser.pname or cast(Forward, parser).parser.pname}" '
+                        f'stopped before end, because of trailing whitespace.',
                         location, PARSER_STOPPED_BEFORE_END_WARNING))
                 location = L
         if stitches:

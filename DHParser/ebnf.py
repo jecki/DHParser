@@ -174,7 +174,6 @@ from a grammar, step by step::
     <BLANKLINE>
     parsing: PseudoJunction = create_parser_junction(ArithmeticGrammar)
     get_grammar = parsing.factory  # for backwards compatibility, only
-    <BLANKLINE>
 
     >>> # 2. Execution of the Python-source and extraction of the Grammar-class
     >>> code = compile(DHPARSER_IMPORTS + python_src, '<string>', 'exec')
