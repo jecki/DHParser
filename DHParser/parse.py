@@ -3666,6 +3666,7 @@ class LateBindingUnary(UnaryParser):
                 raise UninitializedError(
                     f'Grammar hast not yet been set in LateBindingUnary "{self}"')
             self.parser = getattr(self.grammar, self.parser_name)
+            print("Ref", self.parser.pname, id(self.parser))
         return self.parser
 
     @property
@@ -5228,6 +5229,7 @@ class Forward(UnaryParser):
         else:
             self.recursion_counter[location] = 0  # fail on the first recursion
             save_suspend_memoization = grammar.suspend_memoization__
+            print(self.parser.pname, save_suspend_memoization, id(self))
             grammar.suspend_memoization__ = False
             history_pointer = len(grammar.history__)
 
