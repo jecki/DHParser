@@ -876,6 +876,11 @@ class Parser:
             self.pname = pname
         return self
 
+    def effective_pname(self) -> str:
+        """Returns the parser's pname. In case of a Forward-parser,
+        returns parser.parser.pname."""
+        return self.pname
+
     @property
     def grammar(self) -> 'Grammar':
         try:
@@ -2163,8 +2168,8 @@ class Grammar:
                     # match was complete except for trailing whitespace
                     if result is None: result = Node(EMPTY_PTYPE, '').with_pos(0)
                     self.tree__.add_error(result, Error(
-                        f'Parser "{parser.pname}" stopped before end, '
-                        f'because of trailing whitespace.',
+                        f'Parser "{parser.effective_pname()}" '
+                        f'stopped before end, because of trailing whitespace.',
                         location, PARSER_STOPPED_BEFORE_END_WARNING))
                 location = L
         if stitches:
@@ -2374,7 +2379,7 @@ class Grammar:
             nonlocal symbol
             self.associated_symbol_cache__[p] = symbol
             for d in p.sub_parsers:
-                if not d.pname and not (isinstance(d, Forward) and cast(Forward, d).parser.pname):
+                if not d.effective_pname():
                     add_anonymous_descendants(d)
 
         for p in self.all_parsers__:
@@ -3641,10 +3646,10 @@ class LateBindingUnary(UnaryParser):
         assert parser_name
         if isinstance(parser_name, Parser):
             parser = parser_name
-            assert parser.pname, \
+            assert parser.effective_pname(), \
                 f'LateBindingUnary must bet initialized with named parser, not {parser}!'
             super().__init__(parser)
-            self.parser_name = parser.pname
+            self.parser_name = parser.effective_pname()
             self.sub_parsers = frozenset({parser})
         else:
             super().__init__(get_parser_placeholder())
@@ -3666,7 +3671,8 @@ class LateBindingUnary(UnaryParser):
                 raise UninitializedError(
                     f'Grammar hast not yet been set in LateBindingUnary "{self}"')
             self.parser = getattr(self.grammar, self.parser_name)
-            print("Ref", self.parser.pname, id(self.parser))
+            ID = id(self.parser)
+            print("Ref", self.parser_name, id(self.parser))
         return self.parser
 
     @property
@@ -4982,14 +4988,14 @@ class Retrieve(ContextSensitive):
     def symbol_pname(self) -> str:
         """Returns the watched symbol's pname, properly, i.e. even in cases
         where the symbol's parser is shielded by a Forward-parser"""
-        return self.parser.pname or cast(Forward, self.parser).parser.pname
+        return self.parser.effective_pname()
 
     def get_node_name(self) -> str:
         """Returns a name for the retrieved node. If the Retrieve-parser
         has a node-name, this overrides the node-name of the retrieved symbol's
         parser."""
         if self.disposable or not self.node_name:
-            return self.parser.pname or cast(Forward, self.parser).parser.pname
+            return self.parser.effective_pname()
             # if self.parser.pname:
             #     return self.parser.name
             # # self.parser is a Forward-Parser, so pick the name of its encapsulated parser
@@ -5183,6 +5189,7 @@ class Forward(UnaryParser):
         memo[id(self)] = duplicate
         copy_parser_base_attrs(self, duplicate)
         parser = copy.deepcopy(self.parser, memo)
+        print(id(self), id(duplicate))
         duplicate.parser = parser
         duplicate.sub_parsers = frozenset({parser})
         return duplicate
@@ -5312,6 +5319,11 @@ class Forward(UnaryParser):
             ret = func()
             self.cycle_reached = False
             return ret
+
+    def effective_pname(self) -> str:
+        """Returns the parser's pname. In case of a Forward-parser,
+        returns parser.parser.pname."""
+        return self.parser.pname
 
     def __repr__(self):
         return self.__cycle_guard(lambda: repr(self.parser), '...')
