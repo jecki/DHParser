@@ -293,7 +293,7 @@ class ParserError(Exception):
 
 PatternMatchType: TypeAlias = Union[RxType, str, Callable, 'Parser']
 ErrorMessagesType: TypeAlias = List[Tuple[PatternMatchType, str]]
-ResumeList: TypeAlias = Sequence[PatternMatchType]  # list of strings or regular expressions
+ResumeList: TypeAlias = List[Union[PatternMatchType, 'Parser']]  # list of strings or regular expressions
 ReentryPointAlgorithm: TypeAlias = Callable[[StringView, int, int], Tuple[int, int]]
 # (text, start point, end point) => (reentry point, match length)
 # A return value of (-1, x) means that no reentry point before the end of the document was found
@@ -924,13 +924,14 @@ class Parser:
                 self._descendants_cache = set(pt[-1] for pt in self._desc_trails_cache)
             else:
                 if  is_grammar_placeholder(grammar):   grammar = self._grammar
-                visited = set()
+                visited = dict()  # set()
 
                 def collect(parser: Parser):
                     nonlocal visited
                     if parser not in visited:
                         parser.grammar = grammar
-                        visited.add(parser)
+                        # visited.add(parser)
+                        visited[parser] = (id(parser), type(parser))
                         for p in parser.sub_parsers:
                             collect(p)
                 collect(self)
@@ -1314,7 +1315,7 @@ def cancel_proxy(self: Parser, location: cython.int) -> Tuple[Optional[Node], cy
     grammar.cancel_interval__ -= 1
     if grammar.cancel_interval__ < 0:
         grammar.cancel_interval__ = CANCEL_QUERY_INTERVAL
-        if grammar.cancel_query__():
+        if grammar.cancel_query__ and grammar.cancel_query__():
             raise CancelError(location)
     return self._parse(location)
 
@@ -1460,7 +1461,7 @@ class Grammar:
                 specific symbol (i.e. parser name) and any of the regular expressions
                 matches the error message of the first matching expression is used
                 instead of the generic mandatory violation error messages. This
-                allows to answer typical kinds of errors (say putting a colon ","
+                allows answering typical kinds of errors (say putting a colon ","
                 where a semicolon ";" is expected) with more informative error
                 messages.
 
@@ -1730,7 +1731,7 @@ class Grammar:
                 else:
                     setattr(self, parser.pname, parser)
             elif isinstance(parser, Forward):
-                setattr(self, cast(Forward, parser).parser.pname, parser)
+                setattr(self, parser.parser.pname, parser)
             self.all_parsers__.add(parser)
             # parser.grammar = self  # moved to parser.descendants
 
@@ -1781,7 +1782,7 @@ class Grammar:
         # during testing and development this does not need to be the case.)
         if root:
             self.root_parser__ = copy.deepcopy(root)
-            if not self.root_parser__.pname and not isinstance(self.root_parser__, Forward):
+            if not self.root_parser__.effective_pname():
                 self.root_parser__.name("root")
             self.root_parser__.disposable = False
             self.static_analysis_pending__ = [True]  # type: List[bool]
@@ -1802,7 +1803,7 @@ class Grammar:
         self.ff_parser__ = self.root_parser__
         self.unconnected_parsers__: MutableSet[Parser] = set()
         self.resume_parsers__: MutableSet[Parser] = set()
-        resume_lists = []
+        resume_lists: List[ResumeList] = []
         if hasattr(self, 'resume_rules__'):
             resume_lists.extend(self.resume_rules__.values())
         if hasattr(self, 'skip_rules__'):
@@ -1810,7 +1811,7 @@ class Grammar:
         for l in resume_lists:
             for i in range(len(l)):
                 if isinstance(l[i], Parser):
-                    p = self[l[i].pname]  # deep-copy and initialize with grammar-object
+                    p = self[cast(Parser, l[i]).pname]  # deep-copy and initialize with grammar-object
                     l[i] = p
                     if p not in root_connected:
                         self.unconnected_parsers__.add(p)
@@ -3656,7 +3657,7 @@ class LateBindingUnary(UnaryParser):
             self.parser_name = parser_name
             self._sub_parsers = frozenset()
 
-    def  __deepcopy__(self, memo):
+    def __deepcopy__(self, memo):
         duplicate = self.__class__(self.parser_name)
         if not is_parser_placeholder(self.parser):
             duplicate.parser = copy.deepcopy(self.parser, memo)
@@ -3670,9 +3671,11 @@ class LateBindingUnary(UnaryParser):
             if is_grammar_placeholder(self._grammar):
                 raise UninitializedError(
                     f'Grammar hast not yet been set in LateBindingUnary "{self}"')
-            self.parser = getattr(self.grammar, self.parser_name)
-            ID = id(self.parser)
-            print("Ref", self.parser_name, id(self.parser))
+            # self.parser = getattr(self.grammar, self.parser_name)
+            self.parser = self.grammar.__dict__[self.parser_name]
+            assert isinstance(self.parser, Parser), f'"{self.parser_name}" is not a parser!'
+            if self.parser_name == 'expr':
+                print("Ref", self.parser_name, id(self.parser), ' -- ', id(self))
         return self.parser
 
     @property
