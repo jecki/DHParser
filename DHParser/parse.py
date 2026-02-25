@@ -1878,7 +1878,10 @@ class Grammar:
 
     def __getitem__(self, key):
         try:
-            return self.__dict__[key]
+            parser = self.__dict__[key]
+            if parser not in self.all_parsers__:
+                parser.apply(self._add_parser__, self)
+            return parser
         except KeyError:
             # TODO: This code should never be reached, anymore. Add an assert for testing and later remove it entirely!
             parser_template = getattr(self.__class__, key, None)
