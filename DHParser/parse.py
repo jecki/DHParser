@@ -932,7 +932,6 @@ class Parser:
                 def collect(parser: Parser):
                     nonlocal visited
                     if parser not in visited:
-                        # parser.grammar = grammar
                         visited.add(parser)
                         for p in parser.sub_parsers:
                             collect(p)
@@ -1720,6 +1719,7 @@ class Grammar:
                     else:
                         parser.name(anonymous + entry)
                     cls.parser_names__.append(entry)
+                    # TODO: Connect Late Binding Parsers here already!
                     ensure_drop_propagation(parser)
             cls.parser_initialization__ = ["done"]  # (over-)write subclass-variable
 
