@@ -1737,8 +1737,8 @@ class Grammar:
         """Constructor of class Grammar.
 
         :param root: If not None, this is going to be the root parser of the grammar.
-            This allows to first construct an ensemble of parser objects and then
-            link those objects in a grammar-object, rather than adding the parsers
+            This allows constructing an ensemble of parser objects, first, and then
+            linking those objects in a grammar-object, rather than adding the parsers
             as fields to a derived class of class Grammar. (See the doc-tests in this
             module for examples.)
         :param static_analysis: If not None, this overrides the config value
