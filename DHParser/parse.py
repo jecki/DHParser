@@ -59,8 +59,8 @@ from DHParser.nodetree import Node, RootNode, WHITESPACE_PTYPE, \
     KEEP_COMMENTS_PTYPE, TOKEN_PTYPE, MIXED_CONTENT_TEXT_PTYPE, ZOMBIE_TAG, EMPTY_NODE, \
     EMPTY_PTYPE, LEAF_NODE, ChildrenType, ResultType
 from DHParser.toolkit import sane_parser_name, escape_ctrl_chars, re, matching_brackets, \
-    abbreviate_middle, RxPatternType, RxType, linebreaks, line_col, TypeAlias, List, Tuple, \
-    MutableSet, Set, FrozenSet, Dict, INFINITE, LazyRE, CancelQuery, deprecated
+    abbreviate_middle, RxPatternType, linebreaks, line_col, TypeAlias, List, Tuple, Any, \
+    MutableSet, Set, FrozenSet, Dict, INFINITE, LazyRE, CancelQuery, deprecated, RxType
 
 try:
     import cython
@@ -539,7 +539,10 @@ class Parser:
     can, for example, be returned by the :py:class:`ZeroOrMore`-parser in case
     the contained parser is repeated zero times.
 
-    :ivar pname:  The parser's name.
+    :ivar pname:  The parser's name. Hint: Forward-parsers do not have a
+                pname, even though they are always associated with a symbol.
+                Be sure, to test for Forward-parsers where needed and then pick
+                cast(Forward, parser).parser.pname !
 
     :ivar disposable: A property indicating that the parser returns
                 anonymous nodes. For performance
@@ -627,7 +630,7 @@ class Parser:
         calling the same method from the superclass) by the derived class.
         """
         duplicate = self.__class__()
-        copy_parser_base_attrs(self, duplicate)
+        copy_parser_base_attrs(self, duplicate, memo)
         return duplicate
 
     def __repr__(self):
@@ -924,14 +927,13 @@ class Parser:
                 self._descendants_cache = set(pt[-1] for pt in self._desc_trails_cache)
             else:
                 if  is_grammar_placeholder(grammar):   grammar = self._grammar
-                visited = dict()  # set()
+                visited = set()
 
                 def collect(parser: Parser):
                     nonlocal visited
                     if parser not in visited:
-                        parser.grammar = grammar
-                        # visited.add(parser)
-                        visited[parser] = (id(parser), type(parser))
+                        # parser.grammar = grammar
+                        visited.add(parser)
                         for p in parser.sub_parsers:
                             collect(p)
                 collect(self)
@@ -941,7 +943,7 @@ class Parser:
     def descendant_trails(self) -> Set[ParserTrail]:
         """Returns a set of the trails of self and all descendant
         parsers, avoiding circles. NOTE: The algorithm is rather sloppy and
-        the returned set is not really comprehensive but sufficient to trace
+        the returned set is not really comprehensive, but sufficient to trace
         anonymous parsers to their nearest named ancestor."""
         if self._desc_trails_cache is None:
             visited: MutableSet[Parser] = set()
@@ -1115,8 +1117,15 @@ class NoMemoizationParser(LeafParser):
         return node, next_location
 
 
-def copy_parser_base_attrs(src: Parser, duplicate: Parser):
-    """Duplicates all attributes of the Parser-class from ``src`` to ``duplicate``."""
+def copy_parser_base_attrs(src: Parser, duplicate: Parser, memo: Dict[int, Any]):
+    """Duplicates all attributes of the Parser-class from ``src`` to ``duplicate``.
+    Also, if the parser has directly been assigned to a field in the grammar-class, it
+    will be added early to the grammar! This is a hack, tn order to make
+    LateBindingUnary.resolve_parser_name() work!"""
+    grammar = memo[0]
+    duplicate.grammar = grammar
+    name = memo.get(-id(src), '')
+    if name:  setattr(grammar, name, duplicate)
     duplicate.pname = src.pname
     duplicate.disposable = src.disposable
     duplicate.drop_content = src.drop_content
@@ -1349,7 +1358,7 @@ def ensure_drop_propagation(p: Parser):
                 raise e
 
 
-def is_disposable(name: str, disposables: Set[str]|RxType) -> bool:
+def is_disposable(name: str, disposables: Union[Set[str], RxType]) -> bool:
     if name[0:1] == ':':
         return True
     elif isinstance(disposables, Set):
@@ -1495,6 +1504,7 @@ class Grammar:
                  take the python src of the concrete grammar class
                  (see :py:func:`dsl.grammar_provider`).
 
+
     Instance Attributes:
 
     :ivar all_parsers\__:  A set of all parsers connected to this grammar object
@@ -1578,7 +1588,18 @@ class Grammar:
 
     :ivar associated_symbol_cache\__: A cache for the :py:meth:`associated_symbol__` -method.
 
-        # mirrored class attributes:
+    :ivar memo\__: A temporary memo for the deepcopy-calls inside the constructor.
+                Before the first deepcopy-call, this memo is filled with the negative
+                id's of all the classes' parser-objects that have directly been assigned
+                to a class variable, mapped to the class variable's name (= the symbol
+                of the parser) and zero mapped to the Grammar-object under constrcution.
+                This allows assigning the object variables to the duplicated parser objects
+                as well as assigning the grammar object to all parsers very early in the
+                construction phase. Before the constructor returns memo__ will be set to
+                None and it will never be used anymore, afterwards.
+
+
+    Mirrored class attributes:
 
     :ivar static_analysis_pending\__: A pointer to the class attribute of the same name.
                 (See the description above.) If the class is instantiated with a
@@ -1589,6 +1610,7 @@ class Grammar:
                 (See the description above.) If the class is instantiated with a
                 parser, this pointer will be overwritten with an instance variable
                 that serves the same function.
+
 
     Tacing and debugging support:
 
@@ -1681,10 +1703,8 @@ class Grammar:
         grammar class!
 
         Attention: If there exists more than one reference to the same
-        parser, only the first one will be chosen for python versions
-        greater or equal 3.6.  For python version <= 3.5 an arbitrarily
-        selected reference will be chosen. See PEP 520
-        (www.python.org/dev/peps/pep-0520/) for an explanation of why.
+        parser, only the first one will be chosen. See also PEP 520
+        (www.python.org/dev/peps/pep-0520/).
         """
         if cls.parser_initialization__[0] != "done" and cls != Grammar:
             cdict = cls.__dict__
@@ -1733,15 +1753,15 @@ class Grammar:
             elif isinstance(parser, Forward):
                 setattr(self, parser.parser.pname, parser)
             self.all_parsers__.add(parser)
-            # parser.grammar = self  # moved to parser.descendants
+            # parser.grammar = self  # happens earlier when deep-copying all parser objects
 
 
     def __init__(self, root: Optional[Parser] = None, static_analysis: Optional[bool] = None) -> None:
         """Constructor of class Grammar.
 
         :param root: If not None, this is going to be the root parser of the grammar.
-            This allows to first construct an ensemble of parser objects and then
-            link those objects in a grammar-object, rather than adding the parsers
+            This allows constructing an ensemble of parser objects, first, and then
+            linking those objects in a grammar-object, rather than adding the parsers
             as fields to a derived class of class Grammar. (See the doc-tests in this
             module for examples.)
         :param static_analysis: If not None, this overrides the config value
@@ -1775,14 +1795,23 @@ class Grammar:
         # prepare parsers in the class, first
         self.__class__._assign_parser_names__()
 
+        # prepare a deepcopy-memoy with information about
+        # the named parsers
+        self.memo__: Optional[Dict[int, Any]] = {0: self}
+        for name in self.__class__.parser_names__:
+            obj = self.__class__.__dict__[name]
+            self.memo__[-id(obj)] = name  # src object -> symbol name
+        for name in self.__class__.parser_names__:
+            setattr(self, name, copy.deepcopy(self.__class__.__dict__[name], self.memo__))
+
         # then deep-copy the parser tree from class to instance;
         # parsers not connected to the root object will be copied later
         # on demand (see Grammar.__getitem__()).
         # (Usually, all parsers should be connected to the root object. But
         # during testing and development this does not need to be the case.)
         if root:
-            self.root_parser__ = copy.deepcopy(root)
-            if not self.root_parser__.effective_pname():
+            self.root_parser__ = copy.deepcopy(root, self.memo__)
+            if not self.root_parser__.pname and not isinstance(root, Forward):
                 self.root_parser__.name("root")
             self.root_parser__.disposable = False
             self.static_analysis_pending__ = [True]  # type: List[bool]
@@ -1790,7 +1819,7 @@ class Grammar:
         else:
             assert self.__class__ == Grammar or not is_parser_placeholder(self.__class__.root__),\
                 "Please add `root__` field to definition of class " + self.__class__.__name__
-            self.root_parser__ = copy.deepcopy(self.__class__.root__)
+            self.root_parser__ = copy.deepcopy(self.__class__.root__, self.memo__)
             self.static_analysis_pending__ = self.__class__.static_analysis_pending__
             self.static_analysis_errors__ = self.__class__.static_analysis_errors__
         self.static_analysis_caches__ = dict()  # type: Dict[str, Dict]
@@ -1819,6 +1848,8 @@ class Grammar:
         for name in self.__class__.parser_names__:
             parser = self[name]  # deep-copy and initialize with grammar-object (see __getitem__)
             if parser not in root_connected:  self.unconnected_parsers__.add(parser)
+
+        self.memo__ = None  # reset memo, again
 
         for p in self.all_parsers__:  reset_parser(p)
         if not root:  TreeReduction(self.all_parsers__, self.early_tree_reduction__)
@@ -1849,13 +1880,15 @@ class Grammar:
         try:
             return self.__dict__[key]
         except KeyError:
+            # TODO: This code should never be reached, anymore. Add an assert for testing and later remove it entirely!
             parser_template = getattr(self.__class__, key, None)
             if parser_template:
-                if key != parser_template.pname:
+                if key != parser_template.pname or (parser_template.parser.pname
+                                                    if isinstance(parser_template, Forward) else ''):
                     raise AttributeError(
                         f'Illegal parser-name "{key}" for grammar {self.__class__.__name__}!')
                 # add parser to grammar-object on the fly...
-                parser = copy.deepcopy(parser_template)
+                parser = copy.deepcopy(parser_template, self.memo__)
                 parser.apply(self._add_parser__, self)
                 assert self[key] == parser
                 return self[key]
@@ -2556,7 +2589,7 @@ class PreprocessorToken(LeafParser):
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__(self.pname)
-        copy_parser_base_attrs(self, duplicate)
+        copy_parser_base_attrs(self, duplicate, memo)
         return duplicate
 
     @cython.locals(end=cython.int)
@@ -2638,7 +2671,7 @@ class ERR(LeafParser):
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__(self.err_msg, self.err_code)
-        copy_parser_base_attrs(self, duplicate)
+        copy_parser_base_attrs(self, duplicate, memo)
         return duplicate
 
     def _parse(self, location: cython.int) -> ParsingResult:
@@ -2679,7 +2712,7 @@ class Text(NoMemoizationParser):
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__(self.text)
-        copy_parser_base_attrs(self, duplicate)
+        copy_parser_base_attrs(self, duplicate, memo)
         return duplicate
 
     @cython.locals(location_=cython.int)
@@ -2788,7 +2821,7 @@ class RegExp(LeafParser):
         except TypeError:
             regexp = self.regexp.pattern
         duplicate = self.__class__(regexp)
-        copy_parser_base_attrs(self, duplicate)
+        copy_parser_base_attrs(self, duplicate, memo)
         return duplicate
 
     def _parse(self, location: cython.int) -> ParsingResult:
@@ -2917,7 +2950,7 @@ class Whitespace(RegExp):
         except TypeError:
             regexp = self.regexp.pattern
         duplicate = self.__class__(regexp, self.keep_comments)
-        copy_parser_base_attrs(self, duplicate)
+        copy_parser_base_attrs(self, duplicate, memo)
         return duplicate
 
     def _parse(self, location: cython.int) -> ParsingResult:
@@ -3034,7 +3067,7 @@ class CombinedParser(Parser):
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__()
-        copy_combined_parser_attrs(self, duplicate)
+        copy_combined_parser_attrs(self, duplicate, memo)
         return duplicate
 
     def _return_value_no_optimization(self, node: Optional[Node]) -> Node:
@@ -3254,9 +3287,11 @@ MERGE_TREETOPS = 2  # "merge" horizontally  (A (:Text "hey ") (:RegExp "you")) -
 MERGE_LEAVES = 3  #  (A (:Text "hey ") (:RegExp "you") (C "!")) -> (A (:Text "hey you") (C "!"))
 
 
-def copy_combined_parser_attrs(src: CombinedParser, duplicate: CombinedParser):
+def copy_combined_parser_attrs(src: CombinedParser,
+                               duplicate: CombinedParser,
+                               memo: Dict[int, Any]):
     assert isinstance(src, CombinedParser)
-    copy_parser_base_attrs(src, duplicate)
+    copy_parser_base_attrs(src, duplicate, memo)
     duplicate._return_value = duplicate.__getattribute__(src._return_value.__name__)
     duplicate._return_values = duplicate.__getattribute__(src._return_values.__name__)
 
@@ -3426,7 +3461,7 @@ class SmartRE(CombinedParser):
         duplicate.pattern = self.pattern
         duplicate.groups = copy.deepcopy(self.groups, memo)
         duplicate.is_lookahead_ = self.is_lookahead_
-        copy_combined_parser_attrs(self, duplicate)
+        copy_combined_parser_attrs(self, duplicate, memo)
         return duplicate
 
     @cython.locals(i=cython.int, disposable=cython.bint)
@@ -3550,7 +3585,7 @@ class CustomParser(CombinedParser):
     def __deepcopy__(self, memo):
         parse_func = copy.deepcopy(self.parse_func, memo)
         duplicate = self.__class__(parse_func)
-        copy_combined_parser_attrs(self, duplicate)
+        copy_combined_parser_attrs(self, duplicate, memo)
         return duplicate
 
     def _parse(self, location: cython.int) -> ParsingResult:
@@ -3625,7 +3660,7 @@ class UnaryParser(CombinedParser):
     def __deepcopy__(self, memo):
         parser = copy.deepcopy(self.parser, memo)
         duplicate = self.__class__(parser)
-        copy_combined_parser_attrs(self, duplicate)
+        copy_combined_parser_attrs(self, duplicate, memo)
         return duplicate
 
 
@@ -3662,7 +3697,7 @@ class LateBindingUnary(UnaryParser):
         if not is_parser_placeholder(self.parser):
             duplicate.parser = copy.deepcopy(self.parser, memo)
             duplicate.sub_parsers = frozenset({duplicate.parser})
-        copy_combined_parser_attrs(self, duplicate)
+        copy_combined_parser_attrs(self, duplicate, memo)
         return duplicate
 
     def _resolve_parser_name(self) -> Parser:
@@ -3915,7 +3950,7 @@ class Counted(UnaryParser):
     def __deepcopy__(self, memo):
         parser = copy.deepcopy(self.parser, memo)
         duplicate = self.__class__(parser, self.repetitions)
-        copy_combined_parser_attrs(self, duplicate)
+        copy_combined_parser_attrs(self, duplicate, memo)
         return duplicate
 
     @cython.locals(location_=cython.int)
@@ -4004,7 +4039,7 @@ class NaryParser(CombinedParser):
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
         duplicate = self.__class__(*parsers)
-        copy_combined_parser_attrs(self, duplicate)
+        copy_combined_parser_attrs(self, duplicate, memo)
         return duplicate
 
 
@@ -4282,7 +4317,7 @@ class ErrorCatchingNary(NaryParser):
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
         duplicate = self.__class__(*parsers, mandatory=self.mandatory)
-        copy_combined_parser_attrs(self, duplicate)
+        copy_combined_parser_attrs(self, duplicate, memo)
         return duplicate
 
     def get_reentry_point(self, location: cython.int) -> Tuple[int, Node]:
@@ -4564,7 +4599,7 @@ class Interleave(ErrorCatchingNary):
         parsers = copy.deepcopy(self.parsers, memo)
         duplicate = self.__class__(*parsers, mandatory=self.mandatory,
                                    repetitions=self.repetitions)
-        copy_combined_parser_attrs(self, duplicate)
+        copy_combined_parser_attrs(self, duplicate, memo)
         return duplicate
 
     @cython.locals(location_=cython.int, location__=cython.int, i=cython.int, reloc=cython.int)
@@ -4855,7 +4890,7 @@ class Capture(ContextSensitive):
     def __deepcopy__(self, memo):
         symbol = copy.deepcopy(self.parser, memo)
         duplicate = self.__class__(symbol, self.zero_length_warning)
-        copy_combined_parser_attrs(self, duplicate)
+        copy_combined_parser_attrs(self, duplicate, memo)
         duplicate._can_capture_zero_length = self._can_capture_zero_length
         return duplicate
 
@@ -4984,7 +5019,7 @@ class Retrieve(ContextSensitive):
     def __deepcopy__(self, memo):
         symbol = copy.deepcopy(self.parser, memo)
         duplicate = self.__class__(symbol, self.match)
-        copy_combined_parser_attrs(self, duplicate)
+        copy_combined_parser_attrs(self, duplicate, memo)
         return duplicate
 
     @property
@@ -5074,7 +5109,7 @@ class Pop(Retrieve):
     # def __deepcopy__(self, memo):
     #     symbol = copy.deepcopy(self.parser, memo)
     #     duplicate = self.__class__(symbol, self.match)
-    #     copy_combined_parser_attrs(self, duplicate)
+    #     copy_combined_parser_attrs(self, duplicate, memo)
     #     duplicate.values = self.values[:]
     #     return duplicate
 
@@ -5190,7 +5225,7 @@ class Forward(UnaryParser):
     def __deepcopy__(self, memo):
         duplicate = self.__class__()
         memo[id(self)] = duplicate
-        copy_parser_base_attrs(self, duplicate)
+        copy_parser_base_attrs(self, duplicate, memo)
         parser = copy.deepcopy(self.parser, memo)
         print(id(self), id(duplicate))
         duplicate.parser = parser
