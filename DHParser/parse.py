@@ -3661,7 +3661,9 @@ class LateBindingUnary(UnaryParser):
             if is_grammar_placeholder(self._grammar):
                 raise UninitializedError(
                     f'Grammar hast not yet been set in LateBindingUnary "{self}"')
-            self.parser = getattr(self.grammar, self.parser_name)
+            self.parser = self.grammar.__dict__[self.parser_name]
+            # don't use getattr, above, because this will eventually fall back on class-variables
+            assert isinstance(self.parser, Parser), f'grammar.{self.parser_name} is not a parser'
         return self.parser
 
     @property
