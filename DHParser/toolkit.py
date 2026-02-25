@@ -37,11 +37,11 @@ import sys
 
 if sys.version_info >= (3, 12, 0):
     from collections.abc import Iterable, Sequence, Set, MutableSet, Callable, Container, Hashable
-    from typing import Any, Type, Union, Optional, TypeAlias, Protocol, AbstractSet, FrozenSet, \
+    from typing import Any, Type, Union, Optional, TypeAlias, Protocol, FrozenSet, \
         Dict, List, Tuple, ByteString
     static = staticmethod
 else:
-    from typing import Any, Iterable, Sequence, Set, AbstractSet, Union, Dict, List, Tuple, \
+    from typing import Any, Iterable, Sequence, Set, Set, Union, Dict, List, Tuple, \
         FrozenSet, MutableSet, Optional, Type, Callable, Container, Hashable, ByteString
     try:
         from typing import Protocol
@@ -90,6 +90,7 @@ __all__ = ('re',
            'xml_entity',
            'char_code',
            'RxPatternType',
+           'RxType',
            'escape_re',
            'escape_ctrl_chars',
            'is_filename',
@@ -155,7 +156,6 @@ __all__ = ('re',
            'Iterable',
            'Sequence',
            'Set',
-           'AbstractSet',
            'MutableSet',
            'FrozenSet',
            'Callable',
@@ -406,12 +406,12 @@ def normalize_circular_path(path: Tuple[str, ...]) -> Tuple[str, ...]:
     return path[i:] + path[:i]
 
 
-def normalize_circular_paths(path: Union[Tuple[str, ...], AbstractSet[Tuple[str, ...]]]) \
+def normalize_circular_paths(path: Union[Tuple[str, ...], Set[Tuple[str, ...]]]) \
         -> Union[Tuple[str, ...], MutableSet[Tuple[str, ...]], MutableSet]:
     """Like :py:func:`normalize_circular_path`, but normalizes a whole set of
     paths at once.
     """
-    if isinstance(path, AbstractSet):
+    if isinstance(path, Set):
         return {normalize_circular_path(p) for p in path}
     else:
         return normalize_circular_path(path)
@@ -509,7 +509,7 @@ class LazyRE:
     def __init__(self, regexp: str, flags = 0):
         self.regexp = regexp
         self.re_flags = flags
-        self.rx = None
+        self.rx: Optional[RxPatternType] = None
 
     def compile_me(self):
         if self.rx is None:
@@ -592,8 +592,10 @@ try:
 except AttributeError:
     RxPatternType: TypeAlias = Any
 
+RxType: TypeAlias = Union[RxPatternType, LazyRE]
 
-def subf(rx: Union[RxPatternType, LazyRE], repl: Callable[[str], str], text) -> str:
+
+def subf(rx: RxType, repl: Callable[[str], str], text) -> str:
     r"""Substitutes a pattern in text with a replacement that is derived
     from the found matches by a function. Example::
 

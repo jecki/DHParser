@@ -60,7 +60,7 @@ from DHParser.nodetree import Node, RootNode, WHITESPACE_PTYPE, \
     EMPTY_PTYPE, LEAF_NODE, ChildrenType, ResultType
 from DHParser.toolkit import sane_parser_name, escape_ctrl_chars, re, matching_brackets, \
     abbreviate_middle, RxPatternType, linebreaks, line_col, TypeAlias, List, Tuple, Any, \
-    MutableSet, Set, FrozenSet, Dict, INFINITE, LazyRE, CancelQuery, deprecated
+    MutableSet, Set, FrozenSet, Dict, INFINITE, LazyRE, CancelQuery, deprecated, RxType
 
 try:
     import cython
@@ -291,9 +291,9 @@ class ParserError(Exception):
         return pe
 
 
-PatternMatchType: TypeAlias = Union[RxPatternType, str, Callable, 'Parser']
+PatternMatchType: TypeAlias = Union[RxType, str, Callable, 'Parser']
 ErrorMessagesType: TypeAlias = List[Tuple[PatternMatchType, str]]
-ResumeList: TypeAlias = Sequence[PatternMatchType]  # list of strings or regular expressions
+ResumeList: TypeAlias = List[Union[PatternMatchType, 'Parser']]  # list of strings or regular expressions
 ReentryPointAlgorithm: TypeAlias = Callable[[StringView, int, int], Tuple[int, int]]
 # (text, start point, end point) => (reentry point, match length)
 # A return value of (-1, x) means that no reentry point before the end of the document was found
@@ -493,7 +493,7 @@ ParsingResult: TypeAlias = Tuple[Optional[Node], int]
 MemoizationDict: TypeAlias = Dict[int, ParsingResult]
 
 ApplyFunc: TypeAlias = Callable[['Parser'], Optional[bool]]
-ParserTrail: TypeAlias = Tuple['Parser']
+ParserTrail: TypeAlias = Tuple['Parser', ...]
 ApplyToTrailFunc: TypeAlias = Callable[[ParserTrail], Optional[bool]]
 # The return value of ``True`` stops any further application
 FlagFunc: TypeAlias = Callable[[ApplyFunc, MutableSet[ApplyFunc]], bool]
@@ -540,9 +540,9 @@ class Parser:
     the contained parser is repeated zero times.
 
     :ivar pname:  The parser's name. Hint: Forward-parsers do not have a
-        pname, even though they are always associated with a symbol.
-        Be sure, to test for Forward-parsers where needed and then pick
-        cast(Forward, parser).parser.pname !
+                pname, even though they are always associated with a symbol.
+                Be sure, to test for Forward-parsers where needed and then pick
+                cast(Forward, parser).parser.pname !
 
     :ivar disposable: A property indicating that the parser returns
                 anonymous nodes. For performance
@@ -604,22 +604,22 @@ class Parser:
 
     def __init__(self) -> None:
         # assert isinstance(name, str), str(name)
-        self.pname = ''               # type: str
-        self.ptype = ':' + self.__class__.__name__  # type: str  # must never be changed
-        self.node_name = self.ptype   # type: str   # can be changed later
-        self.disposable = True        # type: bool
-        self.drop_content = False     # type: bool
-        self._sub_parsers = frozenset()  # type: FrozenSet[Parser]
+        self.pname: str = ''
+        self.ptype: str = ':' + self.__class__.__name__
+        self.node_name: str = self.ptype
+        self.disposable: bool = True
+        self.drop_content: bool = False
+        self._sub_parsers: FrozenSet[Parser] = frozenset()
         # this indirection is required for Cython-compatibility
-        self._parse_proxy = self._parse  # type: BoundParseFunc
+        self._parse_proxy: BoundParseFunc = self._parse
         try:
-            self._grammar = get_grammar_placeholder()  # type: Grammar
+            self._grammar: Grammar = get_grammar_placeholder()
         except NameError:
             pass                        # ensures Cython-compatibility
         self._symbol = ''               # type: str
-        self._descendants_cache = None  # type: Optional[Set[Parser]]
-        self._anon_desc_cache = None    # type: Optional[Set[Parser]]
-        self._desc_trails_cache = None  # type: Optional[Set[ParserTrail]]
+        self._descendants_cache: Optional[Set[Parser]] = None
+        self._anon_desc_cache: Optional[Set[Parser]] = None
+        self._desc_trails_cache: Optional[Set[ParserTrail]] = None
         self.reset()
 
     def __deepcopy__(self, memo):
@@ -879,6 +879,11 @@ class Parser:
             self.pname = pname
         return self
 
+    def effective_pname(self) -> str:
+        """Returns the parser's pname. In case of a Forward-parser,
+        returns parser.parser.pname."""
+        return self.pname
+
     @property
     def grammar(self) -> 'Grammar':
         try:
@@ -919,7 +924,7 @@ class Parser:
         if self._descendants_cache is None:
             # Caches descendants, avoiding cycles; updates grammar if needed
             if self._desc_trails_cache:
-                self._descendants_cache = tuple(pt[-1] for pt in self._desc_trails_cache)
+                self._descendants_cache = set(pt[-1] for pt in self._desc_trails_cache)
             else:
                 if  is_grammar_placeholder(grammar):   grammar = self._grammar
                 visited = set()
@@ -941,8 +946,8 @@ class Parser:
         the returned set is not really comprehensive, but sufficient to trace
         anonymous parsers to their nearest named ancestor."""
         if self._desc_trails_cache is None:
-            visited = set()
-            trails = set()
+            visited: MutableSet[Parser] = set()
+            trails: MutableSet[Tuple[Parser, ...]] = set()
 
             def collect_trails(parser: Parser, ptrl: List[Parser]):
                 nonlocal visited, trails
@@ -1319,7 +1324,7 @@ def cancel_proxy(self: Parser, location: cython.int) -> Tuple[Optional[Node], cy
     grammar.cancel_interval__ -= 1
     if grammar.cancel_interval__ < 0:
         grammar.cancel_interval__ = CANCEL_QUERY_INTERVAL
-        if grammar.cancel_query__():
+        if grammar.cancel_query__ and grammar.cancel_query__():
             raise CancelError(location)
     return self._parse(location)
 
@@ -1353,12 +1358,12 @@ def ensure_drop_propagation(p: Parser):
                 raise e
 
 
-def is_disposable(name: str, disposables: Set[str]|RxPatternType) -> bool:
+def is_disposable(name: str, disposables: Union[Set[str], RxType]) -> bool:
     if name[0:1] == ':':
         return True
     elif isinstance(disposables, Set):
         return name in disposables
-    elif isinstance(disposables, RxPatternType):
+    elif isinstance(disposables, RxType):
         return bool(disposables.match(name))
     else:
         assert isinstance(disposables, str), type(disposables)
@@ -1465,7 +1470,7 @@ class Grammar:
                 specific symbol (i.e. parser name) and any of the regular expressions
                 matches the error message of the first matching expression is used
                 instead of the generic mandatory violation error messages. This
-                allows to answer typical kinds of errors (say putting a colon ","
+                allows answering typical kinds of errors (say putting a colon ","
                 where a semicolon ";" is expected) with more informative error
                 messages.
 
@@ -1663,13 +1668,13 @@ class Grammar:
                 has been encountered. Default is 10.000 characters.
     """
     python_src__ = ''  # type: str
-    root__ = get_parser_placeholder()   # type: Parser
+    root__: Parser = get_parser_placeholder()
     # root__ must be overwritten with the root-parser by grammar subclass
-    parser_initialization__ = ["pending"]  # type: List[str]
-    resume_rules__ = dict()        # type: Dict[str, ResumeList]
-    skip_rules__ = dict()          # type: Dict[str, ResumeList]
-    error_messages__ = dict()      # type: Dict[str, Tuple[PatternMatchType, str]]
-    disposable__ = frozenset()     # type: FrozenSet[str]|RxPatternType
+    parser_initialization__: List[str] = ["pending"]
+    resume_rules__: Dict[str, ResumeList] = dict()
+    skip_rules__: Dict[str, ResumeList] = dict()
+    error_messages__: Dict[str, Tuple[PatternMatchType, str]] = dict()
+    disposable__: Union[FrozenSet[str], RxType] = frozenset()
     # some default values
     COMMENT__ = r''  # type: str  # r'#.*'  or r'#.*(?:\n|$)' if combined with horizontal wspc
     WHITESPACE__ = r'[ \t]*(?:\n[ \t]*)?(?!\n)'  # spaces plus at most a single linefeed
@@ -1746,7 +1751,7 @@ class Grammar:
                 else:
                     setattr(self, parser.pname, parser)
             elif isinstance(parser, Forward):
-                setattr(self, cast(Forward, parser).parser.pname, parser)
+                setattr(self, parser.parser.pname, parser)
             self.all_parsers__.add(parser)
             # parser.grammar = self  # happens earlier when deep-copying all parser objects
 
@@ -1766,7 +1771,7 @@ class Grammar:
         # add compiled regular expression for comments if it does not already exist
         if not hasattr(self, 'comment_rx__') or self.comment_rx__ is None:
             if hasattr(self.__class__, 'COMMENT__') and self.__class__.COMMENT__:
-                self.comment_rx__ = re.compile(self.__class__.COMMENT__)
+                self.comment_rx__: RxType = re.compile(self.__class__.COMMENT__)
             else:
                 self.comment_rx__ = RX_NEVER_MATCH
         else:
@@ -1827,7 +1832,7 @@ class Grammar:
         self.ff_parser__ = self.root_parser__
         self.unconnected_parsers__: MutableSet[Parser] = set()
         self.resume_parsers__: MutableSet[Parser] = set()
-        resume_lists = []
+        resume_lists: List[ResumeList] = []
         if hasattr(self, 'resume_rules__'):
             resume_lists.extend(self.resume_rules__.values())
         if hasattr(self, 'skip_rules__'):
@@ -1835,7 +1840,7 @@ class Grammar:
         for l in resume_lists:
             for i in range(len(l)):
                 if isinstance(l[i], Parser):
-                    p = self[l[i].pname or l[i].parser.pname]  # deep-copy and initialize with grammar-object; 2n clase for Forward parsers
+                    p = self[cast(Parser, l[i]).pname]  # deep-copy and initialize with grammar-object
                     l[i] = p
                     if p not in root_connected:
                         self.unconnected_parsers__.add(p)
@@ -2197,7 +2202,7 @@ class Grammar:
                     # match was complete except for trailing whitespace
                     if result is None: result = Node(EMPTY_PTYPE, '').with_pos(0)
                     self.tree__.add_error(result, Error(
-                        f'Parser "{parser.pname or cast(Forward, parser).parser.pname}" '
+                        f'Parser "{parser.effective_pname()}" '
                         f'stopped before end, because of trailing whitespace.',
                         location, PARSER_STOPPED_BEFORE_END_WARNING))
                 location = L
@@ -2408,7 +2413,7 @@ class Grammar:
             nonlocal symbol
             self.associated_symbol_cache__[p] = symbol
             for d in p.sub_parsers:
-                if not d.pname and not (isinstance(d, Forward) and cast(Forward, d).parser.pname):
+                if not d.effective_pname():
                     add_anonymous_descendants(d)
 
         for p in self.all_parsers__:
@@ -3220,7 +3225,7 @@ class CombinedParser(Parser):
                     if tail_is_anonymous_leaf:
                         if head_is_anonymous_leaf:
                             bunch.append(tail._result)
-                            tail = nd
+                            tail: Node = nd
                         else:
                             if bunch:
                                 bunch.append(tail._result)
@@ -3679,7 +3684,7 @@ class LateBindingUnary(UnaryParser):
         self.parser_name: str = parser_name
         self._sub_parsers = frozenset()
 
-    def  __deepcopy__(self, memo):
+    def __deepcopy__(self, memo):
         duplicate = self.__class__(self.parser_name)
         if not is_parser_placeholder(self.parser):
             duplicate.parser = copy.deepcopy(self.parser, memo)
@@ -5011,14 +5016,14 @@ class Retrieve(ContextSensitive):
     def symbol_pname(self) -> str:
         """Returns the watched symbol's pname, properly, i.e. even in cases
         where the symbol's parser is shielded by a Forward-parser"""
-        return self.parser.pname or cast(Forward, self.parser).parser.pname
+        return self.parser.effective_pname()
 
     def get_node_name(self) -> str:
         """Returns a name for the retrieved node. If the Retrieve-parser
         has a node-name, this overrides the node-name of the retrieved symbol's
         parser."""
         if self.disposable or not self.node_name:
-            return self.parser.pname or cast(Forward, self.parser).parser.pname
+            return self.parser.effective_pname()
             # if self.parser.pname:
             #     return self.parser.name
             # # self.parser is a Forward-Parser, so pick the name of its encapsulated parser
@@ -5153,7 +5158,7 @@ class Synonym(UnaryParser):
                     return Node(self.node_name, '', True), location
                 if node.name[0] == ':':  # node.anonymous:
                     # eliminate anonymous child-node on the fly
-                    # node.name = self.node_name   # Bit mistake: this can spoil the memo-cache
+                    # node.name = self.node_name   # Big mistake: this can spoil the memo-cache
                     return Node(self.node_name, node._result), location
                 else:
                     return Node(self.node_name, (node,)), location
@@ -5234,8 +5239,6 @@ class Forward(UnaryParser):
         https://tinlizzie.org/VPRIPapers/tr2007002_packrat.pdf
         """
         grammar = self._grammar
-        if not grammar.left_recursion__:
-            return self.parser(location)
 
         # rollback variable changing operation if the parser backtracks
         # to a position before the variable-changing operation occurred
@@ -5335,6 +5338,11 @@ class Forward(UnaryParser):
             ret = func()
             self.cycle_reached = False
             return ret
+
+    def effective_pname(self) -> str:
+        """Returns the parser's pname. In case of a Forward-parser,
+        returns parser.parser.pname."""
+        return self.parser.pname
 
     def __repr__(self):
         return self.__cycle_guard(lambda: repr(self.parser), '...')

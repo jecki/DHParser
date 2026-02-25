@@ -107,7 +107,7 @@ from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, linebreaks, line_col, JSONnull, JSON_Dict, \
     validate_XML_attribute_value, fix_XML_attribute_value, lxml_XML_attribute_value, \
     abbreviate_middle, TypeAlias, deprecated, RxPatternType, INFINITE, LazyRE, subf, \
-    AbstractSet, Set, deprecation_warning, ascii_char_code, ascii_xml_entity, get_annotations
+    Set, deprecation_warning, ascii_char_code, ascii_xml_entity, get_annotations
 
 try:
     import cython
@@ -2134,9 +2134,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     def as_xml(self, src: Optional[str] = None,
                indentation: int = 2,
-               inline_tags: AbstractSet[str] = frozenset(),
-               string_tags: AbstractSet[str] = LEAF_PTYPES,
-               empty_tags: AbstractSet[str] = AUTO_EMPTY_TAGS,
+               inline_tags: Set[str] = frozenset(),
+               string_tags: Set[str] = LEAF_PTYPES,
+               empty_tags: Set[str] = AUTO_EMPTY_TAGS,
                strict_mode: bool = True, reflow_col: int = 0,  # example: 80
                mapping: RawMappingType = NO_MAPPING_SENTINEL) -> str:
         """Serializes the tree of nodes as XML.
@@ -2285,7 +2285,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return xml
 
     def as_html(self, css: str='', head: str='', lang: str='en',
-                empty_tags: AbstractSet[str] = HTML_EMPTY_TAGS,
+                empty_tags: Set[str] = HTML_EMPTY_TAGS,
                 **kwargs) -> str:
         """Serialize as HTML page. See :py:meth:`Node.as_xml` for the further
         keyword-arguments."""
@@ -2636,8 +2636,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
     # Export and import as Element-Tree ###
 
-    def as_etree(self, ET=None, string_tags: AbstractSet[str] = LEAF_PTYPES,
-                 empty_tags: AbstractSet[str] = frozenset()):
+    def as_etree(self, ET=None, string_tags: Set[str] = LEAF_PTYPES,
+                 empty_tags: Set[str] = frozenset()):
         """Returns the tree as standard-library- or lxml-ElementTree.
 
         :param ET: The ElementTree-library to be used. If None, the STL ElementTree
@@ -3221,9 +3221,9 @@ class RootNode(Node):
 
     def as_xml(self, src: Optional[str] = None,
                indentation: int = 2,
-               inline_tags: AbstractSet[str] = EMPTY_SET_SENTINEL,
-               string_tags: AbstractSet[str] = EMPTY_SET_SENTINEL,
-               empty_tags: AbstractSet[str] = EMPTY_SET_SENTINEL,
+               inline_tags: Set[str] = EMPTY_SET_SENTINEL,
+               string_tags: Set[str] = EMPTY_SET_SENTINEL,
+               empty_tags: Set[str] = EMPTY_SET_SENTINEL,
                strict_mode: bool=True, reflow_col: int = 0,
                mapping = NO_MAPPING_SENTINEL) -> str:
         return super().as_xml(
@@ -3478,7 +3478,7 @@ RX_XML_HEADER = LazyRE(r'<(?![?!])')
 def parse_xml(xml: Union[str, StringView],
               string_tag: str = TOKEN_PTYPE,
               ignore_pos: bool = False,
-              out_empty_tags: AbstractSet[str] = EMPTY_SET_SENTINEL,
+              out_empty_tags: Set[str] = EMPTY_SET_SENTINEL,
               strict_mode: bool = True) -> RootNode:
     """
     Generates a tree of nodes from a (Pseudo-)XML-source. This
