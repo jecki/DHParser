@@ -3709,8 +3709,6 @@ class LateBindingUnary(UnaryParser):
             # self.parser = getattr(self.grammar, self.parser_name)
             self.parser = self.grammar.__dict__[self.parser_name]
             assert isinstance(self.parser, Parser), f'"{self.parser_name}" is not a parser!'
-            if self.parser_name == 'expr':
-                print("Ref", self.parser_name, id(self.parser), ' -- ', id(self))
         return self.parser
 
     @property
@@ -5227,7 +5225,6 @@ class Forward(UnaryParser):
         memo[id(self)] = duplicate
         copy_parser_base_attrs(self, duplicate, memo)
         parser = copy.deepcopy(self.parser, memo)
-        print(id(self), id(duplicate))
         duplicate.parser = parser
         duplicate.sub_parsers = frozenset({parser})
         return duplicate
@@ -5274,7 +5271,6 @@ class Forward(UnaryParser):
         else:
             self.recursion_counter[location] = 0  # fail on the first recursion
             save_suspend_memoization = grammar.suspend_memoization__
-            print(self.parser.pname, save_suspend_memoization, id(self))
             grammar.suspend_memoization__ = False
             history_pointer = len(grammar.history__)
 

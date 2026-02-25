@@ -3024,7 +3024,7 @@ custom parser class::
    ...
    ...     def __deepcopy__(self, memo):
    ...         duplicate = self.__class__()
-   ...         copy_parser_base_attrs(self, duplicate)
+   ...         copy_parser_base_attrs(self, duplicate, memo)
    ...         return duplicate
    ...
    ...     def _parse(self, location) -> Tuple[Optional[Node], int]:
