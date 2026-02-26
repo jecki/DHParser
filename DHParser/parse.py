@@ -85,7 +85,6 @@ __all__ = ('parser_names',
            'AnalysisError',
            'GrammarError',
            'UninitializedError',
-           'ensure_drop_propagation',
            'cancel_proxy',
            'NEVER_MATCH_PATTERN',
            'RX_NEVER_MATCH',
@@ -485,8 +484,10 @@ def get_grammar_placeholder() -> Grammar:
     return cast(Grammar, _GRAMMAR_PLACEHOLDER)
 
 
-def is_grammar_placeholder(grammar: Optional['Grammar']) -> bool:
-    return grammar is None or cast(Grammar, grammar) is _GRAMMAR_PLACEHOLDER
+def is_grammar_placeholder(grammar: Optional[Union['Grammar', type]]) -> bool:
+    return grammar is None \
+        or cast(Grammar, grammar) is _GRAMMAR_PLACEHOLDER \
+        or issubclass(cast(type, grammar), Grammar)
 
 
 ParsingResult: TypeAlias = Tuple[Optional[Node], int]
@@ -1335,28 +1336,6 @@ def reset_parser(parser):
     return parser.reset()
 
 
-def _propagate_drop(p: Parser):
-    """propagates the drop_content flag to all unnamed children."""
-    assert p.drop_content
-    for c in p.sub_parsers:
-        if not c.pname:
-            c.drop_content = True
-            _propagate_drop(c)
-
-def ensure_drop_propagation(p: Parser):
-    """propagates the drop_content flag to all unnamed children."""
-    if p.drop_content:
-        _propagate_drop(p)
-    else:
-        try:
-            for c in p.sub_parsers:
-                if not c.pname:
-                    ensure_drop_propagation(c)
-        except UninitializedError as e:
-            if not isinstance(p, LateBindingUnary):
-                raise e
-
-
 def is_disposable(name: str, disposables: Union[Set[str], RxType]) -> bool:
     if name[0:1] == ':':
         return True
@@ -1684,6 +1663,29 @@ class Grammar:
     early_tree_reduction__ = 1     # type: int  # 1 == CombinedParser.FLATTEN
 
     @classmethod
+    def _propagate_drop__(cls, p: Parser):
+        """propagates the drop_content flag to all unnamed children."""
+        assert p.drop_content
+        for c in p.sub_parsers:
+            if not c.pname:
+                c.drop_content = True
+                cls._propagate_drop__(c)
+
+    @classmethod
+    def ensure_drop_propagation__(cls, p: Parser):
+        """propagates the drop_content flag to all unnamed children."""
+        if p.drop_content:
+            cls._propagate_drop__(p)
+        else:
+            try:
+                for c in p.sub_parsers:
+                    if not c.pname:
+                        cls.ensure_drop_propagation__(c)
+            except UninitializedError as e:
+                if not isinstance(p, LateBindingUnary):
+                    raise e
+
+    @classmethod
     def _assign_parser_names__(cls):
         """
         Initializes the ``parser.pname`` fields of those
@@ -1719,7 +1721,6 @@ class Grammar:
                     else:
                         parser.name(anonymous + entry)
                     cls.parser_names__.append(entry)
-                    # TODO: Connect Late Binding Parsers here already!
                     ensure_drop_propagation(parser)
             cls.parser_initialization__ = ["done"]  # (over-)write subclass-variable
 
