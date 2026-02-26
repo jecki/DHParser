@@ -486,8 +486,8 @@ def get_grammar_placeholder() -> Grammar:
 
 def is_grammar_placeholder(grammar: Optional[Union['Grammar', type]]) -> bool:
     return grammar is None \
-        or cast(Grammar, grammar) is _GRAMMAR_PLACEHOLDER \
-        or issubclass(cast(type, grammar), Grammar)
+        or cast(Grammar, grammar) is _GRAMMAR_PLACEHOLDER # \
+#        or issubclass(cast(type, grammar), Grammar)
 
 
 ParsingResult: TypeAlias = Tuple[Optional[Node], int]
@@ -1667,7 +1667,7 @@ class Grammar:
         """propagates the drop_content flag to all unnamed children."""
         assert p.drop_content
         for c in p.sub_parsers:
-            if not c.pname:
+            if not c.pname and not isinstance(c, (Forward, Ref)):
                 c.drop_content = True
                 cls._propagate_drop__(c)
 
@@ -1679,7 +1679,7 @@ class Grammar:
         else:
             try:
                 for c in p.sub_parsers:
-                    if not c.pname:
+                    if not c.pname and not isinstance(c, (Forward, Ref)):
                         cls.ensure_drop_propagation__(c)
             except UninitializedError as e:
                 if not isinstance(p, LateBindingUnary):
@@ -1721,7 +1721,7 @@ class Grammar:
                     else:
                         parser.name(anonymous + entry)
                     cls.parser_names__.append(entry)
-                    ensure_drop_propagation(parser)
+                    cls.ensure_drop_propagation__(parser)
             cls.parser_initialization__ = ["done"]  # (over-)write subclass-variable
 
 
@@ -1796,14 +1796,17 @@ class Grammar:
         # prepare parsers in the class, first
         self.__class__._assign_parser_names__()
 
-        # prepare a deepcopy-memoy with information about
-        # the named parsers
+        # prepare a deepcopy-memo with information about the named parsers
         self.memo__: Optional[Dict[int, Any]] = {0: self}
         for name in self.__class__.parser_names__:
             obj = self.__class__.__dict__[name]
             self.memo__[-id(obj)] = name  # src object -> symbol name
         for name in self.__class__.parser_names__:
             setattr(self, name, copy.deepcopy(self.__class__.__dict__[name], self.memo__))
+        for name in RESERVED_PARSER_NAMES:
+            p = self.__class__.__dict__.get(name, None)
+            if isinstance(p, Parser):
+                setattr(self, name, copy.deepcopy(p, self.memo__))
 
         # then deep-copy the parser tree from class to instance;
         # parsers not connected to the root object will be copied later
