@@ -2077,6 +2077,32 @@ class TestDropPropagation:
         assert beta.parsers[1].drop_content
         assert beta.parsers[1].parser.drop_content
 
+    def test_drop_propagation_2(self):
+        minilang = """@literalws = right
+            DROP:expr = expr ("+"|"-") term | term
+            term = term ("*"|"/") (factor -> DROP) | factor
+            factor = /[0-9]+/~
+            """
+        parser = create_parser(minilang)
+        assert parser.expr.drop_content
+        assert parser.expr.parser.drop_content
+        assert parser.expr.parser.parsers[0].drop_content
+
+    def test_drop_propagation_3(self):
+        minilang = """@literalws = right
+            DROP:expr = ex
+            ex   = expr ("+"|"-") (term -> DROP) | term
+            term = tr
+            DROP:tr   = term ("*"|"/") factor | factor
+            factor = /[0-9]+/~
+            """
+        parser = create_parser(minilang)
+        assert parser.python_src__.find('DropFrom(Ref') < 0
+        assert not parser.ex.drop_content
+        assert parser.expr.drop_content
+        assert parser.tr.drop_content
+        assert parser.tr.parsers[0].drop_content
+
 class TestPosInitialization:
     def test_position_initialization(self):
         lang = r"""# interfaces subset of typescript-grammar

@@ -1508,6 +1508,7 @@ def neutralize_unnamed_groups(rxp: str) -> str:
 
 REF_TMPL = 'Ref__({symbol})'
 RX_REF_TMPL = r'Ref__\(({symbols})\)'
+RX_DROPFROM_REF = LazyRE(r'DropFrom\(Ref\("(\w+)"\)\)')
 RX_SYNONYM_TMPL = r'Synonym\(({symbols})\)'  # Really needed?
 RX_REF = LazyRE(r'Ref__\((\w+)\)')
 
@@ -2264,6 +2265,7 @@ class EBNFCompiler(Compiler):
                 statement = rx_recursive_ref.sub(r'Ref("\1")', statement)
                 # statement = rx_synonym.sub(rf'Synonym(\1{RECURSIVE_SUFFIX})', statement)
                 statement = RX_REF.sub(r'\1', statement)
+                statement = RX_DROPFROM_REF.sub(r'Ref("\1")', statement)
             if symbol in self.forward:
                 declarations += [symbol + '.set(' + statement + ')']
             else:

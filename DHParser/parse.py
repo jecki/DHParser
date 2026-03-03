@@ -35,6 +35,7 @@ import functools
 from collections import defaultdict
 import copy
 from functools import lru_cache
+from inspect import isclass
 from typing import Callable, cast, Collection, DefaultDict, Sequence, Union, Optional, \
     NamedTuple, Iterator
 
@@ -485,9 +486,10 @@ def get_grammar_placeholder() -> Grammar:
 
 
 def is_grammar_placeholder(grammar: Optional[Union['Grammar', type]]) -> bool:
+    x = Grammar
     return grammar is None \
-        or cast(Grammar, grammar) is _GRAMMAR_PLACEHOLDER # \
-#        or issubclass(cast(type, grammar), Grammar)
+        or cast(Grammar, grammar) is _GRAMMAR_PLACEHOLDER \
+        or isclass(grammar) and issubclass(cast(type, grammar), Grammar)
 
 
 ParsingResult: TypeAlias = Tuple[Optional[Node], int]
@@ -1149,10 +1151,13 @@ def DropFrom(parser: Parser) -> Parser:
     parser itself untouched. This is needed, if you want to drop the
     result from a named-parser in one particular context where it is
     referred to, only."""
-    wrapper = Synonym(parser)
-    wrapper.drop_content = True
-    wrapper.disposable = True
-    return wrapper
+    if isinstance(parser, Ref):
+        return parser
+    else:
+        wrapper = Synonym(parser)
+        wrapper.drop_content = True
+        wrapper.disposable = True
+        return wrapper
 
 
 PARSER_PLACEHOLDER = None  # type: Optional[Parser]
@@ -1666,8 +1671,10 @@ class Grammar:
     def _propagate_drop__(cls, p: Parser):
         """propagates the drop_content flag to all unnamed children."""
         assert p.drop_content
+        p._grammar = cls  # strictly speaking only required for LateBindingUnary
         for c in p.sub_parsers:
-            if not c.pname and not isinstance(c, (Forward, Ref)):
+            if (not isinstance(c, (Forward, Ref))
+                    and (not c.pname or isinstance(p, Forward))):
                 c.drop_content = True
                 cls._propagate_drop__(c)
 
@@ -1678,8 +1685,10 @@ class Grammar:
             cls._propagate_drop__(p)
         else:
             try:
+                p._grammar = cls   # strictly speaking only required for LateBindingUnary
                 for c in p.sub_parsers:
-                    if not c.pname and not isinstance(c, (Forward, Ref)):
+                    if (not isinstance(c, (Forward, Ref))
+                            and (not c.pname or isinstance(p, Forward))):
                         cls.ensure_drop_propagation__(c)
             except UninitializedError as e:
                 if not isinstance(p, LateBindingUnary):
@@ -1721,7 +1730,9 @@ class Grammar:
                     else:
                         parser.name(anonymous + entry)
                     cls.parser_names__.append(entry)
-                    cls.ensure_drop_propagation__(parser)
+            for entry in cls.parser_names__:
+                parser = cdict[entry]
+                cls.ensure_drop_propagation__(parser)
             cls.parser_initialization__ = ["done"]  # (over-)write subclass-variable
 
 
@@ -1793,11 +1804,15 @@ class Grammar:
         self.cancel_interval__: int = CANCEL_QUERY_INTERVAL
         self._reset__()
 
+        # Bootsrapping the Grammar-object: Phase 1
         # prepare parsers in the class, first
         self.__class__._assign_parser_names__()
 
         # prepare a deepcopy-memo with information about the named parsers
         self.memo__: Optional[Dict[int, Any]] = {0: self}
+
+        # deepcopy all named parsers (i.e. parsers assigned to a class variable)
+        # to the Grammar-instance and doing so, connect them to the Grammar-instance
         for name in self.__class__.parser_names__:
             obj = self.__class__.__dict__[name]
             self.memo__[-id(obj)] = name  # src object -> symbol name
@@ -1808,11 +1823,7 @@ class Grammar:
             if isinstance(p, Parser):
                 setattr(self, name, copy.deepcopy(p, self.memo__))
 
-        # then deep-copy the parser tree from class to instance;
-        # parsers not connected to the root object will be copied later
-        # on demand (see Grammar.__getitem__()).
-        # (Usually, all parsers should be connected to the root object. But
-        # during testing and development this does not need to be the case.)
+        # deepcopy the root-parser tree to the Grammar instance
         if root:
             self.root_parser__ = copy.deepcopy(root, self.memo__)
             if not self.root_parser__.pname and not isinstance(root, Forward):
@@ -1823,6 +1834,9 @@ class Grammar:
         else:
             assert self.__class__ == Grammar or not is_parser_placeholder(self.__class__.root__),\
                 "Please add `root__` field to definition of class " + self.__class__.__name__
+            # practically the entire root-parser tree will have been copied already, but this
+            # does not harm, becuase with self.memo__ copying the root-parser-tree will be
+            # short-circuited, anyway. (So the following command is not very costly.)
             self.root_parser__ = copy.deepcopy(self.__class__.root__, self.memo__)
             self.static_analysis_pending__ = self.__class__.static_analysis_pending__
             self.static_analysis_errors__ = self.__class__.static_analysis_errors__
@@ -1831,6 +1845,8 @@ class Grammar:
         self.root_parser__.apply(self._add_parser__, self)
         root_connected = frozenset(self.all_parsers__)
 
+        # now make sure that any parsers occurring in a @skip- or @resume-directive
+        # will also copyied and initialized with the grammar-object
         assert 'root_parser__' in self.__dict__
         assert self.root_parser__ == self.__dict__['root_parser__']
         self.ff_parser__ = self.root_parser__
@@ -1850,7 +1866,7 @@ class Grammar:
                         self.unconnected_parsers__.add(p)
                         self.resume_parsers__.add(p)
         for name in self.__class__.parser_names__:
-            parser = self[name]  # deep-copy and initialize with grammar-object (see __getitem__)
+            parser = self[name]
             if parser not in root_connected:  self.unconnected_parsers__.add(parser)
 
         self.memo__ = None  # reset memo, again
@@ -3710,11 +3726,11 @@ class LateBindingUnary(UnaryParser):
     def _resolve_parser_name(self) -> Parser:
         assert self.parser
         if is_parser_placeholder(self.parser):
-            if is_grammar_placeholder(self._grammar):
+            if is_grammar_placeholder(self._grammar) and not isclass(self._grammar):
                 raise UninitializedError(
                     f'Grammar hast not yet been set in LateBindingUnary "{self}"')
             # self.parser = getattr(self.grammar, self.parser_name)
-            self.parser = self.grammar.__dict__[self.parser_name]
+            self.parser = self._grammar.__dict__[self.parser_name]
             assert isinstance(self.parser, Parser), f'"{self.parser_name}" is not a parser!'
         return self.parser
 
