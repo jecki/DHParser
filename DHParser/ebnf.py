@@ -2265,7 +2265,7 @@ class EBNFCompiler(Compiler):
                 statement = rx_recursive_ref.sub(r'Ref("\1")', statement)
                 # statement = rx_synonym.sub(rf'Synonym(\1{RECURSIVE_SUFFIX})', statement)
                 statement = RX_REF.sub(r'\1', statement)
-                statement = RX_DROPFROM_REF.sub(r'Ref("\1")', statement)
+                statement = RX_DROPFROM_REF.sub(r'Drop(Ref("\1"))', statement)
             if symbol in self.forward:
                 declarations += [symbol + '.set(' + statement + ')']
             else:

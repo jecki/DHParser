@@ -866,7 +866,7 @@ class Parser:
             self.disposable = True
             self.pname = pname[5:]
             self.node_name = pname[4:]
-        elif pname[0:5] == ":DROP":
+        elif pname[0:5] == "DROP:":
             assert disposable or disposable is None
             self.disposable = True
             self.pname = pname[5:]
@@ -1151,13 +1151,10 @@ def DropFrom(parser: Parser) -> Parser:
     parser itself untouched. This is needed, if you want to drop the
     result from a named-parser in one particular context where it is
     referred to, only."""
-    if isinstance(parser, Ref):
-        return parser
-    else:
-        wrapper = Synonym(parser)
-        wrapper.drop_content = True
-        wrapper.disposable = True
-        return wrapper
+    wrapper = parser if isinstance(parser, Ref) else Synonym(parser)
+    wrapper.drop_content = True
+    wrapper.disposable = True
+    return wrapper
 
 
 PARSER_PLACEHOLDER = None  # type: Optional[Parser]
@@ -5408,6 +5405,9 @@ class Forward(UnaryParser):
 
 
 class Ref(LateBindingUnary):
+    """A late binding passive reference to another parser. In contrast to
+    Synonym, Refs do not alter the node name."""
+
     def reset(self):
         super(Ref, self).reset()
         assert not self.pname, "Ref-Parsers mustn't have a name!"
@@ -5415,14 +5415,18 @@ class Ref(LateBindingUnary):
     @cython.locals(ldepth=cython.int, rb_stack_size=cython.int)
     def __call__(self, location: cython.int) -> ParsingResult:
         result = self.parser(location)
+        if self.drop_content:
+            return EMPTY_NODE, result[1]
         return result
-
-    # def _parse(self, location: cython.int) -> ParsingResult:
-    #     return self.parser(location)
 
     def set_proxy(self, proxy: Optional[ParseFunc]):
         """``set_proxy`` has no effects on Ref-objects!"""
         return
+
+    def name(self, pname: str = "", disposable: Optional[bool] = None) -> Parser:
+        assert not pname or pname[0:1] == ":" or pname[0:5] in ('DROP:', 'HIDE:')
+        assert disposable is not False
+        return super().name(pname, True)
 
     def __repr__(self):
         return self.parser_name
