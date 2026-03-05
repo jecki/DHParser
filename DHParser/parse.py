@@ -1668,7 +1668,7 @@ class Grammar:
     def _propagate_drop__(cls, p: Parser):
         """propagates the drop_content flag to all unnamed children."""
         assert p.drop_content
-        p._grammar = cls  # strictly speaking only required for LateBindingUnary
+        p._grammar = cls  # only required for LateBindingUnary, but faster then isinstance-check for every p
         for c in p.sub_parsers:
             if (not isinstance(c, (Forward, Ref))
                     and (not c.pname or isinstance(p, Forward))):
@@ -1682,7 +1682,7 @@ class Grammar:
             cls._propagate_drop__(p)
         else:
             try:
-                p._grammar = cls   # strictly speaking only required for LateBindingUnary
+                p._grammar = cls   # only required for LateBindingUnary
                 for c in p.sub_parsers:
                     if (not isinstance(c, (Forward, Ref))
                             and (not c.pname or isinstance(p, Forward))):
@@ -1801,27 +1801,36 @@ class Grammar:
         self.cancel_interval__: int = CANCEL_QUERY_INTERVAL
         self._reset__()
 
-        # Bootsrapping the Grammar-object: Phase 1
-        # prepare parsers in the class, first
+        # Bootsrapping phase 1: assign names to the parsers
+        # Prepare parsers in the class, first, by setting the name of those parsers
+        # that are assigned to a class variable to the name of that class variable.
+        # Also, LateBindingUnary-parser will be bound at this stage.
         self.__class__._assign_parser_names__()
 
-        # prepare a deepcopy-memo with information about the named parsers
-        self.memo__: Optional[Dict[int, Any]] = {0: self}
+        # Bottstrapping phase 2: deepcopy the parsers defined in the context of the
+        # Grammar-class to the Grammar instance.
 
-        # deepcopy all named parsers (i.e. parsers assigned to a class variable)
-        # to the Grammar-instance and doing so, connect them to the Grammar-instance
+        # 2.1. Prepare a deepcopy-memo and inject the grammar-object into that memo.
+        self.memo__: Optional[Dict[int, Any]] = {0: self}
+        # Then inject all named parsers (i.e. parser directly assigned to a class variable)
+        # into the deepcopy-memo.
         for name in self.__class__.parser_names__:
             obj = self.__class__.__dict__[name]
             self.memo__[-id(obj)] = name  # src object -> symbol name
+        # 2.2. Then, deepcopy all named parsers (i.e. parsers assigned to a class variable)
+        # to the Grammar-instance and doing so, connect them to the Grammar-instance
         for name in self.__class__.parser_names__:
             setattr(self, name, copy.deepcopy(self.__class__.__dict__[name], self.memo__))
+        # 2.3 Now, initialize additional top-level parser references like 'root__'
         for name in RESERVED_PARSER_NAMES:
             p = self.__class__.__dict__.get(name, None)
             if isinstance(p, Parser):
                 setattr(self, name, copy.deepcopy(p, self.memo__))
 
-        # deepcopy the root-parser tree to the Grammar instance
+        # 2.5. Set self.root_parser__
         if root:
+            # deepcopy the root-parser tree to the Grammar instance, if in case the non-derived
+            # Grammar class was initialized with a root-parser defined outside the class
             self.root_parser__ = copy.deepcopy(root, self.memo__)
             if not self.root_parser__.pname and not isinstance(root, Forward):
                 self.root_parser__.name("root")
@@ -1831,19 +1840,31 @@ class Grammar:
         else:
             assert self.__class__ == Grammar or not is_parser_placeholder(self.__class__.root__),\
                 "Please add `root__` field to definition of class " + self.__class__.__name__
-            # practically the entire root-parser tree will have been copied already, but this
-            # does not harm, becuase with self.memo__ copying the root-parser-tree will be
-            # short-circuited, anyway. (So the following command is not very costly.)
-            self.root_parser__ = copy.deepcopy(self.__class__.root__, self.memo__)
+            # assign the 'root_parser__' field to the root-parser of the grammar
+            self.root_parser__ = self.root__
+            # # practically the entire root-parser tree will have been copied already, but this
+            # # does not harm, becuase with self.memo__ copying the root-parser-tree will be
+            # # short-circuited, anyway. (So the following command is not very costly.)
+            # self.root_parser__ = copy.deepcopy(self.__class__.root__, self.memo__)
             self.static_analysis_pending__ = self.__class__.static_analysis_pending__
             self.static_analysis_errors__ = self.__class__.static_analysis_errors__
         self.static_analysis_caches__ = dict()  # type: Dict[str, Dict]
 
+        # At the end of phase two, only parsers inside the skip and resume list
+        # are not yet initialized. This will happen en passent in the next phase
+
+        # Phase 3: Add any parser whatsoever connected to this Grammar instance
+        #          to the self.all_parsers__ set. Add those parser which are
+        #          not connected to the root-parser to the
+        #          self.unconnected_parsers__ - field
+
+        # Start by adding the parsers connected to the root parser.
         self.root_parser__.apply(self._add_parser__, self)
         root_connected = frozenset(self.all_parsers__)
 
-        # now make sure that any parsers occurring in a @skip- or @resume-directive
-        # will also copyied and initialized with the grammar-object
+        # Now, make sure that the parsers occurring in a @skip- or @resume-directive
+        # will also be copyied and initialized with the grammar-object and added
+        # to the all_parsers__ set.
         assert 'root_parser__' in self.__dict__
         assert self.root_parser__ == self.__dict__['root_parser__']
         self.ff_parser__ = self.root_parser__
@@ -1857,20 +1878,25 @@ class Grammar:
         for l in resume_lists:
             for i in range(len(l)):
                 if isinstance(l[i], Parser):
-                    p = self[cast(Parser, l[i]).pname]  # deep-copy and initialize with grammar-object
+                    p = self[cast(Parser, l[i]).pname]  # deep-copy and initialize, if necessary.
                     l[i] = p
                     if p not in root_connected:
                         self.unconnected_parsers__.add(p)
                         self.resume_parsers__.add(p)
+        # Add remaining parsers
         for name in self.__class__.parser_names__:
             parser = self[name]
             if parser not in root_connected:  self.unconnected_parsers__.add(parser)
 
-        self.memo__ = None  # reset memo, again
+        self.memo__ = None  # the deepcopy memo is not needed any more after this point.
 
+        # Phase 4: Reset/Initialize all parsers
         for p in self.all_parsers__:  reset_parser(p)
         if not root:  TreeReduction(self.all_parsers__, self.early_tree_reduction__)
 
+        # Phase 5: Do some static error checking, if the error checking flag
+        #          has been set on the class and error checking for this class
+        #          has not already taken place.
         if (self.static_analysis_pending__
             and (static_analysis
                  or (static_analysis is None
@@ -1900,9 +1926,9 @@ class Grammar:
                 parser.apply(self._add_parser__, self)
             return parser
         except KeyError:
-            # TODO: This code should never be reached, anymore. Add an assert for testing and later remove it entirely!
             parser_template = getattr(self.__class__, key, None)
             if parser_template:
+                # TODO: Can this code every be reached?
                 if key != parser_template.pname or (parser_template.parser.pname
                                                     if isinstance(parser_template, Forward) else ''):
                     raise AttributeError(
