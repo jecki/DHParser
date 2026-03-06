@@ -2235,7 +2235,7 @@ class EBNFCompiler(Compiler):
             if symbol[-2:] != '__' or (symbol.find('_skip_') >= 0 or symbol.find('_resume_') >= 0):
                 # TODO: Except uses at the very end of the rule (i.e. right recursion),
                 #       unless it's forward references (pre-sort the self.forward-references accordingly)
-                statement = statement.replace(REF_TMPL.format(symbol = symbol), symbol)
+                # statement = statement.replace(REF_TMPL.format(symbol = symbol), symbol)  # TODO: Don't do this!
                 statement = rx_recursive_ref.sub(r'Ref("\1")', statement)
                 # statement = rx_synonym.sub(rf'Synonym(\1{RECURSIVE_SUFFIX})', statement)
                 statement = RX_REF.sub(r'\1', statement)

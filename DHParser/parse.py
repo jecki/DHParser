@@ -1970,6 +1970,7 @@ class Grammar:
             self.ff_parser__: Parser = self.root_parser__
         except AttributeError:
             self.ff_parser__: Parser = get_parser_placeholder()
+        self.ref_origin__ = 0
 
     @property
     def reversed__(self) -> StringView:
@@ -5263,7 +5264,7 @@ class Forward(UnaryParser):
 
     def reset(self):
         super(Forward, self).reset()
-        self.recursion_counter: Dict[int, int] = dict()
+        self.recursion_counter: Dict[Tuple[int, int], int] = dict()
         assert not self.pname, "Forward-Parsers mustn't have a name!"
 
     def __deepcopy__(self, memo):
@@ -5293,6 +5294,7 @@ class Forward(UnaryParser):
         https://tinlizzie.org/VPRIPapers/tr2007002_packrat.pdf
         """
         grammar = self._grammar
+        origin = grammar.ref_origin__
 
         # rollback variable changing operation if the parser backtracks
         # to a position before the variable-changing operation occurred
@@ -5305,17 +5307,17 @@ class Forward(UnaryParser):
             # Sorry, no history recording in case of memoized results!
             return visited[location]
 
-        if location in self.recursion_counter:
-            depth = self.recursion_counter[location]
+        if (origin, location) in self.recursion_counter:
+            depth = self.recursion_counter[(origin, location)]
             if depth == 0:
                 grammar.suspend_memoization__ = id(self)
                 result = None, location
             else:
-                self.recursion_counter[location] = depth - 1
+                self.recursion_counter[(origin, location)] = depth - 1
                 result = self.parser(location)
-                self.recursion_counter[location] = depth  # allow moving back and forth
+                self.recursion_counter[(origin, location)] = depth  # allow moving back and forth
         else:
-            self.recursion_counter[location] = 0  # fail on the first recursion
+            self.recursion_counter[(origin, location)] = 0  # fail on the first recursion
             save_suspend_memoization = grammar.suspend_memoization__
             grammar.suspend_memoization__ = False
             history_pointer = len(grammar.history__)
@@ -5329,7 +5331,7 @@ class Forward(UnaryParser):
                 last_history_state = grammar.history__[history_pointer:len(grammar.history__)]
                 depth = 1
                 while True:
-                    self.recursion_counter[location] = depth
+                    self.recursion_counter[(origin, location)] = depth
                     grammar.suspend_memoization__ = False
                     rb_stack_size = len(grammar.rollback__)
                     grammar.history__ = grammar.history__[:history_pointer]
@@ -5377,7 +5379,7 @@ class Forward(UnaryParser):
             if grammar.suspend_memoization__ == id(self) or isinstance(grammar.suspend_memoization__, bool):
                 grammar.suspend_memoization__ = save_suspend_memoization  #  = is_context_sensitive(self.parser)
             if location in visited and result[1] < visited[location][1]:
-                assert False
+                # assert False
                 result = visited[location]
             elif not grammar.suspend_memoization__:
                 visited[location] = result
@@ -5440,6 +5442,7 @@ class Ref(LateBindingUnary):
 
     @cython.locals(ldepth=cython.int, rb_stack_size=cython.int)
     def __call__(self, location: cython.int) -> ParsingResult:
+        self.grammar.ref_origin__ = id(self)
         result = self.parser(location)
         if self.drop_content:
             return EMPTY_NODE, result[1]

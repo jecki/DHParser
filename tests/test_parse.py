@@ -161,6 +161,7 @@ class TestInfiLoopsAndRecursion:
             """
         snippet = "9 + 8 + 7 + 6 + 5 + 3 * 4"
         parser = grammar_provider(minilang)()
+        print(parser.python_src__)
         assert parser
         syntax_tree = parser(snippet)
         if is_logging():

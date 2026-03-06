@@ -116,7 +116,9 @@ class InterwovenLRGrammar(Grammar):
     """
     E = Forward()
     G = Forward()
-    source_hash__ = "3bca5aa553dac46c03ea250adbd0ae8c"
+    H = Forward()
+    F = Forward()
+    source_hash__ = "202247b02adc63cdd416bb16d859aa4f"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -127,8 +129,8 @@ class InterwovenLRGrammar(Grammar):
     wsp__ = Whitespace(WSP_RE__)
     AA = Text("a")
     I = Series(Text("("), OneOrMore(AA), Text(")"))
-    H = Series(Ref("G"), Text("l"))
-    F = Alternative(Series(Ref("E"), Text("+"), ZeroOrMore(I)), Series(Ref("G"), Text("-")))
+    H.set(Series(Ref("G"), Text("l")))
+    F.set(Alternative(Series(Ref("E"), Text("+"), ZeroOrMore(I)), Series(Ref("G"), Text("-"))))
     G.set(Alternative(Series(Ref("H"), Text("m")), Ref("E")))
     E.set(Alternative(Series(Ref("F"), Text("n")), Text("n")))
     S = Synonym(E)
