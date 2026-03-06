@@ -70,12 +70,20 @@ def count_rule_depth(result: MatchResult | None, rule_name: str) -> int:
     return max(counts)
 
 
+def verify_operator_count(result: MatchResult | None, operator: str, n: int) -> bool:
+    if result is None:
+        return n <= 0
+    else:
+        cnt = len(list(result.root_node.select(lambda nd: not nd.children and nd.content == operator,
+                                               include_root=True)))
+        return cnt == n
+
 def is_left_associative(result: MatchResult | None, rule_name: str) -> bool:
     if result is None or result.root_node.errors:
         return False
 
     for nd in result.root_node.select(rule_name, include_root=True):
         if len(nd.children) >= 2:
-            if nd[1].name == rule_name and not nd[0].children:
+            if nd[0].name != rule_name or any(nd[x].name == rule_name for x in nd[1:]):
                 return False
     return True

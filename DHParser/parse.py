@@ -4216,7 +4216,8 @@ class Alternative(NaryParser):
             fixed_start = starting_string(self.parsers[i])
             if fixed_start:
                 for k in range(i):
-                    if does_preempt(fixed_start, self.parsers[k]):
+                    if (not isinstance(self.parsers[k], (Ref, Forward))  # TODO: find a more fine-grained check for recursive parsers
+                            and does_preempt(fixed_start, self.parsers[k])):
                         errors.append(self.static_error(
                             "Parser-specification Error in " + self.location_info()
                             + "\nAlternative %i will never be reached, because its starting-"
@@ -5345,7 +5346,6 @@ class Forward(UnaryParser):
                     # grammar.most_recent_error__ = None
                     next_result = self.parser(location)
 
-
                     # discard next_result if it is not the longest match and return
                     if next_result[1] <= result[1]:  # also true, if no match
                         # Since the result of the last parser call (``next_result``) is discarded,
@@ -5378,11 +5378,11 @@ class Forward(UnaryParser):
             # 2. isinstance check for referenced parsers that are not in fact recursive
             if grammar.suspend_memoization__ == id(self) or isinstance(grammar.suspend_memoization__, bool):
                 grammar.suspend_memoization__ = save_suspend_memoization  #  = is_context_sensitive(self.parser)
-            if location in visited and result[1] < visited[location][1]:
-                # assert False
-                result = visited[location]
-            elif not grammar.suspend_memoization__:
-                visited[location] = result
+        if location in visited and result[1] < visited[location][1]:
+            # assert False
+            result = visited[location]
+        elif not grammar.suspend_memoization__:
+            visited[location] = result
         return result
 
     def set_proxy(self, proxy: Optional[ParseFunc]):

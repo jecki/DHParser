@@ -5,7 +5,7 @@
 # using the EXACT grammars and inputs from the paper's Figure.
 # ===========================================================================
 
-from test_utils import parse_for_tree, count_rule_depth, is_left_associative #, verify_operator_count
+from test_utils import parse_for_tree, count_rule_depth, is_left_associative, verify_operator_count
 
 # =========================================================================
 # (a) Direct Left Recursion
