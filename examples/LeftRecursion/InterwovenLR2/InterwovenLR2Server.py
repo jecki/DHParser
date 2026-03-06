@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-"""InterwovenLRServer.py - starts a server (if not already running) for the
-                    compilation of InterwovenLR
+"""InterwovenLR2Server.py - starts a server (if not already running) for the
+                    compilation of InterwovenLR2
 """
 
 import asyncio
@@ -146,21 +146,21 @@ def json_rpc(func_name, params={}, ID=None) -> dict:
     return {"jsonrpc": "2.0", "method": func_name, "params": params, "id": ID}
 
 
-class InterwovenLRCPUBoundTasks:
+class InterwovenLR2CPUBoundTasks:
     def __init__(self, lsp_data: dict):
         from DHParser.lsp import gen_lsp_table
         self.lsp_data = lsp_data
         self.lsp_table = gen_lsp_table(self, prefix='lsp_')
 
 
-class InterwovenLRBlockingTasks:
+class InterwovenLR2BlockingTasks:
     def __init__(self, lsp_data: dict):
         from DHParser.lsp import gen_lsp_table
         self.lsp_data = lsp_data
         self.lsp_table = gen_lsp_table(self, prefix='lsp_')
 
 
-class InterwovenLRLanguageServerProtocol:
+class InterwovenLR2LanguageServerProtocol:
     """
     For the specification and implementation of the language server protocol, see:
         https://code.visualstudio.com/api/language-extensions/language-server-extension-guide
@@ -173,12 +173,12 @@ class InterwovenLRLanguageServerProtocol:
             'processId': 0,
             'rootUri': '',
             'clientCapabilities': {},
-            'serverInfo': { "name": "InterwovenLR-Server", "version": "0.1" },
+            'serverInfo': { "name": "InterwovenLR2-Server", "version": "0.1" },
             'serverCapabilities': {}
         }
         self.connection = None
-        self.cpu_bound = InterwovenLRCPUBoundTasks(self.lsp_data)
-        self.blocking = InterwovenLRBlockingTasks(self.lsp_data)
+        self.cpu_bound = InterwovenLR2CPUBoundTasks(self.lsp_data)
+        self.blocking = InterwovenLR2BlockingTasks(self.lsp_data)
         self.lsp_table = gen_lsp_table(self, prefix='lsp_')
         self.lsp_fulltable = self.lsp_table.copy()
         assert self.lsp_fulltable.keys().isdisjoint(self.cpu_bound.lsp_table.keys())
@@ -210,7 +210,7 @@ class InterwovenLRLanguageServerProtocol:
         return {}
 
     def batch_job(self, argstr: str):
-        from InterwovenLRParser import batch_process
+        from InterwovenLR2Parser import batch_process
         args = argstr.split(' ')
         indir, outdir = args[1], args[3]
 
@@ -242,12 +242,12 @@ class InterwovenLRLanguageServerProtocol:
         return error_list
 
     # def simply_compile(self, argstr):
-    #     from InterwovenLRParser import compile_src
+    #     from InterwovenLR2Parser import compile_src
     #     return compile_src(argstr)
 
     async def simply_compile(self, argstr: str):
         from functools import partial
-        from InterwovenLRParser import compile_src
+        from InterwovenLR2Parser import compile_src
         exenv = self.connection.exec
         if argstr[:2] != '--':
             return await exenv.loop.run_in_executor(
@@ -259,7 +259,7 @@ class InterwovenLRLanguageServerProtocol:
 
 def run_server(host, port, log_path=None):
     """
-    Starts a new InterwovenLRServer. If `port` is already occupied, different
+    Starts a new InterwovenLR2Server. If `port` is already occupied, different
     ports will be tried.
     """
     global KNOWN_HOST, KNOWN_PORT
@@ -282,7 +282,7 @@ def run_server(host, port, log_path=None):
     from DHParser.configuration import CONFIG_PRESET, read_local_config
     if sys.version_info >= (3, 14, 0):
         CONFIG_PRESET['multicore_pool'] = 'InterpreterPool'
-    read_local_config(os.path.join(scriptdir, 'InterwovenLRConfig.ini'))
+    read_local_config(os.path.join(scriptdir, 'InterwovenLR2Config.ini'))
 
     if sys.version_info < (3, 14, 0) or CONFIG_PRESET['multicore_pool'] != "InterpreterPool":
         from multiprocessing import set_start_method, get_start_method
@@ -299,33 +299,33 @@ def run_server(host, port, log_path=None):
             notify=lambda: print('recompiling ' + grammar_src)):
         print('\nErrors while recompiling "%s":' % grammar_src +
               '\n--------------------------------------\n\n')
-        with open('InterwovenLR_ebnf_ERRORS.txt', 'r', encoding='utf-8') as f:
+        with open('InterwovenLR2_ebnf_ERRORS.txt', 'r', encoding='utf-8') as f:
             print(f.read())
         sys.exit(1)
 
     from DHParser.server import Server, probe_tcp_server, StreamReaderProxy, StreamWriterProxy
     # from DHParser.lsp import gen_lsp_table
 
-    InterwovenLR_lsp = InterwovenLRLanguageServerProtocol()
-    lsp_table = InterwovenLR_lsp.lsp_fulltable.copy()
-    lsp_table.setdefault('default', InterwovenLR_lsp.simply_compile)
-    InterwovenLR_server = Server(rpc_functions=lsp_table,
-                        cpu_bound=InterwovenLR_lsp.cpu_bound.lsp_table.keys(),
-                        blocking=InterwovenLR_lsp.blocking.lsp_table.keys(),
-                        connection_callback=InterwovenLR_lsp.connect,
-                        server_name="InterwovenLRServer",
+    InterwovenLR2_lsp = InterwovenLR2LanguageServerProtocol()
+    lsp_table = InterwovenLR2_lsp.lsp_fulltable.copy()
+    lsp_table.setdefault('default', InterwovenLR2_lsp.simply_compile)
+    InterwovenLR2_server = Server(rpc_functions=lsp_table,
+                        cpu_bound=InterwovenLR2_lsp.cpu_bound.lsp_table.keys(),
+                        blocking=InterwovenLR2_lsp.blocking.lsp_table.keys(),
+                        connection_callback=InterwovenLR2_lsp.connect,
+                        server_name="InterwovenLR2Server",
                         strict_lsp=True)
     if log_path is not None:
         # echoing does not work with stream connections!
-        InterwovenLR_server.echo_log = True if port >= 0 and host else False
-        msg = InterwovenLR_server.start_logging(log_path.strip('" \''))
-        if InterwovenLR_server.echo_log:  echo(msg)
+        InterwovenLR2_server.echo_log = True if port >= 0 and host else False
+        msg = InterwovenLR2_server.start_logging(log_path.strip('" \''))
+        if InterwovenLR2_server.echo_log:  echo(msg)
 
     if port < 0 or not host:
         # communication via streams instead of tcp server
         reader = StreamReaderProxy(sys.stdin)
         writer = StreamWriterProxy(sys.stdout)
-        InterwovenLR_server.run_stream_server(reader, writer)
+        InterwovenLR2_server.run_stream_server(reader, writer)
         return
 
     cfg_filename = get_config_filename()
@@ -364,7 +364,7 @@ def run_server(host, port, log_path=None):
                   'Use option "--port %i" to stop this server!' % (cfg_filename, port))
         try:
             echo('Starting server on %s:%i' % (host, port))
-            InterwovenLR_server.run_tcp_server(host, port)  # returns only after server has stopped!
+            InterwovenLR2_server.run_tcp_server(host, port)  # returns only after server has stopped!
             ports = []
         except OSError as e:
             if not (ports and e.errno == 98):
@@ -535,7 +535,7 @@ def parse_logging_args(args):
 
 def main():
     from argparse import ArgumentParser, REMAINDER
-    parser = ArgumentParser(description="Setup and Control of a Server for processing InterwovenLR-files.")
+    parser = ArgumentParser(description="Setup and Control of a Server for processing InterwovenLR2-files.")
     action_group = parser.add_mutually_exclusive_group()
     action_group.add_argument('file', nargs='?')
     action_group.add_argument('-t', '--status', action='store_true',
@@ -647,13 +647,13 @@ def main():
 
     else:
         echo('Usages:\n'
-             + '    python InterwovenLRServer.py --startserver [--host host] [--port port] [--logging [ON|LOG_PATH|OFF]]\n'
-             + '    python InterwovenLRServer.py --startdaemon [--host host] [--port port] [--logging [ON|LOG_PATH|OFF]]\n'
-             + '    python InterwovenLRServer.py --stream\n'
-             + '    python InterwovenLRServer.py --stopserver\n'
-             + '    python InterwovenLRServer.py --status\n'
-             + '    python InterwovenLRServer.py --logging [ON|LOG_PATH|OFF]\n'
-             + '    python InterwovenLRServer.py FILENAME.dsl [--host host] [--port port]  [--logging [ON|LOG_PATH|OFF]]')
+             + '    python InterwovenLR2Server.py --startserver [--host host] [--port port] [--logging [ON|LOG_PATH|OFF]]\n'
+             + '    python InterwovenLR2Server.py --startdaemon [--host host] [--port port] [--logging [ON|LOG_PATH|OFF]]\n'
+             + '    python InterwovenLR2Server.py --stream\n'
+             + '    python InterwovenLR2Server.py --stopserver\n'
+             + '    python InterwovenLR2Server.py --status\n'
+             + '    python InterwovenLR2Server.py --logging [ON|LOG_PATH|OFF]\n'
+             + '    python InterwovenLR2Server.py FILENAME.dsl [--host host] [--port port]  [--logging [ON|LOG_PATH|OFF]]')
         sys.exit(1)
 
 

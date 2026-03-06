@@ -1,9 +1,0 @@
-# LR2-grammar
-
-@literalws = right
-expr = ex
-ex   = expr ("+"|"-") term | term
-term = tr
-tr   = term ("*"|"/") factor | factor
-factor = /[0-9]+/~
-

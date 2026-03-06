@@ -67,14 +67,14 @@ from DHParser.transform import is_empty, remove_if, TransformationDict, Transfor
 from DHParser import parse as parse_namespace__
 
 import DHParser.versionnumber
-if DHParser.versionnumber.__version_info__ < (1, 9, 5):
+if DHParser.versionnumber.__version_info__ < (1, 9, 4):
     print(f'DHParser version {DHParser.versionnumber.__version__} is lower than the DHParser '
-          f'version 1.9.5, {os.path.basename(__file__)} has first been generated with. '
+          f'version 1.9.4, {os.path.basename(__file__)} has first been generated with. '
           f'Please install a more recent version of DHParser to avoid unexpected errors!')
 
 if sys.version_info >= (3, 14, 0):
     CONFIG_PRESET['multicore_pool'] = 'InterpreterPool'
-read_local_config(os.path.join(scriptdir, 'LR2Config.ini'))
+read_local_config(os.path.join(scriptdir, 'LRConfig.ini'))
 
 
 #######################################################################
@@ -88,16 +88,16 @@ read_local_config(os.path.join(scriptdir, 'LR2Config.ini'))
 # To capture includes, replace the NEVER_MATCH_PATTERN
 # by a pattern with group "name" here, e.g. r'\input{(?P<name>.*)}'
 RE_INCLUDE = NEVER_MATCH_PATTERN
-RE_COMMENT = NEVER_MATCH_PATTERN  # THIS MUST ALWAYS BE THE SAME AS LR2Grammar.COMMENT__ !!!
+RE_COMMENT = NEVER_MATCH_PATTERN  # THIS MUST ALWAYS BE THE SAME AS LRGrammar.COMMENT__ !!!
 
 
-def LR2Tokenizer(original_text) -> Tuple[str, List[Error]]:
+def LRTokenizer(original_text) -> Tuple[str, List[Error]]:
     # Here, a function body can be filled in that adds preprocessor tokens
     # to the source code and returns the modified source.
     return original_text, []
 
 preprocessing: PseudoJunction = create_preprocess_junction(
-    LR2Tokenizer, RE_INCLUDE, RE_COMMENT)
+    LRTokenizer, RE_INCLUDE, RE_COMMENT)
 
 
 #######################################################################
@@ -106,19 +106,16 @@ preprocessing: PseudoJunction = create_preprocess_junction(
 #
 #######################################################################
 
-class LR2Grammar(Grammar):
-    r"""Parser for a LR2 document.
+class LRGrammar(Grammar):
+    r"""Parser for a LR document.
 
     Instantiate this class and then call the instance with the source
     code as the single argument in order to use the parser, e.g.:
-        parser = LR2()
+        parser = LR()
         syntax_tree = parser(source_code)
     """
-    term__Recursive__ = Ref("term")
-    ex__Recursive__ = Ref("ex")
-    tr__Recursive__ = Ref("tr")
-    expr__Recursive__ = Ref("expr")
-    source_hash__ = "145321f91d10760b1f01de202c85ea62"
+    S = Forward()
+    source_hash__ = "ae7b510559d3ab67d5f9cc7c5fa7e3b2"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -127,27 +124,24 @@ class LR2Grammar(Grammar):
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
-    factor = Series(RegExp('[0-9]+'), wsp__)
-    term = Series(tr__Recursive__, wsp__)
-    expr = Series(ex__Recursive__, wsp__)
-    tr = Alternative(Series(Ref("term"), Alternative(Series(Text("*"), wsp__), Series(Text("/"), wsp__)), factor), factor)
-    ex = Alternative(Series(Ref("expr"), Alternative(Series(Text("+"), wsp__), Series(Text("-"), wsp__)), Ref("term")), Ref("term"))
-    root__ = expr__Recursive__
+    T = OneOrMore(RegExp('[0-9]'))
+    S.set(Alternative(Series(S, Text("+"), T), T))
+    root__ = S
     
-parsing: PseudoJunction = create_parser_junction(LR2Grammar)
+parsing: PseudoJunction = create_parser_junction(LRGrammar)
 get_grammar = parsing.factory  # for backwards compatibility, only
 
 
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
-        RE_COMMENT in (LR2Grammar.COMMENT__, NEVER_MATCH_PATTERN), \
-        "Please adjust the pre-processor-variable RE_COMMENT in file LR2Parser.py so that " \
+        RE_COMMENT in (LRGrammar.COMMENT__, NEVER_MATCH_PATTERN), \
+        "Please adjust the pre-processor-variable RE_COMMENT in file LRParser.py so that " \
         "it either is the NEVER_MATCH_PATTERN or has the same value as the COMMENT__-attribute " \
-        "of the grammar class LR2Grammar! " \
+        "of the grammar class LRGrammar! " \
         'Currently, RE_COMMENT reads "%s" while COMMENT__ is "%s". ' \
-        % (RE_COMMENT, LR2Grammar.COMMENT__) + \
+        % (RE_COMMENT, LRGrammar.COMMENT__) + \
         "\n\nIf RE_COMMENT == NEVER_MATCH_PATTERN then includes will deliberately be " \
-        "processed, otherwise RE_COMMENT==LR2Grammar.COMMENT__ allows the " \
+        "processed, otherwise RE_COMMENT==LRGrammar.COMMENT__ allows the " \
         "preprocessor to ignore comments."
 except (AttributeError, NameError):
     pass
@@ -160,35 +154,32 @@ except (AttributeError, NameError):
 #
 #######################################################################
 
-LR2_AST_transformation_table = {
-    # AST Transformations for the LR2-grammar
+LR_AST_transformation_table = {
+    # AST Transformations for the LR-grammar
     # Special rules:
     # "<<<": [],  # called once before the tree-traversal starts
     # ">>>": [],  # called once after the tree-traversal has finished
     # "<": [],  # called for each node before calling its specific rules
     # "*": [],  # fallback for nodes that do not appear in this table
     # ">": [],   # called for each node after calling its specific rules
-    "expr": [],
-    "ex": [],
-    "term": [],
-    "tr": [],
-    "factor": [],
+    "S": [],
+    "T": [],
 }
 
 
 # DEPRECATED, because it requires pickling the transformation-table, which rules out lambdas!
 # ASTTransformation: Junction = create_junction(
-#     LR2_AST_transformation_table, "CST", "AST", "transtable")
+#     LR_AST_transformation_table, "CST", "AST", "transtable")
 
-def LR2Transformer() -> TransformerFunc:
+def LRTransformer() -> TransformerFunc:
     return static(partial(
         transformer, 
-        transformation_table=LR2_AST_transformation_table.copy(),
+        transformation_table=LR_AST_transformation_table.copy(),
         src_stage='CST', 
         dst_stage='AST'))
 
 ASTTransformation: Junction = Junction(
-    'CST', ThreadLocalSingletonFactory(LR2Transformer), 'AST')
+    'CST', ThreadLocalSingletonFactory(LRTransformer), 'AST')
 get_transformer = ASTTransformation.factory  # for backwards compatibility, only
 
 
@@ -198,13 +189,13 @@ get_transformer = ASTTransformation.factory  # for backwards compatibility, only
 #
 #######################################################################
 
-class LR2Compiler(Compiler):
+class LRCompiler(Compiler):
     """Compiler for the abstract-syntax-tree of a 
-        LR2 source file.
+        LR source file.
     """
 
     def __init__(self):
-        super(LR2Compiler, self).__init__()
+        super(LRCompiler, self).__init__()
         self.forbid_returning_None = True  # set to False if any compilation-method is allowed to return None
 
     def reset(self):
@@ -213,29 +204,20 @@ class LR2Compiler(Compiler):
 
     def prepare(self, root: RootNode) -> None:
         assert root.stage == "AST", f"Source stage `AST` expected, `but `{root.stage}` found."
-        root.stage = "LR2"
+        root.stage = "LR"
     def finalize(self, result: Any) -> Any:
         return result
 
-    def on_expr(self, node):
+    def on_S(self, node):
         return self.fallback_compiler(node)
 
-    # def on_ex(self, node):
-    #     return node
-
-    # def on_term(self, node):
-    #     return node
-
-    # def on_tr(self, node):
-    #     return node
-
-    # def on_factor(self, node):
+    # def on_T(self, node):
     #     return node
 
 
 
 compiling: Junction = Junction(
-    'AST', ThreadLocalSingletonFactory(LR2Compiler), 'LR2')
+    'AST', ThreadLocalSingletonFactory(LRCompiler), 'LR')
 
 get_compiler = compiling.factory  # for backwards compatibility, only
 
@@ -257,9 +239,9 @@ from DHParser import ALLOWED_PRESET_VALUES
 #     ...
 
 # # change the names of the source and destination stages. Source
-# # ("LR2") in this example must be the name of some earlier stage, though.
+# # ("LR") in this example must be the name of some earlier stage, though.
 # postprocessing: Junction = Junction(
-#     "LR2", ThreadLocalSingletonFactory(PostProcessing), "refined")
+#     "LR", ThreadLocalSingletonFactory(PostProcessing), "refined")
 #
 # DON'T FORGET TO ADD ALL POSTPROCESSING-JUNCTIONS TO THE GLOBAL
 # "junctions"-set IN SECTION "Processing-Pipeline" BELOW!
@@ -299,7 +281,7 @@ serializations = expand_table(dict([('*', [get_config_value('default_serializati
 #######################################################################
 
 def pipeline(source: str,
-             target: Union[str, Set[str]] = "LR2",
+             target: Union[str, Set[str]] = "LR",
              start_parser: str = "root_parser__",
              *, cancel_query: Optional[CancelQuery] = None) -> PipelineResult:
     """Runs the source code through the processing pipeline. If
@@ -318,7 +300,7 @@ def pipeline(source: str,
 
 
 def compile_src(source: str,
-                target: str = "LR2",
+                target: str = "LR",
                 start_parser: str = "root_parser__",
                 *, cancel_query: Optional[CancelQuery] = None) -> Tuple[Any, List[Error]]:
     """Compiles the source to a single target and returns the result of the compilation
@@ -344,7 +326,7 @@ def compile_src(source: str,
 
 
 def compile_snippet(source_code: str,
-                    target: str = "LR2",
+                    target: str = "LR",
                     start_parser: str = "root_parser__",
                     *, cancel_query: Optional[CancelQuery] = None) -> Tuple[Any, List[Error]]:
     """Compiles a piece of source_code. In contrast to :py:func:`compile_src` the
@@ -372,7 +354,7 @@ def process_file(source: str, out_dir: str = '', target_set: Set[str]=frozenset(
     elif not target_set <= targets:
         raise AssertionError('Unknown compilation target(s): ' +
                              ', '.join(t for t in target_set - targets))
-    # serializations = get_config_value('LR2_serializations', serializations)
+    # serializations = get_config_value('LR_serializations', serializations)
     return dsl.process_file(source, out_dir, preprocessing.factory, parsing.factory,
                             junctions, target_set, serializations, cancel_query)
 
@@ -389,7 +371,7 @@ def batch_process(file_names: List[str], out_dir: str,
     error messages to the directory `our_dir`. Returns a list of error
     messages files.
     """
-    from LR2Parser import process_file_wrapper
+    from LRParser import process_file_wrapper
     return dsl.batch_process(file_names, out_dir, process_file_wrapper,
         submit_func=submit_func, log_func=log_func, cancel_func=cancel_func)
 
@@ -432,12 +414,12 @@ def main(called_from_app=False) -> bool:
               'because grammar was not found at: ' + grammar_path)
 
     from argparse import ArgumentParser
-    a = "an" if "LR2"[0:1] in "AEIOUaeiou" else "a"
-    parser = ArgumentParser(description="Parses " + a + " LR2 file and shows its syntax-tree."
+    a = "an" if "LR"[0:1] in "AEIOUaeiou" else "a"
+    parser = ArgumentParser(description="Parses " + a + " LR file and shows its syntax-tree."
                             " If several filenames are provided or an output directory is "
                             "specified with --out, the results will be written to the disk!"
                             " To directly process content, use a pipe | e.g. "
-                            ' echo "..." | LR2Parser.py.')
+                            ' echo "..." | LRParser.py.')
     parser.add_argument('files', nargs='*')
     parser.add_argument('-p', '--parse', nargs=1, default=[],
                         help='Processes the given snippet directly (instead of a file).')
@@ -478,7 +460,7 @@ def main(called_from_app=False) -> bool:
                   '(Snippets that contain blanks need to be enclosed in quotes "..."')
             sys.exit(1)
 
-    read_local_config(os.path.join(scriptdir, 'LR2Config.ini'))
+    read_local_config(os.path.join(scriptdir, 'LRConfig.ini'))
 
     if args.serialize:
         if (args.serialize[0].lower() not in
@@ -489,7 +471,7 @@ def main(called_from_app=False) -> bool:
             sys.exit(1)
         serializations['*'] = args.serialize
         access_presets()
-        set_preset_value('LR2_serializations', serializations, allow_new_key=True)
+        set_preset_value('LR_serializations', serializations, allow_new_key=True)
         finalize_presets()
 
     if args.debug is not None:

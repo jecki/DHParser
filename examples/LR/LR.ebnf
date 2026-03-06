@@ -1,3 +1,0 @@
-@flavor = heuristic
-S <- S "+" T / T ;
-T <- [0-9]+ ;

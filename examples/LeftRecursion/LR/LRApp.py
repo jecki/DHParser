@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""InterwovenLRApp.py - a simple GUI for the compilation of InterwovenLR-files"""
+"""LRApp.py - a simple GUI for the compilation of LR-files"""
 
 import sys
 from functools import partial
@@ -37,7 +37,7 @@ from DHParser.pipeline import PipelineResult, connection, as_graph, pp_paths, \
 from DHParser.testing import merge_test_units
 from DHParser.toolkit import MultiCoreManager
 
-import InterwovenLRParser
+import LRParser
 
 
 class TextLineNumbers(tk.Canvas):
@@ -100,11 +100,11 @@ DEMO_SRC = ""  # a piece of source code that is displayed as a demonstration
                # example when starting the App
 
 
-class InterwovenLRApp(tk.Tk):
+class LRApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.withdraw()
-        self.title('InterwovenLR App')
+        self.title('LR App')
         self.minsize(920, 680)
         self.geometry("1040x880")
         self.option_add('*tearOff', False)
@@ -126,7 +126,7 @@ class InterwovenLRApp(tk.Tk):
 
         self.source_modified_sentinel = 0
         self.source_paste = False
-        grammar = InterwovenLRParser.parsing.factory()
+        grammar = LRParser.parsing.factory()
         self.parser_names = grammar.parser_names__[:]
         # self.parser_names.remove(grammar.root__.pname)
         self.parser_names.sort(key=lambda s: s.lower().lstrip('_'))
@@ -140,17 +140,17 @@ class InterwovenLRApp(tk.Tk):
         # and contains biufurcations.
 
         # # 1. show the complete pipeline as a stylized tree
-        # self.targets = pp_paths(InterwovenLRParser.junctions, vertical='┊', bifurcation='├').split('\n')[1:]
+        # self.targets = pp_paths(LRParser.junctions, vertical='┊', bifurcation='├').split('\n')[1:]
 
         # # 2. show the complete pipeline as an indented tree
-        # self.targets = str(as_graph(InterwovenLRParser.junctions)).split('\n')[1:]
+        # self.targets = str(as_graph(LRParser.junctions)).split('\n')[1:]
 
         # 3. show only final targets
-        self.targets = [j.dst for j in InterwovenLRParser.junctions]
-        self.targets.sort(key=lambda s: s in InterwovenLRParser.targets)
+        self.targets = [j.dst for j in LRParser.junctions]
+        self.targets.sort(key=lambda s: s in LRParser.targets)
 
         if len(self.targets) > 1:  self.targets.append(ALL_TARGETS_SPECIAL)
-        self.compilation_target = list(InterwovenLRParser.targets)[0]
+        self.compilation_target = list(LRParser.targets)[0]
         self.target_name = tk.StringVar(value=self.compilation_target)
         self.target_format = tk.StringVar(
             value=get_config_value('default_serialization', 'sxpr'))
@@ -415,11 +415,11 @@ class InterwovenLRApp(tk.Tk):
                     self.num_compiled = 0
                     self.source_name = ''
                     self.outdir = os.path.join(os.path.dirname(self.names[0]),
-                                               'InterwovenLR_output')
+                                               'LR_output')
                     if not os.path.exists(self.outdir):  os.mkdir(self.outdir)
                     self.compilation_units = len(self.names)
                     self.worker = threading.Thread(
-                        target = InterwovenLRParser.batch_process,
+                        target = LRParser.batch_process,
                         args = (self.names, self.outdir),
                         kwargs = dict([('log_func', self.log_callback),
                                        ('cancel_func',
@@ -527,16 +527,16 @@ class InterwovenLRApp(tk.Tk):
 
     def compile_single_unit(self, source, target, parser):
         if target == ALL_TARGETS_SPECIAL:
-            path = InterwovenLRParser.junctions
+            path = LRParser.junctions
         else:
-            path = connection(InterwovenLRParser.junctions, target, "CST")
+            path = connection(LRParser.junctions, target, "CST")
         target_set: Set[str] = set(j.src for j in path)
         if target == ALL_TARGETS_SPECIAL:
             for j in path:  target_set.add(j.dst)
         else:
             target_set.add(target)
         try:
-            results = InterwovenLRParser.pipeline(
+            results = LRParser.pipeline(
                 source, target_set, parser, cancel_query=self.cancel_event.is_set)
             if not self.cancel_event.is_set():
                 self.all_results = results
@@ -552,7 +552,7 @@ class InterwovenLRApp(tk.Tk):
         target = self.target_name.get().lstrip(PIPE_CHARS)
         self.compilation_target = target
         self.compilation_units = 1
-        # self.all_results = InterwovenLRParser.pipeline(source, self.compilation_target, parser)
+        # self.all_results = LRParser.pipeline(source, self.compilation_target, parser)
         # self.finish_single_unit()
         self.cancel_event.clear()
         self.worker = threading.Thread(
@@ -793,13 +793,13 @@ class InterwovenLRApp(tk.Tk):
     def write_or_update_config_file(self, path, config) -> bool:
         fname = os.path.basename(path)
         empty = len(config.sections()) == 0
-        ts2p_new = 'InterwovenLR' not in config.sections()
+        ts2p_new = 'LR' not in config.sections()
         if ts2p_new:
-            config['InterwovenLR'] = {}
-        cfg = get_config_values('InterwovenLR.*')
-        i = len('InterwovenLR.')
+            config['LR'] = {}
+        cfg = get_config_values('LR.*')
+        i = len('LR.')
         cfg = {k[i:]: str(v) for k, v in cfg.items()}
-        config['InterwovenLR'].update(cfg)
+        config['LR'].update(cfg)
         try:
             with open(path, 'w', encoding='utf-8') as f:
                 config.write(f)
@@ -831,10 +831,10 @@ class InterwovenLRApp(tk.Tk):
         else:
             if ftype == 'test':
                 stages = (UNIT_STAGES
-                    | frozenset(j.dst for j in InterwovenLRParser.junctions))
+                    | frozenset(j.dst for j in LRParser.junctions))
                 suite = unit_from_config(fdata, fname, allowed_stages=stages)
                 if 'config__' in suite:
-                    cfg = get_config_values('InterwovenLR.*')
+                    cfg = get_config_values('LR.*')
                     for k, v in suite['config__'].items():
                         if k not in cfg or cfg[k] != eval(v):
                             empty = '""'
@@ -864,7 +864,7 @@ class InterwovenLRApp(tk.Tk):
                                     else result[0] }
                     tests[stage] = cases
             unit = { parser: tests }
-            cfg_data = dump_config_data('InterwovenLR.*', use_headings=False)
+            cfg_data = dump_config_data('LR.*', use_headings=False)
             suite = merge_test_units(suite, unit)
             try:
                 with open(path, 'w', encoding='utf-8') as f:
@@ -921,8 +921,8 @@ class InterwovenLRApp(tk.Tk):
                    "The apparatus is always right!",
                    "Everyone is replaceable and should be!")
         tk.messagebox.showinfo(
-            title="About InterwovenLR",
-            message=("InterwovenLR was brought to you by:\n\n"
+            title="About LR",
+            message=("LR was brought to you by:\n\n"
                      "SLAVES TO THE MACHINE SOFTWARE\n\n"
                      + slogans[random.randint(0, len(slogans) - 1)] + '\n\n')
         )
@@ -941,8 +941,8 @@ if __name__ == '__main__':
     if sys.version_info < (3, 14, 0):
         import multiprocessing
         multiprocessing.freeze_support()
-    read_local_config(os.path.join(scriptdir, 'InterwovenLRConfig.ini'))
-    if not InterwovenLRParser.main(called_from_app=True):
-        app = InterwovenLRApp()
+    read_local_config(os.path.join(scriptdir, 'LRConfig.ini'))
+    if not LRParser.main(called_from_app=True):
+        app = LRApp()
         app.mainloop()
 

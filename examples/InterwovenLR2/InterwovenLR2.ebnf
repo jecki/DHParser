@@ -1,4 +1,0 @@
-@flavor  = heuristic
-S <- L ;
-L <- P ".x" / "x" ;
-P <- P "(n)" / L ;

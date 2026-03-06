@@ -30,7 +30,9 @@ class ParseTestResult:
 
 class MatchResult:
     root_node: RootNode
-
+    root: RootNode
+    is_mismatch: bool
+    len: int
 
 
 def run_test_parse(grammar_spec: str, input_str: str) -> ParseTestResult:
@@ -55,8 +57,19 @@ def parse_for_tree(grammar_spec: str, input_str: str, top_rule = 'S') -> MatchRe
     root_node = grammar(input_str, start_parser=top_rule)
     result = MatchResult()
     result.root_node = root_node
+    result.len = root_node.strlen()
     for e in root_node.errors_sorted:  print(e)
     return result if result.root_node.name != ZOMBIE_TAG else None
+
+def squirrel_parse_pt(grammar_spec, top_rule_name, input) -> MatchResult:
+    result = parse_for_tree(grammar_spec, input, top_rule_name)
+    if result is None:
+        result = MatchResult()
+        result.is_mismatch = True
+    else:
+        result.is_mismatch = False
+        result.root = result.root_node
+    return result
 
 
 def count_rule_depth(result: MatchResult | None, rule_name: str) -> int:
