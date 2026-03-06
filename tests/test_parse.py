@@ -2096,13 +2096,18 @@ class TestDropPropagation:
             DROP:tr   = term ("*"|"/") factor | factor
             factor = /[0-9]+/~
             """
-        parser = create_parser(minilang)
-        assert parser.python_src__.find('DropFrom(') < 0
-        assert parser.python_src__.find('Drop(Ref(') >= 0
-        assert not parser.ex.drop_content
-        assert parser.expr.drop_content
-        assert parser.tr.drop_content
-        assert parser.tr.parsers[0].drop_content
+        lr = get_config_value('left_recursion')
+        set_config_value('left_recursion', 'Full')
+        try:
+            parser = create_parser(minilang)
+            assert parser.python_src__.find('DropFrom(') < 0
+            assert parser.python_src__.find('Drop(Ref(') >= 0
+            assert not parser.ex.drop_content
+            assert parser.expr.drop_content
+            assert parser.tr.drop_content
+            assert parser.tr.parsers[0].drop_content
+        finally:
+            set_config_value('left_recursion', lr)
 
 class TestPosInitialization:
     def test_position_initialization(self):

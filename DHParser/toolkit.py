@@ -41,7 +41,7 @@ if sys.version_info >= (3, 12, 0):
         Dict, List, Tuple, ByteString
     static = staticmethod
 else:
-    from typing import Any, Iterable, Sequence, Set, Set, Union, Dict, List, Tuple, \
+    from typing import Any, Iterable, Sequence, Set, Union, Dict, List, Tuple, \
         FrozenSet, MutableSet, Optional, Type, Callable, Container, Hashable, ByteString
     try:
         from typing import Protocol
