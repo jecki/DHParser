@@ -831,7 +831,7 @@ CONFIG_PRESET['optimizations'] = frozenset()
 # "Full" - Full left-recursion-handling.
 # Default value: "Full"
 ALLOWED_PRESET_VALUES['left_recursion'] = frozenset({'None', 'Forward', 'Full'})
-CONFIG_PRESET['left_recursion'] = 'Full'
+CONFIG_PRESET['left_recursion'] = 'Forward'
 
 
 ########################################################################

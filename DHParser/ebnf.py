@@ -174,7 +174,6 @@ from a grammar, step by step::
     <BLANKLINE>
     parsing: PseudoJunction = create_parser_junction(ArithmeticGrammar)
     get_grammar = parsing.factory  # for backwards compatibility, only
-    <BLANKLINE>
 
     >>> # 2. Execution of the Python-source and extraction of the Grammar-class
     >>> code = compile(DHPARSER_IMPORTS + python_src, '<string>', 'exec')
@@ -270,7 +269,7 @@ from DHParser.nodetree import Node, RootNode, Path, WHITESPACE_PTYPE, KEEP_COMME
     TOKEN_PTYPE, ZOMBIE_TAG, flatten_sxpr, parse_sxpr
 from DHParser.toolkit import load_if_file, wrap_str_literal, escape_ctrl_chars, md5, \
     sane_parser_name, re, expand_table, unrepr, compile_python_object, deprecated, \
-    ThreadLocalSingletonFactory, Any, Iterable, Sequence, Set, AbstractSet, Union, Dict, List, \
+    ThreadLocalSingletonFactory, Any, Iterable, Sequence, Set, Union, Dict, List, \
     Tuple, FrozenSet, MutableSet, Optional, Type, Callable, Container, TypeAlias, \
     matching_brackets, INFINITE, LazyRE, static, RX_NEVER_MATCH
 from DHParser.transform import TransformerFunc, transformer, remove_brackets, change_name, \
@@ -2220,9 +2219,9 @@ class EBNFCompiler(Compiler):
 
         if self.left_recursion == 'Full':
             recursive = self.recursive_symbols()
-            for s in self.forward:
-                for p in self.recursive_paths(s):
-                    print(p)
+            # for s in self.forward:
+            #     for p in self.recursive_paths(s):
+            #         print(p)
             # TODO: Sort out purely right-recursive symbols
             symstr = '|'.join(recursive)
             recursive_ref_pattern = RX_REF_TMPL.format(symbols = symstr)
