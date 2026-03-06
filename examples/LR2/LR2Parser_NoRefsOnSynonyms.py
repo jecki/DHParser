@@ -74,7 +74,7 @@ if DHParser.versionnumber.__version_info__ < (1, 9, 5):
 
 if sys.version_info >= (3, 14, 0):
     CONFIG_PRESET['multicore_pool'] = 'InterpreterPool'
-read_local_config(os.path.join(scriptdir, 'InterwovenLRConfig.ini'))
+read_local_config(os.path.join(scriptdir, 'LR2Config.ini'))
 
 
 #######################################################################
@@ -88,16 +88,16 @@ read_local_config(os.path.join(scriptdir, 'InterwovenLRConfig.ini'))
 # To capture includes, replace the NEVER_MATCH_PATTERN
 # by a pattern with group "name" here, e.g. r'\input{(?P<name>.*)}'
 RE_INCLUDE = NEVER_MATCH_PATTERN
-RE_COMMENT = NEVER_MATCH_PATTERN  # THIS MUST ALWAYS BE THE SAME AS InterwovenLRGrammar.COMMENT__ !!!
+RE_COMMENT = NEVER_MATCH_PATTERN  # THIS MUST ALWAYS BE THE SAME AS LR2Grammar.COMMENT__ !!!
 
 
-def InterwovenLRTokenizer(original_text) -> Tuple[str, List[Error]]:
+def LR2Tokenizer(original_text) -> Tuple[str, List[Error]]:
     # Here, a function body can be filled in that adds preprocessor tokens
     # to the source code and returns the modified source.
     return original_text, []
 
 preprocessing: PseudoJunction = create_preprocess_junction(
-    InterwovenLRTokenizer, RE_INCLUDE, RE_COMMENT)
+    LR2Tokenizer, RE_INCLUDE, RE_COMMENT)
 
 
 #######################################################################
@@ -106,17 +106,19 @@ preprocessing: PseudoJunction = create_preprocess_junction(
 #
 #######################################################################
 
-class InterwovenLRGrammar(Grammar):
-    r"""Parser for an InterwovenLR document.
+class LR2Grammar(Grammar):
+    r"""Parser for a LR2 document.
 
     Instantiate this class and then call the instance with the source
     code as the single argument in order to use the parser, e.g.:
-        parser = InterwovenLR()
+        parser = LR2()
         syntax_tree = parser(source_code)
     """
-    E = Forward()
-    G = Forward()
-    source_hash__ = "3bca5aa553dac46c03ea250adbd0ae8c"
+    term__Recursive__ = Ref("term")
+    ex__Recursive__ = Ref("ex")
+    tr__Recursive__ = Ref("tr")
+    expr__Recursive__ = Ref("expr")
+    source_hash__ = "145321f91d10760b1f01de202c85ea62"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -125,29 +127,27 @@ class InterwovenLRGrammar(Grammar):
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
-    AA = Text("a")
-    I = Series(Text("("), OneOrMore(AA), Text(")"))
-    H = Series(Ref("G"), Text("l"))
-    F = Alternative(Series(Ref("E"), Text("+"), ZeroOrMore(I)), Series(Ref("G"), Text("-")))
-    G.set(Alternative(Series(Ref("H"), Text("m")), Ref("E")))
-    E.set(Alternative(Series(Ref("F"), Text("n")), Text("n")))
-    S = Synonym(E)
-    root__ = S
+    factor = Series(RegExp('[0-9]+'), wsp__)
+    term = Synonym(tr__Recursive__)
+    expr = Synonym(ex__Recursive__)
+    tr = Alternative(Series(term, Alternative(Series(Text("*"), wsp__), Series(Text("/"), wsp__)), factor), factor)
+    ex = Alternative(Series(expr, Alternative(Series(Text("+"), wsp__), Series(Text("-"), wsp__)), Ref("term")), Ref("term"))
+    root__ = expr__Recursive__
     
-parsing: PseudoJunction = create_parser_junction(InterwovenLRGrammar)
+parsing: PseudoJunction = create_parser_junction(LR2Grammar)
 get_grammar = parsing.factory  # for backwards compatibility, only
 
 
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
-        RE_COMMENT in (InterwovenLRGrammar.COMMENT__, NEVER_MATCH_PATTERN), \
-        "Please adjust the pre-processor-variable RE_COMMENT in file InterwovenLRParser.py so that " \
+        RE_COMMENT in (LR2Grammar.COMMENT__, NEVER_MATCH_PATTERN), \
+        "Please adjust the pre-processor-variable RE_COMMENT in file LR2Parser.py so that " \
         "it either is the NEVER_MATCH_PATTERN or has the same value as the COMMENT__-attribute " \
-        "of the grammar class InterwovenLRGrammar! " \
+        "of the grammar class LR2Grammar! " \
         'Currently, RE_COMMENT reads "%s" while COMMENT__ is "%s". ' \
-        % (RE_COMMENT, InterwovenLRGrammar.COMMENT__) + \
+        % (RE_COMMENT, LR2Grammar.COMMENT__) + \
         "\n\nIf RE_COMMENT == NEVER_MATCH_PATTERN then includes will deliberately be " \
-        "processed, otherwise RE_COMMENT==InterwovenLRGrammar.COMMENT__ allows the " \
+        "processed, otherwise RE_COMMENT==LR2Grammar.COMMENT__ allows the " \
         "preprocessor to ignore comments."
 except (AttributeError, NameError):
     pass
@@ -160,37 +160,35 @@ except (AttributeError, NameError):
 #
 #######################################################################
 
-InterwovenLR_AST_transformation_table = {
-    # AST Transformations for the InterwovenLR-grammar
+LR2_AST_transformation_table = {
+    # AST Transformations for the LR2-grammar
     # Special rules:
     # "<<<": [],  # called once before the tree-traversal starts
     # ">>>": [],  # called once after the tree-traversal has finished
     # "<": [],  # called for each node before calling its specific rules
     # "*": [],  # fallback for nodes that do not appear in this table
     # ">": [],   # called for each node after calling its specific rules
-    "S": [],
-    "E": [],
-    "F": [],
-    "G": [],
-    "H": [],
-    "I": [],
-    "AA": [],
+    "expr": [],
+    "ex": [],
+    "term": [],
+    "tr": [],
+    "factor": [],
 }
 
 
 # DEPRECATED, because it requires pickling the transformation-table, which rules out lambdas!
 # ASTTransformation: Junction = create_junction(
-#     InterwovenLR_AST_transformation_table, "CST", "AST", "transtable")
+#     LR2_AST_transformation_table, "CST", "AST", "transtable")
 
-def InterwovenLRTransformer() -> TransformerFunc:
+def LR2Transformer() -> TransformerFunc:
     return static(partial(
         transformer, 
-        transformation_table=InterwovenLR_AST_transformation_table.copy(),
+        transformation_table=LR2_AST_transformation_table.copy(),
         src_stage='CST', 
         dst_stage='AST'))
 
 ASTTransformation: Junction = Junction(
-    'CST', ThreadLocalSingletonFactory(InterwovenLRTransformer), 'AST')
+    'CST', ThreadLocalSingletonFactory(LR2Transformer), 'AST')
 get_transformer = ASTTransformation.factory  # for backwards compatibility, only
 
 
@@ -200,13 +198,13 @@ get_transformer = ASTTransformation.factory  # for backwards compatibility, only
 #
 #######################################################################
 
-class InterwovenLRCompiler(Compiler):
+class LR2Compiler(Compiler):
     """Compiler for the abstract-syntax-tree of a 
-        InterwovenLR source file.
+        LR2 source file.
     """
 
     def __init__(self):
-        super(InterwovenLRCompiler, self).__init__()
+        super(LR2Compiler, self).__init__()
         self.forbid_returning_None = True  # set to False if any compilation-method is allowed to return None
 
     def reset(self):
@@ -215,35 +213,29 @@ class InterwovenLRCompiler(Compiler):
 
     def prepare(self, root: RootNode) -> None:
         assert root.stage == "AST", f"Source stage `AST` expected, `but `{root.stage}` found."
-        root.stage = "InterwovenLR"
+        root.stage = "LR2"
     def finalize(self, result: Any) -> Any:
         return result
 
-    def on_S(self, node):
+    def on_expr(self, node):
         return self.fallback_compiler(node)
 
-    # def on_E(self, node):
+    # def on_ex(self, node):
     #     return node
 
-    # def on_F(self, node):
+    # def on_term(self, node):
     #     return node
 
-    # def on_G(self, node):
+    # def on_tr(self, node):
     #     return node
 
-    # def on_H(self, node):
-    #     return node
-
-    # def on_I(self, node):
-    #     return node
-
-    # def on_AA(self, node):
+    # def on_factor(self, node):
     #     return node
 
 
 
 compiling: Junction = Junction(
-    'AST', ThreadLocalSingletonFactory(InterwovenLRCompiler), 'InterwovenLR')
+    'AST', ThreadLocalSingletonFactory(LR2Compiler), 'LR2')
 
 get_compiler = compiling.factory  # for backwards compatibility, only
 
@@ -265,9 +257,9 @@ from DHParser import ALLOWED_PRESET_VALUES
 #     ...
 
 # # change the names of the source and destination stages. Source
-# # ("InterwovenLR") in this example must be the name of some earlier stage, though.
+# # ("LR2") in this example must be the name of some earlier stage, though.
 # postprocessing: Junction = Junction(
-#     "InterwovenLR", ThreadLocalSingletonFactory(PostProcessing), "refined")
+#     "LR2", ThreadLocalSingletonFactory(PostProcessing), "refined")
 #
 # DON'T FORGET TO ADD ALL POSTPROCESSING-JUNCTIONS TO THE GLOBAL
 # "junctions"-set IN SECTION "Processing-Pipeline" BELOW!
@@ -307,7 +299,7 @@ serializations = expand_table(dict([('*', [get_config_value('default_serializati
 #######################################################################
 
 def pipeline(source: str,
-             target: Union[str, Set[str]] = "InterwovenLR",
+             target: Union[str, Set[str]] = "LR2",
              start_parser: str = "root_parser__",
              *, cancel_query: Optional[CancelQuery] = None) -> PipelineResult:
     """Runs the source code through the processing pipeline. If
@@ -326,7 +318,7 @@ def pipeline(source: str,
 
 
 def compile_src(source: str,
-                target: str = "InterwovenLR",
+                target: str = "LR2",
                 start_parser: str = "root_parser__",
                 *, cancel_query: Optional[CancelQuery] = None) -> Tuple[Any, List[Error]]:
     """Compiles the source to a single target and returns the result of the compilation
@@ -352,7 +344,7 @@ def compile_src(source: str,
 
 
 def compile_snippet(source_code: str,
-                    target: str = "InterwovenLR",
+                    target: str = "LR2",
                     start_parser: str = "root_parser__",
                     *, cancel_query: Optional[CancelQuery] = None) -> Tuple[Any, List[Error]]:
     """Compiles a piece of source_code. In contrast to :py:func:`compile_src` the
@@ -380,7 +372,7 @@ def process_file(source: str, out_dir: str = '', target_set: Set[str]=frozenset(
     elif not target_set <= targets:
         raise AssertionError('Unknown compilation target(s): ' +
                              ', '.join(t for t in target_set - targets))
-    # serializations = get_config_value('InterwovenLR_serializations', serializations)
+    # serializations = get_config_value('LR2_serializations', serializations)
     return dsl.process_file(source, out_dir, preprocessing.factory, parsing.factory,
                             junctions, target_set, serializations, cancel_query)
 
@@ -397,7 +389,7 @@ def batch_process(file_names: List[str], out_dir: str,
     error messages to the directory `our_dir`. Returns a list of error
     messages files.
     """
-    from InterwovenLRParser import process_file_wrapper
+    from LR2Parser import process_file_wrapper
     return dsl.batch_process(file_names, out_dir, process_file_wrapper,
         submit_func=submit_func, log_func=log_func, cancel_func=cancel_func)
 
@@ -440,12 +432,12 @@ def main(called_from_app=False) -> bool:
               'because grammar was not found at: ' + grammar_path)
 
     from argparse import ArgumentParser
-    a = "an" if "InterwovenLR"[0:1] in "AEIOUaeiou" else "a"
-    parser = ArgumentParser(description="Parses " + a + " InterwovenLR file and shows its syntax-tree."
+    a = "an" if "LR2"[0:1] in "AEIOUaeiou" else "a"
+    parser = ArgumentParser(description="Parses " + a + " LR2 file and shows its syntax-tree."
                             " If several filenames are provided or an output directory is "
                             "specified with --out, the results will be written to the disk!"
                             " To directly process content, use a pipe | e.g. "
-                            ' echo "..." | InterwovenLRParser.py.')
+                            ' echo "..." | LR2Parser.py.')
     parser.add_argument('files', nargs='*')
     parser.add_argument('-p', '--parse', nargs=1, default=[],
                         help='Processes the given snippet directly (instead of a file).')
@@ -486,7 +478,7 @@ def main(called_from_app=False) -> bool:
                   '(Snippets that contain blanks need to be enclosed in quotes "..."')
             sys.exit(1)
 
-    read_local_config(os.path.join(scriptdir, 'InterwovenLRConfig.ini'))
+    read_local_config(os.path.join(scriptdir, 'LR2Config.ini'))
 
     if args.serialize:
         if (args.serialize[0].lower() not in
@@ -497,7 +489,7 @@ def main(called_from_app=False) -> bool:
             sys.exit(1)
         serializations['*'] = args.serialize
         access_presets()
-        set_preset_value('InterwovenLR_serializations', serializations, allow_new_key=True)
+        set_preset_value('LR2_serializations', serializations, allow_new_key=True)
         finalize_presets()
 
     if args.debug is not None:

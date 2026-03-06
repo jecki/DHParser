@@ -27,7 +27,7 @@ except (ImportError, ModuleNotFoundError):
         dhparserdir = scriptdir[:i + 10]  # 10 = len("/DHParser/")
         if dhparserdir not in sys.path:  sys.path.insert(0, dhparserdir)
 
-from DHParser.compile import Compiler, compile_source, full_compile
+from DHParser.compile import Compiler, compile_source, Junction, full_compile
 from DHParser.configuration import set_config_value, add_config_values, get_config_value, \
     access_thread_locals, access_presets, finalize_presets, set_preset_value, \
     get_preset_value, read_local_config, CONFIG_PRESET, NEVER_MATCH_PATTERN, ALLOWED_PRESET_VALUES
@@ -45,7 +45,7 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, DropFro
     LateBindingUnary, mixin_comment, last_value, matching_bracket, optional_last_value, \
     PARSER_PLACEHOLDER, RX_NEVER_MATCH, UninitializedError
 from DHParser.pipeline import end_points, full_pipeline, create_parser_junction, \
-    create_preprocess_junction, create_junction, Junction, PseudoJunction, PipelineResult
+    create_preprocess_junction, create_junction, PseudoJunction, PipelineResult
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.stringview import StringView
@@ -116,7 +116,7 @@ class InterwovenLRGrammar(Grammar):
     """
     E = Forward()
     G = Forward()
-    source_hash__ = "3bca5aa553dac46c03ea250adbd0ae8c"
+    source_hash__ = "21feabcdc639a80f85534ce6fc7f5fd0"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -127,10 +127,10 @@ class InterwovenLRGrammar(Grammar):
     wsp__ = Whitespace(WSP_RE__)
     AA = Text("a")
     I = Series(Text("("), OneOrMore(AA), Text(")"))
-    H = Series(Ref("G"), Text("l"))
-    F = Alternative(Series(Ref("E"), Text("+"), ZeroOrMore(I)), Series(Ref("G"), Text("-")))
-    G.set(Alternative(Series(Ref("H"), Text("m")), Ref("E")))
-    E.set(Alternative(Series(Ref("F"), Text("n")), Text("n")))
+    H = Series(G, Text("l"))
+    F = Alternative(Series(E, Text("+"), ZeroOrMore(I)), Series(G, Text("-")))
+    G.set(Alternative(Series(H, Text("m")), E))
+    E.set(Alternative(Series(F, Text("n")), Text("n")))
     S = Synonym(E)
     root__ = S
     

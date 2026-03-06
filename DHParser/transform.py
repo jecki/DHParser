@@ -31,7 +31,7 @@ from __future__ import annotations
 import collections.abc
 from functools import partial, singledispatch, reduce
 import operator
-from typing import AbstractSet, Callable, cast, Container, Dict, \
+from typing import Set, Callable, cast, Container, Dict, \
     Tuple, List, Sequence, Union, Optional
 
 try:
@@ -198,14 +198,14 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
 
     Usage::
 
-        @transformation_factory(AbstractSet[str])
+        @transformation_factory(Set[str])
         def remove_tokens(path, tokens):
             ...
 
     or, alternatively::
 
         @transformation_factory
-        def remove_tokens(path, tokens: AbstractSet[str]):
+        def remove_tokens(path, tokens: Set[str]):
             ...
 
     Example::
@@ -270,7 +270,7 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
                 if len(params) == 1 and issubtype(p1type, Container) \
                         and not (issubtype(p1type, str) or issubtype(p1type, ByteString)):
                     def gen_special(*args):
-                        c = set(args) if issubtype(p1type, AbstractSet) else \
+                        c = set(args) if issubtype(p1type, Set) else \
                             tuple(args) if issubtype(p1type, Sequence) else args
                         d = {params[0].name: c}
                         return partial(f, **d)
@@ -627,14 +627,14 @@ def neg(path: Path, bool_func: collections.abc.Callable) -> Optional[bool]:
 
 
 @transformation_factory(collections.abc.Set)
-def any_of(path: Path, bool_func_set: AbstractSet[collections.abc.Callable]) -> bool:
+def any_of(path: Path, bool_func_set: Set[collections.abc.Callable]) -> bool:
     """Returns True, if any of the bool functions in `bool_func_set` evaluate to True
     for the given path."""
     return any(bf(path) for bf in bool_func_set)
 
 
 @transformation_factory(collections.abc.Set)
-def all_of(path: Path, bool_func_set: AbstractSet[collections.abc.Callable]) -> bool:
+def all_of(path: Path, bool_func_set: Set[collections.abc.Callable]) -> bool:
     """Returns True, if all the bool functions in `bool_func_set` evaluate to True
     for the given path."""
     return all(bf(path) for bf in bool_func_set)
@@ -718,7 +718,7 @@ def is_empty(path: Path) -> bool:
 
 
 @transformation_factory(collections.abc.Set)
-def is_token(path: Path, tokens: AbstractSet[str] = frozenset()) -> bool:
+def is_token(path: Path, tokens: Set[str] = frozenset()) -> bool:
     """
     Checks whether the last node in the path has the name ":Text"
     and it's content matches one of the given tokens. Leading and trailing
@@ -730,7 +730,7 @@ def is_token(path: Path, tokens: AbstractSet[str] = frozenset()) -> bool:
 
 
 @transformation_factory(collections.abc.Set)
-def is_one_of(path: Path, name_set: AbstractSet[str]) -> bool:
+def is_one_of(path: Path, name_set: Set[str]) -> bool:
     """Returns true, if the node's name is one of the given tag names."""
     return path[-1].name in name_set
 
@@ -742,7 +742,7 @@ def is_a(path: Path, name: str) -> bool:
 
 
 @transformation_factory(collections.abc.Set)
-def not_one_of(path: Path, name_set: AbstractSet[str]) -> bool:
+def not_one_of(path: Path, name_set: Set[str]) -> bool:
     """Returns true, if the node's name is not one of the given tag names."""
     return path[-1].name not in name_set
 
@@ -806,9 +806,9 @@ def has_attr(path: Path, attr: str="", value: Optional[str] = None) -> bool:
 
 @transformation_factory(collections.abc.Set)
 def has_ancestor(path: Path,
-                 name_set: AbstractSet[str],
+                 name_set: Set[str],
                  generations: int = -1,
-                 until: Union[AbstractSet[str], str] = frozenset()) -> bool:
+                 until: Union[Set[str], str] = frozenset()) -> bool:
     """
     Checks whether a node with one of the given tag names appears somewhere
     in the path before the last node in the path.
@@ -838,7 +838,7 @@ def has_ancestor(path: Path,
 
 
 @transformation_factory(collections.abc.Set)
-def has_parent(path: Path, name_set: AbstractSet[str]) -> bool:
+def has_parent(path: Path, name_set: Set[str]) -> bool:
     """Checks whether the immediate predecessor in the path has one of the
     given tags."""
     return has_ancestor(path, name_set, 1)
@@ -850,9 +850,9 @@ def has_children(path: Path) -> bool:
 
 
 @transformation_factory(collections.abc.Set)
-def has_descendant(path: Path, name_set: AbstractSet[str],
+def has_descendant(path: Path, name_set: Set[str],
                    generations: int = -1,
-                   until: Union[AbstractSet[str], str] = frozenset()) -> bool:
+                   until: Union[Set[str], str] = frozenset()) -> bool:
     """Checks whether a node with one of the given tag names appears somewhere
     among the descendants (children and children's children etc.)
     of the last node in the path.
@@ -885,14 +885,14 @@ def has_descendant(path: Path, name_set: AbstractSet[str],
 
 
 @transformation_factory(collections.abc.Set)
-def has_child(path: Path, name_set: AbstractSet[str]) -> bool:
+def has_child(path: Path, name_set: Set[str]) -> bool:
     """Checks whether at least one child (i.e. immediate descendant) has one of
     the given tags."""
     return has_descendant(path, name_set, 1)
 
 
 @transformation_factory(collections.abc.Set)
-def has_sibling(path: Path, name_set: AbstractSet[str]):
+def has_sibling(path: Path, name_set: Set[str]):
     """Checks whether the last node in the path has a node with one of the
     given names as sibling."""
     if len(path) >= 2:
@@ -1689,7 +1689,7 @@ def left_associative(path: Path):
 
 
 @transformation_factory(collections.abc.Set)
-def lean_left(path: Path, operators: AbstractSet[str]):
+def lean_left(path: Path, operators: Set[str]):
     """
     Turns a right-leaning tree into a left-leaning tree:
 
@@ -1792,7 +1792,7 @@ def keep_children_if(path: Path, condition: CondFunc):
 
 
 @transformation_factory(collections.abc.Set)
-def keep_tokens(path: Path, tokens: AbstractSet[str] = frozenset()):
+def keep_tokens(path: Path, tokens: Set[str] = frozenset()):
     """Removes any among a particular set of tokens from the immediate
     descendants of a node. If ``tokens`` is the empty set, all tokens
     are removed."""
@@ -1800,7 +1800,7 @@ def keep_tokens(path: Path, tokens: AbstractSet[str] = frozenset()):
 
 
 @transformation_factory(collections.abc.Set)
-def keep_nodes(path: Path, names: AbstractSet[str]):
+def keep_nodes(path: Path, names: Set[str]):
     """Removes children by tag name."""
     keep_children_if(path, partial(is_one_of, name_set=names))
 
@@ -1873,7 +1873,7 @@ def remove_brackets(path: Path):
 
 
 @transformation_factory(collections.abc.Set)
-def remove_tokens(path: Path, tokens: AbstractSet[str] = frozenset()):
+def remove_tokens(path: Path, tokens: Set[str] = frozenset()):
     """Removes any among a particular set of tokens from the immediate
     descendants of a node. If ``tokens`` is the empty set, all tokens
     are removed."""
@@ -1881,7 +1881,7 @@ def remove_tokens(path: Path, tokens: AbstractSet[str] = frozenset()):
 
 
 @transformation_factory(collections.abc.Set)
-def remove_children(path: Path, names: AbstractSet[str]):
+def remove_children(path: Path, names: Set[str]):
     """Removes children by tag name."""
     remove_children_if(path, partial(is_one_of, name_set=names))
 
@@ -2025,7 +2025,7 @@ def node_maker(name: str,
 
 
 @transformation_factory(collections.abc.Set)
-def positions_of(path: Path, names: AbstractSet[str] = frozenset()) -> Tuple[int, ...]:
+def positions_of(path: Path, names: Set[str] = frozenset()) -> Tuple[int, ...]:
     """Returns a (potentially empty) tuple of the positions of the
     children that have one of the given `names`.
     """
@@ -2163,7 +2163,7 @@ def assert_content(path: Path, regexp: str):
 
 
 @transformation_factory(collections.abc.Set)
-def require(path: Path, child_tags: AbstractSet[str]):
+def require(path: Path, child_tags: Set[str]):
     node = path[-1]
     for child in node._children:
         if child.name not in child_tags:
@@ -2172,7 +2172,7 @@ def require(path: Path, child_tags: AbstractSet[str]):
 
 
 @transformation_factory(collections.abc.Set)
-def forbid(path: Path, child_tags: AbstractSet[str]):
+def forbid(path: Path, child_tags: Set[str]):
     node = path[-1]
     for child in node._children:
         if child.name in child_tags:

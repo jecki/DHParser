@@ -107,7 +107,7 @@ from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, linebreaks, line_col, JSONnull, JSON_Dict, \
     validate_XML_attribute_value, fix_XML_attribute_value, lxml_XML_attribute_value, \
     abbreviate_middle, TypeAlias, deprecated, RxPatternType, INFINITE, LazyRE, subf, \
-    Set, deprecation_warning, ascii_char_code, ascii_xml_entity, get_annotations
+    Set, MutableSet, deprecation_warning, ascii_char_code, ascii_xml_entity, get_annotations
 
 try:
     import cython
@@ -2107,7 +2107,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         return self.as_sxpr(src, indentation, compact, flatten_threshold, sxml=normal_form,
                             reflow_col=reflow_col, mapping=mapping)
 
-    def collect_empty_tags(self) -> Set[str]:
+    def collect_empty_tags(self) -> MutableSet[str]:
         """Collects the names of all nodes for which it is True that
         all nodes with that name are empty. Example::
 
@@ -2117,8 +2117,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
 
         :return: The set of names of always empty-nodes
         """
-        empty_tags = set()
-        not_empty = set()
+        empty_tags: MutableSet[str] = set()
+        not_empty: MutableSet[str] = set()
         for nd in self.walk_tree(include_root=True):
             tag = nd.name
             if tag not in not_empty:

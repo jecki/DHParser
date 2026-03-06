@@ -35,6 +35,7 @@ import functools
 from collections import defaultdict
 import copy
 from functools import lru_cache
+from inspect import isclass
 from typing import Callable, cast, Collection, DefaultDict, Sequence, Union, Optional, \
     NamedTuple, Iterator
 
@@ -85,7 +86,6 @@ __all__ = ('parser_names',
            'AnalysisError',
            'GrammarError',
            'UninitializedError',
-           'ensure_drop_propagation',
            'cancel_proxy',
            'NEVER_MATCH_PATTERN',
            'RX_NEVER_MATCH',
@@ -485,8 +485,11 @@ def get_grammar_placeholder() -> Grammar:
     return cast(Grammar, _GRAMMAR_PLACEHOLDER)
 
 
-def is_grammar_placeholder(grammar: Optional['Grammar']) -> bool:
-    return grammar is None or cast(Grammar, grammar) is _GRAMMAR_PLACEHOLDER
+def is_grammar_placeholder(grammar: Optional[Union['Grammar', type]]) -> bool:
+    x = Grammar
+    return grammar is None \
+        or cast(Grammar, grammar) is _GRAMMAR_PLACEHOLDER \
+        or isclass(grammar) and issubclass(cast(type, grammar), Grammar)
 
 
 ParsingResult: TypeAlias = Tuple[Optional[Node], int]
@@ -863,7 +866,7 @@ class Parser:
             self.disposable = True
             self.pname = pname[5:]
             self.node_name = pname[4:]
-        elif pname[0:5] == ":DROP":
+        elif pname[0:5] == "DROP:":
             assert disposable or disposable is None
             self.disposable = True
             self.pname = pname[5:]
@@ -932,7 +935,6 @@ class Parser:
                 def collect(parser: Parser):
                     nonlocal visited
                     if parser not in visited:
-                        # parser.grammar = grammar
                         visited.add(parser)
                         for p in parser.sub_parsers:
                             collect(p)
@@ -1149,7 +1151,7 @@ def DropFrom(parser: Parser) -> Parser:
     parser itself untouched. This is needed, if you want to drop the
     result from a named-parser in one particular context where it is
     referred to, only."""
-    wrapper = Synonym(parser)
+    wrapper = parser if isinstance(parser, Ref) else Synonym(parser)
     wrapper.drop_content = True
     wrapper.disposable = True
     return wrapper
@@ -1336,34 +1338,12 @@ def reset_parser(parser):
     return parser.reset()
 
 
-def _propagate_drop(p: Parser):
-    """propagates the drop_content flag to all unnamed children."""
-    assert p.drop_content
-    for c in p.sub_parsers:
-        if not c.pname:
-            c.drop_content = True
-            _propagate_drop(c)
-
-def ensure_drop_propagation(p: Parser):
-    """propagates the drop_content flag to all unnamed children."""
-    if p.drop_content:
-        _propagate_drop(p)
-    else:
-        try:
-            for c in p.sub_parsers:
-                if not c.pname:
-                    ensure_drop_propagation(c)
-        except UninitializedError as e:
-            if not isinstance(p, LateBindingUnary):
-                raise e
-
-
 def is_disposable(name: str, disposables: Union[Set[str], RxType]) -> bool:
     if name[0:1] == ':':
         return True
     elif isinstance(disposables, Set):
         return name in disposables
-    elif isinstance(disposables, RxPatternType):
+    elif isinstance(disposables, RxType):
         return bool(disposables.match(name))
     else:
         assert isinstance(disposables, str), type(disposables)
@@ -1685,6 +1665,33 @@ class Grammar:
     early_tree_reduction__ = 1     # type: int  # 1 == CombinedParser.FLATTEN
 
     @classmethod
+    def _propagate_drop__(cls, p: Parser):
+        """propagates the drop_content flag to all unnamed children."""
+        assert p.drop_content
+        p._grammar = cls  # only required for LateBindingUnary, but faster then isinstance-check for every p
+        for c in p.sub_parsers:
+            if (not isinstance(c, (Forward, Ref))
+                    and (not c.pname or isinstance(p, Forward))):
+                c.drop_content = True
+                cls._propagate_drop__(c)
+
+    @classmethod
+    def ensure_drop_propagation__(cls, p: Parser):
+        """propagates the drop_content flag to all unnamed children."""
+        if p.drop_content:
+            cls._propagate_drop__(p)
+        else:
+            try:
+                p._grammar = cls   # only required for LateBindingUnary
+                for c in p.sub_parsers:
+                    if (not isinstance(c, (Forward, Ref))
+                            and (not c.pname or isinstance(p, Forward))):
+                        cls.ensure_drop_propagation__(c)
+            except UninitializedError as e:
+                if not isinstance(p, LateBindingUnary):
+                    raise e
+
+    @classmethod
     def _assign_parser_names__(cls):
         """
         Initializes the ``parser.pname`` fields of those
@@ -1720,7 +1727,9 @@ class Grammar:
                     else:
                         parser.name(anonymous + entry)
                     cls.parser_names__.append(entry)
-                    ensure_drop_propagation(parser)
+            for entry in cls.parser_names__:
+                parser = cdict[entry]
+                cls.ensure_drop_propagation__(parser)
             cls.parser_initialization__ = ["done"]  # (over-)write subclass-variable
 
 
@@ -1792,24 +1801,36 @@ class Grammar:
         self.cancel_interval__: int = CANCEL_QUERY_INTERVAL
         self._reset__()
 
-        # prepare parsers in the class, first
+        # Bootsrapping phase 1: assign names to the parsers
+        # Prepare parsers in the class, first, by setting the name of those parsers
+        # that are assigned to a class variable to the name of that class variable.
+        # Also, LateBindingUnary-parser will be bound at this stage.
         self.__class__._assign_parser_names__()
 
-        # prepare a deepcopy-memoy with information about
-        # the named parsers
+        # Bottstrapping phase 2: deepcopy the parsers defined in the context of the
+        # Grammar-class to the Grammar instance.
+
+        # 2.1. Prepare a deepcopy-memo and inject the grammar-object into that memo.
         self.memo__: Optional[Dict[int, Any]] = {0: self}
+        # Then inject all named parsers (i.e. parser directly assigned to a class variable)
+        # into the deepcopy-memo.
         for name in self.__class__.parser_names__:
             obj = self.__class__.__dict__[name]
             self.memo__[-id(obj)] = name  # src object -> symbol name
+        # 2.2. Then, deepcopy all named parsers (i.e. parsers assigned to a class variable)
+        # to the Grammar-instance and doing so, connect them to the Grammar-instance
         for name in self.__class__.parser_names__:
             setattr(self, name, copy.deepcopy(self.__class__.__dict__[name], self.memo__))
+        # 2.3 Now, initialize additional top-level parser references like 'root__'
+        for name in RESERVED_PARSER_NAMES:
+            p = self.__class__.__dict__.get(name, None)
+            if isinstance(p, Parser):
+                setattr(self, name, copy.deepcopy(p, self.memo__))
 
-        # then deep-copy the parser tree from class to instance;
-        # parsers not connected to the root object will be copied later
-        # on demand (see Grammar.__getitem__()).
-        # (Usually, all parsers should be connected to the root object. But
-        # during testing and development this does not need to be the case.)
+        # 2.5. Set self.root_parser__
         if root:
+            # deepcopy the root-parser tree to the Grammar instance, if in case the non-derived
+            # Grammar class was initialized with a root-parser defined outside the class
             self.root_parser__ = copy.deepcopy(root, self.memo__)
             if not self.root_parser__.pname and not isinstance(root, Forward):
                 self.root_parser__.name("root")
@@ -1819,14 +1840,31 @@ class Grammar:
         else:
             assert self.__class__ == Grammar or not is_parser_placeholder(self.__class__.root__),\
                 "Please add `root__` field to definition of class " + self.__class__.__name__
-            self.root_parser__ = copy.deepcopy(self.__class__.root__, self.memo__)
+            # assign the 'root_parser__' field to the root-parser of the grammar
+            self.root_parser__ = self.root__
+            # # practically the entire root-parser tree will have been copied already, but this
+            # # does not harm, becuase with self.memo__ copying the root-parser-tree will be
+            # # short-circuited, anyway. (So the following command is not very costly.)
+            # self.root_parser__ = copy.deepcopy(self.__class__.root__, self.memo__)
             self.static_analysis_pending__ = self.__class__.static_analysis_pending__
             self.static_analysis_errors__ = self.__class__.static_analysis_errors__
         self.static_analysis_caches__ = dict()  # type: Dict[str, Dict]
 
+        # At the end of phase two, only parsers inside the skip and resume list
+        # are not yet initialized. This will happen en passent in the next phase
+
+        # Phase 3: Add any parser whatsoever connected to this Grammar instance
+        #          to the self.all_parsers__ set. Add those parser which are
+        #          not connected to the root-parser to the
+        #          self.unconnected_parsers__ - field
+
+        # Start by adding the parsers connected to the root parser.
         self.root_parser__.apply(self._add_parser__, self)
         root_connected = frozenset(self.all_parsers__)
 
+        # Now, make sure that the parsers occurring in a @skip- or @resume-directive
+        # will also be copyied and initialized with the grammar-object and added
+        # to the all_parsers__ set.
         assert 'root_parser__' in self.__dict__
         assert self.root_parser__ == self.__dict__['root_parser__']
         self.ff_parser__ = self.root_parser__
@@ -1840,20 +1878,25 @@ class Grammar:
         for l in resume_lists:
             for i in range(len(l)):
                 if isinstance(l[i], Parser):
-                    p = self[cast(Parser, l[i]).pname]  # deep-copy and initialize with grammar-object
+                    p = self[cast(Parser, l[i]).pname]  # deep-copy and initialize, if necessary.
                     l[i] = p
                     if p not in root_connected:
                         self.unconnected_parsers__.add(p)
                         self.resume_parsers__.add(p)
+        # Add remaining parsers
         for name in self.__class__.parser_names__:
-            parser = self[name]  # deep-copy and initialize with grammar-object (see __getitem__)
+            parser = self[name]
             if parser not in root_connected:  self.unconnected_parsers__.add(parser)
 
-        self.memo__ = None  # reset memo, again
+        self.memo__ = None  # the deepcopy memo is not needed any more after this point.
 
+        # Phase 4: Reset/Initialize all parsers
         for p in self.all_parsers__:  reset_parser(p)
         if not root:  TreeReduction(self.all_parsers__, self.early_tree_reduction__)
 
+        # Phase 5: Do some static error checking, if the error checking flag
+        #          has been set on the class and error checking for this class
+        #          has not already taken place.
         if (self.static_analysis_pending__
             and (static_analysis
                  or (static_analysis is None
@@ -1883,9 +1926,9 @@ class Grammar:
                 parser.apply(self._add_parser__, self)
             return parser
         except KeyError:
-            # TODO: This code should never be reached, anymore. Add an assert for testing and later remove it entirely!
             parser_template = getattr(self.__class__, key, None)
             if parser_template:
+                # TODO: Can this code every be reached?
                 if key != parser_template.pname or (parser_template.parser.pname
                                                     if isinstance(parser_template, Forward) else ''):
                     raise AttributeError(
@@ -3681,11 +3724,19 @@ class LateBindingUnary(UnaryParser):
     LateBindingUnary is not to be confused with :py:class:`Forward` and should
     not be abused for recursive parser calls either!"""
 
-    def __init__(self, parser_name: str) -> None:
+    def __init__(self, parser_name: Union[str, Parser]) -> None:
         assert parser_name
-        super().__init__(get_parser_placeholder())
-        self.parser_name: str = parser_name
-        self._sub_parsers = frozenset()
+        if isinstance(parser_name, Parser):
+            parser = parser_name
+            assert parser.effective_pname(), \
+                f'LateBindingUnary must bet initialized with named parser, not {parser}!'
+            super().__init__(parser)
+            self.parser_name = parser.effective_pname()
+            self.sub_parsers = frozenset({parser})
+        else:
+            super().__init__(get_parser_placeholder())
+            self.parser_name = parser_name
+            self._sub_parsers = frozenset()
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__(self.parser_name)
@@ -3698,12 +3749,12 @@ class LateBindingUnary(UnaryParser):
     def _resolve_parser_name(self) -> Parser:
         assert self.parser
         if is_parser_placeholder(self.parser):
-            if is_grammar_placeholder(self._grammar):
+            if is_grammar_placeholder(self._grammar) and not isclass(self._grammar):
                 raise UninitializedError(
                     f'Grammar hast not yet been set in LateBindingUnary "{self}"')
-            self.parser = self.grammar.__dict__[self.parser_name]
-            # don't use getattr, above, because this will eventually fall back on class-variables
-            assert isinstance(self.parser, Parser), f'grammar.{self.parser_name} is not a parser'
+            # self.parser = getattr(self.grammar, self.parser_name)
+            self.parser = self._grammar.__dict__[self.parser_name]
+            assert isinstance(self.parser, Parser), f'"{self.parser_name}" is not a parser!'
         return self.parser
 
     @property
@@ -4203,52 +4254,6 @@ def longest_match(strings: List[str], text: Union[StringView, str], n: int = 1) 
     if match:  return match
     if head == strings[i]:  return head
     return ''
-
-# class TextAlternative(Alternative):
-#     r"""A faster Alternative-Parser for special cases where all alternatives
-#     are Text-parsers or sequences beginning with a Text-Parser.
-#
-#     EXPERIMENTAL!!!
-#     """
-#
-#     def __init__(self, *parsers: Parser) -> None:
-#         super().__init__(*parsers)
-#         heads: List[str] = []
-#         for p in parsers:
-#             while isinstance(p, Synonym):
-#                 p = p.parser
-#             if isinstance(p, Text):
-#                 heads.append(p.text)
-#             elif isinstance(p, Series) and isinstance(p.parsers[0], Text):
-#                 heads.append(cast(Text, p.parsers[0]).text)
-#             else:
-#                 raise ValueError(
-#                     f'Parser {p} is not a Text-parser and does not start with a Text-parser')
-#         heads.sort()
-#         self.heads = heads
-#         self.indices = {h: parsers.index(p) for h, p in zip(heads, parsers)}
-#         self.min_head_size = min(len(h) for h in self.heads)
-#
-#     @cython.locals(location_=cython.int)
-#     def _parse(self, location: xint) -> ParsingResult:
-#         text = self.grammar.document__[location:]
-#         m = longest_match(self.heads, text, self.min_head_size)
-#         if m:
-#             parser = self.parsers[self.indices[m]]
-#             node, location_ = parser(location)
-#             if node is not None:
-#                 return self._return_value(node), location_
-#         return None, location
-#
-#     def static_analysis(self) -> List['AnalysisError']:
-#         errors = super().static_analysis()
-#         if len(self.heads) != len(set(self.heads)):
-#             errors.append(self.static_error(
-#                 'Duplicate text-heads in ' + self.location_info()
-#                 + ' Use of Alternative() instead of TextAlternative() '
-#                 + ' could possibly solve this problem.',
-#                 DUPLICATE_PARSERS_IN_ALTERNATIVE))
-#         return errors
 
 
 NO_MANDATORY = 2**30
@@ -5257,7 +5262,7 @@ class Forward(UnaryParser):
         if location in self.recursion_counter:
             depth = self.recursion_counter[location]
             if depth == 0:
-                grammar.suspend_memoization__ = True
+                grammar.suspend_memoization__ = id(self)
                 result = None, location
             else:
                 self.recursion_counter[location] = depth - 1
@@ -5319,8 +5324,15 @@ class Forward(UnaryParser):
                     depth += 1
             # grammar.suspend_memoization__ = save_suspend_memoization \
             #     or location <= (grammar.last_rb__loc__ + int(text._len == result[1]._len))
-            grammar.suspend_memoization__ = save_suspend_memoization  #  = is_context_sensitive(self.parser)
-            if not grammar.suspend_memoization__:
+            # both checks in the following are necessary:
+            # 1. id(self)-check in order not to interfere with interwoven recursive parser calls
+            # 2. isinstance check for referenced parsers that are not in fact recursive
+            if grammar.suspend_memoization__ == id(self) or isinstance(grammar.suspend_memoization__, bool):
+                grammar.suspend_memoization__ = save_suspend_memoization  #  = is_context_sensitive(self.parser)
+            if location in visited and result[1] < visited[location][1]:
+                assert False
+                result = visited[location]
+            elif not grammar.suspend_memoization__:
                 visited[location] = result
         return result
 
@@ -5372,141 +5384,28 @@ class Forward(UnaryParser):
 
 
 class Ref(LateBindingUnary):
-    r"""
-    Ref allows declaring forward-referecnes in a grammar, e.g.::
-
-        >>> class Arithmetic(Grammar):
-        ...     r'''
-        ...     expression =  term  { ("+" | "-") term }
-        ...     term       =  factor  { ("*" | "/") factor }
-        ...     factor     =  INTEGER | "("  expression  ")"
-        ...     INTEGER    =  /\d+/~
-        ...     '''
-        ...     INTEGER    = RE('\\d+')
-        ...     factor     = INTEGER | TKN("(") + Ref('expression') + TKN(")")
-        ...     term       = factor + ZeroOrMore((TKN("*") | TKN("/")) + factor)
-        ...     expression = term + ZeroOrMore((TKN("+") | TKN("-")) + term)
-        ...     root__     = expression
-
-    :ivar recursion_counter:  Mapping of places to how often the parser
-            has already been called recursively at this place. This
-            is needed to implement left recursion. The number of
-            calls becomes irrelevant once a result has been memoized.
-
-    The Ref-parser class implements a seed-and-grow algorithm to handle
-    left-recursive grammars. See it's __call__()-method.
-    """
+    """A late binding passive reference to another parser. In contrast to
+    Synonym, Refs do not alter the node name."""
 
     def reset(self):
         super(Ref, self).reset()
-        self.recursion_counter: Dict[int, int] = dict()
         assert not self.pname, "Ref-Parsers mustn't have a name!"
 
     @cython.locals(ldepth=cython.int, rb_stack_size=cython.int)
     def __call__(self, location: cython.int) -> ParsingResult:
-        """
-        Overrides :py:meth:`Parser.__call__`, because Forward is not an independent parser
-        but merely redirects the call to another parser. Other than parser
-        :py:class:`Synonym`, which might be a meaningful marker for the syntax tree,
-        parser Forward should never appear in the syntax tree.
-
-        :py:meth:`Forward.__call__` also takes care of (most of) the left recursion
-        handling. In order to do so it (unfortunately) has to duplicate some code
-        from :py:meth:`Parser.__call__`.
-
-        The algorithm for avoiding infinite loops in left-recursive grammars roughly follows:
-        https://medium.com/@gvanrossum_83706/left-recursive-peg-grammars-65dab3c580e1
-        See also:
-        https://tinlizzie.org/VPRIPapers/tr2007002_packrat.pdf
-        """
-        grammar = self._grammar
-        if not grammar.left_recursion__:
-            return self.parser(location)
-
-        # rollback variable changing operation if the parser backtracks
-        # to a position before the variable-changing operation occurred
-        if location <= grammar.last_rb__loc__:
-            grammar.rollback_to__(location)
-
-        # if the location has already been visited by the current parser, return the saved result
-        visited = self.visited  # using local variable for better performance
-        if location in visited:
-            # Sorry, no history recording in case of memoized results!
-            return visited[location]
-
-        if location in self.recursion_counter:
-            depth = self.recursion_counter[location]
-            if depth == 0:
-                grammar.suspend_memoization__ = True
-                result = None, location
-            else:
-                self.recursion_counter[location] = depth - 1
-                result = self.parser(location)
-                self.recursion_counter[location] = depth  # allow moving back and forth
-        else:
-            self.recursion_counter[location] = 0  # fail on the first recursion
-            save_suspend_memoization = grammar.suspend_memoization__
-            grammar.suspend_memoization__ = False
-            history_pointer = len(grammar.history__)
-
-            result = self.parser(location)
-
-            if result[0] is not None:
-                # keep calling the (potentially left-)recursive parser and increase
-                # the recursion depth by 1 for each call as long as the length of
-                # the match increases.
-                last_history_state = grammar.history__[history_pointer:len(grammar.history__)]
-                depth = 1
-                while True:
-                    self.recursion_counter[location] = depth
-                    grammar.suspend_memoization__ = False
-                    rb_stack_size = len(grammar.rollback__)
-                    grammar.history__ = grammar.history__[:history_pointer]
-                    # reduplication of error messages will be caught by nodetree.RootNode.add_error()
-                    # saving and restoring the errors-messages state on each iteration presupposes
-                    # that error messages will be recreated every time, which, however, does not
-                    # happen because of memoization. (This is a downside of global error-reporting
-                    # in contrast to attaching error-messages locally to the node where they
-                    # occurred. Big topic...)
-                    # don't carry error/resumption-messages over to the next iteration
-                    # grammar.most_recent_error__ = None
-                    next_result = self.parser(location)
-
-                    # discard next_result if it is not the longest match and return
-                    if next_result[1] <= result[1]:  # also true, if no match
-                        # Since the result of the last parser call (``next_result``) is discarded,
-                        # any variables captured by this call should be "rolled back", too.
-                        while len(grammar.rollback__) > rb_stack_size:
-                            _, rb_func = grammar.rollback__.pop()
-                            rb_func()
-                            grammar.last_rb__loc__ = grammar.rollback__[-1][0] \
-                                if grammar.rollback__ else -2
-                        # Finally, overwrite the discarded result in the last history record with
-                        # the accepted result, i.e. the longest match.
-                        # TODO: Move this to trace.py, somehow... and make it less confusing
-                        #       that the result is not the last but the longest match...
-                        grammar.history__ = grammar.history__[:history_pointer] + last_history_state
-                        # record = grammar.history__[-1]
-                        # if record.call_stack[-1] == (self.parser.pname, location):
-                        #     record.text = result[1]
-                        #     delta = len(text) - len(result[1])
-                        #     assert record.node.name != ':None'
-                        #     record.node.result = text[:delta]
-                        break
-
-                    last_history_state = grammar.history__[history_pointer:len(grammar.history__)]
-                    result = next_result
-                    depth += 1
-            # grammar.suspend_memoization__ = save_suspend_memoization \
-            #     or location <= (grammar.last_rb__loc__ + int(text._len == result[1]._len))
-            grammar.suspend_memoization__ = save_suspend_memoization  #  = is_context_sensitive(self.parser)
-            if not grammar.suspend_memoization__:
-                visited[location] = result
+        result = self.parser(location)
+        if self.drop_content:
+            return EMPTY_NODE, result[1]
         return result
 
     def set_proxy(self, proxy: Optional[ParseFunc]):
-        """``set_proxy`` has no effects on Forward-objects!"""
+        """``set_proxy`` has no effects on Ref-objects!"""
         return
+
+    def name(self, pname: str = "", disposable: Optional[bool] = None) -> Parser:
+        assert not pname or pname[0:1] == ":" or pname[0:5] in ('DROP:', 'HIDE:')
+        assert disposable is not False
+        return super().name(pname, True)
 
     def __repr__(self):
         return self.parser_name

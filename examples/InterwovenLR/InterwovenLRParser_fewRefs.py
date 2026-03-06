@@ -27,7 +27,7 @@ except (ImportError, ModuleNotFoundError):
         dhparserdir = scriptdir[:i + 10]  # 10 = len("/DHParser/")
         if dhparserdir not in sys.path:  sys.path.insert(0, dhparserdir)
 
-from DHParser.compile import Compiler, compile_source, full_compile
+from DHParser.compile import Compiler, compile_source, Junction, full_compile
 from DHParser.configuration import set_config_value, add_config_values, get_config_value, \
     access_thread_locals, access_presets, finalize_presets, set_preset_value, \
     get_preset_value, read_local_config, CONFIG_PRESET, NEVER_MATCH_PATTERN, ALLOWED_PRESET_VALUES
@@ -41,11 +41,11 @@ from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode, Pat
 from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, DropFrom, AnyChar, Parser, \
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, ERR, \
     Option, NegativeLookbehind, OneOrMore, RegExp, SmartRE, Retrieve, Series, Capture, TreeReduction, \
-    ZeroOrMore, Ref, Forward, NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, \
+    ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, \
     LateBindingUnary, mixin_comment, last_value, matching_bracket, optional_last_value, \
-    PARSER_PLACEHOLDER, RX_NEVER_MATCH, UninitializedError
+    PARSER_PLACEHOLDER, RX_NEVER_MATCH, UninitializedError, Ref
 from DHParser.pipeline import end_points, full_pipeline, create_parser_junction, \
-    create_preprocess_junction, create_junction, Junction, PseudoJunction, PipelineResult
+    create_preprocess_junction, create_junction, PseudoJunction, PipelineResult
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.stringview import StringView
@@ -67,9 +67,9 @@ from DHParser.transform import is_empty, remove_if, TransformationDict, Transfor
 from DHParser import parse as parse_namespace__
 
 import DHParser.versionnumber
-if DHParser.versionnumber.__version_info__ < (1, 9, 5):
+if DHParser.versionnumber.__version_info__ < (1, 9, 3):
     print(f'DHParser version {DHParser.versionnumber.__version__} is lower than the DHParser '
-          f'version 1.9.5, {os.path.basename(__file__)} has first been generated with. '
+          f'version 1.9.3, {os.path.basename(__file__)} has first been generated with. '
           f'Please install a more recent version of DHParser to avoid unexpected errors!')
 
 if sys.version_info >= (3, 14, 0):
@@ -114,9 +114,7 @@ class InterwovenLRGrammar(Grammar):
         parser = InterwovenLR()
         syntax_tree = parser(source_code)
     """
-    E = Forward()
-    G = Forward()
-    source_hash__ = "3bca5aa553dac46c03ea250adbd0ae8c"
+    source_hash__ = "70767cd1b54ff3f7edfa1d056dbb3695"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -126,12 +124,13 @@ class InterwovenLRGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     AA = Text("a")
-    I = Series(Text("("), OneOrMore(AA), Text(")"))
-    H = Series(Ref("G"), Text("l"))
-    F = Alternative(Series(Ref("E"), Text("+"), ZeroOrMore(I)), Series(Ref("G"), Text("-")))
-    G.set(Alternative(Series(Ref("H"), Text("m")), Ref("E")))
-    E.set(Alternative(Series(Ref("F"), Text("n")), Text("n")))
-    S = Synonym(E)
+    I = Series(Text("("), OneOrMore(Ref("AA")), Text(")"))
+    E = Alternative(Series(Ref("F"), Text("n")), Text("n"))
+    F = Alternative(Series(E, Text("+"), ZeroOrMore(I)), Series(Ref("G"), Text("-")))
+    G = Alternative(Series(Ref("H"), Text("m")), E)
+    H = Series(G, Text("l"))
+    ERef = Ref("E")
+    S = Synonym(ERef)
     root__ = S
     
 parsing: PseudoJunction = create_parser_junction(InterwovenLRGrammar)

@@ -174,6 +174,7 @@ from a grammar, step by step::
     <BLANKLINE>
     parsing: PseudoJunction = create_parser_junction(ArithmeticGrammar)
     get_grammar = parsing.factory  # for backwards compatibility, only
+    <BLANKLINE>
 
     >>> # 2. Execution of the Python-source and extraction of the Grammar-class
     >>> code = compile(DHPARSER_IMPORTS + python_src, '<string>', 'exec')
@@ -269,9 +270,9 @@ from DHParser.nodetree import Node, RootNode, Path, WHITESPACE_PTYPE, KEEP_COMME
     TOKEN_PTYPE, ZOMBIE_TAG, flatten_sxpr, parse_sxpr
 from DHParser.toolkit import load_if_file, wrap_str_literal, escape_ctrl_chars, md5, \
     sane_parser_name, re, expand_table, unrepr, compile_python_object, deprecated, \
-    ThreadLocalSingletonFactory, Any, Iterable, Sequence, Set, Union, Dict, List, \
+    ThreadLocalSingletonFactory, Any, Iterable, Sequence, Set, AbstractSet, Union, Dict, List, \
     Tuple, FrozenSet, MutableSet, Optional, Type, Callable, Container, TypeAlias, \
-    matching_brackets, INFINITE, LazyRE, static
+    matching_brackets, INFINITE, LazyRE, static, RX_NEVER_MATCH
 from DHParser.transform import TransformerFunc, transformer, remove_brackets, change_name, \
     reduce_single_child, replace_by_single_child, is_empty, remove_children, add_error, \
     remove_tokens, remove_anonymous_tokens, flatten, forbid, assert_content, remove_children_if, \
@@ -1506,6 +1507,13 @@ def neutralize_unnamed_groups(rxp: str) -> str:
     return '?:'.join(al)
 
 
+REF_TMPL = 'Ref__({symbol})'
+RX_REF_TMPL = r'Ref__\(({symbols})\)'
+RX_DROPFROM_REF = LazyRE(r'DropFrom\(Ref\("(\w+)"\)\)')
+RX_SYNONYM_TMPL = r'Synonym\(({symbols})\)'  # Really needed?
+RX_REF = LazyRE(r'Ref__\((\w+)\)')
+
+
 class EBNFCompilerError(CompilerError):
     r"""the Error that is raised by :py:class:`EBNFCompiler` class.
     (Not compilation errors in the strict sense,
@@ -1641,6 +1649,9 @@ class EBNFCompiler(Compiler):
     :ivar grammar_name:  The name of the grammar to be compiled
 
     :ivar grammar_source:  The source code of the grammar to be compiled.
+
+    :ivar left_recursion: Determine the kind of left-recursion-handling. Value
+            is read from congiuration and is eithet "None", "Forward", "Full"
     """
     COMMENT_KEYWORD = "COMMENT__"
     COMMENT_PARSER_KEYWORD = "comment__"
@@ -1706,6 +1717,7 @@ class EBNFCompiler(Compiler):
         self.consumed_custom_errors = set()    # type: MutableSet[str]
         self.consumed_skip_rules = set()       # type: MutableSet[str]
         self.P = {p: p for p in parser_names}  # type: Dict[str, str]
+        self.left_recursion = get_config_value('left_recursion')
 
 
     @property
@@ -1810,35 +1822,6 @@ class EBNFCompiler(Compiler):
         compiler += [COMPILER_FACTORY.format(NAME=self.grammar_name)]
         return '\n'.join(compiler)
 
-    # def verify_transformation_table(self, transtable):
-    #     """
-    #     Checks for symbols that occur in the transformation-table but have
-    #     never been defined in the grammar. Usually, this kind of
-    #     inconsistency results from an error like a typo in the transformation
-    #     table.
-    #     """
-    #     assert self._dirty_flag
-    #     table_entries = set(expand_table(transtable).keys()) - {'*', '<', '>', '~', '<<<', '>>>'}
-    #     symbols = set(self.rules.keys()) | set(self.macros.keys())
-    #     symbols.add('ZOMBIE__')
-    #     if self.directives.comment:
-    #         symbols.add('comment__')
-    #     messages = []
-    #     # # commented out, because warning is confusing for beginners
-    #     # for entry in table_entries:
-    #     #     if entry not in symbols and not entry[:1] == ":":
-    #     #         messages.append(Error(('Symbol "%s" is not defined in grammar %s but appears in '
-    #     #                                'the transformation table!') % (entry, self.grammar_name),
-    #     #                               0, UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING))
-    #     return messages
-
-    # def verify_compiler(self, compiler):
-    #     """
-    #     Checks for on_XXXX()-methods that occur in the compiler, although XXXX
-    #     has never been defined in the grammar. Usually, this kind of
-    #     inconsistency results from an error like a typo in the compiler-code.
-    #     """
-    #     pass  # TODO: add verification code here
 
     def check_rx(self, node: Node, rx: str, smartRE: bool = False) -> str:
         """
@@ -2091,7 +2074,7 @@ class EBNFCompiler(Compiler):
                                     'nowhere defined!' % directive,
                                     DIRECTIVE_FOR_NONEXISTANT_SYMBOL)
 
-        # execute deferred tasks, for example semantic checks that cannot
+        # execute deferred tasks, for example, semantic checks that cannot
         # be done before the symbol table is complete
 
         for task in self.deferred_tasks:
@@ -2209,7 +2192,7 @@ class EBNFCompiler(Compiler):
                         + '    Instantiate this class and then call the instance with the source\n'
                         + '    code as the single argument in order to use the parser, e.g.:\n'
                         + f'        parser = {self.grammar_name}()\n'
-                        + f'        syntax_tree = parser(source_code)'
+                        + '        syntax_tree = parser(source_code)'
                         + ('\n\n    Grammar:' if self.grammar_source and show_source else '')]
         definitions.append(('parser_initialization__', '["upon instantiation"]'))
         definitions.append(('static_analysis_pending__', '[True]'))
@@ -2234,7 +2217,30 @@ class EBNFCompiler(Compiler):
         definitions.reverse()
         declarations += [symbol + ' = Forward()'
                          for symbol in sorted(list(self.forward))]
+
+        if self.left_recursion == 'Full':
+            recursive = self.recursive_symbols()
+            for s in self.forward:
+                for p in self.recursive_paths(s):
+                    print(p)
+            # TODO: Sort out purely right-recursive symbols
+            symstr = '|'.join(recursive)
+            recursive_ref_pattern = RX_REF_TMPL.format(symbols = symstr)
+            rx_recursive_ref = re.compile(recursive_ref_pattern)
+            synonym_pattern = RX_SYNONYM_TMPL.format(symbols = symstr)
+            rx_synonym = re.compile(synonym_pattern)
+        else:
+            recursive_ref_pattern: str = '(' + NEVER_MATCH_PATTERN + ')'
+            rx_recursive_ref = re.compile(recursive_ref_pattern)
         for symbol, statement in definitions:
+            if symbol[-2:] != '__' or (symbol.find('_skip_') >= 0 or symbol.find('_resume_') >= 0):
+                # TODO: Except uses at the very end of the rule (i.e. right recursion),
+                #       unless it's forward references (pre-sort the self.forward-references accordingly)
+                statement = statement.replace(REF_TMPL.format(symbol = symbol), symbol)
+                statement = rx_recursive_ref.sub(r'Ref("\1")', statement)
+                # statement = rx_synonym.sub(rf'Synonym(\1{RECURSIVE_SUFFIX})', statement)
+                statement = RX_REF.sub(r'\1', statement)
+                statement = RX_DROPFROM_REF.sub(r'Drop(Ref("\1"))', statement)
             if symbol in self.forward:
                 declarations += [symbol + '.set(' + statement + ')']
             else:
@@ -2516,7 +2522,8 @@ class EBNFCompiler(Compiler):
             self.rules[rule] = self.current_symbols
             defn = self.compile(body)
             if isinstance(defn, str):
-                if defn.find("(") < 0:
+                m = None
+                if defn.find("(") < 0 or (m := RX_REF.fullmatch(defn)):
                     # assume it's a synonym, like 'page = REGEX_PAGE_NR'
                     if not drop_flag and defn in self.directives['drop'] \
                             and re.match(self.directives['disposable'], rule):
@@ -2524,7 +2531,7 @@ class EBNFCompiler(Compiler):
                             f'it is a Synonym for the dropped symbol "{defn}". If this behaviour '
                             f'is undesired, swap the definitions of both symbols. Otherwise, add '
                             f'"{rule}" to the @drop-directive to avoid this warning.', ERROR)
-                    defn = f'{self.P["Synonym"]}({defn})'
+                    defn = f'{self.P["Synonym"]}({defn if m is None else m.group(1)})'
                 if drop_flag and not defn.startswith(self.P["Drop"] + "("):
                     defn = f'{self.P["Drop"]}({defn})'
             else:
@@ -3473,7 +3480,8 @@ class EBNFCompiler(Compiler):
                 return keyword
             elif symbol.endswith('__'):
                 self.tree.new_error(node, 'Illegal use of reserved symbol name "%s"!' % symbol)
-            return symbol
+            return f"Ref__({symbol})" if self.left_recursion == "Full" else symbol
+            # return symbol  # return f"Ref(symbol)" and delete als non-recursive Refs later?
 
 
     def drop_on(self, category):
@@ -3790,12 +3798,6 @@ def compile_ebnf_ast(ast: RootNode) -> str:
     parse text following the grammar described with the EBNF-code."""
     return get_ebnf_compiler()(ast)
 
-
-########################################################################
-#
-# EBNF compiler
-#
-########################################################################
 
 def compile_ebnf(ebnf_source: str, branding: str = 'DSL', *, preserve_AST: bool = False) \
         -> CompilationResult:   # -> (result, messages, AST)
