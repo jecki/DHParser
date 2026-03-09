@@ -1343,7 +1343,7 @@ def is_disposable(name: str, disposables: Union[Set[str], RxType]) -> bool:
         return True
     elif isinstance(disposables, Set):
         return name in disposables
-    elif isinstance(disposables, RxType):
+    elif isinstance(disposables, (RxPatternType, LazyRE)):
         return bool(disposables.match(name))
     else:
         assert isinstance(disposables, str), type(disposables)
