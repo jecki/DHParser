@@ -5302,6 +5302,8 @@ class Forward(UnaryParser):
         if location <= grammar.last_rb__loc__:
             grammar.rollback_to__(location)
 
+        print(self.parser.pname + ': ', location)
+
         # if the location has already been visited by the current parser, return the saved result
         visited = self.visited  # using local variable for better performance
         if location in visited:
@@ -5347,6 +5349,7 @@ class Forward(UnaryParser):
                     next_result = self.parser(location)
 
                     # discard next_result if it is not the longest match and return
+                    # TODO: Try ff_pos__ instead?
                     if next_result[1] <= result[1]:  # also true, if no match
                         # Since the result of the last parser call (``next_result``) is discarded,
                         # any variables captured by this call should be "rolled back", too.
@@ -5383,6 +5386,7 @@ class Forward(UnaryParser):
             result = visited[location]
         elif not grammar.suspend_memoization__:
             visited[location] = result
+        print(self.parser.pname + ': ', '*' if result[0] is None else result[0].content)
         return result
 
     def set_proxy(self, proxy: Optional[ParseFunc]):
