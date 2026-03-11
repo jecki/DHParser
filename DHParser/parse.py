@@ -5352,7 +5352,7 @@ class Forward(UnaryParser):
                     # discard next_result if it is not the longest match and return
                     # TODO: Try ff_pos__ instead?
                     if (next_result[0] is None or (next_result[1] <= farthest)
-                          # or (next_result[1] < result[1] and result[1] >= grammar.ff_pos__)
+                        # or (next_result[1] < result[1] and result[1] >= grammar.ff_pos__)
                     ):
                     # if next_result[1] <= result[1]:  # also true, if no match
                         # Since the result of the last parser call (``next_result``) is discarded,
@@ -5373,6 +5373,7 @@ class Forward(UnaryParser):
                         #     delta = len(text) - len(result[1])
                         #     assert record.node.name != ':None'
                         #     record.node.result = text[:delta]
+                        print(grammar.ff_pos__, result[1], next_result[1])
                         break
 
                     last_history_state = grammar.history__[history_pointer:len(grammar.history__)]
