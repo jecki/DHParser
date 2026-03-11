@@ -5351,7 +5351,9 @@ class Forward(UnaryParser):
 
                     # discard next_result if it is not the longest match and return
                     # TODO: Try ff_pos__ instead?
-                    if (next_result[0] is None or (next_result[1] <= farthest)):
+                    if (next_result[0] is None or (next_result[1] <= farthest)
+                          # or (next_result[1] < result[1] and result[1] >= grammar.ff_pos__)
+                    ):
                     # if next_result[1] <= result[1]:  # also true, if no match
                         # Since the result of the last parser call (``next_result``) is discarded,
                         # any variables captured by this call should be "rolled back", too.
@@ -5376,6 +5378,7 @@ class Forward(UnaryParser):
                     last_history_state = grammar.history__[history_pointer:len(grammar.history__)]
                     result = next_result
                     farthest = grammar.ff_pos__
+                    print(farthest, result[1])
                     depth += 1
             # grammar.suspend_memoization__ = save_suspend_memoization \
             #     or location <= (grammar.last_rb__loc__ + int(text._len == result[1]._len))
