@@ -5376,9 +5376,9 @@ class Forward(UnaryParser):
                         break
 
                     last_history_state = grammar.history__[history_pointer:len(grammar.history__)]
+                    print(grammar.ff_pos__, result[1], next_result[1])
                     result = next_result
                     farthest = grammar.ff_pos__
-                    print(farthest, result[1])
                     depth += 1
             # grammar.suspend_memoization__ = save_suspend_memoization \
             #     or location <= (grammar.last_rb__loc__ + int(text._len == result[1]._len))
