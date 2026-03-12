@@ -5350,7 +5350,7 @@ class Forward(UnaryParser):
                     next_result = self.parser(location)
 
                     # discard next_result if it is not the longest match and return
-                    # TODO: Try ff_pos__ instead?
+                    #
                     if (next_result[0] is None or (next_result[1] <= farthest)
                         # or (next_result[1] < result[1] and result[1] >= grammar.ff_pos__)
                     ):
