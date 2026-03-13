@@ -5327,60 +5327,55 @@ class Forward(UnaryParser):
 
             result = self.parser(location)
 
-            if result[0] is not None:
-                # keep calling the (potentially left-)recursive parser and increase
-                # the recursion depth by 1 for each call as long as the length of
-                # the match increases.
-                last_history_state = grammar.history__[history_pointer:len(grammar.history__)]
-                farthest = grammar.ff_pos__
-                depth = 1
-                while True:
-                    self.recursion_counter[(origin, location)] = depth
-                    grammar.suspend_memoization__ = False
-                    rb_stack_size = len(grammar.rollback__)
-                    grammar.history__ = grammar.history__[:history_pointer]
-                    # reduplication of error messages will be caught by nodetree.RootNode.add_error()
-                    # saving and restoring the errors-messages state on each iteration presupposes
-                    # that error messages will be recreated every time, which, however, does not
-                    # happen because of memoization. (This is a downside of global error-reporting
-                    # in contrast to attaching error-messages locally to the node where they
-                    # occurred. Big topic...)
-                    # don't carry error/resumption-messages over to the next iteration
-                    # grammar.most_recent_error__ = None
-                    next_result = self.parser(location)
+            # keep calling the (potentially left-)recursive parser and increase
+            # the recursion depth by 1 for each call as long as the length of
+            # the match increases.
+            last_history_state = grammar.history__[history_pointer:len(grammar.history__)]
+            farthest = grammar.ff_pos__
+            depth = 1
+            while True:
+                self.recursion_counter[(origin, location)] = depth
+                grammar.suspend_memoization__ = False
+                rb_stack_size = len(grammar.rollback__)
+                grammar.history__ = grammar.history__[:history_pointer]
+                # reduplication of error messages will be caught by nodetree.RootNode.add_error()
+                # saving and restoring the errors-messages state on each iteration presupposes
+                # that error messages will be recreated every time, which, however, does not
+                # happen because of memoization. (This is a downside of global error-reporting
+                # in contrast to attaching error-messages locally to the node where they
+                # occurred. Big topic...)
+                # don't carry error/resumption-messages over to the next iteration
+                # grammar.most_recent_error__ = None
+                next_result = self.parser(location)
 
-                    # discard next_result if it is not the longest match and return
-                    #
-                    if (next_result[0] is None or (next_result[1] <= farthest)
-                        # or (next_result[1] < result[1] and result[1] >= grammar.ff_pos__)
-                    ):
-                    # if next_result[1] <= result[1]:  # also true, if no match
-                        # Since the result of the last parser call (``next_result``) is discarded,
-                        # any variables captured by this call should be "rolled back", too.
-                        while len(grammar.rollback__) > rb_stack_size:
-                            _, rb_func = grammar.rollback__.pop()
-                            rb_func()
-                            grammar.last_rb__loc__ = grammar.rollback__[-1][0] \
-                                if grammar.rollback__ else -2
-                        # Finally, overwrite the discarded result in the last history record with
-                        # the accepted result, i.e. the longest match.
-                        # TODO: Move this to trace.py, somehow... and make it less confusing
-                        #       that the result is not the last but the longest match...
-                        grammar.history__ = grammar.history__[:history_pointer] + last_history_state
-                        # record = grammar.history__[-1]
-                        # if record.call_stack[-1] == (self.parser.pname, location):
-                        #     record.text = result[1]
-                        #     delta = len(text) - len(result[1])
-                        #     assert record.node.name != ':None'
-                        #     record.node.result = text[:delta]
-                        print(grammar.ff_pos__, result[1], next_result[1])
-                        break
-
-                    last_history_state = grammar.history__[history_pointer:len(grammar.history__)]
+                # discard next_result if it is not the longest match and return
+                if next_result[1] <= result[1]:  # also true, if no match
+                    # Since the result of the last parser call (``next_result``) is discarded,
+                    # any variables captured by this call should be "rolled back", too.
+                    while len(grammar.rollback__) > rb_stack_size:
+                        _, rb_func = grammar.rollback__.pop()
+                        rb_func()
+                        grammar.last_rb__loc__ = grammar.rollback__[-1][0] \
+                            if grammar.rollback__ else -2
+                    # Finally, overwrite the discarded result in the last history record with
+                    # the accepted result, i.e. the longest match.
+                    # TODO: Move this to trace.py, somehow... and make it less confusing
+                    #       that the result is not the last but the longest match...
+                    grammar.history__ = grammar.history__[:history_pointer] + last_history_state
+                    # record = grammar.history__[-1]
+                    # if record.call_stack[-1] == (self.parser.pname, location):
+                    #     record.text = result[1]
+                    #     delta = len(text) - len(result[1])
+                    #     assert record.node.name != ':None'
+                    #     record.node.result = text[:delta]
                     print(grammar.ff_pos__, result[1], next_result[1])
-                    result = next_result
-                    farthest = grammar.ff_pos__
-                    depth += 1
+                    break
+
+                last_history_state = grammar.history__[history_pointer:len(grammar.history__)]
+                print(grammar.ff_pos__, result[1], next_result[1])
+                result = next_result
+                farthest = grammar.ff_pos__
+                depth += 1
             # grammar.suspend_memoization__ = save_suspend_memoization \
             #     or location <= (grammar.last_rb__loc__ + int(text._len == result[1]._len))
             # both checks in the following are necessary:
