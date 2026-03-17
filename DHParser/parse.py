@@ -5302,8 +5302,6 @@ class Forward(UnaryParser):
         if location <= grammar.last_rb__loc__:
             grammar.rollback_to__(location)
 
-        print(self.parser.pname + ': ', location)
-
         # if the location has already been visited by the current parser, return the saved result
         visited = self.visited  # using local variable for better performance
         if location in visited:
@@ -5368,11 +5366,9 @@ class Forward(UnaryParser):
                     #     delta = len(text) - len(result[1])
                     #     assert record.node.name != ':None'
                     #     record.node.result = text[:delta]
-                    print(grammar.ff_pos__, result[1], next_result[1])
                     break
 
                 last_history_state = grammar.history__[history_pointer:len(grammar.history__)]
-                print(grammar.ff_pos__, result[1], next_result[1])
                 result = next_result
                 farthest = grammar.ff_pos__
                 depth += 1
@@ -5387,8 +5383,9 @@ class Forward(UnaryParser):
             # assert False
             result = visited[location]
         elif not grammar.suspend_memoization__:
-            visited[location] = result
-        print(self.parser.pname + ': ', '*' if result[0] is None else result[0].content)
+            visited[location] = result  # TODO: need versioned memoization
+            print('Memo', location, result)
+        print(location, depth-1, result)
         return result
 
     def set_proxy(self, proxy: Optional[ParseFunc]):
