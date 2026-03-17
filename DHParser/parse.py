@@ -5385,7 +5385,7 @@ class Forward(UnaryParser):
         elif not grammar.suspend_memoization__:
             visited[location] = result  # TODO: need versioned memoization
             print('Memo', location, result)
-        print(location, depth-1, result)
+        print(location, result)
         return result
 
     def set_proxy(self, proxy: Optional[ParseFunc]):
