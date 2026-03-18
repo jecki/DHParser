@@ -5267,6 +5267,9 @@ class Forward(UnaryParser):
         super(Forward, self).reset()
         self.recursion_counter: Dict[Tuple[int, int], int] = dict()
         assert not self.pname, "Forward-Parsers mustn't have a name!"
+        self.memo: Dict[int, List[Node]] = dict()
+
+        self.call_stack = []
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__()
@@ -5307,6 +5310,8 @@ class Forward(UnaryParser):
         if location in visited:
             # Sorry, no history recording in case of memoized results!
             return visited[location]
+
+        self.call_stack.append(self.parser.node_name + ' ' + str(location))
 
         if (origin, location) in self.recursion_counter:
             depth = self.recursion_counter[(origin, location)]
@@ -5385,7 +5390,8 @@ class Forward(UnaryParser):
         elif not grammar.suspend_memoization__:
             visited[location] = result  # TODO: need versioned memoization
             print('Memo', location, result)
-        print(location, result)
+        print(self.call_stack, location, result)
+        self.call_stack.pop()
         return result
 
     def set_proxy(self, proxy: Optional[ParseFunc]):
