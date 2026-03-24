@@ -751,6 +751,8 @@ class Parser:
             if location <= grammar.last_rb__loc__:
                 grammar.rollback_to__(location)
 
+            X = id(self)
+
             # if location has already been visited by the current parser, return saved result
             visited = self.visited  # using local variable for better performance
             if location in visited:
@@ -884,7 +886,7 @@ class Parser:
         return self
 
     def effective_pname(self) -> str:
-        """Returns the parser's pname. In case of a Forward-parser,
+        """Returns the parser's pname. In the case of a Forward-parser,
         returns parser.parser.pname."""
         return self.pname
 
@@ -1844,7 +1846,7 @@ class Grammar:
             # assign the 'root_parser__' field to the root-parser of the grammar
             self.root_parser__ = self.root__
             # # practically the entire root-parser tree will have been copied already, but this
-            # # does not harm, becuase with self.memo__ copying the root-parser-tree will be
+            # # does not harm, because with self.memo__ copying the root-parser-tree will be
             # # short-circuited, anyway. (So the following command is not very costly.)
             # self.root_parser__ = copy.deepcopy(self.__class__.root__, self.memo__)
             self.static_analysis_pending__ = self.__class__.static_analysis_pending__
@@ -4083,14 +4085,14 @@ class NaryParser(CombinedParser):
         self.sub_parsers = frozenset(parsers)
 
     def __deepcopy__(self, memo):
-        parsers = copy.deepcopy(self.parsers, memo)
+        parsers = copy.deepcopy(self.parsers, memo)  # TODO: eliminate duplicates due to recursion
         duplicate = self.__class__(*parsers)
         copy_combined_parser_attrs(self, duplicate, memo)
         return duplicate
 
 
 def starting_string(parser: Parser) -> str:
-    """If parser starts with a fixed string, this will be returned.
+    """If the parser starts with a fixed string, this will be returned.
     """
     # keep track of already visited parsers to avoid infinite circles
     been_there = parser.grammar.static_analysis_caches__\
@@ -5156,6 +5158,7 @@ class Pop(Retrieve):
     # def __deepcopy__(self, memo):
     #     symbol = copy.deepcopy(self.parser, memo)
     #     duplicate = self.__class__(symbol, self.match)
+    #     memo[id(self)] = duplicate  # test
     #     copy_combined_parser_attrs(self, duplicate, memo)
     #     duplicate.values = self.values[:]
     #     return duplicate
@@ -5274,7 +5277,7 @@ class Forward(UnaryParser):
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__()
-        memo[id(self)] = duplicate
+        memo[id(self)] = duplicate  # prevent infinite recursion during next deepcopy() call
         copy_parser_base_attrs(self, duplicate, memo)
         parser = copy.deepcopy(self.parser, memo)
         duplicate.parser = parser
@@ -5290,7 +5293,7 @@ class Forward(UnaryParser):
         parser Forward should never appear in the syntax tree.
 
         :py:meth:`Forward.__call__` also takes care of (most of) the left recursion
-        handling. In order to do so it (unfortunately) has to duplicate some code
+        handling. In order to do so, it (unfortunately) has to duplicate some code
         from :py:meth:`Parser.__call__`.
 
         The algorithm for avoiding infinite loops in left-recursive grammars roughly follows:
