@@ -3771,6 +3771,9 @@ class LateBindingUnary(UnaryParser):
         else:
             self._sub_parsers = f
 
+    def effective_pname(self) -> str:
+        return self.parser_name if is_parser_placeholder(self.parser) else self.parser.effective_pname()
+
 
 class Option(UnaryParser):
     r"""
