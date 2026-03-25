@@ -751,12 +751,10 @@ class Parser:
             if location <= grammar.last_rb__loc__:
                 grammar.rollback_to__(location)
 
-            X = id(self)
-
             # if location has already been visited by the current parser, return saved result
             visited = self.visited  # using local variable for better performance
             if location in visited:
-                assert self.pname and not grammar.tree__.errors, f'{location}, {self}'
+                assert self.pname and not grammar.tree__.errors, f'{location}, {self}, {grammar.tree__.errors}'
                 if grammar.history_tracking__  and self._parse_proxy.__name__ == 'trace_history' \
                         and self._parse_proxy.__module__ == 'DHParser.trace':
                     return self._parse_proxy(-location or -INFINITE)  # a negative location signals a memo-hit
@@ -3709,8 +3707,11 @@ class UnaryParser(CombinedParser):
 
     def __deepcopy__(self, memo):
         parser = copy.deepcopy(self.parser, memo)
-        duplicate = self.__class__(parser)
-        copy_combined_parser_attrs(self, duplicate, memo)
+        try:
+            duplicate = memo[id(self)]
+        except KeyError:
+            duplicate = self.__class__(parser)
+            copy_combined_parser_attrs(self, duplicate, memo)
         return duplicate
 
 
@@ -3743,11 +3744,18 @@ class LateBindingUnary(UnaryParser):
             self._sub_parsers = frozenset()
 
     def __deepcopy__(self, memo):
-        duplicate = self.__class__(self.parser_name)
-        if not is_parser_placeholder(self.parser):
-            duplicate.parser = copy.deepcopy(self.parser, memo)
+        if is_parser_placeholder(self.parser):
+            duplicate = self.__class__(self.parser_name)
             duplicate.sub_parsers = frozenset({duplicate.parser})
-        copy_combined_parser_attrs(self, duplicate, memo)
+            copy_combined_parser_attrs(self, duplicate, memo)
+        else:
+            _ = copy.deepcopy(self.parser, memo)
+            try:
+                duplicate = memo[id(self)]
+            except KeyError:
+                duplicate = self.__class__(self.parser_name)
+                duplicate.sub_parsers = frozenset({duplicate.parser})
+                copy_combined_parser_attrs(self, duplicate, memo)
         return duplicate
 
     def _resolve_parser_name(self) -> Parser:
@@ -3997,8 +4005,11 @@ class Counted(UnaryParser):
 
     def __deepcopy__(self, memo):
         parser = copy.deepcopy(self.parser, memo)
-        duplicate = self.__class__(parser, self.repetitions)
-        copy_combined_parser_attrs(self, duplicate, memo)
+        try:
+            duplicate = memo[id(self)]
+        except KeyError:
+            duplicate = self.__class__(parser, self.repetitions)
+            copy_combined_parser_attrs(self, duplicate, memo)
         return duplicate
 
     @cython.locals(location_=cython.int)
@@ -4085,9 +4096,12 @@ class NaryParser(CombinedParser):
         self.sub_parsers = frozenset(parsers)
 
     def __deepcopy__(self, memo):
-        parsers = copy.deepcopy(self.parsers, memo)  # TODO: eliminate duplicates due to recursion
-        duplicate = self.__class__(*parsers)
-        copy_combined_parser_attrs(self, duplicate, memo)
+        parsers = copy.deepcopy(self.parsers, memo)
+        try:
+            duplicate = memo[id(self)]
+        except KeyError:
+            duplicate = self.__class__(*parsers)
+            copy_combined_parser_attrs(self, duplicate, memo)
         return duplicate
 
 
@@ -4365,8 +4379,11 @@ class ErrorCatchingNary(NaryParser):
 
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
-        duplicate = self.__class__(*parsers, mandatory=self.mandatory)
-        copy_combined_parser_attrs(self, duplicate, memo)
+        try:
+            duplicate = memo[id(self)]
+        except KeyError:
+            duplicate = self.__class__(*parsers, mandatory=self.mandatory)
+            copy_combined_parser_attrs(self, duplicate, memo)
         return duplicate
 
     def get_reentry_point(self, location: cython.int) -> Tuple[int, Node]:
@@ -4646,9 +4663,13 @@ class Interleave(ErrorCatchingNary):
 
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
-        duplicate = self.__class__(*parsers, mandatory=self.mandatory,
-                                   repetitions=self.repetitions)
-        copy_combined_parser_attrs(self, duplicate, memo)
+        try:
+            duplicate = memo[id(self)]
+        except KeyError:
+            duplicate = self.__class__(*parsers,
+                                       mandatory=self.mandatory,
+                                       repetitions=self.repetitions)
+            copy_combined_parser_attrs(self, duplicate, memo)
         return duplicate
 
     @cython.locals(location_=cython.int, location__=cython.int, i=cython.int, reloc=cython.int)
@@ -4938,9 +4959,12 @@ class Capture(ContextSensitive):
 
     def __deepcopy__(self, memo):
         symbol = copy.deepcopy(self.parser, memo)
-        duplicate = self.__class__(symbol, self.zero_length_warning)
-        copy_combined_parser_attrs(self, duplicate, memo)
-        duplicate._can_capture_zero_length = self._can_capture_zero_length
+        try:
+            duplicate = memo[id(self)]
+        except KeyError:
+            duplicate = self.__class__(symbol, self.zero_length_warning)
+            copy_combined_parser_attrs(self, duplicate, memo)
+            duplicate._can_capture_zero_length = self._can_capture_zero_length
         return duplicate
 
     @property
@@ -5067,8 +5091,11 @@ class Retrieve(ContextSensitive):
 
     def __deepcopy__(self, memo):
         symbol = copy.deepcopy(self.parser, memo)
-        duplicate = self.__class__(symbol, self.match)
-        copy_combined_parser_attrs(self, duplicate, memo)
+        try:
+            duplicate = memo[id(self)]
+        except KeyError:
+            duplicate = self.__class__(symbol, self.match)
+            copy_combined_parser_attrs(self, duplicate, memo)
         return duplicate
 
     @property
@@ -5157,10 +5184,12 @@ class Pop(Retrieve):
 
     # def __deepcopy__(self, memo):
     #     symbol = copy.deepcopy(self.parser, memo)
-    #     duplicate = self.__class__(symbol, self.match)
-    #     memo[id(self)] = duplicate  # test
-    #     copy_combined_parser_attrs(self, duplicate, memo)
-    #     duplicate.values = self.values[:]
+    #     try:
+    #         duplicate = memo[id(self)]
+    #     except KeyError:
+    #         duplicate = self.__class__(symbol, self.match)
+    #         copy_combined_parser_attrs(self, duplicate, memo)
+    #         duplicate.values = self.values[:]
     #     return duplicate
 
     def _rollback(self):
@@ -5393,8 +5422,8 @@ class Forward(UnaryParser):
             result = visited[location]
         elif not grammar.suspend_memoization__:
             visited[location] = result  # TODO: need versioned memoization
-            print('Memo', location, result)
-        print(self.call_stack, location, result)
+            # print('Memo', location, result)
+        # print(self.call_stack, location, result)
         self.call_stack.pop()
         return result
 
@@ -5442,7 +5471,6 @@ class Forward(UnaryParser):
         if not parser.drop_content:  parser.disposable = self.disposable
         self.drop_content = parser.drop_content
         self.pname = ""
-
 
 
 class Ref(LateBindingUnary):
