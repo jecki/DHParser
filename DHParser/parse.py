@@ -3744,9 +3744,10 @@ class LateBindingUnary(UnaryParser):
             self._sub_parsers = frozenset()
 
     def __deepcopy__(self, memo):
+        X = id(self) in memo
+
         if is_parser_placeholder(self.parser):
             duplicate = self.__class__(self.parser_name)
-            duplicate.sub_parsers = frozenset({duplicate.parser})
             copy_combined_parser_attrs(self, duplicate, memo)
         else:
             _ = copy.deepcopy(self.parser, memo)
@@ -3768,6 +3769,9 @@ class LateBindingUnary(UnaryParser):
             self.parser = self._grammar.__dict__[self.parser_name]
             assert isinstance(self.parser, Parser), f'"{self.parser_name}" is not a parser!'
         return self.parser
+
+    def effective_pname(self) -> str:
+        return self.parser.pname
 
     @property
     def sub_parsers(self) -> FrozenSet[Parser]:
@@ -5446,8 +5450,8 @@ class Forward(UnaryParser):
             return ret
 
     def effective_pname(self) -> str:
-        """Returns the parser's pname. In case of a Forward-parser,
-        returns parser.parser.pname."""
+        """Returns the parser's pname. In the case of a Forward-
+        or Ref-parser, returns parser.parser.pname."""
         return self.parser.pname
 
     def __repr__(self):
