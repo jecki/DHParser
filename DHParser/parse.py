@@ -1752,15 +1752,18 @@ class Grammar:
         if parser not in self.all_parsers__:
             if parser.pname:
                 # prevent overwriting instance variables or parsers of a different class
+                # or isinstance(self.__dict__[parser.pname], parser.__class__)), \
                 if parser.pname in self.__dict__:
                     assert (isinstance(self.__dict__[parser.pname], Forward)
-                            or isinstance(self.__dict__[parser.pname], parser.__class__)), \
+                            or self.__dict__.get(parser.pname, parser) is parser), \
                         ('Cannot add parser "%s" because a field with the same name '
                          'already exists in grammar object: %s!'
                          % (parser.pname, str(self.__dict__[parser.pname])))
                 else:
                     setattr(self, parser.pname, parser)
             elif isinstance(parser, Forward):
+                # assert parser.parser.pname not in self.__dict__, parser.parser.pname
+                assert self.__dict__.get(parser.parser.pname, parser) is parser
                 setattr(self, parser.parser.pname, parser)
             self.all_parsers__.add(parser)
             # parser.grammar = self  # happens earlier when deep-copying all parser objects
@@ -1888,6 +1891,14 @@ class Grammar:
         for name in self.__class__.parser_names__:
             parser = self[name]
             if parser not in root_connected:  self.unconnected_parsers__.add(parser)
+
+        if self.__class__.__name__ == 'DSLGrammar':
+            print('***')
+            for p in self.all_parsers__:
+                if p.pname == 'term':
+                    print('term = ', id(p))
+                elif p.effective_pname() == 'term':
+                    print(type(p), id(p), id(p.parser))
 
         self.memo__ = None  # the deepcopy memo is not needed any more after this point.
 
@@ -3744,8 +3755,6 @@ class LateBindingUnary(UnaryParser):
             self._sub_parsers = frozenset()
 
     def __deepcopy__(self, memo):
-        X = id(self) in memo
-
         if is_parser_placeholder(self.parser):
             duplicate = self.__class__(self.parser_name)
             copy_combined_parser_attrs(self, duplicate, memo)
@@ -3771,7 +3780,7 @@ class LateBindingUnary(UnaryParser):
         return self.parser
 
     def effective_pname(self) -> str:
-        return self.parser.pname
+        return self.parser_name if is_parser_placeholder(self.parser) else self.parser.effective_pname()
 
     @property
     def sub_parsers(self) -> FrozenSet[Parser]:
@@ -5289,7 +5298,7 @@ class Forward(UnaryParser):
             is needed to implement left recursion. The number of
             calls becomes irrelevant once a result has been memoized.
 
-    The Forward parser class contains an algorithm to handle left-recursive
+    The Forward parser class contains an algorithm to handle left-recursivef
     grammars. See it's __call__()-method. The algorithm handles direct and indirect
     left-recursion, but not interwoven left-recursion!
     """
@@ -5469,6 +5478,7 @@ class Forward(UnaryParser):
         """Sets the parser to which the calls to this Forward-object
         shall be delegated.
         """
+        assert not isinstance(parser, Forward)
         self.parser = parser
         self.sub_parsers = frozenset({parser})
         if self.pname and not parser.pname:  parser.name(self.pname, self.disposable)

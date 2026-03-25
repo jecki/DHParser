@@ -140,6 +140,7 @@ class TestInfiLoopsAndRecursion:
             """
         grammar_factory = grammar_provider(minilang)
         parser = grammar_factory()
+        # print(parser.python_src__)
         snippet = "5*4*3*2"
         # set_tracer(parser, trace_history)
         st = parser(snippet)
