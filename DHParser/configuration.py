@@ -457,9 +457,9 @@ def get_config_values(key_pattern: str = "*", *additional_patterns) -> Dict:
     """Returns a dictionary of all configuration entries that match
     `key_pattern`."""
     access_presets()
-    presets = get_preset_values(key_pattern)
+    presets_copy = get_preset_values(key_pattern)
     for pattern in additional_patterns:
-        presets.update(get_preset_values(pattern))
+        presets_copy.update(get_preset_values(pattern))
     finalize_presets()
     import fnmatch
     with get_access_lock():
@@ -471,9 +471,9 @@ def get_config_values(key_pattern: str = "*", *additional_patterns) -> Dict:
             else:
                 cfg_values.update({key: value for key, value in cfg.items()
                                    if fnmatch.fnmatchcase(key, key_pattern)})
-        presets.update(cfg_values)
-        cfg.update(presets)
-    return presets
+        presets_copy.update(cfg_values)
+        cfg.update(presets_copy)
+    return presets_copy
 
 
 def set_config_value(key: str, value: Any, allow_new_key: bool = False):
