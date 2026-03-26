@@ -1477,7 +1477,8 @@ def next_valid_letter(text, start, end):
         assert any(err.code == MANDATORY_CONTINUATION for err in cst.errors)
 
     def test_bigfattest(self):
-        gr = copy.deepcopy(get_ebnf_grammar())
+        gr_ = get_ebnf_grammar()
+        gr = copy.deepcopy(gr_)
         resume_notices_on(gr)
         cst = gr(EBNF_with_Errors)
         locations = []

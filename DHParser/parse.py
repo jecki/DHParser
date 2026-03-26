@@ -873,13 +873,16 @@ class Parser:
             self.node_name = pname[4:]
             Drop(self)
         else:
+            if pname[0:1] == "$":
+                pname = pname[1:]
+            else:  # self.pname will not be set for macros!
+                self.pname = pname
             self.disposable = False
             if disposable is True:
                 self.disposable = True
                 self.node_name = ':' + pname
             else:
                 self.node_name = pname
-            self.pname = pname
         return self
 
     def effective_pname(self) -> str:
@@ -1734,7 +1737,7 @@ class Grammar:
 
 
     def __deepcopy__(self, memo):
-        duplicate = self.__class__(self.root_parser__)
+        duplicate = self.__class__()
         duplicate.history_tracking__ = self.history_tracking__
         duplicate.resume_notices__ = self.resume_notices__
         duplicate.max_parser_dropouts__ = self.max_parser_dropouts__
@@ -1755,14 +1758,17 @@ class Grammar:
                 if parser.pname in self.__dict__:
                     assert (isinstance(self.__dict__[parser.pname], Forward)
                             or self.__dict__.get(parser.pname, parser) is parser), \
-                        ('Cannot add parser "%s" because a field with the same name '
-                         'already exists in grammar object: %s!'
-                         % (parser.pname, str(self.__dict__[parser.pname])))
+                        (f'Cannot add parser "{parser}" because a field with '
+                         ' the same name already exists in grammar object: '
+                         f'{self.__dict__[parser.pname]}')
                 else:
                     setattr(self, parser.pname, parser)
             elif isinstance(parser, Forward):
                 # assert parser.parser.pname not in self.__dict__, parser.parser.pname
-                assert self.__dict__.get(parser.parser.pname, parser) is parser
+                assert self.__dict__.get(parser.parser.pname, parser) is parser, \
+                    (f'Cannot add forward-parser "{parser}" because a field with '
+                     ' the same name already exists in grammar object: '
+                     f'{self.__dict__[parser.parser.pname]}')
                 setattr(self, parser.parser.pname, parser)
             self.all_parsers__.add(parser)
             # parser.grammar = self  # happens earlier when deep-copying all parser objects
