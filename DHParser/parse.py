@@ -475,6 +475,12 @@ def artifact(nd: Node) -> bool:
 #
 ########################################################################
 
+
+
+def NOCALL(*args, **kwargs):
+    assert False, f'illegal method-call on PLACEHOLDER-object!'
+
+
 _GRAMMAR_PLACEHOLDER = None  # type: Optional[Grammar]
 
 
@@ -482,6 +488,7 @@ def get_grammar_placeholder() -> Grammar:
     global _GRAMMAR_PLACEHOLDER
     if _GRAMMAR_PLACEHOLDER is None:
         _GRAMMAR_PLACEHOLDER = Grammar.__new__(Grammar)
+        _GRAMMAR_PLACEHOLDER.__call__ = NOCALL
     return cast(Grammar, _GRAMMAR_PLACEHOLDER)
 
 
@@ -873,17 +880,20 @@ class Parser:
             self.node_name = pname[4:]
             Drop(self)
         else:
+            if pname[0:1] == "$":
+                pname = pname[1:]
+            else:  # self.pname will not be set for macros!
+                self.pname = pname
             self.disposable = False
             if disposable is True:
                 self.disposable = True
                 self.node_name = ':' + pname
             else:
                 self.node_name = pname
-            self.pname = pname
         return self
 
     def effective_pname(self) -> str:
-        """Returns the parser's pname. In case of a Forward-parser,
+        """Returns the parser's pname. In the case of a Forward-parser,
         returns parser.parser.pname."""
         return self.pname
 
@@ -1171,6 +1181,8 @@ def get_parser_placeholder() -> Parser:
         PARSER_PLACEHOLDER.drop_content = False
         PARSER_PLACEHOLDER.node_name = ':PLACEHOLDER__'
         PARSER_PLACEHOLDER.sub_parsers = frozenset()
+        PARSER_PLACEHOLDER.__deepcopy__ = NOCALL
+        PARSER_PLACEHOLDER.apply = NOCALL
     return cast(Parser, PARSER_PLACEHOLDER)
 
 
@@ -1734,7 +1746,7 @@ class Grammar:
 
 
     def __deepcopy__(self, memo):
-        duplicate = self.__class__(self.root_parser__)
+        duplicate = self.__class__()
         duplicate.history_tracking__ = self.history_tracking__
         duplicate.resume_notices__ = self.resume_notices__
         duplicate.max_parser_dropouts__ = self.max_parser_dropouts__
@@ -1751,16 +1763,26 @@ class Grammar:
         if parser not in self.all_parsers__:
             if parser.pname:
                 # prevent overwriting instance variables or parsers of a different class
-                if parser.pname in self.__dict__:
-                    assert (isinstance(self.__dict__[parser.pname], Forward)
-                            or isinstance(self.__dict__[parser.pname], parser.__class__)), \
-                        ('Cannot add parser "%s" because a field with the same name '
-                         'already exists in grammar object: %s!'
-                         % (parser.pname, str(self.__dict__[parser.pname])))
+                registered = self.__dict__.get(parser.pname, None)
+                if registered:
+                    # assert (isinstance(self.__dict__[parser.pname], Forward)
+                    #         or self.__dict__.get(parser.pname, parser) is parser), \
+                    assert (registered is parser
+                            or (isinstance(registered, Forward) and registered.parser is parser)), \
+                        (f'Cannot add parser "{parser}" because a field with '
+                         ' the same name already exists in grammar object: '
+                         f'{type(registered)} {registered}')
                 else:
                     setattr(self, parser.pname, parser)
             elif isinstance(parser, Forward):
-                setattr(self, parser.parser.pname, parser)
+                registered = self.__dict__.get(parser.parser.pname, None)
+                if registered and not registered is parser.parser:
+                    assert registered is parser, \
+                        (f'Cannot add forward-parser "{parser}" because a field with '
+                         ' the same name already exists in grammar object: '
+                         f'{type(registered)} {registered}')
+                else:  # set forward parser or overwrite forwarded parser with forward parser
+                    setattr(self, parser.parser.pname, parser)
             self.all_parsers__.add(parser)
             # parser.grammar = self  # happens earlier when deep-copying all parser objects
 
@@ -1776,6 +1798,8 @@ class Grammar:
         :param static_analysis: If not None, this overrides the config value
             "static_analysis".
         """
+        assert root is None or self.__class__ is Grammar, \
+            "External root-parsers cannot be passed to derived classes of Grammar!"
         self.all_parsers__: MutableSet[Parser] = set()
         # add compiled regular expression for comments if it does not already exist
         if not hasattr(self, 'comment_rx__') or self.comment_rx__ is None:
@@ -1825,7 +1849,10 @@ class Grammar:
         for name in RESERVED_PARSER_NAMES:
             p = self.__class__.__dict__.get(name, None)
             if isinstance(p, Parser):
-                setattr(self, name, copy.deepcopy(p, self.memo__))
+                if p is PARSER_PLACEHOLDER:
+                    setattr(self, name, p)
+                else:
+                    setattr(self, name, copy.deepcopy(p, self.memo__))
 
         # 2.5. Set self.root_parser__
         if root:
@@ -1843,7 +1870,7 @@ class Grammar:
             # assign the 'root_parser__' field to the root-parser of the grammar
             self.root_parser__ = self.root__
             # # practically the entire root-parser tree will have been copied already, but this
-            # # does not harm, becuase with self.memo__ copying the root-parser-tree will be
+            # # does not harm, because with self.memo__ copying the root-parser-tree will be
             # # short-circuited, anyway. (So the following command is not very costly.)
             # self.root_parser__ = copy.deepcopy(self.__class__.root__, self.memo__)
             self.static_analysis_pending__ = self.__class__.static_analysis_pending__
@@ -1859,14 +1886,14 @@ class Grammar:
         #          self.unconnected_parsers__ - field
 
         # Start by adding the parsers connected to the root parser.
-        self.root_parser__.apply(self._add_parser__, self)
+        if self.root_parser__ is not PARSER_PLACEHOLDER:
+            self.root_parser__.apply(self._add_parser__, self)
+            assert self.root_parser__ is self.__dict__['root_parser__']
         root_connected = frozenset(self.all_parsers__)
 
         # Now, make sure that the parsers occurring in a @skip- or @resume-directive
         # will also be copyied and initialized with the grammar-object and added
         # to the all_parsers__ set.
-        assert 'root_parser__' in self.__dict__
-        assert self.root_parser__ == self.__dict__['root_parser__']
         self.ff_parser__ = self.root_parser__
         self.unconnected_parsers__: MutableSet[Parser] = set()
         self.resume_parsers__: MutableSet[Parser] = set()
@@ -3705,8 +3732,11 @@ class UnaryParser(CombinedParser):
 
     def __deepcopy__(self, memo):
         parser = copy.deepcopy(self.parser, memo)
-        duplicate = self.__class__(parser)
-        copy_combined_parser_attrs(self, duplicate, memo)
+        try:
+            duplicate = memo[id(self)]
+        except KeyError:
+            duplicate = self.__class__(parser)
+            copy_combined_parser_attrs(self, duplicate, memo)
         return duplicate
 
 
@@ -3739,11 +3769,17 @@ class LateBindingUnary(UnaryParser):
             self._sub_parsers = frozenset()
 
     def __deepcopy__(self, memo):
-        duplicate = self.__class__(self.parser_name)
-        if not is_parser_placeholder(self.parser):
-            duplicate.parser = copy.deepcopy(self.parser, memo)
-            duplicate.sub_parsers = frozenset({duplicate.parser})
-        copy_combined_parser_attrs(self, duplicate, memo)
+        if is_parser_placeholder(self.parser):
+            duplicate = self.__class__(self.parser_name)
+            copy_combined_parser_attrs(self, duplicate, memo)
+        else:
+            _ = copy.deepcopy(self.parser, memo)
+            try:
+                duplicate = memo[id(self)]
+            except KeyError:
+                duplicate = self.__class__(self.parser_name)
+                duplicate.sub_parsers = frozenset({duplicate.parser})
+                copy_combined_parser_attrs(self, duplicate, memo)
         return duplicate
 
     def _resolve_parser_name(self) -> Parser:
@@ -3756,6 +3792,9 @@ class LateBindingUnary(UnaryParser):
             self.parser = self._grammar.__dict__[self.parser_name]
             assert isinstance(self.parser, Parser), f'"{self.parser_name}" is not a parser!'
         return self.parser
+
+    def effective_pname(self) -> str:
+        return self.parser_name if is_parser_placeholder(self.parser) else self.parser.effective_pname()
 
     @property
     def sub_parsers(self) -> FrozenSet[Parser]:
@@ -3770,9 +3809,6 @@ class LateBindingUnary(UnaryParser):
             self._sub_parsers = frozenset()
         else:
             self._sub_parsers = f
-
-    def effective_pname(self) -> str:
-        return self.parser_name if is_parser_placeholder(self.parser) else self.parser.effective_pname()
 
 
 class Option(UnaryParser):
@@ -3996,8 +4032,11 @@ class Counted(UnaryParser):
 
     def __deepcopy__(self, memo):
         parser = copy.deepcopy(self.parser, memo)
-        duplicate = self.__class__(parser, self.repetitions)
-        copy_combined_parser_attrs(self, duplicate, memo)
+        try:
+            duplicate = memo[id(self)]
+        except KeyError:
+            duplicate = self.__class__(parser, self.repetitions)
+            copy_combined_parser_attrs(self, duplicate, memo)
         return duplicate
 
     @cython.locals(location_=cython.int)
@@ -4085,13 +4124,16 @@ class NaryParser(CombinedParser):
 
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
-        duplicate = self.__class__(*parsers)
-        copy_combined_parser_attrs(self, duplicate, memo)
+        try:
+            duplicate = memo[id(self)]
+        except KeyError:
+            duplicate = self.__class__(*parsers)
+            copy_combined_parser_attrs(self, duplicate, memo)
         return duplicate
 
 
 def starting_string(parser: Parser) -> str:
-    """If parser starts with a fixed string, this will be returned.
+    """If the parser starts with a fixed string, this will be returned.
     """
     # keep track of already visited parsers to avoid infinite circles
     been_there = parser.grammar.static_analysis_caches__\
@@ -4218,7 +4260,8 @@ class Alternative(NaryParser):
             fixed_start = starting_string(self.parsers[i])
             if fixed_start:
                 for k in range(i):
-                    if does_preempt(fixed_start, self.parsers[k]):
+                    if (not isinstance(self.parsers[k], (Ref, Forward))  # TODO: find a more fine-grained check for recursive parsers
+                            and does_preempt(fixed_start, self.parsers[k])):
                         errors.append(self.static_error(
                             "Parser-specification Error in " + self.location_info()
                             + "\nAlternative %i will never be reached, because its starting-"
@@ -4317,8 +4360,11 @@ class ErrorCatchingNary(NaryParser):
 
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
-        duplicate = self.__class__(*parsers, mandatory=self.mandatory)
-        copy_combined_parser_attrs(self, duplicate, memo)
+        try:
+            duplicate = memo[id(self)]
+        except KeyError:
+            duplicate = self.__class__(*parsers, mandatory=self.mandatory)
+            copy_combined_parser_attrs(self, duplicate, memo)
         return duplicate
 
     def get_reentry_point(self, location: cython.int) -> Tuple[int, Node]:
@@ -4598,9 +4644,13 @@ class Interleave(ErrorCatchingNary):
 
     def __deepcopy__(self, memo):
         parsers = copy.deepcopy(self.parsers, memo)
-        duplicate = self.__class__(*parsers, mandatory=self.mandatory,
-                                   repetitions=self.repetitions)
-        copy_combined_parser_attrs(self, duplicate, memo)
+        try:
+            duplicate = memo[id(self)]
+        except KeyError:
+            duplicate = self.__class__(*parsers,
+                                       mandatory=self.mandatory,
+                                       repetitions=self.repetitions)
+            copy_combined_parser_attrs(self, duplicate, memo)
         return duplicate
 
     @cython.locals(location_=cython.int, location__=cython.int, i=cython.int, reloc=cython.int)
@@ -4890,9 +4940,12 @@ class Capture(ContextSensitive):
 
     def __deepcopy__(self, memo):
         symbol = copy.deepcopy(self.parser, memo)
-        duplicate = self.__class__(symbol, self.zero_length_warning)
-        copy_combined_parser_attrs(self, duplicate, memo)
-        duplicate._can_capture_zero_length = self._can_capture_zero_length
+        try:
+            duplicate = memo[id(self)]
+        except KeyError:
+            duplicate = self.__class__(symbol, self.zero_length_warning)
+            copy_combined_parser_attrs(self, duplicate, memo)
+            duplicate._can_capture_zero_length = self._can_capture_zero_length
         return duplicate
 
     @property
@@ -5019,8 +5072,11 @@ class Retrieve(ContextSensitive):
 
     def __deepcopy__(self, memo):
         symbol = copy.deepcopy(self.parser, memo)
-        duplicate = self.__class__(symbol, self.match)
-        copy_combined_parser_attrs(self, duplicate, memo)
+        try:
+            duplicate = memo[id(self)]
+        except KeyError:
+            duplicate = self.__class__(symbol, self.match)
+            copy_combined_parser_attrs(self, duplicate, memo)
         return duplicate
 
     @property
@@ -5109,9 +5165,12 @@ class Pop(Retrieve):
 
     # def __deepcopy__(self, memo):
     #     symbol = copy.deepcopy(self.parser, memo)
-    #     duplicate = self.__class__(symbol, self.match)
-    #     copy_combined_parser_attrs(self, duplicate, memo)
-    #     duplicate.values = self.values[:]
+    #     try:
+    #         duplicate = memo[id(self)]
+    #     except KeyError:
+    #         duplicate = self.__class__(symbol, self.match)
+    #         copy_combined_parser_attrs(self, duplicate, memo)
+    #         duplicate.values = self.values[:]
     #     return duplicate
 
     def _rollback(self):
@@ -5207,7 +5266,7 @@ class Forward(UnaryParser):
             is needed to implement left recursion. The number of
             calls becomes irrelevant once a result has been memoized.
 
-    The Forward parser class contains an algorithm to handle left-recursive
+    The Forward parser class contains an algorithm to handle left-recursivef
     grammars. See it's __call__()-method. The algorithm handles direct and indirect
     left-recursion, but not interwoven left-recursion!
     """
@@ -5225,7 +5284,7 @@ class Forward(UnaryParser):
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__()
-        memo[id(self)] = duplicate
+        memo[id(self)] = duplicate  # prevent infinite recursion during next deepcopy() call
         copy_parser_base_attrs(self, duplicate, memo)
         parser = copy.deepcopy(self.parser, memo)
         duplicate.parser = parser
@@ -5358,8 +5417,8 @@ class Forward(UnaryParser):
             return ret
 
     def effective_pname(self) -> str:
-        """Returns the parser's pname. In case of a Forward-parser,
-        returns parser.parser.pname."""
+        """Returns the parser's pname. In the case of a Forward-
+        or Ref-parser, returns parser.parser.pname."""
         return self.parser.pname
 
     def __repr__(self):
@@ -5377,13 +5436,13 @@ class Forward(UnaryParser):
         """Sets the parser to which the calls to this Forward-object
         shall be delegated.
         """
+        assert not isinstance(parser, Forward)
         self.parser = parser
         self.sub_parsers = frozenset({parser})
         if self.pname and not parser.pname:  parser.name(self.pname, self.disposable)
         if not parser.drop_content:  parser.disposable = self.disposable
         self.drop_content = parser.drop_content
         self.pname = ""
-
 
 
 class Ref(LateBindingUnary):

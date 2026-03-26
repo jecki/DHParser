@@ -247,8 +247,8 @@ except ImportError:
     import DHParser.externallibs.shadow_cython as cython
 
 from DHParser.compile import CompilerError, Compiler, CompilationResult, compile_source
-from DHParser.configuration import access_thread_locals, get_config_value, \
-    get_config_values, set_config_value, NEVER_MATCH_PATTERN, ALLOWED_PRESET_VALUES
+from DHParser.configuration import access_thread_locals, get_config_value, get_config_values, \
+    set_config_value, NEVER_MATCH_PATTERN, ALLOWED_PRESET_VALUES
 from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_TOKEN_WARNING,\
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, NOTICE, \
     DIRECTIVE_FOR_NONEXISTANT_SYMBOL, UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING, \
@@ -2876,9 +2876,9 @@ class EBNFCompiler(Compiler):
         elif not re.match(self.directives.disposable, macro_name):
             if len(self.path) >= 3 and self.path[-3].name != 'definition':
                 if code.find('(') >= 0:
-                    return f'({code}).name("{macro_name}")'
+                    return f'({code}).name("${macro_name}")'
                 else:  # code is symbol which already has a name which should not be overwritten.
-                    return f'{self.P["Synonym"]}({code}).name("{macro_name}")'
+                    return f'{self.P["Synonym"]}({code}).name("${macro_name}")'  # TODO: Is this still needed?
         return code
 
     def on_macro(self, node) -> str:
