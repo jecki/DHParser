@@ -2018,6 +2018,42 @@ class TestAlternativeParserDefinitions:
         st1 = json_parser(self.json_text)
         assert st1.equals(self.goal)
 
+class TestMemoOptimization:
+    def test_grammar_class(self):
+        class JSON_Grammar(Grammar):
+            disposable__ = {"_element", "_dwsp", "_EOF", "_CHARACTERS",
+                            "_bool"}  # re.compile(r'_\w+')
+            _element = Forward()
+            _dwsp = Drop(Whitespace(r'\s*'))
+            _EOF = NegativeLookahead(RegExp('.'))
+            EXP = Text("E") | Text("e") + Option(Text("+") | Text("-")) + RegExp(r'[0-9]+')
+            DOT = Text(".")
+            FRAC = DOT + RegExp(r'[0-9]+')
+            NEG = Text("-")
+            INT = Option(NEG) + RegExp(r'[1-9][0-9]+') | RegExp(r'[0-9]')
+            HEX = RegExp(r'[0-9a-fA-F][0-9a-fA-F]')
+            UNICODE = DTKN("\\u") + HEX + HEX
+            ESCAPE = RegExp('\\\\[/bnrt\\\\]') | UNICODE
+            PLAIN = RegExp('[^"\\\\]+')
+            _CHARACTERS = ZeroOrMore(PLAIN | ESCAPE)
+            null = TKN("null")
+            false = TKN("false")
+            true = TKN("true")
+            _bool = true | false
+            number = INT + Option(FRAC) + Option(EXP) + _dwsp
+            string = Text('"') + _CHARACTERS + Text('"') + _dwsp
+            array = DTKN("[") + Option(_element + ZeroOrMore(DTKN(",") + _element)) + DTKN("]")
+            member = string + DTKN(":") + _element
+            json_object = DTKN("{") + member + ZeroOrMore(DTKN(",") + member) + DTKN("}")
+            _element.set(Alternative(json_object, array, string, number, _bool, null, Text("ups!")))
+            json = _dwsp + _element + _EOF
+            root__ = json
+
+        json = JSON_Grammar()
+        p = json._element.parser.parsers[-1]
+        print(p)
+        print(json.associated_symbol__(p))
+
 
 class TestConvenientSerialization:
     def test_convenient_serialization(self):
