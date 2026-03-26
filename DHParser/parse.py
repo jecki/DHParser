@@ -475,6 +475,12 @@ def artifact(nd: Node) -> bool:
 #
 ########################################################################
 
+
+
+def NOCALL(*args, **kwargs):
+    assert False, f'illegal method-call on PLACEHOLDER-object!'
+
+
 _GRAMMAR_PLACEHOLDER = None  # type: Optional[Grammar]
 
 
@@ -482,6 +488,7 @@ def get_grammar_placeholder() -> Grammar:
     global _GRAMMAR_PLACEHOLDER
     if _GRAMMAR_PLACEHOLDER is None:
         _GRAMMAR_PLACEHOLDER = Grammar.__new__(Grammar)
+        _GRAMMAR_PLACEHOLDER.__call__ = NOCALL
     return cast(Grammar, _GRAMMAR_PLACEHOLDER)
 
 
@@ -1174,6 +1181,8 @@ def get_parser_placeholder() -> Parser:
         PARSER_PLACEHOLDER.drop_content = False
         PARSER_PLACEHOLDER.node_name = ':PLACEHOLDER__'
         PARSER_PLACEHOLDER.sub_parsers = frozenset()
+        PARSER_PLACEHOLDER.__deepcopy__ = NOCALL
+        PARSER_PLACEHOLDER.apply = NOCALL
     return cast(Parser, PARSER_PLACEHOLDER)
 
 
@@ -1754,22 +1763,26 @@ class Grammar:
         if parser not in self.all_parsers__:
             if parser.pname:
                 # prevent overwriting instance variables or parsers of a different class
-                # or isinstance(self.__dict__[parser.pname], parser.__class__)), \
-                if parser.pname in self.__dict__:
-                    assert (isinstance(self.__dict__[parser.pname], Forward)
-                            or self.__dict__.get(parser.pname, parser) is parser), \
+                registered = self.__dict__.get(parser.pname, None)
+                if registered:
+                    # assert (isinstance(self.__dict__[parser.pname], Forward)
+                    #         or self.__dict__.get(parser.pname, parser) is parser), \
+                    assert (registered is parser
+                            or (isinstance(registered, Forward) and registered.parser is parser)), \
                         (f'Cannot add parser "{parser}" because a field with '
                          ' the same name already exists in grammar object: '
-                         f'{self.__dict__[parser.pname]}')
+                         f'{type(registered)} {registered}')
                 else:
                     setattr(self, parser.pname, parser)
             elif isinstance(parser, Forward):
-                # assert parser.parser.pname not in self.__dict__, parser.parser.pname
-                assert self.__dict__.get(parser.parser.pname, parser) is parser, \
-                    (f'Cannot add forward-parser "{parser}" because a field with '
-                     ' the same name already exists in grammar object: '
-                     f'{self.__dict__[parser.parser.pname]}')
-                setattr(self, parser.parser.pname, parser)
+                registered = self.__dict__.get(parser.parser.pname, None)
+                if registered and not registered is parser.parser:
+                    assert registered is parser, \
+                        (f'Cannot add forward-parser "{parser}" because a field with '
+                         ' the same name already exists in grammar object: '
+                         f'{type(registered)} {registered}')
+                else:  # set forward parser or overwrite forwarded parser with forward parser
+                    setattr(self, parser.parser.pname, parser)
             self.all_parsers__.add(parser)
             # parser.grammar = self  # happens earlier when deep-copying all parser objects
 
@@ -1785,6 +1798,8 @@ class Grammar:
         :param static_analysis: If not None, this overrides the config value
             "static_analysis".
         """
+        assert root is None or self.__class__ is Grammar, \
+            "External root-parsers cannot be passed to derived classes of Grammar!"
         self.all_parsers__: MutableSet[Parser] = set()
         # add compiled regular expression for comments if it does not already exist
         if not hasattr(self, 'comment_rx__') or self.comment_rx__ is None:
@@ -1834,7 +1849,10 @@ class Grammar:
         for name in RESERVED_PARSER_NAMES:
             p = self.__class__.__dict__.get(name, None)
             if isinstance(p, Parser):
-                setattr(self, name, copy.deepcopy(p, self.memo__))
+                if p is PARSER_PLACEHOLDER:
+                    setattr(self, name, p)
+                else:
+                    setattr(self, name, copy.deepcopy(p, self.memo__))
 
         # 2.5. Set self.root_parser__
         if root:
@@ -1868,14 +1886,14 @@ class Grammar:
         #          self.unconnected_parsers__ - field
 
         # Start by adding the parsers connected to the root parser.
-        self.root_parser__.apply(self._add_parser__, self)
+        if self.root_parser__ is not PARSER_PLACEHOLDER:
+            self.root_parser__.apply(self._add_parser__, self)
+            assert self.root_parser__ is self.__dict__['root_parser__']
         root_connected = frozenset(self.all_parsers__)
 
         # Now, make sure that the parsers occurring in a @skip- or @resume-directive
         # will also be copyied and initialized with the grammar-object and added
         # to the all_parsers__ set.
-        assert 'root_parser__' in self.__dict__
-        assert self.root_parser__ == self.__dict__['root_parser__']
         self.ff_parser__ = self.root_parser__
         self.unconnected_parsers__: MutableSet[Parser] = set()
         self.resume_parsers__: MutableSet[Parser] = set()
@@ -1897,6 +1915,7 @@ class Grammar:
             parser = self[name]
             if parser not in root_connected:  self.unconnected_parsers__.add(parser)
 
+        # DEBUGGING code:
         if self.__class__.__name__ == 'DSLGrammar':
             print('***')
             for p in self.all_parsers__:
