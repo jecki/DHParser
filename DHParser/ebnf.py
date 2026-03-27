@@ -1951,25 +1951,48 @@ class EBNFCompiler(Compiler):
         return result
 
 
+    # def recursive_paths(self, symbol: str) -> FrozenSet[Tuple[str, ...]]:
+    #     """Returns the recursive paths from the symbol to itself. If
+    #     sym is not recursive, the returned tuple (of paths) will be empty.
+    #     This method exists only for testing and debugging (so far...)."""
+    #     path = []  # type: List[str]
+    #     recursive_paths = set()  # type: MutableSet[Tuple[str, ...]]
+    #
+    #     def gather(sym: str):  # TODO: Time is exploding for larger grammars!!!
+    #         nonlocal path, recursive_paths
+    #         path.append(sym)
+    #         for s in self.directly_referred(sym):
+    #             if s not in EBNFCompiler.RESERVED_SYMBOLS:
+    #                 if s == symbol:
+    #                     recursive_paths.add(tuple(path))
+    #                 elif s not in path:
+    #                     gather(s)
+    #         path.pop()
+    #     gather(symbol)
+    #     return frozenset(recursive_paths)
+
+
     def recursive_paths(self, symbol: str) -> FrozenSet[Tuple[str, ...]]:
         """Returns the recursive paths from the symbol to itself. If
         sym is not recursive, the returned tuple (of paths) will be empty.
         This method exists only for testing and debugging (so far...)."""
         path = []  # type: List[str]
-        recursive_paths = set()  # type: MutableSet[Tuple[str, ...]]
+        recursive_paths: Dict[str, Tuple[str, ...]] = dict()
 
-        def gather(sym: str):
+        def gather(sym: str):  # TODO: Time is exploding for larger grammars!!!
             nonlocal path, recursive_paths
             path.append(sym)
             for s in self.directly_referred(sym):
                 if s not in EBNFCompiler.RESERVED_SYMBOLS:
                     if s == symbol:
-                        recursive_paths.add(tuple(path))
+                        path_tuple = tuple(path)
+                        for rs in path:
+                            recursive_paths[rs] = path_tuple  # TODO: And now what?
                     elif s not in path:
                         gather(s)
             path.pop()
         gather(symbol)
-        return frozenset(recursive_paths)
+        return frozenset(recursive_paths.values())
 
 
     @cython.locals(N=cython.int, top=cython.int, pointer=cython.int,
