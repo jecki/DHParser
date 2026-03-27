@@ -1996,104 +1996,104 @@ class TestRuleOrder:
         parser = create_parser(reverse_order)
         assert parser.B.__class__.__name__ != "Forward"
 
-    def test_resusive_paths(self):
-        lang = """
-            A = B | C
-            B = C [`+` A]
-            C = `x` [`-` A] [`*` B]
-        """
-        ebnf_grammar = get_ebnf_grammar()
-        st = ebnf_grammar(lang)
-        assert not st.errors, str(st.errors)
-        ebnf_transformer = get_ebnf_transformer()
-        ebnf_transformer(st)
-        ebnf_compiler = get_ebnf_compiler()
-        python_src = ebnf_compiler(st)
-        pathsA = ebnf_compiler.recursive_paths('A')
-        assert pathsA == frozenset({('A', 'B', 'C'), ('A', 'B'),
-                                    ('A', 'C', 'B'), ('A', 'C')})
-        pathsB = ebnf_compiler.recursive_paths('B')
-        assert pathsB == frozenset({('B', 'C', 'A'), ('B', 'A', 'C'),
-                                    ('B', 'A'), ('B', 'C')})
-        pathsC = ebnf_compiler.recursive_paths('C')
-        assert pathsC == frozenset({('C', 'A', 'B'), ('C', 'A'),
-                                    ('C', 'B'), ('C', 'B', 'A')})
+    # def test_recursive_paths(self):
+    #     lang = """
+    #         A = B | C
+    #         B = C [`+` A]
+    #         C = `x` [`-` A] [`*` B]
+    #     """
+    #     ebnf_grammar = get_ebnf_grammar()
+    #     st = ebnf_grammar(lang)
+    #     assert not st.errors, str(st.errors)
+    #     ebnf_transformer = get_ebnf_transformer()
+    #     ebnf_transformer(st)
+    #     ebnf_compiler = get_ebnf_compiler()
+    #     python_src = ebnf_compiler(st)
+    #     pathsA = ebnf_compiler.recursive_paths('A')
+    #     assert pathsA == frozenset({('A', 'B', 'C'), ('A', 'B'),
+    #                                 ('A', 'C', 'B'), ('A', 'C')})
+    #     pathsB = ebnf_compiler.recursive_paths('B')
+    #     assert pathsB == frozenset({('B', 'C', 'A'), ('B', 'A', 'C'),
+    #                                 ('B', 'A'), ('B', 'C')})
+    #     pathsC = ebnf_compiler.recursive_paths('C')
+    #     assert pathsC == frozenset({('C', 'A', 'B'), ('C', 'A'),
+    #                                 ('C', 'B'), ('C', 'B', 'A')})
 
-    def test_order_of_declarations(self):
-        """If the order of definitions changes, the following invariants should hold:
-        1. The number of Forward declarations is the same
-        2. No two Forwardly-declared symbols yield exactly the same set of recursive paths
-        3. The union of sets of recursive paths from all farwad-declared symbol
-           remains the same.
-        4. But: Depending on the order of definitions the symbols which are declared as
-           Forward symbols can change within the limits of the previous 3 invariantes.
-        """
-
-        def compileEBNF(lang):
-            ebnf_grammar = get_ebnf_grammar()
-            st = ebnf_grammar(lang)
-            assert not st.errors, str(st.errors)
-            ebnf_transformer = get_ebnf_transformer()
-            ebnf_transformer(st)
-            ebnf_compiler = get_ebnf_compiler()
-            ebnf_compiler(st)
-            return ebnf_compiler
-
-        def all_paths(compiler_obj):
-            paths = [normalize_circular_paths(compiler_obj.recursive_paths(sym))
-                     for sym in compiler_obj.forward]
-            for i in range(len(paths)):
-                for k in range(i + 1, len(paths)):
-                    assert paths[i] ^ paths[k]
-            return paths and paths[0].union(*paths[1:])
-
-        lang = """doc = A
-            A = B | C
-            B = C [`+` A]
-            C = `x` [`-` A] [`*` B]
-        """
-        compiler_obj = compileEBNF(lang)
-        A = all_paths(compiler_obj)
-        lang = """doc = A
-            A = B | C
-            C = `x` [`-` A] [`*` B]
-            B = C [`+` A]
-        """
-        compiler_obj = compileEBNF(lang)
-        B = all_paths(compiler_obj)
-        assert A == B, str(A) + str(B)
-
-        lang = """doc = A
-            A = B | C
-            B = C [`+` A]
-            C = `x` [`-` A]
-        """
-        compiler_obj = compileEBNF(lang)
-        A = all_paths(compiler_obj)
-        lang = """doc = A
-            A = B | C
-            C = `x` [`-` A]
-            B = C [`+` A]
-        """
-        compiler_obj = compileEBNF(lang)
-        B = all_paths(compiler_obj)
-        assert A == B, str(A) + str(B)
-
-        lang = """doc = A
-            A = B | C
-            B = C [`+` A]
-            C = `x` [`*` B]
-        """
-        compiler_obj = compileEBNF(lang)
-        A = all_paths(compiler_obj)
-        lang = """doc = A
-            A = B | C
-            C = `x` [`*` B]
-            B = C [`+` A]
-        """
-        compiler_obj = compileEBNF(lang)
-        B = all_paths(compiler_obj)
-        assert A == B, str(A) + str(B)
+    # def test_order_of_declarations(self):
+    #     """If the order of definitions changes, the following invariants should hold:
+    #     1. The number of Forward declarations is the same
+    #     2. No two Forwardly-declared symbols yield exactly the same set of recursive paths
+    #     3. The union of sets of recursive paths from all farwad-declared symbol
+    #        remains the same.
+    #     4. But: Depending on the order of definitions the symbols which are declared as
+    #        Forward symbols can change within the limits of the previous 3 invariantes.
+    #     """
+    #
+    #     def compileEBNF(lang):
+    #         ebnf_grammar = get_ebnf_grammar()
+    #         st = ebnf_grammar(lang)
+    #         assert not st.errors, str(st.errors)
+    #         ebnf_transformer = get_ebnf_transformer()
+    #         ebnf_transformer(st)
+    #         ebnf_compiler = get_ebnf_compiler()
+    #         ebnf_compiler(st)
+    #         return ebnf_compiler
+    #
+    #     def all_paths(compiler_obj):
+    #         paths = [normalize_circular_paths(compiler_obj.recursive_paths(sym))
+    #                  for sym in compiler_obj.forward]
+    #         for i in range(len(paths)):
+    #             for k in range(i + 1, len(paths)):
+    #                 assert paths[i] ^ paths[k]
+    #         return paths and paths[0].union(*paths[1:])
+    #
+    #     lang = """doc = A
+    #         A = B | C
+    #         B = C [`+` A]
+    #         C = `x` [`-` A] [`*` B]
+    #     """
+    #     compiler_obj = compileEBNF(lang)
+    #     A = all_paths(compiler_obj)
+    #     lang = """doc = A
+    #         A = B | C
+    #         C = `x` [`-` A] [`*` B]
+    #         B = C [`+` A]
+    #     """
+    #     compiler_obj = compileEBNF(lang)
+    #     B = all_paths(compiler_obj)
+    #     assert A == B, str(A) + str(B)
+    #
+    #     lang = """doc = A
+    #         A = B | C
+    #         B = C [`+` A]
+    #         C = `x` [`-` A]
+    #     """
+    #     compiler_obj = compileEBNF(lang)
+    #     A = all_paths(compiler_obj)
+    #     lang = """doc = A
+    #         A = B | C
+    #         C = `x` [`-` A]
+    #         B = C [`+` A]
+    #     """
+    #     compiler_obj = compileEBNF(lang)
+    #     B = all_paths(compiler_obj)
+    #     assert A == B, str(A) + str(B)
+    #
+    #     lang = """doc = A
+    #         A = B | C
+    #         B = C [`+` A]
+    #         C = `x` [`*` B]
+    #     """
+    #     compiler_obj = compileEBNF(lang)
+    #     A = all_paths(compiler_obj)
+    #     lang = """doc = A
+    #         A = B | C
+    #         C = `x` [`*` B]
+    #         B = C [`+` A]
+    #     """
+    #     compiler_obj = compileEBNF(lang)
+    #     B = all_paths(compiler_obj)
+    #     assert A == B, str(A) + str(B)
 
 
 class TestInclude:

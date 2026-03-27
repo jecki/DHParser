@@ -1972,29 +1972,6 @@ class EBNFCompiler(Compiler):
     #     return frozenset(recursive_paths)
 
 
-    def recursive_paths(self, symbol: str) -> FrozenSet[Tuple[str, ...]]:
-        """Returns the recursive paths from the symbol to itself. If
-        sym is not recursive, the returned tuple (of paths) will be empty.
-        This method exists only for testing and debugging (so far...)."""
-        path = []  # type: List[str]
-        recursive_paths: Dict[str, Tuple[str, ...]] = dict()
-
-        def gather(sym: str):  # TODO: Time is exploding for larger grammars!!!
-            nonlocal path, recursive_paths
-            path.append(sym)
-            for s in self.directly_referred(sym):
-                if s not in EBNFCompiler.RESERVED_SYMBOLS:
-                    if s == symbol:
-                        path_tuple = tuple(path)
-                        for rs in path:
-                            recursive_paths[rs] = path_tuple  # TODO: And now what?
-                    elif s not in path:
-                        gather(s)
-            path.pop()
-        gather(symbol)
-        return frozenset(recursive_paths.values())
-
-
     @cython.locals(N=cython.int, top=cython.int, pointer=cython.int,
                    i=cython.int, k=cython.int, j=cython.int)
     def optimize_definitions_order(self, definitions: List[Tuple[str, str]]):
@@ -2057,15 +2034,15 @@ class EBNFCompiler(Compiler):
                         pass
             i += 1
         self.forward = recursive
-
-
-    def recursive_symbols(self) -> Set[str]:
-        """Returns all recursive symbols. Must be called after optimize_definitions_order()!"""
-        recursive = set()
-        for sym in self.forward:
-            for path in self.recursive_paths(sym):
-                recursive.update(path)
-        return recursive
+    #
+    #
+    # def recursive_symbols(self) -> Set[str]:
+    #     """Returns all recursive symbols. Must be called after optimize_definitions_order()!"""
+    #     recursive = set()
+    #     for sym in self.forward:
+    #         for path in self.recursive_paths(sym):
+    #             recursive.update(path)
+    #     return recursive
 
 
     def assemble_parser(self, definitions: List[Tuple[str, str]], root_symbol: str) -> str:
@@ -2241,12 +2218,12 @@ class EBNFCompiler(Compiler):
                          for symbol in sorted(list(self.forward))]
 
         if self.left_recursion == 'Full':
-            recursive = self.recursive_symbols()
-            for s in self.forward:
-                for p in self.recursive_paths(s):
-                    print(p)
-            # TODO: Sort out purely right-recursive symbols
-            symstr = '|'.join(recursive)
+            # recursive = self.recursive_symbols()
+            # for s in self.forward:
+            #     for p in self.recursive_paths(s):
+            #         print(p)
+            # # TODO: Sort out purely right-recursive symbols
+            symstr = '|'.join(self.forward)
             recursive_ref_pattern = RX_REF_TMPL.format(symbols = symstr)
             rx_recursive_ref = re.compile(recursive_ref_pattern)
             synonym_pattern = RX_SYNONYM_TMPL.format(symbols = symstr)
