@@ -481,15 +481,20 @@ def artifact(nd: Node) -> bool:
 class BlackHoleDict(dict):
     """A dictionary that always stays empty. Use case:
     Testing memoization."""
+    def __init__(self, purpose="BlackHole"):
+        super().__init__()
+        self.purpose = purpose
     def __setitem__(self, key, value):
         return
     def __getitem__(self, key):
-        raise ValueError(f"BlackHole __getitem__: {self}, {key}")
+        raise ValueError(f"{purpose} __getitem__: {self}, {key}")
     def __contains__(self, item):
-        raise ValueError(f"BlackHole __contains__: {self}, {item}")
+        raise ValueError(f"{purpose} __contains__: {self}, {item}")
 
 
-BLACKHOLE_SINGLETON = BlackHoleDict()
+BLACKHOLE = BlackHoleDict("BlackHole")
+MEMO_PLACEHOLDER = BlackHoleDict("Memo Placeholder")
+MEMO_INITIALIZATION = BlackHoleDict("Memo Initialization Pending")
 
 
 def NOCALL(*args, **kwargs):
@@ -641,14 +646,12 @@ class Parser:
             self._grammar: Grammar = get_grammar_placeholder()
         except NameError:
             pass                        # ensures Cython-compatibility
-        self._symbol = ''               # type: str
+        self.symbol = ''               # type: str
         self.symbol_parser = get_parser_placeholder()
-        self.recursive = False
         self._descendants_cache: Optional[Set[Parser]] = None
         self._anon_desc_cache: Optional[Set[Parser]] = None
         self._desc_trails_cache: Optional[Set[ParserTrail]] = None
-        self.reset()
-        self.visited = BLACKHOLE_SINGLETON
+        self.visited = MEMO_PLACEHOLDER
 
     def __deepcopy__(self, memo):
         """Deepcopy method of the parser. Upon instantiation of a Grammar-object,
@@ -667,25 +670,6 @@ class Parser:
     def __str__(self):
         return self.pname + (' = ' if self.pname else '') + repr(self)
 
-    # @property
-    # def ptype(self) -> str:
-    #     """Returns a type name for the parser. By default, this is the name of
-    #     the parser class with an added leading colon ':'. """
-    #     return ':' + self.__class__.__name__
-
-    @property
-    def symbol(self) -> str:
-        """Returns the symbol with which the parser is associated in a grammar.
-        This is the closest parser with a pname that contains this parser."""
-        if not self._symbol:
-            try:
-                self._symbol = self.grammar.associated_symbol__(self).get_name()
-            except AttributeError:
-                # return an empty string, if parser is not connected to grammar,
-                # but be sure not to save the empty string in self._symbol
-                return ''
-        return self._symbol
-
     @property
     def repr(self) -> str:
         """Returns the parser's name if it has a name and ``self.__repr__()`` otherwise."""
@@ -695,13 +679,8 @@ class Parser:
         """Initializes or resets any parser variables. If overwritten,
         the ``reset()``-method of the parent class must be called from the
         ``reset()``-method of the derived class."""
-        if hasattr(self, 'visited'):  # don't waste time on first time initialization!
-            if self.pname or (isinstance(self._grammar.associated_symbol__(self), Forward)):
-                print(id(self), self, type(self), "Memo")
-                self.visited: MemoizationDict = dict()
-            else:
-                print(id(self), self, type(self), "Black Hole")
-                self.visited = BLACKHOLE_SINGLETON
+        if self.visited is not in (BLACKHOLE, MEMO_PLACAHOLER):
+            self.visited = dict()
 
     @cython.locals(next_location=cython.int, location=cython.int, gap=cython.int, i=cython.int)
     def _handle_parsing_error(self, pe: ParserError, location: cython.int) -> ParsingResult:
@@ -1103,8 +1082,8 @@ class NoMemoizationParser(LeafParser):
 
     def __init__(self) -> None:
         super().__init__()
-        global BLACKHOLE_SINGLETON
-        self.visited: MemoizationDict = BLACKHOLE_SINGLETON
+        global BLACKHOLE
+        self.visited: MemoizationDict = BLACKHOLE
 
     def reset(self):
         # no need to initialize self.visited, it's always the BLACKHOLE_SINGLETON
@@ -2506,6 +2485,8 @@ class Grammar:
         def connect_anonymous_descendants(trail: List[Parser], symbol: Parser):
             p = trail[-1]
             p.symbol_parser = symbol
+            p.symbol = symbol.pname
+            p.visited = INITIALIZATION_PENDING
             for d in p.sub_parsers:
                 if d.get_name():
                     if isinstance(d, Forward):
