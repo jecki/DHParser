@@ -92,7 +92,9 @@ __all__ = ('parser_names',
            'Grammar',
            'match',
            'fullmatch',
+           'get_grammar_placeholder',
            'is_grammar_placeholder',
+           'get_parser_placeholder',
            'is_parser_placeholder',
            'Always',
            'Never',
@@ -690,6 +692,7 @@ class Parser:
         ``reset()``-method of the derived class."""
         # global _GRAMMAR_PLACEHOLDER
         # grammar = self._grammar
+        # if not is_grammar_placeholder(self._grammar):
         self.visited: MemoizationDict = dict()
 
     @cython.locals(next_location=cython.int, location=cython.int, gap=cython.int, i=cython.int)
@@ -1189,7 +1192,7 @@ def get_parser_placeholder() -> Parser:
 
 def is_parser_placeholder(parser: Optional[Parser]) -> bool:
     """Returns True, if ``parser`` is ``None`` or merely a placeholder for a parser."""
-    return not parser or parser.ptype == ":Parser"
+    return parser is None or parser.ptype == ":Parser"
 
 
 # functions for analysing the parser tree/graph ###
@@ -5497,7 +5500,7 @@ class Forward(UnaryParser):
     def sym_name(self) -> str:
         """Returns the parser's pname. In the case of a Forward-
         or Ref-parser, returns parser.parser.pname."""
-        return self.parser.pname
+        return self.parser.pname or self.pname
 
     def __repr__(self):
         return self.__cycle_guard(lambda: repr(self.parser), '...')
