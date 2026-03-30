@@ -1,0 +1,3 @@
+@flavor = heuristic
+A <- B / "x" ;
+B <- A "y" / A "x" ;

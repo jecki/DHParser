@@ -484,7 +484,9 @@ class BlackHoleDict(dict):
     def __setitem__(self, key, value):
         return
     def __getitem__(self, key):
-        raise AssertionError(f"BlackHole access: {self}, {key}")
+        raise ValueError(f"BlackHole __getitem__: {self}, {key}")
+    def __contains__(self, item):
+        raise ValueError(f"BlackHole __contains__: {self}, {item}")
 
 
 BLACKHOLE_SINGLETON = BlackHoleDict()
@@ -644,6 +646,7 @@ class Parser:
         self._anon_desc_cache: Optional[Set[Parser]] = None
         self._desc_trails_cache: Optional[Set[ParserTrail]] = None
         self.reset()
+        self.visited = BLACKHOLE_SINGLETON
 
     def __deepcopy__(self, memo):
         """Deepcopy method of the parser. Upon instantiation of a Grammar-object,
@@ -690,10 +693,13 @@ class Parser:
         """Initializes or resets any parser variables. If overwritten,
         the ``reset()``-method of the parent class must be called from the
         ``reset()``-method of the derived class."""
-        # global _GRAMMAR_PLACEHOLDER
-        # grammar = self._grammar
-        # if not is_grammar_placeholder(self._grammar):
-        self.visited: MemoizationDict = dict()
+        if hasattr(self, 'visited'):  # don't waste time on first time initialization!
+            if self.pname or (isinstance(self._grammar.associated_symbol__(self), Forward)):
+                print(id(self), self, type(self), "Memo")
+                self.visited: MemoizationDict = dict()
+            else:
+                print(id(self), self, type(self), "Black Hole")
+                self.visited = BLACKHOLE_SINGLETON
 
     @cython.locals(next_location=cython.int, location=cython.int, gap=cython.int, i=cython.int)
     def _handle_parsing_error(self, pe: ParserError, location: cython.int) -> ParsingResult:
@@ -2465,6 +2471,8 @@ class Grammar:
         """
         try:
             return self.associated_symbol_cache__[parser]
+        except AttributeError:
+            return None  # return None if grammar is placeholder or not yet initialized
         except KeyError:
             pass
 
