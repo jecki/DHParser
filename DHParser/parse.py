@@ -476,6 +476,17 @@ def artifact(nd: Node) -> bool:
 ########################################################################
 
 
+class BlackHoleDict(dict):
+    """A dictionary that always stays empty. Use case:
+    Testing memoization."""
+    def __setitem__(self, key, value):
+        return
+    def __getitem__(self, key):
+        raise AssertionError(f"BlackHole access: {self}, {key}")
+
+
+BLACKHOLE_SINGLETON = BlackHoleDict()
+
 
 def NOCALL(*args, **kwargs):
     assert False, f'illegal method-call on PLACEHOLDER-object!'
@@ -661,7 +672,7 @@ class Parser:
         This is the closest parser with a pname that contains this parser."""
         if not self._symbol:
             try:
-                self._symbol = self.grammar.associated_symbol__(self).pname
+                self._symbol = self.grammar.associated_symbol__(self).sym_name()
             except AttributeError:
                 # return an empty string, if parser is not connected to grammar,
                 # but be sure not to save the empty string in self._symbol
@@ -892,7 +903,7 @@ class Parser:
                 self.node_name = pname
         return self
 
-    def effective_pname(self) -> str:
+    def sym_name(self) -> str:
         """Returns the parser's pname. In the case of a Forward-parser,
         returns parser.parser.pname."""
         return self.pname
@@ -1074,16 +1085,6 @@ class LeafParser(Parser):
         except RecursionError:
             node, next_location = self._handle_recursion_error(location)
         return node, next_location
-
-
-class BlackHoleDict(dict):
-    """A dictionary that always stays empty. Use case:
-    Disabling memoization."""
-    def __setitem__(self, key, value):
-        return
-
-
-BLACKHOLE_SINGLETON = BlackHoleDict()
 
 
 class NoMemoizationParser(LeafParser):
@@ -1921,7 +1922,7 @@ class Grammar:
             for p in self.all_parsers__:
                 if p.pname == 'term':
                     print('term = ', id(p))
-                elif p.effective_pname() == 'term':
+                elif p.sym_name() == 'term':
                     print(type(p), id(p), id(p.parser))
 
         self.memo__ = None  # the deepcopy memo is not needed any more after this point.
@@ -2176,8 +2177,8 @@ class Grammar:
 
             ## begin of error-handling
 
-            # form here on, it is only error handling in case the parser failed,
-            # e.g. because of incomplete match.
+            # form here on, it is only error handling in case the parser has failed,
+            # e.g. because of an incomplete match.
 
             # Not very elegant code, but there are many special cases to consider, e.g.
             # in order to allow proper error-reporting when testing sub-parsers with
@@ -2193,8 +2194,10 @@ class Grammar:
                 if result is None or (result.name == ZOMBIE_TAG and len(result) == 0):
                     err_pos = self.ff_pos__
                     associated_symbol = self.associated_symbol__(self.ff_parser__)
-                    if associated_symbol != self.ff_parser__:
-                        err_pname = associated_symbol.pname + '->' + str(self.ff_parser__)
+                    if isinstance(associated_symbol, Forward):
+                        associated_symbol = associated_symbol.parser
+                    if associated_symbol is not self.ff_parser__:
+                        err_pname = associated_symbol.sym_name() + '->' + str(self.ff_parser__)
                     else:
                         err_pname = str(associated_symbol)
                     err_text = self.document__[err_pos:err_pos + 20]
@@ -2285,7 +2288,7 @@ class Grammar:
                     # match was complete except for trailing whitespace
                     if result is None: result = Node(EMPTY_PTYPE, '').with_pos(0)
                     self.tree__.add_error(result, Error(
-                        f'Parser "{parser.effective_pname()}" '
+                        f'Parser "{parser.sym_name()}" '
                         f'stopped before end, because of trailing whitespace.',
                         location, PARSER_STOPPED_BEFORE_END_WARNING))
                 location = L
@@ -2445,6 +2448,8 @@ class Grammar:
     def associated_symbol__(self, parser: Parser) -> Parser:
         r"""Returns the closest named parser that contains ``parser``.
         If ``parser`` is a named parser itself, ``parser`` is returned.
+        In case ``parser`` has been set as parser in a Forward-parser object,
+        the containing Forward-parser object is returned.
         If ``parser`` is not connected to any symbol in the Grammar,
         an AttributeError is raised. Example::
 
@@ -2455,21 +2460,26 @@ class Grammar:
             >>> gr.associated_symbol__(anonymous_re).pname
             'word'
         """
-        symbol = self.associated_symbol_cache__.get(parser, None)   # type: Optional[Parser]
-        if symbol:  return symbol
+        try:
+            return self.associated_symbol_cache__[parser]
+        except KeyError:
+            pass
 
         def find_symbol_for_parser(ptrail: ParserTrail) -> Optional[bool]:
             nonlocal symbol, parser
             if parser in ptrail[-1].sub_parsers:
-                for p in reversed(ptrail):
-                    if p.pname:
+                for i in range(len(ptrail) - 1, -1, -1):  # reversed(ptrail):
+                    if ptrail[i].pname:
                         # save the name of the closest containing named parser
-                        symbol = p
+                        if i > 0 and isinstance(ptrail[i - 1], Forward):
+                            symbol = ptrail[i - 1]
+                        else:
+                            symbol = ptrail[i]
                         return True  # stop searching
             return False  # continue searching
 
-        if isinstance(parser, Forward) and cast(Forward, parser).parser.pname:
-            symbol = cast(Forward, parser).parser
+        if isinstance(parser, Forward):
+            symbol = parser
         elif parser.pname:
             symbol = parser
         else:
@@ -2477,9 +2487,9 @@ class Grammar:
                 for resume_parser in self.unconnected_parsers__:
                     if resume_parser.apply_to_trail(find_symbol_for_parser):
                         break
-            if symbol is None:
-                raise AttributeError('Parser %s (%i) is not contained in Grammar!'
-                                     % (str(parser), id(parser)))
+                else:
+                    raise AttributeError('Parser %s (%i) is not contained in Grammar!'
+                                         % (str(parser), id(parser)))
 
         self.associated_symbol_cache__[parser] = symbol
         return symbol
@@ -2494,19 +2504,21 @@ class Grammar:
 
         def add_anonymous_descendants(p: Parser):
             nonlocal symbol
-            self.associated_symbol_cache__[p] = symbol
             for d in p.sub_parsers:
-                if not d.effective_pname():
+                if not d.sym_name():
                     add_anonymous_descendants(d)
 
         for p in self.all_parsers__:
             if isinstance(p, Forward) and cast(Forward, p).parser.pname:
                 symbol = cast(Forward, p).parser
-                self.associated_symbol_cache__[p] = symbol
+                self.associated_symbol_cache__[p] = p
+                self.associated_symbol_cache__[symbol] = p
                 add_anonymous_descendants(symbol)
             elif p.pname:
-                symbol = p
-                add_anonymous_descendants(symbol)
+                if p not in self.associated_symbol_cache__:
+                    symbol = p
+                    self.associated_symbol_cache__[p] = symbol
+                    add_anonymous_descendants(symbol)
 
 
     def static_analysis__(self) -> List[AnalysisError]:
@@ -3768,10 +3780,10 @@ class LateBindingUnary(UnaryParser):
         assert parser_name
         if isinstance(parser_name, Parser):
             parser = parser_name
-            assert parser.effective_pname(), \
+            assert parser.sym_name(), \
                 f'LateBindingUnary must bet initialized with named parser, not {parser}!'
             super().__init__(parser)
-            self.parser_name = parser.effective_pname()
+            self.parser_name = parser.sym_name()
             self.sub_parsers = frozenset({parser})
         else:
             super().__init__(get_parser_placeholder())
@@ -3803,8 +3815,8 @@ class LateBindingUnary(UnaryParser):
             assert isinstance(self.parser, Parser), f'"{self.parser_name}" is not a parser!'
         return self.parser
 
-    def effective_pname(self) -> str:
-        return self.parser_name if is_parser_placeholder(self.parser) else self.parser.effective_pname()
+    def sym_name(self) -> str:
+        return self.parser_name if is_parser_placeholder(self.parser) else self.parser.sym_name()
 
     @property
     def sub_parsers(self) -> FrozenSet[Parser]:
@@ -5139,14 +5151,14 @@ class Retrieve(ContextSensitive):
     def symbol_pname(self) -> str:
         """Returns the watched symbol's pname, properly, i.e. even in cases
         where the symbol's parser is shielded by a Forward-parser"""
-        return self.parser.effective_pname()
+        return self.parser.sym_name()
 
     def get_node_name(self) -> str:
         """Returns a name for the retrieved node. If the Retrieve-parser
         has a node-name, this overrides the node-name of the retrieved symbol's
         parser."""
         if self.disposable or not self.node_name:
-            return self.parser.effective_pname()
+            return self.parser.sym_name()
             # if self.parser.pname:
             #     return self.parser.name
             # # self.parser is a Forward-Parser, so pick the name of its encapsulated parser
@@ -5482,7 +5494,7 @@ class Forward(UnaryParser):
             self.cycle_reached = False
             return ret
 
-    def effective_pname(self) -> str:
+    def sym_name(self) -> str:
         """Returns the parser's pname. In the case of a Forward-
         or Ref-parser, returns parser.parser.pname."""
         return self.parser.pname
