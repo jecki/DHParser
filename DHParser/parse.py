@@ -1191,7 +1191,7 @@ def get_parser_placeholder() -> Parser:
 
 def is_parser_placeholder(parser: Optional[Parser]) -> bool:
     """Returns True, if ``parser`` is ``None`` or merely a placeholder for a parser."""
-    return not parser or parser.ptype == ":Parser"
+    return parser is None or parser.ptype == ":Parser"
 
 
 # functions for analysing the parser tree/graph ###
@@ -2186,8 +2186,8 @@ class Grammar:
 
             ## begin of error-handling
 
-            # form here on, it is only error handling in case the parser failed,
-            # e.g. because of incomplete match.
+            # form here on, it is only error handling in case the parser has failed,
+            # e.g. because of an incomplete match.
 
             # Not very elegant code, but there are many special cases to consider, e.g.
             # in order to allow proper error-reporting when testing sub-parsers with
@@ -2203,7 +2203,7 @@ class Grammar:
                 if result is None or (result.name == ZOMBIE_TAG and len(result) == 0):
                     err_pos = self.ff_pos__
                     associated_symbol = self.associated_symbol__(self.ff_parser__)
-                    if associated_symbol != self.ff_parser__:
+                    if associated_symbol is not self.ff_parser__:
                         err_pname = associated_symbol.pname + '->' + str(self.ff_parser__)
                     else:
                         err_pname = str(associated_symbol)
@@ -5495,13 +5495,13 @@ class Forward(UnaryParser):
     def effective_pname(self) -> str:
         """Returns the parser's pname. In the case of a Forward-
         or Ref-parser, returns parser.parser.pname."""
-        return self.parser.pname
+        return self.parser.pname or self.pname
 
     def __repr__(self):
         return self.__cycle_guard(lambda: repr(self.parser), '...')
 
     def __str__(self):
-        return "fwd'" + self.__cycle_guard(lambda: str(self.parser), '...')
+        return self.__cycle_guard(lambda: str(self.parser), '...')
 
     @property
     def repr(self) -> str:
