@@ -476,12 +476,25 @@ def artifact(nd: Node) -> bool:
 ########################################################################
 
 
+class BlackHoleDict(dict):
+    """A dictionary that always stays empty. Use case:
+    Disabling memoization."""
+    def __setitem__(self, key, value):
+        return
+    def __getitem__(self, key):
+        raise AssertionError(f'BlackHoleDict cannot be read from. Key: {key}')
+    def __contains__(self, key):
+        raise AssertionError(f'BlackHoleDict cannot be queried. Key: {key}')
+
+
+BLACKHOLE_SINGLETON = BlackHoleDict()
+
 
 def NOCALL(*args, **kwargs):
     assert False, f'illegal method-call on PLACEHOLDER-object!'
 
 
-_GRAMMAR_PLACEHOLDER = None  # type: Optional[Grammar]
+_GRAMMAR_PLACEHOLDER: Optional[Grammar] = None  # type: Optional[Grammar]
 
 
 def get_grammar_placeholder() -> Grammar:
@@ -489,7 +502,7 @@ def get_grammar_placeholder() -> Grammar:
     if _GRAMMAR_PLACEHOLDER is None:
         _GRAMMAR_PLACEHOLDER = Grammar.__new__(Grammar)
         _GRAMMAR_PLACEHOLDER.__call__ = NOCALL
-    return cast(Grammar, _GRAMMAR_PLACEHOLDER)
+    return _GRAMMAR_PLACEHOLDER
 
 
 def is_grammar_placeholder(grammar: Optional[Union['Grammar', type]]) -> bool:
@@ -1074,16 +1087,6 @@ class LeafParser(Parser):
         except RecursionError:
             node, next_location = self._handle_recursion_error(location)
         return node, next_location
-
-
-class BlackHoleDict(dict):
-    """A dictionary that always stays empty. Use case:
-    Disabling memoization."""
-    def __setitem__(self, key, value):
-        return
-
-
-BLACKHOLE_SINGLETON = BlackHoleDict()
 
 
 class NoMemoizationParser(LeafParser):
@@ -1928,6 +1931,12 @@ class Grammar:
 
         # Phase 4: Reset/Initialize all parsers
         for p in self.all_parsers__:  reset_parser(p)
+
+        # DEBUGGING / TEST code:
+        def optimize_memo(ptrail):
+            print(' -> '.join([(("fwd'" if isinstance(p, Forward) else ("ref'" if isinstance(p, Ref) else '')) + (p.effective_pname()) if p.effective_pname() else str(p)) for p in ptrail]))
+        self.root_parser__.apply_to_trail(optimize_memo)
+
         if not root:  TreeReduction(self.all_parsers__, self.early_tree_reduction__)
 
         # Phase 5: Do some static error checking, if the error checking flag
@@ -2104,6 +2113,7 @@ class Grammar:
                         if any(is_lookahead(tn) and location >= len(self.document__)
                                for tn, location in h.call_stack):
                             return True
+                return False
             else:
                 return False
 
@@ -5491,7 +5501,7 @@ class Forward(UnaryParser):
         return self.__cycle_guard(lambda: repr(self.parser), '...')
 
     def __str__(self):
-        return self.__cycle_guard(lambda: str(self.parser), '...')
+        return "fwd'" + self.__cycle_guard(lambda: str(self.parser), '...')
 
     @property
     def repr(self) -> str:
@@ -5540,4 +5550,4 @@ class Ref(LateBindingUnary):
         return self.parser_name
 
     def __str__(self):
-        return self.parser_name
+        return "ref'" + self.parser_name
