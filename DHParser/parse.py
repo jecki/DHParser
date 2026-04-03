@@ -628,7 +628,7 @@ class Parser:
             pass                        # ensures Cython-compatibility
         self._symbol = ''               # type: str
         self._descendants_cache: Optional[Set[Parser]] = None
-        self._anon_desc_cache: Optional[Set[Parser]] = None
+        # self._anon_desc_cache: Optional[Set[Parser]] = None
         self._desc_trails_cache: Optional[Set[ParserTrail]] = None
         self.reset()
 
