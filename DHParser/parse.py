@@ -1935,7 +1935,8 @@ class Grammar:
         # DEBUGGING / TEST code:
         def optimize_memo(ptrail):
             print(' -> '.join([(("fwd'" if isinstance(p, Forward) else ("ref'" if isinstance(p, Ref) else '')) + (p.effective_pname()) if p.effective_pname() else str(p)) for p in ptrail]))
-        self.root_parser__.apply_to_trail(optimize_memo)
+        if self.root_parser__ is not PARSER_PLACEHOLDER:
+            self.root_parser__.apply_to_trail(optimize_memo)
 
         if not root:  TreeReduction(self.all_parsers__, self.early_tree_reduction__)
 
