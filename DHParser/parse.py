@@ -5389,6 +5389,8 @@ class Forward(UnaryParser):
         # if the location has already been visited by the current parser, return the saved result
         visited = self.visited  # using local variable for better performance
         if location in visited:
+        # if (visited.get(location, (EMPTY_NODE, location))[0] or EMPTY_NODE).get_attr('version__', -1) \
+        #         == self.recursion_counter.get((origin, location), -2):
             # Sorry, no history recording in case of memoized results!
             return visited[location]
 
@@ -5470,6 +5472,8 @@ class Forward(UnaryParser):
             # assert False
             result = visited[location]
         elif not grammar.suspend_memoization__:
+            # TODO: versioned memoization
+            # if result[0] is not None:  result[0].attr['version__'] = depth
             visited[location] = result  # TODO: need versioned memoization
             # print('Memo', location, result)
         # print(self.call_stack, location, result)
