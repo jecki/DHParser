@@ -550,7 +550,7 @@ class Parser:
     Parser objects are callable and parsing is done by calling a parser
     object with the text to parse.
 
-    If the parser matches it returns a tuple consisting of a node
+    If the parser matches, it returns a tuple consisting of a node
     representing the root of the concrete syntax tree resulting from the
     match as well as the substring ``text[i:]`` where i is the length of
     matched text (which can be zero in the case of parsers like
@@ -1933,10 +1933,10 @@ class Grammar:
         for p in self.all_parsers__:  reset_parser(p)
 
         # DEBUGGING / TEST code:
-        def optimize_memo(ptrail):
-            print(' -> '.join([(("fwd'" if isinstance(p, Forward) else ("ref'" if isinstance(p, Ref) else '')) + (p.effective_pname()) if p.effective_pname() else str(p)) for p in ptrail]))
-        if self.root_parser__ is not PARSER_PLACEHOLDER:
-            self.root_parser__.apply_to_trail(optimize_memo)
+        # def optimize_memo(ptrail):
+        #     print(' -> '.join([(("fwd'" if isinstance(p, Forward) else ("ref'" if isinstance(p, Ref) else '')) + (p.effective_pname()) if p.effective_pname() else str(p)) for p in ptrail]))
+        # if self.root_parser__ is not PARSER_PLACEHOLDER:
+        #     self.root_parser__.apply_to_trail(optimize_memo)
 
         if not root:  TreeReduction(self.all_parsers__, self.early_tree_reduction__)
 
