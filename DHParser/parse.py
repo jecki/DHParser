@@ -5319,8 +5319,7 @@ class Forward(UnaryParser):
         visited = self.visited  # using local variable for better performance
         if location in visited:
             # Sorry, no history recording in case of memoized results!
-            if location in self.recursion_counter:
-                grammar.suspend_memoization__ = id(self)
+            grammar.suspend_memoization__ = id(self)
             return visited[location]
 
         if location in self.recursion_counter:
