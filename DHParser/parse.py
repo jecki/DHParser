@@ -5418,7 +5418,6 @@ class Forward(UnaryParser):
                 # the recursion depth by 1 for each call as long as the length of
                 # the match increases.
                 last_history_state = grammar.history__[history_pointer:len(grammar.history__)]
-                farthest = grammar.ff_pos__
                 depth = 1
                 while True:
                     self.recursion_counter[(origin, location)] = depth
@@ -5459,7 +5458,6 @@ class Forward(UnaryParser):
 
                     last_history_state = grammar.history__[history_pointer:len(grammar.history__)]
                     result = next_result
-                    farthest = grammar.ff_pos__
                     depth += 1
             # grammar.suspend_memoization__ = save_suspend_memoization \
             #     or location <= (grammar.last_rb__loc__ + int(text._len == result[1]._len))
