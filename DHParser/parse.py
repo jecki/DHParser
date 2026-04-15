@@ -5335,7 +5335,7 @@ class Forward(UnaryParser):
         rb_stack_size = len(grammar.rollback__)
         last_history_state = []
 
-        result = None, location  # TODO: -1 instead of location ???
+        result = None, location
         next_result = self.parser(location)
 
         while next_result[1] > result[1]:
@@ -5348,6 +5348,9 @@ class Forward(UnaryParser):
             visited[location] = result
             next_result = self.parser(location)
 
+        if history_tracking and result[0] is not None:
+            grammar.history__ = grammar.history__[:history_pointer] + last_history_state
+
         self.recursion_counter[location] = False
         # Since the result of the last parser call (``next_result``) is discarded,
         # any variables captured by this call should be "rolled back", too.
@@ -5356,9 +5359,6 @@ class Forward(UnaryParser):
             rb_func()
             grammar.last_rb__loc__ = grammar.rollback__[-1][0] \
                 if grammar.rollback__ else -2
-
-        if history_tracking:
-            grammar.history__ = grammar.history__[:history_pointer] + last_history_state
 
         # both checks in the following are necessary:
         # 1. id(self)-check in order not to interfere with interwoven recursive parser calls
