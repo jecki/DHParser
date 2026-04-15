@@ -533,7 +533,7 @@ class Parser:
     Since parsers can contain other parsers (see classes UnaryOperator
     and NaryOperator) they form a cyclical directed graph. A root
     parser is a parser from which all other parsers can be reached.
-    Usually, there is one root parser which serves as the starting
+    Usually, there is one root parser, which serves as the starting
     point of the parsing process. When speaking of "the root parser"
     it is this root parser object that is meant.
 
@@ -766,7 +766,7 @@ class Parser:
         grammar = self._grammar
 
         try:
-            # rollback variable changing operation if the parser backtracks to a position
+            # rollback variable-changing operation if the parser backtracks to a position
             # before or at the location where the variable-changing operation occurred
             if location <= grammar.last_rb__loc__:
                 grammar.rollback_to__(location)
@@ -824,7 +824,7 @@ class Parser:
         until both match.
         """
         if isinstance(other, Interleave):
-            return cast(Interleave, other).__rmul__(self)
+            return other.__rmul__(self)
         return Interleave(self, other)
 
     def _parse(self, location: cython.int) -> ParsingResult:
@@ -967,8 +967,8 @@ class Parser:
 
     def descendant_trails(self) -> Set[ParserTrail]:
         """Returns a set of the trails of self and all descendant
-        parsers, avoiding circles. NOTE: The algorithm is rather sloppy and
-        the returned set is not really comprehensive, but sufficient to trace
+        parsers, avoiding circles. NOTE: The algorithm is rather sloppy, and
+        the returned set is not really comprehensive but sufficient to trace
         anonymous parsers to their nearest named ancestor."""
         if self._desc_trails_cache is None:
             visited: MutableSet[Parser] = set()

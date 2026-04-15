@@ -55,7 +55,7 @@ def recompile_grammar(grammar_src, force):
 
 
 def run_grammar_tests(fn_pattern, parser_factory, transformer_factory,
-                      junctions=set(), targets=set(), serializations=set(),
+                      junctions=set(), targets=set(), serializations=dict(),
                       preprocessor_factory=nil_preprocessor_factory):
     if fn_pattern.find('/') >= 0 or fn_pattern.find('\\') >= 0:
         testdir, fn_pattern = os.path.split(fn_pattern)
