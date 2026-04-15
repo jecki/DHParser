@@ -5310,7 +5310,7 @@ class Forward(UnaryParser):
         """
         grammar = self._grammar
 
-        # rollback variable changing operation if the parser backtracks
+        # rollback variable-changing operation if the parser backtracks
         # to a position before the variable-changing operation occurred
         if location <= grammar.last_rb__loc__:
             grammar.rollback_to__(location)
@@ -5334,7 +5334,8 @@ class Forward(UnaryParser):
             self.recursion_counter[location] = 0  # fail on the first recursion
             save_suspend_memoization = grammar.suspend_memoization__
             grammar.suspend_memoization__ = False
-            history_pointer = len(grammar.history__)
+            history_tracking = grammar.history_tracking__
+            history_pointer = len(grammar.history__) if history_tracking else 0
 
             result = self.parser(location)
 
@@ -5342,13 +5343,15 @@ class Forward(UnaryParser):
                 # keep calling the (potentially left-)recursive parser and increase
                 # the recursion depth by 1 for each call as long as the length of
                 # the match increases.
-                last_history_state = grammar.history__[history_pointer:len(grammar.history__)]
+                last_history_state = grammar.history__[history_pointer:len(grammar.history__)] \
+                    if history_tracking else []
                 depth = 1
                 while True:
                     self.recursion_counter[location] = depth
                     grammar.suspend_memoization__ = False
                     rb_stack_size = len(grammar.rollback__)
-                    grammar.history__ = grammar.history__[:history_pointer]
+                    if history_tracking:
+                        grammar.history__ = grammar.history__[:history_pointer]
                     # reduplication of error messages will be caught by nodetree.RootNode.add_error()
                     # saving and restoring the errors-messages state on each iteration presupposes
                     # that error messages will be recreated every time, which, however, does not
@@ -5372,7 +5375,8 @@ class Forward(UnaryParser):
                         # the accepted result, i.e. the longest match.
                         # TODO: Move this to trace.py, somehow... and make it less confusing
                         #       that the result is not the last but the longest match...
-                        grammar.history__ = grammar.history__[:history_pointer] + last_history_state
+                        if history_tracking:
+                            grammar.history__ = grammar.history__[:history_pointer] + last_history_state
                         # record = grammar.history__[-1]
                         # if record.call_stack[-1] == (self.parser.pname, location):
                         #     record.text = result[1]
@@ -5381,7 +5385,8 @@ class Forward(UnaryParser):
                         #     record.node.result = text[:delta]
                         break
 
-                    last_history_state = grammar.history__[history_pointer:len(grammar.history__)]
+                    if history_tracking:
+                        last_history_state = grammar.history__[history_pointer:len(grammar.history__)]
                     result = next_result
                     depth += 1
             # grammar.suspend_memoization__ = save_suspend_memoization \
