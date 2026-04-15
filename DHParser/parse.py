@@ -5310,7 +5310,7 @@ class Forward(UnaryParser):
         """
         grammar = self._grammar
 
-        # rollback variable-changing operation if the parser backtracks
+        # roll back variable-changing operation if the parser backtracks
         # to a position before the variable-changing operation occurred
         if location <= grammar.last_rb__loc__:
             grammar.rollback_to__(location)
@@ -5319,51 +5319,55 @@ class Forward(UnaryParser):
         visited = self.visited  # using local variable for better performance
         if location in visited:
             # Sorry, no history recording in case of memoized results!
-            grammar.suspend_memoization__ = id(self)
+            if self.recursion_counter[location]:
+                grammar.suspend_memoization__ = id(self)
             return visited[location]
 
         if location in self.recursion_counter:
             grammar.suspend_memoization__ = id(self)
-            result = None, location
-        else:
-            self.recursion_counter[location] = 0  # fail on the first recursion
-            save_suspend_memoization = grammar.suspend_memoization__
+            return None, location
+
+        self.recursion_counter[location] = True  # fail on the first recursion
+        save_suspend_memoization = grammar.suspend_memoization__
+        grammar.suspend_memoization__ = False
+        history_tracking = grammar.history_tracking__
+        history_pointer = len(grammar.history__) if history_tracking else 0
+        rb_stack_size = len(grammar.rollback__)
+        last_history_state = []
+
+        result = None, location
+        next_result = self.parser(location)
+
+        while next_result[1] > result[1]:
+            result = next_result
             grammar.suspend_memoization__ = False
-            history_pointer = len(grammar.history__)
             rb_stack_size = len(grammar.rollback__)
-            last_history_state = []
-
-            result = None, -1
-            next_result = self.parser(location)
-
-            while next_result[1] > result[1]:
-                result = next_result
-                self.recursion_counter[location] += 1
-                grammar.suspend_memoization__ = False
-                rb_stack_size = len(grammar.rollback__)
+            if history_tracking:
                 last_history_state = grammar.history__[history_pointer:len(grammar.history__)] + last_history_state
                 grammar.history__ = grammar.history__[:history_pointer]
-                visited[location] = result
-                next_result = self.parser(location)
+            visited[location] = result
+            next_result = self.parser(location)
 
-            # Since the result of the last parser call (``next_result``) is discarded,
-            # any variables captured by this call should be "rolled back", too.
-            while len(grammar.rollback__) > rb_stack_size:
-                _, rb_func = grammar.rollback__.pop()
-                rb_func()
-                grammar.last_rb__loc__ = grammar.rollback__[-1][0] \
-                    if grammar.rollback__ else -2
-            # Finally, overwrite the discarded result in the last history record with
-            # the accepted result, i.e. the longest match.
-            # TODO: Move this to trace.py, somehow... and make it less confusing
-            #       that the result is not the last but the longest match...
+        self.recursion_counter[location] = False
+        # Since the result of the last parser call (``next_result``) is discarded,
+        # any variables captured by this call should be "rolled back", too.
+        while len(grammar.rollback__) > rb_stack_size:
+            _, rb_func = grammar.rollback__.pop()
+            rb_func()
+            grammar.last_rb__loc__ = grammar.rollback__[-1][0] \
+                if grammar.rollback__ else -2
+        # Finally, overwrite the discarded result in the last history record with
+        # the accepted result, i.e. the longest match.
+        # TODO: Move this to trace.py, somehow... and make it less confusing
+        #       that the result is not the last but the longest match...
+        if history_tracking:
             grammar.history__ = grammar.history__[:history_pointer] + last_history_state
 
-            # both checks in the following are necessary:
-            # 1. id(self)-check in order not to interfere with interwoven recursive parser calls
-            # 2. isinstance check for referenced parsers that are not in fact recursive
-            if grammar.suspend_memoization__ == id(self) or isinstance(grammar.suspend_memoization__, bool):
-                grammar.suspend_memoization__ = save_suspend_memoization  #  = is_context_sensitive(self.parser)
+        # both checks in the following are necessary:
+        # 1. id(self)-check in order not to interfere with interwoven recursive parser calls
+        # 2. isinstance check for referenced parsers that are not in fact recursive
+        if grammar.suspend_memoization__ == id(self) or isinstance(grammar.suspend_memoization__, bool):
+            grammar.suspend_memoization__ = save_suspend_memoization  #  = is_context_sensitive(self.parser)
         if not grammar.suspend_memoization__:
             visited[location] = result
         return result
