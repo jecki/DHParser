@@ -5310,7 +5310,7 @@ class Forward(UnaryParser):
         """
         grammar = self._grammar
 
-        # rollback variable changing operation if the parser backtracks
+        # rollback variable-changing operation if the parser backtracks
         # to a position before the variable-changing operation occurred
         if location <= grammar.last_rb__loc__:
             grammar.rollback_to__(location)
