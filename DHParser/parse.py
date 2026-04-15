@@ -5335,7 +5335,7 @@ class Forward(UnaryParser):
         rb_stack_size = len(grammar.rollback__)
         last_history_state = []
 
-        result = None, location
+        result = None, location  # TODO: -1 instead of location ???
         next_result = self.parser(location)
 
         while next_result[1] > result[1]:
@@ -5356,10 +5356,7 @@ class Forward(UnaryParser):
             rb_func()
             grammar.last_rb__loc__ = grammar.rollback__[-1][0] \
                 if grammar.rollback__ else -2
-        # Finally, overwrite the discarded result in the last history record with
-        # the accepted result, i.e. the longest match.
-        # TODO: Move this to trace.py, somehow... and make it less confusing
-        #       that the result is not the last but the longest match...
+
         if history_tracking:
             grammar.history__ = grammar.history__[:history_pointer] + last_history_state
 
