@@ -1983,7 +1983,7 @@ class Grammar:
         self.variables__: DefaultDict[str, List[str]] = defaultdict(lambda: [])
         self.rollback__: List[Tuple[int, Callable]] = []
         self.last_rb__loc__: int = -2
-        self.suspend_memoization__: bool = False
+        self.suspend_memoization__: Union[bool, int] = False
         # support for call stack tracing
         self.call_stack__: List[CallItem] = []  # name, location
         # snapshots of call stacks
@@ -5391,10 +5391,7 @@ class Forward(UnaryParser):
             # 2. isinstance check for referenced parsers that are not in fact recursive
             if grammar.suspend_memoization__ == id(self) or isinstance(grammar.suspend_memoization__, bool):
                 grammar.suspend_memoization__ = save_suspend_memoization  #  = is_context_sensitive(self.parser)
-        if location in visited and result[1] < visited[location][1]:
-            assert False
-            result = visited[location]
-        elif not grammar.suspend_memoization__:
+        if not grammar.suspend_memoization__:
             visited[location] = result
         return result
 
