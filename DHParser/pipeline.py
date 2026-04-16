@@ -143,7 +143,7 @@ PIPE_CHARS = ' ┊┆|│├─└┃┣┗━'  # {' ', '│', '├', '└', '�
 
 def pp_paths(paths: Union[Dict[str, List[str]], Set[Junction]],
              vertical = '│ ', bifurcation = '├─') -> str:
-    if isinstance(paths, Set):
+    if isinstance(paths, (Set, frozenset)):
         paths = as_paths(paths)
     paths = list(paths.values())
     paths.sort(reverse=True)
@@ -418,13 +418,17 @@ def _preprocessor_factory(prep_func: Union[PreprocessorFunc, Tokenizer],
     include_prep = partial(preprocess_includes, find_next_include=find_next_include)
     anno = get_annotations(prep_func)
     try:
-        if anno['return'] == PreprocessorResult:
-            assert func_type is None or func_type is PreprocessorFunc, \
+        ret_type = anno['return']
+        if ret_type is PreprocessorResult or ret_type == PreprocessorResult or \
+                str(ret_type) == 'PreprocessorResult':
+            assert func_type is None or func_type is PreprocessorFunc \
+                    or func_type == PreprocessorFunc or str(func_type) == "PreprocessorFunc", \
                 f"func_type={func_type} is incompatible with return type PreprocessorResult of " \
                 f"parameter prep_func when calling DHParser.pipeline.create_preprocess_junction()"
             prep = prep_func
         else:
-            assert func_type is None or func_type is Tokenizer, \
+            assert func_type is None or func_type is Tokenizer \
+                    or func_type == Tokenizer or str(func_type) == "Tokenizer", \
                 f"func_type={func_type} is incompatible with return type {anno['return']} of " \
                 f"parameter prep_func when calling DHParser.pipeline.create_preprocess_junction()"
             prep = make_preprocessor(prep_func)
@@ -432,7 +436,8 @@ def _preprocessor_factory(prep_func: Union[PreprocessorFunc, Tokenizer],
         assert func_type is not None, \
             "Please specify the kind of preprocessor by passing parameter func_type=Tokenizer " \
             "or func_type=PreprocessorFunc to DHParser.pipeline.create_preprocess_junction()"
-        prep = prep_func if func_type == PreprocessorFunc else make_preprocessor(prep_func)
+        prep = prep_func if func_type is PreprocessorFunc or func_type == PreprocessorFunc \
+            or str(func_type) == 'PreprocessorFunc' else make_preprocessor(prep_func)
     return chain_preprocessors(include_prep, prep)
 
 def same_name(name: str) -> str:
@@ -461,7 +466,7 @@ def create_preprocess_junction(prep_func: Union[PreprocessorFunc, Tokenizer],
 #                 *, complete_match=True):
 #     return parser_factory()(document, start_parser, complete_match=complete_match)
 
-def _parser_factory(raw_grammar) -> Grammar:
+def _parser_factory(raw_grammar, python_src='') -> Grammar:
     grammar = raw_grammar()
     if get_config_value('resume_notices'):
         resume_notices_on(grammar)
@@ -469,7 +474,7 @@ def _parser_factory(raw_grammar) -> Grammar:
         set_tracer(grammar, trace_history)
     try:
         if not grammar.__class__.python_src__:
-            grammar.__class__.python_src__ = getattr(_parser_factory, 'python_src__','')
+            grammar.__class__.python_src__ = python_src
     except AttributeError:
         pass
     return grammar

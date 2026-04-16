@@ -174,7 +174,6 @@ from a grammar, step by step::
     <BLANKLINE>
     parsing: PseudoJunction = create_parser_junction(ArithmeticGrammar)
     get_grammar = parsing.factory  # for backwards compatibility, only
-    <BLANKLINE>
 
     >>> # 2. Execution of the Python-source and extraction of the Grammar-class
     >>> code = compile(DHPARSER_IMPORTS + python_src, '<string>', 'exec')
@@ -248,7 +247,7 @@ except ImportError:
     import DHParser.externallibs.shadow_cython as cython
 
 from DHParser.compile import CompilerError, Compiler, CompilationResult, compile_source
-from DHParser.configuration import access_thread_locals, get_config_value, \
+from DHParser.configuration import access_thread_locals, get_config_value, get_config_values, \
     set_config_value, NEVER_MATCH_PATTERN, ALLOWED_PRESET_VALUES
 from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_TOKEN_WARNING,\
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, NOTICE, \
@@ -270,9 +269,9 @@ from DHParser.nodetree import Node, RootNode, Path, WHITESPACE_PTYPE, KEEP_COMME
     TOKEN_PTYPE, ZOMBIE_TAG, flatten_sxpr, parse_sxpr
 from DHParser.toolkit import load_if_file, wrap_str_literal, escape_ctrl_chars, md5, \
     sane_parser_name, re, expand_table, unrepr, compile_python_object, deprecated, \
-    ThreadLocalSingletonFactory, Any, Iterable, Sequence, Set, AbstractSet, Union, Dict, List, \
+    ThreadLocalSingletonFactory, Any, Iterable, Sequence, Set, Union, Dict, List, \
     Tuple, FrozenSet, MutableSet, Optional, Type, Callable, Container, TypeAlias, \
-    matching_brackets, INFINITE, LazyRE, static
+    matching_brackets, INFINITE, LazyRE, static, RX_NEVER_MATCH
 from DHParser.transform import TransformerFunc, transformer, remove_brackets, change_name, \
     reduce_single_child, replace_by_single_child, is_empty, remove_children, add_error, \
     remove_tokens, remove_anonymous_tokens, flatten, forbid, assert_content, remove_children_if, \
@@ -283,6 +282,7 @@ from DHParser.versionnumber import __version__
 
 __all__ = ('DHPARSER_IMPORTS',
            'get_ebnf_preprocessor',
+           'grammar_chksum',
            'get_ebnf_grammar',
            'get_ebnf_transformer',
            'get_ebnf_compiler',
@@ -293,11 +293,14 @@ __all__ = ('DHPARSER_IMPORTS',
            'ConfigurableEBNFGrammar',
            'EBNFTransform',
            'get_EBNF_AST_Serialization_Table',
-           'EBNF_from_AST',
+           # 'EBNF_from_AST',
            'EBNFCompilerError',
            'EBNFDirectives',
            'WHITESPACE_TYPES',
            'EBNFCompiler',
+           'ebnf_to_ast',
+           'ebnf_from_ast',
+           'compile_ebnf_ast',
            'compile_ebnf')
 
 
@@ -655,6 +658,17 @@ class ConfigurableEBNFGrammar(Grammar):
         self.mode__ = 'fixed'
 
 
+def grammar_chksum(grammar_source: str) -> str:
+    """Creates a chksum from the grammar source, the DHParser version
+    and the configuration. This checksum can be added to the Python
+    source file generated from the grammar in order to determine
+    whether the grammar it needs to be regenerated.
+    """
+    config = get_config_values()
+    del config['syncfile_path']
+    return md5(grammar_source, __version__, str(config))
+
+
 @deprecated(f"grammar_changed() has been moved from DHParser.ebnf to DHParser.dsl. Please, update your imports.")
 def grammar_changed(grammar_class, grammar_source: str) -> bool:
     """
@@ -672,7 +686,7 @@ def grammar_changed(grammar_class, grammar_source: str) -> bool:
         source from which the grammar class was generated
     """
     grammar = load_if_file(grammar_source)
-    chksum = md5(grammar, __version__)
+    chksum = grammar_chksum(grammar)
     if isinstance(grammar_class, str):
         # grammar_class = load_compiler_suite(grammar_class)[1]
         with open(grammar_class, 'r', encoding='utf8') as f:
@@ -1080,8 +1094,11 @@ def get_EBNF_AST_Serialization_Table(flavor: str = "EBNF") -> Dict[str, Callable
     """
     global EBNF_Serialization_Table, PEG_Serialization_Table
 
-    paren_needed = lambda nd: (len(nd.children) > 1 or nd[0].name not in
-                               ('symbol', 'literal', 'plaintext', 'group'))
+    # paren_needed = lambda nd: (len(nd.children) > 1 or nd[0].name not in
+    #                            ('symbol', 'literal', 'plaintext', 'group'))
+    def paren_needed(nd: Node) -> bool:
+        return (len(nd.children) > 1 or nd[0].name not in
+                ('symbol', 'literal', 'plaintext', 'group'))
 
     if flavor == "EBNF":
         if EBNF_Serialization_Table is None:
@@ -1101,7 +1118,7 @@ def get_EBNF_AST_Serialization_Table(flavor: str = "EBNF") -> Dict[str, Callable
                          f'but not "{flavor}"!')
 
 
-def EBNF_from_AST(ebnf_AST: Node, syntax: str = "DHParser") -> str:
+def serialize_AST(ebnf_AST: Node, syntax: str = "DHParser") -> str:
     """
     Generates EBNF-code from the abstract syntax tree of an EBNF-grammar.
 
@@ -1145,6 +1162,10 @@ def EBNF_from_AST(ebnf_AST: Node, syntax: str = "DHParser") -> str:
     return ebnf
 
 
+@deprecated('EBNF_from_AST() is dprecated, please use DHParser.ebnf.ebnf_from_ast()')
+def EBNF_from_AST(ebnf_AST: Node, syntax: str = "DHParser") -> str:
+    return serialize_AST(ebnf_AST, syntax)
+
 
 ########################################################################
 #
@@ -1176,7 +1197,7 @@ except (ImportError, ModuleNotFoundError):
         dhparserdir = scriptdir[:i + 10]  # 10 = len("/DHParser/")
         if dhparserdir not in sys.path:  sys.path.insert(0, dhparserdir)
 
-from DHParser.compile import Compiler, compile_source, Junction, full_compile
+from DHParser.compile import Compiler, compile_source, full_compile
 from DHParser.configuration import set_config_value, add_config_values, get_config_value, \\
     access_thread_locals, access_presets, finalize_presets, set_preset_value, \\
     get_preset_value, read_local_config, CONFIG_PRESET, NEVER_MATCH_PATTERN, ALLOWED_PRESET_VALUES
@@ -1190,11 +1211,11 @@ from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode, Pat
 from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, DropFrom, AnyChar, Parser, \\
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, ERR, \\
     Option, NegativeLookbehind, OneOrMore, RegExp, SmartRE, Retrieve, Series, Capture, TreeReduction, \\
-    ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, \\
+    ZeroOrMore, Ref, Forward, NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, \\
     LateBindingUnary, mixin_comment, last_value, matching_bracket, optional_last_value, \\
     PARSER_PLACEHOLDER, RX_NEVER_MATCH, UninitializedError
 from DHParser.pipeline import end_points, full_pipeline, create_parser_junction, \\
-    create_preprocess_junction, create_junction, PseudoJunction, PipelineResult
+    create_preprocess_junction, create_junction, Junction, PseudoJunction, PipelineResult
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \\
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.stringview import StringView
@@ -1259,20 +1280,6 @@ def parse_word(s: StringView) -> Optional[Node]:
 GRAMMAR_FACTORY = r'''
 parsing: PseudoJunction = create_parser_junction({NAME}Grammar)
 get_grammar = parsing.factory  # for backwards compatibility, only
-
-try:
-    assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
-        RE_COMMENT in ({NAME}Grammar.COMMENT__, NEVER_MATCH_PATTERN), \
-        "Please adjust the pre-processor-variable RE_COMMENT in file {NAME}Parser.py so that " \
-        "it either is the NEVER_MATCH_PATTERN or has the same value as the COMMENT__-attribute " \
-        "of the grammar class {NAME}Grammar! " \
-        'Currently, RE_COMMENT reads "%s" while COMMENT__ is "%s". ' \
-        % (RE_COMMENT, {NAME}Grammar.COMMENT__) + \
-        "\n\nIf RE_COMMENT == NEVER_MATCH_PATTERN then includes will deliberately be " \
-        "processed, otherwise RE_COMMENT=={NAME}Grammar.COMMENT__ allows the " \
-        "preprocessor to ignore comments."
-except (AttributeError, NameError):
-    pass
 '''
 
 
@@ -1499,6 +1506,13 @@ def neutralize_unnamed_groups(rxp: str) -> str:
     return '?:'.join(al)
 
 
+REF_TMPL = 'Ref__({symbol})'
+RX_REF_TMPL = r'Ref__\(({symbols})\)'
+RX_DROPFROM_REF = LazyRE(r'DropFrom\(Ref\("(\w+)"\)\)')
+RX_SYNONYM_TMPL = r'Synonym\(({symbols})\)'  # Really needed?
+RX_REF = LazyRE(r'Ref__\((\w+)\)')
+
+
 class EBNFCompilerError(CompilerError):
     r"""the Error that is raised by :py:class:`EBNFCompiler` class.
     (Not compilation errors in the strict sense,
@@ -1634,6 +1648,9 @@ class EBNFCompiler(Compiler):
     :ivar grammar_name:  The name of the grammar to be compiled
 
     :ivar grammar_source:  The source code of the grammar to be compiled.
+
+    :ivar left_recursion: Determine the kind of left-recursion-handling. Value
+            is read from congiuration and is eithet "None", "Forward", "Full"
     """
     COMMENT_KEYWORD = "COMMENT__"
     COMMENT_PARSER_KEYWORD = "comment__"
@@ -1699,6 +1716,7 @@ class EBNFCompiler(Compiler):
         self.consumed_custom_errors = set()    # type: MutableSet[str]
         self.consumed_skip_rules = set()       # type: MutableSet[str]
         self.P = {p: p for p in parser_names}  # type: Dict[str, str]
+        self.left_recursion = get_config_value('left_recursion')
 
 
     @property
@@ -1803,35 +1821,6 @@ class EBNFCompiler(Compiler):
         compiler += [COMPILER_FACTORY.format(NAME=self.grammar_name)]
         return '\n'.join(compiler)
 
-    # def verify_transformation_table(self, transtable):
-    #     """
-    #     Checks for symbols that occur in the transformation-table but have
-    #     never been defined in the grammar. Usually, this kind of
-    #     inconsistency results from an error like a typo in the transformation
-    #     table.
-    #     """
-    #     assert self._dirty_flag
-    #     table_entries = set(expand_table(transtable).keys()) - {'*', '<', '>', '~', '<<<', '>>>'}
-    #     symbols = set(self.rules.keys()) | set(self.macros.keys())
-    #     symbols.add('ZOMBIE__')
-    #     if self.directives.comment:
-    #         symbols.add('comment__')
-    #     messages = []
-    #     # # commented out, because warning is confusing for beginners
-    #     # for entry in table_entries:
-    #     #     if entry not in symbols and not entry[:1] == ":":
-    #     #         messages.append(Error(('Symbol "%s" is not defined in grammar %s but appears in '
-    #     #                                'the transformation table!') % (entry, self.grammar_name),
-    #     #                               0, UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING))
-    #     return messages
-
-    # def verify_compiler(self, compiler):
-    #     """
-    #     Checks for on_XXXX()-methods that occur in the compiler, although XXXX
-    #     has never been defined in the grammar. Usually, this kind of
-    #     inconsistency results from an error like a typo in the compiler-code.
-    #     """
-    #     pass  # TODO: add verification code here
 
     def check_rx(self, node: Node, rx: str, smartRE: bool = False) -> str:
         """
@@ -1963,9 +1952,9 @@ class EBNFCompiler(Compiler):
 
 
     def recursive_paths(self, symbol: str) -> FrozenSet[Tuple[str, ...]]:
-        """Returns the recursive paths from symbol to itself. If
+        """Returns the recursive paths from the symbol to itself. If
         sym is not recursive, the returned tuple (of paths) will be empty.
-        This method exists only for debugging (so far...)."""
+        This method exists only for testing and debugging (so far...)."""
         path = []  # type: List[str]
         recursive_paths = set()  # type: MutableSet[Tuple[str, ...]]
 
@@ -2047,6 +2036,15 @@ class EBNFCompiler(Compiler):
         self.forward = recursive
 
 
+    def recursive_symbols(self) -> Set[str]:
+        """Returns all recursive symbols. Must be called after optimize_definitions_order()!"""
+        recursive = set()
+        for sym in self.forward:
+            for path in self.recursive_paths(sym):
+                recursive.update(path)
+        return recursive
+
+
     def assemble_parser(self, definitions: List[Tuple[str, str]], root_symbol: str) -> str:
         """
         Creates the Python code for the parser after compilation of
@@ -2075,7 +2073,7 @@ class EBNFCompiler(Compiler):
                                     'nowhere defined!' % directive,
                                     DIRECTIVE_FOR_NONEXISTANT_SYMBOL)
 
-        # execute deferred tasks, for example semantic checks that cannot
+        # execute deferred tasks, for example, semantic checks that cannot
         # be done before the symbol table is complete
 
         for task in self.deferred_tasks:
@@ -2193,7 +2191,7 @@ class EBNFCompiler(Compiler):
                         + '    Instantiate this class and then call the instance with the source\n'
                         + '    code as the single argument in order to use the parser, e.g.:\n'
                         + f'        parser = {self.grammar_name}()\n'
-                        + f'        syntax_tree = parser(source_code)'
+                        + '        syntax_tree = parser(source_code)'
                         + ('\n\n    Grammar:' if self.grammar_source and show_source else '')]
         definitions.append(('parser_initialization__', '["upon instantiation"]'))
         definitions.append(('static_analysis_pending__', '[True]'))
@@ -2204,8 +2202,8 @@ class EBNFCompiler(Compiler):
                                        'MERGE_LEAVES')[self.directives.reduction]
             definitions.append(('early_tree_reduction__', opt))
         if self.grammar_source:
-            definitions.append(('source_hash__',
-                                '"%s"' % md5(self.grammar_source, __version__)))
+            chksum = grammar_chksum(self.grammar_source)
+            definitions.append(('source_hash__', f'"{chksum}"'))
             declarations.append('')
             if show_source:
                 declarations += [line for line in self.grammar_source.split('\n')]
@@ -2218,7 +2216,30 @@ class EBNFCompiler(Compiler):
         definitions.reverse()
         declarations += [symbol + ' = Forward()'
                          for symbol in sorted(list(self.forward))]
+
+        if self.left_recursion == 'Full':
+            recursive = self.recursive_symbols()
+            # for s in self.forward:
+            #     for p in self.recursive_paths(s):
+            #         print(p)
+            # TODO: Sort out purely right-recursive symbols
+            symstr = '|'.join(recursive)
+            recursive_ref_pattern = RX_REF_TMPL.format(symbols = symstr)
+            rx_recursive_ref = re.compile(recursive_ref_pattern)
+            synonym_pattern = RX_SYNONYM_TMPL.format(symbols = symstr)
+            rx_synonym = re.compile(synonym_pattern)
+        else:
+            recursive_ref_pattern: str = '(' + NEVER_MATCH_PATTERN + ')'
+            rx_recursive_ref = re.compile(recursive_ref_pattern)
         for symbol, statement in definitions:
+            if symbol[-2:] != '__' or (symbol.find('_skip_') >= 0 or symbol.find('_resume_') >= 0):
+                # TODO: Except uses at the very end of the rule (i.e. right recursion),
+                #       unless it's forward references (pre-sort the self.forward-references accordingly)
+                statement = statement.replace(REF_TMPL.format(symbol = symbol), symbol)
+                statement = rx_recursive_ref.sub(r'Ref("\1")', statement)
+                # statement = rx_synonym.sub(rf'Synonym(\1{RECURSIVE_SUFFIX})', statement)
+                statement = RX_REF.sub(r'\1', statement)
+                statement = RX_DROPFROM_REF.sub(r'Drop(Ref("\1"))', statement)
             if symbol in self.forward:
                 declarations += [symbol + '.set(' + statement + ')']
             else:
@@ -2426,7 +2447,8 @@ class EBNFCompiler(Compiler):
                     raise te_ae  # not merely a consequntial error of another reported error
             except SyntaxError as se:
                 src_lines = probe_src.split('\n')
-                se.msg += f' "{src_lines[se.lineno - 1]}" '
+                if se.lineno is not None:
+                    se.msg += f' "{src_lines[se.lineno - 1]}" '
                 raise se
             for sym, parser, err in errors:
                 psym = parser.symbol
@@ -2474,7 +2496,7 @@ class EBNFCompiler(Compiler):
                                 'but directive marker @ is missing...', WARNING)
         if rule in self.rules:
             first = self.rules[rule][0]
-            if not id(first) in self.tree.error_nodes:
+            if id(first) not in self.tree.error_nodes:
                 self.tree.new_error(first, 'First definition of rule "%s" '
                                     'followed by illegal redefinitions.' % rule)
             self.tree.new_error(node, 'A rule "%s" has already been defined earlier.' % rule)
@@ -2499,7 +2521,8 @@ class EBNFCompiler(Compiler):
             self.rules[rule] = self.current_symbols
             defn = self.compile(body)
             if isinstance(defn, str):
-                if defn.find("(") < 0:
+                m = None
+                if defn.find("(") < 0 or (m := RX_REF.fullmatch(defn)):
                     # assume it's a synonym, like 'page = REGEX_PAGE_NR'
                     if not drop_flag and defn in self.directives['drop'] \
                             and re.match(self.directives['disposable'], rule):
@@ -2507,7 +2530,7 @@ class EBNFCompiler(Compiler):
                             f'it is a Synonym for the dropped symbol "{defn}". If this behaviour '
                             f'is undesired, swap the definitions of both symbols. Otherwise, add '
                             f'"{rule}" to the @drop-directive to avoid this warning.', ERROR)
-                    defn = f'{self.P["Synonym"]}({defn})'
+                    defn = f'{self.P["Synonym"]}({defn if m is None else m.group(1)})'
                 if drop_flag and not defn.startswith(self.P["Drop"] + "("):
                     defn = f'{self.P["Drop"]}({defn})'
             else:
@@ -2853,9 +2876,9 @@ class EBNFCompiler(Compiler):
         elif not re.match(self.directives.disposable, macro_name):
             if len(self.path) >= 3 and self.path[-3].name != 'definition':
                 if code.find('(') >= 0:
-                    return f'({code}).name("{macro_name}")'
+                    return f'({code}).name("${macro_name}")'
                 else:  # code is symbol which already has a name which should not be overwritten.
-                    return f'{self.P["Synonym"]}({code}).name("{macro_name}")'
+                    return f'{self.P["Synonym"]}({code}).name("${macro_name}")'  # TODO: Is this still needed?
         return code
 
     def on_macro(self, node) -> str:
@@ -3095,7 +3118,7 @@ class EBNFCompiler(Compiler):
             else:
                 filtered_children.append(nd)
         custom_args = ['mandatory=%i' % mandatory_marker[0]] if mandatory_marker else []
-        # add custom error message if it has been declared for the current definition
+        # add a custom error-message if it has been declared for the current definition
         if custom_args:
             try:
                 current_symbol = next(reversed(list(self.rules.keys())))   # list() needed for Python < 3.8
@@ -3456,7 +3479,8 @@ class EBNFCompiler(Compiler):
                 return keyword
             elif symbol.endswith('__'):
                 self.tree.new_error(node, 'Illegal use of reserved symbol name "%s"!' % symbol)
-            return symbol
+            return f"Ref__({symbol})" if self.left_recursion == "Full" else symbol
+            # return symbol  # return f"Ref(symbol)" and delete als non-recursive Refs later?
 
 
     def drop_on(self, category):
@@ -3474,7 +3498,7 @@ class EBNFCompiler(Compiler):
         pattern = repr(pattern)
         if pattern.find('(?x)') >= 0:
             m = re.search(r'\\n[ \t]*', pattern)
-            indent = len(m.group(0)) - 2
+            indent = (len(m.group(0)) - 2) if m else -2 # TODO: is -2 correct?
             pattern = re.sub(r'\\n[ \t]*', '\\\\n\n', pattern)
             parts = pattern.split('\n')
             pattern = wrap_str_literal(parts, offset = len(REClass) + 1 + indent)
@@ -3742,18 +3766,37 @@ def get_ebnf_compiler(grammar_name="", grammar_source="") -> EBNFCompiler:
         return compiler
 
 
+########################################################################
+#
+# EBNF compiler
+#
+########################################################################
+
+
+def ebnf_to_ast(ebnf_source: str) -> RootNode:
+    """Compiles EBNF-code into an EBNF-AST."""
+    prep = get_ebnf_preprocessor()(ebnf_source)
+    cst = get_ebnf_grammar()(prep)
+    ast = get_ebnf_transformer(cst)
+    return ast
+
+
+def ebnf_from_ast(ebnf_AST: Node, syntax: str = "DHParser") -> str:
+    """Serializes and EBNF-AST back to ebnf code.
+
+    :param ebnf_AST: EBNF-AST to serialize.
+    :param syntax: the syntax-style for the serialization, must be one
+        of 'DHParser', 'ISO' or 'PEG' (parsing-expression-grammar-style)
+    """
+    return serialize_AST(ebnf_AST, syntax)
+
+
 def compile_ebnf_ast(ast: RootNode) -> str:
     """Compiles the abstract-syntax-tree of an EBNF-source-text into
     python code of a class derived from `parse.Grammar` that can
     parse text following the grammar described with the EBNF-code."""
     return get_ebnf_compiler()(ast)
 
-
-########################################################################
-#
-# EBNF compiler
-#
-########################################################################
 
 def compile_ebnf(ebnf_source: str, branding: str = 'DSL', *, preserve_AST: bool = False) \
         -> CompilationResult:   # -> (result, messages, AST)

@@ -34,7 +34,6 @@ dhparser_cythonize_stringview = 'DHParser.scripts.dhparser_cythonize:main'
 xml_reflow = 'DHParser.scripts.XMLreflow:main'
 
 [project.optional-dependencies]
-regex = ["regex"]
 cython = ["cython>=3.0"]
 sphinx = ["sphinx (>=8.0) ; python_version >= '3.10'"]
 pytest = ["pytest>=5.0"]

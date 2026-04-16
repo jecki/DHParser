@@ -197,9 +197,9 @@ class reGrammar(Grammar):
     _entity = Forward()
     _item = Forward()
     sequence = Forward()
-    source_hash__ = "f032ce59777a2dfc10b808a0bc4cea6e"
+    source_hash__ = "ddcb8f21f67f4dcba3e550d3717f26fa"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:_csEsc$|_illegal$|_ch$|_item$|_group$|_reEsc$|_char$|_escapedCh$|_entity$|_chars$|_number$|_nibble$|EOF$|_octal$|_escape$|_anyChar$|_grpChar$|_grpChars$|_extension$|_grpItem$|BS$|_special$)')
+    disposable__ = re.compile('(?:_escape$|_extension$|EOF$|_char$|_grpChars$|_grpItem$|_illegal$|_grpChar$|_number$|_chars$|_escapedCh$|_reEsc$|_nibble$|_group$|_octal$|_ch$|BS$|_entity$|_special$|_item$|_anyChar$|_csEsc$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -294,6 +294,7 @@ class reGrammar(Grammar):
 parsing: PseudoJunction = create_parser_junction(reGrammar)
 get_grammar = parsing.factory  # for backwards compatibility, only
 
+
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
         RE_COMMENT in (reGrammar.COMMENT__, NEVER_MATCH_PATTERN), \
@@ -307,6 +308,7 @@ try:
         "preprocessor to ignore comments."
 except (AttributeError, NameError):
     pass
+
 
 
 #######################################################################
@@ -890,7 +892,6 @@ class NormalizeCharsets(Compiler):
             node.result = result
         return node
 
-    @staticmethod
     def dissolve_nesting(self, node: Node) -> Node:
         new_result = []
         for child in node.children:

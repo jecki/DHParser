@@ -25,10 +25,9 @@ import os
 from functools import partial
 from typing import Set
 
-from DHParser import PickMultiCoreExecutor
-
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
+scriptpath = os.path.abspath(scriptpath)
 
 from DHParser.compile import Compiler
 from DHParser.configuration import CONFIG_PRESET
@@ -40,7 +39,7 @@ from DHParser.parse import Grammar, Forward, CombinedParser, mixin_comment, Whit
 from DHParser.pipeline import create_parser_junction, create_junction, end_points, full_pipeline, \
     create_preprocess_junction, PseudoJunction, Junction, as_paths, as_graph, pp_paths
 from DHParser.toolkit import ThreadLocalSingletonFactory, expand_table, Any, Tuple, List, \
-    NEVER_MATCH_PATTERN, re, MultiCoreManager
+    NEVER_MATCH_PATTERN, re, MultiCoreManager, PickMultiCoreExecutor
 from DHParser.transform import merge_adjacent, is_one_of, apply_if, replace_by_single_child, \
     replace_content_with, replace_by_children, reduce_single_child, change_name, transformer, \
     TransformerFunc

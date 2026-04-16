@@ -37,16 +37,11 @@ import sys
 
 if sys.version_info >= (3, 12, 0):
     from collections.abc import Iterable, Sequence, Set, MutableSet, Callable, Container, Hashable
-    from typing import Any, Type, Union, Optional, TypeAlias, Protocol
-    AbstractSet: TypeAlias = Set
-    FrozenSet: TypeAlias = frozenset
-    Dict: TypeAlias = dict
-    List: TypeAlias = list
-    Tuple: TypeAlias = tuple
-    ByteString: TypeAlias = Union[bytes, bytearray]
+    from typing import Any, Type, Union, Optional, TypeAlias, Protocol, FrozenSet, \
+        Dict, List, Tuple, ByteString
     static = staticmethod
 else:
-    from typing import Any, Iterable, Sequence, Set, AbstractSet, Union, Dict, List, Tuple, \
+    from typing import Any, Iterable, Sequence, Set, Union, Dict, List, Tuple, \
         FrozenSet, MutableSet, Optional, Type, Callable, Container, Hashable, ByteString
     try:
         from typing import Protocol
@@ -95,6 +90,7 @@ __all__ = ('re',
            'xml_entity',
            'char_code',
            'RxPatternType',
+           'RxType',
            'escape_re',
            'escape_ctrl_chars',
            'is_filename',
@@ -160,7 +156,6 @@ __all__ = ('re',
            'Iterable',
            'Sequence',
            'Set',
-           'AbstractSet',
            'MutableSet',
            'FrozenSet',
            'Callable',
@@ -316,7 +311,7 @@ def deprecation_warning(message: str):
         except DeprecationWarning as e:
             try:
                 deprecation_policy = get_config_value('deprecation_policy')
-            except AssertionError as e:
+            except AssertionError:
                 deprecation_policy = 'warn'
             if deprecation_policy == 'warn':
                 import traceback
@@ -363,7 +358,11 @@ def get_annotations(item):
         import inspect
         return inspect.get_annotations(item)
     else:
-        return item.__annotations__
+        try:
+            return item.__annotations__
+        except AttributeError: # Python Version 3.8 compatibility
+            assert isinstance(item, functools.partial)
+            return item.func.__annotations__
 
 
 #######################################################################
@@ -405,18 +404,18 @@ def normalize_circular_path(path: Tuple[str, ...]) -> Tuple[str, ...]:
         >>> normalize_circular_path(('term', 'factor', 'expression'))
         ('expression', 'term', 'factor')
     """
-    assert isinstance(path, Tuple)
+    assert isinstance(path, Tuple), type(path)
     first_sym = min(path)
     i = path.index(first_sym)
     return path[i:] + path[:i]
 
 
-def normalize_circular_paths(path: Union[Tuple[str, ...], AbstractSet[Tuple[str, ...]]]) \
+def normalize_circular_paths(path: Union[Tuple[str, ...], Set[Tuple[str, ...]]]) \
         -> Union[Tuple[str, ...], MutableSet[Tuple[str, ...]], MutableSet]:
     """Like :py:func:`normalize_circular_path`, but normalizes a whole set of
     paths at once.
     """
-    if isinstance(path, AbstractSet):
+    if isinstance(path, (Set, frozenset)):
         return {normalize_circular_path(p) for p in path}
     else:
         return normalize_circular_path(path)
@@ -444,7 +443,7 @@ def is_filename(strg: str) -> bool:
     byteorder-mark to the beginning of the string, because this
     will be stripped by the DHParser's parser, anyway!
     """
-    return strg and strg[0:1] not in ('\ufeff', '\ufffe') \
+    return bool(strg) and strg[0:1] not in ('\ufeff', '\ufffe') \
         and strg[0:3] not in ('\xef\xbb\xbf', '\x00\x00\ufeff', '\x00\x00\ufffe') \
         and strg.find('\n') < 0 \
         and strg[:1] != " " and strg[-1:] != " " \
@@ -486,7 +485,7 @@ def split_path(path: str) -> Tuple[str, ...]:
         >>> os.path.split('a/b/c')  # for comparison.
         ('a/b', 'c')
     """
-    split = os.path.split(path)
+    split: Tuple[str, ...] = os.path.split(path)
     while split[0]:
         split = os.path.split(split[0]) + split[1:]
     return split[1:]
@@ -514,7 +513,7 @@ class LazyRE:
     def __init__(self, regexp: str, flags = 0):
         self.regexp = regexp
         self.re_flags = flags
-        self.rx = None
+        self.rx: Optional[RxPatternType] = None
 
     def compile_me(self):
         if self.rx is None:
@@ -597,8 +596,10 @@ try:
 except AttributeError:
     RxPatternType: TypeAlias = Any
 
+RxType: TypeAlias = Union[RxPatternType, LazyRE]
 
-def subf(rx: Union[RxPatternType, LazyRE], repl: Callable[[str], str], text) -> str:
+
+def subf(rx: RxType, repl: Callable[[str], str], text) -> str:
     r"""Substitutes a pattern in text with a replacement that is derived
     from the found matches by a function. Example::
 
@@ -1291,7 +1292,10 @@ def has_fenced_code(text_or_file: str, info_strings=('ebnf', 'test')) -> bool:
     rx_fence = re.compile(fence_tmpl % (label_re, label_re), flags=re.IGNORECASE)
 
     for match in rx_fence.finditer(markdown):
-        matched_string = re.match(r'\n`+|\n~+', match.group(0)).group(0)
+        m = re.match(r'\n`+|\n~+', match.group(0))
+        if m is None:
+            continue
+        matched_string = m.group(0)
         if markdown.find(matched_string, match.end()) >= 0:
             return True
         else:
@@ -1451,7 +1455,7 @@ def smart_list(arg: Union[str, Iterable, Any]) -> Union[Sequence, Set]:
             if len(lst) > 1:
                 return [s.strip() for s in lst]
         return [s.strip() for s in arg.strip().split(' ')]
-    elif isinstance(arg, Sequence) or isinstance(arg, Set):
+    elif isinstance(arg, Sequence) or isinstance(arg, (Set, frozenset)):
         return arg
     elif isinstance(arg, Iterable):
         return list(arg)

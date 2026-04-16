@@ -32,8 +32,8 @@ from typing import Any, cast, List, Tuple, Union, Iterator, Iterable, Optional, 
 import DHParser.ebnf
 from DHParser.compile import Compiler, compile_source, CompilerFactory
 from DHParser.pipeline import full_pipeline, Junction
-from DHParser.configuration import get_config_value, set_config_value
-from DHParser.ebnf import EBNFCompiler, DHPARSER_IMPORTS, \
+from DHParser.configuration import get_config_value, set_config_value, get_config_values
+from DHParser.ebnf import EBNFCompiler, DHPARSER_IMPORTS, grammar_chksum, \
     get_ebnf_preprocessor, get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler
 from DHParser.error import Error, is_error, has_errors, only_errors, canonical_error_strings, \
     ErrorCode, ERROR
@@ -44,7 +44,7 @@ from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, \
     PreprocessorFactory
 from DHParser.transform import TransformerFunc, TransformerFactory
 from DHParser.toolkit import DHPARSER_DIR, load_if_file, is_python_code, is_filename, \
-    compile_python_object, re, as_identifier, cpu_count, LazyRE, CancelQuery, md5, \
+    compile_python_object, re, as_identifier, cpu_count, LazyRE, CancelQuery, \
     deprecated, deprecation_warning, instantiate_executor, PickMultiCoreExecutor
 from DHParser.versionnumber import __version__, __version_info__
 
@@ -83,6 +83,22 @@ SECTION_MARKER = """\n
 # {marker}
 #
 #######################################################################
+\n"""
+
+CONSISTENCY_CHECK = """\n
+try:
+    assert RE_INCLUDE == NEVER_MATCH_PATTERN or \\
+        RE_COMMENT in ({NAME}Grammar.COMMENT__, NEVER_MATCH_PATTERN), \\
+        "Please adjust the pre-processor-variable RE_COMMENT in file {NAME}Parser.py so that " \\
+        "it either is the NEVER_MATCH_PATTERN or has the same value as the COMMENT__-attribute " \\
+        "of the grammar class {NAME}Grammar! " \\
+        'Currently, RE_COMMENT reads "%s" while COMMENT__ is "%s". ' \\
+        % (RE_COMMENT, {NAME}Grammar.COMMENT__) + \\
+        "\\n\\nIf RE_COMMENT == NEVER_MATCH_PATTERN then includes will deliberately be " \\
+        "processed, otherwise RE_COMMENT=={NAME}Grammar.COMMENT__ allows the " \\
+        "preprocessor to ignore comments."
+except (AttributeError, NameError):
+    pass
 \n"""
 
 RX_SECTION_MARKER = LazyRE(SECTION_MARKER.format(marker=r'.*?SECTION.*?'))
@@ -206,7 +222,7 @@ def grammar_changed(grammar_class, grammar_source: str) -> bool:
         source from which the grammar class was generated
     """
     grammar = load_if_file(grammar_source)
-    chksum = md5(grammar, __version__)
+    chksum = grammar_chksum(grammar)
     if isinstance(grammar_class, str):
         # grammar_class = load_compiler_suite(grammar_class)[1]
         with open(grammar_class, 'r', encoding='utf8') as f:
@@ -311,6 +327,7 @@ def compileEBNF(ebnf_src: str, branding="DSL") -> str:
            SECTION_MARKER.format(marker=PREPROCESSOR_SECTION), compiler.gen_preprocessor_skeleton(),
            SECTION_MARKER.format(marker=CUSTOM_PARSER_SECTION), compiler.gen_custom_parser_example(),
            SECTION_MARKER.format(marker=PARSER_SECTION), compiler.result,
+           CONSISTENCY_CHECK.format(NAME=branding),
            SECTION_MARKER.format(marker=AST_SECTION), compiler.gen_transformer_skeleton(),
            SECTION_MARKER.format(marker=COMPILER_SECTION), compiler.gen_compiler_skeleton(),
            SECTION_MARKER.format(marker=END_SECTIONS_MARKER),
@@ -349,7 +366,10 @@ def grammar_provider(ebnf_src: str,
     parsing_stage = compile_python_object('\n'.join([imports, additional_code, grammar_src]),
                                           r'parsing')  # r'get_(?:\w+_)?grammar$'
     if callable(parsing_stage.factory):
-        parsing_stage.factory.python_src__ = grammar_src
+        if hasattr(parsing_stage.factory, 'keywords'):
+            parsing_stage.factory.keywords['python_src'] = grammar_src
+        else:
+            parsing_stage.factory.python_src__ = grammar_src
         return parsing_stage.factory
     raise ValueError('Could not compile grammar provider!')
 
@@ -361,7 +381,8 @@ def create_parser(ebnf_src: str, branding="DSL", additional_code: str = '') -> G
     """
     grammar_factory = grammar_provider(ebnf_src, branding, additional_code)
     grammar = grammar_factory()
-    src = getattr(grammar_factory, 'python_src__','')
+    src = getattr(grammar_factory, 'python_src__',
+                  grammar_factory.keywords['python_src'])
     # extract Grammar class from source code for more clarity
     i = src.find(f'class {branding}Grammar(Grammar):')
     assert i >= 0, src
@@ -585,6 +606,7 @@ def compile_on_disk(source_file: str,
             f.write(preprocessor)
             f.write(SECTION_MARKER.format(marker=PARSER_SECTION))
             f.write(cast(str, result))
+            f.write(CONSISTENCY_CHECK.format(NAME=compiler_name),)
             f.write(SECTION_MARKER.format(marker=AST_SECTION))
             f.write(ast)
             f.write(SECTION_MARKER.format(marker=COMPILER_SECTION))
@@ -875,7 +897,7 @@ Future = object  # to save the import of concurrent.futures when not needed!
 def batch_process(file_names: List[str], out_dir: str,
                   process_file: Union[Callable[[Tuple[str, str, CancelQuery]], str],
                                       Callable[[Tuple[str, str]], str]],
-                  *, submit_func: Optional[Callable[[Callable, str, str, Callable], Future]] = None,
+                  *, submit_func: Optional[Callable[[Callable, str, str], Future]] = None,
                   log_func: Optional[Callable[[str], None]] = None,
                   cancel_query: Optional[CancelQuery] = None,
                   cancel_func: Optional[CancelQuery] = None) -> List[str]:

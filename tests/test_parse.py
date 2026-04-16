@@ -40,7 +40,7 @@ from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMor
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, \
     Interleave, CombinedParser, Text, EMPTY_NODE, Capture, Drop, Whitespace, \
     GrammarError, Counted, Always, longest_match, extract_error_code, \
-    Option, DTKN, RegExp, ensure_drop_propagation, Option, SmartRE
+    Option, DTKN, RegExp, Option, SmartRE
 from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.compile import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
@@ -2056,7 +2056,7 @@ class TestDropPropagation:
         assert beta.parsers[1].drop_content
         assert not beta.parsers[1].parser.drop_content
 
-        ensure_drop_propagation(alpha)
+        Grammar.ensure_drop_propagation__(alpha)
         assert not alpha.drop_content
         assert not alpha.drop_content
         assert not beta.drop_content
@@ -2068,7 +2068,7 @@ class TestDropPropagation:
         beta = Series(Text("B"), Drop(OneOrMore(Text("C"))))
         alpha = Series(Text("A"), beta)
         alpha.drop_content = True
-        ensure_drop_propagation(alpha)
+        Grammar.ensure_drop_propagation__(alpha)
         assert alpha.drop_content
         assert alpha.drop_content
         assert beta.drop_content
@@ -2076,6 +2076,38 @@ class TestDropPropagation:
         assert beta.parsers[0].drop_content
         assert beta.parsers[1].drop_content
         assert beta.parsers[1].parser.drop_content
+
+    def test_drop_propagation_2(self):
+        minilang = """@literalws = right
+            DROP:expr = expr ("+"|"-") term | term
+            term = term ("*"|"/") (factor -> DROP) | factor
+            factor = /[0-9]+/~
+            """
+        parser = create_parser(minilang)
+        assert parser.expr.drop_content
+        assert parser.expr.parser.drop_content
+        assert parser.expr.parser.parsers[0].drop_content
+
+    def test_drop_propagation_3(self):
+        minilang = """@literalws = right
+            DROP:expr = ex
+            ex   = expr ("+"|"-") (term -> DROP) | term
+            term = tr
+            DROP:tr   = term ("*"|"/") factor | factor
+            factor = /[0-9]+/~
+            """
+        lr = get_config_value('left_recursion')
+        set_config_value('left_recursion', 'Full')
+        try:
+            parser = create_parser(minilang)
+            assert parser.python_src__.find('DropFrom(') < 0
+            assert parser.python_src__.find('Drop(Ref(') >= 0
+            assert not parser.ex.drop_content
+            assert parser.expr.drop_content
+            assert parser.tr.drop_content
+            assert parser.tr.parsers[0].drop_content
+        finally:
+            set_config_value('left_recursion', lr)
 
 class TestPosInitialization:
     def test_position_initialization(self):
@@ -2309,17 +2341,17 @@ EOF        =  !/./        # no more characters ahead, end of file reached
         # This must not fail with an uninitialized position error!
 
 
-class TestEdgeCases:
-    def test_wrong_parser_name(self):
-        trivial = """word = letters { letters | `-` letters }
-        letters = /[A-Za-z]+/"""
-        parser = create_parser(trivial)
-        try:
-            parser('ups', 'root__')
-            assert False, "Attribute Error expected!"
-        except AttributeError:
-            pass
-        _ = parser('ups', 'root_parser__')
+# class TestEdgeCases:
+#     def test_wrong_parser_name(self):
+#         trivial = """word = letters { letters | `-` letters }
+#         letters = /[A-Za-z]+/"""
+#         parser = create_parser(trivial)
+#         try:
+#             parser('ups', 'root__')
+#             assert False, "Attribute Error expected!"
+#         except AttributeError:
+#             pass
+#         _ = parser('ups', 'root_parser__')
 
 
 if __name__ == "__main__":

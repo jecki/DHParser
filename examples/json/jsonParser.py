@@ -104,7 +104,7 @@ class jsonGrammar(Grammar):
         syntax_tree = parser(source_code)
     """
     _element = Forward()
-    source_hash__ = "02dcd1e75b07541610f5654626e77e84"
+    source_hash__ = "eeda710b2b66e7148766ebeb388997bc"
     disposable__ = re.compile('_[A-Za-z]+')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -143,6 +143,7 @@ class jsonGrammar(Grammar):
 parsing: PseudoJunction = create_parser_junction(jsonGrammar)
 get_grammar = parsing.factory  # for backwards compatibility, only
 
+
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
         RE_COMMENT in (jsonGrammar.COMMENT__, NEVER_MATCH_PATTERN), \
@@ -156,6 +157,7 @@ try:
         "preprocessor to ignore comments."
 except (AttributeError, NameError):
     pass
+
 
 
 #######################################################################

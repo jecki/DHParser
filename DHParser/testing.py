@@ -565,10 +565,11 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         case, all source snippets must already have been preprocessed.
     """
     assert isinstance(report, str)
-    assert isinstance(junctions, Set) and all(isinstance(e[0], str) and isinstance(e[2], str)
-                                              and callable(e[1]) for e in junctions), \
+    assert isinstance(junctions, (Set, frozenset)) \
+            and all(isinstance(e[0], str) and isinstance(e[2], str)
+                    and callable(e[1]) for e in junctions), \
         f"Value {repr(junctions)} passed to parameter 'junctions' is not a set of compilation-junctions!"
-    assert isinstance(show, Set) and all(isinstance(element, str) for element in show), \
+    assert isinstance(show, (Set, frozenset)) and all(isinstance(element, str) for element in show), \
         f"Value {repr(show)} passed to parameter 'show' is not a set of strings!"
 
     output = []
@@ -706,6 +707,11 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         if parser_name[-2:] == '__':
             assert parser_name == 'config__', f'Unknown metadata-type: "{parser_name}"'
             for key, value in tests.items():
+                if key[0:9] == 'DHParser.':  key = key[9:]
+                if key == "left_recursion":
+                    print('Warning: Config-Variable "left_recursion" has no effect in test-cases. '
+                          'Please set it in a the ...Config.ini file. Other than the test-cases, '
+                          'the ...Config.ini file is processed before the grammar is recompiled.')
                 saved_config_values[key] = get_config_value(key)
                 set_config_value(key, eval(value))
             continue
@@ -1168,7 +1174,7 @@ def extract_symbols(ebnf_text_or_file: str) -> SymbolsDictType:
                for dfn in deflist]
     if not deflist:
         if ebnf_text_or_file.find('\n') < 0 and ebnf_text_or_file.endswith('.ebnf'):
-            deflist = ['#: ' + os.path.splitext(ebnf_text_or_file)[0]]
+            deflist = ['#: ' + os.path.splitext(os.path.basename(ebnf_text_or_file))[0]]
         else:
             deflist = ['#: ALL']
     symbols = OrderedDict()  # type: SymbolsDictType

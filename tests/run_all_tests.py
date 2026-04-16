@@ -73,8 +73,6 @@ def gather_interpreters():
     found = []
     if run_cmd(['pypy3', '-V']):
         found.append('pypy3 ')
-    elif run_cmd(['pypy36', '-V']):
-        found.append('pypy36 ')
     elif run_cmd(['pypy', '-V']):
         found.append('pypy ')
     if run_cmd(['python', '-V']):
@@ -93,10 +91,10 @@ def gather_interpreters():
     #     found.append('python3.6 ')
     # elif run_cmd(['~/.local/bin/python3.6', '-V']):
     #     found.append('~/.local/bin/python3.6 ')
-    if run_cmd(['python3.7', '-V']):
-        found.append('python3.7 ')
-    elif run_cmd(['~/.local/bin/python3.7', '-V']):
-        found.append('~/.local/bin/python3.7 ')
+    # if run_cmd(['python3.7', '-V']):
+    #     found.append('python3.7 ')
+    # elif run_cmd(['~/.local/bin/python3.7', '-V']):
+    #     found.append('~/.local/bin/python3.7 ')
     if run_cmd(['python3.8', '-V']):
         found.append('python3.8 ')
     elif run_cmd(['~/.local/bin/python3.8', '-V']):

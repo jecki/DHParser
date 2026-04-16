@@ -103,7 +103,7 @@ class LaTeXGrammar(Grammar):
     paragraph = Forward()
     param_block = Forward()
     tabular_config = Forward()
-    source_hash__ = "6d979c36af89829f138a683e31d680bf"
+    source_hash__ = "dcb4cf059cea487db6dd6b1e74418104"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
     disposable__ = re.compile('_\\w+')
     static_analysis_pending__ = []  # type: List[bool]
@@ -279,6 +279,7 @@ class LaTeXGrammar(Grammar):
 parsing: PseudoJunction = create_parser_junction(LaTeXGrammar)
 get_grammar = parsing.factory  # for backwards compatibility, only
 
+
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
         RE_COMMENT in (LaTeXGrammar.COMMENT__, NEVER_MATCH_PATTERN), \
@@ -292,6 +293,7 @@ try:
         "preprocessor to ignore comments."
 except (AttributeError, NameError):
     pass
+
 
 
 #######################################################################

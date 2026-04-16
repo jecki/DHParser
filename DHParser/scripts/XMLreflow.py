@@ -30,10 +30,10 @@ if dhparserdir not in sys.path:
 
 from DHParser.nodetree import parse_sxpr, RootNode
 from DHParser.parsers import parse_XML, parse_HTML
-from DHParser.toolkit import AbstractSet
+from DHParser.toolkit import Set
 
 
-def process_file(filename: str, tags: AbstractSet, column: int,
+def process_file(filename: str, tags: Set, column: int,
                  output: str, verbose: bool):
     with open(filename, 'r', encoding='utf-8') as f:
         xml = f.read()

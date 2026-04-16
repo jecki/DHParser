@@ -36,7 +36,7 @@ from DHParser.transform import traverse, reduce_single_child, remove_whitespace,
     positions_of, insert, node_maker, apply_if, change_name, add_attributes, add_error, \
     merge_leaves, BLOCK_ANONYMOUS_LEAVES, pick_longest_content, fix_content, merge_connected, \
     is_a, update_attr, swap_nested_nodes, has_child
-from typing import AbstractSet, List, Sequence, Tuple
+from typing import Set, List, Sequence, Tuple
 
 
 class TestRemoval:
@@ -120,7 +120,7 @@ class TestTransformationFactory:
             pass
         try:
             @transformation_factory(tuple)
-            def bad_transformation(context: List[Node], parameters: AbstractSet[str]):
+            def bad_transformation(context: List[Node], parameters: Set[str]):
                 pass
             assert False, "mismatching types not recognized by transform.transformation_factory()"
         except TypeError:
@@ -128,8 +128,8 @@ class TestTransformationFactory:
 
     def test_forbidden_generic_types_in_decorator(self):
         try:
-            @transformation_factory(AbstractSet[str])
-            def forbidden_transformation(context: List[Node], parameters: AbstractSet[str]):
+            @transformation_factory(Set[str])
+            def forbidden_transformation(context: List[Node], parameters: Set[str]):
                 pass
             assert False, "use of generics not recognized in transform.transformation_factory()"
         except TypeError:
@@ -149,7 +149,7 @@ class TestTransformationFactory:
     def test_parameter_set_expansion1(self):
         save = None
         @transformation_factory(collections.abc.Set)
-        def parameterized_transformation(context: List[Node], parameters: AbstractSet[str]):
+        def parameterized_transformation(context: List[Node], parameters: Set[str]):
             nonlocal save
             save = parameters
         transformation = parameterized_transformation('a', 'b', 'c')

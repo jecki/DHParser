@@ -99,9 +99,9 @@ class XML_DTDGrammar(Grammar):
     element = Forward()
     extSubsetDecl = Forward()
     ignoreSectContents = Forward()
-    source_hash__ = "89eb30bf08fd1ca41187d0e714fe9d54"
+    source_hash__ = "345b7818341fee6360681f3a60600f13"
     disposable__ = re.compile('$.')
-    static_analysis_pending__ = [True]
+    static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
     comment_rx__ = RX_NEVER_MATCH
@@ -225,6 +225,7 @@ class XML_DTDGrammar(Grammar):
 parsing: PseudoJunction = create_parser_junction(XML_DTDGrammar)
 get_grammar = parsing.factory  # for backwards compatibility, only
 
+
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
         RE_COMMENT in (XML_DTDGrammar.COMMENT__, NEVER_MATCH_PATTERN), \
@@ -238,6 +239,7 @@ try:
         "preprocessor to ignore comments."
 except (AttributeError, NameError):
     pass
+
 
 
 #######################################################################
