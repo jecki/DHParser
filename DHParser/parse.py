@@ -5367,6 +5367,7 @@ class Forward(UnaryParser):
             grammar.suspend_memoization__ = False
             rb_stack_size = len(grammar.rollback__)
             if history_tracking:
+                rec = grammar.history__[-1]
                 last_history_state.extend(grammar.history__[history_pointer:])
                 grammar.history__ = grammar.history__[:history_pointer]
             visited[location] = result
