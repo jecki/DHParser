@@ -1,3 +1,13 @@
+DHParser Version 1.9.5 (16.4.2026)
+..................................
+
+- bugfix: removed pytest and sphinx as dependencies from pyproject.toml
+- refactored DHParser.parse.Forward in order to prepare it for implementing
+  Hutchinson's Squirrel-parser algorithm
+- refactored DHParser.parse.Grammr bootstrapping in __init__-method
+- bugfixes in DHParser.parse, most notably LateBindingUnary
+
+
 DHParser Version 1.9.4 (29.1.2026)
 ..................................
 

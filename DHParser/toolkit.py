@@ -358,7 +358,11 @@ def get_annotations(item):
         import inspect
         return inspect.get_annotations(item)
     else:
-        return item.__annotations__
+        try:
+            return item.__annotations__
+        except AttributeError: # Python Version 3.8 compatibility
+            assert isinstance(item, functools.partial)
+            return item.func.__annotations__
 
 
 #######################################################################
