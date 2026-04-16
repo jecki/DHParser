@@ -115,7 +115,7 @@ class Arithmetic3bGrammar(Grammar):
         syntax_tree = parser(source_code)
     """
     expression = Forward()
-    source_hash__ = "cb85ebfcca127ea704e5f26c1ecde615"
+    source_hash__ = "b9799c44ba40a9412154a82c8f751ebe"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -135,6 +135,7 @@ class Arithmetic3bGrammar(Grammar):
 parsing: PseudoJunction = create_parser_junction(Arithmetic3bGrammar)
 get_grammar = parsing.factory  # for backwards compatibility, only
 
+
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
         RE_COMMENT in (Arithmetic3bGrammar.COMMENT__, NEVER_MATCH_PATTERN), \
@@ -148,6 +149,7 @@ try:
         "preprocessor to ignore comments."
 except (AttributeError, NameError):
     pass
+
 
 
 #######################################################################

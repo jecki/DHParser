@@ -115,7 +115,7 @@ class Arithmetic2Grammar(Grammar):
         syntax_tree = parser(source_code)
     """
     expression = Forward()
-    source_hash__ = "461f03c65742d47bfbc92c604c21b9a6"
+    source_hash__ = "5696e36487dec65667c88be12e40aefe"
     disposable__ = re.compile('(?:(?:(?:(?:expression$))|(?:term$))|(?:factor$))|(?:group$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -141,6 +141,7 @@ class Arithmetic2Grammar(Grammar):
 parsing: PseudoJunction = create_parser_junction(Arithmetic2Grammar)
 get_grammar = parsing.factory  # for backwards compatibility, only
 
+
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
         RE_COMMENT in (Arithmetic2Grammar.COMMENT__, NEVER_MATCH_PATTERN), \
@@ -154,6 +155,7 @@ try:
         "preprocessor to ignore comments."
 except (AttributeError, NameError):
     pass
+
 
 
 #######################################################################

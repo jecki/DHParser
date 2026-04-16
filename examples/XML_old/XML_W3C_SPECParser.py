@@ -110,9 +110,9 @@ class XML_W3C_SPECGrammar(Grammar):
     element = Forward()
     extSubsetDecl = Forward()
     ignoreSectContents = Forward()
-    source_hash__ = "69847410c865fec27bf37e78577b615f"
+    source_hash__ = "2a68f03b69f392d5a1ad248ac5ecb551"
     disposable__ = re.compile('$.')
-    static_analysis_pending__ = [True]
+    static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
     comment_rx__ = RX_NEVER_MATCH
@@ -203,6 +203,7 @@ class XML_W3C_SPECGrammar(Grammar):
 parsing: PseudoJunction = create_parser_junction(XML_W3C_SPECGrammar)
 get_grammar = parsing.factory  # for backwards compatibility, only
 
+
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
         RE_COMMENT in (XML_W3C_SPECGrammar.COMMENT__, NEVER_MATCH_PATTERN), \
@@ -216,6 +217,7 @@ try:
         "preprocessor to ignore comments."
 except (AttributeError, NameError):
     pass
+
 
 
 #######################################################################

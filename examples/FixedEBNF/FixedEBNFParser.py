@@ -86,8 +86,8 @@ class FixedEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "67b5b3d311a9afa33ce94010274c9fec"
-    disposable__ = re.compile('(?:FOLLOW_UP$|MOD_SEP$|EOF$|is_mdef$|countable$|no_range$|component$|pure_elem$|MOD_SYM$|ANY_SUFFIX$)')
+    source_hash__ = "00b6d54cf2d2e8480053cd9a31f82266"
+    disposable__ = re.compile('(?:MOD_SEP$|no_range$|countable$|is_mdef$|MOD_SYM$|FOLLOW_UP$|ANY_SUFFIX$|EOF$|pure_elem$|component$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
@@ -175,6 +175,7 @@ class FixedEBNFGrammar(Grammar):
 parsing: PseudoJunction = create_parser_junction(FixedEBNFGrammar)
 get_grammar = parsing.factory  # for backwards compatibility, only
 
+
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
         RE_COMMENT in (FixedEBNFGrammar.COMMENT__, NEVER_MATCH_PATTERN), \
@@ -188,6 +189,7 @@ try:
         "preprocessor to ignore comments."
 except (AttributeError, NameError):
     pass
+
 
 
 #######################################################################

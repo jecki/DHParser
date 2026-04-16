@@ -106,9 +106,9 @@ class XMLGrammar(Grammar):
         syntax_tree = parser(source_code)
     """
     element = Forward()
-    source_hash__ = "e5a0167ba5c28399d9e21cf87371a829"
+    source_hash__ = "b80907fe351df7b71d014e4ae2dc517e"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:NameStartChar$|EOF$|NameChars$|CommentChars$|tagContent$|Misc$|CData$|PubidCharsSingleQuoted$|EncName$|prolog$|BOM$|VersionNum$|Reference$|XmlPIAtts$|PubidChars$)')
+    disposable__ = re.compile('(?:BOM$|Misc$|prolog$|VersionNum$|EncName$|PubidCharsSingleQuoted$|NameChars$|PubidChars$|XmlPIAtts$|CData$|tagContent$|NameStartChar$|CommentChars$|EOF$|Reference$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'tagContent': [('', "syntax error in tag-name of opening or empty tag:  {1}")],
@@ -191,6 +191,7 @@ class XMLGrammar(Grammar):
 parsing: PseudoJunction = create_parser_junction(XMLGrammar)
 get_grammar = parsing.factory  # for backwards compatibility, only
 
+
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
         RE_COMMENT in (XMLGrammar.COMMENT__, NEVER_MATCH_PATTERN), \
@@ -204,6 +205,7 @@ try:
         "preprocessor to ignore comments."
 except (AttributeError, NameError):
     pass
+
 
 
 #######################################################################

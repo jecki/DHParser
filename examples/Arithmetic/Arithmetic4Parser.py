@@ -116,7 +116,7 @@ class Arithmetic4Grammar(Grammar):
     """
     expression = Forward()
     term = Forward()
-    source_hash__ = "3ffae679a0e9075e3075b40c570e4aa1"
+    source_hash__ = "ec92841be5fb0cc057afe37f13b81ab8"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -138,6 +138,7 @@ class Arithmetic4Grammar(Grammar):
 parsing: PseudoJunction = create_parser_junction(Arithmetic4Grammar)
 get_grammar = parsing.factory  # for backwards compatibility, only
 
+
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
         RE_COMMENT in (Arithmetic4Grammar.COMMENT__, NEVER_MATCH_PATTERN), \
@@ -151,6 +152,7 @@ try:
         "preprocessor to ignore comments."
 except (AttributeError, NameError):
     pass
+
 
 
 #######################################################################
