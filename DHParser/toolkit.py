@@ -358,7 +358,11 @@ def get_annotations(item):
         import inspect
         return inspect.get_annotations(item)
     else:
-        return item.__annotations__
+        try:
+            return item.__annotations__
+        except AttributeError: # Python Version 3.8 compatibility
+            assert isinstance(item, functools.partial)
+            return item.func.__annotations__
 
 
 #######################################################################
@@ -400,7 +404,7 @@ def normalize_circular_path(path: Tuple[str, ...]) -> Tuple[str, ...]:
         >>> normalize_circular_path(('term', 'factor', 'expression'))
         ('expression', 'term', 'factor')
     """
-    assert isinstance(path, Tuple)
+    assert isinstance(path, Tuple), type(path)
     first_sym = min(path)
     i = path.index(first_sym)
     return path[i:] + path[:i]
@@ -411,7 +415,7 @@ def normalize_circular_paths(path: Union[Tuple[str, ...], Set[Tuple[str, ...]]])
     """Like :py:func:`normalize_circular_path`, but normalizes a whole set of
     paths at once.
     """
-    if isinstance(path, Set):
+    if isinstance(path, (Set, frozenset)):
         return {normalize_circular_path(p) for p in path}
     else:
         return normalize_circular_path(path)
@@ -1451,7 +1455,7 @@ def smart_list(arg: Union[str, Iterable, Any]) -> Union[Sequence, Set]:
             if len(lst) > 1:
                 return [s.strip() for s in lst]
         return [s.strip() for s in arg.strip().split(' ')]
-    elif isinstance(arg, Sequence) or isinstance(arg, Set):
+    elif isinstance(arg, Sequence) or isinstance(arg, (Set, frozenset)):
         return arg
     elif isinstance(arg, Iterable):
         return list(arg)
