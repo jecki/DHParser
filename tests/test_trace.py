@@ -23,10 +23,9 @@ import os
 import re
 import sys
 
-from DHParser import ERROR
-
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
+scriptpath = os.path.abspath(scriptpath)
 
 REVEAL = False
 
@@ -35,7 +34,7 @@ from DHParser.configuration import set_config_value, get_config_value
 from DHParser.dsl import grammar_provider, create_parser
 from DHParser.log import log_parsing_history, start_logging, log_dir
 from DHParser.trace import set_tracer, trace_history, resume_notices_on
-from DHParser.error import Error, MANDATORY_CONTINUATION, PARSER_STOPPED_BEFORE_END, \
+from DHParser.error import ERROR, MANDATORY_CONTINUATION, PARSER_STOPPED_BEFORE_END, \
     MANDATORY_CONTINUATION_AT_EOF, WARNING, RESUME_NOTICE, ERROR_WHILE_RECOVERING_FROM_ERROR
 from DHParser.testing import unique_name
 

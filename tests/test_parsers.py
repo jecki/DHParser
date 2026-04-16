@@ -20,6 +20,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import os
+import sys
+
+scriptpath = os.path.dirname(__file__) or '.'
+sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
+scriptpath = os.path.abspath(scriptpath)
+
 from DHParser.parsers import parse_HTML, parse_XML
 from DHParser import nodetree, LEAF_PTYPES
 

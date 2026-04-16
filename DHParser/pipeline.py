@@ -143,7 +143,7 @@ PIPE_CHARS = ' ┊┆|│├─└┃┣┗━'  # {' ', '│', '├', '└', '�
 
 def pp_paths(paths: Union[Dict[str, List[str]], Set[Junction]],
              vertical = '│ ', bifurcation = '├─') -> str:
-    if isinstance(paths, Set):
+    if isinstance(paths, (Set, frozenset)):
         paths = as_paths(paths)
     paths = list(paths.values())
     paths.sort(reverse=True)

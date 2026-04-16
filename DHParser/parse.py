@@ -1353,7 +1353,7 @@ def reset_parser(parser):
 def is_disposable(name: str, disposables: Union[Set[str], RxType]) -> bool:
     if name[0:1] == ':':
         return True
-    elif isinstance(disposables, Set):
+    elif isinstance(disposables, (Set, frozenset)):
         return name in disposables
     elif isinstance(disposables, (RxPatternType, LazyRE)):
         return bool(disposables.match(name))

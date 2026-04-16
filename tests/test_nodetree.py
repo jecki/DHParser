@@ -25,18 +25,17 @@ import json
 import os
 import sys
 
-from DHParser import deep_split
-
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
+scriptpath = os.path.abspath(scriptpath)
 
 from DHParser.configuration import get_config_value, set_config_value
-from DHParser.nodetree import (Node, RootNode, parse_sxpr, parse_xml, flatten_sxpr, \
+from DHParser.nodetree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxpr, \
     flatten_xml, parse_json, ZOMBIE_TAG, EMPTY_NODE, ANY_NODE, next_path, \
     prev_path, pick_from_path, ContentMapping, leaf_paths, NO_PATH, \
     select_path_if, pick_path, LEAF_PATH, TOKEN_PTYPE, content_of, strlen_of, \
     gen_chain_ID, parse_sxml, DIVISIBLES, reflow_as_oneliner, has_token, eq_tokens, \
-    add_class, has_class, remove_class, HTML_EMPTY_TAGS, get_next_leaf)
+    add_class, has_class, remove_class, HTML_EMPTY_TAGS, get_next_leaf, deep_split
 from DHParser.pipeline import create_parser_junction, Junction, PseudoJunction
 from DHParser.transform import traverse, reduce_single_child, remove_brackets, \
     replace_by_single_child, flatten, remove_empty, remove_whitespace, TransformerFunc, \

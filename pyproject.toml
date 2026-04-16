@@ -19,6 +19,9 @@ keywords = [
     'formal grammar',
     'EBNF', 'SXML', 'XML'
 ]
+dependencies = [
+    "pytest>=7.4.4",
+]
 
 [project.urls]
 repository = "https://gitlab.lrz.de/badw-it/DHParser"
