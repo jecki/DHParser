@@ -1356,7 +1356,7 @@ def reset_parser(parser):
 def is_disposable(name: str, disposables: Union[Set[str], RxType]) -> bool:
     if name[0:1] == ':':
         return True
-    elif isinstance(disposables, (Set, frozenset)):
+    elif isinstance(disposables, Set):
         return name in disposables
     elif isinstance(disposables, (RxPatternType, LazyRE)):
         return bool(disposables.match(name))
@@ -2002,7 +2002,7 @@ class Grammar:
         self.variables__: DefaultDict[str, List[str]] = defaultdict(lambda: [])
         self.rollback__: List[Tuple[int, Callable]] = []
         self.last_rb__loc__: int = -2
-        self.suspend_memoization__: Union[bool, int] = False
+        self.suspend_memoization__: bool = False
         # support for call stack tracing
         self.call_stack__: List[CallItem] = []  # name, location
         # snapshots of call stacks
@@ -4322,6 +4322,52 @@ def longest_match(strings: List[str], text: Union[StringView, str], n: int = 1) 
     if head == strings[i]:  return head
     return ''
 
+# class TextAlternative(Alternative):
+#     r"""A faster Alternative-Parser for special cases where all alternatives
+#     are Text-parsers or sequences beginning with a Text-Parser.
+#
+#     EXPERIMENTAL!!!
+#     """
+#
+#     def __init__(self, *parsers: Parser) -> None:
+#         super().__init__(*parsers)
+#         heads: List[str] = []
+#         for p in parsers:
+#             while isinstance(p, Synonym):
+#                 p = p.parser
+#             if isinstance(p, Text):
+#                 heads.append(p.text)
+#             elif isinstance(p, Series) and isinstance(p.parsers[0], Text):
+#                 heads.append(cast(Text, p.parsers[0]).text)
+#             else:
+#                 raise ValueError(
+#                     f'Parser {p} is not a Text-parser and does not start with a Text-parser')
+#         heads.sort()
+#         self.heads = heads
+#         self.indices = {h: parsers.index(p) for h, p in zip(heads, parsers)}
+#         self.min_head_size = min(len(h) for h in self.heads)
+#
+#     @cython.locals(location_=cython.int)
+#     def _parse(self, location: xint) -> ParsingResult:
+#         text = self.grammar.document__[location:]
+#         m = longest_match(self.heads, text, self.min_head_size)
+#         if m:
+#             parser = self.parsers[self.indices[m]]
+#             node, location_ = parser(location)
+#             if node is not None:
+#                 return self._return_value(node), location_
+#         return None, location
+#
+#     def static_analysis(self) -> List['AnalysisError']:
+#         errors = super().static_analysis()
+#         if len(self.heads) != len(set(self.heads)):
+#             errors.append(self.static_error(
+#                 'Duplicate text-heads in ' + self.location_info()
+#                 + ' Use of Alternative() instead of TextAlternative() '
+#                 + ' could possibly solve this problem.',
+#                 DUPLICATE_PARSERS_IN_ALTERNATIVE))
+#         return errors
+
 
 NO_MANDATORY = 2**30
 
@@ -5287,7 +5333,7 @@ class Forward(UnaryParser):
             is needed to implement left recursion. The number of
             calls becomes irrelevant once a result has been memoized.
 
-    The Forward parser class contains an algorithm to handle left-recursive
+    The Forward parser class contains an algorithm to handle left-recursivef
     grammars. See it's __call__()-method. The algorithm handles direct and indirect
     left-recursion, but not interwoven left-recursion!
     """
@@ -5335,7 +5381,7 @@ class Forward(UnaryParser):
         grammar = self._grammar
         origin = grammar.ref_origin__
 
-        # roll back variable-changing operation if the parser backtracks
+        # rollback variable changing operation if the parser backtracks
         # to a position before the variable-changing operation occurred
         if location <= grammar.last_rb__loc__:
             grammar.rollback_to__(location)
