@@ -116,7 +116,7 @@ class Arithmetic5Grammar(Grammar):
     """
     expression = Forward()
     term = Forward()
-    source_hash__ = "d02b6c4f4e476422d3d99acc8ef5f9d8"
+    source_hash__ = "79d2ca43a419f4ace60cde2ae58362e1"
     disposable__ = re.compile('(?:expression$|factor$|term$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -141,6 +141,7 @@ class Arithmetic5Grammar(Grammar):
 parsing: PseudoJunction = create_parser_junction(Arithmetic5Grammar)
 get_grammar = parsing.factory  # for backwards compatibility, only
 
+
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
         RE_COMMENT in (Arithmetic5Grammar.COMMENT__, NEVER_MATCH_PATTERN), \
@@ -154,6 +155,7 @@ try:
         "preprocessor to ignore comments."
 except (AttributeError, NameError):
     pass
+
 
 
 #######################################################################

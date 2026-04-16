@@ -110,8 +110,8 @@ class LyrikGrammar(Grammar):
         parser = Lyrik()
         syntax_tree = parser(source_code)
     """
-    source_hash__ = "d081534dd330fa9c7310ea2bda1831fa"
-    disposable__ = re.compile('(?:ENDE$|ziel$|ZEICHENFOLGE$|wortfolge$|LEERRAUM$|JAHRESZAHL$)')
+    source_hash__ = "3aad91cb6a7334d0137ffccace8ef536"
+    disposable__ = re.compile('(?:LEERRAUM$|wortfolge$|ziel$|ZEICHENFOLGE$|ENDE$|JAHRESZAHL$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -155,6 +155,7 @@ class LyrikGrammar(Grammar):
 parsing: PseudoJunction = create_parser_junction(LyrikGrammar)
 get_grammar = parsing.factory  # for backwards compatibility, only
 
+
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
         RE_COMMENT in (LyrikGrammar.COMMENT__, NEVER_MATCH_PATTERN), \
@@ -168,6 +169,7 @@ try:
         "preprocessor to ignore comments."
 except (AttributeError, NameError):
     pass
+
 
 
 #######################################################################

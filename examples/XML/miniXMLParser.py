@@ -113,7 +113,7 @@ class miniXMLGrammar(Grammar):
         syntax_tree = parser(source_code)
     """
     element = Forward()
-    source_hash__ = "46554167bdb0845a76b28aec4e7fb42f"
+    source_hash__ = "33b03d620b36e3f63d26c9a1a1846b09"
     disposable__ = re.compile('(?:EOF$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -143,6 +143,7 @@ class miniXMLGrammar(Grammar):
 parsing: PseudoJunction = create_parser_junction(miniXMLGrammar)
 get_grammar = parsing.factory  # for backwards compatibility, only
 
+
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
         RE_COMMENT in (miniXMLGrammar.COMMENT__, NEVER_MATCH_PATTERN), \
@@ -156,6 +157,7 @@ try:
         "preprocessor to ignore comments."
 except (AttributeError, NameError):
     pass
+
 
 
 #######################################################################

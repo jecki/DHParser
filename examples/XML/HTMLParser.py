@@ -108,9 +108,9 @@ class HTMLGrammar(Grammar):
         syntax_tree = parser(source_code)
     """
     element = Forward()
-    source_hash__ = "dc09dfe53db82fe88eae68261b92cf91"
+    source_hash__ = "1005882e509b123b83b3bd3b1294a533"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:Misc$|NameStartChar$|PubidCharsSingleQuoted$|EOF$|tagContent$|BOM$|NameChars$|CommentChars$|VersionNum$|Reference$|prolog$|PubidChars$|EncName$|CData$)')
+    disposable__ = re.compile('(?:EncName$|BOM$|NameStartChar$|CData$|NameChars$|PubidCharsSingleQuoted$|Misc$|PubidChars$|prolog$|VersionNum$|CommentChars$|tagContent$|Reference$|EOF$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'tagContent': [('', "syntax error in tag-name of opening or empty tag:  {1}")],
@@ -184,6 +184,7 @@ class HTMLGrammar(Grammar):
 parsing: PseudoJunction = create_parser_junction(HTMLGrammar)
 get_grammar = parsing.factory  # for backwards compatibility, only
 
+
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
         RE_COMMENT in (HTMLGrammar.COMMENT__, NEVER_MATCH_PATTERN), \
@@ -197,6 +198,7 @@ try:
         "preprocessor to ignore comments."
 except (AttributeError, NameError):
     pass
+
 
 
 #######################################################################
