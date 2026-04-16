@@ -1,0 +1,948 @@
+#!/usr/bin/env python3
+
+"""LRApp.py - a simple GUI for the compilation of LR-files"""
+
+import sys
+from functools import partial
+import os
+import re
+import threading
+from typing import cast, Tuple, Set
+
+import tkinter as tk
+import webbrowser
+from tkinter import ttk
+from tkinter import filedialog, messagebox, scrolledtext, font
+
+try:
+    scriptdir = os.path.dirname(os.path.realpath(__file__))
+except NameError:
+    scriptdir = ''
+if scriptdir and scriptdir not in sys.path: sys.path.append(scriptdir)
+
+try:
+    from DHParser import versionnumber
+except (ImportError, ModuleNotFoundError):
+    i = scriptdir.rfind("/DHParser/")
+    if i >= 0:
+        dhparserdir = scriptdir[:i + 10]  # 10 == len("/DHParser/")
+        if dhparserdir not in sys.path:  sys.path.append(dhparserdir)
+
+from DHParser.configuration import read_local_config, get_config_values, \
+    get_config_value, dump_config_data
+from DHParser.error import Error, ERROR, PARSER_STOPPED_BEFORE_END_WARNING
+from DHParser.nodetree import Node, EMPTY_NODE
+from DHParser.pipeline import PipelineResult, connection, as_graph, pp_paths, \
+    PIPE_CHARS
+from DHParser.testing import merge_test_units
+from DHParser.toolkit import MultiCoreManager
+
+import LRParser
+
+
+class TextLineNumbers(tk.Canvas):
+    """See https://stackoverflow.com/questions/16369470/tkinter-adding-line-number-to-text-widget
+    and https://stackoverflow.com/questions/24896747/how-to-display-line-numbers-in-tkinter-text-widget
+    """
+    def __init__(self, text_widget, **kwargs):
+        super().__init__(width=40, **kwargs)
+        self.first_line = ""
+        self.last_line = ""
+        self.text_widget = text_widget
+        self.text_widget.bind('<KeyRelease>', self.redraw) # This is insufficient and does not work under all OSs
+        self.text_widget.bind('<MouseWheel>', self.redraw)
+        self.text_widget.bind('<B1-Motion>', self.redraw)
+        self.text_widget.bind('<Button-1>', self.redraw)
+        self.text_widget.bind('<Configure>', self.redraw)
+        self.text_widget['yscrollcommand'] = self.yscrollcommand
+        self.text_widget.vbar['command'] = self.yview
+        self.redraw()
+
+    def yview(self, *args):
+        self.redraw()
+        self.text_widget.yview(*args)
+
+    def yscrollcommand(self, *args):
+        self.redraw()
+        return self.text_widget.vbar.set(*args)
+
+    def redraw_needed(self):
+        """-> index of last line"""
+        first = self.text_widget.index("@0,0")
+        ysize = self.text_widget.winfo_height()
+        last = self.text_widget.index(f"@0,{ysize}")
+        if first != self.first_line or last != self.last_line:
+            return first, last
+        return "", ""
+
+    def redraw(self, event=None):
+        first, last = self.redraw_needed()
+        if first:
+            self.first_line = first
+            self.last_line = last
+            self.delete("all")
+            i = first
+            self.first_line = float(i)
+            while True:
+                dline = self.text_widget.dlineinfo(i)
+                if dline is None:
+                    break
+                y = dline[1]
+                linenum = str(i).split(".")[0]
+                self.create_text(2, y, anchor="nw", text=linenum)
+                i = self.text_widget.index(f"{i}+1line")
+
+
+ALL_TARGETS_SPECIAL = "[all targets]"
+
+
+DEMO_SRC = ""  # a piece of source code that is displayed as a demonstration
+               # example when starting the App
+
+
+class LRApp(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self.withdraw()
+        self.title('LR App')
+        self.minsize(920, 680)
+        self.geometry("1040x880")
+        self.option_add('*tearOff', False)
+
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
+
+        # window content resizes with window:
+        # win = self.winfo_toplevel()
+        # win.rowconfigure(0, weight=1)
+        # win.columnconfigure(0, weight=1)
+        # self.rowconfigure(0, weight=1)
+        # self.columnconfigure(1, weight=1)
+
+        # widget-variables
+        self.num_sources = 0
+        self.num_compiled = 0
+        self.progress = tk.IntVar()
+        self.progress.set(0)
+
+        self.source_modified_sentinel = 0
+        self.source_paste = False
+        grammar = LRParser.parsing.factory()
+        self.parser_names = grammar.parser_names__[:]
+        # self.parser_names.remove(grammar.root__.pname)
+        self.parser_names.sort(key=lambda s: s.lower().lstrip('_'))
+        self.parser_names.insert(0, "root_parser__")
+        self.root_name = tk.StringVar(value=grammar.root__.pname)
+
+        self.all_results: PipelineResult = {}
+
+        # Uncomment one of the following alternatives.
+        # The first two alternatives are helpful if the pipeline is very long
+        # and contains biufurcations.
+
+        # # 1. show the complete pipeline as a stylized tree
+        # self.targets = pp_paths(LRParser.junctions, vertical='┊', bifurcation='├').split('\n')[1:]
+
+        # # 2. show the complete pipeline as an indented tree
+        # self.targets = str(as_graph(LRParser.junctions)).split('\n')[1:]
+
+        # 3. show only final targets
+        self.targets = [j.dst for j in LRParser.junctions]
+        self.targets.sort(key=lambda s: s in LRParser.targets)
+
+        if len(self.targets) > 1:  self.targets.append(ALL_TARGETS_SPECIAL)
+        self.compilation_target = list(LRParser.targets)[0]
+        self.target_name = tk.StringVar(value=self.compilation_target)
+        self.target_format = tk.StringVar(
+            value=get_config_value('default_serialization', 'sxpr'))
+        self.error_list = []
+
+        self.default_font = font.nametofont("TkDefaultFont")
+        font_properties = self.default_font.actual()
+        family, size = font_properties['family'], font_properties['size']
+        self.bold_label = ttk.Style()
+        self.bold_label.configure("Bold.TLabel", font=(family, size, "bold"))
+        self.green_label = ttk.Style()
+        self.green_label.configure("Green.TLabel", foreground="green")
+        self.red_label = ttk.Style()
+        self.red_label.configure("Red.TLabel", foreground="red")
+        self.grey_label = ttk.Style()
+        self.grey_label.configure("Grey.TLabel", foreground="grey")
+        self.black_label = ttk.Style()
+        self.black_label.configure("Black.TLabel", foreground="black")
+        self.bold_button = ttk.Style()
+        self.bold_button.configure("BoldRed.TButton", font=(family, size, "bold"),
+                                   foreground="red")
+        self.normal_button = ttk.Style()
+        self.normal_button.configure("NormalBlack.TButton", font=(family, size, "normal"),
+                                     foreground="black")
+        self.green_button = ttk.Style()
+        self.green_button.configure("Green.TButton", font=(family, size, "normal"),
+                                   foreground="green")
+
+        # multitasking infrastructure
+        self.lock = threading.Lock()
+        self.worker = None
+        self.compilation_units = 0
+        self.mc_manager = MultiCoreManager()
+        # self.mc_manager.start()
+        self.cancel_event = self.mc_manager.Event()
+
+        # application variables
+        self.outdir = ''
+        self.names = []
+        self.source_name = ''
+
+        # links (fill in the following URLs to activate the respective menu items
+        self.docs_URL = ''
+        self.source_URL = ''
+        self.license_URL = ''
+
+        self.deiconify()
+        self.create_widgets()
+        self.source.insert(tk.END, DEMO_SRC)
+        self.connect_events()
+        self.place_widgets()
+
+    def create_widgets(self):
+        # self.header = ttk.Label(text="")
+        self.pick_source_info = ttk.Label(text="... or paste your code below:",
+                                          style="Green.TLabel")
+        self.pick_source = ttk.Button(text="Pick source file(s)...",
+            style="Green.TButton", command=self.on_pick_source)
+        self.save_source = ttk.Button(text="Save source", command=self.on_save_source)
+        self.save_source['state'] = tk.DISABLED
+        self.source_info = ttk.Label(text='Source:', style="Bold.TLabel")
+        self.source_undo = ttk.Button(text="Undo", command=self.on_source_undo)
+        self.source_clear = ttk.Button(text="Clear source", command=self.on_clear_source)
+        self.source_clear['state'] = tk.DISABLED
+        self.source = scrolledtext.ScrolledText(undo=True)
+        self.line_numbers = TextLineNumbers(self.source)
+        self.root_info = ttk.Label(text="Parser:")
+        self.root_parser = ttk.Combobox(self, values=self.parser_names,
+                                        textvariable=self.root_name,
+                                        state='readonly')
+        self.compile = ttk.Button(text="Compile", style="BoldRed.TButton", command=self.on_compile)
+        self.compile['state'] = tk.DISABLED
+        self.target_stage = ttk.Combobox(self, values=self.targets,
+                                         textvariable=self.target_name,
+                                         state='readonly')
+        self.target_choice = ttk.Combobox(
+            self, values=['XML', 'SXML', 'sxpr', 'xast', 'ndst', 'tree'],
+            textvariable=self.target_format,
+            state='readonly')
+        if self.target_name.get().lstrip(PIPE_CHARS) not in ('AST', 'CST'):
+            self.target_choice['state'] = tk.DISABLED
+        self.result_info = ttk.Label(text='Result:', style="Bold.TLabel")
+        self.result = scrolledtext.ScrolledText()
+        # self.result['state'] = tk.DISABLED
+        self.save_result = ttk.Button(text="Save result...", command=self.on_save_result)
+        self.save_result['state'] = tk.DISABLED
+        self.export_test = ttk.Button(text="Export as test case...", command=self.on_export_test)
+        self.export_test['state'] = tk.DISABLED
+        self.errors_info = ttk.Label(text='Errors:', style="Bold.TLabel")
+        self.errors = scrolledtext.ScrolledText()
+        # self.errors['state'] = tk.DISABLED
+        self.progressbar = ttk.Progressbar(orient="horizontal", variable=self.progress)
+        self.cancel = ttk.Button(text="Cancel", command=self.on_cancel)
+        self.cancel['state'] = tk.DISABLED
+        self.message = ttk.Label(text='', style="Black.TLabel")
+        self.exit = ttk.Button(text="Quit", command=self.on_close)
+
+        self.menubar = tk.Menu(self)
+        self.file_menu = tk.Menu(self.menubar, tearoff=0)
+        self.menubar.add_cascade(menu=self.file_menu, label="File")
+        self.file_menu.add_command(label="Load source...", command=self.on_pick_source)
+        self.file_menu.add_command(label="Save source", command=self.on_save_source)
+        self.file_menu.entryconfig("Save source", state=tk.DISABLED)
+        self.file_menu.add_separator()
+        self.file_menu.add_command(label="Save result...", command=self.on_save_result)
+        self.file_menu.entryconfig("Save result...", state=tk.DISABLED)
+        self.file_menu.add_separator()
+        self.file_menu.add_command(label="Exit", command=self.on_close)
+        self.help_menu = tk.Menu(self.menubar, tearoff=0)
+        self.menubar.add_cascade(menu=self.help_menu, label="Help")
+        if self.docs_URL:
+            self.help_menu.add_command(
+                label="Docs", command=partial(self.open_link, url=self.docs_URL))
+        if self.source_URL:
+            self.help_menu.add_command(
+                label="Source code", command=partial(self.open_link, url=self.source_URL))
+        if self.license_URL:
+            self.help_menu.add_command(
+                label="License info", command=partial(self.open_link, url=self.license_URL))
+        self.help_menu.add_separator()
+        self.help_menu.add_command(label="About...", command=self.on_about)
+        self.config(menu=self.menubar)
+
+    def connect_events(self):
+        self.source.bind("<<Modified>>", self.on_source_change)
+        self.source.bind("<Control-v>", self.on_source_insert, add="+")
+        self.source.bind("<Command-v>", self.on_source_insert, add="+")
+        self.source.bind("<KeyRelease>", self.on_source_key, add="+")
+        self.source.bind("<Button-1>", self.on_source_mouse, add="+")
+        self.target_stage.bind("<<ComboboxSelected>>", self.on_target_stage)
+        self.target_choice.bind("<<ComboboxSelected>>", self.on_target_choice)
+        self.root_parser.bind("<<ComboboxSelected>>", self.on_root_parser)
+        self.errors.bind('<KeyRelease>', self.on_errors_key)
+        # self.errors.bind('<MouseWheel>', self.on_errors_mouse)
+        self.errors.bind('<Button-1>', self.on_errors_mouse)
+        # self.errors.bind('<Configure>', self.on_errors)
+
+    def place_widgets(self):
+        padW = dict(sticky=(tk.W,), padx="5", pady="5")
+        padE = dict(sticky=(tk.E,), padx="5", pady="5")
+        padWE = dict(sticky=(tk.W, tk.E), padx="5", pady="5")
+        padAll = dict(sticky=(tk.N, tk.S, tk.W, tk.E), padx="5", pady="5")
+        # padNW = dict(sticky=(tk.W, tk.N), padx="5", pady="5")
+        # self.header.grid(row=0, column=0, columnspan=6, **padAll)
+        self.pick_source_info.grid(row=1, column=3, **padW)
+        self.pick_source.grid(row=1, column=2, **padE)
+        self.save_source.grid(row=1, column=1, **padE)
+        self.source_info.grid(row=1, column=0, **padW)
+        self.source_undo.grid(row=1, column=4, **padE)
+        self.source_clear.grid(row=1, column=5, **padE)
+        self.source.grid(row=2, column=1, columnspan=5, **padAll)
+        self.line_numbers.grid(row=2, column=0, **padAll)
+        self.root_parser.grid(row=3, column=2, **padE)
+        self.compile.grid(row=3, column=3, **padWE)
+        self.target_stage.grid(row=3, column=4, **padW)
+        self.target_choice.grid(row=3, column=5, **padE)
+        self.result_info.grid(row=3, column=0, **padW)
+        self.root_info.grid(row=3, column=1, **padE)
+        self.result.grid(row=4, column=0, columnspan=6, **padAll)
+        self.save_result.grid(row=5, column=3, **padWE)
+        self.export_test.grid(row=5, column=4, **padWE)
+        self.errors_info.grid(row=5, column=0, **padW)
+        self.errors.grid(row=6, column=0, columnspan=6, **padAll)
+        # self.progressbar.grid(row=7, column=0, columnspan=5, **padWE)
+        self.cancel.grid(row=7, column=5, **padE)
+        self.message.grid(row=8, column=0, columnspan=5, **padWE)
+        self.exit.grid(row=8, column=5, **padE)
+        self.rowconfigure(2, weight=1)
+        self.rowconfigure(4, weight=1)
+        self.rowconfigure(6, weight=2)
+        self.columnconfigure(1, weight=1)
+        self.columnconfigure(4, weight=1)
+        self.source.focus_set()
+
+    def show_progressbar(self):
+        padWE = dict(sticky=(tk.W, tk.E), padx="5", pady="5")
+        self.progressbar.grid(row=7, column=0, columnspan=5, **padWE)
+
+    def hide_progressbar(self):
+        self.progressbar.grid_forget()
+
+    def clear_result(self):
+        with self.lock:
+            self.errors.delete("1.0", tk.END)
+            self.update()
+
+    def log_callback(self, txt):
+        self.result.insert(tk.END, txt + '\n')
+        # self.errors.yview_moveto(1.0)
+        self.num_compiled += 1
+        self.progress.set(min(100, int(100 * self.num_compiled / self.num_sources)))
+        self.update()
+
+    def clear_message(self):
+        def clear():
+            self.message['text'] = ''
+            self.message['style'] = 'Black.TLabel'
+        self.message['style'] = 'Grey.TLabel'
+        self.after(1500, clear)
+
+    def poll_worker(self):
+        self.update_idletasks()
+        if self.worker and self.worker.is_alive():
+            if self.cancel['state'] != tk.NORMAL \
+                    and not self.cancel_event.is_set():
+                self.cancel['state'] = tk.NORMAL
+                self.show_progressbar()
+            self.after(500, self.poll_worker)
+        else:
+            self.cancel['state'] = tk.DISABLED
+            self.progressbar.stop()
+            if self.cancel_event.is_set():
+                self.errors.insert(tk.END, "Canceled\n")
+                self.result.yview_moveto(1.0)
+            elif self.compilation_units == 1:
+                self.finish_single_unit()
+                self.progressbar['mode'] = 'determinate'
+                self.progress.set(0)
+            else:
+                self.finish_multiple_units()
+            self.worker = None
+            self.compilation_units = 0
+            self.compilation_target = ""
+            self.after(500, self.hide_progressbar)
+
+    def on_pick_source(self):
+        if not self.worker or self.on_cancel():
+            self.progressbar.stop()
+            self.progressbar['mode'] = 'determinate'
+            self.progress.set(0)
+            self.names = list(tk.filedialog.askopenfilenames(
+                title="Chose files to parse/compile",
+                filetypes=[('All', '*')]
+            ))
+            if self.names:
+                self.all_results = {}
+                self.error_list = []
+                self.source.delete(1.0, tk.END)
+                self.result.delete(1.0, tk.END)
+                self.errors.delete(1.0, tk.END)
+                self.export_test['state'] = tk.DISABLED
+                self.save_result['state'] = tk.DISABLED
+                self.file_menu.entryconfig("Save result...", state=tk.DISABLED)
+                if len(self.names) == 1:
+                    try:
+                        with open(self.names[0], 'r', encoding='utf-8') as f:
+                            snippet = f.read()
+                        self.source.delete('1.0', tk.END)
+                        self.source.insert(tk.END, snippet)
+                        self.export_test['state'] = tk.NORMAL
+                        self.source_name = self.names[0]
+                    except (FileNotFoundError, PermissionError,
+                            IsADirectoryError, IOError, UnicodeDecodeError) as e:
+                        self.result.insert(tk.END, str(e))
+                        tk.messagebox.showerror("IO Error", str(e))
+                        self.message['text'] = 'IOError: ' + e.__class__.__name__
+                        self.message['style'] = "Red.TLabel"
+                        self.after(3500, self.clear_message)
+                else:
+                    self.cancel_event.clear()
+                    self.num_sources = len(self.names)
+                    self.num_compiled = 0
+                    self.source_name = ''
+                    self.outdir = os.path.join(os.path.dirname(self.names[0]),
+                                               'LR_output')
+                    if not os.path.exists(self.outdir):  os.mkdir(self.outdir)
+                    self.compilation_units = len(self.names)
+                    self.worker = threading.Thread(
+                        target = LRParser.batch_process,
+                        args = (self.names, self.outdir),
+                        kwargs = dict([('log_func', self.log_callback),
+                                       ('cancel_func',
+                                        self.cancel_event.is_set)]))
+                    self.worker.start()
+                    self.after(100, self.poll_worker)
+                    self.compile['state'] = tk.DISABLED
+                    self.progressbar['mode'] = "determinate"
+
+    def on_clear_source(self):
+        self.source.delete('1.0', tk.END)
+        self.compile['state'] = tk.DISABLED
+        self.source_clear['state'] = tk.DISABLED
+        self.save_source['state'] = tk.DISABLED
+        self.file_menu.entryconfig("Save source", state=tk.DISABLED)
+        self.source_modified_sentinel = 2
+        self.source_name = ''
+
+    def adjust_button_status(self):
+        txt = self.source.get('1.0', tk.END)
+        if re.fullmatch(r'\s*', txt):
+            self.compile['state'] = tk.DISABLED
+            self.source_clear['state'] = tk.DISABLED
+            self.save_source['state'] = tk.DISABLED
+            self.file_menu.entryconfig("Save source", state=tk.DISABLED)
+        else:
+            self.compile['state'] = tk.NORMAL
+            self.source_clear['state'] = tk.NORMAL
+            self.save_source['state'] = tk.NORMAL
+            self.file_menu.entryconfig("Save source", state=tk.NORMAL)
+
+    def on_source_change(self, event):
+        if self.source_modified_sentinel: # ignore call due to change of emit_modified
+            self.source_modified_sentinel -= 1
+            if self.source_modified_sentinel > 0:
+                self.source.edit_modified(False)
+            else:
+                self.adjust_button_status()
+                self.line_numbers.redraw()
+                if self.all_results:
+                    self.export_test['state'] = tk.DISABLED
+                else:
+                    self.export_test['state'] = tk.NORMAL
+        else:
+            self.source_modified_sentinel = 1
+            self.source.edit_modified(False)
+            if self.source_paste:
+                self.source_paste = False
+                # Call compile, here, directly?
+
+    def on_source_insert(self, event):
+        self.source_paste = True
+
+    def on_source_undo(self):
+        try:
+            self.source.edit_undo()
+            self.source_modified_sentinel = 2
+        except tk.TclError:
+            pass  # nothing to undo-error
+
+    def hilight_error_line(self, i, link_source=True):
+        self.source.tag_delete("errorline")
+        self.errors.tag_delete("currenterror")
+        if 0 <= i < len(self.error_list):
+            error = self.error_list[i]
+            line, col = self.tk_error_pos(error)
+            if link_source:
+                self.source.see(f"{line}.{col}")
+                line_str = self.source.get(f'{line}.0', f'{line + 1}.0').strip('\n')
+                self.source.tag_add("errorline", f"{line}.{0}", f"{line}.{col}")
+                self.source.tag_add("errorline", f"{line}.{col + 1}", f"{line}.{len(line_str)}")
+                self.source.tag_config("errorline", background="lightgrey")
+            err_str = self.errors.get(f'{i + 1}.0', f'{i + 2}.0').strip('\n')
+            self.errors.tag_add("currenterror", f"{i + 1}.{0}", f"{i + 1}.{len(err_str)}")
+            self.errors.tag_config("currenterror", background="yellow")
+
+    def show_if_error_at(self, location):
+        tag_names = self.source.tag_names(location)
+        l, c = map(int, location.split('.'))
+        if 'error' in tag_names or 'warning' in tag_names:
+            for i, e in enumerate(self.error_list):
+                if e.line == l and abs(e.column - c) <= 2:
+                    self.hilight_error_line(i, link_source=False)
+        elif not any(e.line == l for e in self.error_list):
+            self.hilight_error_line(-1)  # stop highlighting
+
+    def on_source_key(self, event):
+        self.show_if_error_at(self.source.index(tk.INSERT))
+        # self.line_numbers.redraw()
+
+    def on_source_mouse(self, event):
+        self.show_if_error_at(self.source.index(f"@{event.x},{event.y}"))
+
+    def tk_error_pos(self, error: Error) -> Tuple[int, int]:
+        line = error.line
+        col = error.column - 1
+        line_str = self.source.get(f'{line}.0', f'{line + 1}.0').strip('\n')
+        if 0 < col == len(line_str):  col -= 1
+        return (line, col)
+
+    def mark_error_pos(self, error):
+        line, col = self.tk_error_pos(error)
+        typ = 'error' if error.code >= ERROR else 'warning'
+        self.source.tag_add(typ, f'{line}.{col}', f'{line}.{col + 1}')
+
+    def compile_single_unit(self, source, target, parser):
+        if target == ALL_TARGETS_SPECIAL:
+            path = LRParser.junctions
+        else:
+            path = connection(LRParser.junctions, target, "CST")
+        target_set: Set[str] = set(j.src for j in path)
+        if target == ALL_TARGETS_SPECIAL:
+            for j in path:  target_set.add(j.dst)
+        else:
+            target_set.add(target)
+        try:
+            results = LRParser.pipeline(
+                source, target_set, parser, cancel_query=self.cancel_event.is_set)
+            if not self.cancel_event.is_set():
+                self.all_results = results
+        except AttributeError as e:
+            tk.messagebox.showerror("Compilation Error", str(e))
+
+    def on_compile(self):
+        source = self.source.get("1.0", tk.END)
+        if source.find('\n') < 0:
+            if re.fullmatch(r'\s*', source):  return
+            source += '\n'
+        parser = self.root_name.get()
+        target = self.target_name.get().lstrip(PIPE_CHARS)
+        self.compilation_target = target
+        self.compilation_units = 1
+        # self.all_results = LRParser.pipeline(source, self.compilation_target, parser)
+        # self.finish_single_unit()
+        self.cancel_event.clear()
+        self.worker = threading.Thread(
+            target = self.compile_single_unit,
+            args = (source, self.compilation_target, parser),
+        )
+        self.worker.start()
+        self.progressbar['mode'] = 'indeterminate'
+        self.progressbar.start()
+        self.after(100, self.poll_worker)
+        self.compile['state'] = tk.DISABLED
+        self.save_result['state'] = tk.DISABLED
+        self.export_test['state'] = tk.DISABLED
+        self.file_menu.entryconfig("Save result...", state=tk.DISABLED)
+
+    def finish_single_unit(self):
+        self.source.tag_delete("error")
+        self.source.tag_delete("errorline")
+        self.errors.tag_delete("currenterror")
+        self.errors.tag_delete("error")
+        serialization_format = self.target_format.get()
+        target = self.target_name.get().lstrip(PIPE_CHARS)
+        if target not in self.all_results:
+            target = self.compilation_target
+            self.target_name.set(target)
+        targets, results = [], []
+        if target == ALL_TARGETS_SPECIAL:
+            self.error_list = []
+            for t, (result, error_list) in self.all_results.items():
+                targets.append(t)
+                results.append(result)
+                for e in error_list:
+                    if e not in self.error_list:
+                        self.error_list.append(e)
+        else:
+            result, self.error_list = self.all_results[target]
+            results = [result]
+            targets = [target]
+        self.error_list = [e for e in self.error_list
+                           if e.code != PARSER_STOPPED_BEFORE_END_WARNING]
+        self.compile['state'] = tk.DISABLED
+        self.result.delete("1.0", tk.END)
+        self.target_choice['state'] = tk.DISABLED
+        # serialized = ''
+        # for t, result in zip(targets, results):
+        #     if isinstance(result, Node):
+        #         serialized = result.serialize(serialization_format)
+        #         self.target_choice['state'] = 'readonly'  # tk.NORMAL
+        #     else:
+        #         serialized = result or ""
+        #     if not re.fullmatch(r'\s*', serialized):
+        #         if len(targets) > 1:
+        #             self.result.insert(tk.END, ''.join([t, '\n', '='*len(t), '\n\n']))
+        #         self.result.insert(tk.END, serialized + '\n\n')
+        # if not re.fullmatch(r'\s*', serialized):
+        #     self.save_result['state'] = tk.NORMAL
+        #     self.file_menu.entryconfig("Save result...", state=tk.NORMAL)
+        self.update_result()
+        self.export_test['state'] = tk.NORMAL
+        self.errors.delete("1.0", tk.END)
+        for i, e in enumerate(self.error_list):
+            err_str = str(e) + '\n'
+            self.errors.insert(f"{i + 1}.0", err_str)
+            if e.code >= ERROR:
+                self.errors.tag_add('error', f"{i + 1}.{0}", f"{i + 1}.{len(err_str)}")
+        self.errors.tag_config('error', foreground='red')
+        # self.errors.insert("1.0", '\n'.join(str(e) for e in self.error_list))
+        for e in self.error_list:
+            self.mark_error_pos(e)
+        self.source.tag_config("error", background="orange red")
+        self.source.tag_config("warning", background="thistle")
+
+    def finish_multiple_units(self):
+        assert self.compilation_units >= 2
+        self.result.insert(tk.END, "Compilation finished.\n")
+        self.result.insert(tk.END, f"Results written to {self.outdir}.\n")
+        self.errors.insert(tk.END, f"Errors (if any) written to {self.outdir}.\n")
+        if self.target_name.get().lstrip(PIPE_CHARS).lower() == 'html':
+            html_name = os.path.splitext(os.path.basename(self.names[0]))[0] + '.html'
+            html_name = os.path.join(self.outdir, html_name)
+            self.errors.insert(tk.END, html_name + "\n")
+            webbrowser.open('file://' + os.path.abspath(html_name)
+                            if sys.platform == "darwin" else html_name)
+        else:
+            webbrowser.open('file://' + os.path.abspath(self.outdir)
+                            if sys.platform == "darwin" else self.outdir)
+
+    def update_result(self, if_tree=False) -> bool:
+        target = self.target_name.get().lstrip(PIPE_CHARS)
+        if target == ALL_TARGETS_SPECIAL:
+            results = list(self.all_results.items())
+            missing = [t for t in self.targets[:-1] if not self.all_results.get(t, (None, []))[0]]
+        else:
+            results = [(target, self.all_results.get(target, ("", [])))]
+            missing = [target] if not self.all_results.get(target, (None, []))[0] else []
+        format = self.target_format.get()
+        res_ser = []
+        for t, res in results:
+            if isinstance(res[0], Node):
+                res_ser.append((t, cast(Node, res[0]).serialize(format)))
+            elif not if_tree:
+                res_ser.append((t, res[0] or ''))
+        self.result.delete('1.0', tk.END)
+        for t, txt in res_ser:
+            if not re.fullmatch(r'\s*', txt):
+                if len(results) > 1:
+                    heading = ''.join([t, '\n', '='*len(t), '\n\n'])
+                    ending = '\n\n'
+                else:
+                    heading, ending = '', ''
+                self.result.insert(tk.END, ''.join([heading, txt, ending]))
+        if any(re.fullmatch(r'\s*', txt) for _, txt in res_ser) \
+                or target == ALL_TARGETS_SPECIAL and missing:
+            self.save_result['state'] = tk.DISABLED
+            self.file_menu.entryconfig("Save result...", state=tk.DISABLED)
+            if self.all_results:
+                entree = f"Stages {str(missing)[1:-1]} have" if len(missing) > 1 \
+                         else f"Stage {str(missing)[1:-1]} has"
+                self.result.insert(
+                    "1.0", f'{entree} not been passed during compilation! '
+                           f'Try "{ALL_TARGETS_SPECIAL}" to ensure that every stage is '
+                           f'generated.{"\n\n" if len(results) > 1 else ""}')
+            self.compile['state'] = tk.NORMAL
+        else:
+            if self.source_modified_sentinel == 0:
+                self.compile['state'] = tk.DISABLED
+            self.save_result['state'] = tk.NORMAL
+            self.file_menu.entryconfig("Save result...", state=tk.NORMAL)
+        return any(r[0] for r in results) or any(r[1] for r in results)
+
+    def on_target_stage(self, event):
+        target = self.target_name.get().lstrip(PIPE_CHARS)
+        if target in ('AST', 'CST', ALL_TARGETS_SPECIAL) or isinstance(
+                self.all_results.get(target, (None, []))[0], Node):
+            self.target_choice['state'] = 'readonly'  # tk.NORMAL
+        else:
+            self.target_choice['state'] = tk.DISABLED
+        if not self.update_result():
+            self.adjust_button_status()
+
+    def on_target_choice(self, event):
+        self.update_result(if_tree=True)
+
+    def on_root_parser(self, event):
+        self.update_result(if_tree=True)
+        self.adjust_button_status()
+
+    def on_errors_key(self, event):
+        i = int(self.errors.index(tk.INSERT).split('.')[0])
+        self.hilight_error_line(i - 1)
+
+    def on_errors_mouse(self, event):
+        i = int(self.errors.index(f"@0,{event.y}").split('.')[0])
+        self.hilight_error_line(i - 1)
+
+    def on_save_source(self):
+        if (not self.source_name or (os.path.exists(self.source_name) and
+                not tk.messagebox.askyesno("Save source?",
+                f'Do you really want to overwrite "{self.source_name}"?'))):
+            source_name = tk.filedialog.asksaveasfilename(
+                title="Save source as..",
+                filetypes=((('All', '*'),)))
+        else:
+            source_name = self.source_name
+        if source_name:
+            source = self.source.get("1.0", tk.END)
+            try:
+                with open(source_name, 'w', encoding='utf-8') as file:
+                    file.write(source)
+                self.message['text'] =  f'"{source_name}" written to disk.'
+                self.message['style'] = "Green.TLabel"
+                self.after(3500, self.clear_message)
+                self.source_name = source_name
+            except (IsADirectoryError, PermissionError, IOError) as e:
+                tk.messagebox.showerror("IO Error", str(e))
+
+    def on_save_result(self):
+        target = self.target_name.get().lstrip(PIPE_CHARS)
+        if self.target_choice['state'] in ('readonly', tk.NORMAL):
+            format = 'in format ' + self.target_format.get()
+        else:
+            format = ''
+        basename = os.path.splitext(os.path.basename(self.source_name))[0]
+        filename = tk.filedialog.asksaveasfilename(
+            initialfile=basename,
+            defaultextension='.' + target,
+            title=f"Save {target}-results {format} as..",
+            filetypes=[(target, '*.' + target), ('All', '*')]
+        )
+        if filename:
+            result = self.result.get("1.0", tk.END)
+            try:
+                with open(filename, 'w', encoding='utf-8') as file:
+                    file.write(result)
+                self.message['text'] =  f'"{filename}" written to disk.'
+                self.message['style'] = "Green.TLabel"
+                self.after(3500, self.clear_message)
+            except (PermissionError, IOError) as e:
+                tk.messagebox.showerror("IO Error", str(e))
+
+    def read_config_or_test_file(self, path: str) \
+            -> Tuple[object, str, str, str, str, bool]:
+        """-> (ConfigParser-object, fname, fpath, ftype, fdata, failure)"""
+        import configparser
+        fpath, fname = os.path.split(path)
+        ftype = 'config' if fname.lower().endswith('config.ini') \
+                            and not fname.lower().find('test_') >= 0 \
+            else 'test'
+        failure = not bool(path)
+        config = configparser.ConfigParser()
+        config.optionxform = lambda optionstr: optionstr
+        if os.path.exists(path):
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    fdata = f.read()
+                if fdata:
+                    config.optionxform = lambda option: option
+                    config.read_string(fdata)
+                    if ftype != 'test' and any(s.find(':') >= 0
+                                               for s in config.sections()):
+                        ftype = 'test'
+                elif ftype == 'test':
+                    ftype = 'empty'
+            except (PermissionError, IOError, IsADirectoryError,
+                    UnicodeDecodeError) as e:
+                tk.messagebox.showerror("IO Error", str(e))
+                failure = True
+            except configparser.Error as e:
+                tk.messagebox.showerror(
+                    "File-format Error",
+                    f"Error in file {fname}+\n\n" + str(e))
+                failure = True
+        else:
+            fdata = ''
+            if ftype == 'test':  ftype = 'empty'
+        return (config, fname, fpath, ftype, fdata, failure)
+
+    def write_or_update_config_file(self, path, config) -> bool:
+        fname = os.path.basename(path)
+        empty = len(config.sections()) == 0
+        ts2p_new = 'LR' not in config.sections()
+        if ts2p_new:
+            config['LR'] = {}
+        cfg = get_config_values('LR.*')
+        i = len('LR.')
+        cfg = {k[i:]: str(v) for k, v in cfg.items()}
+        config['LR'].update(cfg)
+        try:
+            with open(path, 'w', encoding='utf-8') as f:
+                config.write(f)
+            if empty:
+                self.message['text'] = f'Configuration written to "{fname}".'
+            else:
+                if ts2p_new:
+                    self.message['text'] = f'Configuration added to "{fname}".'
+                else:
+                    self.message['text'] = f'Configuration updated in "{fname}".'
+        except (FileNotFoundError, PermissionError,
+                IsADirectoryError, IOError) as e:
+            tk.messagebox.showerror("IO Error", str(e))
+            return False
+        return True
+
+    def on_export_test(self):
+        from DHParser.testing import unit_to_config, unit_from_config, \
+            UNIT_STAGES
+        path = tk.filedialog.asksaveasfilename(
+            title=f"Save or add case to test-ini-file..",
+            filetypes=[('Test', '.ini'), ('All', '*')]
+        )
+        config, fname, fpath, ftype, fdata, failure = \
+            self.read_config_or_test_file(path)
+        if failure:  return
+        if ftype == 'config':
+            self.write_or_update_config_file(path, config)
+        else:
+            if ftype == 'test':
+                stages = (UNIT_STAGES
+                    | frozenset(j.dst for j in LRParser.junctions))
+                suite = unit_from_config(fdata, fname, allowed_stages=stages)
+                if 'config__' in suite:
+                    cfg = get_config_values('LR.*')
+                    for k, v in suite['config__'].items():
+                        if k not in cfg or cfg[k] != eval(v):
+                            empty = '""'
+                            tk.messagebox.showerror(
+                                "Configuration mismatch",
+                                f'Configuration in file "{fname}" '
+                                "does not match current configuration, "
+                                f'e.g.\n{k}="{v}" instead of '
+                                f'"{cfg.get(k, empty)}"')
+                            return
+                    del suite['config__']
+            else:
+                suite = {}
+            source = self.source.get("1.0", tk.END)
+            parser = self.root_name.get()
+            if self.error_list:
+                error_level = max(e.code for e in self.error_list)
+            else:
+                error_level = 0
+            cases = { 'M1': source.replace('\t', '    ') }
+            tests = { 'match': cases }
+            if error_level < ERROR:
+                for stage, result in self.all_results.items():
+                    if stage.upper() == 'CST':  continue
+                    cases = { 'M1': result[0].serialize()
+                                    if isinstance(result[0], Node)
+                                    else result[0] }
+                    tests[stage] = cases
+            unit = { parser: tests }
+            cfg_data = dump_config_data('LR.*', use_headings=False)
+            suite = merge_test_units(suite, unit)
+            try:
+                with open(path, 'w', encoding='utf-8') as f:
+                    if cfg_data:
+                        f.write('[config]\n')
+                        f.write(cfg_data)
+                        f.write('\n')
+                    f.write(unit_to_config(suite))
+                if ftype == "empty":
+                    self.message['text'] = f'Test-file "{fname}" written to disk.'
+                elif ftype == "test":
+                    self.message['text'] = f'Test-case added to file "{fname}".'
+            except (FileNotFoundError, PermissionError,
+                    IsADirectoryError, IOError) as e:
+                tk.messagebox.showerror("IO Error", str(e))
+        self.message['style'] = "Green.TLabel"
+        self.after(3500, self.clear_message)
+
+    def on_cancel(self) -> bool:
+        if self.worker:
+            if tk.messagebox.askyesno(
+                title="Cancel?",
+                message="A parsing/compilation-process is still under way!\n"
+                        "Cancel running process?"):
+                self.update()
+                self.update_idletasks()
+                if self.worker:
+                    self.cancel_event.set()
+                    self.errors.insert(tk.END, "Canceling reaming tasks...\n")
+                    self.update()
+                    self.update_idletasks()
+                    self.worker.join(5.0)
+                    if not self.worker.is_alive():
+                        self.message['text'] = "Parsing/Compilation canceled"
+                        self.message['style'] = "Red.TLabel"
+                        self.after(2500, self.clear_message)
+                    self.errors.yview_moveto(1.0)
+                    self.adjust_button_status()
+                    return True
+                else:
+                    return False
+        return True
+
+    def open_link(self, url):
+        import webbrowser
+        webbrowser.open(url)
+
+    def on_about(self):
+        import random
+        slogans = ("'cause it is the machines that bring order to life!",
+                   "We work hard to make your job expendable!",
+                   "We program pig systems that make your life hell!",
+                   "8 bit can do it all!",
+                   "The apparatus is always right!",
+                   "Everyone is replaceable and should be!")
+        tk.messagebox.showinfo(
+            title="About LR",
+            message=("LR was brought to you by:\n\n"
+                     "SLAVES TO THE MACHINE SOFTWARE\n\n"
+                     + slogans[random.randint(0, len(slogans) - 1)] + '\n\n')
+        )
+
+    def on_close(self):
+        if self.on_cancel():
+            if self.worker and self.worker.is_alive():
+                self.errors.insert(tk.END, "Killing still running processes!\n")
+                self.errors.yview_moveto(1.0)
+            self.mc_manager.shutdown()
+            self.destroy()
+            self.quit()
+
+
+if __name__ == '__main__':
+    if sys.version_info < (3, 14, 0):
+        import multiprocessing
+        multiprocessing.freeze_support()
+    read_local_config(os.path.join(scriptdir, 'LRConfig.ini'))
+    if not LRParser.main(called_from_app=True):
+        app = LRApp()
+        app.mainloop()
+

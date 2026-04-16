@@ -74,7 +74,7 @@ if DHParser.versionnumber.__version_info__ < (1, 9, 5):
 
 if sys.version_info >= (3, 14, 0):
     CONFIG_PRESET['multicore_pool'] = 'InterpreterPool'
-read_local_config(os.path.join(scriptdir, 'InterwovenLRConfig.ini'))
+read_local_config(os.path.join(scriptdir, 'direct_hiddenConfig.ini'))
 
 
 #######################################################################
@@ -88,16 +88,16 @@ read_local_config(os.path.join(scriptdir, 'InterwovenLRConfig.ini'))
 # To capture includes, replace the NEVER_MATCH_PATTERN
 # by a pattern with group "name" here, e.g. r'\input{(?P<name>.*)}'
 RE_INCLUDE = NEVER_MATCH_PATTERN
-RE_COMMENT = NEVER_MATCH_PATTERN  # THIS MUST ALWAYS BE THE SAME AS InterwovenLRGrammar.COMMENT__ !!!
+RE_COMMENT = NEVER_MATCH_PATTERN  # THIS MUST ALWAYS BE THE SAME AS direct_hiddenGrammar.COMMENT__ !!!
 
 
-def InterwovenLRTokenizer(original_text) -> Tuple[str, List[Error]]:
+def direct_hiddenTokenizer(original_text) -> Tuple[str, List[Error]]:
     # Here, a function body can be filled in that adds preprocessor tokens
     # to the source code and returns the modified source.
     return original_text, []
 
 preprocessing: PseudoJunction = create_preprocess_junction(
-    InterwovenLRTokenizer, RE_INCLUDE, RE_COMMENT)
+    direct_hiddenTokenizer, RE_INCLUDE, RE_COMMENT)
 
 
 #######################################################################
@@ -106,17 +106,16 @@ preprocessing: PseudoJunction = create_preprocess_junction(
 #
 #######################################################################
 
-class InterwovenLRGrammar(Grammar):
-    r"""Parser for an InterwovenLR document.
+class direct_hiddenGrammar(Grammar):
+    r"""Parser for a direct_hidden document.
 
     Instantiate this class and then call the instance with the source
     code as the single argument in order to use the parser, e.g.:
-        parser = InterwovenLR()
+        parser = direct_hidden()
         syntax_tree = parser(source_code)
     """
     E = Forward()
-    G = Forward()
-    source_hash__ = "202247b02adc63cdd416bb16d859aa4f"
+    source_hash__ = "eeed0910d28da3f68c6e36a83b81f5f4"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -125,29 +124,24 @@ class InterwovenLRGrammar(Grammar):
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
-    AA = Text("a")
-    I = Series(Text("("), OneOrMore(AA), Text(")"))
-    H = Series(Ref("G"), Text("l"))
-    F = Alternative(Series(Ref("E"), Text("+"), ZeroOrMore(I)), Series(Ref("G"), Text("-")))
-    G.set(Alternative(Series(Ref("H"), Text("m")), Ref("E")))
-    E.set(Alternative(Series(Ref("F"), Text("n")), Text("n")))
-    S = Synonym(E)
-    root__ = S
+    F = Text("f")
+    E.set(Alternative(Series(Option(F), Ref("E"), Text("+n")), Text("n")))
+    root__ = E
     
-parsing: PseudoJunction = create_parser_junction(InterwovenLRGrammar)
+parsing: PseudoJunction = create_parser_junction(direct_hiddenGrammar)
 get_grammar = parsing.factory  # for backwards compatibility, only
 
 
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
-        RE_COMMENT in (InterwovenLRGrammar.COMMENT__, NEVER_MATCH_PATTERN), \
-        "Please adjust the pre-processor-variable RE_COMMENT in file InterwovenLRParser.py so that " \
+        RE_COMMENT in (direct_hiddenGrammar.COMMENT__, NEVER_MATCH_PATTERN), \
+        "Please adjust the pre-processor-variable RE_COMMENT in file direct_hiddenParser.py so that " \
         "it either is the NEVER_MATCH_PATTERN or has the same value as the COMMENT__-attribute " \
-        "of the grammar class InterwovenLRGrammar! " \
+        "of the grammar class direct_hiddenGrammar! " \
         'Currently, RE_COMMENT reads "%s" while COMMENT__ is "%s". ' \
-        % (RE_COMMENT, InterwovenLRGrammar.COMMENT__) + \
+        % (RE_COMMENT, direct_hiddenGrammar.COMMENT__) + \
         "\n\nIf RE_COMMENT == NEVER_MATCH_PATTERN then includes will deliberately be " \
-        "processed, otherwise RE_COMMENT==InterwovenLRGrammar.COMMENT__ allows the " \
+        "processed, otherwise RE_COMMENT==direct_hiddenGrammar.COMMENT__ allows the " \
         "preprocessor to ignore comments."
 except (AttributeError, NameError):
     pass
@@ -160,37 +154,32 @@ except (AttributeError, NameError):
 #
 #######################################################################
 
-InterwovenLR_AST_transformation_table = {
-    # AST Transformations for the InterwovenLR-grammar
+direct_hidden_AST_transformation_table = {
+    # AST Transformations for the direct_hidden-grammar
     # Special rules:
     # "<<<": [],  # called once before the tree-traversal starts
     # ">>>": [],  # called once after the tree-traversal has finished
     # "<": [],  # called for each node before calling its specific rules
     # "*": [],  # fallback for nodes that do not appear in this table
     # ">": [],   # called for each node after calling its specific rules
-    "S": [],
     "E": [],
     "F": [],
-    "G": [],
-    "H": [],
-    "I": [],
-    "AA": [],
 }
 
 
 # DEPRECATED, because it requires pickling the transformation-table, which rules out lambdas!
 # ASTTransformation: Junction = create_junction(
-#     InterwovenLR_AST_transformation_table, "CST", "AST", "transtable")
+#     direct_hidden_AST_transformation_table, "CST", "AST", "transtable")
 
-def InterwovenLRTransformer() -> TransformerFunc:
+def direct_hiddenTransformer() -> TransformerFunc:
     return static(partial(
         transformer, 
-        transformation_table=InterwovenLR_AST_transformation_table.copy(),
+        transformation_table=direct_hidden_AST_transformation_table.copy(),
         src_stage='CST', 
         dst_stage='AST'))
 
 ASTTransformation: Junction = Junction(
-    'CST', ThreadLocalSingletonFactory(InterwovenLRTransformer), 'AST')
+    'CST', ThreadLocalSingletonFactory(direct_hiddenTransformer), 'AST')
 get_transformer = ASTTransformation.factory  # for backwards compatibility, only
 
 
@@ -200,13 +189,13 @@ get_transformer = ASTTransformation.factory  # for backwards compatibility, only
 #
 #######################################################################
 
-class InterwovenLRCompiler(Compiler):
+class direct_hiddenCompiler(Compiler):
     """Compiler for the abstract-syntax-tree of a 
-        InterwovenLR source file.
+        direct_hidden source file.
     """
 
     def __init__(self):
-        super(InterwovenLRCompiler, self).__init__()
+        super(direct_hiddenCompiler, self).__init__()
         self.forbid_returning_None = True  # set to False if any compilation-method is allowed to return None
 
     def reset(self):
@@ -215,35 +204,20 @@ class InterwovenLRCompiler(Compiler):
 
     def prepare(self, root: RootNode) -> None:
         assert root.stage == "AST", f"Source stage `AST` expected, `but `{root.stage}` found."
-        root.stage = "InterwovenLR"
+        root.stage = "direct_hidden"
     def finalize(self, result: Any) -> Any:
         return result
 
-    def on_S(self, node):
+    def on_E(self, node):
         return self.fallback_compiler(node)
 
-    # def on_E(self, node):
-    #     return node
-
     # def on_F(self, node):
-    #     return node
-
-    # def on_G(self, node):
-    #     return node
-
-    # def on_H(self, node):
-    #     return node
-
-    # def on_I(self, node):
-    #     return node
-
-    # def on_AA(self, node):
     #     return node
 
 
 
 compiling: Junction = Junction(
-    'AST', ThreadLocalSingletonFactory(InterwovenLRCompiler), 'InterwovenLR')
+    'AST', ThreadLocalSingletonFactory(direct_hiddenCompiler), 'direct_hidden')
 
 get_compiler = compiling.factory  # for backwards compatibility, only
 
@@ -265,9 +239,9 @@ from DHParser import ALLOWED_PRESET_VALUES
 #     ...
 
 # # change the names of the source and destination stages. Source
-# # ("InterwovenLR") in this example must be the name of some earlier stage, though.
+# # ("direct_hidden") in this example must be the name of some earlier stage, though.
 # postprocessing: Junction = Junction(
-#     "InterwovenLR", ThreadLocalSingletonFactory(PostProcessing), "refined")
+#     "direct_hidden", ThreadLocalSingletonFactory(PostProcessing), "refined")
 #
 # DON'T FORGET TO ADD ALL POSTPROCESSING-JUNCTIONS TO THE GLOBAL
 # "junctions"-set IN SECTION "Processing-Pipeline" BELOW!
@@ -307,7 +281,7 @@ serializations = expand_table(dict([('*', [get_config_value('default_serializati
 #######################################################################
 
 def pipeline(source: str,
-             target: Union[str, Set[str]] = "InterwovenLR",
+             target: Union[str, Set[str]] = "direct_hidden",
              start_parser: str = "root_parser__",
              *, cancel_query: Optional[CancelQuery] = None) -> PipelineResult:
     """Runs the source code through the processing pipeline. If
@@ -326,7 +300,7 @@ def pipeline(source: str,
 
 
 def compile_src(source: str,
-                target: str = "InterwovenLR",
+                target: str = "direct_hidden",
                 start_parser: str = "root_parser__",
                 *, cancel_query: Optional[CancelQuery] = None) -> Tuple[Any, List[Error]]:
     """Compiles the source to a single target and returns the result of the compilation
@@ -352,7 +326,7 @@ def compile_src(source: str,
 
 
 def compile_snippet(source_code: str,
-                    target: str = "InterwovenLR",
+                    target: str = "direct_hidden",
                     start_parser: str = "root_parser__",
                     *, cancel_query: Optional[CancelQuery] = None) -> Tuple[Any, List[Error]]:
     """Compiles a piece of source_code. In contrast to :py:func:`compile_src` the
@@ -380,7 +354,7 @@ def process_file(source: str, out_dir: str = '', target_set: Set[str]=frozenset(
     elif not target_set <= targets:
         raise AssertionError('Unknown compilation target(s): ' +
                              ', '.join(t for t in target_set - targets))
-    # serializations = get_config_value('InterwovenLR_serializations', serializations)
+    # serializations = get_config_value('direct_hidden_serializations', serializations)
     return dsl.process_file(source, out_dir, preprocessing.factory, parsing.factory,
                             junctions, target_set, serializations, cancel_query)
 
@@ -397,7 +371,7 @@ def batch_process(file_names: List[str], out_dir: str,
     error messages to the directory `our_dir`. Returns a list of error
     messages files.
     """
-    from InterwovenLRParser import process_file_wrapper
+    from direct_hiddenParser import process_file_wrapper
     return dsl.batch_process(file_names, out_dir, process_file_wrapper,
         submit_func=submit_func, log_func=log_func, cancel_func=cancel_func)
 
@@ -440,12 +414,12 @@ def main(called_from_app=False) -> bool:
               'because grammar was not found at: ' + grammar_path)
 
     from argparse import ArgumentParser
-    a = "an" if "InterwovenLR"[0:1] in "AEIOUaeiou" else "a"
-    parser = ArgumentParser(description="Parses " + a + " InterwovenLR file and shows its syntax-tree."
+    a = "an" if "direct_hidden"[0:1] in "AEIOUaeiou" else "a"
+    parser = ArgumentParser(description="Parses " + a + " direct_hidden file and shows its syntax-tree."
                             " If several filenames are provided or an output directory is "
                             "specified with --out, the results will be written to the disk!"
                             " To directly process content, use a pipe | e.g. "
-                            ' echo "..." | InterwovenLRParser.py.')
+                            ' echo "..." | direct_hiddenParser.py.')
     parser.add_argument('files', nargs='*')
     parser.add_argument('-p', '--parse', nargs=1, default=[],
                         help='Processes the given snippet directly (instead of a file).')
@@ -486,7 +460,7 @@ def main(called_from_app=False) -> bool:
                   '(Snippets that contain blanks need to be enclosed in quotes "..."')
             sys.exit(1)
 
-    read_local_config(os.path.join(scriptdir, 'InterwovenLRConfig.ini'))
+    read_local_config(os.path.join(scriptdir, 'direct_hiddenConfig.ini'))
 
     if args.serialize:
         if (args.serialize[0].lower() not in
@@ -497,7 +471,7 @@ def main(called_from_app=False) -> bool:
             sys.exit(1)
         serializations['*'] = args.serialize
         access_presets()
-        set_preset_value('InterwovenLR_serializations', serializations, allow_new_key=True)
+        set_preset_value('direct_hidden_serializations', serializations, allow_new_key=True)
         finalize_presets()
 
     if args.debug is not None:
