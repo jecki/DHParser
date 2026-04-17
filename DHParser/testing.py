@@ -565,10 +565,11 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         case, all source snippets must already have been preprocessed.
     """
     assert isinstance(report, str)
-    assert isinstance(junctions, Set) and all(isinstance(e[0], str) and isinstance(e[2], str)
-                                              and callable(e[1]) for e in junctions), \
+    assert isinstance(junctions, (Set, frozenset)) \
+            and all(isinstance(e[0], str) and isinstance(e[2], str)
+                    and callable(e[1]) for e in junctions), \
         f"Value {repr(junctions)} passed to parameter 'junctions' is not a set of compilation-junctions!"
-    assert isinstance(show, Set) and all(isinstance(element, str) for element in show), \
+    assert isinstance(show, (Set, frozenset)) and all(isinstance(element, str) for element in show), \
         f"Value {repr(show)} passed to parameter 'show' is not a set of strings!"
 
     output = []
