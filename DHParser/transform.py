@@ -270,7 +270,7 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
                 if len(params) == 1 and issubtype(p1type, Container) \
                         and not (issubtype(p1type, str) or issubtype(p1type, ByteString)):
                     def gen_special(*args):
-                        c = set(args) if issubtype(p1type, (Set, frozenset)) else \
+                        c = set(args) if issubtype(p1type, Set) else \
                             tuple(args) if issubtype(p1type, Sequence) else args
                         d = {params[0].name: c}
                         return partial(f, **d)
@@ -2025,7 +2025,7 @@ def node_maker(name: str,
 
 
 @transformation_factory(collections.abc.Set)
-def positions_of(path: Path, names: Union[Set[str], str] = set()) -> Tuple[int, ...]:
+def positions_of(path: Path, names: Set[str] = set()) -> Tuple[int, ...]:
     """Returns a (potentially empty) tuple of the positions of the
     children that have one of the given `names`.
     """
