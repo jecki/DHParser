@@ -36,6 +36,7 @@ from collections import defaultdict
 import copy
 from functools import lru_cache
 from inspect import isclass
+from itertools import chain
 from typing import Callable, cast, Collection, DefaultDict, Sequence, Union, Optional, \
     NamedTuple, Iterator
 
@@ -5363,8 +5364,8 @@ class Forward(UnaryParser):
         history_tracking = grammar.history_tracking__
         if history_tracking:
             history_pointer = len(grammar.history__)
-            call_stack_pointer = len(grammar.call_stack__)
-            last_call_stack = ()
+            # record = None
+            call_stack = []
         rb_stack_size = len(grammar.rollback__)
         last_history_state = []
 
@@ -5376,16 +5377,16 @@ class Forward(UnaryParser):
             grammar.suspend_memoization__ = False
             rb_stack_size = len(grammar.rollback__)
             if history_tracking:
-                record = grammar.history__[-1]
-                # record.call_stack += last_call_stack
-                # last_call_stack = record.call_stack[call_stack_pointer:]
-                # last_history_state.extend(grammar.history__[history_pointer:])
-                # grammar.history__ = grammar.history__[:history_pointer]
+                record = grammar.history__.pop()
+                call_stack.append(record.call_stack)
             visited[location] = result
             next_result = self._parse_proxy(location)  # self.parser(location)
 
-        # if history_tracking and result[0] is not None:
-       #     grammar.history__ = grammar.history__[:history_pointer] + last_history_state
+        if history_tracking and result[0] is not None:
+            # grammar.history__ = grammar.history__[:history_pointer]
+            call_stack.reverse()
+            record.call_stack = tuple(grammar.call_stack__) + tuple(chain.from_iterable(call_stack))
+            grammar.history__.append(record)
 
         self.recursion_counter[location] = False
         # Since the result of the last parser call (``next_result``) is discarded,
