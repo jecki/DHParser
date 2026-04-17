@@ -1181,8 +1181,11 @@ def get_parser_placeholder() -> Parser:
         PARSER_PLACEHOLDER.drop_content = False
         PARSER_PLACEHOLDER.node_name = ':PLACEHOLDER__'
         PARSER_PLACEHOLDER.sub_parsers = frozenset()
-        PARSER_PLACEHOLDER.__deepcopy__ = NOCALL
-        PARSER_PLACEHOLDER.apply = NOCALL
+        try:
+            PARSER_PLACEHOLDER.__deepcopy__ = NOCALL
+            PARSER_PLACEHOLDER.apply = NOCALL
+        except AttributeError:
+            pass  # In Cython __deepcopy__ is read-only!
     return cast(Parser, PARSER_PLACEHOLDER)
 
 

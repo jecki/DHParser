@@ -718,7 +718,7 @@ def is_empty(path: Path) -> bool:
 
 
 @transformation_factory(collections.abc.Set)
-def is_token(path: Path, tokens: Set[str] = frozenset()) -> bool:
+def is_token(path: Path, tokens: Set[str] = set()) -> bool:
     """
     Checks whether the last node in the path has the name ":Text"
     and it's content matches one of the given tokens. Leading and trailing
@@ -808,7 +808,7 @@ def has_attr(path: Path, attr: str="", value: Optional[str] = None) -> bool:
 def has_ancestor(path: Path,
                  name_set: Set[str],
                  generations: int = -1,
-                 until: Union[Set[str], str] = frozenset()) -> bool:
+                 until: Union[Set[str], str] = set()) -> bool:
     """
     Checks whether a node with one of the given tag names appears somewhere
     in the path before the last node in the path.
@@ -852,7 +852,7 @@ def has_children(path: Path) -> bool:
 @transformation_factory(collections.abc.Set)
 def has_descendant(path: Path, name_set: Set[str],
                    generations: int = -1,
-                   until: Union[Set[str], str] = frozenset()) -> bool:
+                   until: Union[Set[str], str] = set()) -> bool:
     """Checks whether a node with one of the given tag names appears somewhere
     among the descendants (children and children's children etc.)
     of the last node in the path.
@@ -1792,7 +1792,7 @@ def keep_children_if(path: Path, condition: CondFunc):
 
 
 @transformation_factory(collections.abc.Set)
-def keep_tokens(path: Path, tokens: Set[str] = frozenset()):
+def keep_tokens(path: Path, tokens: Set[str] = set()):
     """Removes any among a particular set of tokens from the immediate
     descendants of a node. If ``tokens`` is the empty set, all tokens
     are removed."""
@@ -1873,7 +1873,7 @@ def remove_brackets(path: Path):
 
 
 @transformation_factory(collections.abc.Set)
-def remove_tokens(path: Path, tokens: Set[str] = frozenset()):
+def remove_tokens(path: Path, tokens: Set[str] = set()):
     """Removes any among a particular set of tokens from the immediate
     descendants of a node. If ``tokens`` is the empty set, all tokens
     are removed."""
@@ -1963,7 +1963,7 @@ def add_attributes(path: Path, attributes: dict):  # Dict[str, str]
 
 
 @transformation_factory
-def del_attributes(path: Path, attributes: collections.abc.Set = frozenset()):  # Set[str]
+def del_attributes(path: Path, attributes: collections.abc.Set = set()):  # Set[str]
     """
     Removes XML-attributes from the last node in the given path.
     If the given set is empty, all attributes will be deleted.
@@ -2025,7 +2025,7 @@ def node_maker(name: str,
 
 
 @transformation_factory(collections.abc.Set)
-def positions_of(path: Path, names: Set[str] = frozenset()) -> Tuple[int, ...]:
+def positions_of(path: Path, names: Union[Set[str], str] = set()) -> Tuple[int, ...]:
     """Returns a (potentially empty) tuple of the positions of the
     children that have one of the given `names`.
     """
