@@ -831,7 +831,9 @@ class Parser:
         """Applies the parser to the given ``text`` and returns a node with
         the results or None as well as the text at the position right behind
         the matching string."""
-        raise NotImplementedError
+        raise NotImplementedError(f"{type(self)}._parse() not implemented and "
+            f"{self.effective_pname() or self}._parse() not overwritten by "
+            "Parser.set_proxy() or trace.set_tracer()!")
 
     def is_optional(self) -> Optional[bool]:
         """Returns ``True``, if the parser can never fail, i.e. never yields
@@ -5346,6 +5348,9 @@ class Forward(UnaryParser):
             # Sorry, no history recording in case of memoized results!
             if self.recursion_counter[location]:
                 grammar.suspend_memoization__ = id(self)
+            if grammar.history_tracking__ and self._parse_proxy.__name__ == 'trace_history' \
+                    and self._parse_proxy.__module__ == 'DHParser.trace':
+                return self._parse_proxy(-location or -INFINITE)  # a negative location signals a memo-hit
             return visited[location]
 
         if location in self.recursion_counter:
@@ -5356,26 +5361,31 @@ class Forward(UnaryParser):
         save_suspend_memoization = grammar.suspend_memoization__
         grammar.suspend_memoization__ = False
         history_tracking = grammar.history_tracking__
-        history_pointer = len(grammar.history__) if history_tracking else 0
+        if history_tracking:
+            history_pointer = len(grammar.history__)
+            call_stack_pointer = len(grammar.call_stack__)
+            last_call_stack = ()
         rb_stack_size = len(grammar.rollback__)
         last_history_state = []
 
         result = None, location
-        next_result = self.parser(location)
+        next_result = self._parse_proxy(location)  # self.parser(location)
 
         while next_result[1] > result[1]:
             result = next_result
             grammar.suspend_memoization__ = False
             rb_stack_size = len(grammar.rollback__)
             if history_tracking:
-                rec = grammar.history__[-1]
-                last_history_state.extend(grammar.history__[history_pointer:])
-                grammar.history__ = grammar.history__[:history_pointer]
+                record = grammar.history__[-1]
+                # record.call_stack += last_call_stack
+                # last_call_stack = record.call_stack[call_stack_pointer:]
+                # last_history_state.extend(grammar.history__[history_pointer:])
+                # grammar.history__ = grammar.history__[:history_pointer]
             visited[location] = result
-            next_result = self.parser(location)
+            next_result = self._parse_proxy(location)  # self.parser(location)
 
-        if history_tracking and result[0] is not None:
-            grammar.history__ = grammar.history__[:history_pointer] + last_history_state
+        # if history_tracking and result[0] is not None:
+       #     grammar.history__ = grammar.history__[:history_pointer] + last_history_state
 
         self.recursion_counter[location] = False
         # Since the result of the last parser call (``next_result``) is discarded,
@@ -5395,9 +5405,12 @@ class Forward(UnaryParser):
             visited[location] = result
         return result
 
-    def set_proxy(self, proxy: Optional[ParseFunc]):
-        """``set_proxy`` has no effects on Forward-objects!"""
-        return
+    def _parse(self, location: cython.int) -> ParsingResult:
+        return self.parser(location)
+
+    # def set_proxy(self, proxy: Optional[ParseFunc]):
+    #    """``set_proxy`` has no effects on Forward-objects!"""
+    #     return
 
     def __cycle_guard(self, func, alt_return):
         """

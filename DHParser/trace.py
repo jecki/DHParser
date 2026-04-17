@@ -82,7 +82,7 @@ def set_tracer(parsers: Union[Grammar, Parser, Iterable[Parser]], tracer: Option
         parsers = [parsers]
     if parsers:
         pivot = next(iter(parsers))
-        assert all(pivot._grammar == parser._grammar for parser in parsers)
+        # assert all(pivot._grammar == parser._grammar for parser in parsers)
         if tracer is None:
             pivot._grammar.history_tracking__ = False
             pivot._grammar.resume_notices__ = False
@@ -90,8 +90,7 @@ def set_tracer(parsers: Union[Grammar, Parser, Iterable[Parser]], tracer: Option
             pivot._grammar.history_tracking__ = True
             pivot._grammar.resume_notices__ = True
         for parser in parsers:
-            if parser.ptype != ':Forward':
-                parser.set_proxy(tracer)
+            parser.set_proxy(tracer)
 
 
 #######################################################################
@@ -166,7 +165,7 @@ def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], c
         if location <= -INFINITE:  location = 0
         location = -location
         grammar.call_stack__.append(call_item(self, location, "RECALL: "))
-        node, location_ = self.visited[location]
+        node, location_ = self.visited.get(location, (None, location))
         record = history_record(self, grammar, node, location, location_, "RECALL: ")
         grammar.history__.append(record)
         grammar.call_stack__.pop()
@@ -224,6 +223,7 @@ def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], c
             and not grammar.call_stack__[-1][0].endswith(':SmartRE_Lookahead'):
         grammar.call_stack__.append((' :SmartRE_Lookahead', location))
         stack_counter += 1
+    grammar_suspend_memo_state = grammar.suspend_memoization__
     grammar.moving_forward__ = True
 
     try:
