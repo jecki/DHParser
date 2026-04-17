@@ -5241,6 +5241,7 @@ class Synonym(UnaryParser):
         return self.pname or self.parser.repr
 
 
+
 class Forward(UnaryParser):
     r"""
     Forward allows to declare a parser before it is actually defined.
@@ -5310,7 +5311,7 @@ class Forward(UnaryParser):
         """
         grammar = self._grammar
 
-        # roll back variable-changing operation if the parser backtracks
+        # rollback variable-changing operation if the parser backtracks
         # to a position before the variable-changing operation occurred
         if location <= grammar.last_rb__loc__:
             grammar.rollback_to__(location)
@@ -5319,52 +5320,83 @@ class Forward(UnaryParser):
         visited = self.visited  # using local variable for better performance
         if location in visited:
             # Sorry, no history recording in case of memoized results!
-            if self.recursion_counter[location]:
-                grammar.suspend_memoization__ = id(self)
             return visited[location]
 
         if location in self.recursion_counter:
-            grammar.suspend_memoization__ = id(self)
-            return None, location
-
-        self.recursion_counter[location] = True  # fail on the first recursion
-        save_suspend_memoization = grammar.suspend_memoization__
-        grammar.suspend_memoization__ = False
-        history_tracking = grammar.history_tracking__
-        history_pointer = len(grammar.history__) if history_tracking else 0
-        rb_stack_size = len(grammar.rollback__)
-        last_history_state = []
-
-        result = None, location
-        next_result = self.parser(location)
-
-        while next_result[1] > result[1]:
-            result = next_result
+            depth = self.recursion_counter[location]
+            if depth == 0:
+                grammar.suspend_memoization__ = id(self)
+                result = None, location
+            else:
+                self.recursion_counter[location] = depth - 1
+                result = self.parser(location)
+                self.recursion_counter[location] = depth  # allow moving back and forth
+        else:
+            self.recursion_counter[location] = 0  # fail on the first recursion
+            save_suspend_memoization = grammar.suspend_memoization__
             grammar.suspend_memoization__ = False
-            rb_stack_size = len(grammar.rollback__)
-            if history_tracking:
-                last_history_state.extend(grammar.history__[history_pointer:len(grammar.history__)])
-                grammar.history__ = grammar.history__[:history_pointer]
-            visited[location] = result
-            next_result = self.parser(location)
+            history_tracking = grammar.history_tracking__
+            history_pointer = len(grammar.history__) if history_tracking else 0
 
-        if history_tracking and result[0] is not None:
-            grammar.history__ = grammar.history__[:history_pointer] + last_history_state
+            result = self.parser(location)
 
-        self.recursion_counter[location] = False
-        # Since the result of the last parser call (``next_result``) is discarded,
-        # any variables captured by this call should be "rolled back", too.
-        while len(grammar.rollback__) > rb_stack_size:
-            _, rb_func = grammar.rollback__.pop()
-            rb_func()
-            grammar.last_rb__loc__ = grammar.rollback__[-1][0] \
-                if grammar.rollback__ else -2
+            if result[0] is not None:
+                # keep calling the (potentially left-)recursive parser and increase
+                # the recursion depth by 1 for each call as long as the length of
+                # the match increases.
+                last_history_state = grammar.history__[history_pointer:len(grammar.history__)] \
+                    if history_tracking else []
+                depth = 1
+                while True:
+                    self.recursion_counter[location] = depth
+                    grammar.suspend_memoization__ = False
+                    rb_stack_size = len(grammar.rollback__)
+                    if history_tracking:
+                        grammar.history__ = grammar.history__[:history_pointer]
+                    # reduplication of error messages will be caught by nodetree.RootNode.add_error()
+                    # saving and restoring the errors-messages state on each iteration presupposes
+                    # that error messages will be recreated every time, which, however, does not
+                    # happen because of memoization. (This is a downside of global error-reporting
+                    # in contrast to attaching error-messages locally to the node where they
+                    # occurred. Big topic...)
+                    # don't carry error/resumption-messages over to the next iteration
+                    # grammar.most_recent_error__ = None
+                    next_result = self.parser(location)
 
-        # both checks in the following are necessary:
-        # 1. id(self)-check in order not to interfere with interwoven recursive parser calls
-        # 2. isinstance check for referenced parsers that are not in fact recursive
-        if grammar.suspend_memoization__ == id(self) or isinstance(grammar.suspend_memoization__, bool):
-            grammar.suspend_memoization__ = save_suspend_memoization  #  = is_context_sensitive(self.parser)
+                    # discard next_result if it is not the longest match and return
+                    if next_result[1] <= result[1]:  # also true, if no match
+                        # Since the result of the last parser call (``next_result``) is discarded,
+                        # any variables captured by this call should be "rolled back", too.
+                        while len(grammar.rollback__) > rb_stack_size:
+                            _, rb_func = grammar.rollback__.pop()
+                            rb_func()
+                            grammar.last_rb__loc__ = grammar.rollback__[-1][0] \
+                                if grammar.rollback__ else -2
+                        # Finally, overwrite the discarded result in the last history record with
+                        # the accepted result, i.e. the longest match.
+                        # TODO: Move this to trace.py, somehow... and make it less confusing
+                        #       that the result is not the last but the longest match...
+                        if history_tracking:
+                            grammar.history__ = grammar.history__[:history_pointer] + last_history_state
+                        # record = grammar.history__[-1]
+                        # if record.call_stack[-1] == (self.parser.pname, location):
+                        #     record.text = result[1]
+                        #     delta = len(text) - len(result[1])
+                        #     assert record.node.name != ':None'
+                        #     record.node.result = text[:delta]
+                        break
+
+                    if history_tracking:
+                        last_history_state = grammar.history__[history_pointer:len(grammar.history__)]
+                    result = next_result
+                    depth += 1
+            # grammar.suspend_memoization__ = save_suspend_memoization \
+            #     or location <= (grammar.last_rb__loc__ + int(text._len == result[1]._len))
+            # both checks in the following are necessary:
+            # 1. id(self)-check in order not to interfere with interwoven recursive parser calls
+            # 2. isinstance check for referenced parsers that are not in fact recursive
+            if grammar.suspend_memoization__ == id(self) or isinstance(grammar.suspend_memoization__, bool):
+                grammar.suspend_memoization__ = save_suspend_memoization  #  = is_context_sensitive(self.parser)
         if not grammar.suspend_memoization__:
             visited[location] = result
         return result
