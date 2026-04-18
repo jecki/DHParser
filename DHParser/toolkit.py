@@ -1129,8 +1129,8 @@ def issubtype(sub_type, base_type) -> bool:
         t = tuple(p if isclass(p) else origin_(p)[0] for p in t)
         return t
     true_st = origin(sub_type)
-    true_bt = origin(base_type)[0]
-    return any(issubclass(st, true_bt) for st in true_st)
+    true_bt = origin(base_type)
+    return any(issubclass(st, bt) for st in true_st for bt in true_bt)
 
 
 def isgenerictype(t):
