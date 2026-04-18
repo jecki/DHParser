@@ -208,6 +208,9 @@ class TestTypeSystemSupport:
         assert issubtype(typing.Callable, collections.abc.Callable)
         assert issubtype(typing.Tuple[typing.Callable], tuple)
 
+    def test_is_subtype_extended(self):
+        assert issubtype(typing.Union[typing.Set[str], str], (typing.Set[str], str))
+
 
 class TestJSONSupport:
     data = ('{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":17666,'

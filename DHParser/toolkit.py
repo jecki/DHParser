@@ -1101,7 +1101,9 @@ def issubtype(sub_type, base_type) -> bool:
     WARNING: Implementation is somewhat "hackish" and might break
     with new Python versions.
     """
-    def origin(t) -> tuple:
+    from inspect import isclass
+
+    def origin_(t) -> tuple:
         def fix(t: Any) -> Any:
             return {'Dict': dict, 'Tuple': tuple, 'List': list}.get(t, t)
         try:
@@ -1122,6 +1124,10 @@ def issubtype(sub_type, base_type) -> bool:
                 return str,
             return fix(t),
         return (fix(ot),) if ot is not None else (fix(t),)
+    def origin(t) -> tuple:
+        t = (origin_(p)[0] for p in t) if isinstance(t, tuple) else origin_(t)
+        t = tuple(p if isclass(p) else origin_(p)[0] for p in t)
+        return t
     true_st = origin(sub_type)
     true_bt = origin(base_type)[0]
     return any(issubclass(st, true_bt) for st in true_st)
