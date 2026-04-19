@@ -117,6 +117,7 @@ __all__ = ('re',
            'line_col',
            'text_pos',
            'normalize_docstring',
+           'type_origin',
            'issubtype',
            'isgenerictype',
            'DeserializeFunc',
@@ -1096,6 +1097,30 @@ def ascii_char_code(ch) -> str:
 #######################################################################
 
 
+def type_origin(t) -> tuple:
+    """Returns the origin, i.e. non-generic version of a generic type,
+    e.g. origin(set[str]) yields (<class set>,)"""
+    def fix(t: Any) -> Any:
+        return {'Dict': dict, 'Tuple': tuple, 'List': list}.get(t, t)
+    try:
+        if isinstance(t, (str, bytes)):  t = eval(t)
+        ot = t.__origin__
+        if ot is Union:
+            try:
+                return tuple((fix(a.__origin__) if a.__origin__ is not None else fix(a))
+                             for a in t.__args__)
+            except AttributeError:
+                try:
+                    return tuple((fix(a.__origin__) if a.__origin__ is not None else fix(a))
+                                 for a in t.__union_args__)
+                except AttributeError:
+                    return t.__args__
+    except AttributeError:
+        if t == 'unicode':  # work-around for cython bug
+            return str,
+        return fix(t),
+    return (fix(ot),) if ot is not None else (fix(t),)
+
 def issubtype(sub_type, base_type) -> bool:
     """Returns `True` if sub_type is a subtype of `base_type`.
     WARNING: Implementation is somewhat "hackish" and might break
@@ -1103,33 +1128,23 @@ def issubtype(sub_type, base_type) -> bool:
     """
     from inspect import isclass
 
-    def origin_(t) -> tuple:
-        def fix(t: Any) -> Any:
-            return {'Dict': dict, 'Tuple': tuple, 'List': list}.get(t, t)
-        try:
-            if isinstance(t, (str, bytes)):  t = eval(t)
-            ot = t.__origin__
-            if ot is Union:
-                try:
-                    return tuple((fix(a.__origin__) if a.__origin__ is not None else fix(a))
-                                 for a in t.__args__)
-                except AttributeError:
-                    try:
-                        return tuple((fix(a.__origin__) if a.__origin__ is not None else fix(a))
-                                     for a in t.__union_args__)
-                    except AttributeError:
-                        return t.__args__
-        except AttributeError:
-            if t == 'unicode':  # work-around for cython bug
-                return str,
-            return fix(t),
-        return (fix(ot),) if ot is not None else (fix(t),)
-    def origin(t) -> tuple:
-        t = (origin_(p)[0] for p in t) if isinstance(t, tuple) else origin_(t)
-        t = tuple(p if isclass(p) else origin_(p)[0] for p in t)
+    def origins(t) -> tuple:
+        t = (type_origin(p)[0] for p in t) if isinstance(t, tuple) else type_origin(t)
+        t = tuple(p if isclass(p) else type_origin(p)[0] for p in t)
+        # carry_on = True
+        # while carry_on:
+        #     carry_on = False
+        #     tl = []
+        #     for p in t:
+        #         if isclass(p):
+        #             tl.append(p)
+        #         else:
+        #             tl.append(origin_(p)[0])
+        #             carry_on = True
+        # t = tuple(tl)
         return t
-    true_st = origin(sub_type)
-    true_bt = origin(base_type)
+    true_st = origins(sub_type)
+    true_bt = origins(base_type)
     return any(issubclass(st, bt) for st in true_st for bt in true_bt)
 
 

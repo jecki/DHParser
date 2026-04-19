@@ -43,7 +43,7 @@ from DHParser.error import ErrorCode, AST_TRANSFORM_CRASH, ERROR
 from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, LEAF_PTYPES, PLACEHOLDER, \
     RootNode, parse_sxpr, flatten_sxpr, Path, pp_path
 from DHParser.toolkit import issubtype, isgenerictype, expand_table, smart_list, re, \
-    deprecation_warning, TypeAlias, ByteString
+    deprecation_warning, TypeAlias, ByteString, type_origin
 
 
 __all__ = ('TransformationDict',
@@ -239,17 +239,24 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
         #                     "decorator. Use the equivalent non-generic type instead!"
         #                     % str(t))
         t = real_type(t)
-        if isgenerictype(t):
-            raise TypeError("Generic Type %s not permitted\n in transformation_factory "
-                            "decorator. Use the equivalent non-generic type instead!"
-                            % str(t))
         if issubtype(Path, t):
             raise TypeError("Sequence type %s not permitted\nin transformation_factory "
                             "decorator, because it could be mistaken for a base class "
                             "of Path\nwhich is the type of the canonical first "
                             "argument of transformation functions. Try 'tuple' instead!"
                             % str(t))
+        if isgenerictype(t):
+            t = type_origin(t)[0]
+            # raise TypeError("Generic Type %s not permitted\n in transformation_factory "
+            #                 "decorator. Use the equivalent non-generic type instead!"
+            #                 % str(t))
         return t
+
+    def mkset(args):
+        args0 = next(iter(args))
+        if len(args) == 1 and isinstance(args0, (set, frozenset)):
+            return set(args0)
+        return set(args)
 
     def decorator(f):
         nonlocal t1
@@ -268,10 +275,12 @@ def transformation_factory(t1=None, t2=None, t3=None, t4=None, t5=None):
         elif issubtype(p1type, type_guard(t1)):
             try:
                 if len(params) == 1 and issubtype(p1type, Container) \
-                        and not (issubtype(p1type, str) or issubtype(p1type, ByteString)):
+                        and (getattr(p1type, '__origin__', None) is Union  # isinstance(p1type, Union)
+                             or not issubtype(p1type, (str, ByteString))):
                     def gen_special(*args):
-                        c = set(args) if issubtype(p1type, Set) else \
-                            tuple(args) if issubtype(p1type, Sequence) else args
+                        c = mkset(args) if issubtype(p1type, (Set, frozenset)) \
+                            else tuple(args) if issubtype(p1type, Sequence) \
+                            else args
                         d = {params[0].name: c}
                         return partial(f, **d)
                     assert p1type.__args__ is not None, "Please use more specific container " \
@@ -730,7 +739,7 @@ def is_token(path: Path, tokens: Set[str] = set()) -> bool:
 
 
 @transformation_factory(collections.abc.Set)
-def is_one_of(path: Path, name_set: Set[str]) -> bool:
+def is_one_of(path: Path, name_set: Union[Set[str], str]) -> bool:
     """Returns true, if the node's name is one of the given tag names."""
     return path[-1].name in name_set
 
