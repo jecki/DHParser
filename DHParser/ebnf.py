@@ -2218,12 +2218,12 @@ class EBNFCompiler(Compiler):
                          for symbol in sorted(list(self.forward))]
 
         if self.left_recursion == 'Full':
-            recursive = self.recursive_symbols()
+            # recursive = self.recursive_symbols()
             # for s in self.forward:
             #     for p in self.recursive_paths(s):
             #         print(p)
-            # TODO: Sort out purely right-recursive symbols
-            symstr = '|'.join(recursive)
+            # # TODO: Sort out purely right-recursive symbols
+            symstr = '|'.join(self.forward)
             recursive_ref_pattern = RX_REF_TMPL.format(symbols = symstr)
             rx_recursive_ref = re.compile(recursive_ref_pattern)
             synonym_pattern = RX_SYNONYM_TMPL.format(symbols = symstr)
@@ -2235,7 +2235,7 @@ class EBNFCompiler(Compiler):
             if symbol[-2:] != '__' or (symbol.find('_skip_') >= 0 or symbol.find('_resume_') >= 0):
                 # TODO: Except uses at the very end of the rule (i.e. right recursion),
                 #       unless it's forward references (pre-sort the self.forward-references accordingly)
-                statement = statement.replace(REF_TMPL.format(symbol = symbol), symbol)
+                # statement = statement.replace(REF_TMPL.format(symbol = symbol), symbol)  # TODO: Don't do this!
                 statement = rx_recursive_ref.sub(r'Ref("\1")', statement)
                 # statement = rx_synonym.sub(rf'Synonym(\1{RECURSIVE_SUFFIX})', statement)
                 statement = RX_REF.sub(r'\1', statement)

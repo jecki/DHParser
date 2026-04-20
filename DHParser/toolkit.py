@@ -2149,20 +2149,6 @@ class PickMultiCoreExecutorShim:
         else:
             return ExecutorWrapper(concurrent.futures.ProcessPoolExecutor())
 
-# TODO: Add initializer above
-# from concurrent.futures import InterpreterPoolExecutor
-# import sys
-#
-# def init_worker(parent_sys_path):
-#     import sys
-#     sys.path = list(parent_sys_path)
-#
-# with InterpreterPoolExecutor(
-#     max_workers=4,
-#     initializer=init_worker,
-#     initargs=(sys.path,),
-# ) as pool:
-
 
 PickMultiCoreExecutor = PickMultiCoreExecutorShim()
 
