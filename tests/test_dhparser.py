@@ -127,7 +127,9 @@ class TestDHParserCommandLineTool:
                + name + self.nulldevice)
         system(self.python + os.path.join(name, 'tst_%s_grammar.py --singlethread ' % name)
                + self.nulldevice)
-        system(self.python + os.path.join(name, '%sParser.py ' % name)
+        parser_file_name = os.path.join(name, '%sParser.py ' % name)
+        assert os.path.exists(parser_file_name. rstrip())
+        system(self.python + parser_file_name
                + os.path.join(name, 'example.dsl -s xml >') + os.path.join(name, 'example.xml'))
         with open(os.path.join(name, 'example.xml'), 'r', encoding='utf-8') as f:
             xml = f.read()

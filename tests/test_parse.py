@@ -140,7 +140,6 @@ class TestInfiLoopsAndRecursion:
             """
         grammar_factory = grammar_provider(minilang)
         parser = grammar_factory()
-        # print(parser.python_src__)
         snippet = "5*4*3*2"
         # set_tracer(parser, trace_history)
         st = parser(snippet)
@@ -162,7 +161,6 @@ class TestInfiLoopsAndRecursion:
             """
         snippet = "9 + 8 + 7 + 6 + 5 + 3 * 4"
         parser = grammar_provider(minilang)()
-        print(parser.python_src__)
         assert parser
         syntax_tree = parser(snippet)
         if is_logging():
@@ -1477,8 +1475,7 @@ def next_valid_letter(text, start, end):
         assert any(err.code == MANDATORY_CONTINUATION for err in cst.errors)
 
     def test_bigfattest(self):
-        gr_ = get_ebnf_grammar()
-        gr = copy.deepcopy(gr_)
+        gr = copy.deepcopy(get_ebnf_grammar())
         resume_notices_on(gr)
         cst = gr(EBNF_with_Errors)
         locations = []

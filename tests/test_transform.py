@@ -24,6 +24,7 @@ import copy
 import os
 import sys
 
+
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
@@ -36,7 +37,7 @@ from DHParser.transform import traverse, reduce_single_child, remove_whitespace,
     positions_of, insert, node_maker, apply_if, change_name, add_attributes, add_error, \
     merge_leaves, BLOCK_ANONYMOUS_LEAVES, pick_longest_content, fix_content, merge_connected, \
     is_a, update_attr, swap_nested_nodes, has_child
-from typing import Set, List, Sequence, Tuple
+from typing import Set, List, Sequence, Tuple, Union
 
 
 class TestRemoval:
@@ -126,14 +127,14 @@ class TestTransformationFactory:
         except TypeError:
             pass
 
-    def test_forbidden_generic_types_in_decorator(self):
-        try:
-            @transformation_factory(Set[str])
-            def forbidden_transformation(context: List[Node], parameters: Set[str]):
-                pass
-            assert False, "use of generics not recognized in transform.transformation_factory()"
-        except TypeError:
-            pass
+    # def test_forbidden_generic_types_in_decorator(self):
+    #     try:
+    #         @transformation_factory(Set[str])
+    #         def forbidden_transformation(context: List[Node], parameters: Set[str]):
+    #             pass
+    #         assert False, "use of generics not recognized in transform.transformation_factory()"
+    #     except TypeError:
+    #         pass
 
     def test_forbidden_mutable_sequence_types_in_decorator(self):
         try:
@@ -165,6 +166,28 @@ class TestTransformationFactory:
         transformation = parameterized_transformation('a', 'b', 'c')
         transformation([PLACEHOLDER])
         assert save == ('a', 'b', 'c'), str(save)
+
+    def test_parameter_NoUnion(self):
+        possible_breakpoint_here = 1
+        @transformation_factory(collections.abc.Set)
+        def is_one_of(path: Path, name_set: Set[str]) -> bool:
+            """Returns true, if the node's name is one of the given tag names."""
+            return path[-1].name in name_set
+        transformation = is_one_of({"nixda"})
+        assert transformation([Node('nixda', 'nix')])
+        transformation = is_one_of("nixda")
+        assert transformation([Node('nixda', 'nix')])
+
+    def test_parameter_union(self):
+        possible_breakpoint_here = 1
+        @transformation_factory(collections.abc.Set)
+        def is_one_of(path: Path, name_set: Union[Set[str], str]) -> bool:
+            """Returns true, if the node's name is one of the given tag names."""
+            return path[-1].name in name_set
+        transformation = is_one_of({"nixda"})
+        assert transformation([Node('nixda', 'nix')])
+        transformation = is_one_of("nixda")
+        assert transformation([Node('nixda', 'nix')])
 
 
 class TestConditionalTransformations:

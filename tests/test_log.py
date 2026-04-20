@@ -19,6 +19,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import os
+import sys
+
+scriptpath = os.path.dirname(__file__) or '.'
+sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
+scriptpath = os.path.abspath(scriptpath)
+
 from DHParser.dsl import create_parser
 from DHParser.log import start_logging
 from DHParser.trace import set_tracer, trace_history

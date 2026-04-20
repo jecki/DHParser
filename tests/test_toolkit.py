@@ -44,7 +44,7 @@ from DHParser.toolkit import has_fenced_code, load_if_file, re, normalize_docstr
     issubtype, concurrent_ident, JSONstr, JSONnull, json_dumps, json_rpc, \
     matching_brackets, RX_ENTITY, validate_XML_attribute_value, fix_XML_attribute_value, \
     cached_load, clear_from_cache, PickMultiCoreExecutor, ExecutorWrapper, \
-    disable_multi_interp_extensions_check
+    disable_multi_interp_extensions_check, ByteString
 from DHParser.log import log_dir, start_logging, is_logging, suspend_logging, resume_logging
 
 from DHParser.configuration import CONFIG_PRESET
@@ -207,6 +207,14 @@ class TestTypeSystemSupport:
         assert issubtype(typing.Tuple, type(tuple()))
         assert issubtype(typing.Callable, collections.abc.Callable)
         assert issubtype(typing.Tuple[typing.Callable], tuple)
+        assert issubtype(str, typing.Container)
+
+    def test_is_subtype_extended(self):
+        assert issubtype(typing.Union[typing.Set[str], str], (typing.Set[str], str))
+        assert issubtype(typing.Union[typing.Set[str], str], (typing.Set, frozenset))
+        assert issubtype(typing.Union[typing.Set[str], str], typing.Container)
+        assert issubtype(typing.Union[typing.Set[str], str], (str, ByteString))
+
 
 
 class TestJSONSupport:

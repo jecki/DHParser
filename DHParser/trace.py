@@ -105,6 +105,7 @@ def symbol_name(parser: Parser, grammar: Grammar) -> str:
     # name = parser.name
     if name[:1] == ':':
         name = parser.symbol + '->' + name
+        # name = grammar.associated_symbol__(parser).pname + '->' + name
     return name
 
 

@@ -17,6 +17,7 @@ cdef class Compiler:
     cdef public set _debug_already_compiled
     cdef public list finalizers
     cdef public dict method_dict
+    cdef public set attributes_visited
 
     # cpdef fallback_compiler(self, node)
     # cpdef compile(self, node)
