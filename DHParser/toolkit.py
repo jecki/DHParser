@@ -2062,7 +2062,7 @@ def MultiCoreManager():
 #         return self.future.exception(timeout)
 #
 #     def add_done_callback(self, fn):
-#         pass # TODO: Wrap fn
+#         pass # TOODO: Wrap fn
 #
 #
 # def pickled_return(f):
@@ -2113,6 +2113,11 @@ def disable_multi_interp_extensions_check():
         _imp._override_multi_interp_extensions_check(-1)
 
 
+def init_interpreter_pool_worker(parent_sys_path):
+    import sys
+    sys.path = parent_sys_path
+
+
 class PickMultiCoreExecutorShim:
     def __call__(self):  # -> Type[concurrent.futures.Executor]:
         """Returns an instance of the most lightweight
@@ -2137,7 +2142,10 @@ class PickMultiCoreExecutorShim:
         if sys.version_info >= (3, 14, 0) \
                 and CONFIG_PRESET['multicore_pool'] == 'InterpreterPool' \
                 and not getattr(DHParser.stringview, 'cython_optimized', False):
-            return ExecutorWrapper(concurrent.futures.InterpreterPoolExecutor())
+            return ExecutorWrapper(concurrent.futures.InterpreterPoolExecutor(
+                initializer = init_interpreter_pool_worker,
+                initargs=(sys.path,)
+            ))
         else:
             return ExecutorWrapper(concurrent.futures.ProcessPoolExecutor())
 
