@@ -1219,7 +1219,7 @@ from DHParser.pipeline import end_points, full_pipeline, create_parser_junction,
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \\
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.stringview import StringView
-from DHParser.toolkit import is_filename, load_if_file, cpu_count, get_piped_data \\
+from DHParser.toolkit import is_filename, load_if_file, cpu_count, get_piped_data, \\
     ThreadLocalSingletonFactory, expand_table, static, CancelQuery, re
 from DHParser.trace import set_tracer, resume_notices_on, trace_history
 from DHParser.transform import is_empty, remove_if, TransformationDict, TransformerFunc, \\
