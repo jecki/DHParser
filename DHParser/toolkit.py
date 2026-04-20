@@ -1165,6 +1165,15 @@ def isgenerictype(t):
 RX_FILEPATH = LazyRE(r'[^ \t][^\n\t?*=]+(?<![ \t])')  # r'[\w/:. \\]+'
 
 
+def get_piped_data(timeout: float = 0.1) -> str:
+    """Reads data from a unix-pipe. Ensures that script is not blocking!"""
+    import select
+    if not sys.stdin.isatty() \
+            and select.select([sys.stdin], [], [], timeout)[0]:
+        return sys.stdin.read()
+    return ''
+
+
 def load_if_file(text_or_file) -> str:
     """
     Reads and returns the content of a text-file if parameter

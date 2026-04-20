@@ -214,7 +214,7 @@ def main(called_from_app=False) -> bool:
 
     args = parser.parse_args()
     file_names, out, log_dir = args.files, args.out[0], ''
-    piped_data = '' if sys.stdin.isatty() else sys.stdin.read()
+    piped_data = get_piped_data()
     if piped_data: file_names.insert(0, '\ufeff' + piped_data)
     if args.parse: file_names.insert(0, '\ufeff' + args.parse[0])
 
