@@ -727,7 +727,7 @@ def is_empty(path: Path) -> bool:
 
 
 @transformation_factory(collections.abc.Set)
-def is_token(path: Path, tokens: Set[str] = set()) -> bool:
+def is_token(path: Path, tokens: Union[Set[str], str] = set()) -> bool:
     """
     Checks whether the last node in the path has the name ":Text"
     and it's content matches one of the given tokens. Leading and trailing
@@ -751,7 +751,7 @@ def is_a(path: Path, name: str) -> bool:
 
 
 @transformation_factory(collections.abc.Set)
-def not_one_of(path: Path, name_set: Set[str]) -> bool:
+def not_one_of(path: Path, name_set: Union[Set[str], str]) -> bool:
     """Returns true, if the node's name is not one of the given tag names."""
     return path[-1].name not in name_set
 
@@ -815,7 +815,7 @@ def has_attr(path: Path, attr: str="", value: Optional[str] = None) -> bool:
 
 @transformation_factory(collections.abc.Set)
 def has_ancestor(path: Path,
-                 name_set: Set[str],
+                 name_set: Union[Set[str], str],
                  generations: int = -1,
                  until: Union[Set[str], str] = set()) -> bool:
     """
@@ -847,7 +847,7 @@ def has_ancestor(path: Path,
 
 
 @transformation_factory(collections.abc.Set)
-def has_parent(path: Path, name_set: Set[str]) -> bool:
+def has_parent(path: Path, name_set: Union[Set[str], str]) -> bool:
     """Checks whether the immediate predecessor in the path has one of the
     given tags."""
     return has_ancestor(path, name_set, 1)
@@ -859,7 +859,7 @@ def has_children(path: Path) -> bool:
 
 
 @transformation_factory(collections.abc.Set)
-def has_descendant(path: Path, name_set: Set[str],
+def has_descendant(path: Path, name_set: Union[Set[str], str],
                    generations: int = -1,
                    until: Union[Set[str], str] = set()) -> bool:
     """Checks whether a node with one of the given tag names appears somewhere
@@ -894,14 +894,14 @@ def has_descendant(path: Path, name_set: Set[str],
 
 
 @transformation_factory(collections.abc.Set)
-def has_child(path: Path, name_set: Set[str]) -> bool:
+def has_child(path: Path, name_set: Union[Set[str], str]) -> bool:
     """Checks whether at least one child (i.e. immediate descendant) has one of
     the given tags."""
     return has_descendant(path, name_set, 1)
 
 
 @transformation_factory(collections.abc.Set)
-def has_sibling(path: Path, name_set: Set[str]):
+def has_sibling(path: Path, name_set: Union[Set[str], str]):
     """Checks whether the last node in the path has a node with one of the
     given names as sibling."""
     if len(path) >= 2:
@@ -1698,7 +1698,7 @@ def left_associative(path: Path):
 
 
 @transformation_factory(collections.abc.Set)
-def lean_left(path: Path, operators: Set[str]):
+def lean_left(path: Path, operators: Union[Set[str], str]):
     """
     Turns a right-leaning tree into a left-leaning tree:
 
@@ -1801,7 +1801,7 @@ def keep_children_if(path: Path, condition: CondFunc):
 
 
 @transformation_factory(collections.abc.Set)
-def keep_tokens(path: Path, tokens: Set[str] = set()):
+def keep_tokens(path: Path, tokens: Union[Set[str], str] = set()):
     """Removes any among a particular set of tokens from the immediate
     descendants of a node. If ``tokens`` is the empty set, all tokens
     are removed."""
@@ -1809,7 +1809,7 @@ def keep_tokens(path: Path, tokens: Set[str] = set()):
 
 
 @transformation_factory(collections.abc.Set)
-def keep_nodes(path: Path, names: Set[str]):
+def keep_nodes(path: Path, names: Union[Set[str], str]):
     """Removes children by tag name."""
     keep_children_if(path, partial(is_one_of, name_set=names))
 
@@ -1882,7 +1882,7 @@ def remove_brackets(path: Path):
 
 
 @transformation_factory(collections.abc.Set)
-def remove_tokens(path: Path, tokens: Set[str] = set()):
+def remove_tokens(path: Path, tokens: Union[Set[str], str] = set()):
     """Removes any among a particular set of tokens from the immediate
     descendants of a node. If ``tokens`` is the empty set, all tokens
     are removed."""
@@ -1890,7 +1890,7 @@ def remove_tokens(path: Path, tokens: Set[str] = set()):
 
 
 @transformation_factory(collections.abc.Set)
-def remove_children(path: Path, names: Set[str]):
+def remove_children(path: Path, names: Union[Set[str], str]):
     """Removes children by tag name."""
     remove_children_if(path, partial(is_one_of, name_set=names))
 
@@ -2034,7 +2034,7 @@ def node_maker(name: str,
 
 
 @transformation_factory(collections.abc.Set)
-def positions_of(path: Path, names: Set[str] = set()) -> Tuple[int, ...]:
+def positions_of(path: Path, names: Union[Set[str], str] = set()) -> Tuple[int, ...]:
     """Returns a (potentially empty) tuple of the positions of the
     children that have one of the given `names`.
     """
@@ -2172,7 +2172,7 @@ def assert_content(path: Path, regexp: str):
 
 
 @transformation_factory(collections.abc.Set)
-def require(path: Path, child_tags: Set[str]):
+def require(path: Path, child_tags: Union[Set[str], str]):
     node = path[-1]
     for child in node._children:
         if child.name not in child_tags:
@@ -2181,7 +2181,7 @@ def require(path: Path, child_tags: Set[str]):
 
 
 @transformation_factory(collections.abc.Set)
-def forbid(path: Path, child_tags: Set[str]):
+def forbid(path: Path, child_tags: Union[Set[str], str]):
     node = path[-1]
     for child in node._children:
         if child.name in child_tags:

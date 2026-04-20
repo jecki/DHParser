@@ -1,3 +1,11 @@
+DHParser Version 1.9.6 (20.4.2026)
+..................................
+
+- reverted change of DHParser.parse.Forward in main branch (for now),
+  because it affects history-records and tracing
+- Cython-compatibility restored
+- various bug-fixes
+
 DHParser Version 1.9.5 (16.4.2026)
 ..................................
 
