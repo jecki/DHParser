@@ -1881,14 +1881,12 @@ def submit_wrapper(fn, pid, args=(), kwargs={}):
     return fn(*args, **kwargs)
 
 
-def mapped_wrapper(*args, fn=None, pid='', sys_path=[]):
+def mapped_wrapper(*args, fn=None, pid=''):
     if CONFIG_PRESET['main_pid']:
         assert CONFIG_PRESET['main_pid'] == pid
     else:
         CONFIG_PRESET['main_pid'] = pid
         reset_config_dict()
-    if sys_path:
-        sys.path = sys_path
     return fn(*args)
 
 
@@ -1903,8 +1901,7 @@ class ExecutorWrapper:
 
     def map(self, fn, *iterables, timeout=None, chunksize=1):
         pid = CONFIG_PRESET['main_pid'] or str(os.getpid())
-        path = sys.path if self.executor.__class__.__name__ == "InterpreterPoolExecutor" else []
-        wrapper = functools.partial(mapped_wrapper, fn=fn, pid=pid, sys_path=sys.path)
+        wrapper = functools.partial(mapped_wrapper, fn=fn, pid=pid)
         return self.executor.map(wrapper, *iterables)
 
     def shutdown(self, wait=True, *, cancel_futures=False):
