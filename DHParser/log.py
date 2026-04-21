@@ -318,7 +318,7 @@ class HistoryRecord:
     parser call, which ist either MATCH, FAIL (i.e. no match)
     or ERROR.
     """
-    __slots__ = ('call_stack', 'node', 'text', 'pos', 'line_col', 'errors', '_stack', '_status', '_excerpt')
+    __slots__ = ('call_stack', 'node', 'text', 'line_col', 'errors', '_stack', '_status', '_excerpt')
 
     MATCH = "MATCH"
     NMATCH = "!MATCH"

@@ -284,7 +284,8 @@ def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], c
                     and not any(tag in (':Lookahead', ":NegativeLookahead")
                                 or tag.endswith(":SmartRE_Lookahead")
                                 for tag, _ in grammar.history__[-1].call_stack):
-                grammar.history__.pop()
+                pass
+                # grammar.history__.pop()
             grammar.history__.append(record)
 
 
