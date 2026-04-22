@@ -116,7 +116,7 @@ class InterwovenLRGrammar(Grammar):
     """
     E = Forward()
     G = Forward()
-    source_hash__ = "202247b02adc63cdd416bb16d859aa4f"
+    source_hash__ = "dc99039a88809f02fbdab9f2018da1af"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -129,8 +129,8 @@ class InterwovenLRGrammar(Grammar):
     I = Series(Text("("), OneOrMore(AA), Text(")"))
     H = Series(Ref("G"), Text("l"))
     F = Alternative(Series(Ref("E"), Text("+"), ZeroOrMore(I)), Series(Ref("G"), Text("-")))
-    G.set(Alternative(Series(Ref("H"), Text("m")), Ref("E")))
-    E.set(Alternative(Series(Ref("F"), Text("n")), Text("n")))
+    G.set(Alternative(Series(H, Text("m")), Ref("E")))
+    E.set(Alternative(Series(F, Text("n")), Text("n")))
     S = Synonym(E)
     root__ = S
     

@@ -49,7 +49,7 @@ from DHParser.error import Error, RESUME_NOTICE, RECURSION_DEPTH_LIMIT_HIT
 from DHParser.nodetree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE
 from DHParser.log import HistoryRecord, NONE_NODE
 from DHParser.parse import Grammar, Parser, ParserError, ParseFunc, ContextSensitive, \
-    UnaryParser, SmartRE, cancel_proxy
+    UnaryParser, SmartRE, cancel_proxy, Forward
 from DHParser.toolkit import line_col, INFINITE
 
 __all__ = ('trace_history', 'set_tracer', 'resume_notices_on', 'resume_notices_off')

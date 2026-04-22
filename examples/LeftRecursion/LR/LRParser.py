@@ -115,7 +115,7 @@ class LRGrammar(Grammar):
         syntax_tree = parser(source_code)
     """
     S = Forward()
-    source_hash__ = "ae7b510559d3ab67d5f9cc7c5fa7e3b2"
+    source_hash__ = "5d0cbdc963967a9dc5007d03ceae05b2"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -125,7 +125,7 @@ class LRGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     T = OneOrMore(RegExp('[0-9]'))
-    S.set(Alternative(Series(S, Text("+"), T), T))
+    S.set(Alternative(Series(Ref("S"), Text("+"), T), T))
     root__ = S
     
 parsing: PseudoJunction = create_parser_junction(LRGrammar)

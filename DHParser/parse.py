@@ -5361,34 +5361,32 @@ class Forward(UnaryParser):
         self.recursion_counter[location] = True  # fail on the first recursion
         save_suspend_memoization = grammar.suspend_memoization__
         grammar.suspend_memoization__ = False
-        history_tracking = grammar.history_tracking__
-        if history_tracking:
-            history_pointer = len(grammar.history__)
-            call_stack = []
         rb_stack_size = len(grammar.rollback__)
-        last_history_state = []
 
         result = None, location
         next_result = self._parse_proxy(location)  # self.parser(location)
+
+        history_tracking = grammar.history_tracking__
+        if history_tracking:
+            history_pointer = len(grammar.history__)
+            call_stack_pointer = len(grammar.history__[-1].call_stack)
+            call_stack_pointer0 = len(grammar.call_stack__)
 
         while next_result[1] > result[1]:
             grammar.suspend_memoization__ = False
             rb_stack_size = len(grammar.rollback__)
             if history_tracking:
                 record = grammar.history__[-1] # .pop()
-                call_stack.append(record.call_stack)
-                grammar.history__ = grammar.history__[:history_pointer]
-                grammar.history__.append(record)
-                history_pointer += 1
+                grammar.call_stack__.extend(record.call_stack[call_stack_pointer:])
+                call_stack_pointer = len(grammar.call_stack__)
+                history_pointer = len(grammar.history__)
             result = next_result
             visited[location] = result
             next_result = self._parse_proxy(location)  # self.parser(location)
 
         if history_tracking and result[0] is not None:
             grammar.history__ = grammar.history__[:history_pointer]
-            call_stack.reverse()
-            # record.call_stack = tuple(grammar.call_stack__) + tuple(chain.from_iterable(call_stack))
-            grammar.history__.append(record)
+            grammar.call_stack__ = grammar.call_stack__[:call_stack_pointer0]
 
         self.recursion_counter[location] = False
         # Since the result of the last parser call (``next_result``) is discarded,

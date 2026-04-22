@@ -115,7 +115,7 @@ class direct_hiddenGrammar(Grammar):
         syntax_tree = parser(source_code)
     """
     E = Forward()
-    source_hash__ = "eeed0910d28da3f68c6e36a83b81f5f4"
+    source_hash__ = "20644f5ec0f6f4f3fec7bea01782ce4d"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
