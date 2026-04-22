@@ -5375,14 +5375,15 @@ class Forward(UnaryParser):
         while next_result[1] > result[1]:
             grammar.suspend_memoization__ = False
             rb_stack_size = len(grammar.rollback__)
+            result = next_result
+            visited[location] = result
+            next_result = self._parse_proxy(location)  # self.parser(location)
+
             if history_tracking:
                 record = grammar.history__[-1] # .pop()
                 grammar.call_stack__.extend(record.call_stack[call_stack_pointer:])
                 call_stack_pointer = len(grammar.call_stack__)
                 history_pointer = len(grammar.history__)
-            result = next_result
-            visited[location] = result
-            next_result = self._parse_proxy(location)  # self.parser(location)
 
         if history_tracking and result[0] is not None:
             grammar.history__ = grammar.history__[:history_pointer]
