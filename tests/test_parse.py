@@ -2368,9 +2368,9 @@ EXP         = [ (`E`|`e`) [`+`|`-`] /[0-9]+/ ]
 EOF        =  !/./        # no more characters ahead, end of file reached
 
         """
+        parser = create_parser(lang)
         save = get_config_value('history_tracking')
         set_config_value('history_tracking', True)
-        parser = create_parser(lang)
         set_tracer(parser.root__.descendants(), trace_history)
         parser.history_tracking__ = True
         tree = parser('readonly [number, number] | undefined', "types")
