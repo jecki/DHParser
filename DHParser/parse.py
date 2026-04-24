@@ -5349,9 +5349,6 @@ class Forward(UnaryParser):
             # Sorry, no history recording in case of memoized results!
             if self.recursion_counter[location]:
                 grammar.suspend_memoization__ = id(self)
-            if grammar.history_tracking__ and self._parse_proxy.__name__ == 'trace_history' \
-                    and self._parse_proxy.__module__ == 'DHParser.trace':
-                return self._parse_proxy(-location or -INFINITE)  # a negative location signals a memo-hit
             return visited[location]
 
         if location in self.recursion_counter:
