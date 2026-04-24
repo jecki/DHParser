@@ -775,7 +775,6 @@ class Parser:
             # if location has already been visited by the current parser, return saved result
             visited = self.visited  # using local variable for better performance
             if location in visited:
-                assert self.effective_pname() or not hasattr(self, 'deadend'), str(self)  # EXPERIMENTAL!!!
                 if grammar.history_tracking__  and self._parse_proxy.__name__ == 'trace_history' \
                         and self._parse_proxy.__module__ == 'DHParser.trace':
                     return self._parse_proxy(-location or -INFINITE)  # a negative location signals a memo-hit
@@ -1930,20 +1929,6 @@ class Grammar:
                     print('term = ', id(p))
                 elif p.effective_pname() == 'term':
                     print(type(p), id(p), id(p.parser))
-
-        # EXPERIMENTAL: mark dead-end parsers, i.e. parser that call
-        # only dead-end parsers
-        flag = True
-        remaining = copy.copy(self.all_parsers__)
-        while flag:
-            flag = False
-            for p in frozenset(remaining):
-                if (isinstance(p, LeafParser)
-                        or (not isinstance(self[p.symbol], Forward)) and
-                                all(hasattr(sp, 'deadend') for sp in p.sub_parsers)):
-                    p.deadend = True
-                    flag = True
-                    remaining.remove(p)
 
         self.memo__ = None  # the deepcopy memo is not needed any more after this point.
 
