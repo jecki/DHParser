@@ -5366,7 +5366,7 @@ class Forward(UnaryParser):
         history_tracking = grammar.history_tracking__
         if history_tracking:
             history_pointer = len(grammar.history__)
-            call_stack_pointer = len(grammar.history__[-1].call_stack)
+            call_stack_pointer = len(grammar.history__[-1].call_stack) if grammar.history__ else 0
             call_stack_pointer0 = len(grammar.call_stack__)
 
         while next_result[1] > result[1]:

@@ -110,9 +110,9 @@ class XML_W3C_SPECGrammar(Grammar):
     element = Forward()
     extSubsetDecl = Forward()
     ignoreSectContents = Forward()
-    source_hash__ = "69847410c865fec27bf37e78577b615f"
+    source_hash__ = "b5e1fa150e28b5fa361e13c4dc40c519"
     disposable__ = re.compile('$.')
-    static_analysis_pending__ = [True]
+    static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
     comment_rx__ = RX_NEVER_MATCH
@@ -139,8 +139,8 @@ class XML_W3C_SPECGrammar(Grammar):
     Char = Alternative(RegExp('[\x09]'), RegExp('[\x0A]'), RegExp('[\x0D]'), RegExp('[\x20-\uD7FF]'), RegExp('[\uE000-\uFFFD]'), RegExp('[\U00010000-\U0010FFFF]'))
     PEReference = Series(Text('%'), Name, Text(';'))
     NotationDecl = Series(Text('<!NOTATION'), S, Name, S, Alternative(ExternalID, PublicID), Option(S), Text('>'))
-    ignoreSect = Series(Text('<!['), Option(S), Text('IGNORE'), Option(S), Text('['), ZeroOrMore(ignoreSectContents), Text(']]>'))
-    includeSect = Series(Text('<!['), Option(S), Text('INCLUDE'), Option(S), Text('['), extSubsetDecl, Text(']]>'))
+    ignoreSect = Series(Text('<!['), Option(S), Text('IGNORE'), Option(S), Text('['), ZeroOrMore(Ref("ignoreSectContents")), Text(']]>'))
+    includeSect = Series(Text('<!['), Option(S), Text('INCLUDE'), Option(S), Text('['), Ref("extSubsetDecl"), Text(']]>'))
     EntityValue = Alternative(Series(Text('"'), ZeroOrMore(Alternative(RegExp('[^%&"]'), PEReference, Reference)), Text('"')), Series(Text("\'"), ZeroOrMore(Alternative(RegExp('[^%&\']'), PEReference, Reference)), Text("\'")))
     PEDef = Alternative(EntityValue, ExternalID)
     conditionalSect = Alternative(includeSect, ignoreSect)
@@ -152,9 +152,9 @@ class XML_W3C_SPECGrammar(Grammar):
     Enumeration = Series(Text('('), Option(S), Nmtoken, ZeroOrMore(Series(Option(S), Text('|'), Option(S), Nmtoken)), Option(S), Text(')'))
     DefaultDecl = Alternative(Text('#REQUIRED'), Text('#IMPLIED'), Series(Option(Series(Text('#FIXED'), S)), AttValue))
     Mixed = Alternative(Series(Text('('), Option(S), Text('#PCDATA'), ZeroOrMore(Series(Option(S), Text('|'), Option(S), Name)), Option(S), Text(')*')), Series(Text('('), Option(S), Text('#PCDATA'), Option(S), Text(')')))
-    seq = Series(Text('('), Option(S), cp, ZeroOrMore(Series(Option(S), Text(','), Option(S), cp)), Option(S), Text(')'))
+    seq = Series(Text('('), Option(S), Ref("cp"), ZeroOrMore(Series(Option(S), Text(','), Option(S), Ref("cp"))), Option(S), Text(')'))
     EnumeratedType = Alternative(NotationType, Enumeration)
-    choice = Series(Text('('), Option(S), cp, OneOrMore(Series(Option(S), Text('|'), Option(S), cp)), Option(S), Text(')'))
+    choice = Series(Text('('), Option(S), Ref("cp"), OneOrMore(Series(Option(S), Text('|'), Option(S), Ref("cp"))), Option(S), Text(')'))
     children = Series(Alternative(choice, seq), Option(Alternative(Text('?'), Text('*'), Text('+'))))
     contentspec = Alternative(Text('EMPTY'), Text('ANY'), Mixed, children)
     elementdecl = Series(Text('<!ELEMENT'), S, Name, S, contentspec, Option(S), Text('>'))
@@ -171,9 +171,9 @@ class XML_W3C_SPECGrammar(Grammar):
     DeclSep = Alternative(PEReference, S)
     EntityDef = Alternative(EntityValue, Series(ExternalID, Option(NDataDecl)))
     Comment = Series(Text('<!--'), ZeroOrMore(Alternative(Series(NegativeLookahead(Text('-')), Char), Series(Text('-'), Series(NegativeLookahead(Text('-')), Char)))), Text('-->'))
-    extParsedEnt = Series(Option(TextDecl), content)
+    extParsedEnt = Series(Option(TextDecl), Ref("content"))
     SDDecl = Series(S, Text('standalone'), Eq, Alternative(Series(Text("\'"), Alternative(Text('yes'), Text('no')), Text("\'")), Series(Text('"'), Alternative(Text('yes'), Text('no')), Text('"'))))
-    extSubset = Series(Option(TextDecl), extSubsetDecl)
+    extSubset = Series(Option(TextDecl), Ref("extSubsetDecl"))
     XMLDecl = Series(Text('<?xml'), VersionInfo, Option(EncodingDecl), Option(SDDecl), Option(S), Text('?>'))
     GEDecl = Series(Text('<!ENTITY'), S, Name, S, EntityDef, Option(S), Text('>'))
     CDEnd = Text(']]>')
@@ -192,16 +192,17 @@ class XML_W3C_SPECGrammar(Grammar):
     prolog = Series(Option(XMLDecl), ZeroOrMore(Misc), Option(Series(doctypedecl, ZeroOrMore(Misc))))
     Nmtokens = Series(Nmtoken, ZeroOrMore(Series(RegExp('[\x20]'), Nmtoken)))
     Names = Series(Name, ZeroOrMore(Series(RegExp('[\x20]'), Name)))
-    ignoreSectContents.set(Series(Ignore, ZeroOrMore(Series(Text('<!['), ignoreSectContents, Text(']]>'), Ignore))))
+    ignoreSectContents.set(Series(Ignore, ZeroOrMore(Series(Text('<!['), Ref("ignoreSectContents"), Text(']]>'), Ignore))))
     cp.set(Series(Alternative(Name, choice, seq), Option(Alternative(Text('?'), Text('*'), Text('+')))))
-    content.set(Series(Option(CharData), ZeroOrMore(Series(Alternative(element, Reference, CDSect, PI, Comment), Option(CharData)))))
-    element.set(Alternative(EmptyElemTag, Series(STag, content, ETag)))
+    content.set(Series(Option(CharData), ZeroOrMore(Series(Alternative(Ref("element"), Reference, CDSect, PI, Comment), Option(CharData)))))
+    element.set(Alternative(EmptyElemTag, Series(STag, Ref("content"), ETag)))
     extSubsetDecl.set(ZeroOrMore(Alternative(markupdecl, conditionalSect, DeclSep)))
-    document = Series(prolog, element, ZeroOrMore(Misc))
+    document = Series(prolog, Ref("element"), ZeroOrMore(Misc))
     root__ = document
     
 parsing: PseudoJunction = create_parser_junction(XML_W3C_SPECGrammar)
 get_grammar = parsing.factory  # for backwards compatibility, only
+
 
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
@@ -216,6 +217,7 @@ try:
         "preprocessor to ignore comments."
 except (AttributeError, NameError):
     pass
+
 
 
 #######################################################################

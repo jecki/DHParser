@@ -34,7 +34,7 @@ from DHParser.error import ErrorCode, Error, canonical_error_strings, has_errors
 from DHParser.log import start_logging, suspend_logging, resume_logging
 from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode
 from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar, Parser, \
-    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, ERR, \
+    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, ERR, Ref, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, mixin_comment, \
     last_value, matching_bracket, optional_last_value, SmartRE, RX_NEVER_MATCH
@@ -86,13 +86,11 @@ class FixedEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "67b5b3d311a9afa33ce94010274c9fec"
-    disposable__ = re.compile(
-        '(?:FOLLOW_UP$|MOD_SEP$|EOF$|is_mdef$|countable$|no_range$|component$|pure_elem$|MOD_SYM$|ANY_SUFFIX$)')
+    source_hash__ = "0353dadb2f86312d6b9c839eb141ea59"
+    disposable__ = re.compile('(?:is_mdef$|component$|countable$|ANY_SUFFIX$|MOD_SYM$|no_range$|MOD_SEP$|EOF$|FOLLOW_UP$|pure_elem$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
-    error_messages__ = {'definition': [(re.compile(r','),
-                                        'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
+    error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
     COMMENT__ = r'(?!#x[A-Fa-f0-9])#.*(?:\n|$)|/\*(?:.|\n)*?\*/|\(\*(?:.|\n)*?\*\)'
     comment_rx__ = re.compile(COMMENT__)
     WHITESPACE__ = r'\s*'
@@ -121,92 +119,53 @@ class FixedEBNFGrammar(Grammar):
     multiplier = SmartRE(f'(\\d+)(?:{WSP_RE__})', '/\\d+/ ~')
     whitespace = SmartRE(f'(~)(?:{WSP_RE__})', '/~/ ~')
     any_char = Series(Text("."), dwsp__)
-    free_char = SmartRE(f'([^\\n\\[\\]\\\\]|\\\\[nrtfv`´\'"(){{}}\\[\\]/\\\\])',
-                        '/[^\\n\\[\\]\\\\]/|/\\\\[nrtfv`´\'"(){}\\[\\]\\/\\\\]/')
-    character = Series(
-        Alternative(CH_LEADIN, Text("%x"), Text("U+"), Text("u+"), Text("\\x"), Text("\\u"), Text("\\U")), HEXCODE)
-    range_desc = Series(Alternative(character, free_char),
-                        Option(Series(Option(Text("-")), Alternative(character, free_char))))
+    free_char = SmartRE(f'([^\\n\\[\\]\\\\]|\\\\[nrtfv`´\'"(){{}}\\[\\]/\\\\])', '/[^\\n\\[\\]\\\\]/|/\\\\[nrtfv`´\'"(){}\\[\\]\\/\\\\]/')
+    character = Series(Alternative(CH_LEADIN, Text("%x"), Text("U+"), Text("u+"), Text("\\x"), Text("\\u"), Text("\\U")), HEXCODE)
+    range_desc = Series(Alternative(character, free_char), Option(Series(Option(Text("-")), Alternative(character, free_char))))
     range_chain = Series(Text("["), Option(Text("^")), OneOrMore(range_desc), Text("]"))
     char_ranges = Series(RE_LEADIN, range_chain, ZeroOrMore(Series(Text("|"), range_chain)), RE_LEADOUT, dwsp__)
     restricted_range_desc = Series(character, Option(Series(Text("-"), character)))
     char_range = Series(Text("["), Option(Text("^")), OneOrMore(restricted_range_desc), Series(Text("]"), dwsp__))
     regexp = Series(RE_LEADIN, RE_CORE, RE_LEADOUT, dwsp__)
-    plaintext = SmartRE(
-        f'(?:(`(?:(?<!\\\\)(?:\\\\\\\\)*\\\\`|[^`])*?`)(?:{WSP_RE__}))|(?:(´(?:(?<!\\\\)(?:\\\\\\\\)*\\\\´|[^´])*?´)(?:{WSP_RE__}))',
-        '/`(?:(?<!\\\\)(?:\\\\\\\\)*\\\\`|[^`])*?`/ ~|/´(?:(?<!\\\\)(?:\\\\\\\\)*\\\\´|[^´])*?´/ ~')
-    literal = SmartRE(
-        f'(?:("(?:(?<!\\\\)(?:\\\\\\\\)*\\\\"|[^"])*?")(?:{WSP_RE__}))|(?:(\'(?:(?<!\\\\)(?:\\\\\\\\)*\\\\\'|[^\'])*?\')(?:{WSP_RE__}))|(?:(’(?:(?<!\\\\)(?:\\\\\\\\)*\\\\’|[^’])*?’)(?:{WSP_RE__}))',
-        '/"(?:(?<!\\\\)(?:\\\\\\\\)*\\\\"|[^"])*?"/ ~|/\'(?:(?<!\\\\)(?:\\\\\\\\)*\\\\\'|[^\'])*?\'/ ~|/’(?:(?<!\\\\)(?:\\\\\\\\)*\\\\’|[^’])*?’/ ~')
+    plaintext = SmartRE(f'(?:(`(?:(?<!\\\\)(?:\\\\\\\\)*\\\\`|[^`])*?`)(?:{WSP_RE__}))|(?:(´(?:(?<!\\\\)(?:\\\\\\\\)*\\\\´|[^´])*?´)(?:{WSP_RE__}))', '/`(?:(?<!\\\\)(?:\\\\\\\\)*\\\\`|[^`])*?`/ ~|/´(?:(?<!\\\\)(?:\\\\\\\\)*\\\\´|[^´])*?´/ ~')
+    literal = SmartRE(f'(?:("(?:(?<!\\\\)(?:\\\\\\\\)*\\\\"|[^"])*?")(?:{WSP_RE__}))|(?:(\'(?:(?<!\\\\)(?:\\\\\\\\)*\\\\\'|[^\'])*?\')(?:{WSP_RE__}))|(?:(’(?:(?<!\\\\)(?:\\\\\\\\)*\\\\’|[^’])*?’)(?:{WSP_RE__}))', '/"(?:(?<!\\\\)(?:\\\\\\\\)*\\\\"|[^"])*?"/ ~|/\'(?:(?<!\\\\)(?:\\\\\\\\)*\\\\\'|[^\'])*?\'/ ~|/’(?:(?<!\\\\)(?:\\\\\\\\)*\\\\’|[^’])*?’/ ~')
     symbol = Series(SYM_REGEX, dwsp__)
     argument = Alternative(literal, Series(name, dwsp__))
-    parser = Series(Series(Text("@"), dwsp__), name, Series(Text("("), dwsp__), Option(argument),
-                    Series(Text(")"), dwsp__), mandatory=3)
+    parser = Series(Series(Text("@"), dwsp__), name, Series(Text("("), dwsp__), Option(argument), Series(Text(")"), dwsp__), mandatory=3)
     no_range = Drop(Alternative(NegativeLookahead(multiplier), Series(Lookahead(multiplier), TIMES)))
-    macro = Series(Series(Text("$"), dwsp__), name, Series(Text("("), dwsp__), no_range, expression,
-                   ZeroOrMore(Series(Series(Text(","), dwsp__), no_range, expression)), Series(Text(")"), dwsp__))
+    macro = Series(Series(Text("$"), dwsp__), name, Series(Text("("), dwsp__), no_range, Ref("expression"), ZeroOrMore(Series(Series(Text(","), dwsp__), no_range, Ref("expression"))), Series(Text(")"), dwsp__))
     range = Series(RNG_OPEN, dwsp__, multiplier, Option(Series(RNG_DELIM, dwsp__, multiplier)), RNG_CLOSE, dwsp__)
-    counted = Alternative(Series(countable, range), Series(countable, TIMES, dwsp__, multiplier),
-                          Series(multiplier, TIMES, dwsp__, countable, mandatory=3))
-    option = Alternative(
-        Series(NegativeLookahead(char_range), Series(Text("["), dwsp__), expression, Series(Text("]"), dwsp__),
-               mandatory=2), Series(element, Series(Text("?"), dwsp__)))
-    repetition = Alternative(
-        Series(Series(Text("{"), dwsp__), no_range, expression, Series(Text("}"), dwsp__), mandatory=2),
-        Series(element, Series(Text("*"), dwsp__), no_range))
-    oneormore = Alternative(Series(Series(Text("{"), dwsp__), no_range, expression, Series(Text("}+"), dwsp__)),
-                            Series(element, Series(Text("+"), dwsp__)))
-    group = Series(Series(Text("("), dwsp__), no_range, expression, Series(Text(")"), dwsp__), mandatory=2)
-    retrieveop = SmartRE(f'(?P<:Text>::)(?:{WSP_RE__})|(?P<:Text>:\\?)(?:{WSP_RE__})|(?P<:Text>:)(?:{WSP_RE__})',
-                         '"::"|":?"|":"')
-    flowmarker = SmartRE(
-        f'(?P<:Text>!)(?:{WSP_RE__})|(?P<:Text>\\&)(?:{WSP_RE__})|(?P<:Text><\\-!)(?:{WSP_RE__})|(?P<:Text><\\-\\&)(?:{WSP_RE__})',
-        '"!"|"&"|"<-!"|"<-&"')
+    counted = Alternative(Series(Ref("countable"), range), Series(Ref("countable"), TIMES, dwsp__, multiplier), Series(multiplier, TIMES, dwsp__, Ref("countable"), mandatory=3))
+    option = Alternative(Series(NegativeLookahead(char_range), Series(Text("["), dwsp__), Ref("expression"), Series(Text("]"), dwsp__), mandatory=2), Series(Ref("element"), Series(Text("?"), dwsp__)))
+    repetition = Alternative(Series(Series(Text("{"), dwsp__), no_range, Ref("expression"), Series(Text("}"), dwsp__), mandatory=2), Series(Ref("element"), Series(Text("*"), dwsp__), no_range))
+    oneormore = Alternative(Series(Series(Text("{"), dwsp__), no_range, Ref("expression"), Series(Text("}+"), dwsp__)), Series(Ref("element"), Series(Text("+"), dwsp__)))
+    group = Series(Series(Text("("), dwsp__), no_range, Ref("expression"), Series(Text(")"), dwsp__), mandatory=2)
+    retrieveop = SmartRE(f'(?P<:Text>::)(?:{WSP_RE__})|(?P<:Text>:\\?)(?:{WSP_RE__})|(?P<:Text>:)(?:{WSP_RE__})', '"::"|":?"|":"')
+    flowmarker = SmartRE(f'(?P<:Text>!)(?:{WSP_RE__})|(?P<:Text>\\&)(?:{WSP_RE__})|(?P<:Text><\\-!)(?:{WSP_RE__})|(?P<:Text><\\-\\&)(?:{WSP_RE__})', '"!"|"&"|"<-!"|"<-&"')
     ANY_SUFFIX = RegExp('[?*+]')
-    is_mdef = Series(Series(Text("$"), dwsp__), name, Option(
-        Series(Series(Text("("), dwsp__), placeholder, ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)),
-               Series(Text(")"), dwsp__))), dwsp__, DEF)
-    pure_elem = Series(element, NegativeLookahead(ANY_SUFFIX), mandatory=1)
+    is_mdef = Series(Series(Text("$"), dwsp__), name, Option(Series(Series(Text("("), dwsp__), placeholder, ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)), Series(Text(")"), dwsp__))), dwsp__, DEF)
+    pure_elem = Series(Ref("element"), NegativeLookahead(ANY_SUFFIX), mandatory=1)
     MOD_SEP = RegExp(' *: *')
-    hide = SmartRE(
-        f'(?P<:Text>HIDE)(?:{WSP_RE__})|(?P<:Text>Hide)(?:{WSP_RE__})|(?P<:Text>hide)(?:{WSP_RE__})|(?P<:Text>DISPOSE)(?:{WSP_RE__})|(?P<:Text>Dispose)(?:{WSP_RE__})|(?P<:Text>dispose)(?:{WSP_RE__})',
-        '"HIDE"|"Hide"|"hide"|"DISPOSE"|"Dispose"|"dispose"')
-    drop = SmartRE(
-        f'(?P<:Text>DROP)(?:{WSP_RE__})|(?P<:Text>Drop)(?:{WSP_RE__})|(?P<:Text>drop)(?:{WSP_RE__})|(?P<:Text>SKIP)(?:{WSP_RE__})|(?P<:Text>Skip)(?:{WSP_RE__})|(?P<:Text>skip)(?:{WSP_RE__})',
-        '"DROP"|"Drop"|"drop"|"SKIP"|"Skip"|"skip"')
+    hide = SmartRE(f'(?P<:Text>HIDE)(?:{WSP_RE__})|(?P<:Text>Hide)(?:{WSP_RE__})|(?P<:Text>hide)(?:{WSP_RE__})|(?P<:Text>DISPOSE)(?:{WSP_RE__})|(?P<:Text>Dispose)(?:{WSP_RE__})|(?P<:Text>dispose)(?:{WSP_RE__})', '"HIDE"|"Hide"|"hide"|"DISPOSE"|"Dispose"|"dispose"')
+    drop = SmartRE(f'(?P<:Text>DROP)(?:{WSP_RE__})|(?P<:Text>Drop)(?:{WSP_RE__})|(?P<:Text>drop)(?:{WSP_RE__})|(?P<:Text>SKIP)(?:{WSP_RE__})|(?P<:Text>Skip)(?:{WSP_RE__})|(?P<:Text>skip)(?:{WSP_RE__})', '"DROP"|"Drop"|"drop"|"SKIP"|"Skip"|"skip"')
     part = Series(Alternative(oneormore, pure_elem), Option(Series(MOD_SYM, dwsp__, drop)))
     term = Series(Alternative(oneormore, counted, repetition, option, pure_elem), Option(Series(MOD_SYM, dwsp__, drop)))
-    difference = Series(term,
-                        Option(Series(NegativeLookahead(Text("->")), Series(Text("-"), dwsp__), part, mandatory=2)))
+    difference = Series(term, Option(Series(NegativeLookahead(Text("->")), Series(Text("-"), dwsp__), part, mandatory=2)))
     lookaround = Series(flowmarker, part, mandatory=1)
-    interleave = Series(difference,
-                        ZeroOrMore(Series(Series(Text("°"), dwsp__), Option(Series(Text("§"), dwsp__)), difference)))
-    sequence = Series(Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(
-        Series(AND, dwsp__, Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround))))
+    interleave = Series(difference, ZeroOrMore(Series(Series(Text("°"), dwsp__), Option(Series(Text("§"), dwsp__)), difference)))
+    sequence = Series(Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround), ZeroOrMore(Series(AND, dwsp__, Option(Series(Text("§"), dwsp__)), Alternative(interleave, lookaround))))
     modifier = Series(Alternative(drop, Option(hide)), NegativeLookahead(DEF), MOD_SEP)
     FOLLOW_UP = Alternative(Text("@"), Text("$"), modifier, symbol, EOF)
     is_def = Alternative(Series(Option(Series(MOD_SEP, symbol)), DEF), Series(MOD_SEP, is_mdef))
     macrobody = Synonym(expression)
-    definition = Series(Option(modifier), symbol, DEF, dwsp__, Option(Series(OR, dwsp__)), expression,
-                        Option(Series(MOD_SYM, dwsp__, hide)), ENDL, dwsp__, Lookahead(FOLLOW_UP), mandatory=2)
+    definition = Series(Option(modifier), symbol, DEF, dwsp__, Option(Series(OR, dwsp__)), Ref("expression"), Option(Series(MOD_SYM, dwsp__, hide)), ENDL, dwsp__, Lookahead(FOLLOW_UP), mandatory=2)
     procedure = Series(SYM_REGEX, Series(Text("()"), dwsp__))
     literals = OneOrMore(literal)
-    component = Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(is_def)),
-                            Series(Lookahead(Text("$")), NegativeLookahead(is_mdef), placeholder,
-                                   NegativeLookahead(is_def), mandatory=2),
-                            Series(Series(Text("("), dwsp__), expression, Series(Text(")"), dwsp__)),
-                            Series(RAISE_EXPR_WO_BRACKETS, expression))
-    directive = Series(Series(Text("@"), dwsp__), symbol, Series(Text("="), dwsp__), component,
-                       ZeroOrMore(Series(Series(Text(","), dwsp__), component)), Lookahead(FOLLOW_UP), mandatory=1)
-    macrodef = Series(Option(modifier), Series(Text("$"), dwsp__), name, dwsp__, Option(
-        Series(Series(Text("("), dwsp__), placeholder, ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)),
-               Series(Text(")"), dwsp__), mandatory=1)), DEF, dwsp__, Option(Series(OR, dwsp__)), macrobody,
-                      Option(Series(MOD_SYM, dwsp__, hide)), ENDL, dwsp__, Lookahead(FOLLOW_UP))
-    element.set(
-        Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(is_def)), literal, plaintext, char_ranges,
-                    Series(character, dwsp__), regexp, char_range, any_char, whitespace, group,
-                    Series(macro, NegativeLookahead(is_def)), Series(placeholder, NegativeLookahead(is_def)), parser))
-    countable.set(Alternative(option, oneormore, element))
+    component = Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(is_def)), Series(Lookahead(Text("$")), NegativeLookahead(is_mdef), placeholder, NegativeLookahead(is_def), mandatory=2), Series(Series(Text("("), dwsp__), Ref("expression"), Series(Text(")"), dwsp__)), Series(RAISE_EXPR_WO_BRACKETS, Ref("expression")))
+    directive = Series(Series(Text("@"), dwsp__), symbol, Series(Text("="), dwsp__), component, ZeroOrMore(Series(Series(Text(","), dwsp__), component)), Lookahead(FOLLOW_UP), mandatory=1)
+    macrodef = Series(Option(modifier), Series(Text("$"), dwsp__), name, dwsp__, Option(Series(Series(Text("("), dwsp__), placeholder, ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)), Series(Text(")"), dwsp__), mandatory=1)), DEF, dwsp__, Option(Series(OR, dwsp__)), macrobody, Option(Series(MOD_SYM, dwsp__, hide)), ENDL, dwsp__, Lookahead(FOLLOW_UP))
+    element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(is_def)), literal, plaintext, char_ranges, Series(character, dwsp__), regexp, char_range, any_char, whitespace, group, Series(macro, NegativeLookahead(is_def)), Series(placeholder, NegativeLookahead(is_def)), parser))
+    countable.set(Alternative(option, oneormore, Ref("element")))
     expression.set(Series(sequence, ZeroOrMore(Series(OR, dwsp__, sequence))))
     syntax = Series(dwsp__, ZeroOrMore(Alternative(definition, directive, macrodef)), EOF)
     resume_rules__ = {'definition': [re.compile(r'\n\s*(?=@|\w+\w*\s*=)')],
@@ -215,6 +174,7 @@ class FixedEBNFGrammar(Grammar):
     
 parsing: PseudoJunction = create_parser_junction(FixedEBNFGrammar)
 get_grammar = parsing.factory  # for backwards compatibility, only
+
 
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
@@ -229,6 +189,7 @@ try:
         "preprocessor to ignore comments."
 except (AttributeError, NameError):
     pass
+
 
 
 #######################################################################

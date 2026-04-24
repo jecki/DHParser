@@ -115,7 +115,7 @@ class Arithmetic2Grammar(Grammar):
         syntax_tree = parser(source_code)
     """
     expression = Forward()
-    source_hash__ = "461f03c65742d47bfbc92c604c21b9a6"
+    source_hash__ = "b215cafc1eeb2fbabcb92823f48c12ac"
     disposable__ = re.compile('(?:(?:(?:(?:expression$))|(?:term$))|(?:factor$))|(?:group$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -127,7 +127,7 @@ class Arithmetic2Grammar(Grammar):
     dwsp__ = Drop(Whitespace(WSP_RE__))
     var = Series(RegExp('[A-Za-z]'), dwsp__)
     num = Series(RegExp('(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?'), dwsp__)
-    group = Series(Series(Drop(Text("(")), dwsp__), expression, Series(Drop(Text(")")), dwsp__))
+    group = Series(Series(Drop(Text("(")), dwsp__), Ref("expression"), Series(Drop(Text(")")), dwsp__))
     sign = Alternative(Text("+"), Text("-"))
     factor = Series(Option(Series(sign, dwsp__)), Alternative(num, var, group))
     div = Series(factor, NegativeLookahead(Series(Drop(Text("*")), dwsp__)), ZeroOrMore(Series(Alternative(Series(Drop(Text("/")), dwsp__), Series(Drop(Text(":")), dwsp__)), factor)))
@@ -140,6 +140,7 @@ class Arithmetic2Grammar(Grammar):
     
 parsing: PseudoJunction = create_parser_junction(Arithmetic2Grammar)
 get_grammar = parsing.factory  # for backwards compatibility, only
+
 
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
@@ -154,6 +155,7 @@ try:
         "preprocessor to ignore comments."
 except (AttributeError, NameError):
     pass
+
 
 
 #######################################################################

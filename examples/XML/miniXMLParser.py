@@ -113,7 +113,7 @@ class miniXMLGrammar(Grammar):
         syntax_tree = parser(source_code)
     """
     element = Forward()
-    source_hash__ = "46554167bdb0845a76b28aec4e7fb42f"
+    source_hash__ = "422e9d819659d2562fc9ec7fb9eb8ff0"
     disposable__ = re.compile('(?:EOF$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -126,12 +126,12 @@ class miniXMLGrammar(Grammar):
     dwsp__ = Drop(Whitespace(WSP_RE__))
     EOF = Drop(NegativeLookahead(RegExp('.')))
     CharData = RegExp('(?:(?!\\]\\]>)[^<&])+')
-    content = Series(Option(CharData), ZeroOrMore(Series(Alternative(element, comment__), Option(CharData))))
+    content = Series(Option(CharData), ZeroOrMore(Series(Alternative(Ref("element"), comment__), Option(CharData))))
     TagName = Capture(RegExp('\\w+'), zero_length_warning=True)
     ETag = Series(Drop(Text('</')), Pop(TagName), Drop(Text('>')), mandatory=2)
     STag = Series(Drop(Text('<')), TagName, Drop(Text('>')), mandatory=2)
     STag_skip_1__ = RegExp('[^<>]*>')
-    document = Series(dwsp__, element, dwsp__, EOF, mandatory=3)
+    document = Series(dwsp__, Ref("element"), dwsp__, EOF, mandatory=3)
     ETag_skip_1__ = RegExp('[^<>]*')
     element.set(Series(STag, content, ETag, mandatory=1))
     element_resume_1__ = Series(Pop(TagName, match_func=optional_last_value), Alternative(Lookahead(Series(Drop(Text('</')), Retrieve(TagName), Drop(Text('>')))), Series(Drop(Text('</')), RegExp('\\w+'), Drop(Text('>')))))
@@ -142,6 +142,7 @@ class miniXMLGrammar(Grammar):
     
 parsing: PseudoJunction = create_parser_junction(miniXMLGrammar)
 get_grammar = parsing.factory  # for backwards compatibility, only
+
 
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
@@ -156,6 +157,7 @@ try:
         "preprocessor to ignore comments."
 except (AttributeError, NameError):
     pass
+
 
 
 #######################################################################

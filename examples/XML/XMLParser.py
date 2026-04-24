@@ -37,7 +37,7 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, ERR, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, mixin_comment, \
-    last_value, matching_bracket, optional_last_value, SmartRE, EMPTY_NODE,RX_NEVER_MATCH
+    last_value, matching_bracket, optional_last_value, SmartRE, EMPTY_NODE,RX_NEVER_MATCH, Ref
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.toolkit import re, is_filename, load_if_file, cpu_count,  \
@@ -106,9 +106,9 @@ class XMLGrammar(Grammar):
         syntax_tree = parser(source_code)
     """
     element = Forward()
-    source_hash__ = "e5a0167ba5c28399d9e21cf87371a829"
+    source_hash__ = "312081f2c8b012e0ea140067a72dded7"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:NameStartChar$|EOF$|NameChars$|CommentChars$|tagContent$|Misc$|CData$|PubidCharsSingleQuoted$|EncName$|prolog$|BOM$|VersionNum$|Reference$|XmlPIAtts$|PubidChars$)')
+    disposable__ = re.compile('(?:XmlPIAtts$|PubidChars$|tagContent$|Reference$|BOM$|EOF$|PubidCharsSingleQuoted$|prolog$|VersionNum$|CData$|NameStartChar$|CommentChars$|EncName$|NameChars$|Misc$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'tagContent': [('', "syntax error in tag-name of opening or empty tag:  {1}")],
@@ -164,7 +164,7 @@ class XMLGrammar(Grammar):
     PubidLiteral = Alternative(Series(Drop(Text('"')), Option(PubidChars), Drop(Text('"'))), Series(Drop(Text("\'")), Option(PubidCharsSingleQuoted), Drop(Text("\'"))))
     SystemLiteral = SmartRE(f'(?:")([^"]*)(?:")|(?:\')([^\']*)(?:\')', '\'"\' /[^"]*/ \'"\'|"\'" /[^\']*/ "\'"')
     AttValue = Alternative(Series(Drop(Text('"')), ZeroOrMore(Alternative(RegExp('[^<&"]+'), Reference)), Drop(Text('"'))), Series(Drop(Text("\'")), ZeroOrMore(Alternative(RegExp("[^<&']+"), Reference)), Drop(Text("\'"))))
-    content = Series(Option(CharData), ZeroOrMore(Series(Alternative(element, Reference, CDSect, PI, Comment), Option(CharData))))
+    content = Series(Option(CharData), ZeroOrMore(Series(Alternative(Ref("element"), Reference, CDSect, PI, Comment), Option(CharData))))
     Misc = Series(dwsp__, OneOrMore(Alternative(Series(Comment, dwsp__), Series(StyleSheetPI, dwsp__), Series(XmlModelPI, dwsp__), Series(UnknownXmlPI, dwsp__), Series(PI, dwsp__))))
     Attribute = Series(Name, dwsp__, Drop(Text('=')), dwsp__, AttValue, mandatory=2)
     ETag = Series(Drop(Text('</')), Name, dwsp__, Drop(Text('>')), mandatory=1)
@@ -182,7 +182,7 @@ class XMLGrammar(Grammar):
     XMLDecl = Series(Drop(Text('<?xml')), VersionInfo, Option(EncodingDecl), Option(SDDecl), dwsp__, Drop(Text('?>')), mandatory=1)
     prolog = Series(Option(Series(dwsp__, XMLDecl)), Option(Misc), dwsp__, Option(Series(doctypedecl, Option(Misc), dwsp__)))
     element.set(Alternative(emptyElement, Series(STag, content, ETag, mandatory=1)))
-    document = Series(Option(BOM), prolog, element, Option(Misc), dwsp__, EOF, mandatory=2)
+    document = Series(Option(BOM), prolog, Ref("element"), Option(Misc), dwsp__, EOF, mandatory=2)
     resume_rules__ = {'tagContent': [re.compile(r'(?=>|/>)')],
                       'ETag': [re.compile(r'(?=>)')],
                       'Attribute': [re.compile(r'(?=>|/>)')]}
@@ -190,6 +190,7 @@ class XMLGrammar(Grammar):
     
 parsing: PseudoJunction = create_parser_junction(XMLGrammar)
 get_grammar = parsing.factory  # for backwards compatibility, only
+
 
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
@@ -204,6 +205,7 @@ try:
         "preprocessor to ignore comments."
 except (AttributeError, NameError):
     pass
+
 
 
 #######################################################################

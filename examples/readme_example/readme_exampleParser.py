@@ -37,7 +37,7 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, ERR, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, mixin_comment, \
-    last_value, matching_bracket, optional_last_value, SmartRE, RX_NEVER_MATCH
+    last_value, matching_bracket, optional_last_value, SmartRE, RX_NEVER_MATCH, Ref
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.toolkit import re, is_filename, load_if_file, cpu_count, \
@@ -83,7 +83,7 @@ class readme_exampleGrammar(Grammar):
         parser = readme_example()
         syntax_tree = parser(source_code)
     """
-    source_hash__ = "bba48332f6eef1c637c679a876b116a3"
+    source_hash__ = "efec7c4a4d8248dcc0b2f469a41879fa"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -102,6 +102,7 @@ class readme_exampleGrammar(Grammar):
 parsing: PseudoJunction = create_parser_junction(readme_exampleGrammar)
 get_grammar = parsing.factory  # for backwards compatibility, only
 
+
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
         RE_COMMENT in (readme_exampleGrammar.COMMENT__, NEVER_MATCH_PATTERN), \
@@ -115,6 +116,7 @@ try:
         "preprocessor to ignore comments."
 except (AttributeError, NameError):
     pass
+
 
 
 #######################################################################

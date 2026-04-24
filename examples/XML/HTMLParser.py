@@ -108,9 +108,9 @@ class HTMLGrammar(Grammar):
         syntax_tree = parser(source_code)
     """
     element = Forward()
-    source_hash__ = "dc09dfe53db82fe88eae68261b92cf91"
+    source_hash__ = "1e0e29d8c5afb97ef4a342401e68f61b"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:Misc$|NameStartChar$|PubidCharsSingleQuoted$|EOF$|tagContent$|BOM$|NameChars$|CommentChars$|VersionNum$|Reference$|prolog$|PubidChars$|EncName$|CData$)')
+    disposable__ = re.compile('(?:prolog$|CData$|BOM$|EncName$|PubidCharsSingleQuoted$|EOF$|tagContent$|Misc$|NameChars$|Reference$|CommentChars$|NameStartChar$|VersionNum$|PubidChars$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'tagContent': [('', "syntax error in tag-name of opening or empty tag:  {1}")],
@@ -156,7 +156,7 @@ class HTMLGrammar(Grammar):
     PubidLiteral = Alternative(Series(Drop(IgnoreCase('"')), Option(PubidChars), Drop(IgnoreCase('"'))), Series(Drop(IgnoreCase("\'")), Option(PubidCharsSingleQuoted), Drop(IgnoreCase("\'"))))
     SystemLiteral = SmartRE(f'(?i)(?:")([^"]*)(?:")|(?:\')([^\']*)(?:\')', '\'"\' /[^"]*/ \'"\'|"\'" /[^\']*/ "\'"')
     AttValue = Alternative(Series(Drop(IgnoreCase('"')), ZeroOrMore(Alternative(RegExp('(?i)[^<&"]+'), Reference)), Drop(IgnoreCase('"'))), Series(Drop(IgnoreCase("\'")), ZeroOrMore(Alternative(RegExp("(?i)[^<&']+"), Reference)), Drop(IgnoreCase("\'"))), ZeroOrMore(Alternative(RegExp("(?i)[^<&'>\\s]+"), Reference)))
-    content = Series(Option(CharData), ZeroOrMore(Series(Alternative(element, Reference, CDSect, PI, Comment), Option(CharData))))
+    content = Series(Option(CharData), ZeroOrMore(Series(Alternative(Ref("element"), Reference, CDSect, PI, Comment), Option(CharData))))
     Attribute = Series(Name, dwsp__, Drop(IgnoreCase('=')), dwsp__, AttValue, mandatory=2)
     ETag = Series(Drop(IgnoreCase('</')), Name, dwsp__, Drop(IgnoreCase('>')), mandatory=1)
     tagContent = Series(SmartRE(f'(?i)(?![/!?])', '!/[\\/!?]/'), Name, ZeroOrMore(Series(dwsp__, Attribute)), dwsp__, SmartRE(f'(?i)(?=>|/>)', "&'>'|'/>'"), mandatory=1)
@@ -174,7 +174,7 @@ class HTMLGrammar(Grammar):
     XMLDecl = Series(Drop(IgnoreCase('<?xml')), VersionInfo, Option(EncodingDecl), Option(SDDecl), dwsp__, Drop(IgnoreCase('?>')), mandatory=1)
     prolog = Series(Option(Series(dwsp__, XMLDecl)), Option(Misc), Option(Series(doctypedecl, Option(Misc))))
     element.set(Alternative(emptyElement, voidElement, Series(STag, content, ETag, mandatory=2)))
-    document = Series(Option(BOM), prolog, element, Option(Misc), EOF, mandatory=2)
+    document = Series(Option(BOM), prolog, Ref("element"), Option(Misc), EOF, mandatory=2)
     resume_rules__ = {'tagContent': [re.compile(r'(?i)(?=>|/>)')],
                       'ETag': [re.compile(r'(?i)(?=>)')],
                       'Attribute': [re.compile(r'(?i)(?=>|/>)')],
@@ -183,6 +183,7 @@ class HTMLGrammar(Grammar):
     
 parsing: PseudoJunction = create_parser_junction(HTMLGrammar)
 get_grammar = parsing.factory  # for backwards compatibility, only
+
 
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
@@ -197,6 +198,7 @@ try:
         "preprocessor to ignore comments."
 except (AttributeError, NameError):
     pass
+
 
 
 #######################################################################

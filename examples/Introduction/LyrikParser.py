@@ -43,7 +43,7 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, ERR, \
     Option, NegativeLookbehind, OneOrMore, RegExp, SmartRE, Retrieve, Series, Capture, TreeReduction, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, mixin_comment, \
-    last_value, matching_bracket, optional_last_value, RX_NEVER_MATCH
+    last_value, matching_bracket, optional_last_value, RX_NEVER_MATCH, Ref
 from DHParser.pipeline import end_points, full_pipeline, create_parser_junction, \
     create_preprocess_junction, create_junction, PseudoJunction 
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
@@ -110,8 +110,8 @@ class LyrikGrammar(Grammar):
         parser = Lyrik()
         syntax_tree = parser(source_code)
     """
-    source_hash__ = "d081534dd330fa9c7310ea2bda1831fa"
-    disposable__ = re.compile('(?:ENDE$|ziel$|ZEICHENFOLGE$|wortfolge$|LEERRAUM$|JAHRESZAHL$)')
+    source_hash__ = "ce9ca2c0515916eca3d579639624b4f1"
+    disposable__ = re.compile('(?:ZEICHENFOLGE$|wortfolge$|ENDE$|LEERRAUM$|JAHRESZAHL$|ziel$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -155,6 +155,7 @@ class LyrikGrammar(Grammar):
 parsing: PseudoJunction = create_parser_junction(LyrikGrammar)
 get_grammar = parsing.factory  # for backwards compatibility, only
 
+
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
         RE_COMMENT in (LyrikGrammar.COMMENT__, NEVER_MATCH_PATTERN), \
@@ -168,6 +169,7 @@ try:
         "preprocessor to ignore comments."
 except (AttributeError, NameError):
     pass
+
 
 
 #######################################################################

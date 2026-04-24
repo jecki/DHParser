@@ -116,7 +116,7 @@ class Arithmetic4Grammar(Grammar):
     """
     expression = Forward()
     term = Forward()
-    source_hash__ = "3ffae679a0e9075e3075b40c570e4aa1"
+    source_hash__ = "1f0c2ea955df094591009fa760925b20"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -128,15 +128,16 @@ class Arithmetic4Grammar(Grammar):
     dwsp__ = Drop(Whitespace(WSP_RE__))
     var = Series(RegExp('[A-Za-z]'), dwsp__)
     num = Series(RegExp('(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?'), dwsp__)
-    group = Series(Series(Text("("), dwsp__), expression, Series(Text(")"), dwsp__))
+    group = Series(Series(Text("("), dwsp__), Ref("expression"), Series(Text(")"), dwsp__))
     sign = Alternative(Series(Text("+"), dwsp__), Series(Text("-"), dwsp__))
     factor = Series(Option(sign), Alternative(num, var, group))
-    term.set(Alternative(factor, Series(term, Series(Text("*"), dwsp__), factor), Series(term, Series(Text("/"), dwsp__), factor)))
-    expression.set(Alternative(term, Series(expression, Series(Text("+"), dwsp__), term), Series(expression, Series(Text("-"), dwsp__), term)))
+    term.set(Alternative(factor, Series(Ref("term"), Series(Text("*"), dwsp__), factor), Series(Ref("term"), Series(Text("/"), dwsp__), factor)))
+    expression.set(Alternative(Ref("term"), Series(Ref("expression"), Series(Text("+"), dwsp__), Ref("term")), Series(Ref("expression"), Series(Text("-"), dwsp__), Ref("term"))))
     root__ = expression
     
 parsing: PseudoJunction = create_parser_junction(Arithmetic4Grammar)
 get_grammar = parsing.factory  # for backwards compatibility, only
+
 
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
@@ -151,6 +152,7 @@ try:
         "preprocessor to ignore comments."
 except (AttributeError, NameError):
     pass
+
 
 
 #######################################################################

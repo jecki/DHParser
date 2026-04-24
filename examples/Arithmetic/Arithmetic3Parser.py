@@ -115,7 +115,7 @@ class Arithmetic3Grammar(Grammar):
         syntax_tree = parser(source_code)
     """
     expression = Forward()
-    source_hash__ = "f80bc651d73a71ee590088cec72c8a1d"
+    source_hash__ = "defca367cdb22d85797823db823ed955"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -125,14 +125,15 @@ class Arithmetic3Grammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     number = Alternative(RegExp('0'), Series(RegExp('[1-9]'), ZeroOrMore(RegExp('[0-9]'))))
-    group = Series(Text("("), expression, Text(")"))
+    group = Series(Text("("), Ref("expression"), Text(")"))
     term = Alternative(number, group)
     expression.set(Series(term, ZeroOrMore(Series(Alternative(Text("+"), Text("-"), Text("*"), Text(":")), term))))
-    formulae = Series(wsp__, expression, ZeroOrMore(Series(wsp__, expression)), wsp__)
+    formulae = Series(wsp__, Ref("expression"), ZeroOrMore(Series(wsp__, Ref("expression"))), wsp__)
     root__ = formulae
     
 parsing: PseudoJunction = create_parser_junction(Arithmetic3Grammar)
 get_grammar = parsing.factory  # for backwards compatibility, only
+
 
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
@@ -147,6 +148,7 @@ try:
         "preprocessor to ignore comments."
 except (AttributeError, NameError):
     pass
+
 
 
 #######################################################################

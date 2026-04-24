@@ -116,7 +116,7 @@ class Arithmetic6Grammar(Grammar):
     """
     expression = Forward()
     term = Forward()
-    source_hash__ = "76cfe945a95fa86cd9febca5f1d8ff54"
+    source_hash__ = "40d047d0452a19b5b4d47e725494e89d"
     disposable__ = re.compile('(?:(?:(?:expression$))|(?:term$))|(?:factor$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -127,19 +127,20 @@ class Arithmetic6Grammar(Grammar):
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
     number = Alternative(Series(RegExp('0'), dwsp__), Series(RegExp('[1-9]'), ZeroOrMore(RegExp('[0-9]')), dwsp__))
-    group = Series(Drop(Text("(")), dwsp__, expression, Drop(Text(")")), dwsp__)
+    group = Series(Drop(Text("(")), dwsp__, Ref("expression"), Drop(Text(")")), dwsp__)
     factor = Alternative(group, number)
-    division = Series(factor, Drop(Text(":")), dwsp__, term)
-    multiplication = Series(factor, Drop(Text("*")), dwsp__, term)
-    addition = Series(term, Drop(Text("+")), dwsp__, expression)
-    subtraction = Series(term, Drop(Text("-")), dwsp__, expression)
+    division = Series(factor, Drop(Text(":")), dwsp__, Ref("term"))
+    multiplication = Series(factor, Drop(Text("*")), dwsp__, Ref("term"))
+    addition = Series(Ref("term"), Drop(Text("+")), dwsp__, Ref("expression"))
+    subtraction = Series(Ref("term"), Drop(Text("-")), dwsp__, Ref("expression"))
     term.set(Alternative(multiplication, division, factor))
-    expression.set(Alternative(addition, subtraction, term))
-    formulae = Series(dwsp__, expression, ZeroOrMore(expression))
+    expression.set(Alternative(addition, subtraction, Ref("term")))
+    formulae = Series(dwsp__, Ref("expression"), ZeroOrMore(Ref("expression")))
     root__ = formulae
     
 parsing: PseudoJunction = create_parser_junction(Arithmetic6Grammar)
 get_grammar = parsing.factory  # for backwards compatibility, only
+
 
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
@@ -154,6 +155,7 @@ try:
         "preprocessor to ignore comments."
 except (AttributeError, NameError):
     pass
+
 
 
 #######################################################################

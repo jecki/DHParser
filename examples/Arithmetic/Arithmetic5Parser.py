@@ -116,8 +116,8 @@ class Arithmetic5Grammar(Grammar):
     """
     expression = Forward()
     term = Forward()
-    source_hash__ = "d02b6c4f4e476422d3d99acc8ef5f9d8"
-    disposable__ = re.compile('(?:expression$|factor$|term$)')
+    source_hash__ = "5c0e260bb18bdac0f64be9eb8b06cf44"
+    disposable__ = re.compile('(?:factor$|expression$|term$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -127,19 +127,20 @@ class Arithmetic5Grammar(Grammar):
     wsp__ = Whitespace(WSP_RE__)
     dwsp__ = Drop(Whitespace(WSP_RE__))
     number = Alternative(Series(RegExp('0'), dwsp__), Series(RegExp('[1-9]'), ZeroOrMore(RegExp('[0-9]')), dwsp__))
-    group = Series(Series(Drop(Text("(")), dwsp__), expression, Series(Drop(Text(")")), dwsp__))
+    group = Series(Series(Drop(Text("(")), dwsp__), Ref("expression"), Series(Drop(Text(")")), dwsp__))
     factor = Alternative(group, number)
-    division = Series(term, Series(Drop(Text(":")), dwsp__), factor)
-    multiplication = Series(term, Series(Drop(Text("*")), dwsp__), factor)
-    addition = Series(expression, Series(Drop(Text("+")), dwsp__), term)
-    subtraction = Series(expression, Series(Drop(Text("-")), dwsp__), term)
+    division = Series(Ref("term"), Series(Drop(Text(":")), dwsp__), factor)
+    multiplication = Series(Ref("term"), Series(Drop(Text("*")), dwsp__), factor)
+    addition = Series(Ref("expression"), Series(Drop(Text("+")), dwsp__), Ref("term"))
+    subtraction = Series(Ref("expression"), Series(Drop(Text("-")), dwsp__), Ref("term"))
     term.set(Alternative(multiplication, division, factor))
-    expression.set(Alternative(addition, subtraction, term))
-    formulae = Series(dwsp__, expression, ZeroOrMore(expression))
+    expression.set(Alternative(addition, subtraction, Ref("term")))
+    formulae = Series(dwsp__, Ref("expression"), ZeroOrMore(Ref("expression")))
     root__ = formulae
     
 parsing: PseudoJunction = create_parser_junction(Arithmetic5Grammar)
 get_grammar = parsing.factory  # for backwards compatibility, only
+
 
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
@@ -154,6 +155,7 @@ try:
         "preprocessor to ignore comments."
 except (AttributeError, NameError):
     pass
+
 
 
 #######################################################################
