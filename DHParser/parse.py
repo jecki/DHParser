@@ -775,7 +775,7 @@ class Parser:
             # if location has already been visited by the current parser, return saved result
             visited = self.visited  # using local variable for better performance
             if location in visited:
-                assert self.effective_pname() or not hasattr(self, 'deadend'), str(self) # EXPERIMENTAL!!!
+                assert self.effective_pname() or not hasattr(self, 'deadend'), str(self)  # EXPERIMENTAL!!!
                 if grammar.history_tracking__  and self._parse_proxy.__name__ == 'trace_history' \
                         and self._parse_proxy.__module__ == 'DHParser.trace':
                     return self._parse_proxy(-location or -INFINITE)  # a negative location signals a memo-hit
