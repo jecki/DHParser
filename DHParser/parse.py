@@ -1939,7 +1939,8 @@ class Grammar:
             flag = False
             for p in frozenset(remaining):
                 if (isinstance(p, LeafParser)
-                        or all(hasattr(sp, 'deadend') for sp in p.sub_parsers)):
+                        or (not isinstance(self[p.symbol], Forward)) and
+                                all(hasattr(sp, 'deadend') for sp in p.sub_parsers)):
                     p.deadend = True
                     flag = True
                     remaining.remove(p)
