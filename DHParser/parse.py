@@ -5308,9 +5308,7 @@ class Forward(UnaryParser):
         # self.parser = get_parser_placeholder  # type: Parser
         self.cycle_reached: bool = False
         self.sub_parsers = frozenset()
-        self.tracer_init: FWTracerInit = nil_tracer
-        self.tracer_loop: FWTracerFunc = nil_tracer
-        self.tracer_done: FWTracerFunc = nil_tracer
+        self.set_fwtracer(nil_tracer, nil_tracer, nil_tracer)
 
     def reset(self):
         super(Forward, self).reset()
@@ -5421,9 +5419,9 @@ class Forward(UnaryParser):
         """Adds a seed-and-grow loop-tracer. The tracer can be disabled by calling either
         ``set_fwtracer(nil_tracer, nil_tracer, nil_tracer)`` or ``set_proxy(None)``
         """
-        self.tracer_init = init
-        self.tracer_loop = loop
-        self.tracer_done = done
+        self.tracer_init: FWTracerInit = init
+        self.tracer_loop: FWTracerFunc = loop
+        self.tracer_done: FWTracerFunc = done
 
     def __cycle_guard(self, func, alt_return):
         """

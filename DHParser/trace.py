@@ -110,6 +110,37 @@ def history_record(parser: Parser, grammar: Grammar,
     return HistoryRecord(grammar.call_stack__, hnd, doc[location_:], lc, errors)
 
 
+
+def wrap_call_up(self: Parser, node: Optional[Node], location: int, location_: int):
+    """Creates a history record after the parser call has been completed.
+    """
+    # Don't track returning parsers except in case an error has occurred!
+    grammar = self._grammar
+    if ((self.node_name != WHITESPACE_PTYPE)
+        and (grammar.moving_forward__
+             or (not self.disposable
+                 and (node and grammar.history__[-1].node))
+             or result_changed(node, grammar.history__))):
+        # record history
+        # TODO: Make dropping insignificant whitespace from history configurable
+        record = history_record(self, grammar, node, location, location_)
+        cs_len = len(record.call_stack)
+        if (not grammar.history__ or not node
+                or record.line_col != grammar.history__[-1].line_col
+                or record.call_stack != grammar.history__[-1].call_stack[:cs_len]
+                or self == grammar.start_parser__):
+            if len(record.call_stack) >= 2 and \
+                    record.call_stack[-2][0] in (":Lookbehind", ":NegativeLookbehind"):
+                record.text = grammar.reversed__[len(grammar.document__) - location_:]
+            if not grammar.moving_forward__ \
+                    and not any(tag in (':Lookahead', ":NegativeLookahead")
+                                or tag.endswith(":SmartRE_Lookahead")
+                                for tag, _ in grammar.history__[-1].call_stack):
+                pass
+                # grammar.history__.pop()
+            grammar.history__.append(record)
+
+
 @cython.locals(location_=cython.int, delta=cython.int, cs_len=cython.int,
                i=cython.int, L=cython.int)
 def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], cython.int]:
@@ -225,32 +256,7 @@ def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], c
                           lc, [Error('KeyboardInterrupt (Ctrl-C)', location)]))
         raise ctrlC
 
-
-    # Don't track returning parsers except in case an error has occurred!
-    if ((self.node_name != WHITESPACE_PTYPE)
-        and (grammar.moving_forward__
-             or (not self.disposable
-                 and (node and grammar.history__[-1].node))
-             or result_changed(node, grammar.history__))):
-        # record history
-        # TODO: Make dropping insignificant whitespace from history configurable
-        record = history_record(self, grammar, node, location, location_)
-        cs_len = len(record.call_stack)
-        if (not grammar.history__ or not node
-                or record.line_col != grammar.history__[-1].line_col
-                or record.call_stack != grammar.history__[-1].call_stack[:cs_len]
-                or self == grammar.start_parser__):
-            if len(record.call_stack) >= 2 and \
-                    record.call_stack[-2][0] in (":Lookbehind", ":NegativeLookbehind"):
-                record.text = grammar.reversed__[len(grammar.document__) - location_:]
-            if not grammar.moving_forward__ \
-                    and not any(tag in (':Lookahead', ":NegativeLookahead")
-                                or tag.endswith(":SmartRE_Lookahead")
-                                for tag, _ in grammar.history__[-1].call_stack):
-                pass
-                # grammar.history__.pop()
-            grammar.history__.append(record)
-
+    wrap_call_up(self, node, location, location_)
 
     grammar.moving_forward__ = False
     while stack_counter > 0:
