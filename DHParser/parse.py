@@ -5265,9 +5265,17 @@ class Synonym(UnaryParser):
         return self.pname or self.parser.repr
 
 
+FWTracerInit: TypeAlias = Callable[['Forward', int], Any]
+FWTracerFunc: TypeAlias = Callable[[Any], Any]
+
+
+def nil_tracer(*args, **kwargs) -> LocalData:
+    return None
+
+
 class Forward(UnaryParser):
     r"""
-    Forward allows to declare a parser before it is actually defined.
+    Forward allows declaring a parser before it is actually defined.
     Forward declarations are needed for parsers that are recursively
     nested, e.g.::
 
@@ -5300,6 +5308,9 @@ class Forward(UnaryParser):
         # self.parser = get_parser_placeholder  # type: Parser
         self.cycle_reached: bool = False
         self.sub_parsers = frozenset()
+        self.tracer_init: FWTracerInit = nil_tracer
+        self.tracer_loop: FWTracerFunc = nil_tracer
+        self.tracer_done: FWTracerFunc = nil_tracer
 
     def reset(self):
         super(Forward, self).reset()
@@ -5365,9 +5376,7 @@ class Forward(UnaryParser):
 
         history_tracking = grammar.history_tracking__
         if history_tracking:
-            history_pointer = len(grammar.history__)
-            call_stack_pointer = len(grammar.history__[-1].call_stack) if grammar.history__ else 0
-            call_stack_pointer0 = len(grammar.call_stack__)
+            tracing_data = self.tracer_init(self, location)
 
         while next_result[1] > result[1]:
             grammar.suspend_memoization__ = False
@@ -5377,14 +5386,10 @@ class Forward(UnaryParser):
             next_result = self._parse_proxy(location)  # self.parser(location)
 
             if history_tracking and grammar.history__:  # second clause necessary in case tracer has not been set
-                record = grammar.history__[-1] # .pop()
-                grammar.call_stack__.extend(record.call_stack[call_stack_pointer:])
-                call_stack_pointer = len(grammar.call_stack__)
-                history_pointer = len(grammar.history__)
+                self.tracer_loop(tracing_data)
 
         if history_tracking and result[0] is not None:
-            grammar.history__ = grammar.history__[:history_pointer]
-            grammar.call_stack__ = grammar.call_stack__[:call_stack_pointer0]
+            self.tracer_done(tracing_data)
 
         self.recursion_counter[location] = False
         # Since the result of the last parser call (``next_result``) is discarded,
@@ -5409,6 +5414,16 @@ class Forward(UnaryParser):
 
     def set_proxy(self, proxy: Optional[ParseFunc]):
         super(Forward, self).set_proxy(proxy)
+        if proxy is None:
+            self.set_fwtracer(nil_tracer, nil_tracer, nil_tracer)
+
+    def set_fwtracer(self, init: FWTracerInit, loop: FWTracerFunc, done: FWTracerFunc):
+        """Adds a seed-and-grow loop-tracer. The tracer can be disabled by calling either
+        ``set_fwtracer(nil_tracer, nil_tracer, nil_tracer)`` or ``set_proxy(None)``
+        """
+        self.tracer_init = init
+        self.tracer_loop = loop
+        self.tracer_done = done
 
     def __cycle_guard(self, func, alt_return):
         """

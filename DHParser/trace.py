@@ -38,6 +38,7 @@ This functionality can be used for several purposes:
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Tuple, Optional, List, Iterable, Union, cast
 
 try:
@@ -47,50 +48,12 @@ except ImportError:
 
 from DHParser.error import Error, RESUME_NOTICE, RECURSION_DEPTH_LIMIT_HIT
 from DHParser.nodetree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE
-from DHParser.log import HistoryRecord, NONE_NODE
+from DHParser.log import HistoryRecord, CallItem, NONE_NODE
 from DHParser.parse import Grammar, Parser, ParserError, ParseFunc, ContextSensitive, \
     UnaryParser, SmartRE, cancel_proxy, Forward
 from DHParser.toolkit import line_col, INFINITE
 
 __all__ = ('trace_history', 'set_tracer', 'resume_notices_on', 'resume_notices_off')
-
-
-#######################################################################
-#
-# Adding and removing tracers
-#
-#######################################################################
-
-
-def set_tracer(parsers: Union[Grammar, Parser, Iterable[Parser]], tracer: Optional[ParseFunc]):
-    """Adds or removes a tracing function to (or from) a single parser, a set of
-    parsers or all parsers in a grammar.
-
-    :param parsers: the parsers or single parser or grammar-object containing
-        parsers where the ``tracer`` shall be added or removed.
-    :param tracer: a tracer function or ``None``. If ``None`` any existing
-        tracer will be removed. If not None, tracer must be a parsing function.
-        It is up to the tracer to call the original parsing function
-        (``self._parse()``).
-    """
-    if isinstance(parsers, Grammar):
-        if tracer is None:
-            parsers.history_tracking__ = False
-            parsers.resume_notices__ = False
-        parsers = parsers.all_parsers__
-    elif isinstance(parsers, Parser):
-        parsers = [parsers]
-    if parsers:
-        pivot = next(iter(parsers))
-        # assert all(pivot._grammar == parser._grammar for parser in parsers)
-        if tracer is None:
-            pivot._grammar.history_tracking__ = False
-            pivot._grammar.resume_notices__ = False
-        else:
-            pivot._grammar.history_tracking__ = True
-            pivot._grammar.resume_notices__ = True
-        for parser in parsers:
-            parser.set_proxy(tracer)
 
 
 #######################################################################
@@ -296,6 +259,76 @@ def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], c
     return node, location_
 
 
+@dataclass
+class TracingData:
+    grammar: Grammar
+    history_pointer: int
+    call_stack_pointer: int
+    call_stack_pointer0 : int
+
+
+def fw_init(fwp: 'Forward', location: int)-> TracingData:
+    grammar = fwp._grammar
+    history = grammar.history__
+    return TracingData(grammar,
+                       len(history),
+                       len(history[-1].call_stack) if history else 0,
+                       len(grammar.call_stack__))
+
+
+def fw_loop(locals: TracingData) -> None:
+    grammar = locals.grammar
+    grammar.call_stack__.extend(grammar.history__[-1].call_stack[locals.call_stack_pointer:])
+    locals.call_stack_pointer = len(grammar.call_stack__)
+    locals.history_pointer = len(grammar.history__)
+
+
+def fw_done(locals: TracingData) -> None:
+    grammar = locals.grammar
+    grammar.history__ = grammar.history__[:locals.history_pointer]
+    grammar.call_stack__ = grammar.call_stack__[:locals.call_stack_pointer0]
+
+
+#######################################################################
+#
+# Adding and removing tracers
+#
+#######################################################################
+
+
+def set_tracer(parsers: Union[Grammar, Parser, Iterable[Parser]], tracer: Optional[ParseFunc]):
+    """Adds or removes a tracing function to (or from) a single parser, a set of
+    parsers or all parsers in a grammar.
+
+    :param parsers: the parsers or single parser or grammar-object containing
+        parsers where the ``tracer`` shall be added or removed.
+    :param tracer: a tracer function or ``None``. If ``None`` any existing
+        tracer will be removed. If not None, tracer must be a parsing function.
+        It is up to the tracer to call the original parsing function
+        (``self._parse()``).
+    """
+    if isinstance(parsers, Grammar):
+        if tracer is None:
+            parsers.history_tracking__ = False
+            parsers.resume_notices__ = False
+        parsers = parsers.all_parsers__
+    elif isinstance(parsers, Parser):
+        parsers = [parsers]
+    if parsers:
+        pivot = next(iter(parsers))
+        # assert all(pivot._grammar == parser._grammar for parser in parsers)
+        if tracer is None:
+            pivot._grammar.history_tracking__ = False
+            pivot._grammar.resume_notices__ = False
+        else:
+            pivot._grammar.history_tracking__ = True
+            pivot._grammar.resume_notices__ = True
+        for parser in parsers:
+            parser.set_proxy(tracer)
+            if isinstance(parser, Forward):
+                parser.set_fwtracer(fw_init, fw_loop, fw_done)
+
+
 def resume_notices_on(grammar: Grammar):
     """Turns resume-notices as well as history tracking on!"""
     # grammar.history_tracking__ = True
@@ -306,12 +339,4 @@ def resume_notices_on(grammar: Grammar):
 def resume_notices_off(grammar: Grammar):
     """Turns resume-notices as well as history tracking off!"""
     set_tracer(grammar, None)
-
-
-#######################################################################
-#
-# Interrupt-Polling
-#
-#######################################################################
-
 
