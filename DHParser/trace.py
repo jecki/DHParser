@@ -130,7 +130,7 @@ def call_item(parser: Parser, location: int, prefix: str = '') -> Tuple[str, int
 
 
 def history_record(parser: Parser, grammar: Grammar,
-                   node: Node,
+                   node: Union[Node, None],
                    location: int,
                    location_: int,
                    prefix: str = '') -> HistoryRecord:

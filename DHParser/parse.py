@@ -5407,9 +5407,8 @@ class Forward(UnaryParser):
     def _parse(self, location: cython.int) -> ParsingResult:
         return self.parser(location)
 
-    # def set_proxy(self, proxy: Optional[ParseFunc]):
-    #    """``set_proxy`` has no effects on Forward-objects!"""
-    #     return
+    def set_proxy(self, proxy: Optional[ParseFunc]):
+        super(Forward, self).set_proxy(proxy)
 
     def __cycle_guard(self, func, alt_return):
         """
