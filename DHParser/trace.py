@@ -50,7 +50,7 @@ from DHParser.error import Error, RESUME_NOTICE, RECURSION_DEPTH_LIMIT_HIT
 from DHParser.nodetree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE
 from DHParser.log import HistoryRecord, CallItem, NONE_NODE
 from DHParser.parse import Grammar, Parser, ParserError, ParseFunc, ContextSensitive, \
-    UnaryParser, SmartRE, cancel_proxy, Forward
+    UnaryParser, SmartRE, cancel_proxy, Forward, ParsingResult
 from DHParser.toolkit import line_col, INFINITE
 
 __all__ = ('trace_history', 'set_tracer', 'resume_notices_on', 'resume_notices_off')
@@ -92,6 +92,7 @@ def call_item(parser: Parser, location: int, prefix: str = '') -> Tuple[str, int
         return f"{prefix}{name}", location
 
 
+
 def history_record(parser: Parser, grammar: Grammar,
                    node: Union[Node, None],
                    location: int,
@@ -103,10 +104,15 @@ def history_record(parser: Parser, grammar: Grammar,
     errors = grammar.tree__.error_nodes.get(id(node), [])
     if parser.node_name[0:1] == ':' \
             and not (isinstance(parser, SmartRE) and parser.is_lookahead()):
-        if parser.pname:
-            grammar.call_stack__[-1] = (f"{prefix}{parser.pname}", location)
+        # if parser.pname:
+        #     item = (f"{prefix}{parser.pname}", location)
+        # else:
+        #     item = (f"{prefix}{parser} ", location)
+        item = (f"{prefix}{parser}" + ' ' * int(bool(parser.pname)) , location)
+        if grammar.call_stack__:
+            grammar.call_stack__[-1] = item
         else:
-            grammar.call_stack__[-1] = (f"{prefix}{parser} ", location)
+            grammar.call_stack__.append(item)
     return HistoryRecord(grammar.call_stack__, hnd, doc[location_:], lc, errors)
 
 
@@ -267,7 +273,9 @@ def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], c
 
 @dataclass
 class TracingData:
+    parser: Forward
     grammar: Grammar
+    location: int
     history_pointer: int
     call_stack_pointer: int
     call_stack_pointer0 : int
@@ -276,7 +284,9 @@ class TracingData:
 def fw_init(fwp: 'Forward', location: int)-> TracingData:
     grammar = fwp._grammar
     history = grammar.history__
-    return TracingData(grammar,
+    return TracingData(fwp,
+                       grammar,
+                       location,
                        len(history),
                        len(history[-1].call_stack) if history else 0,
                        len(grammar.call_stack__))
@@ -284,16 +294,21 @@ def fw_init(fwp: 'Forward', location: int)-> TracingData:
 
 def fw_loop(locals: TracingData) -> None:
     grammar = locals.grammar
-    grammar.call_stack__.extend(grammar.history__[-1].call_stack[locals.call_stack_pointer:])
-    locals.call_stack_pointer = len(grammar.call_stack__)
-    locals.history_pointer = len(grammar.history__)
+    if grammar.history__:  # don't do anything in case tracer has not been set
+        grammar.call_stack__.extend(grammar.history__[-1].call_stack[locals.call_stack_pointer:])
+        locals.call_stack_pointer = len(grammar.call_stack__)
+        locals.history_pointer = len(grammar.history__)
+    else:
+        assert False, "Does this ever happen?"
 
 
-def fw_done(locals: TracingData) -> None:
-    grammar = locals.grammar
-    grammar.history__ = grammar.history__[:locals.history_pointer]
-    grammar.call_stack__ = grammar.call_stack__[:locals.call_stack_pointer0]
-
+def fw_done(locals: TracingData, result: ParsingResult) -> None:
+    node, location = result
+    if node is not None:
+        grammar = locals.grammar
+        grammar.history__ = grammar.history__[:locals.history_pointer]
+        grammar.call_stack__ = grammar.call_stack__[:locals.call_stack_pointer0]
+        # wrap_call_up(locals.parser, node, locals.location, location)
 
 #######################################################################
 #

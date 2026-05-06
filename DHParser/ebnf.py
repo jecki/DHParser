@@ -1090,7 +1090,7 @@ def get_EBNF_AST_Serialization_Table(flavor: str = "EBNF") -> Dict[str, Callable
     EBNF-ASTs back to EBNF.
 
     :param flavor: Either "EBNF" (braces notation) or "PEG" (postfix notation)
-    :returns: A table that can be passed to :py:method:`nodetree.Node.evaluate_path`.
+    :returns: A table that can be passed to :py:meth:`nodetree.Node.evaluate_path`.
     """
     global EBNF_Serialization_Table, PEG_Serialization_Table
 

@@ -1480,7 +1480,7 @@ class Grammar:
 
     :cvar parser_initialization\__:  Before the grammar class (!) has been initialized,
                  which happens upon the first time it is instantiated (see
-                 :py:meth:`_assign_parser_names` for an explanation), this class
+                 :py:meth:`_assign_parser_names__` for an explanation), this class
                  field contains a value other than "done". A value of "done" indicates
                  that the class has already been initialized.
 
@@ -5266,10 +5266,11 @@ class Synonym(UnaryParser):
 
 
 FWTracerInit: TypeAlias = Callable[['Forward', int], Any]
-FWTracerFunc: TypeAlias = Callable[[Any], Any]
+FWTracerLoop: TypeAlias = Callable[[Any], None]
+FWTracerDone: TypeAlias = Callable[[ParsingResult], None]
 
 
-def nil_tracer(*args, **kwargs) -> LocalData:
+def nil_tracer(*args, **kwargs) -> None:
     return None
 
 
@@ -5383,11 +5384,11 @@ class Forward(UnaryParser):
             visited[location] = result
             next_result = self._parse_proxy(location)  # self.parser(location)
 
-            if history_tracking and grammar.history__:  # second clause necessary in case tracer has not been set
+            if history_tracking:  # second clause necessary in case tracer has not been set
                 self.tracer_loop(tracing_data)
 
-        if history_tracking and result[0] is not None:
-            self.tracer_done(tracing_data)
+        if history_tracking:
+            self.tracer_done(tracing_data, result)
 
         self.recursion_counter[location] = False
         # Since the result of the last parser call (``next_result``) is discarded,
@@ -5415,13 +5416,13 @@ class Forward(UnaryParser):
         if proxy is None:
             self.set_fwtracer(nil_tracer, nil_tracer, nil_tracer)
 
-    def set_fwtracer(self, init: FWTracerInit, loop: FWTracerFunc, done: FWTracerFunc):
+    def set_fwtracer(self, init: FWTracerInit, loop: FWTracerLoop, done: FWTracerDone):
         """Adds a seed-and-grow loop-tracer. The tracer can be disabled by calling either
         ``set_fwtracer(nil_tracer, nil_tracer, nil_tracer)`` or ``set_proxy(None)``
         """
         self.tracer_init: FWTracerInit = init
-        self.tracer_loop: FWTracerFunc = loop
-        self.tracer_done: FWTracerFunc = done
+        self.tracer_loop: FWTracerLoop = loop
+        self.tracer_done: FWTracerDone = done
 
     def __cycle_guard(self, func, alt_return):
         """
