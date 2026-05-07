@@ -5270,6 +5270,10 @@ FWTracerLoop: TypeAlias = Callable[[Any], None]
 FWTracerDone: TypeAlias = Callable[[ParsingResult], None]
 
 
+def nil_memo_tracer(fwp: Forward, location: int):
+    return fwp.visited[location]
+
+
 def nil_tracer(*args, **kwargs) -> None:
     return None
 
@@ -5309,7 +5313,7 @@ class Forward(UnaryParser):
         # self.parser = get_parser_placeholder  # type: Parser
         self.cycle_reached: bool = False
         self.sub_parsers = frozenset()
-        self.set_fwtracer(nil_tracer, nil_tracer, nil_tracer)
+        self.set_fwtracer(nil_memo_tracer, nil_tracer, nil_tracer, nil_tracer)
 
     def reset(self):
         super(Forward, self).reset()
@@ -5347,6 +5351,7 @@ class Forward(UnaryParser):
         """
         grammar = self._grammar
         origin = grammar.ref_origin__
+        history_tracking = grammar.history_tracking__
 
         # roll back variable-changing operation if the parser backtracks
         # to a position before the variable-changing operation occurred
@@ -5359,10 +5364,12 @@ class Forward(UnaryParser):
             # Sorry, no history recording in case of memoized results!
             if self.recursion_counter[location]:
                 grammar.suspend_memoization__ = id(self)
+            if history_tracking:  return self.tracer_memo(self, location)  # TODO: Remove tracer_memo entirely when finished!
             return visited[location]
 
         if location in self.recursion_counter:
             grammar.suspend_memoization__ = id(self)
+            if history_tracking:  return self.tracer_memo(self, location)
             return None, location
 
         self.recursion_counter[location] = True  # fail on the first recursion
@@ -5372,10 +5379,7 @@ class Forward(UnaryParser):
 
         result = None, location
         next_result = self._parse_proxy(location)  # self.parser(location)
-
-        history_tracking = grammar.history_tracking__
-        if history_tracking:
-            tracing_data = self.tracer_init(self, location)
+        if history_tracking: tracing_data = self.tracer_init(self, location)
 
         while next_result[1] > result[1]:
             grammar.suspend_memoization__ = False
@@ -5383,12 +5387,8 @@ class Forward(UnaryParser):
             result = next_result
             visited[location] = result
             next_result = self._parse_proxy(location)  # self.parser(location)
-
-            if history_tracking:  # second clause necessary in case tracer has not been set
-                self.tracer_loop(tracing_data)
-
-        if history_tracking:
-            self.tracer_done(tracing_data, result)
+            if history_tracking: self.tracer_loop(tracing_data)
+        if history_tracking: self.tracer_done(tracing_data, result)
 
         self.recursion_counter[location] = False
         # Since the result of the last parser call (``next_result``) is discarded,
@@ -5414,12 +5414,14 @@ class Forward(UnaryParser):
     def set_proxy(self, proxy: Optional[ParseFunc]):
         super(Forward, self).set_proxy(proxy)
         if proxy is None:
-            self.set_fwtracer(nil_tracer, nil_tracer, nil_tracer)
+            self.set_fwtracer(nil_memo_tracer, nil_tracer, nil_tracer, nil_tracer)
 
-    def set_fwtracer(self, init: FWTracerInit, loop: FWTracerLoop, done: FWTracerDone):
+    def set_fwtracer(self, memo: ParseFunc, init: FWTracerInit, loop: FWTracerLoop, done: FWTracerDone):
         """Adds a seed-and-grow loop-tracer. The tracer can be disabled by calling either
         ``set_fwtracer(nil_tracer, nil_tracer, nil_tracer)`` or ``set_proxy(None)``
         """
+        assert memo is not nil_tracer(), "Use nil_memo_tracer not nil_memo as first argumen!"
+        self.tracer_memo: ParseFunc = memo
         self.tracer_init: FWTracerInit = init
         self.tracer_loop: FWTracerLoop = loop
         self.tracer_done: FWTracerDone = done

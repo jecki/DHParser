@@ -102,12 +102,10 @@ def history_record(parser: Parser, grammar: Grammar,
     hnd = Node(node.name, doc[location:location_]).with_pos(location) if node else None
     lc = line_col(grammar.document_lbreaks__, location)
     errors = grammar.tree__.error_nodes.get(id(node), [])
-    if parser.node_name[0:1] == ':' \
+    if parser.node_name == ":Forward" and grammar.call_stack__:
+        grammar.call_stack__[-1] = (f"{prefix}{parser.parser.pname or str(parser)}", location)
+    elif parser.node_name[0:1] == ':' \
             and not (isinstance(parser, SmartRE) and parser.is_lookahead()):
-        # if parser.pname:
-        #     item = (f"{prefix}{parser.pname}", location)
-        # else:
-        #     item = (f"{prefix}{parser} ", location)
         item = (f"{prefix}{parser}" + ' ' * int(bool(parser.pname)) , location)
         if grammar.call_stack__:
             grammar.call_stack__[-1] = item
@@ -116,15 +114,15 @@ def history_record(parser: Parser, grammar: Grammar,
     return HistoryRecord(grammar.call_stack__, hnd, doc[location_:], lc, errors)
 
 
-
-def wrap_call_up(self: Parser, node: Optional[Node], location: int, location_: int):
+def wrap_call_up(self: Parser, node: Optional[Node], location: int, location_: int,
+                 force: bool = False):
     """Creates a history record after the parser call has been completed.
     """
     # Don't track returning parsers except in case an error has occurred!
     grammar = self._grammar
     if ((self.node_name != WHITESPACE_PTYPE)
         and (grammar.moving_forward__
-             or (not self.disposable
+             or ((not self.disposable or force)
                  and (node and grammar.history__[-1].node))
              or result_changed(node, grammar.history__))):
         # record history
@@ -281,6 +279,17 @@ class TracingData:
     call_stack_pointer0 : int
 
 
+def fw_memo(self: Forward, location: int):
+    grammar = self._grammar
+    node, location_ = self.visited.get(location, (None, location))
+    prefix = "SEED: " if node is None else "GROW: "
+    grammar.call_stack__.append(call_item(self, location, prefix))
+    record = history_record(self, grammar, node, location, location_, prefix)
+    grammar.history__.append(record)
+    grammar.call_stack__.pop()
+    return node, location_
+
+
 def fw_init(fwp: 'Forward', location: int)-> TracingData:
     grammar = fwp._grammar
     history = grammar.history__
@@ -308,7 +317,7 @@ def fw_done(locals: TracingData, result: ParsingResult) -> None:
         grammar = locals.grammar
         grammar.history__ = grammar.history__[:locals.history_pointer]
         grammar.call_stack__ = grammar.call_stack__[:locals.call_stack_pointer0]
-        # wrap_call_up(locals.parser, node, locals.location, location)
+        wrap_call_up(locals.parser, node, locals.location, location, force=True)
 
 #######################################################################
 #
@@ -347,7 +356,7 @@ def set_tracer(parsers: Union[Grammar, Parser, Iterable[Parser]], tracer: Option
         for parser in parsers:
             parser.set_proxy(tracer)
             if isinstance(parser, Forward):
-                parser.set_fwtracer(fw_init, fw_loop, fw_done)
+                parser.set_fwtracer(fw_memo, fw_init, fw_loop, fw_done)
 
 
 def resume_notices_on(grammar: Grammar):
