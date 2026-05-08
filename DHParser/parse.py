@@ -5379,6 +5379,8 @@ class Forward(UnaryParser):
 
         result = None, location
         next_result = self._parse_proxy(location)  # self.parser(location)
+        if location in visited:
+            result = visited[location]
         if history_tracking: tracing_data = self.tracer_init(self, location)
 
         while next_result[1] > result[1]:
@@ -5390,7 +5392,7 @@ class Forward(UnaryParser):
             if history_tracking: self.tracer_loop(tracing_data)
         if history_tracking: self.tracer_done(tracing_data, result)
 
-        # del self.seed[(origin, location)]
+        del self.seed[(origin, location)]
         # Since the result of the last parser call (``next_result``) is discarded,
         # any variables captured by this call should be "rolled back", too.
         while len(grammar.rollback__) > rb_stack_size:
