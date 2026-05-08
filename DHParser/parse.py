@@ -57,7 +57,7 @@ from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
 from DHParser.log import CallItem, HistoryRecord
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME, SourceMapFunc
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
-from DHParser.nodetree import Node, RootNode, WHITESPACE_PTYPE, \
+from DHParser.nodetree import Node, RootNode, FrozenNode, WHITESPACE_PTYPE, \
     KEEP_COMMENTS_PTYPE, TOKEN_PTYPE, MIXED_CONTENT_TEXT_PTYPE, ZOMBIE_TAG, EMPTY_NODE, \
     EMPTY_PTYPE, LEAF_NODE, ChildrenType, ResultType
 from DHParser.toolkit import sane_parser_name, escape_ctrl_chars, re, matching_brackets, \
@@ -5265,17 +5265,17 @@ class Synonym(UnaryParser):
         return self.pname or self.parser.repr
 
 
+FWTracerMemo: TypeAlias = Callable[['Forward', int, ParsingResult], None]
 FWTracerInit: TypeAlias = Callable[['Forward', int], Any]
 FWTracerLoop: TypeAlias = Callable[[Any], None]
-FWTracerDone: TypeAlias = Callable[[ParsingResult], None]
-
-
-def nil_memo_tracer(fwp: Forward, location: int):
-    return fwp.visited[location]
+FWTracerDone: TypeAlias = Callable[[Any, ParsingResult], None]
 
 
 def nil_tracer(*args, **kwargs) -> None:
     return None
+
+
+SEED = (FrozenNode(':SEED', ''), 0)
 
 
 class Forward(UnaryParser):
@@ -5298,7 +5298,7 @@ class Forward(UnaryParser):
         ...     expression.set(term + ZeroOrMore((TKN("+") | TKN("-")) + term))
         ...     root__     = expression
 
-    :ivar recursion_counter:  Mapping of places to how often the parser
+    :ivar seed:  Mapping of places to how often the parser
             has already been called recursively at this place. This
             is needed to implement left recursion. The number of
             calls becomes irrelevant once a result has been memoized.
@@ -5313,11 +5313,11 @@ class Forward(UnaryParser):
         # self.parser = get_parser_placeholder  # type: Parser
         self.cycle_reached: bool = False
         self.sub_parsers = frozenset()
-        self.set_fwtracer(nil_memo_tracer, nil_tracer, nil_tracer, nil_tracer)
+        self.set_fwtracer(nil_tracer, nil_tracer, nil_tracer, nil_tracer)
 
     def reset(self):
         super(Forward, self).reset()
-        self.recursion_counter: Dict[Tuple[int, int], int] = dict()
+        self.seed: Dict[Tuple[int, int], Optional[ParsingResult]] = dict()
         assert not self.pname, "Forward-Parsers mustn't have a name!"
 
         self.memo: Dict[int, List[Node]] = dict()
@@ -5362,17 +5362,17 @@ class Forward(UnaryParser):
         visited = self.visited  # using local variable for better performance
         if location in visited:
             # Sorry, no history recording in case of memoized results!
-            if self.recursion_counter[location]:
-                grammar.suspend_memoization__ = id(self)
-            if history_tracking:  return self.tracer_memo(self, location)  # TODO: Remove tracer_memo entirely when finished!
+            if history_tracking:  self.tracer_memo(self, location, visited[location])  # TODO: Remove tracer_memo entirely when finished!
             return visited[location]
 
-        if location in self.recursion_counter:
+        # check if a seed has been planted for the seed and grow algorithm
+        sapling = self.seed.get((origin, location), None)
+        if sapling:
             grammar.suspend_memoization__ = id(self)
-            if history_tracking:  return self.tracer_memo(self, location)
-            return None, location
+            if history_tracking:  self.tracer_memo(self, location, sapling)
+            return (None, location) if sapling is SEED else sapling
 
-        self.recursion_counter[location] = True  # fail on the first recursion
+        self.seed[(origin, location)] = SEED  # fail on the first recursion
         save_suspend_memoization = grammar.suspend_memoization__
         grammar.suspend_memoization__ = False
         rb_stack_size = len(grammar.rollback__)
@@ -5385,12 +5385,12 @@ class Forward(UnaryParser):
             grammar.suspend_memoization__ = False
             rb_stack_size = len(grammar.rollback__)
             result = next_result
-            visited[location] = result
+            self.seed[(origin, location)] = result
             next_result = self._parse_proxy(location)  # self.parser(location)
             if history_tracking: self.tracer_loop(tracing_data)
         if history_tracking: self.tracer_done(tracing_data, result)
 
-        self.recursion_counter[location] = False
+        # del self.seed[(origin, location)]
         # Since the result of the last parser call (``next_result``) is discarded,
         # any variables captured by this call should be "rolled back", too.
         while len(grammar.rollback__) > rb_stack_size:
@@ -5404,7 +5404,9 @@ class Forward(UnaryParser):
         # 2. isinstance check for referenced parsers that are not in fact recursive
         if grammar.suspend_memoization__ == id(self) or isinstance(grammar.suspend_memoization__, bool):
             grammar.suspend_memoization__ = save_suspend_memoization  #  = is_context_sensitive(self.parser)
-        if not grammar.suspend_memoization__:
+        if location in visited and result[1] < visited[location][1]:
+            result = visited[location]
+        elif not grammar.suspend_memoization__:
             visited[location] = result
         return result
 
@@ -5414,14 +5416,14 @@ class Forward(UnaryParser):
     def set_proxy(self, proxy: Optional[ParseFunc]):
         super(Forward, self).set_proxy(proxy)
         if proxy is None:
-            self.set_fwtracer(nil_memo_tracer, nil_tracer, nil_tracer, nil_tracer)
+            self.set_fwtracer(nil_tracer, nil_tracer, nil_tracer, nil_tracer)
 
-    def set_fwtracer(self, memo: ParseFunc, init: FWTracerInit, loop: FWTracerLoop, done: FWTracerDone):
+    def set_fwtracer(self, memo: FWTracerMemo, init: FWTracerInit, loop: FWTracerLoop, done: FWTracerDone):
         """Adds a seed-and-grow loop-tracer. The tracer can be disabled by calling either
         ``set_fwtracer(nil_tracer, nil_tracer, nil_tracer)`` or ``set_proxy(None)``
         """
         assert memo is not nil_tracer(), "Use nil_memo_tracer not nil_memo as first argumen!"
-        self.tracer_memo: ParseFunc = memo
+        self.tracer_memo: FWTracerMemo = memo
         self.tracer_init: FWTracerInit = init
         self.tracer_loop: FWTracerLoop = loop
         self.tracer_done: FWTracerDone = done
@@ -5479,7 +5481,7 @@ class Ref(LateBindingUnary):
 
     @cython.locals(ldepth=cython.int, rb_stack_size=cython.int)
     def __call__(self, location: cython.int) -> ParsingResult:
-        self.grammar.ref_origin__ = id(self)
+        self.grammar.ref_origin__ = self.symbol  # id(self)
         result = self.parser(location)
         if self.drop_content:
             return EMPTY_NODE, result[1]

@@ -3013,7 +3013,7 @@ requirements, as for example, the need for a ``__deepcopy__``-method.
 Therefore, implementing one's own Parse-classes should be avoided if
 possible.
 
-Nevertheless, here is the previous example implemented with A
+Nevertheless, here is the previous example implemented with a
 custom parser class::
 
    >>> word_parser_class = """from DHParser.parse import Parser, copy_parser_base_attrs
@@ -3096,7 +3096,9 @@ the processing stages following the parsing-stage (see
 :any:`processing_pipelines`).
 
 
-Now, let's not forget to restore the turned off optimizations (see above)::
+Last not least, let's not forget to restore the optimizations turned off earlier (
+so that we don't get surprises when running doctests in
+other parts of the documentation subsequently to this part).::
 
     >>> set_config_value('optimizations', save_optimizations)
 

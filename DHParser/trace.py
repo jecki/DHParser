@@ -50,7 +50,7 @@ from DHParser.error import Error, RESUME_NOTICE, RECURSION_DEPTH_LIMIT_HIT
 from DHParser.nodetree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE
 from DHParser.log import HistoryRecord, CallItem, NONE_NODE
 from DHParser.parse import Grammar, Parser, ParserError, ParseFunc, ContextSensitive, \
-    UnaryParser, SmartRE, cancel_proxy, Forward, ParsingResult
+    UnaryParser, SmartRE, cancel_proxy, Forward, ParsingResult, SEED
 from DHParser.toolkit import line_col, INFINITE
 
 __all__ = ('trace_history', 'set_tracer', 'resume_notices_on', 'resume_notices_off')
@@ -279,15 +279,21 @@ class TracingData:
     call_stack_pointer0 : int
 
 
-def fw_memo(self: Forward, location: int):
+def fw_memo(self: Forward, location: int, result: ParsingResult):
     grammar = self._grammar
-    node, location_ = self.visited.get(location, (None, location))
-    prefix = "SEED: " if node is None else "GROW: "
+    node, location_ = (None, location) if result is None else result
+    if location in self.visited:
+        prefix = f"RECALL ({grammar.ref_origin__}): "
+    elif result is SEED:
+        prefix = f"SEED ({grammar.ref_origin__}): "
+        node = None
+        location = location
+    else:
+        prefix  = f"GROW ({grammar.ref_origin__}): "
     grammar.call_stack__.append(call_item(self, location, prefix))
     record = history_record(self, grammar, node, location, location_, prefix)
     grammar.history__.append(record)
     grammar.call_stack__.pop()
-    return node, location_
 
 
 def fw_init(fwp: 'Forward', location: int)-> TracingData:
@@ -318,6 +324,7 @@ def fw_done(locals: TracingData, result: ParsingResult) -> None:
         grammar.history__ = grammar.history__[:locals.history_pointer]
         grammar.call_stack__ = grammar.call_stack__[:locals.call_stack_pointer0]
         wrap_call_up(locals.parser, node, locals.location, location, force=True)
+
 
 #######################################################################
 #
