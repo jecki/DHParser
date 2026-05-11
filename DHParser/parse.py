@@ -2020,6 +2020,7 @@ class Grammar:
         except AttributeError:
             self.ff_parser__: Parser = get_parser_placeholder()
         self.ref_origin__ = 0
+        self.ref_ids__: Dict[str, int] = dict()
 
     @property
     def reversed__(self) -> StringView:
@@ -5480,10 +5481,16 @@ class Ref(LateBindingUnary):
     def reset(self):
         super(Ref, self).reset()
         assert not self.pname, "Ref-Parsers mustn't have a name!"
+        if not hasattr(self, 'ref_id') and not is_grammar_placeholder(self._grammar):
+            sym = self.symbol
+            counter = self._grammar.ref_ids__.setdefault(sym, 0) + 1
+            self._grammar.ref_ids__[sym] = counter
+            self.ref_id = self.symbol # + str(counter)
+
 
     @cython.locals(ldepth=cython.int, rb_stack_size=cython.int)
     def __call__(self, location: cython.int) -> ParsingResult:
-        self.grammar.ref_origin__ = self.symbol  # id(self)
+        self.grammar.ref_origin__ = self.ref_id  # self.symbol , id(self)
         result = self.parser(location)
         if self.drop_content:
             return EMPTY_NODE, result[1]
