@@ -5318,7 +5318,7 @@ class Forward(UnaryParser):
 
     def reset(self):
         super(Forward, self).reset()
-        self.seed: Dict[Tuple[int, int], Optional[ParsingResult]] = dict()
+        self.seed: Dict[Tuple[int, int], List[ParsingResult]] = dict()
         assert not self.pname, "Forward-Parsers mustn't have a name!"
 
         self.memo: Dict[int, List[Node]] = dict()
@@ -5367,13 +5367,13 @@ class Forward(UnaryParser):
             return visited[location]
 
         # check if a seed has been planted for the seed and grow algorithm
-        sapling = self.seed.get((origin, location), None)
+        sapling = self.seed.get((origin, location), [None])[-1]
         if sapling:
             grammar.suspend_memoization__ = id(self)
             if history_tracking:  self.tracer_memo(self, location, sapling)
             return (None, location) if sapling is SEED else sapling
 
-        self.seed[(origin, location)] = SEED  # fail on the first recursion
+        self.seed[(origin, location)] = [SEED]  # fail on the first recursion
         save_suspend_memoization = grammar.suspend_memoization__
         grammar.suspend_memoization__ = False
         rb_stack_size = len(grammar.rollback__)
@@ -5388,7 +5388,7 @@ class Forward(UnaryParser):
             grammar.suspend_memoization__ = False
             rb_stack_size = len(grammar.rollback__)
             result = next_result
-            self.seed[(origin, location)] = result
+            self.seed[(origin, location)].append(result)
             next_result = self._parse_proxy(location)  # self.parser(location)
             if history_tracking: self.tracer_loop(tracing_data)
         if history_tracking: self.tracer_done(tracing_data, result)
