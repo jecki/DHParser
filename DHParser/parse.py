@@ -5385,6 +5385,7 @@ class Forward(UnaryParser):
         if history_tracking: tracing_data = self.tracer_init(self, location)
 
         while next_result[1] > result[1]:
+            # TODO:  if next_result is None, then check results on the seed and grow stack
             grammar.suspend_memoization__ = False
             rb_stack_size = len(grammar.rollback__)
             result = next_result
@@ -5393,7 +5394,7 @@ class Forward(UnaryParser):
             if history_tracking: self.tracer_loop(tracing_data)
         if history_tracking: self.tracer_done(tracing_data, result)
 
-        del self.seed[(origin, location)]
+        # del self.seed[(origin, location)]
         # Since the result of the last parser call (``next_result``) is discarded,
         # any variables captured by this call should be "rolled back", too.
         while len(grammar.rollback__) > rb_stack_size:
