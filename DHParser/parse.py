@@ -5266,6 +5266,8 @@ class Synonym(UnaryParser):
         return self.pname or self.parser.repr
 
 
+
+
 FWTracerMemo: TypeAlias = Callable[['Forward', int, ParsingResult], None]
 FWTracerInit: TypeAlias = Callable[['Forward', int], Any]
 FWTracerLoop: TypeAlias = Callable[[Any], None]
@@ -5277,6 +5279,38 @@ def nil_tracer(*args, **kwargs) -> None:
 
 
 SEED = (FrozenNode(':SEED', ''), 0)
+
+
+class VersionIterator:
+    def __init__(self, fwp: 'Forward', location: int):
+        self.fwp = fwp
+        self.location = location
+        self.counter = [len(next(reversed(fwp.versions.values()))) - 1]
+
+    def next(self, location) -> bool:
+        assert location == self.location, "Location changed during version-iteration!"
+        ritems = reversed(self.fwp.versions.items())
+        loc, versions = next(ritems)
+        n = 0
+        while location < loc:
+            c = self.counter[n]
+            c -= 1
+            if c <= 0:
+                c = len(versions) - 1
+                self.counter[n] = c
+                self.fwp.visited[loc] = versions[c]
+                n += 1
+            else:
+                self.counter[n] = c
+                self.fwp.visited[loc] = versions[c]
+                return True
+            try:
+                loc, versions = next(ritems)
+            except StopIteration:
+                return False
+            if n >= len(self.counter):
+                self.counter.append(len(versions))
+        return False
 
 
 class Forward(UnaryParser):
@@ -5320,7 +5354,8 @@ class Forward(UnaryParser):
         super(Forward, self).reset()
         assert not self.pname, "Forward-Parsers mustn't have a name!"
         self.seed: Dict[Tuple[int, int], List[ParsingResult]] = dict()  # aka recursion counter
-        self.memo: Dict[int, List[ParsingResult]] = dict()
+        self.versions: Dict[int, List[ParsingResult]] = dict()
+        self.version_iterator: Optional[VersionIterator] = None
         self.call_stack = []
 
     def __deepcopy__(self, memo):
@@ -5368,7 +5403,7 @@ class Forward(UnaryParser):
         # check if a seed has been planted for the seed and grow algorithm
         sapling = self.seed.get((location, origin), [None])[-1]
         if sapling:
-            grammar.suspend_memoization__ = id(self)
+            grammar.suspend_memoization__ = id(self)  # TODO: Make sure, memoization is turned on only by the very first recursive call on the call stack
             if history_tracking:  self.tracer_memo(self, location, sapling)
             return (None, location) if sapling is SEED else sapling
 
@@ -5379,14 +5414,13 @@ class Forward(UnaryParser):
 
         result = None, location
 
-        while result[0] is None:
+        while True:
             next_result = self._parse_proxy(location)  # self.parser(location)
             if location in visited:
                 result = visited[location]
             if history_tracking: tracing_data = self.tracer_init(self, location)
 
             while next_result[1] > result[1]:
-                # TODO:  if next_result is None, then check results on the seed and grow stack
                 grammar.suspend_memoization__ = False
                 rb_stack_size = len(grammar.rollback__)
                 result = next_result
@@ -5403,11 +5437,17 @@ class Forward(UnaryParser):
                 grammar.last_rb__loc__ = grammar.rollback__[-1][0] \
                     if grammar.rollback__ else -2
 
-            # self.memo[location] = self.seed[(location, origin)][1:]
-            # del self.seed[(location, origin)]
-            # if not self.memo[location]: break
+            if result[0] is None:
+                if self.version_iterator is None:
+                    self.version_iterator = VersionIterator(self, location)
+                if self.version_iterator.next(location):
+                    continue
 
-
+            self.version_iterator = None
+            versions = self.seed[(location, origin)]
+            if len(versions) > 1:  self.versions[location] = versions
+            del self.seed[(location, origin)]
+            break
 
         # both checks in the following are necessary:
         # 1. id(self)-check in order not to interfere with interwoven recursive parser calls

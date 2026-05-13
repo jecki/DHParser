@@ -40,7 +40,7 @@ from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMor
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, \
     Interleave, CombinedParser, Text, EMPTY_NODE, Capture, Drop, Whitespace, \
     GrammarError, Counted, Always, longest_match, extract_error_code, \
-    Option, DTKN, RegExp, Option, SmartRE
+    Option, DTKN, RegExp, Option, SmartRE, VersionIterator, SEED
 from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.compile import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
@@ -49,7 +49,6 @@ from DHParser.dsl import grammar_provider, create_parser
 from DHParser.nodetree import Node, parse_sxpr, ANY_NODE
 from DHParser.stringview import StringView
 from DHParser.trace import set_tracer, trace_history, resume_notices_on
-
 
 
 class TestWhitespace:
@@ -87,15 +86,17 @@ class TestParserError:
 
 class TestParserClass:
     def test_apply(self):
-        minilang ="""
+        minilang = """
             expr = expr ("+"|"-") term | term
             term = term ("*"|"/") factor | factor
             factor = /[0-9]+/~
             """
         gr = grammar_provider(minilang)()
         l = []
+
         def visitor(p: Parser):
             l.append(p.pname + p.ptype)
+
         gr.root__.grammar = gr
         gr.root__.apply(visitor)
         s1 = ", ".join(l)
@@ -109,10 +110,12 @@ class TestParserClass:
 
     def test_symbol(self):
         g = Grammar
+
         class MyGrammar(Grammar):
             wrong = Text('wrong')
             word = OneOrMore(wrong) + Whitespace(r'\s*') + OneOrMore(RegExp(r'\w+'))
             root__ = word
+
         gr = MyGrammar()
         regex = gr['word'].parsers[-1].parser
         result = regex.symbol
@@ -126,12 +129,74 @@ def check_infinite_loop_warning(result):
     result.errors = []
 
 
+STUFFING = Node('STUFFING', 'stuffing')
+
+
 class TestInfiLoopsAndRecursion:
     def setup_class(self):
         pass
         # set_config_value('history_tracking', True)
         # set_config_value('resume_notices', True)
         # start_logging('LOGS')
+
+    def test_version_iterator(self):
+        versions = {0: [(SEED, 0), (STUFFING, 8)],
+                    2: [(SEED, 0), (STUFFING, 8), (STUFFING, 16)],
+                    5: [(SEED, 0), (STUFFING, 8), (STUFFING, 16), (STUFFING, 24)]}
+        fwd = Forward()
+        fwd.reset()
+        fwd.versions = versions
+
+        iterator = VersionIterator(fwd, 0)
+        expected = [{5: (STUFFING, 16)}, {5: (STUFFING, 8)},
+                    {5: (STUFFING, 24), 2: (STUFFING, 16)},
+                    {5: (STUFFING, 16), 2: (STUFFING, 16)},
+                    {5: (STUFFING, 8), 2: (STUFFING, 16)},
+                    {5: (STUFFING, 24), 2: (STUFFING, 8)},
+                    {5: (STUFFING, 16), 2: (STUFFING, 8)},
+                    {5: (STUFFING, 8), 2: (STUFFING, 8)}]
+        l = []
+        while iterator.next(0):
+            l.append(fwd.visited.copy())
+        assert l == expected
+
+        fwd.visited = dict()
+        iterator = VersionIterator(fwd, 1)
+        l = []
+        while iterator.next(1):
+            l.append(fwd.visited.copy())
+        assert l == expected
+
+        fwd.visited = dict()
+        iterator = VersionIterator(fwd, 2)
+        expected = [{5: (STUFFING, 16)},
+                    {5: (STUFFING, 8)}]
+        l = []
+        while iterator.next(2):
+            l.append(fwd.visited.copy())
+        assert l == expected
+
+        fwd.visited = dict()
+        iterator = VersionIterator(fwd, 3)
+        l = []
+        while iterator.next(3):
+            l.append(fwd.visited.copy())
+        assert l == expected
+
+        fwd.visited = dict()
+        iterator = VersionIterator(fwd, 4)
+        l = []
+        while iterator.next(4):
+            l.append(fwd.visited.copy())
+        assert l == expected
+
+        fwd.visited = dict()
+        iterator = VersionIterator(fwd, 5)
+        expected = []
+        l = []
+        while iterator.next(5):
+            l.append(fwd.visited.copy())
+        assert l == expected
 
     def test_very_simple(self):
         minilang = """
@@ -348,10 +413,13 @@ class TestFlowControl:
     t2 = "All word and not play makes Jack a dull boy END\n"
 
     def test_lookbehind(self):
-        ws = RegExp(r'\s*');  ws.pname = "ws"
-        end = RegExp("END");  end.pname = "end"
+        ws = RegExp(r'\s*');
+        ws.pname = "ws"
+        end = RegExp("END");
+        end.pname = "end"
         doc_end = Lookbehind(RegExp('\\s*?\\n')) + end
-        word = RegExp(r'\w+');  word.pname = "word"
+        word = RegExp(r'\w+');
+        word.pname = "word"
         sequence = OneOrMore(NegativeLookahead(end) + word + ws)
         document = ws + sequence + doc_end + ws
         parser = Grammar(document)
@@ -366,7 +434,6 @@ class TestFlowControl:
         assert cst.did_match() and cst.content == "All" and not cst.errors
         cst = parser(self.t2, parser['end'], complete_match=False)
         assert not cst.did_match()
-
 
     def test_lookbehind_indirect(self):
         class LookbehindTestGrammar(Grammar):
@@ -437,7 +504,7 @@ class TestRegex:
                   \w*    # possibly followed by more alpha chracters/
         """
         result, messages, _ = compile_source(mlregex, None, get_ebnf_grammar(),
-                        get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
+                                             get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
         # print(result)
         assert result
         assert not messages, str(messages)
@@ -454,7 +521,7 @@ class TestRegex:
                   \w* /
         """
         result, messages, _ = compile_source(mlregex, None, get_ebnf_grammar(),
-                        get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
+                                             get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
         assert result
         assert not messages, str(messages)
         parser = compile_python_object(DHPARSER_IMPORTS + result, r'\w+Grammar$')()
@@ -469,7 +536,7 @@ class TestRegex:
         regex = /alpha/
         """
         result, messages, _ = compile_source(mlregex, None, get_ebnf_grammar(),
-                        get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
+                                             get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
         assert result
         assert not messages
         grammar = compile_python_object(DHPARSER_IMPORTS + result, r'\w+Grammar$')()
@@ -484,7 +551,7 @@ class TestRegex:
         regex = /alpha/
         """
         result, messages, _ = compile_source(mlregex, None, get_ebnf_grammar(),
-                        get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
+                                             get_ebnf_transformer(), get_ebnf_compiler('MultilineRegexTest'))
         assert result
         assert not messages
         grammar = compile_python_object(DHPARSER_IMPORTS + result, r'\w+Grammar$')()
@@ -530,7 +597,7 @@ class TestGrammar:
         # checks whether pos values in the parsing result and in the
         # history record have been initialized
         grammar = compile_python_object(DHPARSER_IMPORTS + self.pyparser, r'\w+Grammar$')()
-                                        # .format(dhparser_parentdir=repr('.')) + self.pyparser, r'\w+Grammar$')()
+        # .format(dhparser_parentdir=repr('.')) + self.pyparser, r'\w+Grammar$')()
         grammar("no_file_name*")
         for record in grammar.history__:
             assert not record.node or record.node.pos >= 0
@@ -635,13 +702,17 @@ class TestSeries:
         series = "A" "B" §"C" "D"
         """
         parser = grammar_provider(lang)()
-        st = parser("ABCD");  assert not st.error_flag
-        st = parser("A_CD");  assert not st.error_flag
-        st = parser("AB_D");  assert st.error_flag
+        st = parser("ABCD");
+        assert not st.error_flag
+        st = parser("A_CD");
+        assert not st.error_flag
+        st = parser("AB_D");
+        assert st.error_flag
         assert st.errors_sorted[0].code == MANDATORY_CONTINUATION
         assert str(st.errors_sorted[0]).find("series") >= 0
         # transitivity of mandatory-operator
-        st = parser("ABC_");  assert st.error_flag
+        st = parser("ABC_");
+        assert st.error_flag
         assert st.errors_sorted[0].code == MANDATORY_CONTINUATION
 
     def test_mandatory2(self):
@@ -907,7 +978,7 @@ class TestPopRetrieve:
 
     @staticmethod
     def has_tag_name(node, name):
-        return node.name == name # and not isinstance(node.parser, Retrieve)
+        return node.name == name  # and not isinstance(node.parser, Retrieve)
 
     def test_capture_assertions(self):
         try:
@@ -1308,6 +1379,7 @@ ENDL       = `;` | ``
 EOF = !/./ [:?DEF] [:?OR] [:?AND] [:?ENDL]
 """
 
+
 class TestReentryAfterError:
     testlang = """@literalws = right
     document = alpha [beta] gamma "."
@@ -1323,7 +1395,8 @@ class TestReentryAfterError:
     gr = grammar_provider(testlang)()
 
     def test_no_resume_rules(self):
-        gr = self.gr;  gr.resume_rules = dict()
+        gr = self.gr;
+        gr.resume_rules = dict()
         content = 'ALPHA acb BETA bac GAMMA cab .'
         cst = gr(content)
         assert cst.error_flag
@@ -1331,7 +1404,8 @@ class TestReentryAfterError:
         assert cst.pick('alpha').content.startswith('ALPHA')
 
     def test_no_resume_rules_partial_parsing(self):
-        gr = self.gr;  gr.resume_rules = dict()
+        gr = self.gr;
+        gr.resume_rules = dict()
         content = 'ALPHA acb'
         cst = gr(content, 'alpha')
         assert cst.error_flag
@@ -1339,7 +1413,8 @@ class TestReentryAfterError:
         assert cst.pick('alpha').content.startswith('ALPHA')
 
     def test_simple_resume_rule(self):
-        gr = self.gr;  gr.resume_rules = dict()
+        gr = self.gr;
+        gr.resume_rules = dict()
         gr.resume_rules__['alpha'] = [re.compile(r'(?=BETA)')]
         content = 'ALPHA acb BETA bac GAMMA cab .'
         cst = gr(content)
@@ -1350,7 +1425,8 @@ class TestReentryAfterError:
         assert len([err for err in cst.errors_sorted if err.code >= 1000]) == 1
 
     def test_failing_resume_rule(self):
-        gr = self.gr;  gr.resume_rules = dict()
+        gr = self.gr;
+        gr.resume_rules = dict()
         gr.resume_rules__['alpha'] = [re.compile(r'(?=XXX)')]
         content = 'ALPHA acb BETA bac GAMMA cab .'
         cst = gr(content)
@@ -1359,7 +1435,8 @@ class TestReentryAfterError:
         # assert cst.pick('alpha').content.startswith('ALPHA')
 
     def test_several_reentry_points(self):
-        gr = self.gr;  gr.resume_rules = dict()
+        gr = self.gr;
+        gr.resume_rules = dict()
         gr.resume_rules__['alpha'] = [re.compile(r'(?=BETA)'), re.compile(r'(?=GAMMA)')]
         content = 'ALPHA acb BETA bac GAMMA cab .'
         cst = gr(content)
@@ -1370,7 +1447,8 @@ class TestReentryAfterError:
         assert len([err for err in cst.errors_sorted if err.code >= 1000]) == 1
 
     def test_several_reentry_points_second_point_matching(self):
-        gr = self.gr;  gr.resume_rules = dict()
+        gr = self.gr;
+        gr.resume_rules = dict()
         gr.resume_rules__['alpha'] = [re.compile(r'(?=BETA)'), re.compile(r'(?=GAMMA)')]
         content = 'ALPHA acb GAMMA cab .'
         cst = gr(content)
@@ -1384,7 +1462,8 @@ class TestReentryAfterError:
         assert len(cst.errors) == 2 and any(err.code == RESUME_NOTICE for err in cst.errors)
 
     def test_several_resume_rules_innermost_rule_matching(self):
-        gr = self.gr;  gr.resume_rules = dict()
+        gr = self.gr;
+        gr.resume_rules = dict()
         gr.resume_rules__['alpha'] = [re.compile(r'(?=BETA)'), re.compile(r'(?=GAMMA)')]
         gr.resume_rules__['beta'] = [re.compile(r'(?=GAMMA)')]
         gr.resume_rules__['bac'] = [re.compile(r'(?=GAMMA)')]
@@ -1427,7 +1506,6 @@ def next_valid_letter(text, start, end):
         assert 'block_A' in tree and 'block_B' in tree
         assert tree.pick('block_A_skip_R1__')
 
-
     def test_skip_comment_on_resume(self):
         lang = r"""@literalws = right
             @ comment =  /(?:\/\/.*)|(?:\/\*(?:.|\n)*?\*\/)/  # Kommentare im C++-Stil
@@ -1436,6 +1514,7 @@ def next_valid_letter(text, start, end):
             block_A = "a" §"b" "c"
             block_B = "x" "y" "z"
         """
+
         def mini_suite(grammar):
             tree = grammar('abc/*x*/xyz')
             assert not tree.errors
@@ -1485,7 +1564,6 @@ def next_valid_letter(text, start, end):
                              (57, 1), (59, 27), (60, 1), (65, 1), (66, 1)]
 
 
-
 class TestConfiguredErrorMessages:
     def test_configured_error_message(self):
         lang = """
@@ -1495,7 +1573,8 @@ class TestConfiguredErrorMessages:
             head = "A" "B"
             """
         parser = grammar_provider(lang)()
-        st = parser("AB_D");  assert st.error_flag
+        st = parser("AB_D");
+        assert st.error_flag
         assert st.errors_sorted[0].code == MALFORMED_ERROR_STRING
         assert st.errors_sorted[1].code == MANDATORY_CONTINUATION
 
@@ -1628,7 +1707,8 @@ class TestStaticAnalysis:
                 "Capture-dropped-content-Warning expected"
 
     def test_cyclical_ebnf_error(self):
-        doc = Text('proper');  doc.pname = "doc"
+        doc = Text('proper');
+        doc.pname = "doc"
         grammar = Grammar(doc)
         # grammar.static_analysis__()
         lang = "doc = 'proper'  # this works!"
@@ -1759,8 +1839,9 @@ class TestSmartRE:
     def test_SmartRE(self):
         # check for uninitialized position values
         punkt = Text(".").name("punk")
-        nom_klasse = Series(SmartRE(fr'(?P<:Text>unbestimmt)(?P<:Whitespace>\s*)|(?P<:Text>bestimmt)(?P<:Whitespace>\s*)'),
-                     Option(punkt)).name("doc")
+        nom_klasse = Series(
+            SmartRE(fr'(?P<:Text>unbestimmt)(?P<:Whitespace>\s*)|(?P<:Text>bestimmt)(?P<:Whitespace>\s*)'),
+            Option(punkt)).name("doc")
         doc = Series(nom_klasse, Option(punkt))
         parser = Grammar(doc)
         tree = parser("bestimmt ")
@@ -2015,6 +2096,7 @@ class TestAlternativeParserDefinitions:
         st1 = json_parser(self.json_text)
         assert st1.equals(self.goal)
 
+
 class TestMemoOptimization:
     def test_grammar_class(self):
         class JSON_Grammar(Grammar):
@@ -2144,6 +2226,7 @@ class TestDropPropagation:
             assert parser.tr.parsers[0].drop_content
         finally:
             set_config_value('left_recursion', lr)
+
 
 class TestPosInitialization:
     def test_position_initialization(self):
@@ -2392,5 +2475,5 @@ EOF        =  !/./        # no more characters ahead, end of file reached
 
 if __name__ == "__main__":
     from DHParser.testing import runner
-    runner("", globals())
 
+    runner("", globals())
