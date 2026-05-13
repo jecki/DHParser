@@ -5371,7 +5371,11 @@ class Forward(UnaryParser):
         if sapling:
             grammar.suspend_memoization__ = id(self)
             if history_tracking:  self.tracer_memo(self, location, sapling)
-            return (None, location) if sapling is SEED else sapling
+            if sapling is SEED:
+                # self.seed[(origin, location)] = []
+                return (None, location)
+            else:
+                return sapling
 
         self.seed[(origin, location)] = [SEED]  # fail on the first recursion
         save_suspend_memoization = grammar.suspend_memoization__
@@ -5392,9 +5396,14 @@ class Forward(UnaryParser):
             self.seed[(origin, location)].append(result)
             next_result = self._parse_proxy(location)  # self.parser(location)
             if history_tracking: self.tracer_loop(tracing_data)
+
+        # while (result[0] is None and next_result[0] is None
+        #        and len(self.seed[(origin, location)]) > 2):
+        #     self.seed[(origin, location)].pop()
+
         if history_tracking: self.tracer_done(tracing_data, result)
 
-        # del self.seed[(origin, location)]
+        del self.seed[(origin, location)]
         # Since the result of the last parser call (``next_result``) is discarded,
         # any variables captured by this call should be "rolled back", too.
         while len(grammar.rollback__) > rb_stack_size:
