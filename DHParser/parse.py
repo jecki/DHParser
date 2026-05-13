@@ -5318,10 +5318,9 @@ class Forward(UnaryParser):
 
     def reset(self):
         super(Forward, self).reset()
-        self.seed: Dict[Tuple[int, int], List[ParsingResult]] = dict()  # aka recursion counter
         assert not self.pname, "Forward-Parsers mustn't have a name!"
-
-        self.memo: Dict[int, List[Node]] = dict()
+        self.seed: Dict[Tuple[int, int], List[ParsingResult]] = dict()  # aka recursion counter
+        self.memo: Dict[int, List[ParsingResult]] = dict()
         self.call_stack = []
 
     def __deepcopy__(self, memo):
@@ -5371,11 +5370,7 @@ class Forward(UnaryParser):
         if sapling:
             grammar.suspend_memoization__ = id(self)
             if history_tracking:  self.tracer_memo(self, location, sapling)
-            if sapling is SEED:
-                self.seed[(location, origin)] = []
-                return (None, location)
-            else:
-                return sapling
+            return (None, location) if sapling is SEED else sapling
 
         self.seed[(location, origin)] = [SEED]  # fail on the first recursion
         save_suspend_memoization = grammar.suspend_memoization__
@@ -5383,33 +5378,36 @@ class Forward(UnaryParser):
         rb_stack_size = len(grammar.rollback__)
 
         result = None, location
-        next_result = self._parse_proxy(location)  # self.parser(location)
-        if location in visited:
-            result = visited[location]
-        if history_tracking: tracing_data = self.tracer_init(self, location)
 
-        while next_result[1] > result[1]:
-            # TODO:  if next_result is None, then check results on the seed and grow stack
-            grammar.suspend_memoization__ = False
-            rb_stack_size = len(grammar.rollback__)
-            result = next_result
-            self.seed[(location, origin)].append(result)
+        while result[0] is None:
             next_result = self._parse_proxy(location)  # self.parser(location)
-            if history_tracking: self.tracer_loop(tracing_data)
+            if location in visited:
+                result = visited[location]
+            if history_tracking: tracing_data = self.tracer_init(self, location)
 
-        # while self.seed[(location, origin)][-1] is SEED:
-        #     pass
+            while next_result[1] > result[1]:
+                # TODO:  if next_result is None, then check results on the seed and grow stack
+                grammar.suspend_memoization__ = False
+                rb_stack_size = len(grammar.rollback__)
+                result = next_result
+                self.seed[(location, origin)].append(result)
+                next_result = self._parse_proxy(location)  # self.parser(location)
+                if history_tracking: self.tracer_loop(tracing_data)
+            if history_tracking: self.tracer_done(tracing_data, result)
 
-        if history_tracking: self.tracer_done(tracing_data, result)
+            # Since the result of the last parser call (``next_result``) is discarded,
+            # any variables captured by this call should be "rolled back", too.
+            while len(grammar.rollback__) > rb_stack_size:
+                _, rb_func = grammar.rollback__.pop()
+                rb_func()
+                grammar.last_rb__loc__ = grammar.rollback__[-1][0] \
+                    if grammar.rollback__ else -2
 
-        del self.seed[(location, origin)]
-        # Since the result of the last parser call (``next_result``) is discarded,
-        # any variables captured by this call should be "rolled back", too.
-        while len(grammar.rollback__) > rb_stack_size:
-            _, rb_func = grammar.rollback__.pop()
-            rb_func()
-            grammar.last_rb__loc__ = grammar.rollback__[-1][0] \
-                if grammar.rollback__ else -2
+            # self.memo[location] = self.seed[(location, origin)][1:]
+            # del self.seed[(location, origin)]
+            # if not self.memo[location]: break
+
+
 
         # both checks in the following are necessary:
         # 1. id(self)-check in order not to interfere with interwoven recursive parser calls
