@@ -5318,7 +5318,7 @@ class Forward(UnaryParser):
 
     def reset(self):
         super(Forward, self).reset()
-        self.seed: Dict[Tuple[int, int], List[ParsingResult]] = dict()
+        self.seed: Dict[Tuple[int, int], List[ParsingResult]] = dict()  # aka recursion counter
         assert not self.pname, "Forward-Parsers mustn't have a name!"
 
         self.memo: Dict[int, List[Node]] = dict()
@@ -5367,17 +5367,17 @@ class Forward(UnaryParser):
             return visited[location]
 
         # check if a seed has been planted for the seed and grow algorithm
-        sapling = self.seed.get((origin, location), [None])[-1]
+        sapling = self.seed.get((location, origin), [None])[-1]
         if sapling:
             grammar.suspend_memoization__ = id(self)
             if history_tracking:  self.tracer_memo(self, location, sapling)
             if sapling is SEED:
-                # self.seed[(origin, location)] = []
+                self.seed[(location, origin)] = []
                 return (None, location)
             else:
                 return sapling
 
-        self.seed[(origin, location)] = [SEED]  # fail on the first recursion
+        self.seed[(location, origin)] = [SEED]  # fail on the first recursion
         save_suspend_memoization = grammar.suspend_memoization__
         grammar.suspend_memoization__ = False
         rb_stack_size = len(grammar.rollback__)
@@ -5393,17 +5393,16 @@ class Forward(UnaryParser):
             grammar.suspend_memoization__ = False
             rb_stack_size = len(grammar.rollback__)
             result = next_result
-            self.seed[(origin, location)].append(result)
+            self.seed[(location, origin)].append(result)
             next_result = self._parse_proxy(location)  # self.parser(location)
             if history_tracking: self.tracer_loop(tracing_data)
 
-        # while (result[0] is None and next_result[0] is None
-        #        and len(self.seed[(origin, location)]) > 2):
-        #     self.seed[(origin, location)].pop()
+        # while self.seed[(location, origin)][-1] is SEED:
+        #     pass
 
         if history_tracking: self.tracer_done(tracing_data, result)
 
-        del self.seed[(origin, location)]
+        del self.seed[(location, origin)]
         # Since the result of the last parser call (``next_result``) is discarded,
         # any variables captured by this call should be "rolled back", too.
         while len(grammar.rollback__) > rb_stack_size:
