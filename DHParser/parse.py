@@ -5541,7 +5541,7 @@ class Ref(LateBindingUnary):
             sym = self.symbol
             counter = self._grammar.ref_ids__.setdefault(sym, 0) + 1
             self._grammar.ref_ids__[sym] = counter
-            self.ref_id = self.symbol # + str(counter)
+            self.ref_id = sym # + '>' + self.parser.parser.pname + ':' + str(counter)
 
 
     @cython.locals(ldepth=cython.int, rb_stack_size=cython.int)
