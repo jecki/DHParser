@@ -767,14 +767,14 @@ class Parser:
         grammar = self._grammar
 
         try:
-            # rollback variable-changing operation if the parser backtracks to a position
+            # roll-back variable-changing operation if the parser backtracks to a position
             # before or at the location where the variable-changing operation occurred
             if location <= grammar.last_rb__loc__:
                 grammar.rollback_to__(location)
 
             # if location has already been visited by the current parser, return saved result
             visited = self.visited  # using local variable for better performance
-            if location in visited:
+            if grammar.use_memo__ and location in visited:
                 if grammar.history_tracking__  and self._parse_proxy.__name__ == 'trace_history' \
                         and self._parse_proxy.__module__ == 'DHParser.trace':
                     return self._parse_proxy(-location or -INFINITE)  # a negative location signals a memo-hit
@@ -800,6 +800,7 @@ class Parser:
             if not grammar.suspend_memoization__:
                 visited[location] = (node, next_location)
                 grammar.suspend_memoization__ = save_suspend_memoization
+
         except RecursionError:
             node, next_location = self._handle_recursion_error(location)
         return node, next_location
@@ -2006,6 +2007,7 @@ class Grammar:
         self.rollback__: List[Tuple[int, Callable]] = []
         self.last_rb__loc__: int = -2
         self.suspend_memoization__: Union[bool, int] = False
+        self.use_memo__: int = -1  # True
         # support for call stack tracing
         self.call_stack__: List[CallItem] = []  # name, location
         # snapshots of call stacks
@@ -5355,7 +5357,7 @@ class Forward(UnaryParser):
         assert not self.pname, "Forward-Parsers mustn't have a name!"
         self.seed: Dict[Tuple[int, int], List[ParsingResult]] = dict()  # aka recursion counter
         self.versions: Dict[int, List[ParsingResult]] = dict()
-        self.version_iterator: Optional[VersionIterator] = None
+        self.farthest = -1
         self.call_stack = []
 
     def __deepcopy__(self, memo):
@@ -5387,15 +5389,23 @@ class Forward(UnaryParser):
         grammar = self._grammar
         origin = grammar.ref_origin__
         history_tracking = grammar.history_tracking__
+        visited = self.visited  # using local variable for better performance
 
         # roll back variable-changing operation if the parser backtracks
         # to a position before the variable-changing operation occurred
         if location <= grammar.last_rb__loc__:
             grammar.rollback_to__(location)
 
-        # if the location has already been visited by the current parser, return the saved result
-        visited = self.visited  # using local variable for better performance
-        if location in visited:
+        if not grammar.use_memo__ and (versions := self.versions.get(location, None)):
+            # rotate versions
+            last = versions.pop()
+            versions.insert(0, last)
+            if versions[0] is SEED:
+                grammar.use_memo__ = location or -1
+                return versions[-1]
+            else:
+                return versions[0]
+        elif location in visited:
             # Sorry, no history recording in case of memoized results!
             if history_tracking:  self.tracer_memo(self, location, visited[location])  # TODO: Remove tracer_memo entirely when finished!
             return visited[location]
@@ -5437,15 +5447,14 @@ class Forward(UnaryParser):
                 grammar.last_rb__loc__ = grammar.rollback__[-1][0] \
                     if grammar.rollback__ else -2
 
-            if result[0] is None:
-                if self.version_iterator is None:
-                    self.version_iterator = VersionIterator(self, location)
-                if self.version_iterator.next(location):
-                    continue
+            if result[0] is None and grammar.use_memo__ <= location < self.farthest:
+                grammar.use_memo__ = 0
+                continue
 
-            self.version_iterator = None
             versions = self.seed[(location, origin)]
-            if len(versions) > 1:  self.versions[location] = versions
+            if len(versions) > 1:
+                self.versions[location] = versions
+                if location > self.farthest:  self.farthest = location
             del self.seed[(location, origin)]
             break
 

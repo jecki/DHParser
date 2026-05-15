@@ -116,7 +116,7 @@ class InterwovenLR2Grammar(Grammar):
     """
     L = Forward()
     P = Forward()
-    source_hash__ = "f59a1d52736ccbbde530ac3aa6c8d679"
+    source_hash__ = "79b873b04321bc86ac08483a10687b25"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
