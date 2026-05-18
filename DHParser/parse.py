@@ -5283,36 +5283,36 @@ def nil_tracer(*args, **kwargs) -> None:
 SEED = (FrozenNode(':SEED', ''), 0)
 
 
-class VersionIterator:
-    def __init__(self, fwp: 'Forward', location: int):
-        self.fwp = fwp
-        self.location = location
-        self.counter = [len(next(reversed(fwp.versions.values()))) - 1]
-
-    def next(self, location) -> bool:
-        assert location == self.location, "Location changed during version-iteration!"
-        ritems = reversed(self.fwp.versions.items())
-        loc, versions = next(ritems)
-        n = 0
-        while location < loc:
-            c = self.counter[n]
-            c -= 1
-            if c <= 0:
-                c = len(versions) - 1
-                self.counter[n] = c
-                self.fwp.visited[loc] = versions[c]
-                n += 1
-            else:
-                self.counter[n] = c
-                self.fwp.visited[loc] = versions[c]
-                return True
-            try:
-                loc, versions = next(ritems)
-            except StopIteration:
-                return False
-            if n >= len(self.counter):
-                self.counter.append(len(versions))
-        return False
+# class VersionIterator:
+#     def __init__(self, fwp: 'Forward', location: int):
+#         self.fwp = fwp
+#         self.location = location
+#         self.counter = [len(next(reversed(fwp.versions.values()))) - 1]
+#
+#     def next(self, location) -> bool:
+#         assert location == self.location, "Location changed during version-iteration!"
+#         ritems = reversed(self.fwp.versions.items())
+#         loc, versions = next(ritems)
+#         n = 0
+#         while location < loc:
+#             c = self.counter[n]
+#             c -= 1
+#             if c <= 0:
+#                 c = len(versions) - 1
+#                 self.counter[n] = c
+#                 self.fwp.visited[loc] = versions[c]
+#                 n += 1
+#             else:
+#                 self.counter[n] = c
+#                 self.fwp.visited[loc] = versions[c]
+#                 return True
+#             try:
+#                 loc, versions = next(ritems)
+#             except StopIteration:
+#                 return False
+#             if n >= len(self.counter):
+#                 self.counter.append(len(versions))
+#         return False
 
 
 class Forward(UnaryParser):
