@@ -5360,6 +5360,8 @@ class Forward(UnaryParser):
         self.farthest = -1
         self.call_stack = []
 
+        self.iteration = -1
+
     def __deepcopy__(self, memo):
         duplicate = self.__class__()
         memo[id(self)] = duplicate  # prevent infinite recursion during next deepcopy() call
@@ -5425,6 +5427,7 @@ class Forward(UnaryParser):
         result = None, location
 
         while True:
+            self.iteration = 0
             next_result = self._parse_proxy(location)  # self.parser(location)
             if location in visited:
                 result = visited[location]
@@ -5435,6 +5438,7 @@ class Forward(UnaryParser):
                 rb_stack_size = len(grammar.rollback__)
                 result = next_result
                 self.seed[(location, origin)].append(result)
+                self.iteration += 1
                 next_result = self._parse_proxy(location)  # self.parser(location)
                 if history_tracking: self.tracer_loop(tracing_data)
             if history_tracking: self.tracer_done(tracing_data, result)
