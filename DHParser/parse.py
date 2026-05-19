@@ -17,15 +17,15 @@
 
 
 """
-Module ``parse`` contains the python classes and functions for
-DHParser's packrat-parser. It's central class is the
-``Grammar``-class, which is the base class for any concrete
+Module parse contains the python classes and functions for
+DHParser's packrat-parser. Its central class is the
+Grammar-class, which is the base class for any concrete
 Grammar. Grammar-objects are callable and parsing is done by
 calling a Grammar-object with a source text as argument.
 
 The different parsing functions are callable descendants of class
-``Parser``. Usually, they are organized in a tree and defined
-within the namespace of a grammar-class. See ``ebnf.EBNFGrammar``
+Parser. Usually, they are organized in a tree and defined
+within the namespace of a grammar-class. See :py:class:`ebnf.EBNFGrammar`
 for an example.
 """
 
@@ -215,20 +215,20 @@ class ParserError(Exception):
     If a reentry-rule has been configured for the parser where the error
     occurred, the parser guard can resume the parsing process.
 
-    Currently, the only case when a ``ParserError`` is thrown (and not some
-    different kind of error like ``UnknownParserError``) is when a :py:class:`Series`
+    Currently, the only case when a ParserError is thrown (and not some
+    different kind of error like UnknownParserError) is when a :py:class:`Series`
     or :py:class:`Interleave`-parser detects a missing mandatory element.
 
     :ivar parser:  The parser within which the error has been raised
-    :ivar node:  The node within which the error is locted
+    :ivar node:  The node within which the error is located
     :ivar node_orig_len:  The original size of that node. The actual size
-        of that node may change due to later processing steps und thus not
+        of that node may change due to later processing steps and thus not
         be reliable anymore for the description of the error.
     :ivar location:  The location in the document where the parser that caused the
         error started. This is not to be confused with the location where the error
         occurred, because by the time the error occurrs the parser may already have
         read some part of the document.
-    :ivar error:  The :py:class:`~error.Error` object containing among other things
+    :ivar error:  The :py:class:`~error.Error` object that contains, among other things,
         the exact error location.
     :ivar first_throw:  A flag that indicates that the error has not yet been re-raised
     :ivar attributes_locked:  A frozenset of attributes that must not be overwritten
@@ -2021,7 +2021,7 @@ class Grammar:
             self.ff_parser__: Parser = self.root_parser__
         except AttributeError:
             self.ff_parser__: Parser = get_parser_placeholder()
-        self.ref_origin__ = 0
+        self.ref_origin__: Ref = REF_SENTINEL
         self.ref_ids__: Dict[str, int] = dict()
 
     @property
@@ -3791,8 +3791,8 @@ class LateBindingUnary(UnaryParser):
             self.parser_name = parser.effective_pname()
             self.sub_parsers = frozenset({parser})
         else:
-            super().__init__(get_parser_placeholder())
             self.parser_name = parser_name
+            super().__init__(get_parser_placeholder())
             self._sub_parsers = frozenset()
 
     def __deepcopy__(self, memo):
@@ -3826,7 +3826,11 @@ class LateBindingUnary(UnaryParser):
     @property
     def sub_parsers(self) -> FrozenSet[Parser]:
         if not self._sub_parsers:
-            self._sub_parsers = frozenset({self._resolve_parser_name()})
+            parser = self._resolve_parser_name()
+            if is_parser_placeholder(parser):
+                self._sub_parsers = frozenset()
+            else:
+                self._sub_parsers = frozenset({self._resolve_parser_name()})
         return self._sub_parsers
 
     @sub_parsers.setter
@@ -5389,7 +5393,7 @@ class Forward(UnaryParser):
         https://tinlizzie.org/VPRIPapers/tr2007002_packrat.pdf
         """
         grammar = self._grammar
-        origin = grammar.ref_origin__
+        origin = grammar.ref_origin__.ref_id
         history_tracking = grammar.history_tracking__
         visited = self.visited  # using local variable for better performance
 
@@ -5539,7 +5543,7 @@ class Ref(LateBindingUnary):
     Synonym, Refs do not alter the node name."""
 
     def reset(self):
-        super(Ref, self).reset()
+        # super(Ref, self).reset()  no memo-dict needed
         assert not self.pname, "Ref-Parsers mustn't have a name!"
         if not hasattr(self, 'ref_id') and not is_grammar_placeholder(self._grammar):
             sym = self.symbol
@@ -5550,14 +5554,14 @@ class Ref(LateBindingUnary):
 
     @cython.locals(ldepth=cython.int, rb_stack_size=cython.int)
     def __call__(self, location: cython.int) -> ParsingResult:
-        self.grammar.ref_origin__ = self.ref_id  # self.symbol , id(self)
+        self.grammar.ref_origin__ = self
         result = self.parser(location)
         if self.drop_content:
             return EMPTY_NODE, result[1]
         return result
 
     def set_proxy(self, proxy: Optional[ParseFunc]):
-        """``set_proxy`` has no effects on Ref-objects!"""
+        """set_proxy has no effects on Ref-objects!"""
         return
 
     def name(self, pname: str = "", disposable: Optional[bool] = None) -> Parser:
@@ -5570,3 +5574,14 @@ class Ref(LateBindingUnary):
 
     def __str__(self):
         return "ref'" + self.parser_name
+
+
+class RefSentinel(Ref):
+    def reset(self):
+        self.ref_id = self.parser_name
+
+    def _resolve_parser_name(self) -> Parser:
+        return get_parser_placeholder()
+
+
+REF_SENTINEL = RefSentinel("0")
