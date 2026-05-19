@@ -5475,6 +5475,7 @@ class Forward(UnaryParser):
             result = visited[location]
         elif not grammar.suspend_memoization__:
             visited[location] = result
+        self.iteration = -1
         return result
 
     def _parse(self, location: cython.int) -> ParsingResult:
