@@ -503,6 +503,7 @@ def get_grammar_placeholder() -> Grammar:
     if _GRAMMAR_PLACEHOLDER is None:
         _GRAMMAR_PLACEHOLDER = Grammar.__new__(Grammar)
         _GRAMMAR_PLACEHOLDER.__call__ = NOCALL
+        _GRAMMAR_PLACEHOLDER.COMMENT__ = 'Grammar placeholder'
     return _GRAMMAR_PLACEHOLDER
 
 
@@ -5578,7 +5579,11 @@ class Ref(LateBindingUnary):
 
     def __str__(self):
         if not hasattr(self, 'str_cache'):
-            if self._grammar.ref_ids__[self.key] > 1:
+            if is_grammar_placeholder(self._grammar):
+                return "unitialized'" + self.parser_name
+            # during static analysis, reset may not have been called after
+            # grammar was initalized, thus we neeed get() here:
+            if self._grammar.ref_ids__.get(self.key, 0) > 1:
                 if self.parser_name[-1:].isnumeric():
                     self.str_cache = f"{self.parser_name}:{self.nr}<={self.symbol}"
                 else:
