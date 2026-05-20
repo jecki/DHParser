@@ -5365,6 +5365,7 @@ class Forward(UnaryParser):
         self.call_stack = []
 
         self.iteration = -1
+        self.memo = dict()
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__()
@@ -5393,9 +5394,11 @@ class Forward(UnaryParser):
         https://tinlizzie.org/VPRIPapers/tr2007002_packrat.pdf
         """
         grammar = self._grammar
+        orig = grammar.ref_origin__
         origin = grammar.ref_origin__.ref_id
         history_tracking = grammar.history_tracking__
         visited = self.visited  # using local variable for better performance
+        memo = self.memo
 
         # roll back variable-changing operation if the parser backtracks
         # to a position before the variable-changing operation occurred
@@ -5475,6 +5478,7 @@ class Forward(UnaryParser):
             result = visited[location]
         elif not grammar.suspend_memoization__:
             visited[location] = result
+            memo.setdefault(location, []).append((self.iteration, str(orig), result))
         self.iteration = -1
         return result
 
@@ -5546,12 +5550,11 @@ class Ref(LateBindingUnary):
     def reset(self):
         # super(Ref, self).reset()  no memo-dict needed
         assert not self.pname, "Ref-Parsers mustn't have a name!"
-        if not hasattr(self, 'ref_id') and not is_grammar_placeholder(self._grammar):
-            sym = self.symbol
-            counter = self._grammar.ref_ids__.setdefault(sym, 0) + 1
-            self._grammar.ref_ids__[sym] = counter
-            self.ref_id = sym # + '>' + self.parser.parser.pname + ':' + str(counter)
-
+        if not hasattr(self, 'key') and not is_grammar_placeholder(self._grammar):
+            self.key = f"{self.parser_name}<={self.symbol}"
+            self.nr = self._grammar.ref_ids__.setdefault(self.key, 0) + 1
+            self._grammar.ref_ids__[self.key] = self.nr
+            self.ref_id = self.symbol # + '>' + self.parser.parser.pname + ':' + str(counter)
 
     @cython.locals(ldepth=cython.int, rb_stack_size=cython.int)
     def __call__(self, location: cython.int) -> ParsingResult:
@@ -5574,7 +5577,15 @@ class Ref(LateBindingUnary):
         return self.parser_name
 
     def __str__(self):
-        return "ref'" + self.parser_name
+        if not hasattr(self, 'str_cache'):
+            if self._grammar.ref_ids__[self.key] > 1:
+                if self.parser_name[-1:].isnumeric():
+                    self.str_cache = f"{self.parser_name}:{self.nr}<={self.symbol}"
+                else:
+                    self.str_cache = f"{self.parser_name}{self.nr}<={self.symbol}"
+            else:
+                self.str_cache = f"{self.parser_name}<={self.symbol}"
+        return self.str_cache
 
 
 class RefSentinel(Ref):
@@ -5583,6 +5594,9 @@ class RefSentinel(Ref):
 
     def _resolve_parser_name(self) -> Parser:
         return get_parser_placeholder()
+
+    def __str__(self):
+        return self.parser_name
 
 
 REF_SENTINEL = RefSentinel("0")
