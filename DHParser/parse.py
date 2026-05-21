@@ -5360,7 +5360,7 @@ class Forward(UnaryParser):
     def reset(self):
         super(Forward, self).reset()
         assert not self.pname, "Forward-Parsers mustn't have a name!"
-        self.seed: Dict[Tuple[int, int], List[ParsingResult]] = dict()  # aka recursion counter
+        self.seed: Dict[Tuple[int, str], List[ParsingResult]] = dict()  # aka recursion counter
         self.versions: Dict[int, List[ParsingResult]] = dict()
         self.farthest = -1
         self.call_stack = []
@@ -5432,11 +5432,11 @@ class Forward(UnaryParser):
         grammar.suspend_memoization__ = False
         rb_stack_size = len(grammar.rollback__)
 
-        result = None, location
+        result: ParsingResult = None, location
 
         while True:
             self.iteration = 0
-            next_result = self._parse_proxy(location)  # self.parser(location)
+            next_result: ParsingResult = self._parse_proxy(location)  # self.parser(location)
             if location in visited:
                 result = visited[location]
             if history_tracking: tracing_data = self.tracer_init(self, location)
