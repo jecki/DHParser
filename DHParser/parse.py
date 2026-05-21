@@ -5420,6 +5420,8 @@ class Forward(UnaryParser):
             if history_tracking:  self.tracer_memo(self, location, visited[location])  # TODO: Remove tracer_memo entirely when finished!
             return visited[location]
 
+        self.iteration = -1   # TODO: Replace iteration by a dictionary iteration[origin]
+
         # check if a seed has been planted for the seed and grow algorithm
         sapling = self.seed.get((location, origin), [None])[-1]
         if sapling:
@@ -5480,7 +5482,6 @@ class Forward(UnaryParser):
         elif not grammar.suspend_memoization__:
             visited[location] = result
             memo.setdefault(location, []).append((self.iteration, str(orig), result))
-        self.iteration = -1
         return result
 
     def _parse(self, location: cython.int) -> ParsingResult:
