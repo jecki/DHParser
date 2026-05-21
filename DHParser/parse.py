@@ -5365,7 +5365,7 @@ class Forward(UnaryParser):
         self.farthest = -1
         self.call_stack = []
 
-        self.iteration = -1
+        self.iteration = dict()
         self.memo = dict()
 
     def __deepcopy__(self, memo):
@@ -5395,7 +5395,7 @@ class Forward(UnaryParser):
         https://tinlizzie.org/VPRIPapers/tr2007002_packrat.pdf
         """
         grammar = self._grammar
-        orig = grammar.ref_origin__
+        orig = str(grammar.ref_origin__)
         origin = grammar.ref_origin__.ref_id
         history_tracking = grammar.history_tracking__
         visited = self.visited  # using local variable for better performance
@@ -5420,7 +5420,7 @@ class Forward(UnaryParser):
             if history_tracking:  self.tracer_memo(self, location, visited[location])  # TODO: Remove tracer_memo entirely when finished!
             return visited[location]
 
-        self.iteration = -1   # TODO: Replace iteration by a dictionary iteration[origin]
+        self.iteration[location] = -1   # TODO: Replace iteration by a dictionary iteration[origin]
 
         # check if a seed has been planted for the seed and grow algorithm
         sapling = self.seed.get((location, origin), [None])[-1]
@@ -5437,7 +5437,7 @@ class Forward(UnaryParser):
         result: ParsingResult = None, location
 
         while True:
-            self.iteration = 0
+            self.iteration[location] = 0
             next_result: ParsingResult = self._parse_proxy(location)  # self.parser(location)
             if location in visited:
                 result = visited[location]
@@ -5448,7 +5448,7 @@ class Forward(UnaryParser):
                 rb_stack_size = len(grammar.rollback__)
                 result = next_result
                 self.seed[(location, origin)].append(result)
-                self.iteration += 1
+                self.iteration[location] += 1
                 next_result = self._parse_proxy(location)  # self.parser(location)
                 if history_tracking: self.tracer_loop(tracing_data)
             if history_tracking: self.tracer_done(tracing_data, result)
@@ -5481,7 +5481,7 @@ class Forward(UnaryParser):
             result = visited[location]
         elif not grammar.suspend_memoization__:
             visited[location] = result
-            memo.setdefault(location, []).append((self.iteration, str(orig), result))
+            memo.setdefault(location, []).append((self.iteration[location], orig, result))
         return result
 
     def _parse(self, location: cython.int) -> ParsingResult:
