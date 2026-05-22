@@ -5467,6 +5467,8 @@ class Forward(UnaryParser):
             if len(versions) > 1:
                 self.versions[location] = versions
                 if location > self.farthest:  self.farthest = location
+            _, iter = self.seed[(location, origin)][-1]
+            # TODO_ Maybee not all iterations should be deleted?
             del self.seed[(location, origin)]
             break
 
