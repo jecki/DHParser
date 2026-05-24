@@ -5430,18 +5430,21 @@ class Forward(UnaryParser):
         self.seed[(location, origin)] = [(SEED, 0)]  # fail on the first recursion
         save_suspend_memoization = grammar.suspend_memoization__
         grammar.suspend_memoization__ = False
+        save_ff_pos = grammar.ff_pos__
+        grammar.ff_pos__ = min(location, save_ff_pos)
         rb_stack_size = len(grammar.rollback__)
 
         result: ParsingResult = None, location
 
-        while True:
+        while grammar.ff_pos__ < grammar.document_length__:
             self.iteration[location] = 0
             next_result: ParsingResult = self._parse_proxy(location)  # self.parser(location)
             if location in visited:
                 result = visited[location]
             if history_tracking: tracing_data = self.tracer_init(self, location)
 
-            while next_result[1] > result[1]:
+            while next_result[1] > result[1] and (location, origin) in self.seed \
+                    and grammar.ff_pos__ < grammar.document_length__:
                 grammar.suspend_memoization__ = False
                 rb_stack_size = len(grammar.rollback__)
                 result = next_result
@@ -5463,13 +5466,20 @@ class Forward(UnaryParser):
                 grammar.use_memo__ = 0
                 continue
 
-            versions = self.seed[(location, origin)]
-            if len(versions) > 1:
+            versions = self.seed.get((location, origin), None)
+            if versions is not None and len(versions) > 1:
                 self.versions[location] = versions
                 if location > self.farthest:  self.farthest = location
-            _, iter = self.seed[(location, origin)][-1]
+
+            while versions:
+                r, iter = versions[-1]
+                if iter != self.iteration[location]:
+                    break
+                versions.pop()
+
             # TODO_ Maybee not all iterations should be deleted?
-            del self.seed[(location, origin)]
+            if versions is not None and (not versions or versions[-1][0] is SEED):
+                del self.seed[(location, origin)]
             break
 
         # both checks in the following are necessary:
@@ -5482,6 +5492,7 @@ class Forward(UnaryParser):
         elif not grammar.suspend_memoization__:
             visited[location] = result
             memo.setdefault(location, []).append((self.iteration[location], orig, result))
+        grammar.ff_pos__ = max(grammar.ff_pos__, save_ff_pos)
         self.iteration[location] = -1   # TODO: Replace iteration by a dictionary iteration[origin]
         return result
 
