@@ -5443,11 +5443,12 @@ class Forward(UnaryParser):
                 result = visited[location]
             if history_tracking: tracing_data = self.tracer_init(self, location)
 
-            while next_result[1] > result[1] and (location, origin) in self.seed \
-                    and grammar.ff_pos__ < grammar.document_length__:
+            while next_result[1] > result[1] and (location, origin) in self.seed:
+                result = next_result
+                if grammar.ff_pos__ >= grammar.document_length__:
+                    break
                 grammar.suspend_memoization__ = False
                 rb_stack_size = len(grammar.rollback__)
-                result = next_result
                 self.iteration[location] += 1
                 self.seed[(location, origin)].append((result, self.iteration[location]))
                 next_result = self._parse_proxy(location)  # self.parser(location)
