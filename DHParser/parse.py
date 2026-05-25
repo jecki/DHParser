@@ -5494,7 +5494,7 @@ class Forward(UnaryParser):
             visited[location] = result
             memo.setdefault(location, []).append((self.iteration[location], orig, result))
         grammar.ff_pos__ = max(grammar.ff_pos__, save_ff_pos)
-        self.iteration[location] = -1   # TODO: Replace iteration by a dictionary iteration[origin]
+        self.iteration[location] = -1   # TODO: Replace iteration by a dictionary iteration[(origin, location)]
         return result
 
     def _parse(self, location: cython.int) -> ParsingResult:
