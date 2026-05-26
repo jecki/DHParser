@@ -5436,7 +5436,7 @@ class Forward(UnaryParser):
 
         result: ParsingResult = None, location
 
-        while grammar.ff_pos__ < grammar.document_length__:
+        while grammar.ff_pos__ < grammar.document_length__ or not grammar.use_memo__:
             self.iteration[location] = 0
             next_result: ParsingResult = self._parse_proxy(location)  # self.parser(location)
             if location in visited:
@@ -5445,7 +5445,7 @@ class Forward(UnaryParser):
 
             while next_result[1] > result[1] and (location, origin) in self.seed:
                 result = next_result
-                if grammar.ff_pos__ >= grammar.document_length__:
+                if grammar.ff_pos__ >= grammar.document_length__ and bool(grammar.use_memo__):
                     break
                 grammar.suspend_memoization__ = False
                 rb_stack_size = len(grammar.rollback__)
@@ -5469,7 +5469,7 @@ class Forward(UnaryParser):
 
             versions = self.seed.get((location, origin), None)
             if versions is not None and len(versions) > 1:
-                self.versions[location] = versions
+                self.versions[location] = versions.copy()
                 if location > self.farthest:  self.farthest = location
 
             while versions:
