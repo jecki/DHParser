@@ -768,8 +768,13 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 _, prepped_text, back_mapping, errors = preprocessor(test_code, parser_name)
                 cst = parser(prepped_text, parser_name, back_mapping)  # , complete_match=True
             except AttributeError as upe:
+                tb = upe.__traceback__
+                while tb.tb_next is not None:  tb = tb.tb_next
+                tb_str = f' in File "{tb.tb_frame.f_code.co_filename}", ' \
+                         f'line {tb.tb_lineno}, in {tb.tb_frame.f_code.co_name}'
                 cst = RootNode()
-                cst = cst.new_error(Node(ZOMBIE_TAG, "").with_pos(0), str(upe))
+                cst = cst.new_error(Node(ZOMBIE_TAG, "").with_pos(0), str(upe) + tb_str,
+                                    PYTHON_ERROR_IN_TEST)
             except KeyboardInterrupt as ctrlC:
                 if is_logging() and track_history:
                     with local_log_dir('./LOGS'):

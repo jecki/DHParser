@@ -5412,9 +5412,9 @@ class Forward(UnaryParser):
             versions.insert(0, last)
             if versions[0] is SEED:
                 grammar.use_memo__ = location or -1
-                return versions[-1]
+                return versions[-1][0]
             else:
-                return versions[0]
+                return versions[0][0]
         elif location in visited:
             # Sorry, no history recording in case of memoized results!
             if history_tracking:  self.tracer_memo(self, location, visited[location])  # TODO: Remove tracer_memo entirely when finished!
