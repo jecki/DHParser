@@ -5438,6 +5438,7 @@ class Forward(UnaryParser):
         result: ParsingResult = None, location
 
         while grammar.ff_pos__ < grammar.document_length__:
+            iteration = 0
             self.iteration[location] = 0
             next_result: ParsingResult = self._parse_proxy(location)  # self.parser(location)
             if location in visited:
@@ -5450,8 +5451,9 @@ class Forward(UnaryParser):
                     break
                 grammar.suspend_memoization__ = False
                 rb_stack_size = len(grammar.rollback__)
-                self.iteration[location] += 1
-                self.seed[(location, origin)].append((result, self.iteration[location]))
+                iteration += 1
+                self.iteration[location] = iteration
+                self.seed[(location, origin)].append((result, iteration))
                 next_result = self._parse_proxy(location)  # self.parser(location)
                 if history_tracking: self.tracer_loop(tracing_data)
             if history_tracking: self.tracer_done(tracing_data, result)
@@ -5471,12 +5473,12 @@ class Forward(UnaryParser):
 
             versions = self.seed.get((location, origin), None)
             if versions is not None and len(versions) > 1:
-                self.versions[location] = versions.copy()
+                self.versions[location] = versions # .copy()
                 if location > self.farthest:  self.farthest = location
 
             while versions:
                 r, iter = versions[-1]
-                if iter != self.iteration[location]:
+                if iter != iteration:
                     break
                 versions.pop()
 
