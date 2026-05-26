@@ -5412,7 +5412,7 @@ class Forward(UnaryParser):
             versions.insert(0, last)
             if versions[0] is SEED:
                 grammar.use_memo__ = location or -1
-                return versions[-1][0]
+                return versions[-1][0]  # TODO: Do I need to worry about grammar.ff_pos__, here?
             else:
                 return versions[0][0]
         elif location in visited:
@@ -5421,6 +5421,7 @@ class Forward(UnaryParser):
             return visited[location]
 
         # check if a seed has been planted for the seed and grow algorithm
+
         sapling, iter = self.seed.get((location, origin), [(None, -1)])[-1]
         if sapling and iter == self.iteration[location]:
             grammar.suspend_memoization__ = id(self)  # TODO: Make sure, memoization is turned on only by the very first recursive call on the call stack
@@ -5436,7 +5437,7 @@ class Forward(UnaryParser):
 
         result: ParsingResult = None, location
 
-        while grammar.ff_pos__ < grammar.document_length__ or not grammar.use_memo__:
+        while grammar.ff_pos__ < grammar.document_length__:
             self.iteration[location] = 0
             next_result: ParsingResult = self._parse_proxy(location)  # self.parser(location)
             if location in visited:
@@ -5445,7 +5446,7 @@ class Forward(UnaryParser):
 
             while next_result[1] > result[1] and (location, origin) in self.seed:
                 result = next_result
-                if grammar.ff_pos__ >= grammar.document_length__ and bool(grammar.use_memo__):
+                if grammar.ff_pos__ >= grammar.document_length__:
                     break
                 grammar.suspend_memoization__ = False
                 rb_stack_size = len(grammar.rollback__)
@@ -5465,6 +5466,7 @@ class Forward(UnaryParser):
 
             if result[0] is None and grammar.use_memo__ <= location < self.farthest:
                 grammar.use_memo__ = 0
+                grammar.ff_pos__ = save_ff_pos
                 continue
 
             versions = self.seed.get((location, origin), None)
