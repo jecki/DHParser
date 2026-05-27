@@ -283,7 +283,7 @@ def fw_memo(self: Forward, location: int, result: ParsingResult):
     grammar = self._grammar
     node, location_ = (None, location) if result is None else result
     if location in self.visited:
-        prefix = f"RECALL ({grammar.ref_origin__}): "
+        prefix = f"SAPLING ({grammar.ref_origin__}): "
     elif result is SEED:
         prefix = f"SEED ({grammar.ref_origin__}): "
         node = None

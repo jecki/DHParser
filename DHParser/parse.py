@@ -5428,17 +5428,16 @@ class Forward(UnaryParser):
             if history_tracking:  self.tracer_memo(self, location, sapling)
             return (None, location) if sapling is SEED else sapling
 
-        self.seed[(location, origin)] = [(SEED, 0)]  # fail on the first recursion
         save_suspend_memoization = grammar.suspend_memoization__
         grammar.suspend_memoization__ = False
         save_ff_pos = grammar.ff_pos__
         grammar.ff_pos__ = min(location, save_ff_pos)
         rb_stack_size = len(grammar.rollback__)
 
+        self.seed[(location, origin)] = [(SEED, 0)]  # fail on the first recursion
         result: ParsingResult = None, location
 
         while grammar.ff_pos__ < grammar.document_length__:
-            iteration = 0
             self.iteration[location] = 0
             next_result: ParsingResult = self._parse_proxy(location)  # self.parser(location)
             if location in visited:
@@ -5451,9 +5450,8 @@ class Forward(UnaryParser):
                     break
                 grammar.suspend_memoization__ = False
                 rb_stack_size = len(grammar.rollback__)
-                iteration += 1
-                self.iteration[location] = iteration
-                self.seed[(location, origin)].append((result, iteration))
+                self.iteration[location] += 1
+                self.seed[(location, origin)].append((result, self.iteration[location]))
                 next_result = self._parse_proxy(location)  # self.parser(location)
                 if history_tracking: self.tracer_loop(tracing_data)
             if history_tracking: self.tracer_done(tracing_data, result)
@@ -5478,7 +5476,7 @@ class Forward(UnaryParser):
 
             while versions:
                 r, iter = versions[-1]
-                if iter != iteration:
+                if iter != self.iteration[location]:
                     break
                 versions.pop()
 
@@ -5498,7 +5496,7 @@ class Forward(UnaryParser):
             visited[location] = result
             memo.setdefault(location, []).append((self.iteration[location], orig, result))
         grammar.ff_pos__ = max(grammar.ff_pos__, save_ff_pos)
-        self.iteration[location] = -1   # TODO: Replace iteration by a dictionary iteration[(origin, location)]
+        self.iteration[location] = -1
         return result
 
     def _parse(self, location: cython.int) -> ParsingResult:
