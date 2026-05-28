@@ -5400,6 +5400,7 @@ class Forward(UnaryParser):
         history_tracking = grammar.history_tracking__
         visited = self.visited  # using local variable for better performance
         memo = self.memo
+        #if location > self.farthest:  self.farthest = location
 
         # roll back variable-changing operation if the parser backtracks
         # to a position before the variable-changing operation occurred
