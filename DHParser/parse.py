@@ -5480,7 +5480,7 @@ class Forward(UnaryParser):
                     break
                 versions.pop()
 
-            # TODO_ Maybee not all iterations should be deleted?
+            # TODO_ Maybe not all iterations should be deleted?
             if versions is not None and (not versions or versions[-1][0] is SEED):
                 del self.seed[(location, origin)]
             break
