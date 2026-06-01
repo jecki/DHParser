@@ -975,6 +975,7 @@ class TestPopRetrieve:
         self.minilang_parser2 = grammar_provider(self.mini_lang2)()
         self.minilang_parser3 = grammar_provider(self.mini_lang3)()
         self.minilang_parser4 = grammar_provider(self.mini_lang4)()
+        print(self.minilang_parser4.python_src__)
 
     @staticmethod
     def has_tag_name(node, name):

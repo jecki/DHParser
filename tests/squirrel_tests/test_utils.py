@@ -35,10 +35,13 @@ class MatchResult:
     len: int
 
 
-def run_test_parse(grammar_spec: str, input_str: str) -> ParseTestResult:
+def run_test_parse(grammar_spec: str, input_str: str, start_parser: str = '') -> ParseTestResult:
     grammar_spec = "@flavor=heuristic\n" + grammar_spec
     grammar = create_parser(grammar_spec)
-    root_node = grammar(input_str)
+    if start_parser:
+        root_node = grammar(input_str, start_parser=start_parser)
+    else:
+        root_node = grammar(input_str)
     ok = not any(e.code >= FATAL for e in root_node.errors)
     error_count = len(root_node.errors)
     skipped_strings = [nd.content for nd in root_node.walk_tree(include_root=True)
