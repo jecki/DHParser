@@ -5397,7 +5397,7 @@ class Forward(UnaryParser):
         grammar = self._grammar
         orig = str(grammar.ref_origin__)
         origin = grammar.ref_origin__.ref_id
-        seek_key = (location, origin)
+        seed_key = (location, origin)
         history_tracking = grammar.history_tracking__
         visited = self.visited  # using local variable for better performance
         #if location > self.farthest:  self.farthest = location
@@ -5423,7 +5423,7 @@ class Forward(UnaryParser):
 
         # check if a seed has been planted for the seed and grow algorithm
 
-        sapling, iter = self.seed.get(seek_key, [(None, -1)])[-1]
+        sapling, iter = self.seed.get(seed_key, [(None, -1)])[-1]
         if sapling: #  and iter == self.iteration[location]:
             grammar.suspend_memoization__ = id(self)  # TODO: Make sure, memoization is turned on only by the very first recursive call on the call stack
             if history_tracking:  self.tracer_memo(self, location, sapling)
@@ -5437,7 +5437,7 @@ class Forward(UnaryParser):
         grammar.use_memo__ = -1
         rb_stack_size = len(grammar.rollback__)
 
-        self.seed[seek_key] = [(SEED, 0)]  # fail on the first recursion
+        self.seed[seed_key] = [(SEED, 0)]  # fail on the first recursion
         result: ParsingResult = None, location
 
         while grammar.ff_pos__ < grammar.document_length__:
@@ -5449,7 +5449,7 @@ class Forward(UnaryParser):
                     result = visited[location]
                 if history_tracking: tracing_data = self.tracer_init(self, location)
 
-                while next_result[1] > result[1] and seek_key in self.seed:
+                while next_result[1] > result[1] and seed_key in self.seed:
                     result = next_result
                     if grammar.ff_pos__ >= grammar.document_length__:
                         break
@@ -5457,7 +5457,7 @@ class Forward(UnaryParser):
                     rb_stack_size = len(grammar.rollback__)
                     iteration += 1
                     self.iteration[location] = iteration
-                    self.seed[seek_key].append((result, iteration))
+                    self.seed[seed_key].append((result, iteration))
                     next_result = self._parse_proxy(location)  # self.parser(location)
                     if history_tracking: self.tracer_loop(tracing_data)
                 if history_tracking: self.tracer_done(tracing_data, result)
@@ -5478,7 +5478,7 @@ class Forward(UnaryParser):
                     else:
                         result = next_result
 
-            versions = self.seed.get(seek_key, None)
+            versions = self.seed.get(seed_key, None)
             if versions is not None and len(versions) > 1:
                 self.versions[location] = versions # .copy()
                 if location > self.farthest:  self.farthest = location
@@ -5491,7 +5491,7 @@ class Forward(UnaryParser):
 
             # TODO_ Maybe not all iterations should be deleted?
             if versions is not None and (not versions or versions[-1][0] is SEED):
-                del self.seed[seek_key]
+                del self.seed[seed_key]
             break
 
         # both checks in the following are necessary:
