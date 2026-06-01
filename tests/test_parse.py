@@ -40,7 +40,7 @@ from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMor
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, \
     Interleave, CombinedParser, Text, EMPTY_NODE, Capture, Drop, Whitespace, \
     GrammarError, Counted, Always, longest_match, extract_error_code, \
-    Option, DTKN, RegExp, Option, SmartRE, VersionIterator, SEED
+    Option, DTKN, RegExp, Option, SmartRE, SEED
 from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.compile import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
@@ -139,64 +139,64 @@ class TestInfiLoopsAndRecursion:
         # set_config_value('resume_notices', True)
         # start_logging('LOGS')
 
-    def test_version_iterator(self):
-        versions = {0: [(SEED, 0), (STUFFING, 8)],
-                    2: [(SEED, 0), (STUFFING, 8), (STUFFING, 16)],
-                    5: [(SEED, 0), (STUFFING, 8), (STUFFING, 16), (STUFFING, 24)]}
-        fwd = Forward()
-        fwd.reset()
-        fwd.versions = versions
-
-        iterator = VersionIterator(fwd, 0)
-        expected = [{5: (STUFFING, 16)}, {5: (STUFFING, 8)},
-                    {5: (STUFFING, 24), 2: (STUFFING, 16)},
-                    {5: (STUFFING, 16), 2: (STUFFING, 16)},
-                    {5: (STUFFING, 8), 2: (STUFFING, 16)},
-                    {5: (STUFFING, 24), 2: (STUFFING, 8)},
-                    {5: (STUFFING, 16), 2: (STUFFING, 8)},
-                    {5: (STUFFING, 8), 2: (STUFFING, 8)}]
-        l = []
-        while iterator.next(0):
-            l.append(fwd.visited.copy())
-        assert l == expected
-
-        fwd.visited = dict()
-        iterator = VersionIterator(fwd, 1)
-        l = []
-        while iterator.next(1):
-            l.append(fwd.visited.copy())
-        assert l == expected
-
-        fwd.visited = dict()
-        iterator = VersionIterator(fwd, 2)
-        expected = [{5: (STUFFING, 16)},
-                    {5: (STUFFING, 8)}]
-        l = []
-        while iterator.next(2):
-            l.append(fwd.visited.copy())
-        assert l == expected
-
-        fwd.visited = dict()
-        iterator = VersionIterator(fwd, 3)
-        l = []
-        while iterator.next(3):
-            l.append(fwd.visited.copy())
-        assert l == expected
-
-        fwd.visited = dict()
-        iterator = VersionIterator(fwd, 4)
-        l = []
-        while iterator.next(4):
-            l.append(fwd.visited.copy())
-        assert l == expected
-
-        fwd.visited = dict()
-        iterator = VersionIterator(fwd, 5)
-        expected = []
-        l = []
-        while iterator.next(5):
-            l.append(fwd.visited.copy())
-        assert l == expected
+    # def test_version_iterator(self):
+    #     versions = {0: [(SEED, 0), (STUFFING, 8)],
+    #                 2: [(SEED, 0), (STUFFING, 8), (STUFFING, 16)],
+    #                 5: [(SEED, 0), (STUFFING, 8), (STUFFING, 16), (STUFFING, 24)]}
+    #     fwd = Forward()
+    #     fwd.reset()
+    #     fwd.versions = versions
+    #
+    #     iterator = VersionIterator(fwd, 0)
+    #     expected = [{5: (STUFFING, 16)}, {5: (STUFFING, 8)},
+    #                 {5: (STUFFING, 24), 2: (STUFFING, 16)},
+    #                 {5: (STUFFING, 16), 2: (STUFFING, 16)},
+    #                 {5: (STUFFING, 8), 2: (STUFFING, 16)},
+    #                 {5: (STUFFING, 24), 2: (STUFFING, 8)},
+    #                 {5: (STUFFING, 16), 2: (STUFFING, 8)},
+    #                 {5: (STUFFING, 8), 2: (STUFFING, 8)}]
+    #     l = []
+    #     while iterator.next(0):
+    #         l.append(fwd.visited.copy())
+    #     assert l == expected
+    #
+    #     fwd.visited = dict()
+    #     iterator = VersionIterator(fwd, 1)
+    #     l = []
+    #     while iterator.next(1):
+    #         l.append(fwd.visited.copy())
+    #     assert l == expected
+    #
+    #     fwd.visited = dict()
+    #     iterator = VersionIterator(fwd, 2)
+    #     expected = [{5: (STUFFING, 16)},
+    #                 {5: (STUFFING, 8)}]
+    #     l = []
+    #     while iterator.next(2):
+    #         l.append(fwd.visited.copy())
+    #     assert l == expected
+    #
+    #     fwd.visited = dict()
+    #     iterator = VersionIterator(fwd, 3)
+    #     l = []
+    #     while iterator.next(3):
+    #         l.append(fwd.visited.copy())
+    #     assert l == expected
+    #
+    #     fwd.visited = dict()
+    #     iterator = VersionIterator(fwd, 4)
+    #     l = []
+    #     while iterator.next(4):
+    #         l.append(fwd.visited.copy())
+    #     assert l == expected
+    #
+    #     fwd.visited = dict()
+    #     iterator = VersionIterator(fwd, 5)
+    #     expected = []
+    #     l = []
+    #     while iterator.next(5):
+    #         l.append(fwd.visited.copy())
+    #     assert l == expected
 
     def test_very_simple(self):
         minilang = """

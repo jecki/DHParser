@@ -6,7 +6,7 @@
 #
 #######################################################################
 
-@ whitespace  = vertical             # implicit whitespace, denoted by ~, includes any number of line feeds
+@ whitespace  =  vertical             # implicit whitespace, denoted by ~, includes any number of line feeds
 @ literalws   = right                # literals have implicit whitespace on the right hand side
 @ comment     = /#.*/                # comments range from a '#'-character to the end of the line
 @ ignorecase  = False                # literals and regular expressions are case-sensitive

@@ -5397,6 +5397,7 @@ class Forward(UnaryParser):
         grammar = self._grammar
         orig = str(grammar.ref_origin__)
         origin = grammar.ref_origin__.ref_id
+        seek_key = (location, origin)
         history_tracking = grammar.history_tracking__
         visited = self.visited  # using local variable for better performance
         #if location > self.farthest:  self.farthest = location
@@ -5422,7 +5423,7 @@ class Forward(UnaryParser):
 
         # check if a seed has been planted for the seed and grow algorithm
 
-        sapling, iter = self.seed.get((location, origin), [(None, -1)])[-1]
+        sapling, iter = self.seed.get(seek_key, [(None, -1)])[-1]
         if sapling and iter == self.iteration[location]:
             grammar.suspend_memoization__ = id(self)  # TODO: Make sure, memoization is turned on only by the very first recursive call on the call stack
             if history_tracking:  self.tracer_memo(self, location, sapling)
@@ -5432,46 +5433,49 @@ class Forward(UnaryParser):
         grammar.suspend_memoization__ = False
         save_ff_pos = grammar.ff_pos__
         grammar.ff_pos__ = min(location, save_ff_pos)
+        save_use_memo = grammar.use_memo__
+        grammar.use_memo__ = -1
         rb_stack_size = len(grammar.rollback__)
 
-        self.seed[(location, origin)] = [(SEED, 0)]  # fail on the first recursion
+        self.seed[seek_key] = [(SEED, 0)]  # fail on the first recursion
         result: ParsingResult = None, location
 
         while grammar.ff_pos__ < grammar.document_length__:
             iteration = 0
             self.iteration[location] = 0
             next_result: ParsingResult = self._parse_proxy(location)  # self.parser(location)
-            if location in visited:
-                result = visited[location]
-            if history_tracking: tracing_data = self.tracer_init(self, location)
+            if grammar.use_memo__ or next_result[0] is not None:
+                if location in visited:
+                    result = visited[location]
+                if history_tracking: tracing_data = self.tracer_init(self, location)
 
-            while next_result[1] > result[1] and (location, origin) in self.seed:
-                result = next_result
-                if grammar.ff_pos__ >= grammar.document_length__:
-                    break
-                grammar.suspend_memoization__ = False
-                rb_stack_size = len(grammar.rollback__)
-                iteration += 1
-                self.iteration[location] = iteration
-                self.seed[(location, origin)].append((result, iteration))
-                next_result = self._parse_proxy(location)  # self.parser(location)
-                if history_tracking: self.tracer_loop(tracing_data)
-            if history_tracking: self.tracer_done(tracing_data, result)
+                while next_result[1] > result[1] and seek_key in self.seed:
+                    result = next_result
+                    if grammar.ff_pos__ >= grammar.document_length__:
+                        break
+                    grammar.suspend_memoization__ = False
+                    rb_stack_size = len(grammar.rollback__)
+                    iteration += 1
+                    self.iteration[location] = iteration
+                    self.seed[seek_key].append((result, iteration))
+                    next_result = self._parse_proxy(location)  # self.parser(location)
+                    if history_tracking: self.tracer_loop(tracing_data)
+                if history_tracking: self.tracer_done(tracing_data, result)
 
-            # Since the result of the last parser call (``next_result``) is discarded,
-            # any variables captured by this call should be "rolled back", too.
-            while len(grammar.rollback__) > rb_stack_size:
-                _, rb_func = grammar.rollback__.pop()
-                rb_func()
-                grammar.last_rb__loc__ = grammar.rollback__[-1][0] \
-                    if grammar.rollback__ else -2
+                # Since the result of the last parser call (``next_result``) is discarded,
+                # any variables captured by this call should be "rolled back", too.
+                while len(grammar.rollback__) > rb_stack_size:
+                    _, rb_func = grammar.rollback__.pop()
+                    rb_func()
+                    grammar.last_rb__loc__ = grammar.rollback__[-1][0] \
+                        if grammar.rollback__ else -2
 
-            if result[0] is None and grammar.use_memo__ <= location < self.farthest:
-                grammar.use_memo__ = 0
-                grammar.ff_pos__ = save_ff_pos
-                continue
+                if result[0] is None and grammar.use_memo__ <= location < self.farthest:
+                    grammar.use_memo__ = 0
+                    grammar.ff_pos__ = save_ff_pos
+                    continue
 
-            versions = self.seed.get((location, origin), None)
+            versions = self.seed.get(seek_key, None)
             if versions is not None and len(versions) > 1:
                 self.versions[location] = versions # .copy()
                 if location > self.farthest:  self.farthest = location
@@ -5484,7 +5488,7 @@ class Forward(UnaryParser):
 
             # TODO_ Maybe not all iterations should be deleted?
             if versions is not None and (not versions or versions[-1][0] is SEED):
-                del self.seed[(location, origin)]
+                del self.seed[seek_key]
             break
 
         # both checks in the following are necessary:
@@ -5497,6 +5501,7 @@ class Forward(UnaryParser):
         elif not grammar.suspend_memoization__:
             visited[location] = result
         grammar.ff_pos__ = max(grammar.ff_pos__, save_ff_pos)
+        grammar.use_memo__ = save_use_memo
         self.iteration[location] = -1
         return result
 
