@@ -1923,14 +1923,14 @@ class Grammar:
             parser = self[name]
             if parser not in root_connected:  self.unconnected_parsers__.add(parser)
 
-        # DEBUGGING code:
-        if self.__class__.__name__ == 'DSLGrammar':
-            print('***')
-            for p in self.all_parsers__:
-                if p.pname == 'term':
-                    print('term = ', id(p))
-                elif p.effective_pname() == 'term':
-                    print(type(p), id(p), id(p.parser))
+        # # DEBUGGING code:
+        # if self.__class__.__name__ == 'DSLGrammar':
+        #     print('***')
+        #     for p in self.all_parsers__:
+        #         if p.pname == 'term':
+        #             print('term = ', id(p))
+        #         elif p.effective_pname() == 'term':
+        #             print(type(p), id(p), id(p.parser))
 
         self.memo__ = None  # the deepcopy memo is not needed any more after this point.
 
@@ -5288,38 +5288,6 @@ def nil_tracer(*args, **kwargs) -> None:
 SEED = (FrozenNode(':SEED', ''), 0)
 
 
-# class VersionIterator:
-#     def __init__(self, fwp: 'Forward', location: int):
-#         self.fwp = fwp
-#         self.location = location
-#         self.counter = [len(next(reversed(fwp.versions.values()))) - 1]
-#
-#     def next(self, location) -> bool:
-#         assert location == self.location, "Location changed during version-iteration!"
-#         ritems = reversed(self.fwp.versions.items())
-#         loc, versions = next(ritems)
-#         n = 0
-#         while location < loc:
-#             c = self.counter[n]
-#             c -= 1
-#             if c <= 0:
-#                 c = len(versions) - 1
-#                 self.counter[n] = c
-#                 self.fwp.visited[loc] = versions[c]
-#                 n += 1
-#             else:
-#                 self.counter[n] = c
-#                 self.fwp.visited[loc] = versions[c]
-#                 return True
-#             try:
-#                 loc, versions = next(ritems)
-#             except StopIteration:
-#                 return False
-#             if n >= len(self.counter):
-#                 self.counter.append(len(versions))
-#         return False
-
-
 class Forward(UnaryParser):
     r"""
     Forward allows declaring a parser before it is actually defined.
@@ -5544,6 +5512,356 @@ class Forward(UnaryParser):
         """Returns the parser's pname. In the case of a Forward-
         or Ref-parser, returns parser.parser.pname."""
         return self.parser.pname or self.pname
+
+    def __repr__(self):
+        return self.__cycle_guard(lambda: repr(self.parser), '...')
+
+    def __str__(self):
+        return self.__cycle_guard(lambda: str(self.parser), '...')
+
+    @property
+    def repr(self) -> str:
+        """Returns the parser's name if it has a name or ``repr(self)`` if not."""
+        return self.parser.pname if self.parser.pname else self.__repr__()
+
+    def set(self, parser: Parser):
+        """Sets the parser to which the calls to this Forward-object
+        shall be delegated.
+        """
+        assert not isinstance(parser, Forward)
+        self.parser = parser
+        self.sub_parsers = frozenset({parser})
+        if self.pname and not parser.pname:  parser.name(self.pname, self.disposable)
+        if not parser.drop_content:  parser.disposable = self.disposable
+        self.drop_content = parser.drop_content
+        self.pname = ""
+
+
+###############################################################################
+#
+# Old, deprecated versions of the left-recursion agorithm
+#
+###############################################################################
+
+
+class OldForwardRecursive(UnaryParser):
+    r"""This is the "old" (DHParser version < 2.0) version of the Forward
+    parser class. The left-recursion algorithm handles direct and indirect
+    left-recursion but fails on interwoven and monotonic left-recursion!
+
+    :ivar recursion_counter:  Mapping of places to how often the parser
+        has already been called recursively at this place. This
+        is needed to implement left recursion. The number of
+        calls becomes irrelevant once a result has been memoized.
+    """
+
+    def __init__(self):
+        super().__init__(get_parser_placeholder())
+        # self.parser = get_parser_placeholder  # type: Parser
+        self.cycle_reached: bool = False
+        self.sub_parsers = frozenset()
+
+    def reset(self):
+        super(Forward, self).reset()
+        self.recursion_counter: Dict[int, int] = dict()
+        assert not self.pname, "Forward-Parsers mustn't have a name!"
+
+    def __deepcopy__(self, memo):
+        duplicate = self.__class__()
+        memo[id(self)] = duplicate  # prevent infinite recursion during next deepcopy() call
+        copy_parser_base_attrs(self, duplicate, memo)
+        parser = copy.deepcopy(self.parser, memo)
+        duplicate.parser = parser
+        duplicate.sub_parsers = frozenset({parser})
+        return duplicate
+
+    @cython.locals(ldepth=cython.int, rb_stack_size=cython.int)
+    def __call__(self, location: cython.int) -> ParsingResult:
+        """
+        Overrides :py:meth:`Parser.__call__`, because Forward is not an independent parser
+        but merely redirects the call to another parser. Other than parser
+        :py:class:`Synonym`, which might be a meaningful marker for the syntax tree,
+        parser Forward should never appear in the syntax tree.
+
+        :py:meth:`Forward.__call__` also takes care of (most of) the left recursion
+        handling. In order to do so it (unfortunately) has to duplicate some code
+        from :py:meth:`Parser.__call__`.
+
+        The algorithm for avoiding infinite loops in left-recursive grammars roughly follows:
+        https://medium.com/@gvanrossum_83706/left-recursive-peg-grammars-65dab3c580e1
+        See also:
+        https://tinlizzie.org/VPRIPapers/tr2007002_packrat.pdf
+        """
+        grammar = self._grammar
+
+        # rollback variable-changing operation if the parser backtracks
+        # to a position before the variable-changing operation occurred
+        if location <= grammar.last_rb__loc__:
+            grammar.rollback_to__(location)
+
+        # if the location has already been visited by the current parser, return the saved result
+        visited = self.visited  # using local variable for better performance
+        if location in visited:
+            # Sorry, no history recording in case of memoized results!
+            return visited[location]
+
+        if location in self.recursion_counter:
+            depth = self.recursion_counter[location]
+            if depth == 0:
+                grammar.suspend_memoization__ = id(self)
+                result = None, location
+            else:
+                self.recursion_counter[location] = depth - 1
+                result = self.parser(location)
+                self.recursion_counter[location] = depth  # allow moving back and forth
+        else:
+            self.recursion_counter[location] = 0  # fail on the first recursion
+            save_suspend_memoization = grammar.suspend_memoization__
+            grammar.suspend_memoization__ = False
+            history_tracking = grammar.history_tracking__
+            history_pointer = len(grammar.history__) if history_tracking else 0
+
+            result = self.parser(location)
+
+            if result[0] is not None:
+                # keep calling the (potentially left-)recursive parser and increase
+                # the recursion depth by 1 for each call as long as the length of
+                # the match increases.
+                last_history_state = grammar.history__[history_pointer:len(grammar.history__)] \
+                    if history_tracking else []
+                depth = 1
+                while True:
+                    self.recursion_counter[location] = depth
+                    grammar.suspend_memoization__ = False
+                    rb_stack_size = len(grammar.rollback__)
+                    if history_tracking:
+                        grammar.history__ = grammar.history__[:history_pointer]
+                    # reduplication of error messages will be caught by nodetree.RootNode.add_error()
+                    # saving and restoring the errors-messages state on each iteration presupposes
+                    # that error messages will be recreated every time, which, however, does not
+                    # happen because of memoization. (This is a downside of global error-reporting
+                    # in contrast to attaching error-messages locally to the node where they
+                    # occurred. Big topic...)
+                    # don't carry error/resumption-messages over to the next iteration
+                    # grammar.most_recent_error__ = None
+                    next_result = self.parser(location)
+
+                    # discard next_result if it is not the longest match and return
+                    if next_result[1] <= result[1]:  # also true, if no match
+                        # Since the result of the last parser call (``next_result``) is discarded,
+                        # any variables captured by this call should be "rolled back", too.
+                        while len(grammar.rollback__) > rb_stack_size:
+                            _, rb_func = grammar.rollback__.pop()
+                            rb_func()
+                            grammar.last_rb__loc__ = grammar.rollback__[-1][0] \
+                                if grammar.rollback__ else -2
+                        # Finally, overwrite the discarded result in the last history record with
+                        # the accepted result, i.e. the longest match.
+                        # TODO: Move this to trace.py, somehow... and make it less confusing
+                        #       that the result is not the last but the longest match...
+                        if history_tracking:
+                            grammar.history__ = grammar.history__[:history_pointer] + last_history_state
+                        # record = grammar.history__[-1]
+                        # if record.call_stack[-1] == (self.parser.pname, location):
+                        #     record.text = result[1]
+                        #     delta = len(text) - len(result[1])
+                        #     assert record.node.name != ':None'
+                        #     record.node.result = text[:delta]
+                        break
+
+                    if history_tracking:
+                        last_history_state = grammar.history__[history_pointer:len(grammar.history__)]
+                    result = next_result
+                    depth += 1
+            # grammar.suspend_memoization__ = save_suspend_memoization \
+            #     or location <= (grammar.last_rb__loc__ + int(text._len == result[1]._len))
+            # both checks in the following are necessary:
+            # 1. id(self)-check in order not to interfere with interwoven recursive parser calls
+            # 2. isinstance check for referenced parsers that are not in fact recursive
+            if grammar.suspend_memoization__ == id(self) or isinstance(grammar.suspend_memoization__, bool):
+                grammar.suspend_memoization__ = save_suspend_memoization  #  = is_context_sensitive(self.parser)
+        if not grammar.suspend_memoization__:
+            visited[location] = result
+        return result
+
+    def set_proxy(self, proxy: Optional[ParseFunc]):
+        """set_proxy has no effects on Forward-objects!"""
+        return
+
+    def __cycle_guard(self, func, alt_return):
+        """
+        Returns the value of func() or alt_return if a cycle has
+        been reached (which can happen if func calls methods of
+        child parsers).
+        """
+        if self.cycle_reached:
+            return alt_return
+        else:
+            self.cycle_reached = True
+            ret = func()
+            self.cycle_reached = False
+            return ret
+
+    def effective_pname(self) -> str:
+        """Returns the parser's pname. In the case of a Forward-
+        or Ref-parser, returns parser.parser.pname."""
+        return self.parser.pname
+
+    def __repr__(self):
+        return self.__cycle_guard(lambda: repr(self.parser), '...')
+
+    def __str__(self):
+        return self.__cycle_guard(lambda: str(self.parser), '...')
+
+    @property
+    def repr(self) -> str:
+        """Returns the parser's name if it has a name or repr(self) if not."""
+        return self.parser.pname if self.parser.pname else self.__repr__()
+
+    def set(self, parser: Parser):
+        """Sets the parser to which the calls to this Forward-object
+        shall be delegated.
+        """
+        assert not isinstance(parser, Forward)
+        self.parser = parser
+        self.sub_parsers = frozenset({parser})
+        if self.pname and not parser.pname:  parser.name(self.pname, self.disposable)
+        if not parser.drop_content:  parser.disposable = self.disposable
+        self.drop_content = parser.drop_content
+        self.pname = ""
+
+
+class OldForwardIterative(UnaryParser):
+    r"""This is a more straight-forward quasi-iterative version of the "old"
+    Forward parser class. The left-recursion algorithm handles direct and
+    indirect left-recursion but fails on interwoven and monotonic left-recursion!
+
+    :ivar recursion_counter:  Mapping of places to how often the parser
+            has already been called recursively at this place. This
+            is needed to implement left recursion. The number of
+            calls becomes irrelevant once a result has been memoized.
+    """
+
+    def __init__(self):
+        super().__init__(get_parser_placeholder())
+        # self.parser = get_parser_placeholder  # type: Parser
+        self.cycle_reached: bool = False
+        self.sub_parsers = frozenset()
+
+    def reset(self):
+        super(Forward, self).reset()
+        self.recursion_counter: Dict[int, int] = dict()
+        assert not self.pname, "Forward-Parsers mustn't have a name!"
+
+    def __deepcopy__(self, memo):
+        duplicate = self.__class__()
+        memo[id(self)] = duplicate  # prevent infinite recursion during next deepcopy() call
+        copy_parser_base_attrs(self, duplicate, memo)
+        parser = copy.deepcopy(self.parser, memo)
+        duplicate.parser = parser
+        duplicate.sub_parsers = frozenset({parser})
+        return duplicate
+
+    @cython.locals(ldepth=cython.int, rb_stack_size=cython.int)
+    def __call__(self, location: cython.int) -> ParsingResult:
+        """
+        Overrides :py:meth:`Parser.__call__`, because Forward is not an independent parser
+        but merely redirects the call to another parser. Other than parser
+        :py:class:`Synonym`, which might be a meaningful marker for the syntax tree,
+        parser Forward should never appear in the syntax tree.
+
+        :py:meth:`Forward.__call__` also takes care of (most of) the left recursion
+        handling. In order to do so it (unfortunately) has to duplicate some code
+        from :py:meth:`Parser.__call__`.
+
+        The algorithm for avoiding infinite loops in left-recursive grammars roughly follows:
+        https://medium.com/@gvanrossum_83706/left-recursive-peg-grammars-65dab3c580e1
+        See also:
+        https://tinlizzie.org/VPRIPapers/tr2007002_packrat.pdf
+        """
+        grammar = self._grammar
+
+        # roll back variable-changing operation if the parser backtracks
+        # to a position before the variable-changing operation occurred
+        if location <= grammar.last_rb__loc__:
+            grammar.rollback_to__(location)
+
+        # if the location has already been visited by the current parser, return the saved result
+        visited = self.visited  # using local variable for better performance
+        if location in visited:
+            # Sorry, no history recording in case of memoized results!
+            if self.recursion_counter[location]:
+                grammar.suspend_memoization__ = id(self)
+            return visited[location]
+
+        if location in self.recursion_counter:
+            grammar.suspend_memoization__ = id(self)
+            return None, location
+
+        self.recursion_counter[location] = True  # fail on the first recursion
+        save_suspend_memoization = grammar.suspend_memoization__
+        grammar.suspend_memoization__ = False
+        history_tracking = grammar.history_tracking__
+        history_pointer = len(grammar.history__) if history_tracking else 0
+        rb_stack_size = len(grammar.rollback__)
+        last_history_state = []
+
+        result = None, location
+        next_result = self.parser(location)
+
+        while next_result[1] > result[1]:
+            result = next_result
+            grammar.suspend_memoization__ = False
+            rb_stack_size = len(grammar.rollback__)
+            if history_tracking:
+                last_history_state.extend(grammar.history__[history_pointer:len(grammar.history__)])
+                grammar.history__ = grammar.history__[:history_pointer]
+            visited[location] = result
+            next_result = self.parser(location)
+
+        if history_tracking and result[0] is not None:
+            grammar.history__ = grammar.history__[:history_pointer] + last_history_state
+
+        self.recursion_counter[location] = False
+        # Since the result of the last parser call (``next_result``) is discarded,
+        # any variables captured by this call should be "rolled back", too.
+        while len(grammar.rollback__) > rb_stack_size:
+            _, rb_func = grammar.rollback__.pop()
+            rb_func()
+            grammar.last_rb__loc__ = grammar.rollback__[-1][0] \
+                if grammar.rollback__ else -2
+
+        # both checks in the following are necessary:
+        # 1. id(self)-check in order not to interfere with interwoven recursive parser calls
+        # 2. isinstance check for referenced parsers that are not in fact recursive
+        if grammar.suspend_memoization__ == id(self) or isinstance(grammar.suspend_memoization__, bool):
+            grammar.suspend_memoization__ = save_suspend_memoization  #  = is_context_sensitive(self.parser)
+        if not grammar.suspend_memoization__:
+            visited[location] = result
+        return result
+
+    def set_proxy(self, proxy: Optional[ParseFunc]):
+        """``set_proxy`` has no effects on Forward-objects!"""
+        return
+
+    def __cycle_guard(self, func, alt_return):
+        """
+        Returns the value of ``func()`` or ``alt_return`` if a cycle has
+        been reached (which can happen if ``func`` calls methods of
+        child parsers).
+        """
+        if self.cycle_reached:
+            return alt_return
+        else:
+            self.cycle_reached = True
+            ret = func()
+            self.cycle_reached = False
+            return ret
+
+    def effective_pname(self) -> str:
+        """Returns the parser's pname. In the case of a Forward-
+        or Ref-parser, returns parser.parser.pname."""
+        return self.parser.pname
 
     def __repr__(self):
         return self.__cycle_guard(lambda: repr(self.parser), '...')

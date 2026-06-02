@@ -283,13 +283,13 @@ def fw_memo(self: Forward, location: int, result: ParsingResult):
     grammar = self._grammar
     node, location_ = (None, location) if result is None else result
     if location in self.visited:
-        prefix = f"SAPLING ({grammar.ref_origin__}): "
+        prefix = f"SAPLING: "
     elif result is SEED:
-        prefix = f"SEED ({grammar.ref_origin__}): "
+        prefix = f"SEED: "
         node = None
         location = location
     else:
-        prefix  = f"GROW ({grammar.ref_origin__}): "
+        prefix  = f"GROW: "
     grammar.call_stack__.append(call_item(self, location, prefix))
     record = history_record(self, grammar, node, location, location_, prefix)
     grammar.history__.append(record)
