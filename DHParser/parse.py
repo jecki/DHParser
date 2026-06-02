@@ -5313,7 +5313,7 @@ class Forward(UnaryParser):
     def reset(self):
         super(Forward, self).reset()
         assert not self.pname, "Forward-Parsers mustn't have a name!"
-        self.seed: Dict[Tuple[int, str], List[ParsingResult]] = dict()  # aka recursion counter
+        self.seed: Dict[int, List[ParsingResult]] = dict()  # aka recursion counter
         self.versions: Dict[int, List[ParsingResult]] = dict()
         self.farthest = -1
         self.call_stack = []
@@ -5348,7 +5348,6 @@ class Forward(UnaryParser):
         https://tinlizzie.org/VPRIPapers/tr2007002_packrat.pdf
         """
         grammar = self._grammar
-        seed_key = location  # (location, origin)
         history_tracking = grammar.history_tracking__
         visited = self.visited  # using local variable for better performance
 
@@ -5373,9 +5372,9 @@ class Forward(UnaryParser):
 
         # check if a seed has been planted for the seed and grow algorithm
 
-        sapling, iter = self.seed.get(seed_key, [(None, -1)])[-1]
-        if sapling and iter == self.iteration[location]:
-            grammar.suspend_memoization__ = id(self)  # TODO: Make sure, memoization is turned on only by the very first recursive call on the call stack
+        sapling, iter = self.seed.get(location, [(None, -1)])[-1]
+        if sapling and iter == self.iteration[location]:  # TODO: Could iter == self.iteration[location] lead to infinite recursion?
+            grammar.suspend_memoization__ = id(self)
             if history_tracking:  self.tracer_memo(self, location, sapling)
             return (None, location) if sapling is SEED else sapling
 
@@ -5387,7 +5386,7 @@ class Forward(UnaryParser):
         grammar.use_memo__ = -1
         rb_stack_size = len(grammar.rollback__)
 
-        self.seed[seed_key] = [(SEED, 0)]  # fail on the first recursion
+        self.seed[location] = [(SEED, 0)]  # fail on the first recursion
         result: ParsingResult = None, location
 
         while grammar.ff_pos__ < grammar.document_length__:
@@ -5399,7 +5398,7 @@ class Forward(UnaryParser):
                     result = visited[location]
                 if history_tracking: tracing_data = self.tracer_init(self, location)
 
-                while next_result[1] > result[1] and seed_key in self.seed:
+                while next_result[1] > result[1] and location in self.seed:
                     result = next_result
                     if grammar.ff_pos__ >= grammar.document_length__:
                         break
@@ -5407,7 +5406,7 @@ class Forward(UnaryParser):
                     rb_stack_size = len(grammar.rollback__)
                     iteration += 1
                     self.iteration[location] = iteration
-                    self.seed[seed_key].append((result, iteration))
+                    self.seed[location].append((result, iteration))
                     next_result = self._parse_proxy(location)  # self.parser(location)
                     if history_tracking: self.tracer_loop(tracing_data)
                 if history_tracking: self.tracer_done(tracing_data, result)
@@ -5420,14 +5419,6 @@ class Forward(UnaryParser):
                     grammar.last_rb__loc__ = grammar.rollback__[-1][0] \
                         if grammar.rollback__ else -2
 
-                # if result[0] is None and grammar.use_memo__ <= location < self.farthest:
-                #     if next_result[0] is None:
-                #         grammar.use_memo__ = 0
-                #         grammar.ff_pos__ = save_ff_pos
-                #         continue
-                #     else:
-                #         result = next_result
-
                 if result[0] is None:
                     if next_result[0] is None:
                         if grammar.use_memo__ <= location < self.farthest:
@@ -5439,7 +5430,7 @@ class Forward(UnaryParser):
                     else:
                         result = next_result
 
-            versions = self.seed.get(seed_key, None)
+            versions = self.seed.get(location, None)
             if versions is not None and len(versions) > 1:
                 self.versions[location] = versions # .copy()
                 if location > self.farthest:  self.farthest = location
@@ -5450,9 +5441,8 @@ class Forward(UnaryParser):
                     break
                 versions.pop()
 
-            # TODO_ Maybe not all iterations should be deleted?
             if versions is not None and (not versions or versions[-1][0] is SEED):
-                del self.seed[seed_key]
+                del self.seed[location]
             break
 
         # both checks in the following are necessary:
