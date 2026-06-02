@@ -280,7 +280,7 @@ def test_lr_recovery_trailing_plus():
         top_rule_name='E',
         input='n+n+n+',
     )
-    result = parse_result.root
+    result = parse_result
     if not result.is_mismatch:
         assert result.len >= 5, "should parse at least n+n+n"
 

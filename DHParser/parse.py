@@ -5424,7 +5424,7 @@ class Forward(UnaryParser):
         # check if a seed has been planted for the seed and grow algorithm
 
         sapling, iter = self.seed.get(seed_key, [(None, -1)])[-1]
-        if sapling: # and iter == self.iteration[location]:
+        if sapling and iter == self.iteration[location]:
             grammar.suspend_memoization__ = id(self)  # TODO: Make sure, memoization is turned on only by the very first recursive call on the call stack
             if history_tracking:  self.tracer_memo(self, location, sapling)
             return (None, location) if sapling is SEED else sapling
