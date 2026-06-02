@@ -1213,7 +1213,7 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, DropFro
     Option, NegativeLookbehind, OneOrMore, RegExp, SmartRE, Retrieve, Series, Capture, TreeReduction, \\
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, \\
     LateBindingUnary, mixin_comment, last_value, matching_bracket, optional_last_value, \\
-    PARSER_PLACEHOLDER, RX_NEVER_MATCH, UninitializedError
+    PARSER_PLACEHOLDER, RX_NEVER_MATCH, UninitializedError, OldForwardRecursive
 from DHParser.pipeline import end_points, full_pipeline, create_parser_junction, \\
     create_preprocess_junction, create_junction, Junction, PseudoJunction, PipelineResult
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \\
@@ -1648,6 +1648,9 @@ class EBNFCompiler(Compiler):
     :ivar grammar_name:  The name of the grammar to be compiled
 
     :ivar grammar_source:  The source code of the grammar to be compiled.
+
+    :ivar left_recursion: Determine the kind of left-recursion-handling. Value
+            is read from congiuration and is eithet "None", "Forward", "Full"
     """
     COMMENT_KEYWORD = "COMMENT__"
     COMMENT_PARSER_KEYWORD = "comment__"
@@ -1713,6 +1716,7 @@ class EBNFCompiler(Compiler):
         self.consumed_custom_errors = set()    # type: MutableSet[str]
         self.consumed_skip_rules = set()       # type: MutableSet[str]
         self.P = {p: p for p in parser_names}  # type: Dict[str, str]
+        self.left_recursion: str = get_config_value('left_recursion')
 
 
     @property
@@ -2210,7 +2214,11 @@ class EBNFCompiler(Compiler):
         # turn definitions into declarations in reverse order
 
         definitions.reverse()
-        declarations += [symbol + ' = Forward()'
+        if self.left_recursion == 'Full':  fwclass = "Forward"
+        elif self.left_recursion == 'Forward':  fwclass = "OldForwardRecursive"
+        else:
+            assert self.left_recursion == 'None', f"Invalid left_recursion value: {self.left_recursion}"
+        declarations += [f'{symbol} = {fwclass}()'
                          for symbol in sorted(list(self.forward))]
         for symbol, statement in definitions:
             if symbol in self.forward:

@@ -326,6 +326,24 @@ class TestInfiLoopsAndRecursion:
             log_ST(syntax_tree, "test_LeftRecursion_indirect3.cst")
             log_parsing_history(arithmetic, "test_LeftRecursion_indirect3")
 
+    def test_left_recursion_side_effects(self):
+        syntax = r"""@literalws = right
+        Beleg = '"' Text '"'
+        Text = { Einschub | Zeichenfolge }
+        Einschub = '(' Beleg ')'
+        Zeichenfolge = /[^("]+/
+        """
+        save_config_value = get_config_value('left_recursion')
+        set_config_value('left_recursion', 'Full')
+        try:
+            parser = create_parser(syntax)
+            print(parser.python_src__)
+            result = parser('''"ein ("") Test."''')
+            assert not result.errors
+        except Exception as e:
+            set_config_value('left_recursion', save_config_value)
+            raise e
+
     def test_break_inifnite_loop_ZeroOrMore(self):
         forever = ZeroOrMore(RegExp('(?=.)|$'))
         result = Grammar(forever)('')  # infinite loops will automatically be broken

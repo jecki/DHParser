@@ -155,7 +155,8 @@ __all__ = ('parser_names',
            'last_value',
            'optional_last_value',
            'matching_bracket',
-           'Forward')
+           'Forward',
+           'OldForwardRecursive')
 
 
 # Names of all parser classes and functions that can directly be used
@@ -1579,11 +1580,6 @@ class Grammar:
                 and :py:meth:`Forward.__call__`) as well as the context-sensitive
                 parsers (see function :py:meth:`Grammar.push_rollback__`).
 
-    :ivar left_recursion\__: Turns on left-recursion handling. This prevents the
-                recursive descent parser to get caught in an infinite loop
-                (resulting in a maximum recursion depth reached error) when
-                the grammar definition contains left recursions.
-
     :ivar associated_symbol_cache\__: A cache for the :py:meth:`associated_symbol__` -method.
 
     :ivar memo\__: A temporary memo for the deepcopy-calls inside the constructor.
@@ -1820,7 +1816,6 @@ class Grammar:
                         self.comment_rx__.pattern == RX_NEVER_MATCH.pattern))
         self.start_parser__: Optional[Parser] = None
         self._dirty_flag__: bool = False
-        self.left_recursion__: bool = get_config_value('left_recursion')
         self.history_tracking__: bool = get_config_value('history_tracking')
         self.resume_notices__: bool = get_config_value('resume_notices')
         self.max_parser_dropouts__: int = get_config_value('max_parser_dropouts')
@@ -5356,7 +5351,6 @@ class Forward(UnaryParser):
         seed_key = location  # (location, origin)
         history_tracking = grammar.history_tracking__
         visited = self.visited  # using local variable for better performance
-        #if location > self.farthest:  self.farthest = location
 
         # roll back variable-changing operation if the parser backtracks
         # to a position before the variable-changing operation occurred
@@ -5394,7 +5388,7 @@ class Forward(UnaryParser):
         rb_stack_size = len(grammar.rollback__)
 
         self.seed[seed_key] = [(SEED, 0)]  # fail on the first recursion
-        result: ParsingResult = None, location
+        result: ParsingResult = None, -1
 
         while grammar.ff_pos__ < grammar.document_length__:
             iteration = 0
@@ -5532,7 +5526,7 @@ class Forward(UnaryParser):
 ###############################################################################
 
 
-class OldForwardRecursive(UnaryParser):
+class OldForwardRecursive(Forward):
     r"""This is the "old" (DHParser version < 2.0) version of the Forward
     parser class. The left-recursion algorithm handles direct and indirect
     left-recursion but fails on interwoven and monotonic left-recursion!
@@ -5544,15 +5538,15 @@ class OldForwardRecursive(UnaryParser):
     """
 
     def __init__(self):
-        super().__init__(get_parser_placeholder())
+        super().__init__()
         # self.parser = get_parser_placeholder  # type: Parser
         self.cycle_reached: bool = False
         self.sub_parsers = frozenset()
 
     def reset(self):
-        super(Forward, self).reset()
+        super(UnaryParser, self).reset()
         self.recursion_counter: Dict[int, int] = dict()
-        assert not self.pname, "Forward-Parsers mustn't have a name!"
+        assert not self.pname, f"Forward-Parsers mustn't have a name! ({self.pname})"
 
     def __deepcopy__(self, memo):
         duplicate = self.__class__()
@@ -5717,7 +5711,7 @@ class OldForwardRecursive(UnaryParser):
         self.pname = ""
 
 
-class OldForwardIterative(UnaryParser):
+class OldForwardIterative(Forward):
     r"""This is a more straight-forward quasi-iterative version of the "old"
     Forward parser class. The left-recursion algorithm handles direct and
     indirect left-recursion but fails on interwoven and monotonic left-recursion!
@@ -5729,13 +5723,13 @@ class OldForwardIterative(UnaryParser):
     """
 
     def __init__(self):
-        super().__init__(get_parser_placeholder())
+        super().__init__()
         # self.parser = get_parser_placeholder  # type: Parser
         self.cycle_reached: bool = False
         self.sub_parsers = frozenset()
 
     def reset(self):
-        super(Forward, self).reset()
+        super(UnaryParser, self).reset()
         self.recursion_counter: Dict[int, int] = dict()
         assert not self.pname, "Forward-Parsers mustn't have a name!"
 
@@ -5792,7 +5786,7 @@ class OldForwardIterative(UnaryParser):
         rb_stack_size = len(grammar.rollback__)
         last_history_state = []
 
-        result = None, location
+        result = None, -1
         next_result = self.parser(location)
 
         while next_result[1] > result[1]:
