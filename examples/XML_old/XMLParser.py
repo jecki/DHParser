@@ -47,7 +47,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \
     positions_of, replace_child_names, add_attributes, delimit_children, merge_connected, \
     has_attr, has_parent, ThreadLocalSingletonFactory, TreeReduction, CombinedParser, \
-    apply_unless, ERROR, SmartRE, Ref
+    apply_unless, ERROR, SmartRE
 from DHParser.toolkit import INFINITE
 
 from DHParser.pipeline import PseudoJunction, create_parser_junction
@@ -85,7 +85,7 @@ class XMLGrammar(Grammar):
     element = Forward()
     source_hash__ = "70305aa86e0d22c6bb429858caf88236"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:CommentChars$|EncName$|Reference$|Misc$|PubidChars$|NameChars$|VersionNum$|EOF$|CData$|NameStartChar$|PubidCharsSingleQuoted$)')
+    disposable__ = re.compile('(?:PubidCharsSingleQuoted$|EOF$|CommentChars$|Misc$|NameStartChar$|Reference$|VersionNum$|NameChars$|CData$|EncName$|PubidChars$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -130,7 +130,7 @@ class XMLGrammar(Grammar):
     PubidLiteral = Alternative(Series(Drop(Text('"')), Option(PubidChars), Drop(Text('"'))), Series(Drop(Text("\'")), Option(PubidCharsSingleQuoted), Drop(Text("\'"))))
     SystemLiteral = Alternative(Series(Drop(Text('"')), RegExp('[^"]*'), Drop(Text('"'))), Series(Drop(Text("\'")), RegExp("[^']*"), Drop(Text("\'"))))
     AttValue = Alternative(Series(Drop(Text('"')), ZeroOrMore(Alternative(RegExp('[^<&"]+'), Reference)), Drop(Text('"'))), Series(Drop(Text("\'")), ZeroOrMore(Alternative(RegExp("[^<&']+"), Reference)), Drop(Text("\'"))))
-    content = Series(Option(CharData), ZeroOrMore(Series(Alternative(Ref("element"), Reference, CDSect, PI, Comment), Option(CharData))))
+    content = Series(Option(CharData), ZeroOrMore(Series(Alternative(element, Reference, CDSect, PI, Comment), Option(CharData))))
     Attribute = Series(Name, dwsp__, Drop(Text('=')), dwsp__, AttValue, mandatory=2)
     emptyElement = Series(Drop(Text('<')), Name, ZeroOrMore(Series(dwsp__, Attribute)), dwsp__, Drop(Text('/>')))
     ETag = Series(Drop(Text('</')), Name, dwsp__, Drop(Text('>')), mandatory=1)
@@ -145,7 +145,7 @@ class XMLGrammar(Grammar):
     XMLDecl = Series(Drop(Text('<?xml')), VersionInfo, Option(EncodingDecl), Option(SDDecl), dwsp__, Drop(Text('?>')))
     prolog = Series(Option(Series(dwsp__, XMLDecl)), Option(Misc), Option(Series(doctypedecl, Option(Misc))))
     element.set(Alternative(emptyElement, Series(STag, content, ETag, mandatory=1)))
-    document = Series(prolog, Ref("element"), Option(Misc), EOF)
+    document = Series(prolog, element, Option(Misc), EOF)
     root__ = document
     
 parsing: PseudoJunction = create_parser_junction(XMLGrammar)

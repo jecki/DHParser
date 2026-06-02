@@ -110,7 +110,7 @@ class HTMLGrammar(Grammar):
     element = Forward()
     source_hash__ = "1e0e29d8c5afb97ef4a342401e68f61b"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:prolog$|CData$|BOM$|EncName$|PubidCharsSingleQuoted$|EOF$|tagContent$|Misc$|NameChars$|Reference$|CommentChars$|NameStartChar$|VersionNum$|PubidChars$)')
+    disposable__ = re.compile('(?:PubidChars$|Misc$|EncName$|NameStartChar$|BOM$|PubidCharsSingleQuoted$|VersionNum$|EOF$|CommentChars$|tagContent$|NameChars$|CData$|prolog$|Reference$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'tagContent': [('', "syntax error in tag-name of opening or empty tag:  {1}")],
@@ -135,12 +135,12 @@ class HTMLGrammar(Grammar):
     PubidChars = RegExp("(?i)(?:\\x20|\\x0D|\\x0A|[a-zA-Z0-9]|[-'()+,./:=?;!*#@$_%])+")
     PubidCharsSingleQuoted = RegExp('(?i)(?:\\x20|\\x0D|\\x0A|[a-zA-Z0-9]|[-()+,./:=?;!*#@$_%])+')
     CDSect = Series(Drop(IgnoreCase('<![CDATA[')), CData, Drop(IgnoreCase(']]>')))
-    NameStartChar = RegExp('(?xi)_|:|[A-Z]|[a-z]\n                   |[\\u00C0-\\u00D6]|[\\u00D8-\\u00F6]|['
+    NameStartChar = RegExp('(?ix)_|:|[A-Z]|[a-z]\n                   |[\\u00C0-\\u00D6]|[\\u00D8-\\u00F6]|['
        '\\u00F8-\\u02FF]\n                   |[\\u0370-\\u037D]|[\\u037F-\\u1FFF]|[\\u20'
        '0C-\\u200D]\n                   |[\\u2070-\\u218F]|[\\u2C00-\\u2FEF]|[\\u3001-'
        '\\uD7FF]\n                   |[\\uF900-\\uFDCF]|[\\uFDF0-\\uFFFD]\n               '
        '    |[\\U00010000-\\U000EFFFF]')
-    NameChars = RegExp('(?xi)(?:_|:|-|\\.|[A-Z]|[a-z]|[0-9]\n                   |\\u00B7|[\\u0300-\\u03'
+    NameChars = RegExp('(?ix)(?:_|:|-|\\.|[A-Z]|[a-z]|[0-9]\n                   |\\u00B7|[\\u0300-\\u03'
        '6F]|[\\u203F-\\u2040]\n                   |[\\u00C0-\\u00D6]|[\\u00D8-\\u00F6]|['
        '\\u00F8-\\u02FF]\n                   |[\\u0370-\\u037D]|[\\u037F-\\u1FFF]|[\\u20'
        '0C-\\u200D]\n                   |[\\u2070-\\u218F]|[\\u2C00-\\u2FEF]|[\\u3001-'
@@ -156,7 +156,7 @@ class HTMLGrammar(Grammar):
     PubidLiteral = Alternative(Series(Drop(IgnoreCase('"')), Option(PubidChars), Drop(IgnoreCase('"'))), Series(Drop(IgnoreCase("\'")), Option(PubidCharsSingleQuoted), Drop(IgnoreCase("\'"))))
     SystemLiteral = SmartRE(f'(?i)(?:")([^"]*)(?:")|(?:\')([^\']*)(?:\')', '\'"\' /[^"]*/ \'"\'|"\'" /[^\']*/ "\'"')
     AttValue = Alternative(Series(Drop(IgnoreCase('"')), ZeroOrMore(Alternative(RegExp('(?i)[^<&"]+'), Reference)), Drop(IgnoreCase('"'))), Series(Drop(IgnoreCase("\'")), ZeroOrMore(Alternative(RegExp("(?i)[^<&']+"), Reference)), Drop(IgnoreCase("\'"))), ZeroOrMore(Alternative(RegExp("(?i)[^<&'>\\s]+"), Reference)))
-    content = Series(Option(CharData), ZeroOrMore(Series(Alternative(Ref("element"), Reference, CDSect, PI, Comment), Option(CharData))))
+    content = Series(Option(CharData), ZeroOrMore(Series(Alternative(element, Reference, CDSect, PI, Comment), Option(CharData))))
     Attribute = Series(Name, dwsp__, Drop(IgnoreCase('=')), dwsp__, AttValue, mandatory=2)
     ETag = Series(Drop(IgnoreCase('</')), Name, dwsp__, Drop(IgnoreCase('>')), mandatory=1)
     tagContent = Series(SmartRE(f'(?i)(?![/!?])', '!/[\\/!?]/'), Name, ZeroOrMore(Series(dwsp__, Attribute)), dwsp__, SmartRE(f'(?i)(?=>|/>)', "&'>'|'/>'"), mandatory=1)
@@ -174,7 +174,7 @@ class HTMLGrammar(Grammar):
     XMLDecl = Series(Drop(IgnoreCase('<?xml')), VersionInfo, Option(EncodingDecl), Option(SDDecl), dwsp__, Drop(IgnoreCase('?>')), mandatory=1)
     prolog = Series(Option(Series(dwsp__, XMLDecl)), Option(Misc), Option(Series(doctypedecl, Option(Misc))))
     element.set(Alternative(emptyElement, voidElement, Series(STag, content, ETag, mandatory=2)))
-    document = Series(Option(BOM), prolog, Ref("element"), Option(Misc), EOF, mandatory=2)
+    document = Series(Option(BOM), prolog, element, Option(Misc), EOF, mandatory=2)
     resume_rules__ = {'tagContent': [re.compile(r'(?i)(?=>|/>)')],
                       'ETag': [re.compile(r'(?i)(?=>)')],
                       'Attribute': [re.compile(r'(?i)(?=>|/>)')],

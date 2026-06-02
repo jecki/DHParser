@@ -43,7 +43,7 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, DropFro
     Option, NegativeLookbehind, OneOrMore, RegExp, SmartRE, Retrieve, Series, Capture, TreeReduction, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, \
     LateBindingUnary, mixin_comment, last_value, matching_bracket, optional_last_value, \
-    PARSER_PLACEHOLDER, RX_NEVER_MATCH, UninitializedError, Ref
+    PARSER_PLACEHOLDER, RX_NEVER_MATCH, UninitializedError
 from DHParser.pipeline import end_points, full_pipeline, create_parser_junction, \
     create_preprocess_junction, create_junction, PseudoJunction, PipelineResult
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
@@ -133,7 +133,7 @@ class ArithmeticGrammar(Grammar):
     MUL = Series(Text("*"), dwsp__)
     MINUS = Series(Text("-"), dwsp__)
     PLUS = Series(Text("+"), dwsp__)
-    group = Series(Series(Drop(Text("(")), dwsp__), Ref("expression"), Series(Drop(Text(")")), dwsp__))
+    group = Series(Series(Drop(Text("(")), dwsp__), expression, Series(Drop(Text(")")), dwsp__))
     sign = Alternative(POSITIVE, NEGATIVE)
     factor = Series(Option(sign), Alternative(NUMBER, VARIABLE, group), ZeroOrMore(Alternative(VARIABLE, group)))
     term = Series(factor, ZeroOrMore(Series(Alternative(DIV, MUL), factor)))

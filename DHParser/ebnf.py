@@ -1211,7 +1211,7 @@ from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode, Pat
 from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, DropFrom, AnyChar, Parser, \\
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, ERR, \\
     Option, NegativeLookbehind, OneOrMore, RegExp, SmartRE, Retrieve, Series, Capture, TreeReduction, \\
-    ZeroOrMore, Ref, Forward, NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, \\
+    ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, \\
     LateBindingUnary, mixin_comment, last_value, matching_bracket, optional_last_value, \\
     PARSER_PLACEHOLDER, RX_NEVER_MATCH, UninitializedError
 from DHParser.pipeline import end_points, full_pipeline, create_parser_junction, \\
@@ -1506,10 +1506,10 @@ def neutralize_unnamed_groups(rxp: str) -> str:
     return '?:'.join(al)
 
 
-REF_TMPL = 'Ref__({symbol})'
-RX_REF_TMPL = r'Ref__\(({symbols})\)'
-RX_DROPFROM_REF = LazyRE(r'DropFrom\(Ref\("(\w+)"\)\)')
-RX_SYNONYM_TMPL = r'Synonym\(({symbols})\)'  # Really needed?
+# REF_TMPL = 'Ref__({symbol})'
+# RX_REF_TMPL = r'Ref__\(({symbols})\)'
+# RX_DROPFROM_REF = LazyRE(r'DropFrom\(Ref\("(\w+)"\)\)')
+# RX_SYNONYM_TMPL = r'Synonym\(({symbols})\)'  # Really needed?
 RX_REF = LazyRE(r'Ref__\((\w+)\)')
 
 
@@ -1648,9 +1648,6 @@ class EBNFCompiler(Compiler):
     :ivar grammar_name:  The name of the grammar to be compiled
 
     :ivar grammar_source:  The source code of the grammar to be compiled.
-
-    :ivar left_recursion: Determine the kind of left-recursion-handling. Value
-            is read from congiuration and is eithet "None", "Forward", "Full"
     """
     COMMENT_KEYWORD = "COMMENT__"
     COMMENT_PARSER_KEYWORD = "comment__"
@@ -1716,7 +1713,6 @@ class EBNFCompiler(Compiler):
         self.consumed_custom_errors = set()    # type: MutableSet[str]
         self.consumed_skip_rules = set()       # type: MutableSet[str]
         self.P = {p: p for p in parser_names}  # type: Dict[str, str]
-        self.left_recursion = get_config_value('left_recursion')
 
 
     @property
@@ -2216,30 +2212,7 @@ class EBNFCompiler(Compiler):
         definitions.reverse()
         declarations += [symbol + ' = Forward()'
                          for symbol in sorted(list(self.forward))]
-
-        if self.left_recursion == 'Full':
-            # recursive = self.recursive_symbols()
-            # for s in self.forward:
-            #     for p in self.recursive_paths(s):
-            #         print(p)
-            # # TODO: Sort out purely right-recursive symbols
-            symstr = '|'.join(self.forward)
-            recursive_ref_pattern = RX_REF_TMPL.format(symbols = symstr)
-            rx_recursive_ref = re.compile(recursive_ref_pattern)
-            synonym_pattern = RX_SYNONYM_TMPL.format(symbols = symstr)
-            rx_synonym = re.compile(synonym_pattern)
-        else:
-            recursive_ref_pattern: str = '(' + NEVER_MATCH_PATTERN + ')'
-            rx_recursive_ref = re.compile(recursive_ref_pattern)
         for symbol, statement in definitions:
-            if symbol[-2:] != '__' or (symbol.find('_skip_') >= 0 or symbol.find('_resume_') >= 0):
-                # TODO: Except uses at the very end of the rule (i.e. right recursion),
-                #       unless it's forward references (pre-sort the self.forward-references accordingly)
-                # statement = statement.replace(REF_TMPL.format(symbol = symbol), symbol)  # TODO: Don't do this!
-                statement = rx_recursive_ref.sub(r'Ref("\1")', statement)
-                # statement = rx_synonym.sub(rf'Synonym(\1{RECURSIVE_SUFFIX})', statement)
-                statement = RX_REF.sub(r'\1', statement)
-                statement = RX_DROPFROM_REF.sub(r'Drop(Ref("\1"))', statement)
             if symbol in self.forward:
                 declarations += [symbol + '.set(' + statement + ')']
             else:
@@ -2522,7 +2495,7 @@ class EBNFCompiler(Compiler):
             defn = self.compile(body)
             if isinstance(defn, str):
                 m = None
-                if defn.find("(") < 0 or (m := RX_REF.fullmatch(defn)):
+                if defn.find("(") < 0:
                     # assume it's a synonym, like 'page = REGEX_PAGE_NR'
                     if not drop_flag and defn in self.directives['drop'] \
                             and re.match(self.directives['disposable'], rule):
@@ -2530,7 +2503,7 @@ class EBNFCompiler(Compiler):
                             f'it is a Synonym for the dropped symbol "{defn}". If this behaviour '
                             f'is undesired, swap the definitions of both symbols. Otherwise, add '
                             f'"{rule}" to the @drop-directive to avoid this warning.', ERROR)
-                    defn = f'{self.P["Synonym"]}({defn if m is None else m.group(1)})'
+                    defn = f'{self.P["Synonym"]}({defn})'
                 if drop_flag and not defn.startswith(self.P["Drop"] + "("):
                     defn = f'{self.P["Drop"]}({defn})'
             else:
@@ -3479,8 +3452,7 @@ class EBNFCompiler(Compiler):
                 return keyword
             elif symbol.endswith('__'):
                 self.tree.new_error(node, 'Illegal use of reserved symbol name "%s"!' % symbol)
-            return f"Ref__({symbol})" if self.left_recursion == "Full" else symbol
-            # return symbol  # return f"Ref(symbol)" and delete als non-recursive Refs later?
+            return symbol
 
 
     def drop_on(self, category):

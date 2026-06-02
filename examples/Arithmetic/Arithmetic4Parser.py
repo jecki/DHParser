@@ -128,11 +128,11 @@ class Arithmetic4Grammar(Grammar):
     dwsp__ = Drop(Whitespace(WSP_RE__))
     var = Series(RegExp('[A-Za-z]'), dwsp__)
     num = Series(RegExp('(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?'), dwsp__)
-    group = Series(Series(Text("("), dwsp__), Ref("expression"), Series(Text(")"), dwsp__))
+    group = Series(Series(Text("("), dwsp__), expression, Series(Text(")"), dwsp__))
     sign = Alternative(Series(Text("+"), dwsp__), Series(Text("-"), dwsp__))
     factor = Series(Option(sign), Alternative(num, var, group))
-    term.set(Alternative(factor, Series(Ref("term"), Series(Text("*"), dwsp__), factor), Series(Ref("term"), Series(Text("/"), dwsp__), factor)))
-    expression.set(Alternative(Ref("term"), Series(Ref("expression"), Series(Text("+"), dwsp__), Ref("term")), Series(Ref("expression"), Series(Text("-"), dwsp__), Ref("term"))))
+    term.set(Alternative(factor, Series(term, Series(Text("*"), dwsp__), factor), Series(term, Series(Text("/"), dwsp__), factor)))
+    expression.set(Alternative(term, Series(expression, Series(Text("+"), dwsp__), term), Series(expression, Series(Text("-"), dwsp__), term)))
     root__ = expression
     
 parsing: PseudoJunction = create_parser_junction(Arithmetic4Grammar)

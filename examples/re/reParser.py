@@ -45,7 +45,7 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, DropFro
     Option, NegativeLookbehind, OneOrMore, RegExp, SmartRE, Retrieve, Series, Capture, TreeReduction, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, \
     LateBindingUnary, mixin_comment, last_value, matching_bracket, optional_last_value, \
-    PARSER_PLACEHOLDER, UninitializedError,  RX_NEVER_MATCH, Ref
+    PARSER_PLACEHOLDER, UninitializedError,  RX_NEVER_MATCH
 from DHParser.pipeline import end_points, full_pipeline, create_parser_junction, \
     create_preprocess_junction, create_junction, PseudoJunction, PipelineResult
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
@@ -199,7 +199,7 @@ class reGrammar(Grammar):
     sequence = Forward()
     source_hash__ = "25aba4df82b785974b6bf22b8978e276"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:_item$|_number$|BS$|_ch$|_grpChar$|EOF$|_char$|_escape$|_reEsc$|_octal$|_grpItem$|_escapedCh$|_illegal$|_group$|_special$|_chars$|_anyChar$|_extension$|_nibble$|_csEsc$|_grpChars$|_entity$)')
+    disposable__ = re.compile('(?:_anyChar$|_extension$|_group$|_entity$|_grpItem$|_csEsc$|_nibble$|_number$|_octal$|_item$|_escape$|_reEsc$|_grpChar$|_ch$|_chars$|EOF$|BS$|_special$|_escapedCh$|_grpChars$|_char$|_illegal$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
@@ -212,15 +212,15 @@ class reGrammar(Grammar):
     bs = RegExp('\\\\')
     BS = Drop(Synonym(bs))
     _anyChar = RegExp('[^|+*?]')
-    _char = Series(NegativeLookahead(Ref("_entity")), _anyChar)
+    _char = Series(NegativeLookahead(_entity), _anyChar)
     char = Series(_char, NegativeLookahead(_char))
     charSeq = Series(_char, OneOrMore(_char))
-    _grpChar = Series(NegativeLookahead(Ref("_entity")), RegExp('[^)|+*?]'))
+    _grpChar = Series(NegativeLookahead(_entity), RegExp('[^)|+*?]'))
     grpChar = Series(_grpChar, NegativeLookahead(_grpChar))
     grpCharSeq = Series(_grpChar, OneOrMore(_grpChar))
     _grpChars = Alternative(grpChar, grpCharSeq)
     _chars = Alternative(char, charSeq)
-    _grpItem = Alternative(Ref("_entity"), _grpChars)
+    _grpItem = Alternative(_entity, _grpChars)
     zeroOrOne = Text("?")
     zeroOrMore = Text("*")
     _number = RegExp('[0-9]+')
@@ -278,16 +278,16 @@ class reGrammar(Grammar):
     namedGroup = Series(Drop(Text("P<")), groupName, Drop(Text(">")), grpAlternative, mandatory=1)
     subRegex = Series(Drop(Text(">")), grpAlternative, mandatory=1)
     capturing = Synonym(grpAlternative)
-    bifurcation = Series(Drop(Text("(")), Alternative(groupId, groupName), Drop(Text(")")), Ref("sequence"), Drop(Text("|")), grpSequence, mandatory=1)
-    repetition = Series(Ref("_item"), repType, Option(Alternative(notGreedy, noBacktracking)))
+    bifurcation = Series(Drop(Text("(")), Alternative(groupId, groupName), Drop(Text(")")), sequence, Drop(Text("|")), grpSequence, mandatory=1)
+    repetition = Series(_item, repType, Option(Alternative(notGreedy, noBacktracking)))
     nonCapturing = Series(Option(flags), Drop(Text(":")), grpAlternative, mandatory=2)
     _extension = Series(Drop(Text("?")), Alternative(nonCapturing, subRegex, namedGroup, backRef, comment, lookaround, bifurcation), mandatory=1)
     _group = Series(Drop(Text("(")), Alternative(_extension, capturing), Drop(Text(")")), mandatory=1)
     flagGroups = OneOrMore(Series(Drop(Text("(?")), flags, Drop(Text(")")), mandatory=2))
-    alternative = Series(Ref("sequence"), ZeroOrMore(Series(Drop(Text("|")), Ref("sequence"))))
+    alternative = Series(sequence, ZeroOrMore(Series(Drop(Text("|")), sequence)))
     _entity.set(Alternative(_special, _escape, charset, _group))
-    _item.set(Alternative(Ref("_entity"), _chars))
-    sequence.set(ZeroOrMore(Alternative(repetition, Ref("_item"))))
+    _item.set(Alternative(_entity, _chars))
+    sequence.set(ZeroOrMore(Alternative(repetition, _item)))
     regular_expression = Series(Option(flagGroups), Alternative(alternative, Drop(Text(")"))), EOF)
     root__ = regular_expression
     

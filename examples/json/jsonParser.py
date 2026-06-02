@@ -35,7 +35,7 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, ERR, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, mixin_comment, \
-    last_value, matching_bracket, optional_last_value, SmartRE, RX_NEVER_MATCH, Ref
+    last_value, matching_bracket, optional_last_value, SmartRE, RX_NEVER_MATCH
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.toolkit import re, is_filename, load_if_file, cpu_count, \
@@ -131,13 +131,13 @@ class jsonGrammar(Grammar):
     _bool = Alternative(true, false)
     number = Series(INT, Option(FRAC), Option(EXP), dwsp__)
     string = Series(Text('"'), Option(_CHARACTERS), Text('"'), dwsp__, mandatory=2)
-    _elements = Series(Ref("_element"), ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), Ref("_element"), mandatory=1)))
+    _elements = Series(_element, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), _element, mandatory=1)))
     array = Series(Series(Drop(Text("[")), dwsp__), Option(_elements), Series(Drop(Text("]")), dwsp__), mandatory=2)
-    member = Series(string, Series(Drop(Text(":")), dwsp__), Ref("_element"), mandatory=1)
+    member = Series(string, Series(Drop(Text(":")), dwsp__), _element, mandatory=1)
     _members = Series(member, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), member, mandatory=1)))
     object = Series(Series(Drop(Text("{")), dwsp__), Option(_members), Series(Drop(Text("}")), dwsp__), mandatory=2)
     _element.set(Alternative(object, array, string, number, _bool, null))
-    json = Series(dwsp__, Ref("_element"), _EOF)
+    json = Series(dwsp__, _element, _EOF)
     root__ = json
     
 parsing: PseudoJunction = create_parser_junction(jsonGrammar)

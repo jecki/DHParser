@@ -2219,8 +2219,8 @@ class TestDropPropagation:
         set_config_value('left_recursion', 'Full')
         try:
             parser = create_parser(minilang)
-            assert parser.python_src__.find('DropFrom(') < 0
-            assert parser.python_src__.find('Drop(Ref(') >= 0
+            assert parser.python_src__.find('DropFrom(') >= 0
+            assert parser.python_src__.find('Drop(Ref(') < 0  # Ref() has been deprecated, anyway
             assert not parser.ex.drop_content
             assert parser.expr.drop_content
             assert parser.tr.drop_content

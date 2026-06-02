@@ -125,11 +125,11 @@ class Arithmetic3bGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     number = Alternative(RegExp('0'), Series(RegExp('[1-9]'), ZeroOrMore(RegExp('[0-9]'))))
-    group = Series(Text("("), Ref("expression"), Text(")"))
+    group = Series(Text("("), expression, Text(")"))
     factor = Alternative(number, group)
     term = Series(factor, ZeroOrMore(Series(Alternative(Text("*"), Text(":")), factor)))
     expression.set(Series(term, ZeroOrMore(Series(Alternative(Text("+"), Text("-")), term))))
-    formulae = Series(wsp__, Ref("expression"), ZeroOrMore(Series(wsp__, Ref("expression"))), wsp__)
+    formulae = Series(wsp__, expression, ZeroOrMore(Series(wsp__, expression)), wsp__)
     root__ = formulae
     
 parsing: PseudoJunction = create_parser_junction(Arithmetic3bGrammar)

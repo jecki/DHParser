@@ -38,7 +38,7 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, ERR, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, mixin_comment, \
-    last_value, matching_bracket, optional_last_value, SmartRE, RX_NEVER_MATCH, Ref
+    last_value, matching_bracket, optional_last_value, SmartRE, RX_NEVER_MATCH
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.toolkit import re, is_filename, load_if_file, cpu_count, \
@@ -109,7 +109,7 @@ class FlexibleEBNFGrammar(Grammar):
     element = Forward()
     expression = Forward()
     source_hash__ = "7061b124746f8604f4aab1d957fe6d5e"
-    disposable__ = re.compile('(?:countable$|component$|pure_elem$|MOD_SYM$|no_range$|is_mdef$|FOLLOW_UP$|ANY_SUFFIX$|EOF$|MOD_SEP$)')
+    disposable__ = re.compile('(?:is_mdef$|no_range$|countable$|MOD_SYM$|FOLLOW_UP$|MOD_SEP$|EOF$|component$|ANY_SUFFIX$|pure_elem$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
@@ -160,18 +160,18 @@ class FlexibleEBNFGrammar(Grammar):
     argument = Alternative(literal, Series(name, dwsp__))
     parser = Series(Series(Text("@"), dwsp__), name, Series(Text("("), dwsp__), Option(argument), Series(Text(")"), dwsp__))
     no_range = Drop(Alternative(NegativeLookahead(multiplier), Series(Lookahead(multiplier), Retrieve(TIMES))))
-    macro = Series(Series(Text("$"), dwsp__), name, Series(Text("("), dwsp__), no_range, Ref("expression"), ZeroOrMore(Series(Series(Text(","), dwsp__), no_range, Ref("expression"))), Series(Text(")"), dwsp__))
+    macro = Series(Series(Text("$"), dwsp__), name, Series(Text("("), dwsp__), no_range, expression, ZeroOrMore(Series(Series(Text(","), dwsp__), no_range, expression)), Series(Text(")"), dwsp__))
     range = Series(RNG_BRACE, dwsp__, multiplier, Option(Series(Retrieve(RNG_DELIM), dwsp__, multiplier)), Pop(RNG_BRACE, match_func=matching_bracket), dwsp__)
-    counted = Alternative(Series(Ref("countable"), range), Series(Ref("countable"), Retrieve(TIMES), dwsp__, multiplier), Series(multiplier, Retrieve(TIMES), dwsp__, Ref("countable"), mandatory=3))
-    option = Alternative(Series(NegativeLookahead(char_range), Series(Text("["), dwsp__), Ref("expression"), Series(Text("]"), dwsp__), mandatory=2), Series(Ref("element"), Series(Text("?"), dwsp__)))
-    repetition = Alternative(Series(Series(Text("{"), dwsp__), no_range, Ref("expression"), Series(Text("}"), dwsp__), mandatory=2), Series(Ref("element"), Series(Text("*"), dwsp__), no_range))
-    oneormore = Alternative(Series(Series(Text("{"), dwsp__), no_range, Ref("expression"), Series(Text("}+"), dwsp__)), Series(Ref("element"), Series(Text("+"), dwsp__)))
-    group = Series(Series(Text("("), dwsp__), no_range, Ref("expression"), Series(Text(")"), dwsp__), mandatory=2)
+    counted = Alternative(Series(countable, range), Series(countable, Retrieve(TIMES), dwsp__, multiplier), Series(multiplier, Retrieve(TIMES), dwsp__, countable, mandatory=3))
+    option = Alternative(Series(NegativeLookahead(char_range), Series(Text("["), dwsp__), expression, Series(Text("]"), dwsp__), mandatory=2), Series(element, Series(Text("?"), dwsp__)))
+    repetition = Alternative(Series(Series(Text("{"), dwsp__), no_range, expression, Series(Text("}"), dwsp__), mandatory=2), Series(element, Series(Text("*"), dwsp__), no_range))
+    oneormore = Alternative(Series(Series(Text("{"), dwsp__), no_range, expression, Series(Text("}+"), dwsp__)), Series(element, Series(Text("+"), dwsp__)))
+    group = Series(Series(Text("("), dwsp__), no_range, expression, Series(Text(")"), dwsp__), mandatory=2)
     retrieveop = SmartRE(f'(?P<:Text>::)(?:{WSP_RE__})|(?P<:Text>:\\?)(?:{WSP_RE__})|(?P<:Text>:)(?:{WSP_RE__})', '"::"|":?"|":"')
     flowmarker = SmartRE(f'(?P<:Text>!)(?:{WSP_RE__})|(?P<:Text>\\&)(?:{WSP_RE__})|(?P<:Text><\\-!)(?:{WSP_RE__})|(?P<:Text><\\-\\&)(?:{WSP_RE__})', '"!"|"&"|"<-!"|"<-&"')
     ANY_SUFFIX = RegExp('[?*+]')
     is_mdef = Series(Series(Text("$"), dwsp__), name, Option(Series(Series(Text("("), dwsp__), placeholder, ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)), Series(Text(")"), dwsp__))), dwsp__, Retrieve(DEF))
-    pure_elem = Series(Ref("element"), NegativeLookahead(ANY_SUFFIX), mandatory=1)
+    pure_elem = Series(element, NegativeLookahead(ANY_SUFFIX), mandatory=1)
     MOD_SEP = RegExp(' *: *')
     hide = SmartRE(f'(?P<:Text>HIDE)(?:{WSP_RE__})|(?P<:Text>Hide)(?:{WSP_RE__})|(?P<:Text>hide)(?:{WSP_RE__})|(?P<:Text>DISPOSE)(?:{WSP_RE__})|(?P<:Text>Dispose)(?:{WSP_RE__})|(?P<:Text>dispose)(?:{WSP_RE__})', '"HIDE"|"Hide"|"hide"|"DISPOSE"|"Dispose"|"dispose"')
     drop = SmartRE(f'(?P<:Text>DROP)(?:{WSP_RE__})|(?P<:Text>Drop)(?:{WSP_RE__})|(?P<:Text>drop)(?:{WSP_RE__})|(?P<:Text>SKIP)(?:{WSP_RE__})|(?P<:Text>Skip)(?:{WSP_RE__})|(?P<:Text>skip)(?:{WSP_RE__})', '"DROP"|"Drop"|"drop"|"SKIP"|"Skip"|"skip"')
@@ -185,15 +185,15 @@ class FlexibleEBNFGrammar(Grammar):
     FOLLOW_UP = Alternative(Text("@"), Text("$"), modifier, symbol, EOF)
     is_def = Alternative(Series(Option(Series(MOD_SEP, symbol)), Retrieve(DEF)), Series(MOD_SEP, is_mdef))
     macrobody = Synonym(expression)
-    definition = Series(Option(modifier), symbol, Retrieve(DEF), dwsp__, Option(Series(Retrieve(OR), dwsp__)), Ref("expression"), Option(Series(MOD_SYM, dwsp__, hide)), Retrieve(ENDL), dwsp__, Lookahead(FOLLOW_UP), mandatory=2)
+    definition = Series(Option(modifier), symbol, Retrieve(DEF), dwsp__, Option(Series(Retrieve(OR), dwsp__)), expression, Option(Series(MOD_SYM, dwsp__, hide)), Retrieve(ENDL), dwsp__, Lookahead(FOLLOW_UP), mandatory=2)
     procedure = Series(SYM_REGEX, Series(Text("()"), dwsp__))
     literals = OneOrMore(literal)
     macrodef = Series(Option(modifier), Series(Text("$"), dwsp__), name, dwsp__, Option(Series(Series(Text("("), dwsp__), placeholder, ZeroOrMore(Series(Series(Text(","), dwsp__), placeholder)), Series(Text(")"), dwsp__), mandatory=1)), Retrieve(DEF), dwsp__, Option(Series(OR, dwsp__)), macrobody, Option(Series(MOD_SYM, dwsp__, hide)), Retrieve(ENDL), dwsp__, Lookahead(FOLLOW_UP))
     _is_def = Alternative(Series(Option(Series(MOD_SEP, symbol)), _DEF), Series(MOD_SEP, is_mdef))
-    component = Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(_DEF), NegativeLookahead(_is_def)), Series(Lookahead(Text("$")), NegativeLookahead(is_mdef), placeholder, NegativeLookahead(is_def), mandatory=2), Series(Series(Text("("), dwsp__), Ref("expression"), Series(Text(")"), dwsp__)), Series(RAISE_EXPR_WO_BRACKETS, Ref("expression")))
+    component = Alternative(regexp, literals, procedure, Series(symbol, NegativeLookahead(_DEF), NegativeLookahead(_is_def)), Series(Lookahead(Text("$")), NegativeLookahead(is_mdef), placeholder, NegativeLookahead(is_def), mandatory=2), Series(Series(Text("("), dwsp__), expression, Series(Text(")"), dwsp__)), Series(RAISE_EXPR_WO_BRACKETS, expression))
     directive = Series(Series(Text("@"), dwsp__), symbol, Series(Text("="), dwsp__), component, ZeroOrMore(Series(Series(Text(","), dwsp__), component)), Lookahead(FOLLOW_UP), mandatory=1)
     element.set(Alternative(Series(Option(retrieveop), symbol, NegativeLookahead(is_def)), literal, plaintext, char_ranges, regexp, char_range, Series(character, dwsp__), any_char, whitespace, group, Series(macro, NegativeLookahead(is_def)), Series(placeholder, NegativeLookahead(is_def)), parser))
-    countable.set(Alternative(option, oneormore, Ref("element")))
+    countable.set(Alternative(option, oneormore, element))
     expression.set(Series(sequence, ZeroOrMore(Series(Retrieve(OR), dwsp__, sequence))))
     syntax = Series(dwsp__, ZeroOrMore(Alternative(definition, directive, macrodef)), EOF)
     resume_rules__ = {'definition': [re.compile(r'\n\s*(?=@|\w+\w*\s*=)')],

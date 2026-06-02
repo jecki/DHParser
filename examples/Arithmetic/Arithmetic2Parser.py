@@ -127,7 +127,7 @@ class Arithmetic2Grammar(Grammar):
     dwsp__ = Drop(Whitespace(WSP_RE__))
     var = Series(RegExp('[A-Za-z]'), dwsp__)
     num = Series(RegExp('(?:0|(?:[1-9]\\d*))(?:\\.\\d+)?'), dwsp__)
-    group = Series(Series(Drop(Text("(")), dwsp__), Ref("expression"), Series(Drop(Text(")")), dwsp__))
+    group = Series(Series(Drop(Text("(")), dwsp__), expression, Series(Drop(Text(")")), dwsp__))
     sign = Alternative(Text("+"), Text("-"))
     factor = Series(Option(Series(sign, dwsp__)), Alternative(num, var, group))
     div = Series(factor, NegativeLookahead(Series(Drop(Text("*")), dwsp__)), ZeroOrMore(Series(Alternative(Series(Drop(Text("/")), dwsp__), Series(Drop(Text(":")), dwsp__)), factor)))

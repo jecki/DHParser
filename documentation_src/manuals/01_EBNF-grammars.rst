@@ -1457,7 +1457,7 @@ expressions::
     >>> arithmetic = create_parser(arithmetic_grammar, "arithmetic")
     >>> terms = arithmetic('(2 - 3 * (4 + 5)')
     >>> print(terms.errors[0])
-    1:17: Error (1040): Parser term->`*` did not match: »«
+    1:17: Error (1040): Parser group->`)` did not match: »«
     >>> terms = arithmetic('(2 - 3) * ( )')
     >>> print(terms.errors[0])
     1:13: Error (1040): Parser number->/\\d+/ did not match: »)«
@@ -1467,18 +1467,14 @@ at least when we keep in mind that the computer cannot guess where
 we would have placed the forgotten closing bracket. It can only
 report the point where the mistake becomes apparent.
 
-However, the reported fact that it was the sub-parser \`*\` of
-parser term that failed at this location does little to enlighten
-us with respect to the cause of the failure. The "farthest fail"-method
-as implemented by DHParser yields the
-first parser (of possibly several) that has been tried at the
-position where the farthest fail occurred. Thus, in this case,
-a failure of the parser capturing \`*\` is reported rather than
-of the parser expression->\`+\`. Changing this by reporting the
-last parser or all parsers that failed at this location would
-do little to remedy this situation, however. In this example,
-it would just be as confusing to learn that expression->\`+\` failed
-at the end of the parsed string.
+While the first error message captures the error-cause reasonably
+well, it might still require a little thought to understand that
+"did not match: »«" at a position after the end of the parsed text
+can only mean that the end of the file has been reached unexpectedly.
+The second error message is even a little more misleading in this
+respect. To remedy this situation DHParser offers the mandatory
+item marker "§" for series as well the option to define custom
+error messages.
 
 
 .. _mandatory_items:

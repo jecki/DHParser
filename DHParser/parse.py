@@ -155,8 +155,7 @@ __all__ = ('parser_names',
            'last_value',
            'optional_last_value',
            'matching_bracket',
-           'Forward',
-           'Ref')
+           'Forward')
 
 
 # Names of all parser classes and functions that can directly be used
@@ -197,8 +196,7 @@ parser_names = ('Always',
                 'Capture',
                 'Retrieve',
                 'Pop',
-                'Forward',
-                'Ref')
+                'Forward')
 
 
 ########################################################################
@@ -1169,7 +1167,7 @@ def DropFrom(parser: Parser) -> Parser:
     parser itself untouched. This is needed, if you want to drop the
     result from a named-parser in one particular context where it is
     referred to, only."""
-    wrapper = parser if isinstance(parser, Ref) else Synonym(parser)
+    wrapper = Synonym(parser)
     wrapper.drop_content = True
     wrapper.disposable = True
     return wrapper
@@ -1690,7 +1688,7 @@ class Grammar:
         assert p.drop_content
         p._grammar = cls  # only required for LateBindingUnary, but faster then isinstance-check for every p
         for c in p.sub_parsers:
-            if (not isinstance(c, (Forward, Ref))
+            if (not isinstance(c, Forward)
                     and (not c.pname or isinstance(p, Forward))):
                 c.drop_content = True
                 cls._propagate_drop__(c)
@@ -1704,7 +1702,7 @@ class Grammar:
             try:
                 p._grammar = cls   # only required for LateBindingUnary
                 for c in p.sub_parsers:
-                    if (not isinstance(c, (Forward, Ref))
+                    if (not isinstance(c, Forward)
                             and (not c.pname or isinstance(p, Forward))):
                         cls.ensure_drop_propagation__(c)
             except UninitializedError as e:
@@ -1937,12 +1935,6 @@ class Grammar:
         # Phase 4: Reset/Initialize all parsers
         for p in self.all_parsers__:  reset_parser(p)
 
-        # DEBUGGING / TEST code:
-        # def optimize_memo(ptrail):
-        #     print(' -> '.join([(("fwd'" if isinstance(p, Forward) else ("ref'" if isinstance(p, Ref) else '')) + (p.effective_pname()) if p.effective_pname() else str(p)) for p in ptrail]))
-        # if self.root_parser__ is not PARSER_PLACEHOLDER:
-        #     self.root_parser__.apply_to_trail(optimize_memo)
-
         if not root:  TreeReduction(self.all_parsers__, self.early_tree_reduction__)
 
         # Phase 5: Do some static error checking, if the error checking flag
@@ -2022,8 +2014,6 @@ class Grammar:
             self.ff_parser__: Parser = self.root_parser__
         except AttributeError:
             self.ff_parser__: Parser = get_parser_placeholder()
-        self.ref_origin__: Ref = REF_SENTINEL
-        self.ref_ids__: Dict[str, int] = dict()
 
     @property
     def reversed__(self) -> StringView:
@@ -4292,7 +4282,7 @@ class Alternative(NaryParser):
             fixed_start = starting_string(self.parsers[i])
             if fixed_start:
                 for k in range(i):
-                    if (not isinstance(self.parsers[k], (Ref, Forward))  # TODO: find a more fine-grained check for recursive parsers
+                    if (not isinstance(self.parsers[k], Forward)  # TODO: find a more fine-grained check for recursive parsers
                             and does_preempt(fixed_start, self.parsers[k])):
                         errors.append(self.static_error(
                             "Parser-specification Error in " + self.location_info()
@@ -5363,8 +5353,6 @@ class Forward(UnaryParser):
         https://tinlizzie.org/VPRIPapers/tr2007002_packrat.pdf
         """
         grammar = self._grammar
-        orig = str(grammar.ref_origin__)
-        origin = grammar.ref_origin__.ref_id
         seed_key = location  # (location, origin)
         history_tracking = grammar.history_tracking__
         visited = self.visited  # using local variable for better performance
@@ -5509,8 +5497,8 @@ class Forward(UnaryParser):
             return ret
 
     def effective_pname(self) -> str:
-        """Returns the parser's pname. In the case of a Forward-
-        or Ref-parser, returns parser.parser.pname."""
+        """Returns the parser's pname. In the case of a Forward-parser,
+        returns parser.parser.pname."""
         return self.parser.pname or self.pname
 
     def __repr__(self):
@@ -5703,8 +5691,6 @@ class OldForwardRecursive(UnaryParser):
             return ret
 
     def effective_pname(self) -> str:
-        """Returns the parser's pname. In the case of a Forward-
-        or Ref-parser, returns parser.parser.pname."""
         return self.parser.pname
 
     def __repr__(self):
@@ -5859,8 +5845,6 @@ class OldForwardIterative(UnaryParser):
             return ret
 
     def effective_pname(self) -> str:
-        """Returns the parser's pname. In the case of a Forward-
-        or Ref-parser, returns parser.parser.pname."""
         return self.parser.pname
 
     def __repr__(self):
@@ -5886,65 +5870,3 @@ class OldForwardIterative(UnaryParser):
         self.drop_content = parser.drop_content
         self.pname = ""
 
-
-class Ref(LateBindingUnary):
-    """A late binding passive reference to another parser. In contrast to
-    Synonym, Refs do not alter the node name."""
-
-    def reset(self):
-        # super(Ref, self).reset()  no memo-dict needed
-        assert not self.pname, "Ref-Parsers mustn't have a name!"
-        if not hasattr(self, 'key') and not is_grammar_placeholder(self._grammar):
-            self.key = f"{self.parser_name}<={self.symbol}"
-            self.nr = self._grammar.ref_ids__.setdefault(self.key, 0) + 1
-            self._grammar.ref_ids__[self.key] = self.nr
-            self.ref_id = self.symbol # + '>' + self.parser.parser.pname + ':' + str(counter)
-
-    @cython.locals(ldepth=cython.int, rb_stack_size=cython.int)
-    def __call__(self, location: cython.int) -> ParsingResult:
-        self.grammar.ref_origin__ = self
-        result = self.parser(location)
-        if self.drop_content:
-            return EMPTY_NODE, result[1]
-        return result
-
-    def set_proxy(self, proxy: Optional[ParseFunc]):
-        """set_proxy has no effects on Ref-objects!"""
-        return
-
-    def name(self, pname: str = "", disposable: Optional[bool] = None) -> Parser:
-        assert not pname or pname[0:1] == ":" or pname[0:5] in ('DROP:', 'HIDE:')
-        assert disposable is not False
-        return super().name(pname, True)
-
-    def __repr__(self):
-        return self.parser_name
-
-    def __str__(self):
-        if not hasattr(self, 'str_cache'):
-            if is_grammar_placeholder(self._grammar):
-                return "unitialized'" + self.parser_name
-            # during static analysis, reset may not have been called after
-            # grammar was initalized, thus we neeed get() here:
-            if self._grammar.ref_ids__.get(self.key, 0) > 1:
-                if self.parser_name[-1:].isnumeric():
-                    self.str_cache = f"{self.parser_name}:{self.nr}<={self.symbol}"
-                else:
-                    self.str_cache = f"{self.parser_name}{self.nr}<={self.symbol}"
-            else:
-                self.str_cache = f"{self.parser_name}<={self.symbol}"
-        return self.str_cache
-
-
-class RefSentinel(Ref):
-    def reset(self):
-        self.ref_id = self.parser_name
-
-    def _resolve_parser_name(self) -> Parser:
-        return get_parser_placeholder()
-
-    def __str__(self):
-        return self.parser_name
-
-
-REF_SENTINEL = RefSentinel("0")
