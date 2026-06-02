@@ -5388,7 +5388,7 @@ class Forward(UnaryParser):
         rb_stack_size = len(grammar.rollback__)
 
         self.seed[seed_key] = [(SEED, 0)]  # fail on the first recursion
-        result: ParsingResult = None, -1
+        result: ParsingResult = None, location
 
         while grammar.ff_pos__ < grammar.document_length__:
             iteration = 0
@@ -5420,11 +5420,22 @@ class Forward(UnaryParser):
                     grammar.last_rb__loc__ = grammar.rollback__[-1][0] \
                         if grammar.rollback__ else -2
 
-                if result[0] is None and grammar.use_memo__ <= location < self.farthest:
+                # if result[0] is None and grammar.use_memo__ <= location < self.farthest:
+                #     if next_result[0] is None:
+                #         grammar.use_memo__ = 0
+                #         grammar.ff_pos__ = save_ff_pos
+                #         continue
+                #     else:
+                #         result = next_result
+
+                if result[0] is None:
                     if next_result[0] is None:
-                        grammar.use_memo__ = 0
-                        grammar.ff_pos__ = save_ff_pos
-                        continue
+                        if grammar.use_memo__ <= location < self.farthest:
+                            grammar.use_memo__ = 0
+                            grammar.ff_pos__ = save_ff_pos
+                            continue
+                        else:
+                            result = next_result
                     else:
                         result = next_result
 
@@ -5786,7 +5797,7 @@ class OldForwardIterative(Forward):
         rb_stack_size = len(grammar.rollback__)
         last_history_state = []
 
-        result = None, -1
+        result = None, location
         next_result = self.parser(location)
 
         while next_result[1] > result[1]:
