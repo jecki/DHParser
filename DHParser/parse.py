@@ -5373,7 +5373,7 @@ class Forward(UnaryParser):
         # check if a seed has been planted for the seed and grow algorithm
 
         sapling, iter = self.seed.get(location, [(None, -1)])[-1]
-        if sapling and iter == self.iteration[location]:  # TODO: Could iter == self.iteration[location] lead to infinite recursion?
+        if sapling and iter == self.iteration[location]:  # TODO: Could the requirement iter == self.iteration[location] lead to infinite recursion?
             grammar.suspend_memoization__ = id(self)
             if history_tracking:  self.tracer_memo(self, location, sapling)
             return (None, location) if sapling is SEED else sapling
@@ -5425,10 +5425,10 @@ class Forward(UnaryParser):
                             grammar.use_memo__ = 0
                             grammar.ff_pos__ = save_ff_pos
                             continue
-                        else:
-                            result = next_result
                     else:
                         result = next_result
+
+                # TODO: What about the case result[0] is None and next_result[0] is not None?
 
             versions = self.seed.get(location, None)
             if versions is not None and len(versions) > 1:

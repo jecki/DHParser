@@ -337,7 +337,7 @@ class TestInfiLoopsAndRecursion:
         set_config_value('left_recursion', 'Full')
         try:
             parser = create_parser(syntax)
-            print(parser.python_src__)
+            # print(parser.python_src__)
             result = parser('''"ein ("") Test."''')
             assert not result.errors
         except Exception as e:
@@ -993,7 +993,7 @@ class TestPopRetrieve:
         self.minilang_parser2 = grammar_provider(self.mini_lang2)()
         self.minilang_parser3 = grammar_provider(self.mini_lang3)()
         self.minilang_parser4 = grammar_provider(self.mini_lang4)()
-        print(self.minilang_parser4.python_src__)
+        # print(self.minilang_parser4.python_src__)
 
     @staticmethod
     def has_tag_name(node, name):
