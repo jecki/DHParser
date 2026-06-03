@@ -15,8 +15,8 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 LOG_DIR = os.path.abspath(os.path.join(scriptpath, "LOGS"))
 
 
-from DHParser.dsl import create_parser
-from DHParser.error import FATAL
+from DHParser.dsl import create_parser, CompilationError
+from DHParser.error import FATAL, Error
 from DHParser.nodetree import WHITESPACE_PTYPE, ZOMBIE_TAG, LEAF_PATH, RootNode
 
 
@@ -37,15 +37,23 @@ class MatchResult:
 
 def run_test_parse(grammar_spec: str, input_str: str, start_parser: str = '') -> ParseTestResult:
     grammar_spec = "@flavor=heuristic\n" + grammar_spec
-    grammar = create_parser(grammar_spec)
-    if start_parser:
-        root_node = grammar(input_str, start_parser=start_parser)
-    else:
-        root_node = grammar(input_str)
-    ok = not any(e.code >= FATAL for e in root_node.errors)
-    error_count = len(root_node.errors)
-    skipped_strings = [nd.content for nd in root_node.walk_tree(include_root=True)
-                       if nd.name == WHITESPACE_PTYPE]
+    try:
+        grammar = create_parser(grammar_spec)
+        if start_parser:
+            root_node = grammar(input_str, start_parser=start_parser)
+        else:
+            root_node = grammar(input_str)
+        ok = not any(e.code >= FATAL for e in root_node.errors)
+        error_count = len(root_node.errors)
+        skipped_strings = [nd.content for nd in root_node.walk_tree(include_root=True)
+                           if nd.name == WHITESPACE_PTYPE]
+    except CompilationError as e:
+        print(e)
+        root_node = RootNode().with_pos(0)
+        root_node.errors.append(Error(str(e), 0))
+        ok = False
+        error_count = 1
+        skipped_strings = []
     return ParseTestResult(ok, error_count, skipped_strings, root_node)
 
 
