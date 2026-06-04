@@ -5360,11 +5360,12 @@ class Forward(UnaryParser):
             # rotate versions
             last = versions.pop()
             versions.insert(0, last)
-            if versions[0] is SEED:
+            if last[0] is SEED:
+                # TODO: Will this clause ever be reached? If not, versions.insert(0, last), above is superfluous
                 grammar.use_memo__ = location or -1
                 return versions[-1][0]  # TODO: Do I need to worry about grammar.ff_pos__, here?
             else:
-                return versions[0][0]
+                return last[0]  # versions[0][0]
         elif location in visited:
             # Sorry, no history recording in case of memoized results!
             if history_tracking:  self.tracer_memo(self, location, visited[location])  # TODO: Remove tracer_memo entirely when finished!
@@ -5430,7 +5431,7 @@ class Forward(UnaryParser):
 
             versions = self.seed.get(location, None)
             if versions is not None and len(versions) > 1:
-                self.versions[location] = versions # .copy()
+                self.versions[location] = versions
                 if location > self.farthest:  self.farthest = location
 
             while versions:
