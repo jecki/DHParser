@@ -5424,11 +5424,9 @@ class Forward(UnaryParser):
                         if grammar.use_memo__ <= location < self.farthest:
                             grammar.use_memo__ = 0
                             grammar.ff_pos__ = save_ff_pos
-                            continue
+                            continue  # TODO:  Could this lead to an infinite loop?
                     else:
                         result = next_result
-
-                # TODO: What about the case result[0] is None and next_result[0] is not None?
 
             versions = self.seed.get(location, None)
             if versions is not None and len(versions) > 1:
