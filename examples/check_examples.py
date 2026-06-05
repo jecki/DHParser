@@ -18,7 +18,12 @@ if __name__ == "__main__":
     else:
         interpreter = 'python.exe '
 
-    example_dirs = os.listdir(os.path.join(rootdir, 'examples'))
+    # example_dirs = [os.path.join(rootdir, 'examples', item)
+    #                 for item in os.listdir(os.path.join(rootdir, 'examples'))]
+    example_dirs = []
+    for path, dirnames, filenames in os.walk(os.path.join(rootdir, 'examples')):
+        if any(f.lower().endswith('.ebnf') for f in filenames):
+            example_dirs.append(path)
 
     run = 0
     failures = 0
@@ -30,8 +35,9 @@ if __name__ == "__main__":
             failures += 1
             print("********** FAILURE **********")
 
-    for example in example_dirs:
-        example_path = os.path.join(rootdir, 'examples', example)
+    for example_path in example_dirs:
+        # example_path = os.path.join(rootdir, 'examples', example)
+        example = os.path.basename(example_path)
         if os.path.isdir(example_path):
             save = os.getcwd()
             os.chdir(example_path)
