@@ -115,7 +115,7 @@ class indirectGrammar(Grammar):
         syntax_tree = parser(source_code)
     """
     A = Forward()
-    source_hash__ = "28ea7e5adaf72885a5cfc4399388bf73"
+    source_hash__ = "ca1ff96f7ca63c1910046a567ba84b75"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

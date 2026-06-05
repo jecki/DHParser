@@ -194,12 +194,12 @@ class reGrammar(Grammar):
         parser = re()
         syntax_tree = parser(source_code)
     """
-    _entity = Forward()
-    _item = Forward()
-    sequence = Forward()
-    source_hash__ = "a0e2dbdcbe10a4009c77b5f2c967c84c"
+    _entity = SimpleForwardRecursive()
+    _item = SimpleForwardRecursive()
+    sequence = SimpleForwardRecursive()
+    source_hash__ = "3921698e1795cd3037e87981666e0eed"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:_entity$|_chars$|_group$|_reEsc$|_anyChar$|_item$|_escapedCh$|_ch$|_grpItem$|_grpChar$|_csEsc$|BS$|_extension$|_nibble$|_number$|_grpChars$|_octal$|_illegal$|_escape$|_special$|EOF$|_char$)')
+    disposable__ = re.compile('(?:_grpItem$|_char$|_anyChar$|_octal$|_grpChars$|_escapedCh$|_nibble$|_grpChar$|_group$|_ch$|_reEsc$|_number$|_csEsc$|_extension$|BS$|_entity$|_escape$|_chars$|_illegal$|_special$|EOF$|_item$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''

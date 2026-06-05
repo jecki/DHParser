@@ -701,7 +701,6 @@ CONFIG_PRESET['log_syntax_trees'] = frozenset()
 # Possible value: True, False
 # Default value: False
 CONFIG_PRESET['force_recompile_grammar'] = False
-
 ########################################################################
 #
 # ebnf compiler configuration

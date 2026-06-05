@@ -105,12 +105,12 @@ class XML_W3C_SPECGrammar(Grammar):
         parser = XML_W3C_SPEC()
         syntax_tree = parser(source_code)
     """
-    content = Forward()
-    cp = Forward()
-    element = Forward()
-    extSubsetDecl = Forward()
-    ignoreSectContents = Forward()
-    source_hash__ = "7490fa706d2de00298f5c822c8d93f8e"
+    content = SimpleForwardRecursive()
+    cp = SimpleForwardRecursive()
+    element = SimpleForwardRecursive()
+    extSubsetDecl = SimpleForwardRecursive()
+    ignoreSectContents = SimpleForwardRecursive()
+    source_hash__ = "cbaf98fddc145a26767cd3a57fd35487"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
