@@ -221,6 +221,8 @@ def grammar_changed(grammar_class, grammar_source: str) -> bool:
         True, if the source text of the grammar is different from the
         source from which the grammar class was generated
     """
+    if get_config_value('force_recompile_grammar'):
+        return True
     grammar = load_if_file(grammar_source)
     chksum = grammar_chksum(grammar)
     if isinstance(grammar_class, str):

@@ -114,9 +114,9 @@ class Arithmetic6Grammar(Grammar):
         parser = Arithmetic6()
         syntax_tree = parser(source_code)
     """
-    expression = SimpleForwardRecursive()
-    term = SimpleForwardRecursive()
-    source_hash__ = "aec4dafd91c65f08d8f3c4d30bac0fef"
+    expression = Forward()
+    term = Forward()
+    source_hash__ = "f48a94689537909a2579637940e2895c"
     disposable__ = re.compile('(?:(?:(?:expression$))|(?:term$))|(?:factor$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

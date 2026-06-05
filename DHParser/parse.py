@@ -5357,18 +5357,15 @@ class Forward(UnaryParser):
             grammar.rollback_to__(location)
 
         if not grammar.use_memo__ and (versions := self.versions.get(location, None)):
-            if len(versions) == 1:
-                assert versions[0][0] is SEED
-                return (None, location)
+            # rotate versions
+            last = versions.pop()
+            versions.insert(0, last)
+            if last[0] is SEED:
+                grammar.use_memo__ = location or -1
+                return versions[-1][0] if len(versions) > 1 else (None, location)  # len(version) > 1 implies verions[-1][0] is SEED
+                # TODO: Do I need to worry about grammar.ff_pos__, here?
             else:
-                # rotate versions
-                last = versions.pop()
-                versions.insert(0, last)
-                if last[0] is SEED:
-                    grammar.use_memo__ = location or -1
-                    return versions[-1][0]  # TODO: Do I need to worry about grammar.ff_pos__, here?
-                else:
-                    return last[0]  # versions[0][0]
+                return last[0]  # versions[0][0]
         elif location in visited:
             # Sorry, no history recording in case of memoized results!
             if history_tracking:  self.tracer_memo(self, location, visited[location])  # TODO: Remove tracer_memo entirely when finished!
@@ -5425,7 +5422,8 @@ class Forward(UnaryParser):
 
                 if result[0] is None:
                     if next_result[0] is None:
-                        if grammar.use_memo__ <= location < self.farthest and len(self.seed) > 1:
+                        if grammar.use_memo__ <= location < self.farthest \
+                                and any(loc >= location and len(saps) > 1 for loc, saps in self.seed.items()):
                             grammar.use_memo__ = 0
                             grammar.ff_pos__ = save_ff_pos
                             continue  # TODO:  Could this lead to an infinite loop?

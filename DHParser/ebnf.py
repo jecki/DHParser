@@ -2215,7 +2215,7 @@ class EBNFCompiler(Compiler):
 
         definitions.reverse()
         lr_kind = self.left_recursion.lower()
-        if lr_kind == 'full':  fwclass = "Forward"
+        if lr_kind == "full":  fwclass = "Forward"
         elif lr_kind in ('simple', 'forward'):  fwclass = "SimpleForwardRecursive"
         else:
             assert lr_kind == 'none', f"Invalid left_recursion value: {self.left_recursion}"

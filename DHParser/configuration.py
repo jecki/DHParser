@@ -695,6 +695,12 @@ ALLOWED_PRESET_VALUES['xml_attribute_error_handling'] = frozenset({'ignore', 'fi
 # Default value: empty set
 CONFIG_PRESET['log_syntax_trees'] = frozenset()
 
+# Forces re-compilation of grammar which means that the grammar will
+# always be recompiled when running tests not only when the checksum
+# of the grammar-file has changed.
+# Possible value: True, False
+# Default value: False
+CONFIG_PRESET['force_recompile_grammar'] = False
 
 ########################################################################
 #
@@ -839,7 +845,7 @@ CONFIG_PRESET['optimizations'] = frozenset()
 # Default value: "Full"
 ALLOWED_PRESET_VALUES['left_recursion'] = frozenset({'none', 'forward', 'simple', 'full',
                                                      'None', 'Forward', 'Simple', 'Full'})
-CONFIG_PRESET['left_recursion'] = "simple"
+CONFIG_PRESET['left_recursion'] = "full"
 
 
 ########################################################################

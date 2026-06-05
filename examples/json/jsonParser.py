@@ -103,8 +103,8 @@ class jsonGrammar(Grammar):
         parser = json()
         syntax_tree = parser(source_code)
     """
-    _element = SimpleForwardRecursive()
-    source_hash__ = "eadee98ef94424ff27dd3df98ce145fa"
+    _element = Forward()
+    source_hash__ = "250a4e384ac9f4ad2b4137d42ff3ae66"
     disposable__ = re.compile('_[A-Za-z]+')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
