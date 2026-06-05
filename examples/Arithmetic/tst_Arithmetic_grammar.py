@@ -56,7 +56,7 @@ if __name__ == '__main__':
     access_presets()
     set_preset_value('AST_serialization', "S-expression")
     set_preset_value('test_parallelization', False)
-    set_preset_value('history_tracking', True)
+    set_preset_value('history_tracking', False)
     finalize_presets()
 
     argv = sys.argv[:]

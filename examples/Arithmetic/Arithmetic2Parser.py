@@ -115,7 +115,7 @@ class Arithmetic2Grammar(Grammar):
         syntax_tree = parser(source_code)
     """
     expression = Forward()
-    source_hash__ = "4b068cfad7175d17720d52d9ac888a8e"
+    source_hash__ = "409a05023eb0ea89560088822e942e89"
     disposable__ = re.compile('(?:(?:(?:(?:expression$))|(?:term$))|(?:factor$))|(?:group$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

@@ -116,7 +116,7 @@ class Arithmetic4Grammar(Grammar):
     """
     expression = Forward()
     term = Forward()
-    source_hash__ = "b1db138fdf5774a4e6fac6ef15902850"
+    source_hash__ = "a71ef04051370c390047154ef89b758d"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

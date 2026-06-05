@@ -5362,6 +5362,7 @@ class Forward(UnaryParser):
             versions.insert(0, last)
             if last[0] is SEED:
                 grammar.use_memo__ = location or -1
+                # assert len(versions) > 1
                 return versions[-1][0] if len(versions) > 1 else (None, location)  # len(version) > 1 implies verions[-1][0] is SEED
                 # TODO: Do I need to worry about grammar.ff_pos__, here?
             else:
