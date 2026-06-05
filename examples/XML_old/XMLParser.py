@@ -83,9 +83,9 @@ class XMLGrammar(Grammar):
         syntax_tree = parser(source_code)
     """
     element = Forward()
-    source_hash__ = "70305aa86e0d22c6bb429858caf88236"
+    source_hash__ = "8636c66ab505242590e5d1ebc2c70aa1"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:PubidCharsSingleQuoted$|NameChars$|PubidChars$|NameStartChar$|CData$|EOF$|Reference$|CommentChars$|VersionNum$|EncName$|Misc$)')
+    disposable__ = re.compile('(?:NameStartChar$|Misc$|PubidCharsSingleQuoted$|EOF$|VersionNum$|PubidChars$|CData$|CommentChars$|Reference$|EncName$|NameChars$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''

@@ -774,7 +774,7 @@ class Parser:
 
             # if location has already been visited by the current parser, return saved result
             visited = self.visited  # using local variable for better performance
-            if grammar.use_memo__ and location in visited:
+            if location in visited and grammar.use_memo__:
                 if grammar.history_tracking__  and self._parse_proxy.__name__ == 'trace_history' \
                         and self._parse_proxy.__module__ == 'DHParser.trace':
                     return self._parse_proxy(-location or -INFINITE)  # a negative location signals a memo-hit
@@ -5357,15 +5357,18 @@ class Forward(UnaryParser):
             grammar.rollback_to__(location)
 
         if not grammar.use_memo__ and (versions := self.versions.get(location, None)):
-            # rotate versions
-            last = versions.pop()
-            versions.insert(0, last)
-            if last[0] is SEED:
-                # TODO: Will this clause ever be reached? If not, versions.insert(0, last), above is superfluous
-                grammar.use_memo__ = location or -1
-                return versions[-1][0]  # TODO: Do I need to worry about grammar.ff_pos__, here?
+            if len(versions) == 1:
+                assert versions[0][0] is SEED
+                return (None, location)
             else:
-                return last[0]  # versions[0][0]
+                # rotate versions
+                last = versions.pop()
+                versions.insert(0, last)
+                if last[0] is SEED:
+                    grammar.use_memo__ = location or -1
+                    return versions[-1][0]  # TODO: Do I need to worry about grammar.ff_pos__, here?
+                else:
+                    return last[0]  # versions[0][0]
         elif location in visited:
             # Sorry, no history recording in case of memoized results!
             if history_tracking:  self.tracer_memo(self, location, visited[location])  # TODO: Remove tracer_memo entirely when finished!
@@ -5422,7 +5425,7 @@ class Forward(UnaryParser):
 
                 if result[0] is None:
                     if next_result[0] is None:
-                        if grammar.use_memo__ <= location < self.farthest:
+                        if grammar.use_memo__ <= location < self.farthest and len(self.seed) > 1:
                             grammar.use_memo__ = 0
                             grammar.ff_pos__ = save_ff_pos
                             continue  # TODO:  Could this lead to an infinite loop?

@@ -1457,7 +1457,7 @@ expressions::
     >>> arithmetic = create_parser(arithmetic_grammar, "arithmetic")
     >>> terms = arithmetic('(2 - 3 * (4 + 5)')
     >>> print(terms.errors[0])
-    1:17: Error (1040): Parser group->`)` did not match: »«
+    1:17: Error (1040): Parser term->`*` did not match: »«
     >>> terms = arithmetic('(2 - 3) * ( )')
     >>> print(terms.errors[0])
     1:13: Error (1040): Parser number->/\\d+/ did not match: »)«

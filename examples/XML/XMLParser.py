@@ -106,9 +106,9 @@ class XMLGrammar(Grammar):
         syntax_tree = parser(source_code)
     """
     element = Forward()
-    source_hash__ = "312081f2c8b012e0ea140067a72dded7"
+    source_hash__ = "3f99a05deedbf5540c503f80268128d1"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:prolog$|EOF$|PubidChars$|CommentChars$|CData$|Reference$|PubidCharsSingleQuoted$|tagContent$|XmlPIAtts$|Misc$|VersionNum$|NameStartChar$|EncName$|BOM$|NameChars$)')
+    disposable__ = re.compile('(?:XmlPIAtts$|BOM$|Reference$|CommentChars$|NameStartChar$|PubidChars$|VersionNum$|PubidCharsSingleQuoted$|prolog$|CData$|NameChars$|Misc$|tagContent$|EOF$|EncName$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'tagContent': [('', "syntax error in tag-name of opening or empty tag:  {1}")],
