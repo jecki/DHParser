@@ -104,7 +104,7 @@ def reValidate(original_text, original_name) -> PreprocessorResult:
         i = len(original_text)
         _ = re.compile(original_text)
         return nil_preprocessor(original_text, original_name)
-    except Exception as err:, Ref
+    except Exception as err:
         err_code = INVALID_REGULAR_EXPRESSION
         if re.match(r'\(\?[aixLmsu]*-[aixLmsu]*\)', original_text):
             err_code = INCOMPATIBLE_REGULAR_EXPRESSION
@@ -199,7 +199,7 @@ class reGrammar(Grammar):
     sequence = Forward()
     source_hash__ = "25aba4df82b785974b6bf22b8978e276"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:_grpChar$|_escape$|_grpItem$|_ch$|_special$|_group$|_char$|_chars$|_illegal$|_escapedCh$|BS$|_octal$|_extension$|_nibble$|_anyChar$|_csEsc$|_entity$|EOF$|_number$|_reEsc$|_item$|_grpChars$)')
+    disposable__ = re.compile('(?:_octal$|_extension$|_ch$|_csEsc$|_char$|_number$|_item$|_grpChars$|EOF$|_entity$|_group$|_special$|_escape$|_grpChar$|_chars$|_nibble$|_escapedCh$|_illegal$|_grpItem$|BS$|_anyChar$|_reEsc$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
