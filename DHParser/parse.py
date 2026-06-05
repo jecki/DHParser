@@ -156,7 +156,7 @@ __all__ = ('parser_names',
            'optional_last_value',
            'matching_bracket',
            'Forward',
-           'OldForwardRecursive')
+           'SimpleForwardRecursive')
 
 
 # Names of all parser classes and functions that can directly be used
@@ -5526,7 +5526,7 @@ class Forward(UnaryParser):
 ###############################################################################
 
 
-class OldForwardRecursive(Forward):
+class SimpleForwardRecursive(Forward):
     r"""This is the "old" (DHParser version < 2.0) version of the Forward
     parser class. The left-recursion algorithm handles direct and indirect
     left-recursion but fails on interwoven and monotonic left-recursion!
@@ -5711,10 +5711,12 @@ class OldForwardRecursive(Forward):
         self.pname = ""
 
 
-class OldForwardIterative(Forward):
+class SimpleForwardIterative(Forward):
     r"""This is a more straight-forward quasi-iterative version of the "old"
     Forward parser class. The left-recursion algorithm handles direct and
     indirect left-recursion but fails on interwoven and monotonic left-recursion!
+
+    This version of the parser class is experimental has hardly been tested!!!
 
     :ivar recursion_counter:  Mapping of places to how often the parser
             has already been called recursively at this place. This
