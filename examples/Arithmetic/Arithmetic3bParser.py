@@ -114,8 +114,8 @@ class Arithmetic3bGrammar(Grammar):
         parser = Arithmetic3b()
         syntax_tree = parser(source_code)
     """
-    expression = Forward()
-    source_hash__ = "661a4d1c272078e5c69b6bcf64bfb55d"
+    expression = SimpleForwardRecursive()
+    source_hash__ = "fed3d1101c9216ca227a15cb8fdf39fc"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

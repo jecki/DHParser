@@ -112,8 +112,8 @@ class miniXMLGrammar(Grammar):
         parser = miniXML()
         syntax_tree = parser(source_code)
     """
-    element = Forward()
-    source_hash__ = "1266836e112701fdbcc0a076609b8bb9"
+    element = SimpleForwardRecursive()
+    source_hash__ = "7ec84b9d4d746dcad34f0a60c0592e46"
     disposable__ = re.compile('(?:EOF$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

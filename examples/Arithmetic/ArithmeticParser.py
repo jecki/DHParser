@@ -43,7 +43,7 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, DropFro
     Option, NegativeLookbehind, OneOrMore, RegExp, SmartRE, Retrieve, Series, Capture, TreeReduction, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, \
     LateBindingUnary, mixin_comment, last_value, matching_bracket, optional_last_value, \
-    PARSER_PLACEHOLDER, RX_NEVER_MATCH, UninitializedError
+    PARSER_PLACEHOLDER, RX_NEVER_MATCH, UninitializedError, SimpleForwardRecursive
 from DHParser.pipeline import end_points, full_pipeline, create_parser_junction, \
     create_preprocess_junction, create_junction, PseudoJunction, PipelineResult
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
@@ -114,8 +114,8 @@ class ArithmeticGrammar(Grammar):
         parser = Arithmetic()
         syntax_tree = parser(source_code)
     """
-    expression = Forward()
-    source_hash__ = "f67ae77aa9079620c464b941d48d1725"
+    expression = SimpleForwardRecursive()
+    source_hash__ = "d132cfaac4791f8ff6469e9896297524"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

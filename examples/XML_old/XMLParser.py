@@ -29,7 +29,8 @@ except ImportError:
     import re
 from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, AnyChar, \
-    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
+    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, Option, \
+    NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, SimpleForwardRecursive,\
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \
     Node, TransformerCallable, TransformationDict, transformation_factory, traverse, \
@@ -82,10 +83,10 @@ class XMLGrammar(Grammar):
         parser = XML()
         syntax_tree = parser(source_code)
     """
-    element = Forward()
-    source_hash__ = "8636c66ab505242590e5d1ebc2c70aa1"
+    element = SimpleForwardRecursive()
+    source_hash__ = "04bbfb3682f435ed251264482b8719ac"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:NameStartChar$|Misc$|PubidCharsSingleQuoted$|EOF$|VersionNum$|PubidChars$|CData$|CommentChars$|Reference$|EncName$|NameChars$)')
+    disposable__ = re.compile('(?:NameChars$|Misc$|Reference$|EOF$|PubidChars$|PubidCharsSingleQuoted$|NameStartChar$|CommentChars$|VersionNum$|CData$|EncName$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
