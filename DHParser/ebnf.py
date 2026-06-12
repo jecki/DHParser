@@ -1146,7 +1146,8 @@ def serialize_AST(ebnf_AST: Node, syntax: str = "DHParser") -> str:
     Returns:
         str: A string representation of the EBNF notation derived from the AST.
     """
-    assert syntax in ("DHParser", "ISO", "EBNF", "PEG")
+    if syntax not in ("DHParser", "ISO", "EBNF", "PEG"):
+        raise ValueError('syntax must be one of "DHParser", "ISO", "EBNF", "PEG"')
     try:
         table = get_EBNF_AST_Serialization_Table("PEG" if syntax == "PEG" else "EBNF")
         ebnf = ebnf_AST.evaluate_path(table, path=[ebnf_AST])

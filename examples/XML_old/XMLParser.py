@@ -83,10 +83,10 @@ class XMLGrammar(Grammar):
         parser = XML()
         syntax_tree = parser(source_code)
     """
-    element = SimpleForwardRecursive()
-    source_hash__ = "0ecf62826deb60fd944145e78595a302"
+    element = Forward()
+    source_hash__ = "058584839f11bdda0c1e6f5fb1b0e971"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:PubidChars$|NameChars$|Misc$|EOF$|CommentChars$|VersionNum$|EncName$|PubidCharsSingleQuoted$|NameStartChar$|Reference$|CData$)')
+    disposable__ = re.compile('(?:VersionNum$|Misc$|CData$|EOF$|PubidChars$|NameChars$|EncName$|CommentChars$|PubidCharsSingleQuoted$|Reference$|NameStartChar$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''

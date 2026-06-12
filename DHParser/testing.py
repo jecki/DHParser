@@ -1079,9 +1079,12 @@ def grammar_suite(directory, parser_factory, transformer_factory,
     if is_logging():
         clear_logs()
 
-    tests = [fn for fn in sorted(os.listdir('.'))
-             if any(fnmatch.fnmatch(fn, pattern) for pattern in fn_patterns)]
-
+    entries = [(e.stat().st_size, e.name) for e in os.scandir('.')
+               if e.is_file() and any(fnmatch.fnmatch(e.name, pattern)
+                                      for pattern in fn_patterns)]
+    entries.sort()
+    entries.reverse()  # pick the longest test first
+    tests = [entry[1] for entry in entries]
     assert tests, f"No pattern from {fn_patterns} matched any test in directory {os.getcwd()}"
 
     with instantiate_executor(get_config_value('test_parallelization') and len(tests) > 1,
@@ -1497,7 +1500,8 @@ async def stdio(limit=asyncio.streams._DEFAULT_LIMIT, loop=None):
 
 class MockStream:
     """Simulates a stream that can be written to from one side and read
-    from the other side like a pipe. Usage pattern::
+    from the other side like a pipe. Useful mainly for testing.
+    Usage pattern::
 
         pipe = MockStream()
         reader = StreamReaderProxy(pipe)

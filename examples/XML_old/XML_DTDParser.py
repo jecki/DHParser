@@ -105,12 +105,12 @@ class XML_DTDGrammar(Grammar):
         parser = XML_DTD()
         syntax_tree = parser(source_code)
     """
-    choice = SimpleForwardRecursive()
-    cp = SimpleForwardRecursive()
-    element = SimpleForwardRecursive()
-    extSubsetDecl = SimpleForwardRecursive()
-    ignoreSectContents = SimpleForwardRecursive()
-    source_hash__ = "27206e18fbd3852f0e26b147b9e5ec26"
+    choice = Forward()
+    cp = Forward()
+    element = Forward()
+    extSubsetDecl = Forward()
+    ignoreSectContents = Forward()
+    source_hash__ = "114ab1f67ce7604e7dac05d684b2c094"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

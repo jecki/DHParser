@@ -107,10 +107,10 @@ class HTMLGrammar(Grammar):
         parser = HTML()
         syntax_tree = parser(source_code)
     """
-    element = SimpleForwardRecursive()
-    source_hash__ = "12592520678d9c8d1f3867a9ab33d872"
+    element = Forward()
+    source_hash__ = "3d8d49426b5727cc0df4cd6633100905"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:prolog$|CData$|NameStartChar$|PubidCharsSingleQuoted$|NameChars$|BOM$|CommentChars$|VersionNum$|Reference$|PubidChars$|EncName$|Misc$|EOF$|tagContent$)')
+    disposable__ = re.compile('(?:PubidChars$|NameChars$|prolog$|CommentChars$|CData$|tagContent$|VersionNum$|BOM$|Misc$|EOF$|NameStartChar$|Reference$|EncName$|PubidCharsSingleQuoted$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'tagContent': [('', "syntax error in tag-name of opening or empty tag:  {1}")],
