@@ -666,7 +666,10 @@ def grammar_chksum(grammar_source: str) -> str:
     """
     config = get_config_values()
     del config['syncfile_path']
-    return md5(grammar_source, __version__, str(config))
+    del config['main_pid']
+    cfg = [(k, str(v)) for k, v in config.items()]
+    cfg.sort()
+    return md5(grammar_source, __version__, str(cfg))
 
 
 @deprecated(f"grammar_changed() has been moved from DHParser.ebnf to DHParser.dsl. Please, update your imports.")
