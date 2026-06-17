@@ -665,6 +665,7 @@ def grammar_chksum(grammar_source: str) -> str:
     whether the grammar it needs to be regenerated.
     """
     config = get_config_values()
+    # TODO: Rather than deleting irrelevant and potentially interfering config-values, pick out only those that are relevant
     del config['syncfile_path']
     del config['main_pid']
     cfg = [(k, str(v)) for k, v in config.items()]
@@ -1217,7 +1218,7 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, DropFro
     Option, NegativeLookbehind, OneOrMore, RegExp, SmartRE, Retrieve, Series, Capture, TreeReduction, \\
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, \\
     LateBindingUnary, mixin_comment, last_value, matching_bracket, optional_last_value, \\
-    PARSER_PLACEHOLDER, RX_NEVER_MATCH, UninitializedError, SimpleForwardRecursive
+    PARSER_PLACEHOLDER, RX_NEVER_MATCH, UninitializedError, SimpleForwardRecursive, SimpleForwardIterative
 from DHParser.pipeline import end_points, full_pipeline, create_parser_junction, \\
     create_preprocess_junction, create_junction, Junction, PseudoJunction, PipelineResult
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \\

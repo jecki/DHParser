@@ -156,7 +156,8 @@ __all__ = ('parser_names',
            'optional_last_value',
            'matching_bracket',
            'Forward',
-           'SimpleForwardRecursive')
+           'SimpleForwardRecursive',
+           'SimpleForwardIterative')
 
 
 # Names of all parser classes and functions that can directly be used
