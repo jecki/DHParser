@@ -48,7 +48,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \
     positions_of, replace_child_names, add_attributes, delimit_children, merge_connected, \
     has_attr, has_parent, ThreadLocalSingletonFactory, TreeReduction, CombinedParser, \
-    apply_unless, ERROR, SmartRE
+    apply_unless, ERROR, SmartRE, SimpleForwardIterative
 from DHParser.toolkit import INFINITE
 
 from DHParser.pipeline import PseudoJunction, create_parser_junction
@@ -83,10 +83,10 @@ class XMLGrammar(Grammar):
         parser = XML()
         syntax_tree = parser(source_code)
     """
-    element = Forward()
-    source_hash__ = "058584839f11bdda0c1e6f5fb1b0e971"
+    element = SimpleForwardRecursive()
+    source_hash__ = "4dc9290a643d63b8a5fa5ec2eaa7d03a"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:EncName$|CommentChars$|Reference$|EOF$|NameStartChar$|Misc$|PubidCharsSingleQuoted$|VersionNum$|CData$|NameChars$|PubidChars$)')
+    disposable__ = re.compile('(?:CommentChars$|NameChars$|NameStartChar$|PubidChars$|EncName$|Reference$|EOF$|PubidCharsSingleQuoted$|VersionNum$|CData$|Misc$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''

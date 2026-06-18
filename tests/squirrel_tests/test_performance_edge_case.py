@@ -214,6 +214,7 @@ class TestEdgeCaseTests:
             top_rule_name='A',
             input='xy',
         )
+        assert hasattr(parse_result, 'root'), "left-recursion failed"
         result = parse_result.root
         assert not parse_result.is_mismatch, "left-recursive with base case should work"
         assert not result.errors

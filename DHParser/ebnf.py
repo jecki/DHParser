@@ -1218,7 +1218,8 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, DropFro
     Option, NegativeLookbehind, OneOrMore, RegExp, SmartRE, Retrieve, Series, Capture, TreeReduction, \\
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, \\
     LateBindingUnary, mixin_comment, last_value, matching_bracket, optional_last_value, \\
-    PARSER_PLACEHOLDER, RX_NEVER_MATCH, UninitializedError, SimpleForwardRecursive, SimpleForwardIterative
+    PARSER_PLACEHOLDER, RX_NEVER_MATCH, UninitializedError, SimpleForwardRecursive, \\
+    SimpleForwardIterative, ForwardBase
 from DHParser.pipeline import end_points, full_pipeline, create_parser_junction, \\
     create_preprocess_junction, create_junction, Junction, PseudoJunction, PipelineResult
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \\
@@ -2221,11 +2222,11 @@ class EBNFCompiler(Compiler):
         definitions.reverse()
         lr_kind = self.left_recursion.lower()
         if lr_kind == "full":  fwclass = "Forward"
-        elif lr_kind in ('simple', 'forward'):  fwclass = "SimpleForwardRecursive"
+        elif lr_kind == "classic":  fwclass = "SimpleForwardRecursive"
+        elif lr_kind in ('simple', 'forward'):  fwclass = "SimpleForwardIterative"
+        elif lr_kind == "none": fwclass = "ForwardBase"
         else:
-            assert lr_kind == 'none', f"Invalid left_recursion value: {self.left_recursion}"
-            raise ValueError('Turning of left-recursion completely is not supported '
-                'as this can lead to infinite loops. Please usr left_recursion = "simple" instead!')
+            raise ValueError(f"Invalid left_recursion value: {self.left_recursion}")
         declarations += [f'{symbol} = {fwclass}()'
                          for symbol in sorted(list(self.forward))]
         for symbol, statement in definitions:

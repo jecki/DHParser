@@ -155,6 +155,7 @@ __all__ = ('parser_names',
            'last_value',
            'optional_last_value',
            'matching_bracket',
+           'ForwardBase',
            'Forward',
            'SimpleForwardRecursive',
            'SimpleForwardIterative')
@@ -567,7 +568,7 @@ class Parser:
     :ivar pname:  The parser's name. Hint: Forward-parsers do not have a
                 pname, even though they are always associated with a symbol.
                 Be sure, to test for Forward-parsers where needed and then pick
-                cast(Forward, parser).parser.pname !
+                cast(ForwardBase, parser).parser.pname !
 
     :ivar disposable: A property indicating that the parser returns
                 anonymous nodes. For performance
@@ -750,8 +751,11 @@ class Parser:
         text = grammar.document__[location:]
         node = Node(ZOMBIE_TAG, str(text[:min(10, max(1, text.find("\n")))]) + " ...")
         node._pos = location
-        error = Error("maximum recursion depth of parser reached; potentially due to too many "
-                      "errors or left recursion!", location, RECURSION_DEPTH_LIMIT_HIT)
+        msg = ("Maximum recursion depth of parser reached; potentially due to too many "
+               "errors or left recursion!")
+        if get_config_value('left_recursion').lower() == 'none':
+            msg += " (Setting config value 'left_recursion' to 'full' may help.)"
+        error = Error(msg, location, RECURSION_DEPTH_LIMIT_HIT)
         grammar.tree__.add_error(node, error)
         grammar.most_recent_error__ = ParserError(self, node, node.strlen(), location, error,
                                                   first_throw=False)
@@ -1157,8 +1161,8 @@ def Drop(parser: Parser) -> Parser:
     Parser must be anonymous and disposable. Use "`DropFrom" instead
     when this requirement ist not met."""
     assert parser.disposable, "Parser must be anonymous to be allowed to drop its content."
-    if isinstance(parser, Forward):
-        cast(Forward, parser).parser.drop_content = True
+    if isinstance(parser, ForwardBase):
+        cast(ForwardBase, parser).parser.drop_content = True
     parser.drop_content = True
     return parser
 
@@ -1685,8 +1689,8 @@ class Grammar:
         assert p.drop_content
         p._grammar = cls  # only required for LateBindingUnary, but faster then isinstance-check for every p
         for c in p.sub_parsers:
-            if (not isinstance(c, Forward)
-                    and (not c.pname or isinstance(p, Forward))):
+            if (not isinstance(c, ForwardBase)
+                    and (not c.pname or isinstance(p, ForwardBase))):
                 c.drop_content = True
                 cls._propagate_drop__(c)
 
@@ -1699,8 +1703,8 @@ class Grammar:
             try:
                 p._grammar = cls   # only required for LateBindingUnary
                 for c in p.sub_parsers:
-                    if (not isinstance(c, Forward)
-                            and (not c.pname or isinstance(p, Forward))):
+                    if (not isinstance(c, ForwardBase)
+                            and (not c.pname or isinstance(p, ForwardBase))):
                         cls.ensure_drop_propagation__(c)
             except UninitializedError as e:
                 if not isinstance(p, LateBindingUnary):
@@ -1736,9 +1740,9 @@ class Grammar:
                 if isinstance(parser, Parser) and entry not in RESERVED_PARSER_NAMES:
                     anonymous = ":" if is_disposable(entry, cls.disposable__) else ""
                     assert anonymous or not parser.drop_content, entry
-                    if isinstance(parser, Forward):
-                        if not cast(Forward, parser).parser.pname:
-                            cast(Forward, parser).parser.name(anonymous + entry)
+                    if isinstance(parser, ForwardBase):
+                        if not cast(ForwardBase, parser).parser.pname:
+                            cast(ForwardBase, parser).parser.name(anonymous + entry)
                     else:
                         parser.name(anonymous + entry)
                     cls.parser_names__.append(entry)
@@ -1768,16 +1772,16 @@ class Grammar:
                 # prevent overwriting instance variables or parsers of a different class
                 registered = self.__dict__.get(parser.pname, None)
                 if registered:
-                    # assert (isinstance(self.__dict__[parser.pname], Forward)
+                    # assert (isinstance(self.__dict__[parser.pname], ForwardBase)
                     #         or self.__dict__.get(parser.pname, parser) is parser), \
                     assert (registered is parser
-                            or (isinstance(registered, Forward) and registered.parser is parser)), \
+                            or (isinstance(registered, ForwardBase) and registered.parser is parser)), \
                         (f'Cannot add parser "{parser}" because a field with '
                          ' the same name already exists in grammar object: '
                          f'{type(registered)} {registered}')
                 else:
                     setattr(self, parser.pname, parser)
-            elif isinstance(parser, Forward):
+            elif isinstance(parser, ForwardBase):
                 registered = self.__dict__.get(parser.parser.pname, None)
                 if registered and not registered is parser.parser:
                     assert registered is parser, \
@@ -1861,7 +1865,7 @@ class Grammar:
             # deepcopy the root-parser tree to the Grammar instance, if in case the non-derived
             # Grammar class was initialized with a root-parser defined outside the class
             self.root_parser__ = copy.deepcopy(root, self.memo__)
-            if not self.root_parser__.pname and not isinstance(root, Forward):
+            if not self.root_parser__.pname and not isinstance(root, ForwardBase):
                 self.root_parser__.name("root")
             self.root_parser__.disposable = False
             self.static_analysis_pending__ = [True]  # type: List[bool]
@@ -1969,7 +1973,7 @@ class Grammar:
             if parser_template:
                 # TODO: Can this code every be reached?
                 if key != parser_template.pname or (parser_template.parser.pname
-                                                    if isinstance(parser_template, Forward) else ''):
+                        if isinstance(parser_template, ForwardBase) else ''):
                     raise AttributeError(
                         f'Illegal parser-name "{key}" for grammar {self.__class__.__name__}!')
                 # add parser to grammar-object on the fly...
@@ -2472,8 +2476,8 @@ class Grammar:
                         return True  # stop searching
             return False  # continue searching
 
-        if isinstance(parser, Forward) and cast(Forward, parser).parser.pname:
-            symbol = cast(Forward, parser).parser
+        if isinstance(parser, ForwardBase) and cast(ForwardBase, parser).parser.pname:
+            symbol = cast(ForwardBase, parser).parser
         elif parser.pname:
             symbol = parser
         else:
@@ -2504,8 +2508,8 @@ class Grammar:
                     add_anonymous_descendants(d)
 
         for p in self.all_parsers__:
-            if isinstance(p, Forward) and cast(Forward, p).parser.pname:
-                symbol = cast(Forward, p).parser
+            if isinstance(p, ForwardBase) and cast(ForwardBase, p).parser.pname:
+                symbol = cast(ForwardBase, p).parser
                 self.associated_symbol_cache__[p] = symbol
                 add_anonymous_descendants(symbol)
             elif p.pname:
@@ -4267,7 +4271,7 @@ class Alternative(NaryParser):
         # EXPERIMENTAL
 
         def does_preempt(start, parser) -> bool:
-            if isinstance(parser, Forward):
+            if isinstance(parser, ForwardBase):
                 if self in parser.descendants():
                     # In case of recursive parsers, the test is not reliable!
                     return False
@@ -4278,7 +4282,7 @@ class Alternative(NaryParser):
             fixed_start = starting_string(self.parsers[i])
             if fixed_start:
                 for k in range(i):
-                    if (not isinstance(self.parsers[k], Forward)  # TODO: find a more fine-grained check for recursive parsers
+                    if (not isinstance(self.parsers[k], ForwardBase)  # TODO: find a more fine-grained check for recursive parsers
                             and does_preempt(fixed_start, self.parsers[k])):
                         errors.append(self.static_error(
                             "Parser-specification Error in " + self.location_info()
@@ -5112,7 +5116,7 @@ class Retrieve(ContextSensitive):
             # if self.parser.pname:
             #     return self.parser.name
             # # self.parser is a Forward-Parser, so pick the name of its encapsulated parser
-            # return cast(Forward, self.parser).parser.name
+            # return cast(ForwardBase, self.parser).parser.name
         return self.node_name
 
     @cython.locals(location_=cython.int)
@@ -5259,10 +5263,86 @@ class Synonym(UnaryParser):
         return self.pname or self.parser.repr
 
 
+class ForwardBase(UnaryParser):
+    """Base class for forward parsers that implement (differen kinds of)
+    left recursion handling. This base clase does not implement any kind of
+    left recursion handling but simply forwards the parser call. In case of
+    left-recursive grammars this leads to an infinite loop the will be
+    stopped by the Python interpreter with a RecursionError.
+
+    :ivar cycle_reached: Flag for the private function __cycle_guard() that
+        allows to call a functions that runs recursively through the sub-parsers
+        without getting caught in an infinite loop.
+    """
+
+    def __init__(self):
+        super().__init__(get_parser_placeholder())
+        self.cycle_reached: bool = False
+        self.sub_parsers = frozenset()
+
+    def __deepcopy__(self, memo):
+        duplicate = self.__class__()
+        memo[id(self)] = duplicate  # prevent infinite recursion during next deepcopy() call
+        copy_parser_base_attrs(self, duplicate, memo)
+        parser = copy.deepcopy(self.parser, memo)
+        duplicate.parser = parser
+        duplicate.sub_parsers = frozenset({parser})
+        return duplicate
+
+    def __call__(self, location: cython.int) -> ParsingResult:
+        # This will lead to an infinite loop in case of left-recursion
+        # and raise a RecursionError
+        return self.parser(location)
+
+    def set_proxy(self, proxy: Optional[ParseFunc]):
+        """"set_proxy" has no effects on Forward-objects!"""
+        return
+
+    def __cycle_guard(self, func, alt_return):
+        """
+        Returns the value of "func()" or "alt_return" if a cycle has
+        been reached (which can happen if "func" calls methods of
+        child parsers).
+        """
+        if self.cycle_reached:
+            return alt_return
+        else:
+            self.cycle_reached = True
+            ret = func()
+            self.cycle_reached = False
+            return ret
+
+    def effective_pname(self) -> str:
+        """Returns the parser's pname. In the case of a Forward-parser,
+        returns parser.parser.pname."""
+        return self.parser.pname or self.pname
+
+    def __repr__(self):
+        return self.__cycle_guard(lambda: repr(self.parser), '...')
+
+    def __str__(self):
+        return self.__cycle_guard(lambda: str(self.parser), '...')
+
+    @property
+    def repr(self) -> str:
+        """Returns the parser's name if it has a name or "repr(self)" if not."""
+        return self.parser.pname if self.parser.pname else self.__repr__()
+
+    def set(self, parser: Parser):
+        """Sets the parser to which the calls to this Forward-object
+        shall be delegated.
+        """
+        assert not isinstance(parser, ForwardBase)
+        self.parser = parser
+        self.sub_parsers = frozenset({parser})
+        if self.pname and not parser.pname:  parser.name(self.pname, self.disposable)
+        if not parser.drop_content:  parser.disposable = self.disposable
+        self.drop_content = parser.drop_content
+        self.pname = ""
 
 
-FWTracerMemo: TypeAlias = Callable[['Forward', int, ParsingResult], None]
-FWTracerInit: TypeAlias = Callable[['Forward', int], Any]
+FWTracerMemo: TypeAlias = Callable[['ForwardBase', int, ParsingResult], None]
+FWTracerInit: TypeAlias = Callable[['ForwardBase', int], Any]
 FWTracerLoop: TypeAlias = Callable[[Any], None]
 FWTracerDone: TypeAlias = Callable[[Any, ParsingResult], None]
 
@@ -5274,7 +5354,7 @@ def nil_tracer(*args, **kwargs) -> None:
 SEED = (FrozenNode(':SEED', ''), 0)
 
 
-class Forward(UnaryParser):
+class Forward(ForwardBase):
     r"""
     Forward allows declaring a parser before it is actually defined.
     Forward declarations are needed for parsers that are recursively
@@ -5296,7 +5376,14 @@ class Forward(UnaryParser):
 
     :ivar seed:  Mapping of location to a List of ParsingResults that were
         returned in the course of the iterative expansion (grow-phase) of the
-        left-recursive cycle. The first element is alwas the SEED-sentinel. This is list
+        left-recursive cycle. The first element is always the SEED-sentinel.
+    :ivar versions: Mapping of location to a List of ParsingResults. It will be
+        filled with the list at self.seed[location] in case backtracking
+        through earlier (shorter) matches than the longest match might be needed
+        due to an "overspill" (parsing to far because of greedily picking the
+        longest match).
+    :ivar farthest: Keeps track of the farthest location reached by this parser.
+        This is needed for checking whether an overspill has occured.
 
     The Forward parser class contains an algorithm to handle left-recursive
     grammars. See it's __call__()-method. The algorithm handles direct and indirect
@@ -5304,10 +5391,8 @@ class Forward(UnaryParser):
     """
 
     def __init__(self):
-        super().__init__(get_parser_placeholder())
+        super().__init__()
         # self.parser = get_parser_placeholder  # type: Parser
-        self.cycle_reached: bool = False
-        self.sub_parsers = frozenset()
         self.set_fwtracer(nil_tracer, nil_tracer, nil_tracer, nil_tracer)
 
     def reset(self):
@@ -5319,15 +5404,6 @@ class Forward(UnaryParser):
 
         self.iteration = dict()
         self.memo = dict()
-
-    def __deepcopy__(self, memo):
-        duplicate = self.__class__()
-        memo[id(self)] = duplicate  # prevent infinite recursion during next deepcopy() call
-        copy_parser_base_attrs(self, duplicate, memo)
-        parser = copy.deepcopy(self.parser, memo)
-        duplicate.parser = parser
-        duplicate.sub_parsers = frozenset({parser})
-        return duplicate
 
     @cython.locals(ldepth=cython.int, rb_stack_size=cython.int)
     def __call__(self, location: cython.int) -> ParsingResult:
@@ -5368,7 +5444,7 @@ class Forward(UnaryParser):
                 return last[0]  # versions[0][0]
         elif location in visited:
             # Sorry, no history recording in case of memoized results!
-            if history_tracking:  self.tracer_memo(self, location, visited[location])  # TODO: Remove tracer_memo entirely when finished!
+            # if history_tracking:  self.tracer_memo(self, location, visited[location])  # TODO: Remove tracer_memo entirely when finished!
             return visited[location]
 
         # check if a seed has been planted for the seed and grow algorithm
@@ -5477,57 +5553,15 @@ class Forward(UnaryParser):
         self.tracer_loop: FWTracerLoop = loop
         self.tracer_done: FWTracerDone = done
 
-    def __cycle_guard(self, func, alt_return):
-        """
-        Returns the value of "func()" or "alt_return" if a cycle has
-        been reached (which can happen if "func" calls methods of
-        child parsers).
-        """
-        if self.cycle_reached:
-            return alt_return
-        else:
-            self.cycle_reached = True
-            ret = func()
-            self.cycle_reached = False
-            return ret
-
-    def effective_pname(self) -> str:
-        """Returns the parser's pname. In the case of a Forward-parser,
-        returns parser.parser.pname."""
-        return self.parser.pname or self.pname
-
-    def __repr__(self):
-        return self.__cycle_guard(lambda: repr(self.parser), '...')
-
-    def __str__(self):
-        return self.__cycle_guard(lambda: str(self.parser), '...')
-
-    @property
-    def repr(self) -> str:
-        """Returns the parser's name if it has a name or "repr(self)" if not."""
-        return self.parser.pname if self.parser.pname else self.__repr__()
-
-    def set(self, parser: Parser):
-        """Sets the parser to which the calls to this Forward-object
-        shall be delegated.
-        """
-        assert not isinstance(parser, Forward)
-        self.parser = parser
-        self.sub_parsers = frozenset({parser})
-        if self.pname and not parser.pname:  parser.name(self.pname, self.disposable)
-        if not parser.drop_content:  parser.disposable = self.disposable
-        self.drop_content = parser.drop_content
-        self.pname = ""
-
 
 ###############################################################################
 #
-# Old, deprecated versions of the left-recursion agorithm
+# Older, simpler and more limited versions of the left-recursion agorithm
 #
 ###############################################################################
 
 
-class SimpleForwardRecursive(Forward):
+class SimpleForwardRecursive(ForwardBase):
     r"""This is the "old" (DHParser version < 2.0) version of the Forward
     parser class. The left-recursion algorithm handles direct and indirect
     left-recursion but fails on interwoven and monotonic left-recursion!
@@ -5538,25 +5572,10 @@ class SimpleForwardRecursive(Forward):
         calls becomes irrelevant once a result has been memoized.
     """
 
-    def __init__(self):
-        super().__init__()
-        # self.parser = get_parser_placeholder  # type: Parser
-        self.cycle_reached: bool = False
-        self.sub_parsers = frozenset()
-
     def reset(self):
-        super(UnaryParser, self).reset()
+        super().reset()
         self.recursion_counter: Dict[int, int] = dict()
         assert not self.pname, f"Forward-Parsers mustn't have a name! ({self.pname})"
-
-    def __deepcopy__(self, memo):
-        duplicate = self.__class__()
-        memo[id(self)] = duplicate  # prevent infinite recursion during next deepcopy() call
-        copy_parser_base_attrs(self, duplicate, memo)
-        parser = copy.deepcopy(self.parser, memo)
-        duplicate.parser = parser
-        duplicate.sub_parsers = frozenset({parser})
-        return duplicate
 
     @cython.locals(ldepth=cython.int, rb_stack_size=cython.int)
     def __call__(self, location: cython.int) -> ParsingResult:
@@ -5667,52 +5686,8 @@ class SimpleForwardRecursive(Forward):
             visited[location] = result
         return result
 
-    def set_proxy(self, proxy: Optional[ParseFunc]):
-        """set_proxy has no effects on Forward-objects!"""
-        return
 
-    def __cycle_guard(self, func, alt_return):
-        """
-        Returns the value of func() or alt_return if a cycle has
-        been reached (which can happen if func calls methods of
-        child parsers).
-        """
-        if self.cycle_reached:
-            return alt_return
-        else:
-            self.cycle_reached = True
-            ret = func()
-            self.cycle_reached = False
-            return ret
-
-    def effective_pname(self) -> str:
-        return self.parser.pname
-
-    def __repr__(self):
-        return self.__cycle_guard(lambda: repr(self.parser), '...')
-
-    def __str__(self):
-        return self.__cycle_guard(lambda: str(self.parser), '...')
-
-    @property
-    def repr(self) -> str:
-        """Returns the parser's name if it has a name or repr(self) if not."""
-        return self.parser.pname if self.parser.pname else self.__repr__()
-
-    def set(self, parser: Parser):
-        """Sets the parser to which the calls to this Forward-object
-        shall be delegated.
-        """
-        assert not isinstance(parser, Forward)
-        self.parser = parser
-        self.sub_parsers = frozenset({parser})
-        if self.pname and not parser.pname:  parser.name(self.pname, self.disposable)
-        if not parser.drop_content:  parser.disposable = self.disposable
-        self.drop_content = parser.drop_content
-        self.pname = ""
-
-
-class SimpleForwardIterative(Forward):
+class SimpleForwardIterative(ForwardBase):
     r"""This is a more straight-forward quasi-iterative version of the "old"
     Forward parser class. The left-recursion algorithm handles direct and
     indirect left-recursion but fails on interwoven and monotonic left-recursion!
@@ -5724,12 +5699,6 @@ class SimpleForwardIterative(Forward):
             is needed to implement left recursion. The number of
             calls becomes irrelevant once a result has been memoized.
     """
-
-    def __init__(self):
-        super().__init__()
-        # self.parser = get_parser_placeholder  # type: Parser
-        self.cycle_reached: bool = False
-        self.sub_parsers = frozenset()
 
     def reset(self):
         super(UnaryParser, self).reset()
@@ -5822,48 +5791,3 @@ class SimpleForwardIterative(Forward):
         if not grammar.suspend_memoization__:
             visited[location] = result
         return result
-
-    def set_proxy(self, proxy: Optional[ParseFunc]):
-        """"set_proxy" has no effects on Forward-objects!"""
-        return
-
-    def __cycle_guard(self, func, alt_return):
-        """
-        Returns the value of "func()" or "alt_return" if a cycle has
-        been reached (which can happen if "func" calls methods of
-        child parsers).
-        """
-        if self.cycle_reached:
-            return alt_return
-        else:
-            self.cycle_reached = True
-            ret = func()
-            self.cycle_reached = False
-            return ret
-
-    def effective_pname(self) -> str:
-        return self.parser.pname
-
-    def __repr__(self):
-        return self.__cycle_guard(lambda: repr(self.parser), '...')
-
-    def __str__(self):
-        return self.__cycle_guard(lambda: str(self.parser), '...')
-
-    @property
-    def repr(self) -> str:
-        """Returns the parser's name if it has a name or "repr(self)" if not."""
-        return self.parser.pname if self.parser.pname else self.__repr__()
-
-    def set(self, parser: Parser):
-        """Sets the parser to which the calls to this Forward-object
-        shall be delegated.
-        """
-        assert not isinstance(parser, Forward)
-        self.parser = parser
-        self.sub_parsers = frozenset({parser})
-        if self.pname and not parser.pname:  parser.name(self.pname, self.disposable)
-        if not parser.drop_content:  parser.disposable = self.disposable
-        self.drop_content = parser.drop_content
-        self.pname = ""
-

@@ -834,16 +834,19 @@ CONFIG_PRESET['optimizations'] = frozenset()
 # "SimpleForwardRecrusive" or vice versa.
 # Possible Values are:
 # "none" - No left-recursion-handling. May lead to infinite loops while parsing!
-#          (Presntely, not supported. Use 'simple' instead.)
-# "simple" - Left-recursion check on Forward references. Covers direct and
+#     (Presentely, not supported, anyway. Use 'simple' instead.)
+# "classic" - Left-recursion check on Forward references. Covers direct and
 #     indirect left recursion but yields wrong parsing results with intervowen
-#     left recursion! (This used to be the only left-recursion algorithm for DHParser v
-#     ersions < 2.0)
+#     left recursion! (This used to be the only left-recursion algorithm for DHParser
+#     versions < 2.0)
+# "simple" - An algorithm similar to "classic" but simpler and more in the iterative
+#     style of typical seed and grow algorithms in the literature.
 # "forward" - DEPRECATED: Same as "simple",
 # "full" - Full left-recursion-handling.
 # Default value: "Full"
-ALLOWED_PRESET_VALUES['left_recursion'] = frozenset({'none', 'forward', 'simple', 'full',
-                                                     'None', 'Forward', 'Simple', 'Full'})
+ALLOWED_PRESET_VALUES['left_recursion'] = frozenset(
+    {'none', 'classic', 'forward', 'simple', 'full',
+     'None', 'classic', 'Forward', 'Simple', 'Full'})
 CONFIG_PRESET['left_recursion'] = "full"
 
 

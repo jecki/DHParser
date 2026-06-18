@@ -45,7 +45,8 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, DropFro
     Option, NegativeLookbehind, OneOrMore, RegExp, SmartRE, Retrieve, Series, Capture, TreeReduction, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, \
     LateBindingUnary, mixin_comment, last_value, matching_bracket, optional_last_value, \
-    PARSER_PLACEHOLDER, UninitializedError,  RX_NEVER_MATCH, SimpleForwardRecursive
+    PARSER_PLACEHOLDER, UninitializedError,  RX_NEVER_MATCH, SimpleForwardRecursive, \
+    SimpleForwardIterative
 from DHParser.pipeline import end_points, full_pipeline, create_parser_junction, \
     create_preprocess_junction, create_junction, PseudoJunction, PipelineResult
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
@@ -194,12 +195,12 @@ class reGrammar(Grammar):
         parser = re()
         syntax_tree = parser(source_code)
     """
-    _entity = Forward()
-    _item = Forward()
-    sequence = Forward()
-    source_hash__ = "c65a07822392e2da59020aa5aee4639d"
+    _entity = SimpleForwardRecursive()
+    _item = SimpleForwardRecursive()
+    sequence = SimpleForwardRecursive()
+    source_hash__ = "45c0a5971fd3421c60dc074c4ea2c894"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:_special$|BS$|_reEsc$|_extension$|_char$|_group$|_grpChar$|_escapedCh$|_entity$|_grpItem$|_chars$|_grpChars$|_item$|_illegal$|_ch$|_csEsc$|_nibble$|EOF$|_number$|_octal$|_anyChar$|_escape$)')
+    disposable__ = re.compile('(?:_anyChar$|EOF$|_escapedCh$|_escape$|_grpChars$|_special$|_grpChar$|_csEsc$|_octal$|_grpItem$|_reEsc$|_illegal$|_char$|_ch$|_extension$|_group$|_nibble$|_chars$|_number$|_item$|_entity$|BS$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
