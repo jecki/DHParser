@@ -5768,10 +5768,12 @@ class SimpleForwardIterative(ForwardBase):
             if history_tracking:
                 last_history_state.extend(grammar.history__[history_pointer:len(grammar.history__)])
                 grammar.history__ = grammar.history__[:history_pointer]
-            visited[location] = result
             next_result = self.parser(location)
 
-        if history_tracking and result[0] is not None:
+        if result[0] is None:
+            if next_result[0] is not None:
+                result = next_result
+        elif history_tracking:
             grammar.history__ = grammar.history__[:history_pointer] + last_history_state
 
         self.recursion_counter[location] = False
@@ -5788,6 +5790,8 @@ class SimpleForwardIterative(ForwardBase):
         # 2. isinstance check for referenced parsers that are not in fact recursive
         if grammar.suspend_memoization__ == id(self) or isinstance(grammar.suspend_memoization__, bool):
             grammar.suspend_memoization__ = save_suspend_memoization  #  = is_context_sensitive(self.parser)
-        if not grammar.suspend_memoization__:
+        if location in visited and result[1] < visited[location][1]:
+            result = visited[location]
+        elif not grammar.suspend_memoization__:
             visited[location] = result
         return result
