@@ -114,10 +114,10 @@ class Arithmetic5Grammar(Grammar):
         parser = Arithmetic5()
         syntax_tree = parser(source_code)
     """
-    expression = SimpleForwardRecursive()
-    term = SimpleForwardRecursive()
-    source_hash__ = "388c36bd015777a1e865f6eb2de142f5"
-    disposable__ = re.compile('(?:factor$|expression$|term$)')
+    expression = SimpleForwardIterative()
+    term = SimpleForwardIterative()
+    source_hash__ = "3a0df5ce22546fdb85ee6e060cdf9fd1"
+    disposable__ = re.compile('(?:expression$|factor$|term$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''

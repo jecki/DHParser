@@ -344,6 +344,15 @@ class TestInfiLoopsAndRecursion:
             set_config_value('left_recursion', save_config_value)
             raise e
 
+    def test_parser_that_treads_the_water(self):
+        # parser treads the water ("tritt auf der Stelle")
+        grammar = grammar_provider("""
+            mantle = '"' core '"'
+            core = { '(' core ')' }
+            """)()
+        result = grammar('""')
+        assert not result.errors
+
     def test_break_inifnite_loop_ZeroOrMore(self):
         forever = ZeroOrMore(RegExp('(?=.)|$'))
         result = Grammar(forever)('')  # infinite loops will automatically be broken

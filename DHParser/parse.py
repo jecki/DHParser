@@ -5504,6 +5504,9 @@ class Forward(ForwardBase):
                             grammar.ff_pos__ = save_ff_pos
                             continue  # TODO:  Could this lead to an infinite loop?
                     else:
+                        # make sure that a parser that treats the water
+                        # ("der auf der Stelle tritt") matches nevertheless
+                        # see test_parse.TestInfiniLoopRecursion.test_parser_that_treads_the_water()
                         result = next_result
 
             versions = self.seed.get(location, None)
@@ -5773,6 +5776,7 @@ class SimpleForwardIterative(ForwardBase):
 
         if result[0] is None:
             if next_result[0] is not None:
+                # make sure that a parser that treats the water ("der auf der Stelle tritt") matches nevertheless
                 result = next_result
         elif history_tracking:
             grammar.history__ = grammar.history__[:history_pointer] + last_history_state

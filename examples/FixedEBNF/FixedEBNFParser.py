@@ -84,11 +84,11 @@ class FixedEBNFGrammar(Grammar):
         parser = FixedEBNF()
         syntax_tree = parser(source_code)
     """
-    countable = SimpleForwardRecursive()
-    element = SimpleForwardRecursive()
-    expression = SimpleForwardRecursive()
-    source_hash__ = "ae491081f3193cc6fc1ec8e129cf55b4"
-    disposable__ = re.compile('(?:countable$|MOD_SYM$|FOLLOW_UP$|pure_elem$|ANY_SUFFIX$|is_mdef$|component$|no_range$|MOD_SEP$|EOF$)')
+    countable = SimpleForwardIterative()
+    element = SimpleForwardIterative()
+    expression = SimpleForwardIterative()
+    source_hash__ = "2b151a779e74436a84ce78498ed0c2b5"
+    disposable__ = re.compile('(?:ANY_SUFFIX$|MOD_SEP$|pure_elem$|no_range$|FOLLOW_UP$|MOD_SYM$|is_mdef$|EOF$|countable$|component$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}
