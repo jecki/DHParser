@@ -268,7 +268,7 @@ class SourceMap(NamedTuple):
     :ivar positions: A list of locations in the processed file. Each location is to be
         understood as a marker from which on a different the position in the processed
         file must be shifted by a different offset to gain the position in the original
-        file. The first element in the list of positions should always be 0 and
+        file. The first element in the list of positions should always be 0 and it must
         contain as its last element the length of the processed source plus 1 (or higher).
         (+1 allows the location to exceed the end of the text by 1 which makes writing
          algorithms easier that if the location was not allowed to point beyond the end
@@ -463,6 +463,7 @@ def gen_find_include_func(rx: Union[str, Any],
 class ReadIncludeClass:
     def __call__(self, include_name: str) -> str:
         return self.read_include(include_name)
+
     def read_include(self, include_name: str) -> str:
         with open(include_name, 'r', encoding='utf-8') as f:
             return f.read()

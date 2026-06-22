@@ -5380,10 +5380,10 @@ class Forward(ForwardBase):
     :ivar versions: Mapping of location to a List of ParsingResults. It will be
         filled with the list at self.seed[location] in case backtracking
         through earlier (shorter) matches than the longest match might be needed
-        due to an "overspill" (parsing to far because of greedily picking the
+        due to an "overspill" (parsing too far because of greedily picking the
         longest match).
     :ivar farthest: Keeps track of the farthest location reached by this parser.
-        This is needed for checking whether an overspill has occured.
+        This is needed for checking if an overspill has occured.
 
     The Forward parser class contains an algorithm to handle left-recursive
     grammars. See it's __call__()-method. The algorithm handles direct and indirect

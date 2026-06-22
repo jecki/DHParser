@@ -78,7 +78,7 @@ class TestSourceMapping:
         assert offsets[-1] >= offsets[-2]
         assert self.tokenized.find('AND') == self.code.find('AND') + len('CONJUNCTION') + 2
 
-    def test_bondary_cases(self):
+    def test_boundary_cases(self):
         # position at the end of the file
         source = " "
         srcmap = tokenized_to_original_mapping(source, source)
