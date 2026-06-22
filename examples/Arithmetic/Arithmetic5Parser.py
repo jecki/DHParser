@@ -117,7 +117,7 @@ class Arithmetic5Grammar(Grammar):
     expression = SimpleForwardIterative()
     term = SimpleForwardIterative()
     source_hash__ = "3a0df5ce22546fdb85ee6e060cdf9fd1"
-    disposable__ = re.compile('(?:expression$|factor$|term$)')
+    disposable__ = re.compile('(?:factor$|expression$|term$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''

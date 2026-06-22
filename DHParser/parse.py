@@ -5795,8 +5795,8 @@ class SimpleForwardIterative(ForwardBase):
         # 2. isinstance check for referenced parsers that are not in fact recursive
         if grammar.suspend_memoization__ == id(self) or isinstance(grammar.suspend_memoization__, bool):
             grammar.suspend_memoization__ = save_suspend_memoization  #  = is_context_sensitive(self.parser)
-        if location in visited and result[1] < visited[location][1]:
-            result = visited[location]
-        elif not grammar.suspend_memoization__:
+        # if location in visited and result[1] < visited[location][1]:
+        #     result = visited[location]
+        if not grammar.suspend_memoization__:
             visited[location] = result
         return result

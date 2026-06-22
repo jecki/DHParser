@@ -200,7 +200,7 @@ class reGrammar(Grammar):
     sequence = SimpleForwardIterative()
     source_hash__ = "8d7bc43bcf3d0299a41f74fdb31820cc"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:_special$|_entity$|_nibble$|_grpChars$|_grpItem$|_csEsc$|_grpChar$|_reEsc$|_escapedCh$|_extension$|_char$|_illegal$|_group$|_chars$|BS$|_ch$|_number$|_item$|_escape$|_octal$|EOF$|_anyChar$)')
+    disposable__ = re.compile('(?:_ch$|_chars$|EOF$|_extension$|_escapedCh$|_grpChars$|_number$|_entity$|_special$|_group$|_item$|_anyChar$|_char$|_csEsc$|_illegal$|_nibble$|_octal$|BS$|_grpChar$|_escape$|_grpItem$|_reEsc$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''
