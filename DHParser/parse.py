@@ -5768,6 +5768,7 @@ class SimpleForwardIterative(ForwardBase):
             if history_tracking:
                 last_history_state.extend(grammar.history__[history_pointer:len(grammar.history__)])
                 grammar.history__ = grammar.history__[:history_pointer]
+            visited[location] = result
             next_result = self.parser(location)
 
         if result[0] is None:
