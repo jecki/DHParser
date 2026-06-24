@@ -1,7 +1,7 @@
 """test_squirrel_paper.py  - The examples from Luke Hutchinson's Squirrel-Parser paper,
 p. 21, https://github.com/lukehutch/squirrelparser/blob/main/paper/squirrel_parser.pdf
 
-Uncomment the return-statement at the beginning of the show() function to see the parse trees!
+Comment the return-statement at the beginning of the show()-function out to see the parse trees!
 """
 
 
@@ -17,7 +17,7 @@ scriptpath = os.path.abspath(scriptpath)
 
 
 def show(result):
-    # return  # uncomment to see parse trees!
+    return  # comment out to see parse trees!
     print()
     print(result.as_tree(fancy=True))
     # print(flatten_sxpr(result.as_sxpr()))
