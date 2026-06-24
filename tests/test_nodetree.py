@@ -967,6 +967,33 @@ class TestSerialization:
                                   '    "drei"\n'
                                   '  gamma `class "blue" "vier"')
 
+    def test_hilighted_tree(self):
+        tree = parse_sxpr('(a (b (c (e "1") (f "2")) (d "3\n4") (g (h "4") (i "5"))))')
+        assert tree.as_tree() == (
+            'a\n'                      
+            '  b\n'
+            '    c\n'
+            '      e "1"\n'
+            '      f "2"\n'
+            '    d\n'
+            '      "3"\n'
+            '      "4"\n'
+            '    g\n'
+            '      h "4"\n'
+            '      i "5"')
+        assert tree.as_tree(fancy=True) == (
+            'a\n'
+            '└─b\n'
+            '  ├─c\n'
+            '  │ ├─e "1"\n'
+            '  │ └─f "2"\n'
+            '  ├─d\n'
+            '  │   "3"\n'
+            '  │   "4"\n'
+            '  └─g\n'
+            '    ├─h "4"\n'
+            '    └─i "5"')
+
     def test_xml_inlining(self):
         tree = parse_sxpr('(A (B "C") (D "E"))')
 

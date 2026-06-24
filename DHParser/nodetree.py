@@ -2310,8 +2310,33 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
                           '<body>', xhtml, '</body>', '</html>'])
         return html
 
-    def as_tree(self) -> str:
-        """Serialize as a simple indented text-tree."""
+    def as_tree(self, *, fancy = False) -> str:
+        """Serialize as a simple indented text-tree. If "fancy" is True,
+        then connecting lines (box-characters) are used to indicate the tree
+        structure."""
+
+        def hilight_indentation(lines):
+            indent = [len(l) - len(l.lstrip()) for l in lines]
+            last_line = len(lines) - 1
+            for i in range(len(lines) - 1, -1, -1):
+                if indent[i] > 0:
+                    if lines[i][indent[i]] not in ('"', "'"):
+                        ch_below = lines[i + 1][indent[i] - 2] if i < last_line else ' '
+                        if ch_below not in ('└', '├', '│'):
+                            sym = '└─'
+                        else:
+                            sym = '├─'
+                    else:
+                        sym = '  '
+                    for k in range(indent[i] - 4, -2, -2):
+                        x = list(lines[i + 1]) if i < last_line else []
+                        ch_below =lines[i + 1][k] if i < last_line else ' '
+                        if ch_below not in ('└', '├', '│'):
+                            sym = '  ' + sym
+                        else:
+                            sym = '│ ' + sym
+                    lines[i] = sym + lines[i][indent[i]:]
+
         sxpr = self.as_sxpr(flatten_threshold=0, compact=True)
         lines = sxpr.split('\n')
         for i, line in enumerate(lines):
@@ -2324,6 +2349,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             line = line.replace('`(', '`')
             line = line.replace('") "', '" "')
             lines[i] = line
+        if fancy:  hilight_indentation(lines)
         return '\n'.join(lines)
 
     # JSON serialization ###
