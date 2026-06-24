@@ -352,6 +352,18 @@ class TestInfiLoopsAndRecursion:
             """)()
         result = grammar('""')
         assert not result.errors
+        result = grammar('"()"')
+        assert not result.errors
+        result = grammar('"(())"')
+        assert not result.errors
+
+    def test_simple_treadmill(self):
+        grammar = grammar_provider("loop = { '(' loop ')' }\n")()
+        result = grammar('')
+        assert not result.errors
+        result = grammar('()')
+        assert not result.errors
+
 
     def test_break_inifnite_loop_ZeroOrMore(self):
         forever = ZeroOrMore(RegExp('(?=.)|$'))
