@@ -1158,8 +1158,8 @@ def copy_parser_base_attrs(src: Parser, duplicate: Parser, memo: Dict[int, Any])
 
 
 def Drop(parser: Parser) -> Parser:
-    """Returns the parser with the "parser.drop_content"-property set to "True".
-    Parser must be anonymous and disposable. Use "`DropFrom" instead
+    """Returns the parser with the "parser.drop_content" property set to "True".
+    Parser must be anonymous and disposable. Use "DropFrom" instead
     when this requirement ist not met."""
     assert parser.disposable, "Parser must be anonymous to be allowed to drop its content."
     if isinstance(parser, ForwardBase):
@@ -1439,28 +1439,28 @@ class Grammar:
     field "parser.pname" contains the variable name after instantiation
     of the Grammar class. The parser will nevertheless remain anonymous
     with respect to the tag names of the nodes it generates, if its name
-    is included in the "disposable__"-set or, if "disposable__"
+    is included in the "disposable__" set or, if "disposable__"
     has been defined by a regular expression, matched by that regular expression.
     If one and the same parser is assigned to several class variables
     such as, for example, the parser "expression" in the example above,
     which is also assigned to "root__", the first name sticks.
 
     Grammar objects are callable. Calling a grammar object with a UTF-8
-    encoded document, initiates the parsing of the document with the
+    encoded document initiates the parsing of the document with the
     root parser. The return value is the concrete syntax tree. Grammar
     objects can be reused (i.e. called again) after parsing. Thus, it
     is not necessary to instantiate more than one Grammar object per
     thread.
 
     Grammar classes contain a few special class fields for implicit
-    whitespace and comments that should be overwritten, if the defaults
+    whitespace and comments that should be overwritten if the defaults
     (no comments, horizontal right aligned whitespace) don't fit:
 
     Class Attributes:
 
     :cvar root\__:  The root parser of the grammar. Theoretically, all parsers of the
                  grammar should be reachable by the root parser. However, for testing
-                 of yet incomplete grammars class Grammar does not assume that this
+                 of yet incomplete grammars, class Grammar does not assume that this
                  is the case.
 
     :cvar resume_rules\__: A mapping of parser names to a list of regular expressions
@@ -1471,10 +1471,10 @@ class Grammar:
                 that act as rules to find the reentry point if a ParserError was
                 thrown during the execution of the parser with the respective name.
 
-    :cvar error_messages\__: A mapping of parser names to a Tuple of regalar expressions
+    :cvar error_messages\__: A mapping of parser names to a Tuple of regular expressions
                 and error messages. If a mandatory violation error occurs on a
                 specific symbol (i.e. parser name) and any of the regular expressions
-                matches the error message of the first matching expression is used
+                matches, the error message of the first matching expression is used
                 instead of the generic mandatory violation error messages. This
                 allows answering typical kinds of errors (say putting a colon ","
                 where a semicolon ";" is expected) with more informative error
@@ -5082,7 +5082,7 @@ class Retrieve(ContextSensitive):
     :ivar parser: The name of the parser that has stored the value
         to be retrieved, in other words: "the observed parser".
         (class Retrieve reuses the instance variable "parser" of its
-         superclass Unary with a slightly different semantic)
+        superclass Unary with a slightly different semantics.)
     :ivar match: a procedure through which the processing of the
         retrieved symbols is channeled. In the simple most case, it merely
         returns the last string stored by the observed parser. This can

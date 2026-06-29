@@ -379,7 +379,7 @@ or a regular expression for identifying these symbols by their name to the
 @hide-directive, Here, we have leveraged our convention
 to prefix unimportant symbols with an underscore "_" by specifying the
 symbols that shall by anonymized with a regular expression.
-(See :ref:`below < _alternative_simplification_syntax>` for yet another,
+(See :ref:`below < alternative_simplification_syntax>` for yet another,
 arguably, more convenient syntax for specifying symbols that can
 safely be dropped or hidden.)
 

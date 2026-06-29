@@ -385,7 +385,7 @@ results for the same reflow-column and the same indentation (which is two
 blanks by default).
 
 DHParser's reflow-algorithm can be triggered by assigning a column-number to the
-`reflow_col` of the :py:method:`~nodetree.Node.as_xml`-method::
+`reflow_col` of the :py:meth:`~nodetree.Node.as_xml`-method::
 
     >>> text = '<p>King <name>Charles</name> was crowned by the Archbishop of Cantabury</p>'
     >>> tree = parse_xml(text)

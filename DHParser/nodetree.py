@@ -2111,9 +2111,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         """Collects the names of all nodes for which it is True that
         all nodes with that name are empty. Example::
 
-        >>> tree = parse_sxpr('(r (e "") (f "") (g "X") (e "") (f "X") (g ""))')
-        >>> print(tree.collect_empty_tags())
-        {'e'}
+            >>> tree = parse_sxpr('(r (e "") (f "") (g "X") (e "") (f "X") (g ""))')
+            >>> print(tree.collect_empty_tags())
+            {'e'}
 
         :return: The set of names of always empty-nodes
         """
