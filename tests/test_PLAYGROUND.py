@@ -1,3 +1,8 @@
+import sys, os
+
+scriptpath = os.path.dirname(__file__) or '.'
+sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
+scriptpath = os.path.abspath(scriptpath)
 
 from DHParser import grammar_provider, is_logging, log_ST, is_error, log_parsing_history, get_config_value, set_config_value
 
