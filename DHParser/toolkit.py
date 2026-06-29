@@ -38,7 +38,8 @@ import sys
 if sys.version_info >= (3, 12, 0):
     from collections.abc import Iterable, Sequence, Set, MutableSet, Callable, Container, Hashable
     from typing import Any, Type, Union, Optional, TypeAlias, Protocol, FrozenSet, \
-        Dict, List, Tuple, ByteString
+        Dict, List, Tuple
+    ByteString: TypeAlias = Union[bytes, bytearray, memoryview]
     static = staticmethod
 else:
     from typing import Any, Iterable, Sequence, Set, Union, Dict, List, Tuple, \
