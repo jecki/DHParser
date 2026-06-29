@@ -83,7 +83,7 @@ class readme_exampleGrammar(Grammar):
         parser = readme_example()
         syntax_tree = parser(source_code)
     """
-    source_hash__ = "d273a8636d92fc0774ee2581a905fcc4"
+    source_hash__ = "739c1fe812ec5fde631127afaa61102e"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

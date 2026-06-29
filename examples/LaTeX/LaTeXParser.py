@@ -98,13 +98,13 @@ class LaTeXGrammar(Grammar):
         parser = LaTeX()
         syntax_tree = parser(source_code)
     """
-    _block_environment = SimpleForwardIterative()
-    _text_element = SimpleForwardIterative()
-    block = SimpleForwardIterative()
-    paragraph = SimpleForwardIterative()
-    param_block = SimpleForwardIterative()
-    tabular_config = SimpleForwardIterative()
-    source_hash__ = "a04222adb78df1cfba4938b6bccd77dd"
+    _block_environment = Forward()
+    _text_element = Forward()
+    block = Forward()
+    paragraph = Forward()
+    param_block = Forward()
+    tabular_config = Forward()
+    source_hash__ = "857793a89e9a502767b0ed77fa47fd7e"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
     disposable__ = re.compile('_\\w+')
     static_analysis_pending__ = []  # type: List[bool]

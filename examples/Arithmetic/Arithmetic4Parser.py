@@ -114,9 +114,9 @@ class Arithmetic4Grammar(Grammar):
         parser = Arithmetic4()
         syntax_tree = parser(source_code)
     """
-    expression = SimpleForwardIterative()
-    term = SimpleForwardIterative()
-    source_hash__ = "11ede0fefbeb95f74fedbf872623d08b"
+    expression = Forward()
+    term = Forward()
+    source_hash__ = "002fe00ebef846415eedbd1cf10a3d73"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
