@@ -2,11 +2,11 @@ DHParser
 ========
 
 ![](https://img.shields.io/pypi/v/DHParser) 
-![](https://img.shields.io/pypi/status/DHParser)
+![](https://img.shields.io/pypi/status/DHParser)g
 ![](https://img.shields.io/pypi/l/DHParser)
 ![](https://img.shields.io/pypi/pyversions/DHParser)
 
-DHParser - Rapid prototyping of formal grammars and 
+DHParser - Rapid prototyping and testing of formal grammars and 
 domain specific languages (DSL) in the Digital Humanities.
 See https://dhparser.readthedocs.io/en/latest/
 
@@ -15,22 +15,30 @@ This software is open source software under the Apache 2.0-License (see section 
 Copyright 2016-2025  Eckhart Arnold, Bavarian Academy of Sciences and Humanities
 
 
+Latest News
+-----------
+
+- Finally, full left recursion support via an adapted version of [Luke Hutchinson's squirrel parser](https://github.com/lukehutch/squirrelparser)!
+- support for the conversion between different flavors of the EBNF-syntax.
+- new projects include the skeleton for an App to compile snippets with a GUI.
+
 Purpose
 -------
 
-DHParser is a parser development-framwork that has been developed 
-with three main purposes in mind:
+DHParser is a parser full-stack-framwork for developing grammars, parsers and 
+domain specific languages. In particular, DHParser supports
 
-1. Developing *parsers for domain specific languages* and notations, either existing
-   notations, like, LaTeX, or newly created DSLs, like the
+1. Developing *parsers for domain specific languages*, either existing
+   languages like, LaTeX, or newly created DSLs, like the
    [Medieval-Latin-Dictionary-DSL](https://gitlab.lrz.de/badw-it/mlw-dsl-oeffentlich).
-   Typically, these languages are strict formal languages the grammar of
-   which can be described with context-free grammars. (In cases where
-   this does not hold like TeX, it is often still possible to describe a 
+
+   Typically, these languages are strict formal languages with a context free grammar. 
+   (In cases where this does not hold like TeX, it is often still possible to describe a 
    reasonably large subset of the formal language with a context free grammar.) 
 
 2. Developing *parsers for semi-structured or informally structured
    text-data*.    
+
    This kind of data is typically what you get when retro-digitizing
    textual data like printed bibliographies, or reference works or
    dictionaries. Often such works can be captured with a formal 
@@ -46,7 +54,8 @@ with three main purposes in mind:
    Florian Zacherl has used.)
 
 3. Developing *processing pipelines for tree-structured data*.
-   In typical digital-humanities-applications one wants to produce
+
+   In many digital humanities applications one wants to produce
    different forms of output (say, printed, online-human-readable,
    online-machine-readable) from one and the same source of data.
    Therefore, the parsing stage (if the data source is structured
@@ -60,24 +69,22 @@ Features
 * Memoizing packrat-parser based on Parsing Expression Grammars. This
   means: 
   
-    - Linear parsing time
+    - Linear parsing time guaranteed, not matter how complex the grammar.
 
     - Any EBNF-grammar supported, including left-recursive grammars 
-      (via "seed and grow"-algorithm)
+      (supported via "seed and grow"-algorithm - experimental support 
+      for Luke Hutchinson's squirrel parser LR-algorithm.)
 
-    - Unlimited look ahead and look behind
+    - Unlimited look ahead and look behind.
 
-* [Macros](
-  https://dhparser.readthedocs.io/en/latest/manuals/01_EBNF-grammars.html#macros)
+* [Macros](https://dhparser.readthedocs.io/en/latest/manuals/01_EBNF-grammars.html#macros)
   to avoid code-repetition within grammars
 
-* [Declarative tree-transformations](
-  https://dhparser.readthedocs.io/en/latest/manuals/03_AST-transformation.html#declarative-tree-transformation)
+* [Declarative tree-transformations](https://dhparser.readthedocs.io/en/latest/manuals/03_AST-transformation.html#declarative-tree-transformation)
   for post-processing syntax-trees
 
 * Unit testing framework and post-mortem-debuger for [test-driven grammar
-  development](
-  https://dhparser.readthedocs.io/en/latest/Overview.html#test-driven-grammar-development)
+  development](https://dhparser.readthedocs.io/en/latest/Overview.html#test-driven-grammar-development)
   and rapid-prototyping of grammars
 
 * [Customizable error reporting](
