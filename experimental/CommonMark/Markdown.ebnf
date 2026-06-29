@@ -31,7 +31,7 @@ underscrs = /_+/
 
 EXT_WSPC  = BEGIN_ANY | END_ANY | CONTINUATION |       # extended whitespace
              WSPC | SP | HBR | NL | EOF
-WSPC      = /\s/                                       # whitespace
+WSPC      = / [\t ]*/                                       # whitespace
 SP        = /(?: |\t)+/                                # real space
 BEGIN_ANY = BEGIN_QUOTE | BEGIN_VERBATIM |
              BEGIN_FENCED | BEGIN_BULLET |

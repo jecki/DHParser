@@ -1291,10 +1291,10 @@ def fuse_anonymous_leaves(result: list[Node]) -> list[Node, ...]:
     """Merges all anonymous leave nodes and returns a list of the
     merged nodes, e.g.::
 
-    >>> tree = parse_sxpr('(p (:t "alpha") (:t "beta") (x "zzz") (:y (:t "uuu")) (:t "gamma"))')
-    >>> tree.result = tuple(fuse_anonymous_leaves(list(tree.children)))
-    >>> print(tree.as_sxpr())
-    (p (:t "alphabeta") (x "zzz") (:y (:t "uuu")) (:t "gamma"))
+        >>> tree = parse_sxpr('(p (:t "alpha") (:t "beta") (x "zzz") (:y (:t "uuu")) (:t "gamma"))')
+        >>> tree.result = tuple(fuse_anonymous_leaves(list(tree.children)))
+        >>> print(tree.as_sxpr())
+        (p (:t "alphabeta") (x "zzz") (:y (:t "uuu")) (:t "gamma"))
     """
     i = 0
     L = len(result)

@@ -29,7 +29,8 @@ except ImportError:
     import re
 from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, AnyChar, \
-    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, \
+    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, Option, \
+    NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, SimpleForwardRecursive,\
     ZeroOrMore, Forward, NegativeLookahead, Required, mixin_comment, compile_source, \
     grammar_changed, last_value, matching_bracket, PreprocessorFunc, is_empty, remove_if, \
     Node, TransformerCallable, TransformationDict, transformation_factory, traverse, \
@@ -47,7 +48,7 @@ from DHParser import start_logging, suspend_logging, resume_logging, is_filename
     trace_history, has_descendant, neg, has_ancestor, optional_last_value, insert, \
     positions_of, replace_child_names, add_attributes, delimit_children, merge_connected, \
     has_attr, has_parent, ThreadLocalSingletonFactory, TreeReduction, CombinedParser, \
-    apply_unless, ERROR, SmartRE
+    apply_unless, ERROR, SmartRE, SimpleForwardIterative
 from DHParser.toolkit import INFINITE
 
 from DHParser.pipeline import PseudoJunction, create_parser_junction
@@ -83,9 +84,9 @@ class XMLGrammar(Grammar):
         syntax_tree = parser(source_code)
     """
     element = Forward()
-    source_hash__ = "eff25229b137869f4b15e55c3716dbe3"
+    source_hash__ = "5dbfa10fd0d2641d0b01dc382c1713a2"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:EncName$|VersionNum$|CData$|EOF$|CommentChars$|NameStartChar$|Misc$|Reference$|PubidCharsSingleQuoted$|PubidChars$|NameChars$)')
+    disposable__ = re.compile('(?:EncName$|PubidCharsSingleQuoted$|Reference$|NameStartChar$|VersionNum$|EOF$|Misc$|CData$|PubidChars$|NameChars$|CommentChars$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''

@@ -41,9 +41,9 @@ from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode, Pat
 from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, DropFrom, AnyChar, Parser, \
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, ERR, \
     Option, NegativeLookbehind, OneOrMore, RegExp, SmartRE, Retrieve, Series, Capture, TreeReduction, \
-    ZeroOrMore, Ref, Forward, NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, \
+    ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, \
     LateBindingUnary, mixin_comment, last_value, matching_bracket, optional_last_value, \
-    PARSER_PLACEHOLDER, RX_NEVER_MATCH, UninitializedError
+    PARSER_PLACEHOLDER, RX_NEVER_MATCH, UninitializedError, SimpleForwardRecursive
 from DHParser.pipeline import end_points, full_pipeline, create_parser_junction, \
     create_preprocess_junction, create_junction, Junction, PseudoJunction, PipelineResult
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
@@ -115,7 +115,7 @@ class direct_hiddenGrammar(Grammar):
         syntax_tree = parser(source_code)
     """
     E = Forward()
-    source_hash__ = "eeed0910d28da3f68c6e36a83b81f5f4"
+    source_hash__ = "63d1e81b5c563003b46a7657d1309603"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -125,7 +125,7 @@ class direct_hiddenGrammar(Grammar):
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
     F = Text("f")
-    E.set(Alternative(Series(Option(F), Ref("E"), Text("+n")), Text("n")))
+    E.set(Alternative(Series(Option(F), E, Text("+n")), Text("n")))
     root__ = E
     
 parsing: PseudoJunction = create_parser_junction(direct_hiddenGrammar)

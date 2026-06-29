@@ -108,9 +108,9 @@ class HTMLGrammar(Grammar):
         syntax_tree = parser(source_code)
     """
     element = Forward()
-    source_hash__ = "1005882e509b123b83b3bd3b1294a533"
+    source_hash__ = "cc69cf1e4df34cdc5bcebb493caad537"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:PubidChars$|VersionNum$|prolog$|Reference$|PubidCharsSingleQuoted$|Misc$|EOF$|CData$|CommentChars$|NameStartChar$|NameChars$|tagContent$|EncName$|BOM$)')
+    disposable__ = re.compile('(?:PubidChars$|PubidCharsSingleQuoted$|Reference$|prolog$|VersionNum$|CommentChars$|NameChars$|NameStartChar$|EncName$|CData$|Misc$|BOM$|tagContent$|EOF$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'tagContent': [('', "syntax error in tag-name of opening or empty tag:  {1}")],

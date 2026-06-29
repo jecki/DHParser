@@ -31,10 +31,10 @@ for path in (os.path.join('../../examples', '..'), '.'):  # '../showcases' ?
         sys.path.append(fullpath)
 
 
-class test_regexps:
-    def setup(self):
+class TestRegexps:
+    def setup_class(self):
         self.rx = dict()
-        with open('Markdown.ebnf', 'r', encoding='utf-8') as f:
+        with open(os.path.join(scriptpath, 'Markdown.ebnf'), 'r', encoding='utf-8') as f:
             for stmt in f:
                 m = re.match(r'\s*@?\s*(?P<symbol>\w+)\s*=\s*~?/(?P<regex>.*(?<![^\\]/))/', stmt)
                 if m:
@@ -49,9 +49,9 @@ class test_regexps:
         assert rx.match('    ').group(0) == '    '
         assert rx.match('  \t ').group(0) == '  \t '
         assert rx.match('\n') is None
-        assert rx.match(' \n') == ' '
+        assert rx.match(' \n').group(0) == ' '
         assert rx.match('  \n') is None
-        assert rx.match('   \n') == ' '
+        assert rx.match('   \n').group(0) == ' '
         assert rx.match('\t\n') is None
 
     def test_ST(self):

@@ -41,15 +41,15 @@ from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode, Pat
 from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, DropFrom, AnyChar, Parser, \
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, ERR, \
     Option, NegativeLookbehind, OneOrMore, RegExp, SmartRE, Retrieve, Series, Capture, TreeReduction, \
-    ZeroOrMore, Ref, Forward, NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, \
+    ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, \
     LateBindingUnary, mixin_comment, last_value, matching_bracket, optional_last_value, \
-    PARSER_PLACEHOLDER, RX_NEVER_MATCH, UninitializedError
+    PARSER_PLACEHOLDER, RX_NEVER_MATCH, UninitializedError, SimpleForwardRecursive
 from DHParser.pipeline import end_points, full_pipeline, create_parser_junction, \
     create_preprocess_junction, create_junction, Junction, PseudoJunction, PipelineResult
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.stringview import StringView
-from DHParser.toolkit import is_filename, load_if_file, cpu_count, \
+from DHParser.toolkit import is_filename, load_if_file, cpu_count, get_piped_data, \
     ThreadLocalSingletonFactory, expand_table, static, CancelQuery, re
 from DHParser.trace import set_tracer, resume_notices_on, trace_history
 from DHParser.transform import is_empty, remove_if, TransformationDict, TransformerFunc, \
@@ -67,9 +67,9 @@ from DHParser.transform import is_empty, remove_if, TransformationDict, Transfor
 from DHParser import parse as parse_namespace__
 
 import DHParser.versionnumber
-if DHParser.versionnumber.__version_info__ < (1, 9, 5):
+if DHParser.versionnumber.__version_info__ < (1, 9, 6):
     print(f'DHParser version {DHParser.versionnumber.__version__} is lower than the DHParser '
-          f'version 1.9.5, {os.path.basename(__file__)} has first been generated with. '
+          f'version 1.9.6, {os.path.basename(__file__)} has first been generated with. '
           f'Please install a more recent version of DHParser to avoid unexpected errors!')
 
 if sys.version_info >= (3, 14, 0):
@@ -115,7 +115,7 @@ class indirectGrammar(Grammar):
         syntax_tree = parser(source_code)
     """
     A = Forward()
-    source_hash__ = "9b9b646f559b8fae83fbb3456525899a"
+    source_hash__ = "362f9c5a0de3289a51fc51da300fc46c"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -124,7 +124,7 @@ class indirectGrammar(Grammar):
     WHITESPACE__ = r'\s*'
     WSP_RE__ = mixin_comment(whitespace=WHITESPACE__, comment=COMMENT__)
     wsp__ = Whitespace(WSP_RE__)
-    B = Alternative(Series(Ref("A"), Text("y")), Series(Ref("A"), Text("x")))
+    B = Alternative(Series(A, Text("y")), Series(A, Text("x")))
     A.set(Alternative(B, Text("x")))
     root__ = A
     
@@ -444,7 +444,7 @@ def main(called_from_app=False) -> bool:
 
     args = parser.parse_args()
     file_names, out, log_dir = args.files, args.out[0], ''
-    piped_data = '' if sys.stdin.isatty() else sys.stdin.read()
+    piped_data = get_piped_data()
     if piped_data: file_names.insert(0, '\ufeff' + piped_data)
     if args.parse: file_names.insert(0, '\ufeff' + args.parse[0])
 

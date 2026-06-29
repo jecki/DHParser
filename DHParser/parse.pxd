@@ -5,6 +5,7 @@
 #cython: subinterpreters_compatible = own_gil
 
 import cython
+from Cython.Compiler.Parsing import p_assert_statement
 
 # cpdef copy_parser_base_attrs(src, duplicate)
 
@@ -189,6 +190,22 @@ cdef class Pop(Retrieve):
 cdef class Synonym(UnaryParser):
     pass
 
-cdef class Forward(UnaryParser):
+cdef class ForwardBase(UnaryParser):
     cdef public bint cycle_reached
+
+cdef class Forward(ForwardBase):
+    cdef public object seed
+    cdef public object versions
+    cdef public object iteration
+    cdef public int farthest
+
+    cdef public object tracer_memo
+    cdef public object tracer_init
+    cdef public object tracer_loop
+    cdef public object tracer_done
+
+cdef class SimpleForward(ForwardBase):
+    pass
+
+cdef class SimpleForwardIterative(ForwardBase):
     cdef public object recursion_counter

@@ -1,4 +1,4 @@
-# LR
+# indirect
 
 PLACE A SHORT DESCRIPTION HERE
 
@@ -7,7 +7,7 @@ Author: AUTHOR'S NAME <EMAIL>, AFFILIATION
 
 ## License
 
-LR is open source software under the [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0)
+indirect is open source software under the [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0)
 
 Copyright YEAR AUTHOR'S NAME <EMAIL>, AFFILIATION
 

@@ -665,8 +665,12 @@ def grammar_chksum(grammar_source: str) -> str:
     whether the grammar it needs to be regenerated.
     """
     config = get_config_values()
+    # TODO: Rather than deleting irrelevant and potentially interfering config-values, pick out only those that are relevant
     del config['syncfile_path']
-    return md5(grammar_source, __version__, str(config))
+    del config['main_pid']
+    cfg = [(k, str(v)) for k, v in config.items()]
+    cfg.sort()
+    return md5(grammar_source, __version__, str(cfg))
 
 
 @deprecated(f"grammar_changed() has been moved from DHParser.ebnf to DHParser.dsl. Please, update your imports.")
@@ -1090,7 +1094,7 @@ def get_EBNF_AST_Serialization_Table(flavor: str = "EBNF") -> Dict[str, Callable
     EBNF-ASTs back to EBNF.
 
     :param flavor: Either "EBNF" (braces notation) or "PEG" (postfix notation)
-    :returns: A table that can be passed to :py:method:`nodetree.Node.evaluate_path`.
+    :returns: A table that can be passed to :py:meth:`nodetree.Node.evaluate_path`.
     """
     global EBNF_Serialization_Table, PEG_Serialization_Table
 
@@ -1146,7 +1150,8 @@ def serialize_AST(ebnf_AST: Node, syntax: str = "DHParser") -> str:
     Returns:
         str: A string representation of the EBNF notation derived from the AST.
     """
-    assert syntax in ("DHParser", "ISO", "EBNF", "PEG")
+    if syntax not in ("DHParser", "ISO", "EBNF", "PEG"):
+        raise ValueError('syntax must be one of "DHParser", "ISO", "EBNF", "PEG"')
     try:
         table = get_EBNF_AST_Serialization_Table("PEG" if syntax == "PEG" else "EBNF")
         ebnf = ebnf_AST.evaluate_path(table, path=[ebnf_AST])
@@ -1211,9 +1216,10 @@ from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode, Pat
 from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, DropFrom, AnyChar, Parser, \\
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, ERR, \\
     Option, NegativeLookbehind, OneOrMore, RegExp, SmartRE, Retrieve, Series, Capture, TreeReduction, \\
-    ZeroOrMore, Ref, Forward, NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, \\
+    ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, \\
     LateBindingUnary, mixin_comment, last_value, matching_bracket, optional_last_value, \\
-    PARSER_PLACEHOLDER, RX_NEVER_MATCH, UninitializedError
+    PARSER_PLACEHOLDER, RX_NEVER_MATCH, UninitializedError, SimpleForwardRecursive, \\
+    SimpleForwardIterative, ForwardBase
 from DHParser.pipeline import end_points, full_pipeline, create_parser_junction, \\
     create_preprocess_junction, create_junction, Junction, PseudoJunction, PipelineResult
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \\
@@ -1506,10 +1512,10 @@ def neutralize_unnamed_groups(rxp: str) -> str:
     return '?:'.join(al)
 
 
-REF_TMPL = 'Ref__({symbol})'
-RX_REF_TMPL = r'Ref__\(({symbols})\)'
-RX_DROPFROM_REF = LazyRE(r'DropFrom\(Ref\("(\w+)"\)\)')
-RX_SYNONYM_TMPL = r'Synonym\(({symbols})\)'  # Really needed?
+# REF_TMPL = 'Ref__({symbol})'
+# RX_REF_TMPL = r'Ref__\(({symbols})\)'
+# RX_DROPFROM_REF = LazyRE(r'DropFrom\(Ref\("(\w+)"\)\)')
+# RX_SYNONYM_TMPL = r'Synonym\(({symbols})\)'  # Really needed?
 RX_REF = LazyRE(r'Ref__\((\w+)\)')
 
 
@@ -1716,7 +1722,7 @@ class EBNFCompiler(Compiler):
         self.consumed_custom_errors = set()    # type: MutableSet[str]
         self.consumed_skip_rules = set()       # type: MutableSet[str]
         self.P = {p: p for p in parser_names}  # type: Dict[str, str]
-        self.left_recursion = get_config_value('left_recursion')
+        self.left_recursion: str = get_config_value('left_recursion')
 
 
     @property
@@ -1951,25 +1957,25 @@ class EBNFCompiler(Compiler):
         return result
 
 
-    def recursive_paths(self, symbol: str) -> FrozenSet[Tuple[str, ...]]:
-        """Returns the recursive paths from the symbol to itself. If
-        sym is not recursive, the returned tuple (of paths) will be empty.
-        This method exists only for testing and debugging (so far...)."""
-        path = []  # type: List[str]
-        recursive_paths = set()  # type: MutableSet[Tuple[str, ...]]
-
-        def gather(sym: str):
-            nonlocal path, recursive_paths
-            path.append(sym)
-            for s in self.directly_referred(sym):
-                if s not in EBNFCompiler.RESERVED_SYMBOLS:
-                    if s == symbol:
-                        recursive_paths.add(tuple(path))
-                    elif s not in path:
-                        gather(s)
-            path.pop()
-        gather(symbol)
-        return frozenset(recursive_paths)
+    # def recursive_paths(self, symbol: str) -> FrozenSet[Tuple[str, ...]]:
+    #     """Returns the recursive paths from the symbol to itself. If
+    #     sym is not recursive, the returned tuple (of paths) will be empty.
+    #     This method exists only for testing and debugging (so far...)."""
+    #     path = []  # type: List[str]
+    #     recursive_paths = set()  # type: MutableSet[Tuple[str, ...]]
+    #
+    #     def gather(sym: str):  # TODO: Time is exploding for larger grammars!!!
+    #         nonlocal path, recursive_paths
+    #         path.append(sym)
+    #         for s in self.directly_referred(sym):
+    #             if s not in EBNFCompiler.RESERVED_SYMBOLS:
+    #                 if s == symbol:
+    #                     recursive_paths.add(tuple(path))
+    #                 elif s not in path:
+    #                     gather(s)
+    #         path.pop()
+    #     gather(symbol)
+    #     return frozenset(recursive_paths)
 
 
     @cython.locals(N=cython.int, top=cython.int, pointer=cython.int,
@@ -2034,15 +2040,15 @@ class EBNFCompiler(Compiler):
                         pass
             i += 1
         self.forward = recursive
-
-
-    def recursive_symbols(self) -> Set[str]:
-        """Returns all recursive symbols. Must be called after optimize_definitions_order()!"""
-        recursive = set()
-        for sym in self.forward:
-            for path in self.recursive_paths(sym):
-                recursive.update(path)
-        return recursive
+    #
+    #
+    # def recursive_symbols(self) -> Set[str]:
+    #     """Returns all recursive symbols. Must be called after optimize_definitions_order()!"""
+    #     recursive = set()
+    #     for sym in self.forward:
+    #         for path in self.recursive_paths(sym):
+    #             recursive.update(path)
+    #     return recursive
 
 
     def assemble_parser(self, definitions: List[Tuple[str, str]], root_symbol: str) -> str:
@@ -2214,32 +2220,16 @@ class EBNFCompiler(Compiler):
         # turn definitions into declarations in reverse order
 
         definitions.reverse()
-        declarations += [symbol + ' = Forward()'
-                         for symbol in sorted(list(self.forward))]
-
-        if self.left_recursion == 'Full':
-            # recursive = self.recursive_symbols()
-            # for s in self.forward:
-            #     for p in self.recursive_paths(s):
-            #         print(p)
-            # # TODO: Sort out purely right-recursive symbols
-            symstr = '|'.join(self.forward)
-            recursive_ref_pattern = RX_REF_TMPL.format(symbols = symstr)
-            rx_recursive_ref = re.compile(recursive_ref_pattern)
-            synonym_pattern = RX_SYNONYM_TMPL.format(symbols = symstr)
-            rx_synonym = re.compile(synonym_pattern)
+        lr_kind = self.left_recursion.lower()
+        if lr_kind == "full":  fwclass = "Forward"
+        elif lr_kind == "classic":  fwclass = "SimpleForwardRecursive"
+        elif lr_kind in ('simple', 'forward'):  fwclass = "SimpleForwardIterative"
+        elif lr_kind == "none": fwclass = "ForwardBase"
         else:
-            recursive_ref_pattern: str = '(' + NEVER_MATCH_PATTERN + ')'
-            rx_recursive_ref = re.compile(recursive_ref_pattern)
+            raise ValueError(f"Invalid left_recursion value: {self.left_recursion}")
+        declarations += [f'{symbol} = {fwclass}()'
+                         for symbol in sorted(list(self.forward))]
         for symbol, statement in definitions:
-            if symbol[-2:] != '__' or (symbol.find('_skip_') >= 0 or symbol.find('_resume_') >= 0):
-                # TODO: Except uses at the very end of the rule (i.e. right recursion),
-                #       unless it's forward references (pre-sort the self.forward-references accordingly)
-                # statement = statement.replace(REF_TMPL.format(symbol = symbol), symbol)  # TODO: Don't do this!
-                statement = rx_recursive_ref.sub(r'Ref("\1")', statement)
-                # statement = rx_synonym.sub(rf'Synonym(\1{RECURSIVE_SUFFIX})', statement)
-                statement = RX_REF.sub(r'\1', statement)
-                statement = RX_DROPFROM_REF.sub(r'Drop(Ref("\1"))', statement)
             if symbol in self.forward:
                 declarations += [symbol + '.set(' + statement + ')']
             else:
@@ -2522,7 +2512,7 @@ class EBNFCompiler(Compiler):
             defn = self.compile(body)
             if isinstance(defn, str):
                 m = None
-                if defn.find("(") < 0 or (m := RX_REF.fullmatch(defn)):
+                if defn.find("(") < 0:
                     # assume it's a synonym, like 'page = REGEX_PAGE_NR'
                     if not drop_flag and defn in self.directives['drop'] \
                             and re.match(self.directives['disposable'], rule):
@@ -2530,7 +2520,7 @@ class EBNFCompiler(Compiler):
                             f'it is a Synonym for the dropped symbol "{defn}". If this behaviour '
                             f'is undesired, swap the definitions of both symbols. Otherwise, add '
                             f'"{rule}" to the @drop-directive to avoid this warning.', ERROR)
-                    defn = f'{self.P["Synonym"]}({defn if m is None else m.group(1)})'
+                    defn = f'{self.P["Synonym"]}({defn})'
                 if drop_flag and not defn.startswith(self.P["Drop"] + "("):
                     defn = f'{self.P["Drop"]}({defn})'
             else:
@@ -3479,8 +3469,7 @@ class EBNFCompiler(Compiler):
                 return keyword
             elif symbol.endswith('__'):
                 self.tree.new_error(node, 'Illegal use of reserved symbol name "%s"!' % symbol)
-            return f"Ref__({symbol})" if self.left_recursion == "Full" else symbol
-            # return symbol  # return f"Ref(symbol)" and delete als non-recursive Refs later?
+            return symbol
 
 
     def drop_on(self, category):

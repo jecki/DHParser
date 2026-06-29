@@ -38,7 +38,8 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, ERR, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, mixin_comment, \
-    last_value, matching_bracket, optional_last_value, SmartRE, RX_NEVER_MATCH
+    last_value, matching_bracket, optional_last_value, SmartRE, RX_NEVER_MATCH, \
+    SimpleForwardRecursive, SimpleForwardIterative
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.toolkit import re, is_filename, load_if_file, cpu_count, \
@@ -108,8 +109,8 @@ class FlexibleEBNFGrammar(Grammar):
     countable = Forward()
     element = Forward()
     expression = Forward()
-    source_hash__ = "a1f96e26b8d5e41970c7d44a2f1d154f"
-    disposable__ = re.compile('(?:pure_elem$|MOD_SYM$|FOLLOW_UP$|ANY_SUFFIX$|no_range$|is_mdef$|EOF$|component$|MOD_SEP$|countable$)')
+    source_hash__ = "7a207c68992e4b98df05f35d4d6bf647"
+    disposable__ = re.compile('(?:FOLLOW_UP$|pure_elem$|ANY_SUFFIX$|no_range$|EOF$|is_mdef$|MOD_SEP$|countable$|component$|MOD_SYM$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'definition': [(re.compile(r','), 'Delimiter "," not expected in definition!\\nEither this was meant to be a directive and the directive symbol @ is missing\\nor the error is due to inconsistent use of the comma as a delimiter\\nfor the elements of a sequence.')]}

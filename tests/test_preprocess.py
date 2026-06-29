@@ -78,7 +78,7 @@ class TestSourceMapping:
         assert offsets[-1] >= offsets[-2]
         assert self.tokenized.find('AND') == self.code.find('AND') + len('CONJUNCTION') + 2
 
-    def test_bondary_cases(self):
+    def test_boundary_cases(self):
         # position at the end of the file
         source = " "
         srcmap = tokenized_to_original_mapping(source, source)
@@ -222,12 +222,24 @@ class TestTokenParsing:
         self.verify_mapping("print(x)", self.code, tokenized, mapping)
         self.verify_mapping("print(y)", self.code, tokenized, mapping)
 
+    def test_compile_with_tokens(self):
+        prepr = chain_preprocessors(preprocess_comments, preprocess_indentation)
+        self.grammar.max_parser_dropouts__ = 3
+        result, messages, syntaxtree = compile_source(self.code, prepr, self.grammar,
+                                                      lambda i: i, lambda i: i,
+                                                      preserve_AST=True)
+        blocks = [b for b in result.select('block')]
+        assert len(blocks) == 3
+        assert not result.errors
+
+
     def test_error_position(self):
         orig_src = self.code.replace('#', '\x1b')
         prepr = chain_preprocessors(preprocess_comments, preprocess_indentation)
         self.grammar.max_parser_dropouts__ = 3
         result, messages, syntaxtree = compile_source(orig_src, prepr, self.grammar,
-                                                      lambda i: i, lambda i: i)
+                                                      lambda i: i, lambda i: i,
+                                                      preserve_AST=True)
         for err in messages:
             if self.code[err.orig_pos] == "#":
                 break

@@ -35,7 +35,8 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, ERR, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, mixin_comment, \
-    last_value, matching_bracket, optional_last_value, SmartRE, RX_NEVER_MATCH
+    last_value, matching_bracket, optional_last_value, SmartRE, RX_NEVER_MATCH, \
+    SimpleForwardRecursive, SimpleForwardIterative
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.toolkit import re, is_filename, load_if_file, cpu_count, \
@@ -104,7 +105,7 @@ class jsonGrammar(Grammar):
         syntax_tree = parser(source_code)
     """
     _element = Forward()
-    source_hash__ = "eeda710b2b66e7148766ebeb388997bc"
+    source_hash__ = "de76a209d09f03ed8df3d4361edbcb0e"
     disposable__ = re.compile('_[A-Za-z]+')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

@@ -38,7 +38,8 @@ import sys
 if sys.version_info >= (3, 12, 0):
     from collections.abc import Iterable, Sequence, Set, MutableSet, Callable, Container, Hashable
     from typing import Any, Type, Union, Optional, TypeAlias, Protocol, FrozenSet, \
-        Dict, List, Tuple, ByteString
+        Dict, List, Tuple
+    ByteString: TypeAlias = Union[bytes, bytearray, memoryview]
     static = staticmethod
 else:
     from typing import Any, Iterable, Sequence, Set, Union, Dict, List, Tuple, \
@@ -343,11 +344,17 @@ def deprecated(message: str) -> Callable:
     assert isinstance(message, str)
 
     def decorator(f: Callable) -> Callable:
-        @functools.wraps(f)
-        def wrapper(*args, **kwargs):
-            deprecation_warning(message or str(f))
-            return f(*args, **kwargs)
-        return wrapper
+        if cython.compiled:
+            def wrapper(*args, **kwargs):
+                deprecation_warning(message or str(f))
+                return f(*args, **kwargs)
+            return wrapper
+        else:
+            @functools.wraps(f)
+            def wrapper(*args, **kwargs):
+                deprecation_warning(message or str(f))
+                return f(*args, **kwargs)
+            return wrapper
     return decorator
 
 
@@ -604,9 +611,9 @@ def subf(rx: RxType, repl: Callable[[str], str], text) -> str:
     r"""Substitutes a pattern in text with a replacement that is derived
     from the found matches by a function. Example::
 
-    >>> RX_CTRL_CHARS = re.compile(r'''[\x00-\x08\x0B-\x1F]''')
-    >>> subf(RX_CTRL_CHARS, lambda s: str(ord(s)), '\r')
-    '13'
+        >>> RX_CTRL_CHARS = re.compile(r'''[\x00-\x08\x0B-\x1F]''')
+        >>> subf(RX_CTRL_CHARS, lambda s: str(ord(s)), '\r')
+        '13'
     """
     a = 0
     chunks = []
@@ -1077,16 +1084,18 @@ def char_code(unicode_ch) -> str:
 def ascii_xml_entity(ch) -> str:
     r"""Converts a character to an XML entity. Example::
 
-    >>> print(ascii_xml_entity('\r'))
-    &#x0d;"""
+        >>> print(ascii_xml_entity('\r'))
+        &#x0d;
+    """
     return f'&#x{ord(ch):02x};'
 
 
 def ascii_char_code(ch) -> str:
     r"""Converts a character with ord(ch) < 256 to char-code. Example::
 
-    >>> print(ascii_char_code('a'))
-    \x61"""
+        >>> print(ascii_char_code('a'))
+        \x61
+    """
     return f'\\x{ord(ch):02x}'
 
 

@@ -1,4 +1,4 @@
-# LR2
+# direct_hidden
 
 PLACE A SHORT DESCRIPTION HERE
 
@@ -7,7 +7,7 @@ Author: AUTHOR'S NAME <EMAIL>, AFFILIATION
 
 ## License
 
-LR2 is open source software under the [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0)
+direct_hidden is open source software under the [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0)
 
 Copyright YEAR AUTHOR'S NAME <EMAIL>, AFFILIATION
 

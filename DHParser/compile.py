@@ -527,7 +527,7 @@ def compile_source(source: str,
         # AST-transformation
 
         if is_error(syntax_tree.error_flag):
-            # catch Python exception, because if an error has occurred
+            # catch Python-exception, because if an error has occurred
             # earlier, the syntax tree might not look like expected,
             # which could (fatally) break AST transformations.
             try:

@@ -37,7 +37,8 @@ from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, ERR, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, mixin_comment, \
-    last_value, matching_bracket, optional_last_value, SmartRE, EMPTY_NODE,RX_NEVER_MATCH
+    last_value, matching_bracket, optional_last_value, SmartRE, EMPTY_NODE,RX_NEVER_MATCH, \
+    SimpleForwardRecursive, SimpleForwardIterative
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.toolkit import re, is_filename, load_if_file, cpu_count,  \
@@ -106,9 +107,9 @@ class XMLGrammar(Grammar):
         syntax_tree = parser(source_code)
     """
     element = Forward()
-    source_hash__ = "b80907fe351df7b71d014e4ae2dc517e"
+    source_hash__ = "cd838e937964bf19455dc4553e9e43fe"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:prolog$|PubidCharsSingleQuoted$|EOF$|BOM$|XmlPIAtts$|EncName$|NameChars$|VersionNum$|tagContent$|Misc$|Reference$|CommentChars$|CData$|NameStartChar$|PubidChars$)')
+    disposable__ = re.compile('(?:EOF$|PubidChars$|CommentChars$|prolog$|EncName$|Reference$|NameStartChar$|BOM$|tagContent$|VersionNum$|XmlPIAtts$|PubidCharsSingleQuoted$|CData$|Misc$|NameChars$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'tagContent': [('', "syntax error in tag-name of opening or empty tag:  {1}")],

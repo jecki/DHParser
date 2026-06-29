@@ -379,7 +379,7 @@ or a regular expression for identifying these symbols by their name to the
 @hide-directive, Here, we have leveraged our convention
 to prefix unimportant symbols with an underscore "_" by specifying the
 symbols that shall by anonymized with a regular expression.
-(See :ref:`below < _alternative_simplification_syntax>` for yet another,
+(See :ref:`below < alternative_simplification_syntax>` for yet another,
 arguably, more convenient syntax for specifying symbols that can
 safely be dropped or hidden.)
 
@@ -1467,18 +1467,14 @@ at least when we keep in mind that the computer cannot guess where
 we would have placed the forgotten closing bracket. It can only
 report the point where the mistake becomes apparent.
 
-However, the reported fact that it was the sub-parser \`*\` of
-parser term that failed at this location does little to enlighten
-us with respect to the cause of the failure. The "farthest fail"-method
-as implemented by DHParser yields the
-first parser (of possibly several) that has been tried at the
-position where the farthest fail occurred. Thus, in this case,
-a failure of the parser capturing \`*\` is reported rather than
-of the parser expression->\`+\`. Changing this by reporting the
-last parser or all parsers that failed at this location would
-do little to remedy this situation, however. In this example,
-it would just be as confusing to learn that expression->\`+\` failed
-at the end of the parsed string.
+While the first error message captures the error-cause reasonably
+well, it might still require a little thought to understand that
+"did not match: »«" at a position after the end of the parsed text
+can only mean that the end of the file has been reached unexpectedly.
+The second error message is even a little more misleading in this
+respect. To remedy this situation DHParser offers the mandatory
+item marker "§" for series as well the option to define custom
+error messages.
 
 
 .. _mandatory_items:
@@ -3013,7 +3009,7 @@ requirements, as for example, the need for a ``__deepcopy__``-method.
 Therefore, implementing one's own Parse-classes should be avoided if
 possible.
 
-Nevertheless, here is the previous example implemented with A
+Nevertheless, here is the previous example implemented with a
 custom parser class::
 
    >>> word_parser_class = """from DHParser.parse import Parser, copy_parser_base_attrs
@@ -3096,7 +3092,9 @@ the processing stages following the parsing-stage (see
 :any:`processing_pipelines`).
 
 
-Now, let's not forget to restore the turned off optimizations (see above)::
+Last not least, let's not forget to restore the optimizations turned off earlier (
+so that we don't get surprises when running doctests in
+other parts of the documentation subsequently to this part).::
 
     >>> set_config_value('optimizations', save_optimizations)
 

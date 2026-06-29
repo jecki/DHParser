@@ -38,6 +38,7 @@ This functionality can be used for several purposes:
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Tuple, Optional, List, Iterable, Union, cast
 
 try:
@@ -47,51 +48,12 @@ except ImportError:
 
 from DHParser.error import Error, RESUME_NOTICE, RECURSION_DEPTH_LIMIT_HIT
 from DHParser.nodetree import Node, REGEXP_PTYPE, TOKEN_PTYPE, WHITESPACE_PTYPE
-from DHParser.log import HistoryRecord, NONE_NODE
+from DHParser.log import HistoryRecord, CallItem, NONE_NODE
 from DHParser.parse import Grammar, Parser, ParserError, ParseFunc, ContextSensitive, \
-    UnaryParser, SmartRE, cancel_proxy
+    UnaryParser, SmartRE, cancel_proxy, Forward, ParsingResult, SEED
 from DHParser.toolkit import line_col, INFINITE
 
 __all__ = ('trace_history', 'set_tracer', 'resume_notices_on', 'resume_notices_off')
-
-
-#######################################################################
-#
-# Adding and removing tracers
-#
-#######################################################################
-
-
-def set_tracer(parsers: Union[Grammar, Parser, Iterable[Parser]], tracer: Optional[ParseFunc]):
-    """Adds or removes a tracing function to (or from) a single parser, a set of
-    parsers or all parsers in a grammar.
-
-    :param parsers: the parsers or single parser or grammar-object containing
-        parsers where the ``tracer`` shall be added or removed.
-    :param tracer: a tracer function or ``None``. If ``None`` any existing
-        tracer will be removed. If not None, tracer must be a parsing function.
-        It is up to the tracer to call the original parsing function
-        (``self._parse()``).
-    """
-    if isinstance(parsers, Grammar):
-        if tracer is None:
-            parsers.history_tracking__ = False
-            parsers.resume_notices__ = False
-        parsers = parsers.all_parsers__
-    elif isinstance(parsers, Parser):
-        parsers = [parsers]
-    if parsers:
-        pivot = next(iter(parsers))
-        assert all(pivot._grammar == parser._grammar for parser in parsers)
-        if tracer is None:
-            pivot._grammar.history_tracking__ = False
-            pivot._grammar.resume_notices__ = False
-        else:
-            pivot._grammar.history_tracking__ = True
-            pivot._grammar.resume_notices__ = True
-        for parser in parsers:
-            if parser.ptype != ':Forward':
-                parser.set_proxy(tracer)
 
 
 #######################################################################
@@ -105,7 +67,8 @@ def symbol_name(parser: Parser, grammar: Grammar) -> str:
     name = str(parser) if isinstance(parser, ContextSensitive) else parser.node_name
     # name = parser.name
     if name[:1] == ':':
-        name = grammar.associated_symbol__(parser).pname + '->' + name
+        name = parser.symbol + '->' + name
+        # name = grammar.associated_symbol__(parser).pname + '->' + name
     return name
 
 
@@ -129,8 +92,9 @@ def call_item(parser: Parser, location: int, prefix: str = '') -> Tuple[str, int
         return f"{prefix}{name}", location
 
 
+
 def history_record(parser: Parser, grammar: Grammar,
-                   node: Node,
+                   node: Union[Node, None],
                    location: int,
                    location_: int,
                    prefix: str = '') -> HistoryRecord:
@@ -138,13 +102,47 @@ def history_record(parser: Parser, grammar: Grammar,
     hnd = Node(node.name, doc[location:location_]).with_pos(location) if node else None
     lc = line_col(grammar.document_lbreaks__, location)
     errors = grammar.tree__.error_nodes.get(id(node), [])
-    if parser.node_name[0:1] == ':' \
+    if parser.node_name == ":Forward" and grammar.call_stack__:
+        grammar.call_stack__[-1] = (f"{prefix}{parser.parser.pname or str(parser)}", location)
+    elif parser.node_name[0:1] == ':' \
             and not (isinstance(parser, SmartRE) and parser.is_lookahead()):
-        if parser.pname:
-            grammar.call_stack__[-1] = (f"{prefix}{parser.pname}", location)
+        item = (f"{prefix}{parser}" + ' ' * int(bool(parser.pname)) , location)
+        if grammar.call_stack__:
+            grammar.call_stack__[-1] = item
         else:
-            grammar.call_stack__[-1] = (f"{prefix}{parser} ", location)
+            grammar.call_stack__.append(item)
     return HistoryRecord(grammar.call_stack__, hnd, doc[location_:], lc, errors)
+
+
+def wrap_call_up(self: Parser, node: Optional[Node], location: int, location_: int,
+                 force: bool = False):
+    """Creates a history record after the parser call has been completed.
+    """
+    # Don't track returning parsers except in case an error has occurred!
+    grammar = self._grammar
+    if ((self.node_name != WHITESPACE_PTYPE)
+        and (grammar.moving_forward__
+             or ((not self.disposable or force)
+                 and (node and grammar.history__[-1].node))
+             or result_changed(node, grammar.history__))):
+        # record history
+        # TODO: Make dropping insignificant whitespace from history configurable
+        record = history_record(self, grammar, node, location, location_)
+        cs_len = len(record.call_stack)
+        if (not grammar.history__ or not node
+                or record.line_col != grammar.history__[-1].line_col
+                or record.call_stack != grammar.history__[-1].call_stack[:cs_len]
+                or self == grammar.start_parser__):
+            if len(record.call_stack) >= 2 and \
+                    record.call_stack[-2][0] in (":Lookbehind", ":NegativeLookbehind"):
+                record.text = grammar.reversed__[len(grammar.document__) - location_:]
+            if not grammar.moving_forward__ \
+                    and not any(tag in (':Lookahead', ":NegativeLookahead")
+                                or tag.endswith(":SmartRE_Lookahead")
+                                for tag, _ in grammar.history__[-1].call_stack):
+                pass
+                # grammar.history__.pop()
+            grammar.history__.append(record)
 
 
 @cython.locals(location_=cython.int, delta=cython.int, cs_len=cython.int,
@@ -166,7 +164,7 @@ def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], c
         if location <= -INFINITE:  location = 0
         location = -location
         grammar.call_stack__.append(call_item(self, location, "RECALL: "))
-        node, location_ = self.visited[location]
+        node, location_ = self.visited.get(location, (None, location))
         record = history_record(self, grammar, node, location, location_, "RECALL: ")
         grammar.history__.append(record)
         grammar.call_stack__.pop()
@@ -224,6 +222,7 @@ def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], c
             and not grammar.call_stack__[-1][0].endswith(':SmartRE_Lookahead'):
         grammar.call_stack__.append((' :SmartRE_Lookahead', location))
         stack_counter += 1
+    grammar_suspend_memo_state = grammar.suspend_memoization__
     grammar.moving_forward__ = True
 
     try:
@@ -261,37 +260,110 @@ def trace_history(self: Parser, location: cython.int) -> Tuple[Optional[Node], c
                           lc, [Error('KeyboardInterrupt (Ctrl-C)', location)]))
         raise ctrlC
 
-
-    # Don't track returning parsers except in case an error has occurred!
-    if ((self.node_name != WHITESPACE_PTYPE)
-        and (grammar.moving_forward__
-             or (not self.disposable
-                 and (node and grammar.history__[-1].node))
-             or result_changed(node, grammar.history__))):
-        # record history
-        # TODO: Make dropping insignificant whitespace from history configurable
-        record = history_record(self, grammar, node, location, location_)
-        cs_len = len(record.call_stack)
-        if (not grammar.history__ or not node
-                or record.line_col != grammar.history__[-1].line_col
-                or record.call_stack != grammar.history__[-1].call_stack[:cs_len]
-                or self == grammar.start_parser__):
-            if len(record.call_stack) >= 2 and \
-                    record.call_stack[-2][0] in (":Lookbehind", ":NegativeLookbehind"):
-                record.text = grammar.reversed__[len(grammar.document__) - location_:]
-            if not grammar.moving_forward__ \
-                    and not any(tag in (':Lookahead', ":NegativeLookahead")
-                                or tag.endswith(":SmartRE_Lookahead")
-                                for tag, _ in grammar.history__[-1].call_stack):
-                grammar.history__.pop()
-            grammar.history__.append(record)
-
+    wrap_call_up(self, node, location, location_)
 
     grammar.moving_forward__ = False
     while stack_counter > 0:
         grammar.call_stack__.pop()
         stack_counter -= 1
     return node, location_
+
+
+@dataclass
+class TracingData:
+    parser: Forward
+    grammar: Grammar
+    location: int
+    history_pointer: int
+    call_stack_pointer: int
+    call_stack_pointer0 : int
+
+
+def fw_memo(self: Forward, location: int, result: ParsingResult):
+    grammar = self._grammar
+    node, location_ = (None, location) if result is None else result
+    if location in self.visited:
+        prefix = f"SAPLING: "
+    elif result is SEED:
+        prefix = f"SEED: "
+        node = None
+        location = location
+    else:
+        prefix  = f"GROW: "
+    grammar.call_stack__.append(call_item(self, location, prefix))
+    record = history_record(self, grammar, node, location, location_, prefix)
+    grammar.history__.append(record)
+    grammar.call_stack__.pop()
+
+
+def fw_init(fwp: 'Forward', location: int)-> TracingData:
+    grammar = fwp._grammar
+    history = grammar.history__
+    return TracingData(fwp,
+                       grammar,
+                       location,
+                       len(history),
+                       len(history[-1].call_stack) if history else 0,
+                       len(grammar.call_stack__))
+
+
+def fw_loop(locals: TracingData) -> None:
+    grammar = locals.grammar
+    if grammar.history__:  # don't do anything in case tracer has not been set
+        grammar.call_stack__.extend(grammar.history__[-1].call_stack[locals.call_stack_pointer:])
+        locals.call_stack_pointer = len(grammar.call_stack__)
+        locals.history_pointer = len(grammar.history__)
+    else:
+        assert False, "Does this ever happen?"
+
+
+def fw_done(locals: TracingData, result: ParsingResult) -> None:
+    node, location = result
+    if node is not None:
+        grammar = locals.grammar
+        grammar.history__ = grammar.history__[:locals.history_pointer]
+        grammar.call_stack__ = grammar.call_stack__[:locals.call_stack_pointer0]
+        wrap_call_up(locals.parser, node, locals.location, location, force=True)
+
+
+#######################################################################
+#
+# Adding and removing tracers
+#
+#######################################################################
+
+
+def set_tracer(parsers: Union[Grammar, Parser, Iterable[Parser]], tracer: Optional[ParseFunc]):
+    """Adds or removes a tracing function to (or from) a single parser, a set of
+    parsers or all parsers in a grammar.
+
+    :param parsers: the parsers or single parser or grammar-object containing
+        parsers where the ``tracer`` shall be added or removed.
+    :param tracer: a tracer function or ``None``. If ``None`` any existing
+        tracer will be removed. If not None, tracer must be a parsing function.
+        It is up to the tracer to call the original parsing function
+        (``self._parse()``).
+    """
+    if isinstance(parsers, Grammar):
+        if tracer is None:
+            parsers.history_tracking__ = False
+            parsers.resume_notices__ = False
+        parsers = parsers.all_parsers__
+    elif isinstance(parsers, Parser):
+        parsers = [parsers]
+    if parsers:
+        pivot = next(iter(parsers))
+        # assert all(pivot._grammar == parser._grammar for parser in parsers)
+        if tracer is None:
+            pivot._grammar.history_tracking__ = False
+            pivot._grammar.resume_notices__ = False
+        else:
+            pivot._grammar.history_tracking__ = True
+            pivot._grammar.resume_notices__ = True
+        for parser in parsers:
+            parser.set_proxy(tracer)
+            if isinstance(parser, Forward):
+                parser.set_fwtracer(fw_memo, fw_init, fw_loop, fw_done)
 
 
 def resume_notices_on(grammar: Grammar):
@@ -304,12 +376,4 @@ def resume_notices_on(grammar: Grammar):
 def resume_notices_off(grammar: Grammar):
     """Turns resume-notices as well as history tracking off!"""
     set_tracer(grammar, None)
-
-
-#######################################################################
-#
-# Interrupt-Polling
-#
-#######################################################################
-
 

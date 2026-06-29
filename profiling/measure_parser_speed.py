@@ -26,12 +26,12 @@ def collect_mlw_files():
 
 
 def parse_mlw_files(mlw_files, preprocessor, grammar):
-    # time = datetime.datetime.now()
+    time = datetime.datetime.now()
     for name, data in mlw_files:
         _ = compile_source(data, preprocessor, grammar, lambda rn: rn, lambda rn: rn)
-        # t2 = datetime.datetime.now()
-        # print(name, t2 - time)
-        # time = t2
+        t2 = datetime.datetime.now()
+        print(name, t2 - time)
+        time = t2
 
 
 if __name__ == '__main__':

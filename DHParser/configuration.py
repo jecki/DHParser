@@ -695,7 +695,12 @@ ALLOWED_PRESET_VALUES['xml_attribute_error_handling'] = frozenset({'ignore', 'fi
 # Default value: empty set
 CONFIG_PRESET['log_syntax_trees'] = frozenset()
 
-
+# Forces re-compilation of grammar which means that the grammar will
+# always be recompiled when running tests not only when the checksum
+# of the grammar-file has changed.
+# Possible value: True, False
+# Default value: False
+CONFIG_PRESET['force_recompile_grammar'] = False
 ########################################################################
 #
 # ebnf compiler configuration
@@ -823,15 +828,26 @@ CONFIG_PRESET['optimizations'] = frozenset()
     # {'literal', 'lookahead', 'alternative', 'sequence'})
 
 
-# Chooses the left-recursion-handling. Possible Values are:
-# "None" - No left-recursion-handling. May lead to infinite loops while parsing!
-# "Forward" - Left-recursion check on Forward references. Covers direct and
+# Chooses the left-recursion-handling. This guides only the choice of the Forward class
+# when grammars are compiled into parsers. It does not affect already compiled parsers.
+# To change the behaviour of compiled classes, you have to replace "Forward" by
+# "SimpleForwardRecrusive" or vice versa.
+# Possible Values are:
+# "none" - No left-recursion-handling. May lead to infinite loops while parsing!
+#     (Presentely, not supported, anyway. Use 'simple' instead.)
+# "classic" - Left-recursion check on Forward references. Covers direct and
 #     indirect left recursion but yields wrong parsing results with intervowen
-#     left recursion!
-# "Full" - Full left-recursion-handling.
+#     left recursion! (This used to be the only left-recursion algorithm for DHParser
+#     versions < 2.0)
+# "simple" - An algorithm similar to "classic" but simpler and more in the iterative
+#     style of typical seed and grow algorithms in the literature.
+# "forward" - DEPRECATED: Same as "simple",
+# "full" - Full left-recursion-handling.
 # Default value: "Full"
-ALLOWED_PRESET_VALUES['left_recursion'] = frozenset({'None', 'Forward', 'Full'})
-CONFIG_PRESET['left_recursion'] = 'Forward'
+ALLOWED_PRESET_VALUES['left_recursion'] = frozenset(
+    {'none', 'classic', 'forward', 'simple', 'full',
+     'None', 'classic', 'Forward', 'Simple', 'Full'})
+CONFIG_PRESET['left_recursion'] = "full"
 
 
 ########################################################################

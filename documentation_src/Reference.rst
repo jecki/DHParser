@@ -73,39 +73,39 @@ filter-definition            @SYM_filter = func()  same
 
 
 ¹⁾ :ref:`Insignificant whitespace <insignificant_whitespace>` is whitespace
-   that neither carries any syntactic significance (say, as a delimiter) nor
-   has any semantic relevance (say as part of the data).
+that neither carries any syntactic significance (say, as a delimiter) nor
+has any semantic relevance (say as part of the data).
 
 ²⁾ Interleave means that the following elements must appear (like in a
-   sequence), but it does not matter in which order.
+sequence), but it does not matter in which order.
 
 ³⁾ In DHParser :ref:`lookbehind-assertions <lookaraound_operators>` always
-   operate on the reverse input string! This allows to exploit the full
-   capabilities of regular expressions without need to worry about
-   regex-engines supporting only constant-length look-behinds etc.
-   Keep in mind that looking back for the keyword "BEGIN" then means
-   that you have to check for "NIGEB", e.g. "<-& /\s*NIGEB/" means
-   that the prvious token read "BEGIN".
+operate on the reverse input string! This allows to exploit the full
+capabilities of regular expressions without need to worry about
+regex-engines supporting only constant-length look-behinds etc.
+Keep in mind that looking back for the keyword "BEGIN" then means
+that you have to check for "NIGEB", e.g. "<-& /\s*NIGEB/" means
+that the prvious token read "BEGIN".
 
 ⁴⁾ :ref:`Mandatory markers <mandatory_items>` express expectations about
-   the following items in a document. If a sequences has matched up to the
-   marker but then fails to match an element after the marker, this is
-   mot just a non-match, but an error that will be reported.
-   ref:`Error messages <grammar_code_for_errors>` should be added to
-   paths in the grammar that should never be reached if the parsed
-   document is correct.
+the following items in a document. If a sequences has matched up to the
+marker but then fails to match an element after the marker, this is
+mot just a non-match, but an error that will be reported.
+ref:`Error messages <grammar_code_for_errors>` should be added to
+paths in the grammar that should never be reached if the parsed
+document is correct.
 
 ⁵⁾ See the :ref:`Marcros-section <macro_system>` in the manual for a detailed
-   explanation how macros work in DHParser.
+explanation how macros work in DHParser.
 
 ⁶⁾ :ref:`Custom parsers <custom_parsers>` are parsers that are defined
-   as Python-functions which will be called from the generated Python-parser
-   during parsing.
+as Python-functions which will be called from the generated Python-parser
+during parsing.
 
 ⁷⁾ :ref:`Constext sensitive parsers <context_sensitive_parsers>` break with
-   the paradigm of context-free-grammars and may slow down the parsing
-   process. In connections with filter-functions they provide next to custom
-   parsers another means of realizing semantic actions.
+the paradigm of context-free-grammars and may slow down the parsing
+process. In connections with filter-functions they provide next to custom
+parsers another means of realizing semantic actions.
 
 
 Example
