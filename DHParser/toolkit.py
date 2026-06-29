@@ -344,11 +344,17 @@ def deprecated(message: str) -> Callable:
     assert isinstance(message, str)
 
     def decorator(f: Callable) -> Callable:
-        @functools.wraps(f)
-        def wrapper(*args, **kwargs):
-            deprecation_warning(message or str(f))
-            return f(*args, **kwargs)
-        return wrapper
+        if cython.compiled:
+            def wrapper(*args, **kwargs):
+                deprecation_warning(message or str(f))
+                return f(*args, **kwargs)
+            return wrapper
+        else:
+            @functools.wraps(f)
+            def wrapper(*args, **kwargs):
+                deprecation_warning(message or str(f))
+                return f(*args, **kwargs)
+            return wrapper
     return decorator
 
 

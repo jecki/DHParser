@@ -503,7 +503,8 @@ def get_grammar_placeholder() -> Grammar:
     global _GRAMMAR_PLACEHOLDER
     if _GRAMMAR_PLACEHOLDER is None:
         _GRAMMAR_PLACEHOLDER = Grammar.__new__(Grammar)
-        _GRAMMAR_PLACEHOLDER.__call__ = NOCALL
+        if not cython.compiled:
+            _GRAMMAR_PLACEHOLDER.__call__ = NOCALL
         _GRAMMAR_PLACEHOLDER.COMMENT__ = 'Grammar placeholder'
     return _GRAMMAR_PLACEHOLDER
 
@@ -1193,8 +1194,9 @@ def get_parser_placeholder() -> Parser:
         PARSER_PLACEHOLDER.drop_content = False
         PARSER_PLACEHOLDER.node_name = ':PLACEHOLDER__'
         PARSER_PLACEHOLDER.sub_parsers = frozenset()
-        PARSER_PLACEHOLDER.__deepcopy__ = NOCALL
-        PARSER_PLACEHOLDER.apply = NOCALL
+        if not cython.compiled:
+            PARSER_PLACEHOLDER.__deepcopy__ = NOCALL
+            PARSER_PLACEHOLDER.apply = NOCALL
     return cast(Parser, PARSER_PLACEHOLDER)
 
 
@@ -5400,10 +5402,8 @@ class Forward(ForwardBase):
         assert not self.pname, "Forward-Parsers mustn't have a name!"
         self.seed: Dict[int, List[ParsingResult]] = dict()  # aka recursion counter
         self.versions: Dict[int, List[ParsingResult]] = dict()
-        self.farthest = -1
-
         self.iteration = dict()
-        self.memo = dict()
+        self.farthest = -1
 
     @cython.locals(ldepth=cython.int, rb_stack_size=cython.int)
     def __call__(self, location: cython.int) -> ParsingResult:
