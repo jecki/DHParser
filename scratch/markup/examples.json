@@ -2,87 +2,87 @@
 [
   {
     "before": "<cell>Zur <lb/>Geschichte der Handelsgesellschaften im Mittelalter</cell>",
-    "after": "<cell><ref type=\"bibl\" target=\"xxx\">Zur <lb/>Geschichte der\n                            Handelsgesellschaften im Mittelalter</ref></cell>",
+    "after": "<cell><ref type=\"bibl\" target=\"xxx\">Zur <lb/>Geschichte der Handelsgesellschaften im Mittelalter</ref></cell>",
     "replacements": [
       {
-        "ref": "Zur Geschichte der\n                            Handelsgesellschaften im Mittelalter",
+        "ref": "Zur Geschichte der Handelsgesellschaften im Mittelalter",
         "target": "xxx",
         "type": "bibl"
       }
     ]
   },
   {
-    "before": "<cell>wollte er sich mit der handelsrechtlichen Habilitations<lb/>schrift\n                        begnügen</cell>",
+    "before": "<cell>wollte er sich mit der handelsrechtlichen Habilitations<lb/>schrift begnügen</cell>",
     "after": "<cell>wollte er sich mit der handelsrechtlichen <ref type=\"pers\" target=\"Weber_Max_Habilitation_1892_bio0005\">Habilitations<lb/>schrift</ref> begnügen</cell>",
     "replacements": [
       {
-        "ref": "wollte er sich mit der handelsrechtlichen Habilitationsschrift begnügen",
+        "ref": "Habilitationsschrift",
         "target": "Weber_Max_Habilitation_1892_bio0005",
         "type": "pers"
       }
     ]
   },
   {
-    "before": "<cell>ist von einem Versuch der Weiterführung der „Handelsge<lb/>sellschaften“\n                        nichts bekannt</cell>",
+    "before": "<cell>ist von einem Versuch der Weiterführung der „Handelsge<lb/>sellschaften“ nichts bekannt</cell>",
     "after": "<cell>ist von einem Versuch der Weiterführung der „<ref type=\"bibl\" target=\"Weber_Handelsgesellschaften_MWG_I_1_L0336\">Handelsge<lb/>sellschaften</ref>“ nichts bekannt</cell>",
     "replacements": [
       {
-        "ref": "ist von einem Versuch der Weiterführung der „Handelsgesellschaften“ nichts bekannt",
+        "ref": "Handelsgesellschaften",
         "target": "Weber_Handelsgesellschaften_MWG_I_1_L0336",
         "type": "bibl"
       }
     ]
   },
   {
-    "before": "<cell>vgl. Gesammelte <pb n=\"58\"></pb>Werke der Brüder Christian und Friedrich\n                        Leopold Grafen zu Stolberg, 1. Band. – Ham<lb/>burg: Friedrich Perthes 1827,\n                        S. 44.</cell>",
-    "after": "<cell>vgl. <ref type=\"bibl\" target=\"Stolberg_Gesammelte_Werke_I_L0305\">Gesammelte <pb n=\"58\"></pb>Werke der Brüder Christian und Friedrich Leopold\n                            Grafen zu Stolberg, 1. Band. – Ham<lb/>burg: Friedrich Perthes\n                            1827</ref>, S. 44.</cell>",
+    "before": "<cell>vgl. Gesammelte <pb n=\"58\"></pb>Werke der Brüder Christian und Friedrich Leopold Grafen zu Stolberg, 1. Band. – Ham<lb/>burg: Friedrich Perthes 1827, S. 44.</cell>",
+    "after": "<cell>vgl. <ref type=\"bibl\" target=\"Stolberg_Gesammelte_Werke_I_L0305\">Gesammelte <pb n=\"58\"></pb>Werke der Brüder Christian und Friedrich Leopold Grafen zu Stolberg, 1. Band. – Ham<lb/>burg: Friedrich Perthes 1827</ref>, S. 44.</cell>",
     "replacements": [
       {
-        "ref": "vgl. Gesammelte Werke der Brüder Christian und Friedrich Leopold\n                            Grafen zu Stolberg, 1. Band. – Hamburg: Friedrich Perthes\n                            1827, S. 44.",
+        "ref": "Gesammelte Werke der Brüder Christian und Friedrich Leopold Grafen zu Stolberg, 1. Band. – Hamburg: Friedrich Perthes 1827",
         "target": "Stolberg_Gesammelte_Werke_I_L0305",
         "type": "bibl"
       }
     ]
   },
   {
-    "before": "<cell>citierten Worten <hi rend=\"italic\">Frontins</hi> am besten\n                        entspricht.</cell>",
-    "after": "<cell>citierten <ref type=\"bibl\" target=\"Frontin_De_agrorum_qualitate_L0097\">Worten <hi rend=\"italic\">Frontins</hi></ref> am besten\n                        entspricht.</cell>",
+    "before": "<cell>citierten Worten <hi rend=\"italic\">Frontins</hi> am besten entspricht.</cell>",
+    "after": "<cell>citierten <ref type=\"bibl\" target=\"Frontin_De_agrorum_qualitate_L0097\">Worten <hi rend=\"italic\">Frontins</hi></ref> am besten entspricht.</cell>",
     "replacements": [
       {
-        "ref": "citierten Worten Frontins am besten\n                        entspricht.",
+        "ref": "Worten Frontins",
         "target": "Frontin_De_agrorum_qualitate_L0097",
         "type": "bibl"
       }
     ]
   },
   {
-    "before": "<cell>patrimonial-<hi rend=\"italic\">autokratisch</hi> regierten erweiterten\n                        <lb/>Familie</cell>",
-    "after": "<cell><ref type=\"subj\" target=\"Familie_patrimonial_autokratisch_regierte_S00406\">patrimonial-<hi rend=\"italic\">autokratisch</hi> regierten\n                            erweiterten <lb/>Familie</ref></cell>",
+    "before": "<cell>patrimonial-<hi rend=\"italic\">autokratisch</hi> regierten erweiterten <lb/>Familie</cell>",
+    "after": "<cell><ref type=\"subj\" target=\"Familie_patrimonial_autokratisch_regierte_S00406\">patrimonial-<hi rend=\"italic\">autokratisch</hi> regierten erweiterten <lb/>Familie</ref></cell>",
     "replacements": [
       {
-        "ref": "patrimonial-autokratisch regierten\n                            erweiterten Familie",
+        "ref": "patrimonial-autokratisch regierten erweiterten Familie",
         "target": "Familie_patrimonial_autokratisch_regierte_S00406",
         "type": "subj"
       }
     ]
   },
   {
-    "before": "<cell>Dagegen D. 18 § 44<note type=\"comment\" n=\"109\">Das Zitat stammt aus § 4.\n                        </note>eod.</cell>",
-    "after": "<cell>Dagegen <ref type=\"bibl\" target=\"Digesten_L0082\">D. 18 § 44<note type=\"comment\" n=\"109\">Das Zitat stammt aus § 4.\n                        </note>eod.</ref></cell>",
+    "before": "<cell>Dagegen D. 18 § 44<note type=\"comment\" n=\"109\">Das Zitat stammt aus § 4. </note>eod.</cell>",
+    "after": "<cell>Dagegen <ref type=\"bibl\" target=\"Digesten_L0082\">D. 18 § 44<note type=\"comment\" n=\"109\">Das Zitat stammt aus § 4. </note>eod.</ref></cell>",
     "replacements": [
       {
-        "ref": "Dagegen D. 18 § 44Das Zitat stammt aus § 4.\n                        eod.",
+        "ref": "D. 18 § 44Das Zitat stammt aus § 4. eod.",
         "target": "Digesten_L0082",
         "type": "bibl"
       }
     ]
   },
   {
-    "before": "<cell><hi rend=\"italic\">Moritz Voigt</hi>. Über den Bestand und die historische\n                        Entwickelung der Servituten<note type=\"comment\" n=\"7\" xml:id=\"comment-1331\">Nach Servituten folgt im Titel: und der Servitutenklagen. </note>\n                        wäh<lb/>rend der römischen Republik (Verh. der Sächs. Ges. d. Wiss.\n                        Phil.-hist. Kl. 26, 1874, S. <lb/>155<note type=\"comment\" n=\"8\" xml:id=\"comment-1332\">Die Abhandlung umfaßt die Seiten 159–227.\n                        </note>)</cell>",
-    "after": "<cell><ref type=\"bibl\" target=\"Voigt_Bestand_L0323\"><hi rend=\"italic\">Moritz\n                                Voigt</hi>. Über den Bestand und die historische Entwickelung der\n                                Servituten<note type=\"comment\" n=\"7\">Nach Servituten folgt im Titel:\n                                und der Servitutenklagen. </note> wäh<lb/>rend der römischen\n                            Republik (Verh. der Sächs. Ges. d. Wiss. Phil.-hist. Kl. 26, 1874, S.\n                                <lb/>155<note type=\"comment\" n=\"8\">Die Abhandlung umfaßt die Seiten\n                                159–227. </note>)</ref></cell>",
+    "before": "<cell><hi rend=\"italic\">Moritz Voigt</hi>. Über den Bestand und die historische Entwickelung der Servituten<note type=\"comment\" n=\"7\" xml:id=\"comment-1331\">Nach Servituten folgt im Titel: und der Servitutenklagen. </note> wäh<lb/>rend der römischen Republik (Verh. der Sächs. Ges. d. Wiss. Phil.-hist. Kl. 26, 1874, S. <lb/>155<note type=\"comment\" n=\"8\" xml:id=\"comment-1332\">Die Abhandlung umfaßt die Seiten 159–227. </note>)</cell>",
+    "after": "<cell><ref type=\"bibl\" target=\"Voigt_Bestand_L0323\"><hi rend=\"italic\">Moritz Voigt</hi>. Über den Bestand und die historische Entwickelung der Servituten<note type=\"comment\" n=\"7\">Nach Servituten folgt im Titel: und der Servitutenklagen. </note> wäh<lb/>rend der römischen Republik (Verh. der Sächs. Ges. d. Wiss. Phil.-hist. Kl. 26, 1874, S. <lb/>155<note type=\"comment\" n=\"8\">Die Abhandlung umfaßt die Seiten 159–227. </note>)</ref></cell>",
     "replacements": [
       {
-        "ref": "Moritz\n                                Voigt. Über den Bestand und die historische Entwickelung der\n                                ServitutenNach Servituten folgt im Titel:\n                                und der Servitutenklagen.  während der römischen\n                            Republik (Verh. der Sächs. Ges. d. Wiss. Phil.-hist. Kl. 26, 1874, S.\n                                155Die Abhandlung umfaßt die Seiten\n                                159–227. )",
+        "ref": "Moritz Voigt. Über den Bestand und die historische Entwickelung der ServitutenNach Servituten folgt im Titel: und der Servitutenklagen. während der römischen Republik (Verh. der Sächs. Ges. d. Wiss. Phil.-hist. Kl. 26, 1874, S. 155Die Abhandlung umfaßt die Seiten 159–227. )",
         "target": "Voigt_Bestand_L0323",
         "type": "bibl"
       }
@@ -93,7 +93,7 @@
     "after": "<cell>per <ref type=\"subj\" target=\"scamna_et_strigae_S01193\"><app n=\"e\"><lem>scamna</lem><rdg wit=\"A\">scamne</rdg></app> et strigas</ref></cell>",
     "replacements": [
       {
-        "ref": "per scamnascamne et strigas",
+        "ref": "scamnascamne et strigas",
         "target": "scamna_et_strigae_S01193",
         "type": "subj"
       }
@@ -144,11 +144,11 @@
     ]
   },
   {
-    "before": "<cell>das gewaltige <hi rend=\"italic\">Schauspiel der römi<lb/>schen</hi>\n                        kontinentalen Eroberungspolitik</cell>",
+    "before": "<cell>das gewaltige <hi rend=\"italic\">Schauspiel der römi<lb/>schen</hi> kontinentalen Eroberungspolitik</cell>",
     "after": "<cell>das gewaltige <hi rend=\"italic\">Schauspiel der </hi><ref type=\"subj\" target=\"Eroberungspolitik_roemische_S00378\"><hi rend=\"italic\">römi<lb/>schen</hi> kontinentalen Eroberungspolitik</ref></cell>",
     "replacements": [
       {
-        "ref": "das gewaltige Schauspiel der römischen kontinentalen Eroberungspolitik",
+        "ref": "römischen kontinentalen Eroberungspolitik",
         "target": "Eroberungspolitik_roemische_S00378",
         "type": "subj"
       }
@@ -156,10 +156,10 @@
   },
   {
     "before": "<cell>das gewaltige <app n=\"a\"><lem>Schauspiel der römi<lb/>schen</lem><note>Fehlt in X.</note></app> kontinentalen Eroberungspolitik</cell>",
-    "after": "<cell>das gewaltige <app n=\"a\"><lem>Schauspiel der <ref type=\"subj\" target=\"Eroberungspolitik_roemische_S00378\">römi<lb/>schen</ref></lem><note>Fehlt in X.</note></app><ref type=\"subj\" target=\"Eroberungspolitik_roemische_S00378\">\n                            kontinentalen Eroberungspolitik</ref></cell>",
+    "after": "<cell>das gewaltige <app n=\"a\"><lem>Schauspiel der <ref type=\"subj\" target=\"Eroberungspolitik_roemische_S00378\">römi<lb/>schen</ref></lem><note>Fehlt in X.</note></app><ref type=\"subj\" target=\"Eroberungspolitik_roemische_S00378\"> kontinentalen Eroberungspolitik</ref></cell>",
     "replacements": [
       {
-        "ref": "das gewaltige Schauspiel der römischenFehlt in X.\n                            kontinentalen Eroberungspolitik",
+        "ref": " kontinentalen Eroberungspolitik",
         "target": "Eroberungspolitik_roemische_S00378",
         "type": "subj"
       }
@@ -181,7 +181,7 @@
     "after": "<cell><ref type=\"bibl\" target=\"Digesten_L0082\">D. 52 pr. d[e] a[ctionibus]<app n=\"o\"><lem>e[mpti]</lem><note><pb n=\"336\"></pb>A: <hi rend=\"serif\">o. </hi></note></app> v[enditi]</ref></cell>",
     "replacements": [
       {
-        "ref": "D. 52 pr. d[e] a[ctionibus]e[mpti]A: o.  v[enditi]",
+        "ref": "D. 52 pr. d[e] a[ctionibus]e[mpti]A: o. v[enditi]",
         "target": "Digesten_L0082",
         "type": "bibl"
       }
@@ -189,21 +189,21 @@
   },
   {
     "before": "<cell>bereits in dem Brief an Frensdorff vom <lb/>11. Januar 1888 </cell>",
-    "after": "<cell>bereits in dem <ref type=\"bibl\" target=\"xxx\">Brief an <ref type=\"pers\" target=\"Frensdorff_Ferdinand_0084\">Frensdorff</ref> vom <lb/>11.\n                            Januar 1888</ref></cell>",
+    "after": "<cell>bereits in dem <ref type=\"bibl\" target=\"xxx\">Brief an <ref type=\"pers\" target=\"Frensdorff_Ferdinand_0084\">Frensdorff</ref> vom <lb/>11. Januar 1888</ref></cell>",
     "replacements": [
       {
-        "ref": "bereits in dem Brief an Frensdorff vom 11.\n                            Januar 1888",
+        "ref": "Brief an Frensdorff vom 11. Januar 1888",
         "target": "xxx",
         "type": "bibl"
       }
     ]
   },
   {
-    "before": "<cell>siehe auch die Mitteilung in dem Brief an die <lb/>Mutter vom 17. Juni\n                        1889 (ZStA Merseburg, Rep. 92, Nl. Max Weber, Nr. 3):</cell>",
-    "after": "<cell>siehe auch die Mitteilung in dem <ref type=\"bibl\" target=\"xxx\">Brief an\n                            die <lb/><ref type=\"pers\" target=\"Weber_Helene_0307\">Mutter</ref> vom\n                            17. Juni 1889 (ZStA Merseburg, Rep. 92, Nl. Max Weber, Nr.\n                        3)</ref>:</cell>",
+    "before": "<cell>siehe auch die Mitteilung in dem Brief an die <lb/>Mutter vom 17. Juni 1889 (ZStA Merseburg, Rep. 92, Nl. Max Weber, Nr. 3):</cell>",
+    "after": "<cell>siehe auch die Mitteilung in dem <ref type=\"bibl\" target=\"xxx\">Brief an die <lb/><ref type=\"pers\" target=\"Weber_Helene_0307\">Mutter</ref> vom 17. Juni 1889 (ZStA Merseburg, Rep. 92, Nl. Max Weber, Nr. 3)</ref>:</cell>",
     "replacements": [
       {
-        "ref": "siehe auch die Mitteilung in dem Brief an\n                            die Mutter vom\n                            17. Juni 1889 (ZStA Merseburg, Rep. 92, Nl. Max Weber, Nr.\n                        3):",
+        "ref": "Brief an die Mutter vom 17. Juni 1889 (ZStA Merseburg, Rep. 92, Nl. Max Weber, Nr. 3)",
         "target": "xxx",
         "type": "bibl"
       }
