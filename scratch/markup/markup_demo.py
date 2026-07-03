@@ -72,7 +72,7 @@ def markup(before: str, replacements: list[dict[str, str]]) -> str:
         smallest_subtree, _ = find_common_ancestor(cm.path(cm.get_path_index(a)),
                                                    cm.path(cm.get_path_index(b)))
 
-        # Schließe note-tokens aus, die innerhalb einer app-Umgebung vorkomen:
+        # Schließe note-tokens aus, die innerhalb einer app-Umgebung vorkommen:
         def note_selector(path) -> bool:
             if len(path) < 3:
                 return False
