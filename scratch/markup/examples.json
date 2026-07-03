@@ -177,8 +177,8 @@
     ]
   },
   {
-    "before": "<cell>D. 52 pr. d[e] a[ctionibus]<app n=\"o\"><lem>e[mpti]</lem><note><pb n=\"336\"></pb>A: <hi rend=\"serif\">o. </hi></note></app> v[enditi]</cell>",
-    "after": "<cell><ref type=\"bibl\" target=\"Digesten_L0082\">D. 52 pr. d[e] a[ctionibus]<app n=\"o\"><lem>e[mpti]</lem><note><pb n=\"336\"></pb>A: <hi rend=\"serif\">o. </hi></note></app> v[enditi]</ref></cell>",
+    "before": "<cell>D. 52 pr. d[e] a[ctionibus]<app n=\"o\"><lem>e[mpti]</lem><note><pb n=\"336\"></pb>A: <hi rend=\"serif\">o.</hi></note></app> v[enditi]</cell>",
+    "after": "<cell><ref type=\"bibl\" target=\"Digesten_L0082\">D. 52 pr. d[e] a[ctionibus]<app n=\"o\"><lem>e[mpti]</lem><note><pb n=\"336\"></pb>A: <hi rend=\"serif\">o.</hi></note></app> v[enditi]</ref></cell>",
     "replacements": [
       {
         "ref": "D. 52 pr. d[e] a[ctionibus]e[mpti]A: o. v[enditi]",

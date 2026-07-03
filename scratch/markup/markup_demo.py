@@ -1,11 +1,13 @@
 import sys, os, json, re
 
+from DHParser import reduce_single_child
+
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..', '..')))
 scriptpath = os.path.abspath(scriptpath)
 
-from DHParser.nodetree import Node, ContentMapping, parse_xml, find_common_ancestor
-from DHParser.transform import pull_up
+from DHParser.nodetree import Node, ContentMapping, parse_xml, find_common_ancestor, TOKEN_PTYPE, pp_path
+from DHParser.transform import pull_up, merge_adjacent, reduce_single_child
 
 EXAMPLES_FILE = "VerlinkungsBeispiele.mwg.xml"
 
@@ -38,7 +40,7 @@ DIVISIBILITY = {
     'app': ['ref']    # app ist "härter" als "ref"
 }
 
-IGNORE = {'note'}
+IGNORE = {}  # {'note'}
 
 
 def note_selector(path) -> bool:
@@ -64,11 +66,34 @@ def markup(before: str, replacements: list[dict[str, str]]) -> str:
         attrs = dict()
         if typ: attrs['type'] = typ
         attrs['target'] = target
-        cm.markup(a, b, 'ref', attrs)
+
+        cm.markup(a, b, 'ref', attrs)   # <=== the most important part!
+
         smallest_subtree, _ = find_common_ancestor(cm.path(cm.get_path_index(a)),
                                                    cm.path(cm.get_path_index(b)))
+
+        # Schließe note-tokens aus, die innerhalb einer app-Umgebung vorkomen:
+        def note_selector(path) -> bool:
+            if len(path) < 3:
+                return False
+            if (path[-1].name == 'note' and
+                    path[-2].name == 'ref'
+                    and any(nd.name == 'app' for nd in path)):
+                return True
+            return False
+
         for note_path in smallest_subtree.select_path(note_selector):
             pull_up(note_path)
+            note = note_path[-1]
+            assert note.name == 'note', pp_path(note_path)
+            for nd in note.select_children('ref'):
+                if nd.has_equal_attr(Node('dummy', '').with_attr(attrs)):
+                    nd.name = TOKEN_PTYPE
+                    nd.attr = {}
+            merge_adjacent(note_path, lambda p: p[-1].name == TOKEN_PTYPE, TOKEN_PTYPE)
+            if len(note.children) == 1 and note[0].name == TOKEN_PTYPE:
+                reduce_single_child(note_path)
+
         # cm.rebuild_mapping(a, b)  # content mapping is build a new with the next iteration, anyway
     return tree.as_xml(inline_tags={'cell'}, empty_tags={'lb'})
 

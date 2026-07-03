@@ -71,18 +71,18 @@
     "after": "<cell>Dagegen <ref type=\"bibl\" target=\"Digesten_L0082\">D. 18 § 44<note type=\"comment\" n=\"109\">Das Zitat stammt aus § 4. </note>eod.</ref></cell>",
     "replacements": [
       {
-        "ref": "D. 18 § 44eod.",
+        "ref": "D. 18 § 44Das Zitat stammt aus § 4. eod.",
         "target": "Digesten_L0082",
         "type": "bibl"
       }
     ]
   },
   {
-    "before": "<cell><hi rend=\"italic\">Moritz Voigt</hi>. Über den Bestand und die historische Entwickelung der Servituten<note type=\"comment\" n=\"7\" xml:id=\"comment-1331\">Nach Servituten folgt im Titel: und der Servitutenklagen. </note> wäh<lb/>rend der römischen Republik (Verh. der Sächs. Ges. d. Wiss. Phil.-hist. Kl. 26, 1874, S. <lb/>155<note type=\"comment\" n=\"8\" xml:id=\"comment-1332\">Die Abhandlung umfaßt die Seiten 159–227. </note>)</cell>",
-    "after": "<cell><ref type=\"bibl\" target=\"Voigt_Bestand_L0323\"><hi rend=\"italic\">Moritz Voigt</hi>. Über den Bestand und die historische Entwickelung der Servituten<note type=\"comment\" n=\"7\" xml:id=\"comment-1331\">Nach Servituten folgt im Titel: und der Servitutenklagen. </note> wäh<lb/>rend der römischen Republik (Verh. der Sächs. Ges. d. Wiss. Phil.-hist. Kl. 26, 1874, S. <lb/>155<note type=\"comment\" n=\"8\" xml:id=\"comment-1332\">Die Abhandlung umfaßt die Seiten 159–227. </note>)</ref></cell>",
+    "before": "<cell><hi rend=\"italic\">Moritz Voigt</hi>. Über den Bestand und die historische Entwickelung der Servituten<note type=\"comment\" n=\"7\" xml:id=\"comment-1331\">Nach Servituten folgt im Titel: und der Servitutenklagen.</note> wäh<lb/>rend der römischen Republik (Verh. der Sächs. Ges. d. Wiss. Phil.-hist. Kl. 26, 1874, S. <lb/>155<note type=\"comment\" n=\"8\" xml:id=\"comment-1332\">Die Abhandlung umfaßt die Seiten 159–227. </note>)</cell>",
+    "after": "<cell><ref type=\"bibl\" target=\"Voigt_Bestand_L0323\"><hi rend=\"italic\">Moritz Voigt</hi>. Über den Bestand und die historische Entwickelung der Servituten<note type=\"comment\" n=\"7\" xml:id=\"comment-1331\">Nach Servituten folgt im Titel: und der Servitutenklagen.</note> wäh<lb/>rend der römischen Republik (Verh. der Sächs. Ges. d. Wiss. Phil.-hist. Kl. 26, 1874, S. <lb/>155<note type=\"comment\" n=\"8\" xml:id=\"comment-1332\">Die Abhandlung umfaßt die Seiten 159–227. </note>)</ref></cell>",
     "replacements": [
       {
-        "ref": "Moritz Voigt. Über den Bestand und die historische Entwickelung der Servituten während der römischen Republik (Verh. der Sächs. Ges. d. Wiss. Phil.-hist. Kl. 26, 1874, S. 155)",
+        "ref": "Moritz Voigt. Über den Bestand und die historische Entwickelung der ServitutenNach Servituten folgt im Titel: und der Servitutenklagen. während der römischen Republik (Verh. der Sächs. Ges. d. Wiss. Phil.-hist. Kl. 26, 1874, S. 155Die Abhandlung umfaßt die Seiten 159–227. )",
         "target": "Voigt_Bestand_L0323",
         "type": "bibl"
       }
@@ -137,7 +137,7 @@
     "after": "<cell><ref type=\"subj\" target=\"publizianisches_Edikt_S01076\"><app n=\"h\"><lem>publizianische</lem><note><pb n=\"185\"></pb>A: <hi rend=\"serif\">publiziarische</hi></note></app> Edikt</ref></cell>",
     "replacements": [
       {
-        "ref": "publizianische Edikt",
+        "ref": "publizianischeA: publiziarische Edikt",
         "target": "publizianisches_Edikt_S01076",
         "type": "subj"
       }
@@ -159,7 +159,7 @@
     "after": "<cell>das gewaltige <app n=\"a\"><lem>Schauspiel der <ref type=\"subj\" target=\"Eroberungspolitik_roemische_S00378\">römi<lb/>schen</ref></lem><note>Fehlt in X.</note></app><ref type=\"subj\" target=\"Eroberungspolitik_roemische_S00378\"> kontinentalen Eroberungspolitik</ref></cell>",
     "replacements": [
       {
-        "ref": "römischen kontinentalen Eroberungspolitik",
+        "ref": "römischenFehlt in X. kontinentalen Eroberungspolitik",
         "target": "Eroberungspolitik_roemische_S00378",
         "type": "subj"
       }
@@ -167,7 +167,7 @@
   },
   {
     "before": "<cell><app n=\"e\"><lem>ζυ(γά</lem><note>A: <hi rend=\"serif\"><hi rend=\"greek\">ζ(υγά</hi></hi></note></app></cell>",
-    "after": "<cell><ref type=\"subj\" target=\"znga_S01501\"><app n=\"e\"><lem>ζυ(γά</lem><note>A: <hi rend=\"serif\"><hi rend=\"greek\">ζ(υγά</hi></hi></note></app></ref></cell>",
+    "after": "<cell><app n=\"e\"><ref type=\"subj\" target=\"znga_S01501\"><lem>ζυ(γά</lem><note>A: <hi rend=\"serif\"><hi rend=\"greek\">ζ(υγά</hi></hi></note></ref></app></cell>",
     "replacements": [
       {
         "ref": "ζυ(γάA: ζ(υγά",
@@ -177,8 +177,8 @@
     ]
   },
   {
-    "before": "<cell>D. 52 pr. d[e] a[ctionibus]<app n=\"o\"><lem>e[mpti]</lem><note><pb n=\"336\"></pb>A: <hi rend=\"serif\">o. </hi></note></app> v[enditi]</cell>",
-    "after": "<cell><ref type=\"bibl\" target=\"Digesten_L0082\">D. 52 pr. d[e] a[ctionibus]<app n=\"o\"><lem>e[mpti]</lem><note><pb n=\"336\"></pb>A: <hi rend=\"serif\">o. </hi></note></app> v[enditi]</ref></cell>",
+    "before": "<cell>D. 52 pr. d[e] a[ctionibus]<app n=\"o\"><lem>e[mpti]</lem><note><pb n=\"336\"></pb>A: <hi rend=\"serif\">o.</hi></note></app> v[enditi]</cell>",
+    "after": "<cell><ref type=\"bibl\" target=\"Digesten_L0082\">D. 52 pr. d[e] a[ctionibus]<app n=\"o\"><lem>e[mpti]</lem><note><pb n=\"336\"></pb>A: <hi rend=\"serif\">o.</hi></note></app> v[enditi]</ref></cell>",
     "replacements": [
       {
         "ref": "D. 52 pr. d[e] a[ctionibus]e[mpti]A: o. v[enditi]",
@@ -188,13 +188,17 @@
     ]
   },
   {
-    "before": "<cell>bereits in dem Brief an Frensdorff vom <lb/>11. Januar 1888 </cell>",
+    "before": "<cell>bereits in dem Brief an Frensdorff vom <lb/>11. Januar 1888</cell>",
     "after": "<cell>bereits in dem <ref type=\"bibl\" target=\"xxx\">Brief an <ref type=\"pers\" target=\"Frensdorff_Ferdinand_0084\">Frensdorff</ref> vom <lb/>11. Januar 1888</ref></cell>",
     "replacements": [
       {
         "ref": "Brief an Frensdorff vom 11. Januar 1888",
         "target": "xxx",
         "type": "bibl"
+      },
+      { "ref": "Frensdorff",
+        "target": "Frensdorff_Ferdinand_0084",
+        "type": "pers"
       }
     ]
   },
@@ -206,6 +210,10 @@
         "ref": "Brief an die Mutter vom 17. Juni 1889 (ZStA Merseburg, Rep. 92, Nl. Max Weber, Nr. 3)",
         "target": "xxx",
         "type": "bibl"
+      },
+      { "ref": "Mutter",
+        "target": "Weber_Helene_0307",
+        "type": "pers"
       }
     ]
   }
