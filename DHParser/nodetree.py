@@ -4343,6 +4343,11 @@ def find_common_ancestor(path_A: Path, path_B: Path) -> Tuple[Optional[Node], in
     """Returns the last common ancestor of path_A, path_B and its index
     in the path. If there is no common ancestor (None, undefined integer)
     is returned.
+
+    The "last" common ancestor is the ancestor that is the farthest away from
+    the root or, to put it differently, it is the root of the smallest tree
+    that encompasses both path_A and path_B. (The last common ancestor seen
+    from the root is actually the first common ancestor seen from the leaves!)
     """
     common_ancestor = None
     i = 0
@@ -5666,7 +5671,7 @@ class ContentMapping:
 
 
     def rebuild_mapping(self, start_pos: int, end_pos: int):
-        """Reconstructs a particular section of the context mapping after the
+        """Reconstructs a particular section of the content mapping after the
         underlying tree has been restructured.
 
         :param start_pos: The string position of the beginning of the text-area
