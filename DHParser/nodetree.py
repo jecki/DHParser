@@ -5274,7 +5274,12 @@ class ContentMapping:
         return self._pos_list
 
     def path(self, path_index: int) -> Path:
-        return self._path_list[path_index]
+        try:
+            return self._path_list[path_index]
+        except IndexError:
+            raise IndexError(f"path_index {path_index} is out of range "
+                f" [0, {len(self._path_list) - 1}]! Use cm.path(cm.get_path_index(position)) "
+                "to determine the path that for a particular position in the text!")
 
     def pos(self, path_index: int) -> int:
         return self._pos_list[path_index]
