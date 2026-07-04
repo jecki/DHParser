@@ -43,7 +43,27 @@ DIVISIBILITY = {
 IGNORE = {}  # {'note'}
 
 
-def note_selector(path) -> bool:
+def pull_out(path):
+    """A variant of DHParser.transform.pull_up that does not keep the
+    surrounding markup intact."""
+    node = path[-1]
+    if len(path) <= 2:
+        return
+    parent = path[-2]
+    ur_parent = path[-3]
+    i = parent.index(node)
+    i2 = ur_parent.index(parent)
+    children = ur_parent._children
+    inlay = []
+    if i > 0:
+        inlay.append(Node(parent.name, parent[:i]).with_pos(parent._pos).with_attr(parent.attr))
+    inlay.append(node)
+    if i < len(parent.children) - 1:
+        inlay.append(Node(parent.name, parent[i + 1:]).with_pos(parent[i + 1]._pos).with_attr(parent.attr))
+    ur_parent._set_result(children[:i2] + tuple(inlay) + children[i2 + 1:])
+
+
+def select_note_inside_app(path) -> bool:
     if len(path) < 3:
         return False
     if (path[-1].name == 'note' and
@@ -53,7 +73,17 @@ def note_selector(path) -> bool:
     return False
 
 
-def markup(before: str, replacements: list[dict[str, str]]) -> str:
+def markup(before: str, replacements: list[dict[str, str]], exclude=select_note_inside_app) -> str:
+    """Fügt <ref> tags in einen XML-Schnipsel ein. "replacements" ist eine Liste
+    von Verzeichnissen der Gestalt:
+    [ {
+        "ref": "Handelsgesellschaften", # Der Text (ohne Tags), der mit einer Referenz versehen werden soll
+        "target": "Weber_Handelsgesellschaften_MWG_I_1_L0336",  # Das Ziel der Referenz
+        "type": "bibl"  # Der Typ der Referenz
+      }
+      {...}
+    ]
+    """
     tree = parse_xml(before)
     for replacement in replacements:
         ref = replacement['ref']
@@ -72,29 +102,9 @@ def markup(before: str, replacements: list[dict[str, str]]) -> str:
         smallest_subtree, _ = find_common_ancestor(cm.path(cm.get_path_index(a)),
                                                    cm.path(cm.get_path_index(b)))
 
-        # Schließe note-tokens aus, die innerhalb einer app-Umgebung vorkommen:
-        def note_selector(path) -> bool:
-            if len(path) < 3:
-                return False
-            if (path[-1].name == 'note' and
-                    path[-2].name == 'ref'
-                    and any(nd.name == 'app' for nd in path)):
-                return True
-            return False
+        for note_path in smallest_subtree.select_path(exclude):
+            pull_out(note_path)
 
-        for note_path in smallest_subtree.select_path(note_selector):
-            pull_up(note_path)
-            note = note_path[-1]
-            assert note.name == 'note', pp_path(note_path)
-            for nd in note.select_children('ref'):
-                if nd.has_equal_attr(Node('dummy', '').with_attr(attrs)):
-                    nd.name = TOKEN_PTYPE
-                    nd.attr = {}
-            merge_adjacent(note_path, lambda p: p[-1].name == TOKEN_PTYPE, TOKEN_PTYPE)
-            if len(note.children) == 1 and note[0].name == TOKEN_PTYPE:
-                reduce_single_child(note_path)
-
-        # cm.rebuild_mapping(a, b)  # content mapping is build a new with the next iteration, anyway
     return tree.as_xml(inline_tags={'cell'}, empty_tags={'lb'})
 
 
