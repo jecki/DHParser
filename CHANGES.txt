@@ -4,7 +4,7 @@ DHParser Version 1.9.7 (29.6.2026)
 - Full left-recursion support using an adapted Version of Luke
   Hutchinson's squirrel parser! (Still experimental, set config value
   left_recursion = "full" to use the new algorithm.)
-- boot strapping of grammars refactored (to fix some bugs in
+- bootstrapping of grammars refactored (to fix some bugs in
   connection with the use of Late Binding Unary.)
 
 

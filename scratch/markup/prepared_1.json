@@ -67,14 +67,13 @@
     ]
   },
   {
-    "before": "<cell>Dagegen D. 18 § 44<note type=\"comment\" n=\"109\">Das Zitat stammt aus § 4.</note> eod.</cell>",
-    "after": "<cell>Dagegen <ref type=\"bibl\" target=\"Digesten_L0082\">D. 18 § 44<note type=\"comment\" n=\"109\">Das Zitat stammt aus § 4.</note> eod.</ref></cell>",
+    "before": "<cell>Dagegen D. 18 § 44<note type=\"comment\" n=\"109\">Das Zitat stammt aus § 4. </note>eod.</cell>",
+    "after": "<cell>Dagegen <ref type=\"bibl\" target=\"Digesten_L0082\">D. 18 § 44<note type=\"comment\" n=\"109\">Das Zitat stammt aus § 4. </note>eod.</ref></cell>",
     "replacements": [
       {
-        "ref": "D. 18 § 44 eod.",
+        "ref": "D. 18 § 44Das Zitat stammt aus § 4. eod.",
         "target": "Digesten_L0082",
-        "type": "bibl",
-        "ignore": "note"
+        "type": "bibl"
       }
     ]
   },
@@ -83,10 +82,9 @@
     "after": "<cell><ref type=\"bibl\" target=\"Voigt_Bestand_L0323\"><hi rend=\"italic\">Moritz Voigt</hi>. Über den Bestand und die historische Entwickelung der Servituten<note type=\"comment\" n=\"7\" xml:id=\"comment-1331\">Nach Servituten folgt im Titel: und der Servitutenklagen.</note> wäh<lb/>rend der römischen Republik (Verh. der Sächs. Ges. d. Wiss. Phil.-hist. Kl. 26, 1874, S. <lb/>155<note type=\"comment\" n=\"8\" xml:id=\"comment-1332\">Die Abhandlung umfaßt die Seiten 159–227. </note>)</ref></cell>",
     "replacements": [
       {
-        "ref": "Moritz Voigt. Über den Bestand und die historische Entwickelung der Servituten während der römischen Republik (Verh. der Sächs. Ges. d. Wiss. Phil.-hist. Kl. 26, 1874, S. 155)",
+        "ref": "Moritz Voigt. Über den Bestand und die historische Entwickelung der ServitutenNach Servituten folgt im Titel: und der Servitutenklagen. während der römischen Republik (Verh. der Sächs. Ges. d. Wiss. Phil.-hist. Kl. 26, 1874, S. 155Die Abhandlung umfaßt die Seiten 159–227. )",
         "target": "Voigt_Bestand_L0323",
-        "type": "bibl",
-        "ignore": "note"
+        "type": "bibl"
       }
     ]
   },
