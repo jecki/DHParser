@@ -99,6 +99,7 @@ __all__ = ('TransformationDict',
            'merge_results',
            'move_fringes',
            'pull_up',
+           'pull_out',
            'left_associative',
            'lean_left',
            'apply_if',
@@ -1633,8 +1634,34 @@ def move_fringes(path: Path, condition: CondFunc, *, side:str = "both", merge: b
         parent._set_result(parent_children[:a + 1] + before + (node,) + after + parent_children[b:])
 
 
-def pull_up(path):
-    """Moves the last Node in the list one level up in the hierarchy.
+def _pull_up_or_out(path, keep_markup: bool):
+    """See :py:meth:`pull_up` and :py:meth:`pull_out`."""
+    node = path[-1]
+    if len(path) <= 2:
+        return
+    parent = path[-2]
+    ur_parent = path[-3]
+    i = parent.index(node)
+    i2 = ur_parent.index(parent)
+    if keep_markup:
+        node._set_result(Node(parent.name, node.result).with_pos(node._pos).with_attr(parent.attr))
+    children = ur_parent._children
+    inlay = []
+    if i > 0:
+        inlay.append(Node(parent.name, parent[:i]).with_pos(parent._pos).with_attr(parent.attr))
+    inlay.append(node)
+    if i < len(parent.children) - 1:
+        inlay.append(Node(parent.name, parent[i + 1:]).with_pos(parent[i + 1]._pos).with_attr(parent.attr))
+    ur_parent._set_result(children[:i2] + tuple(inlay) + children[i2 + 1:])
+
+
+def pull_up(path, keep_markup: bool = True):
+    """Moves the last Node in the list one level up in the hierarchy, but
+    leaving markup intact. This means that a single child of the same type
+    and with the same attributes as the parent node will be added to the
+    moved up node that takes the content the node had before moving up.
+    (See examples, below!) Use :py:func:`pull_out` if you don't want to
+    keep the markup intact.
 
     >>> tree = parse_sxpr('(p (t "A") (i (t "1") (X "---") (t "2")) (t "B"))')
     >>> path = tree.pick_path('X')
@@ -1659,25 +1686,40 @@ def pull_up(path):
     >>> pull_up(path)
     >>> print(tree.as_sxpr())
     (p (t "A") (X (i "---")) (t "B"))
-
-    EXPERIMENTAL!!!
     """
-    node = path[-1]
-    if len(path) <= 2:
-        return
-    parent = path[-2]
-    ur_parent = path[-3]
-    i = parent.index(node)
-    i2 = ur_parent.index(parent)
-    node._set_result(Node(parent.name, node.result).with_pos(node._pos).with_attr(parent.attr))
-    children = ur_parent._children
-    inlay = []
-    if i > 0:
-        inlay.append(Node(parent.name, parent[:i]).with_pos(parent._pos).with_attr(parent.attr))
-    inlay.append(node)
-    if i < len(parent.children) - 1:
-        inlay.append(Node(parent.name, parent[i + 1:]).with_pos(parent[i + 1]._pos).with_attr(parent.attr))
-    ur_parent._set_result(children[:i2] + tuple(inlay) + children[i2 + 1:])
+    _pull_up_or_out(path, keep_markup=True)
+
+
+def pull_out(path):
+    """Moves the last Node in the list one level up in the hierarchy,
+    breaking up the surrounding markup. Use :py:func:`pull_up` if you
+    want to keep the surrounding markup intact.
+
+    >>> tree = parse_sxpr('(p (t "A") (i (t "1") (X "---") (t "2")) (t "B"))')
+    >>> path = tree.pick_path('X')
+    >>> pull_out(path)
+    >>> print(tree.as_sxpr())
+    (p (t "A") (i (t "1")) (X "---") (i (t "2")) (t "B"))
+
+    >>> tree = parse_sxpr('(p (t "A") (i (X "---") (t "2")) (t "B"))')
+    >>> path = tree.pick_path('X')
+    >>> pull_out(path)
+    >>> print(tree.as_sxpr())
+    (p (t "A") (X "---") (i (t "2")) (t "B"))
+
+    >>> tree = parse_sxpr('(p (t "A") (i  (t "1") (X "---")) (t "B"))')
+    >>> path = tree.pick_path('X')
+    >>> pull_out(path)
+    >>> print(tree.as_sxpr())
+    (p (t "A") (i (t "1")) (X "---") (t "B"))
+
+    >>> tree = parse_sxpr('(p (t "A") (i (X "---")) (t "B"))')
+    >>> path = tree.pick_path('X')
+    >>> pull_out(path)
+    >>> print(tree.as_sxpr())
+    (p (t "A") (X "---") (t "B"))
+    """
+    _pull_up_or_out(path, keep_markup=False)
 
 
 def left_associative(path: Path):
