@@ -73,30 +73,6 @@ def select_note_inside_app(path) -> bool:
     return False
 
 
-
-def markup_text(root: Node,
-                elements: list[str],
-                pattern: str,
-                ignore: list[str],
-                exclude: list[str],
-                split: list[str],
-                tag: str,
-                attributes: dict[str, str]) -> None:
-    """Markiere text Strukturübergreifend.
-
-        :param root: Wurzelelement des zu bearbeitenden XML-Baums.
-        :param elements: Liste der Tags, innerhalb derer gesucht und ggf. ersetzt werden soll oder
-        :param pattern: Regulärer Ausdruck für den Text, der ausgezeichnet werden soll.
-        :param ignore: Liste der Elemente, der Inhalt bei der Suche ignoriert werden soll.
-        :param exclude: Liste der Elemente, die bei der Auszeichnung ignoriert werden sollen.
-        # split: Liste von Elementen, die nötigenfalls zerteilt werden können.
-        tag: Name des einzufügenden Elements.
-        attributes: Attribute des einzufügenden Elements.
-    """
-    pass
-    # TODO
-
-
 def markup(before: str, replacements: list[dict[str, str]], exclude=select_note_inside_app) -> str:
     """Fügt <ref> tags in einen XML-Schnipsel ein. "replacements" ist eine Liste
     von Verzeichnissen der Gestalt:
