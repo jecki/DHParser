@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import sys, os, re
 from lxml import etree
 
 
@@ -44,9 +45,12 @@ XPATH_LIBRARY = {
         and p[-1].name == 'body'
         and p[-2].name == 'text' \
         and p[-2].get_attribute('type', '') == 'main-text',
-
-    './/app/rdg|.//app/note|.//note': lambda p: len(p) >= 1 and p[-1].name == 'node' \
-        or (len(p) >= 0 and p[-1].name == 'rdg' and p[-2].name == 'app')
+    './/app/rdg|.//app/note|.//note': lambda p: p[-1].name == 'node' \
+        or (len(p) >= 2 and p[-1].name == 'rdg' and p[-2].name == 'app'),
+    './/app//rdg|.//app//note': lambda p: len(p) >= 2 \
+        and p[-1].name in ('rdg', 'note') and any(nd.name == 'app' for nd in p[:-1]),
+    './/cell': lambda p: p[-1].name == 'cell',
+    './/note': lambda p: p[-1].name == 'note'
 }
 
 
@@ -71,7 +75,7 @@ def mark_text(root: etree._Element,
               elements: str,
               pattern: str,
               exclude: str,
-              lock_out: list,
+              lock_out: str,
               split: list,
               tag: str,
               attributes: dict) -> etree._Element:
@@ -82,7 +86,7 @@ def mark_text(root: etree._Element,
         elements: XPath der Elemente, innerhalb derer Text ausgezeichnet werden soll.
         pattern: Regulärer Ausdruck für den Text, der ausgezeichnet werden soll.
         exclude: XPath der Unterelemente, deren Inhalt bei der Suche ignoriert werden soll
-        lock_out: Liste von Elementen, die bei der Einfügung ausgespart bleiben sollen.
+        lock_out: XPath von Elementen, die bei der Einfügung ausgespart bleiben sollen.
         split: Liste von Elementen, die nötigenfalls zerteilt werden können.
         tag: Name des einzufügenden Elements.
         attributes: Attribute des einzufügenden Elements.
@@ -92,27 +96,25 @@ def mark_text(root: etree._Element,
         print("Warnung: Der Algorithmus zum Aussparen von Elementen is noch provisorisch und "
               "wirkt sich bisher nur auf unmittelbare Kind-Elemente des einzufügenden Tags aus!")
     root_node = Node.from_etree(root)
-    for element in root_node.select-path(XPath(elements)):
-        cm = ContentMapping(element, ignore=XPath(exclude), divisibility=split)
+    for element in root_node.select_path(XPath(elements), include_root=True):
+        cm = ContentMapping(element[-1], ignore=XPath(exclude), divisibility=split)
         for m in re.finditer(pattern, cm.content):
             a, b = m.span()
             attrs = dict()
-            if typ: attrs['type'] = typ
-            attrs['target'] = target
             cm.markup(a, b, 'ref', attrs)
 
             if lock_out:
                 smallest_subtree, _ = find_common_ancestor(cm.path(cm.get_path_index(a)),
                                                            cm.path(cm.get_path_index(b)))
-                for note_path in smallest_subtree.select_path(lock_out):
+                for note_path in smallest_subtree.select_path(XPath(lock_out)):
                     pull_out(note_path)
-                cm.rebuild_mapping(smallest_subtree.pos,
-                                   smallest_subtree.pos + len(smallest_subtree.content) - 1)
-    return root_node.as_etree(empty_tag={'lb'})
+                subtree_pos = cm.get_node_position(smallest_subtree)
+                cm.rebuild_mapping(subtree_pos,
+                                   subtree_pos + len(smallest_subtree.content) - 1)
+    return root_node.as_etree(ET=etree, empty_tags={'lb'})
 
 
 def process_example():
-
     input_path = 'example.mwg.tei.xml'
     output_path = 'example.output.mwg.tei.xml'
     tree = etree.parse(input_path, parser=etree.XMLParser())
@@ -121,7 +123,8 @@ def process_example():
               elements='//text[@type="main-text"]/body',
               pattern=r'scamn\w+ et strig\w+',
               exclude='.//app/rdg|.//app/note|.//note',
-              # split=['hi'],
+              lock_out='.//app//rdg|.//app//note',
+              split=['hi'],
               tag='ref',
               attributes={
                   'type': 'subj',
@@ -137,8 +140,38 @@ def process_example():
         )
 
 
+TEST_CODE =   {
+    "before": "<cell>das gewaltige <app n=\"a\"><lem>Schauspiel der römi<lb/>schen</lem><note>Fehlt in X.</note></app> kontinentalen Eroberungspolitik</cell>",
+    "after": "<cell>das gewaltige <app n=\"a\"><lem>Schauspiel der <ref type=\"subj\" target=\"Eroberungspolitik_roemische_S00378\">römi<lb/>schen</ref></lem><note>Fehlt in X.</note></app><ref type=\"subj\" target=\"Eroberungspolitik_roemische_S00378\"> kontinentalen Eroberungspolitik</ref></cell>",
+    "replacements": [
+      {
+        "ref": "römischen kontinentalen Eroberungspolitik",
+        "target": "Eroberungspolitik_roemische_S00378",
+        "type": "subj"
+      }
+    ]
+  }
+
+
+def test_with_lxml(snippet, ref, target, typ) -> str:
+    root = etree.XML(snippet)
+    result = mark_text(root = root,
+                       elements = './/cell',
+                       pattern = re.escape(ref),
+                       exclude = './/note',
+                       lock_out = './/app//rdg|.//app//note',
+                       split = ['hi'],
+                       tag = 'ref',
+                       attributes = {'type': typ, 'target': target})
+    return etree.tostring(result, encoding="utf-8", pretty_print=True)
+
 
 if __name__ == '__main__':
-    process_example()
+    after = test_with_lxml(TEST_CODE['before'],
+                           TEST_CODE['replacements'][0]['ref'],
+                           TEST_CODE['replacements'][0]['target'],
+                          TEST_CODE['replacements'][0]['type'])
+    print(after.decode('utf-8'))
+    # process_example()
 
 

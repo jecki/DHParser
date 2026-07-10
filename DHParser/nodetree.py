@@ -53,7 +53,7 @@ The source code of the module ``nodetree`` consists of four main sections:
        on arbitrary criteria (passed as match-node or match-path-function)
 
     e. Experimental (XML-)milestone-support: :py:meth:`Node.milestone_segment`
-       and :py:meth:`Node.split`. See also: :py:class:`ContextMapping`
+       and :py:meth:`Node.split`. See also: :py:class:`ContentMapping`
 
     f. A very simple method for tree evaluation: (More elaborate
        scaffolding for tree evaluation is found in :py:mod:`~traverse`
@@ -76,7 +76,7 @@ The source code of the module ``nodetree`` consists of four main sections:
     of the tree with one particular node inside or at the leaf of the
     tree.
 
-4.  Context-mappings: A Class (:py:class:`ContextMapping`) for
+4.  Content-mappings: A Class (:py:class:`ContentMapping`) for
     relating the flat string-content of a document-tree to its
     structure. This allows using the string-content for searching in the
     document and then switching to the tree-structure to manipulate it.
@@ -846,7 +846,13 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def pos(self) -> int:
         """Returns the position of the Node's content in the source text."""
         if self._pos < 0:
-            raise AssertionError("Position value not initialized! Use Node.with_pos()")
+            raise AssertionError("Position value not initialized! Use node.with_pos() "
+                "to set the position of node and all of its descendants.\nTypically, "
+                "you would call node.with_pos(0) for the root node of a node tree once "
+                "in the lifetime of the tree.\nWhen working with content mappings, the "
+                "position relative to the content mapping can be obtained with "
+                "cm.get_node_position(). This is independet of node. pos and does not "
+                "require any initialization!")
         return self._pos
 
     def with_pos(self, pos: cython.int) -> Node:
@@ -4404,7 +4410,7 @@ def path_sanity_check(path: Path) -> bool:
 
 #######################################################################
 #
-# Context Mappings, splitting and insertion of new nodes into a tree
+# Content Mappings, splitting and insertion of new nodes into a tree
 #
 #######################################################################
 
@@ -4561,7 +4567,7 @@ def split_node(node: Node, parent: Node, i: cython.int, left_biased: bool = True
         the previous path rather than the location at the very beginning
         of the next path. The default value is "True".
     :param chain_attr: a dictionary with a single key and value resembling
-        an attribute and value that will be added to the attributes-dicitonary
+        an attribute and value that will be added to the attributes-dictionary
         of both nodes after the split if the node is named node.
 
     :returns: the index of the split within the children's tuple of the
@@ -5143,6 +5149,13 @@ class ContentMapping:
     the markup-method takes care of splitting up either the newly created or
     some of the existing nodes to fit in the markup.
 
+    Caveat: Content mappings always use their own position values counting from 0
+    for the left-most character. The Node.pos value will be both ignored and left
+    untouched by the ContentMapping object. It is not even required that Node.pos has
+    been initialized. Use :py:meth:`ContentMapping.get_node_pos` to determine
+    a node's position within the content mapping and do not assume this to be
+    the same as Node.pos.
+
     Public properties:
 
     :ivar path_list: A list of paths covering the selected leaves of the tree from
@@ -5171,7 +5184,7 @@ class ContentMapping:
         In any case, the string content of the added markup remains the same, but
         it might cover more tags than strictly necessary.
     :ivar chain_attr_name: An attribute that will receive one and the same identifier as
-        value for all nodes belonging to the chain of on split-up node.
+        value for all nodes belonging to the chain of a split-up node.
     :ivar auto_cleanup: Update the content mapping after the markup has been finished.
         Should always be true if it is intended to reuse the same content mapping
         for further markups in the same range or other purposes.
@@ -5193,6 +5206,7 @@ class ContentMapping:
                  divisibility: Union[Dict[str, Container], Container, str] = DIVISIBLES,
                  chain_attr_name: str = '',
                  auto_cleanup: bool = True):
+        assert isinstance(origin, Node), f"origin must be a Node, not {type(origin)}, {origin}"
         self.origin: Node = origin
         select_func, ignore_func = _breed_leaf_selector(select, ignore)
         self.select_func: PathMatchFunction = select_func
@@ -5421,16 +5435,12 @@ class ContentMapping:
 
     def get_node_position(self, node: Node, reverse: bool=False) -> int:
         """Returns the string-position of the first or last + 1 (if 'reverse'
-        is True) character of the first or last occurrence of 'node'
-        within the mapping. If 'node' is None or not contained in any path
-        of the mapping, -1 will be returned. If 'node' is a leaf node, it
-        occurs only once (if at all) in the mapping. Otherwise, it
-        occurs (if at all) more often than once if it or any of its
-        children has more than one child.
+        is True) character of the node within the mapping. If 'node' is None
+        or not contained in any path of the mapping, -1 will be returned.
 
-        Independent of whether the node is a leaf-node, the position
-        of the first and last + 1 character is the same if and
-        only if the string content of 'node' is empty.
+        Note that this is the position within the context mapping and not
+        a position derived from node.pos! (Content mappings always use their own
+        positions and start counting from 0 for the left-most character.)
 
         Examples::
 
