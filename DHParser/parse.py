@@ -3000,16 +3000,16 @@ def DTKN(token, wsL='', wsR=r'\s*'):
     return withWS(lambda: Drop(Text(token)), wsL, wsR)
 
 
-class Whitespace(RegExp):
+class Whitespace(RegExp):  # TODO:  Derive this form CombinedParser to keep different comments apart
     r"""A variant of RegExp that it meant to be used for insignificant whitespace.
     In contrast to RegExp, Whitespace always returns a match. If the defining
     regular expression did not match, an empty match is returned.
 
-    :ivar keep_comments: A boolean indicating whether or not whitespace
-        containing comments should be kept, even if the self.drop_content
-        flag is True. If keep_comments and drop_flag are both True
+    :ivar keep_comments: A boolean indicating whether whitespace
+        that contains comments should be kept, even if the self.drop_content
+        flag is True. If keep_comments and drop_flag are both true,
         a stretch of whitespace containing a comment will be renamed
-        to "comment\__" and whitspace that does not contain any comments
+        to "comment\__" and whitespace that does not contain any comments
         will be dropped.
 
     Example::
@@ -3135,7 +3135,7 @@ class CombinedParser(Parser):
     also time.
 
     Regarding the latter, however, performing flattening or
-    merging during parsing stage alse means that it will be perfomred
+    merging during the parsing stage also means that it will be performed
     on all those tree-structures that are discarded later in the parsing
     process, as well.
 
@@ -3145,7 +3145,7 @@ class CombinedParser(Parser):
     because of potentially many string-concatenations. But then again,
     the usual depth-first-traversal during AST-transformation will take
     longer, because of the much more verbose tree. (Experiments suggest
-    that not much ist to be gained by post-poning flattening and
+    that not much is to be gained by postponing flattening and
     merging to the AST-transformation stage.)
 
     Another optimization consists in returning the singleton EMPTY_NODE
@@ -3181,7 +3181,7 @@ class CombinedParser(Parser):
         will be passed through. If the descendant node is anonymous,
         it will be dropped and only its result will be kept.
         In all other cases a new node will be
-        generated and the descendant node will be its single child.
+        generated, and the descendant node will be its single child.
         """
         # assert node is None or isinstance(node, Node)
         if node is not None:
