@@ -993,7 +993,7 @@ CONFIG_PRESET['test_skip_preprocessor'] = False
 
 # Determines what happens when functions decorated as deprecated
 # are called. Possible values are:
-# "warn" - print ar warning, the first time the deprecated function
+# "warn" - print a warning, the first time the deprecated function
 #          is called
 # "fail" - raise a DeprecationWarning, the first time the deprecated
 #          function is called

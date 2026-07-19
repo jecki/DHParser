@@ -1,7 +1,5 @@
 import sys, os, json, re
 
-from DHParser import reduce_single_child
-
 scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..', '..')))
 scriptpath = os.path.abspath(scriptpath)

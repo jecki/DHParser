@@ -658,6 +658,11 @@ class ConfigurableEBNFGrammar(Grammar):
         self.mode__ = 'fixed'
 
 
+CHKSUM_CONFIG_KEYS = ['static_analysis', 'reorder_definitions', 'add_grammar_source_to_parser_docstring',
+                      'default_disposable_regexp', 'default_literalws', 'syntax_variant', 'delimiter_set',
+                      'optimizations', 'left_recursion']
+
+
 def grammar_chksum(grammar_source: str) -> str:
     """Creates a chksum from the grammar source, the DHParser version
     and the configuration. This checksum can be added to the Python
@@ -665,10 +670,7 @@ def grammar_chksum(grammar_source: str) -> str:
     whether the grammar it needs to be regenerated.
     """
     config = get_config_values()
-    # TODO: Rather than deleting irrelevant and potentially interfering config-values, pick out only those that are relevant
-    del config['syncfile_path']
-    del config['main_pid']
-    cfg = [(k, str(v)) for k, v in config.items()]
+    cfg = [(k, config[k]) for k in CHKSUM_CONFIG_KEYS]
     cfg.sort()
     return md5(grammar_source, __version__, str(cfg))
 
