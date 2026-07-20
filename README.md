@@ -2,7 +2,7 @@ DHParser
 ========
 
 ![](https://img.shields.io/pypi/v/DHParser) 
-![](https://img.shields.io/pypi/status/DHParser)g
+![](https://img.shields.io/pypi/status/DHParser)
 ![](https://img.shields.io/pypi/l/DHParser)
 ![](https://img.shields.io/pypi/pyversions/DHParser)
 

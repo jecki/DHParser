@@ -1241,7 +1241,7 @@ def mixin_comment(whitespace: str, comment: str, always_match: bool = True) -> s
     regexps. Thus comments can occur wherever whitespace is allowed
     and will be skipped just as implicit whitespace.
 
-    Note, that because this works on the level of regular expressions,
+    Note that because this works on the level of regular expressions,
     nesting comments is not possible. It also makes it much harder to
     use directives inside comments (which isn't recommended, anyway).
 
@@ -3005,12 +3005,22 @@ class Whitespace(RegExp):
     In contrast to RegExp, Whitespace always returns a match. If the defining
     regular expression did not match, an empty match is returned.
 
-    :ivar keep_comments: A boolean indicating whether or not whitespace
-        containing comments should be kept, even if the self.drop_content
-        flag is True. If keep_comments and drop_flag are both True
+    :ivar keep_comments: A boolean indicating whether whitespace
+        that contains comments should be kept, even if the self.drop_content
+        flag is True. If keep_comments and drop_flag are both true,
         a stretch of whitespace containing a comment will be renamed
-        to "comment\__" and whitspace that does not contain any comments
+        to "comment\__" and whitespace that does not contain any comments
         will be dropped.
+
+    Class Whitespace uses only a very simple (and fast algorithm) to preserve
+    comments if needed. Keep in mind the following caveats:
+
+    Caveat 1: If there is a comment, the returned node will contain any leading
+        or trailing whitespace as well, not just the comment.
+
+    Caveat 2: If there are several comments, possibly interspersed with whitespace,
+        there will still only one flat node named "commet__" be produced that
+        contains all whitespace and all comments in the sequence.
 
     Example::
 
@@ -3060,11 +3070,10 @@ class Whitespace(RegExp):
             capture = match.group(0)
             if capture or not self.disposable:
                 end = match.end()
-                if self.drop_content:
-                    if self.keep_comments:
-                        if capture.lstrip():
-                            name = "comment__" if self.node_name[0:1] == ":" else self.node_name
-                            return Node(name, capture, True), end
+                if self.keep_comments and capture.lstrip():  # there is not only whitesspace, thus a comment...
+                    name = "comment__" if self.node_name[0:1] == ":" else self.node_name
+                    return Node(name, capture, True), end
+                elif self.drop_content:
                     return EMPTY_NODE, end
                 return Node(self.node_name, capture, True), end
         return EMPTY_NODE, location
@@ -3076,7 +3085,7 @@ class Whitespace(RegExp):
         return '~'
 
 
-# TODO: Add character-range-parser
+# TODO: Add character-range-parser?
 
 
 def update_scanner(grammar: Grammar, leaf_parsers: Dict[str, str]):
@@ -3135,7 +3144,7 @@ class CombinedParser(Parser):
     also time.
 
     Regarding the latter, however, performing flattening or
-    merging during parsing stage alse means that it will be perfomred
+    merging during the parsing stage also means that it will be performed
     on all those tree-structures that are discarded later in the parsing
     process, as well.
 
@@ -3145,7 +3154,7 @@ class CombinedParser(Parser):
     because of potentially many string-concatenations. But then again,
     the usual depth-first-traversal during AST-transformation will take
     longer, because of the much more verbose tree. (Experiments suggest
-    that not much ist to be gained by post-poning flattening and
+    that not much is to be gained by postponing flattening and
     merging to the AST-transformation stage.)
 
     Another optimization consists in returning the singleton EMPTY_NODE
@@ -3181,7 +3190,7 @@ class CombinedParser(Parser):
         will be passed through. If the descendant node is anonymous,
         it will be dropped and only its result will be kept.
         In all other cases a new node will be
-        generated and the descendant node will be its single child.
+        generated, and the descendant node will be its single child.
         """
         # assert node is None or isinstance(node, Node)
         if node is not None:

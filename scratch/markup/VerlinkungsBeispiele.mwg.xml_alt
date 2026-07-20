@@ -1,0 +1,271 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/css" href="mwg-documents.css"?>
+<?xml-stylesheet type="text/css" href="example.css"?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0">
+    <teiHeader/>
+    <text>
+        <body>
+            <table>
+                <row role="label" rend="bold">
+                    <cell>Unverlinkt</cell>
+                    <cell>Verlinkt</cell>
+                </row>
+                <row>
+                    <cell/>
+                    <cell/>
+                </row>
+                <row rend="bold">
+                    <cell>Fälle mit leeren Elementen:</cell>
+                    <cell/>
+                </row>
+                <row>
+                    <cell>Zur <lb/>Geschichte der Handelsgesellschaften im Mittelalter</cell>
+                    <cell><ref type="bibl" target="xxx">Zur <lb/>Geschichte der
+                            Handelsgesellschaften im Mittelalter</ref></cell>
+                </row>
+                <row>
+                    <cell>wollte er sich mit der handelsrechtlichen Habilitations<lb/>schrift
+                        begnügen</cell>
+                    <cell>wollte er sich mit der handelsrechtlichen <ref type="pers"
+                            target="Weber_Max_Habilitation_1892_bio0005"
+                            >Habilitations<lb/>schrift</ref> begnügen</cell>
+                </row>
+                <row>
+                    <cell>ist von einem Versuch der Weiterführung der „Handelsge<lb/>sellschaften“
+                        nichts bekannt</cell>
+                    <cell>ist von einem Versuch der Weiterführung der „<ref type="bibl"
+                            target="Weber_Handelsgesellschaften_MWG_I_1_L0336"
+                            >Handelsge<lb/>sellschaften</ref>“ nichts bekannt</cell>
+                </row>
+                <row>
+                    <cell>vgl. Gesammelte <pb n="58"/>Werke der Brüder Christian und Friedrich
+                        Leopold Grafen zu Stolberg, 1. Band. – Ham<lb/>burg: Friedrich Perthes 1827,
+                        S. 44.</cell>
+                    <cell>vgl. <ref type="bibl" target="Stolberg_Gesammelte_Werke_I_L0305"
+                            >Gesammelte <pb n="58"/>Werke der Brüder Christian und Friedrich Leopold
+                            Grafen zu Stolberg, 1. Band. – Ham<lb/>burg: Friedrich Perthes
+                            1827</ref>, S. 44.</cell>
+                </row>
+                <row>
+                    <cell/>
+                    <cell/>
+                </row>
+                <row rend="bold">
+                    <cell>Fälle mit Elementen, deren Inhalt berücksichtigt werden soll:</cell>
+                    <cell/>
+                </row>
+                <row>
+                    <cell>citierten Worten <hi rend="italic">Frontins</hi> am besten
+                        entspricht.</cell>
+                    <cell>citierten <ref type="bibl" target="Frontin_De_agrorum_qualitate_L0097"
+                            >Worten <hi rend="italic">Frontins</hi></ref> am besten
+                        entspricht.</cell>
+                </row>
+                <row>
+                    <cell>patrimonial-<hi rend="italic">autokratisch</hi> regierten erweiterten
+                        <lb/>Familie</cell>
+                    <cell><ref type="subj" target="Familie_patrimonial_autokratisch_regierte_S00406"
+                                >patrimonial-<hi rend="italic">autokratisch</hi> regierten
+                            erweiterten <lb/>Familie</ref></cell>
+                </row>
+                <row>
+                    <cell/>
+                    <cell/>
+                </row>
+                <row rend="bold">
+                    <cell>Fälle mit Elementen, deren Inhalt ausgeblendet werden soll:</cell>
+                    <cell/>
+                </row>
+                <row>
+                    <cell>Dagegen D. 18 § 44<note type="comment" n="109">Das Zitat stammt aus § 4.
+                        </note>eod.</cell>
+                    <cell>Dagegen <ref type="bibl" target="Digesten_L0082">D. 18 § 44<note
+                                type="comment" n="109">Das Zitat stammt aus § 4.
+                        </note>eod.</ref></cell>
+                </row>
+                <row>
+                    <cell><hi rend="italic">Moritz Voigt</hi>. Über den Bestand und die historische
+                        Entwickelung der Servituten<note type="comment" n="7" xml:id="comment-1331"
+                            >Nach Servituten folgt im Titel: und der Servitutenklagen. </note>
+                        wäh<lb/>rend der römischen Republik (Verh. der Sächs. Ges. d. Wiss.
+                        Phil.-hist. Kl. 26, 1874, S. <lb/>155<note type="comment" n="8"
+                            xml:id="comment-1332">Die Abhandlung umfaßt die Seiten 159–227.
+                        </note>)</cell>
+                    <cell><ref type="bibl" target="Voigt_Bestand_L0323"><hi rend="italic">Moritz
+                                Voigt</hi>. Über den Bestand und die historische Entwickelung der
+                                Servituten<note type="comment" n="7">Nach Servituten folgt im Titel:
+                                und der Servitutenklagen. </note> wäh<lb/>rend der römischen
+                            Republik (Verh. der Sächs. Ges. d. Wiss. Phil.-hist. Kl. 26, 1874, S.
+                                <lb/>155<note type="comment" n="8">Die Abhandlung umfaßt die Seiten
+                                159–227. </note>)</ref></cell>
+                </row>
+                <row>
+                    <cell/>
+                    <cell/>
+                </row>
+                <row rend="bold">
+                    <cell>Fälle mit Apparaten (lem mit einbezogen, rdg ausgeblendet):</cell>
+                    <cell/>
+                </row>
+                <row>
+                    <cell>per <app n="e">
+                            <lem>scamna</lem>
+                            <rdg wit="A">scamne</rdg>
+                        </app> et strigas</cell>
+                    <cell>per <ref type="subj" target="scamna_et_strigae_S01193"><app n="e">
+                                <lem>scamna</lem>
+                                <rdg wit="A">scamne</rdg>
+                            </app> et strigas</ref></cell>
+                </row>
+                <row>
+                    <cell><app n="g">
+                            <lem>silvae</lem>
+                            <rdg wit="A">silvae,</rdg>
+                        </app> glandiferae</cell>
+                    <cell><ref type="subj" target="silva_glandifera_S01229"><app n="g">
+                                <lem>silvae </lem>
+                                <rdg wit="A">silvae, </rdg>
+                            </app>glandiferae</ref></cell>
+                </row>
+                <row>
+                    <cell>C. I. L., I zu <app n="b">
+                            <lem>Z.</lem>
+                            <rdg wit="A"><pb n="130"/>c.</rdg>
+                        </app> 57. 66 der lex <lb/>agraria</cell>
+                    <cell><ref type="bibl" target="Mommsen_Lex_agraria_L0217">C. I. L., I zu <app
+                                n="b">
+                                <lem>Z.</lem>
+                                <rdg wit="A"><pb n="130"/>c.</rdg>
+                            </app> 57. 66 der lex <lb/>agraria</ref></cell>
+                </row>
+                <row>
+                    <cell><hi rend="italic">Hyg.</hi>, de <app n="d">
+                            <lem>cond.</lem>
+                            <rdg wit="A"><pb n="136"/>cred.</rdg>
+                        </app> agr. p. 117, 5</cell>
+                    <cell><ref type="bibl" target="Hygin_De_condicionibus_agrorum_L0135"><hi
+                                rend="italic">Hyg.</hi>, de <app n="d">
+                                <lem>cond.</lem>
+                                <rdg wit="A"><pb n="136"/>cred.</rdg>
+                            </app> agr. p. 117, 5</ref></cell>
+                </row>
+                <row>
+                    <cell><app n="h">
+                            <lem>publizianische</lem>
+                            <note><pb n="185"/>A: <hi rend="serif">publiziarische</hi></note>
+                        </app> Edikt</cell>
+                    <cell><ref type="subj" target="publizianisches_Edikt_S01076"><app n="h">
+                                <lem>publizianische</lem>
+                                <note><pb n="185"/>A: <hi rend="serif">publiziarische</hi></note>
+                            </app> Edikt</ref></cell>
+                </row>
+                <row>
+                    <cell/>
+                    <cell/>
+                </row>
+                <row rend="bold">
+                    <cell>Wünschenswert:</cell>
+                    <cell/>
+                </row>
+                <row>
+                    <cell/>
+                    <cell/>
+                </row>
+                <row rend="bold">
+                    <cell>Fälle mit Überschneidungen, wobei das bestehende Element zerteilt
+                        wird:</cell>
+                    <cell/>
+                </row>
+                <row>
+                    <cell>das gewaltige <hi rend="italic">Schauspiel der römi<lb/>schen</hi>
+                        kontinentalen Eroberungspolitik</cell>
+                    <cell>das gewaltige <hi rend="italic">Schauspiel der </hi><ref type="subj"
+                            target="Eroberungspolitik_roemische_S00378"><hi rend="italic"
+                                >römi<lb/>schen</hi> kontinentalen Eroberungspolitik</ref></cell>
+                </row>
+                <row>
+                    <cell/>
+                    <cell/>
+                </row>
+                <row rend="bold">
+                    <cell>Fälle mit Überschneidungen, wobei der zu setzende Link zerteilt
+                        wird:</cell>
+                    <cell/>
+                </row>
+                <row>
+                    <cell>das gewaltige <app n="a">
+                            <lem>Schauspiel der römi<lb/>schen</lem>
+                            <note>Fehlt in X.</note>
+                        </app> kontinentalen Eroberungspolitik</cell>
+                    <cell>das gewaltige <app n="a">
+                            <lem>Schauspiel der <ref type="subj"
+                                    target="Eroberungspolitik_roemische_S00378"
+                                >römi<lb/>schen</ref></lem>
+                        <note>Fehlt in X.</note>
+                        </app><ref type="subj" target="Eroberungspolitik_roemische_S00378">
+                            kontinentalen Eroberungspolitik</ref></cell>
+                </row>
+                <row>
+                    <cell/>
+                    <cell/>
+                </row>
+                <row rend="bold">
+                    <cell>Mit Klammern:</cell>
+                    <cell/>
+                </row>
+                <row>
+                    <cell><app n="e">
+                            <lem>ζυ(γά</lem>
+                            <note>A: <hi rend="serif"><hi rend="greek">ζ(υγά</hi></hi></note>
+                        </app></cell>
+                    <cell><ref type="subj" target="znga_S01501"><app n="e">
+                                <lem>ζυ(γά</lem>
+                                <note>A: <hi rend="serif"><hi rend="greek">ζ(υγά</hi></hi></note>
+                            </app></ref></cell>
+                </row>
+                <row>
+                    <cell>D. 52 pr. d[e] a[ctionibus]<app n="o">
+                            <lem>e[mpti]</lem>
+                            <note><pb n="336"/>A: <hi rend="serif">o. </hi></note>
+                        </app> v[enditi]</cell>
+                    <cell><ref type="bibl" target="Digesten_L0082">D. 52 pr. d[e] a[ctionibus]<app
+                                n="o">
+                                <lem>e[mpti]</lem>
+                                <note><pb n="336"/>A: <hi rend="serif">o. </hi></note>
+                            </app> v[enditi]</ref></cell>
+                </row>
+                <row>
+                    <cell/>
+                    <cell/>
+                </row>
+                <row>
+                    <cell/>
+                    <cell/>
+                </row>
+                <row>
+                    <cell/>
+                    <cell/>
+                </row>
+                <row rend="bold">
+                    <cell>Beispiele für rekursive Anwendung:</cell>
+                    <cell/>
+                </row>
+                <row>
+                    <cell>bereits in dem Brief an Frensdorff vom <lb/>11. Januar 1888 </cell>
+                    <cell>bereits in dem <ref type="bibl" target="xxx">Brief an <ref type="pers"
+                                target="Frensdorff_Ferdinand_0084">Frensdorff</ref> vom <lb/>11.
+                            Januar 1888</ref>
+                    </cell>
+                </row>
+                <row>
+                    <cell>siehe auch die Mitteilung in dem Brief an die <lb/>Mutter vom 17. Juni
+                        1889 (ZStA Merseburg, Rep. 92, Nl. Max Weber, Nr. 3):</cell>
+                    <cell>siehe auch die Mitteilung in dem <ref type="bibl" target="xxx">Brief an
+                            die <lb/><ref type="pers" target="Weber_Helene_0307">Mutter</ref> vom
+                            17. Juni 1889 (ZStA Merseburg, Rep. 92, Nl. Max Weber, Nr.
+                        3)</ref>:</cell>
+                </row>
+            </table>
+        </body>
+    </text>
+</TEI>
