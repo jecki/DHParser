@@ -113,7 +113,7 @@ class miniXMLGrammar(Grammar):
         syntax_tree = parser(source_code)
     """
     element = Forward()
-    source_hash__ = "7a4397918463bd24ed08464260bc014e"
+    source_hash__ = "6cd4641ea6fb8165d6c4af088ac09eef"
     disposable__ = re.compile('(?:EOF$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

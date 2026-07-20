@@ -8,8 +8,8 @@
 Welcome to DHParser's documentation!
 ====================================
 
-DHParser is a parser generator and domain specific language
-construction kit, designed for but not restricted to
+DHParser is a "full-stack" parser generator and domain specific language
+construction framework, designed for but not restricted to
 Digital Humanities applications.
 
 DHParser offers:
@@ -19,14 +19,14 @@ DHParser offers:
 * Macros to reduce code repetition within grammars and includes to
   avoid code repetition between grammars.
 * Parsing Expression Grammar (PEG) parser with memoization
-  and strong left recursion support (direct and indirect,
-  but not interwoven left recursion)
+  and strong left recursion support (experimental full left-recursion
+  support with a variant of Luke Hutchinson's squirrel parser algorthm)
 * unit testing framework for grammars
 * post mortem debugger for generated parsers
 * support for fail tolerant parsing
 * customizable error messages
 * extensive tree processing facilities
-* support for building language servers (experimental)
+* support for building language servers
 * full Unicode support
 
 DHParser is by now mature and "production ready". It is being used in several projects,
@@ -41,6 +41,7 @@ DHParser is open source software under the `Apache 2.0 License`_.
 Copyright 2016-2024  `Eckhart Arnold <arnold@badw.de>`_, Bavarian Academy of Sciences and Humanities
 
 The source code can downloaded from: `gitlab.lrz.de/badw-it/DHParser <https://gitlab.lrz.de/badw-it/DHParser>`_
+or `https://github.com/jecki/DHParser <https://github.com/jecki/DHParser>`_
 
 
 Install DHParser
@@ -57,7 +58,7 @@ new project with DHParser without using "pip install", the commands are the foll
 
 .. code:: bash
 
-    $ git clone --depth=1 https://gitlab.lrz.de/badw-it/DHParser
+    $ git clone --depth=1 https://gitlab.lrz.de/badw-it/DHParser  # mirror: https://github.com/jecki/DHParser.git
     $ python3 DHParser/DHParser/scripts/dhparser.py MyNewParserProject
     $ ln -s ../DHParser/DHParser MyNewParserProject/DHParser
 

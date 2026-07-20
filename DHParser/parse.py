@@ -1241,7 +1241,7 @@ def mixin_comment(whitespace: str, comment: str, always_match: bool = True) -> s
     regexps. Thus comments can occur wherever whitespace is allowed
     and will be skipped just as implicit whitespace.
 
-    Note, that because this works on the level of regular expressions,
+    Note that because this works on the level of regular expressions,
     nesting comments is not possible. It also makes it much harder to
     use directives inside comments (which isn't recommended, anyway).
 
@@ -3000,7 +3000,7 @@ def DTKN(token, wsL='', wsR=r'\s*'):
     return withWS(lambda: Drop(Text(token)), wsL, wsR)
 
 
-class Whitespace(RegExp):  # TODO:  Derive this form CombinedParser to keep different comments apart
+class Whitespace(RegExp):
     r"""A variant of RegExp that it meant to be used for insignificant whitespace.
     In contrast to RegExp, Whitespace always returns a match. If the defining
     regular expression did not match, an empty match is returned.
@@ -3011,6 +3011,16 @@ class Whitespace(RegExp):  # TODO:  Derive this form CombinedParser to keep diff
         a stretch of whitespace containing a comment will be renamed
         to "comment\__" and whitespace that does not contain any comments
         will be dropped.
+
+    Class Whitespace uses only a very simple (and fast algorithm) to preserve
+    comments if needed. Keep in mind the following caveats:
+
+    Caveat 1: If there is a comment, the returned node will contain any leading
+        or trailing whitespace as well, not just the comment.
+
+    Caveat 2: If there are several comments, possibly interspersed with whitespace,
+        there will still only one flat node named "commet__" be produced that
+        contains all whitespace and all comments in the sequence.
 
     Example::
 
@@ -3060,11 +3070,10 @@ class Whitespace(RegExp):  # TODO:  Derive this form CombinedParser to keep diff
             capture = match.group(0)
             if capture or not self.disposable:
                 end = match.end()
-                if self.drop_content:
-                    if self.keep_comments:
-                        if capture.lstrip():
-                            name = "comment__" if self.node_name[0:1] == ":" else self.node_name
-                            return Node(name, capture, True), end
+                if self.keep_comments and capture.lstrip():  # there is not only whitesspace, thus a comment...
+                    name = "comment__" if self.node_name[0:1] == ":" else self.node_name
+                    return Node(name, capture, True), end
+                elif self.drop_content:
                     return EMPTY_NODE, end
                 return Node(self.node_name, capture, True), end
         return EMPTY_NODE, location
@@ -3076,7 +3085,7 @@ class Whitespace(RegExp):  # TODO:  Derive this form CombinedParser to keep diff
         return '~'
 
 
-# TODO: Add character-range-parser
+# TODO: Add character-range-parser?
 
 
 def update_scanner(grammar: Grammar, leaf_parsers: Dict[str, str]):

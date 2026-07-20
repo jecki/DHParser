@@ -115,7 +115,7 @@ class LRGrammar(Grammar):
         syntax_tree = parser(source_code)
     """
     S = Forward()
-    source_hash__ = "05440c220628afa4ce565c7c5859f2e5"
+    source_hash__ = "7fb5f346d242f12e145e7936f99d16eb"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

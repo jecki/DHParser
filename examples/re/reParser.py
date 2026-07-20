@@ -198,9 +198,9 @@ class reGrammar(Grammar):
     _entity = Forward()
     _item = Forward()
     sequence = Forward()
-    source_hash__ = "878b578ecf89b3669aa129f360db9b23"
+    source_hash__ = "c83ed2a1f7ed334e0132c419735ea5b4"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:_char$|_nibble$|_illegal$|_entity$|EOF$|_anyChar$|_group$|_chars$|_grpChars$|_ch$|_item$|_reEsc$|_escape$|_csEsc$|_special$|_grpItem$|_extension$|BS$|_number$|_escapedCh$|_octal$|_grpChar$)')
+    disposable__ = re.compile('(?:_escape$|_grpChar$|_entity$|_csEsc$|_grpChars$|_grpItem$|_reEsc$|_char$|_special$|BS$|_group$|_octal$|_escapedCh$|EOF$|_nibble$|_illegal$|_extension$|_anyChar$|_number$|_ch$|_chars$|_item$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''

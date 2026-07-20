@@ -116,7 +116,7 @@ class LR2Grammar(Grammar):
     """
     expr = Forward()
     term = Forward()
-    source_hash__ = "b980e3d078916f8ea9d6b1885136cfc1"
+    source_hash__ = "a6b2a5163d37c4fc32fca2c0e137c194"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
