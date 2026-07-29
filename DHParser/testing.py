@@ -910,17 +910,18 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                         if isinstance(data, Node):  # TODO: exclude also trees with simplifying serialization (e.g. XML)
                             for nd in data.select_if(lambda n: n.has_attr(), include_root=True):
                                 nd.attr = {k: str(v) for k, v in nd.attr.items()}
-                        # if isinstance(data, Node):
                             compare = flat_string_test(tests, stage, data, test_name,
                                                        parser_name, test_code, errata)
                             if compare and not compare.equals(data):
-                                test_str = flatten_sxpr(data.as_sxpr())
-                                compare_str = flatten_sxpr(compare.as_sxpr())
-                                test_code_str = "\n\t".join(test_code.split("\n"))
-                                errata.append(f'{stage}-test {test_name} for parser {parser_name} failed:\n'
-                                              f'\tExpr.:     {test_code_str}\n'
-                                              f'\tExpected:  {compare_str}\n'
-                                              f'\tReceived:  {test_str}')
+                                if (srl := serializations.get(stage, serializations['*'])[0]) == 'sxpr' \
+                                        or compare.serialize(srl) != data.serialize(srl):
+                                    test_str = flatten_sxpr(data.as_sxpr())
+                                    compare_str = flatten_sxpr(compare.as_sxpr())
+                                    test_code_str = "\n\t".join(test_code.split("\n"))
+                                    errata.append(f'{stage}-test {test_name} for parser {parser_name} failed:\n'
+                                                  f'\tExpr.:     {test_code_str}\n'
+                                                  f'\tExpected:  {compare_str}\n'
+                                                  f'\tReceived:  {test_str}')
                         else:
                             compare = get(tests, stage, test_name).strip('\n')
                             if compare:
