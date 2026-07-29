@@ -540,8 +540,9 @@ def md_codeblock(code: str) -> str:
         return '\n\n\t' + '\n\t'.join(lines)
 
 
-def add_default_serializations(serializations: Dict[str, List[str]]):
+def add_default_serializations(serializations: Dict[str, List[str]]) -> Dict[str, List[str]]:
     """Reads all unknown serializations for CST, AST and '*' from the configuration"""
+    serializations = serializations.copy()
     if 'CST' not in serializations:
         serializations['CST'] = [get_config_value('CST_serialization')
                                  or get_config_value('default_serialization')]
@@ -550,6 +551,7 @@ def add_default_serializations(serializations: Dict[str, List[str]]):
                                  or get_config_value('default_serialization')]
     if '*' not in serializations:
         serializations['*'] = [get_config_value('default_serialization')]
+    return serializations
 
 
 def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT', verbose=False,
@@ -715,20 +717,23 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
             log_parsing_history(parser, f"{test_type}_{parser_name}_{tname}.log")
 
     saved_config_values = dict()
-    if not any(key == 'config__' for key in test_unit.keys()):
-        add_default_serializations(serializations)
+    try:
+        cfg = test_unit['config__']
+        for key, value in cfg.items():
+            if key[0:9] == 'DHParser.':  key = key[9:]
+            if key == "left_recursion":
+                print('Warning: Config-Variable "left_recursion" has no effect in test-cases. '
+                      'Please set it in a the ...Config.ini file. Other than the test-cases, '
+                      'the ...Config.ini file is processed before the grammar is recompiled.')
+            saved_config_values[key] = get_config_value(key)
+            set_config_value(key, eval(value))
+    except KeyError:
+        pass
+    serializations = add_default_serializations(serializations)
+
     for parser_name, tests in test_unit.items():
         if parser_name[-2:] == '__':
             assert parser_name == 'config__', f'Unknown metadata-type: "{parser_name}"'
-            for key, value in tests.items():
-                if key[0:9] == 'DHParser.':  key = key[9:]
-                if key == "left_recursion":
-                    print('Warning: Config-Variable "left_recursion" has no effect in test-cases. '
-                          'Please set it in a the ...Config.ini file. Other than the test-cases, '
-                          'the ...Config.ini file is processed before the grammar is recompiled.')
-                saved_config_values[key] = get_config_value(key)
-                set_config_value(key, eval(value))
-            add_default_serializations(serializations)
             continue
 
         track_history = config_history_tracking
