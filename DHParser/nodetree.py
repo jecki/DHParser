@@ -2206,7 +2206,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             nonlocal self, attr_filter, _empty_tags, line_breaks
             if node is self and node.name == ':XML':  return ''
             if node.name in string_tags and not node.has_attr():
-                if node.name == CHAR_REF_PTYPE and node.content.isalnum(): return "&#x"
+                if node.name == CHAR_REF_PTYPE and node.content.isalnum(): return "&#"
                 elif node.name == ENTITY_REF_PTYPE: return "&"
                 else: return ''
             txt = ['<', xml_tag_name(node.name)]
