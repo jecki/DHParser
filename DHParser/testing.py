@@ -540,6 +540,18 @@ def md_codeblock(code: str) -> str:
         return '\n\n\t' + '\n\t'.join(lines)
 
 
+def add_default_serializations(serializations: Dict[str, List[str]]):
+    """Reads all unknown serializations for CST, AST and '*' from the configuration"""
+    if 'CST' not in serializations:
+        serializations['CST'] = [get_config_value('CST_serialization')
+                                 or get_config_value('default_serialization')]
+    if 'AST' not in serializations:
+        serializations['AST'] = [get_config_value('AST_serialization')
+                                 or get_config_value('default_serialization')]
+    if '*' not in serializations:
+        serializations['*'] = [get_config_value('default_serialization')]
+
+
 def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT', verbose=False,
                  junctions=set(), show=set(), serializations: Dict[str, List[str]] = dict(),
                  preprocessor_factory=nil_preprocessor_factory):
@@ -571,6 +583,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         f"Value {repr(junctions)} passed to parameter 'junctions' is not a set of compilation-junctions!"
     assert isinstance(show, (Set, frozenset)) and all(isinstance(element, str) for element in show), \
         f"Value {repr(show)} passed to parameter 'show' is not a set of strings!"
+    add_default_serializations(serializations)
 
     output = []
 
@@ -887,7 +900,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 for stage in transformation_stages:
                     try:
                         data = extract_data(targets[stage][0])
-                        if isinstance(data, Node):
+                        if isinstance(data, Node):  # TODO: exclude also trees with simplifying serialization (e.g. XML)
                             for nd in data.select_if(lambda n: n.has_attr(), include_root=True):
                                 nd.attr = {k: str(v) for k, v in nd.attr.items()}
                         # if isinstance(data, Node):
