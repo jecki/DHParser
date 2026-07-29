@@ -583,7 +583,6 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
         f"Value {repr(junctions)} passed to parameter 'junctions' is not a set of compilation-junctions!"
     assert isinstance(show, (Set, frozenset)) and all(isinstance(element, str) for element in show), \
         f"Value {repr(show)} passed to parameter 'show' is not a set of strings!"
-    add_default_serializations(serializations)
 
     output = []
 
@@ -716,6 +715,8 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
             log_parsing_history(parser, f"{test_type}_{parser_name}_{tname}.log")
 
     saved_config_values = dict()
+    if not any(key == 'config__' for key in test_unit.keys()):
+        add_default_serializations(serializations)
     for parser_name, tests in test_unit.items():
         if parser_name[-2:] == '__':
             assert parser_name == 'config__', f'Unknown metadata-type: "{parser_name}"'
@@ -727,6 +728,7 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                           'the ...Config.ini file is processed before the grammar is recompiled.')
                 saved_config_values[key] = get_config_value(key)
                 set_config_value(key, eval(value))
+            add_default_serializations(serializations)
             continue
 
         track_history = config_history_tracking
