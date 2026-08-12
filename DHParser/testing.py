@@ -923,13 +923,13 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                                                   f'\tExpected:  {compare_str}\n'
                                                   f'\tReceived:  {test_str}')
                         else:
-                            compare = get(tests, stage, test_name).strip('\n')
+                            compare = get(tests, stage, test_name).strip()
                             if compare:
                                 test_str = str(data)
                                 if stage in ('match', 'fail', 'AST', 'CST'):
                                     test_str = normalize_code(test_str, full_normalization=False)
                                 else:
-                                    test_str = test_str.strip('\n')
+                                    test_str = test_str.strip()
                                 if not compare == test_str:
                                     test_code_str = "\n\t".join(test_code.split("\n"))
                                     if compare.find('\n') >= 0 and compare.strip() == compare:
