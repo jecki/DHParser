@@ -124,8 +124,8 @@ class HTMLGrammar(Grammar):
     dwsp__ = Drop(Whitespace(WSP_RE__))
     EOF = Drop(SmartRE(f'(?i)(?!.)', '!/./'))
     S = RegExp('(?i)\\s+')
-    CharRef = SmartRE(f'(?i)(?:\\&\\#)([0-9]+)(?:;)|(?:\\&\\#x)([0-9a-fA-F]+)(?:;)',
-                      "'&#' /[0-9]+/ ';'|'&#x' /[0-9a-fA-F]+/ ';'")
+    CharRef = SmartRE(f'(?i)(?:\\&\\#)([0-9]+)(?:;)|(?:\\&\\#)(x[0-9a-fA-F]+)(?:;)',
+                      "'&#' /[0-9]+/ ';'|'&#' /x[0-9a-fA-F]+/ ';'")
     CommentChars = RegExp('(?i)(?:(?!-)(?:\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U000100'
                           '00-\\U0010FFFF]))+')
     PIChars = RegExp('(?i)(?:(?!\\?>)(?:\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U000'

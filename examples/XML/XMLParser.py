@@ -107,9 +107,9 @@ class XMLGrammar(Grammar):
         syntax_tree = parser(source_code)
     """
     element = Forward()
-    source_hash__ = "5016a8fd9e6da3060580be94de063381"
+    source_hash__ = "9b7080d3b7f45d9a74fd8d81b202620a"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:prolog$|Misc$|PubidCharsSingleQuoted$|XmlPIAtts$|NameChars$|Reference$|NameStartChar$|PubidChars$|EncName$|BOM$|CommentChars$|EOF$|CData$|tagContent$|VersionNum$)')
+    disposable__ = re.compile('(?:VersionNum$|Reference$|prolog$|XmlPIAtts$|PubidChars$|NameStartChar$|Misc$|PubidCharsSingleQuoted$|CData$|tagContent$|EOF$|EncName$|BOM$|NameChars$|CommentChars$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'tagContent': [('', "syntax error in tag-name of opening or empty tag:  {1}")],
@@ -125,7 +125,7 @@ class XMLGrammar(Grammar):
     S = RegExp('\\s+')
     Char = RegExp('(?:\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-\\U0010FF'
        'FF])+')
-    CharRef = SmartRE(f'(?:\\&\\#)([0-9]+)(?:;)|(?:\\&\\#x)([0-9a-fA-F]+)(?:;)', "'&#' /[0-9]+/ ';'|'&#x' /[0-9a-fA-F]+/ ';'")
+    CharRef = SmartRE(f'(?:\\&\\#)([0-9]+)(?:;)|(?:\\&\\#)(x[0-9a-fA-F]+)(?:;)', "'&#' /[0-9]+/ ';'|'&#' /x[0-9a-fA-F]+/ ';'")
     CommentChars = RegExp('(?:(?!-)(?:\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U00010000-'
        '\\U0010FFFF]))+')
     PIChars = RegExp('(?:(?!\\?>)(?:\\x09|\\x0A|\\x0D|[\\u0020-\\uD7FF]|[\\uE000-\\uFFFD]|[\\U0001000'

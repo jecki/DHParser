@@ -540,6 +540,20 @@ def md_codeblock(code: str) -> str:
         return '\n\n\t' + '\n\t'.join(lines)
 
 
+def add_default_serializations(serializations: Dict[str, List[str]]) -> Dict[str, List[str]]:
+    """Reads all unknown serializations for CST, AST and '*' from the configuration"""
+    serializations = serializations.copy()
+    if 'CST' not in serializations:
+        serializations['CST'] = [get_config_value('CST_serialization')
+                                 or get_config_value('default_serialization')]
+    if 'AST' not in serializations:
+        serializations['AST'] = [get_config_value('AST_serialization')
+                                 or get_config_value('default_serialization')]
+    if '*' not in serializations:
+        serializations['*'] = [get_config_value('default_serialization')]
+    return serializations
+
+
 def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT', verbose=False,
                  junctions=set(), show=set(), serializations: Dict[str, List[str]] = dict(),
                  preprocessor_factory=nil_preprocessor_factory):
@@ -703,17 +717,23 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
             log_parsing_history(parser, f"{test_type}_{parser_name}_{tname}.log")
 
     saved_config_values = dict()
+    try:
+        cfg = test_unit['config__']
+        for key, value in cfg.items():
+            if key[0:9] == 'DHParser.':  key = key[9:]
+            if key == "left_recursion":
+                print('Warning: Config-Variable "left_recursion" has no effect in test-cases. '
+                      'Please set it in a the ...Config.ini file. Other than the test-cases, '
+                      'the ...Config.ini file is processed before the grammar is recompiled.')
+            saved_config_values[key] = get_config_value(key)
+            set_config_value(key, eval(value))
+    except KeyError:
+        pass
+    serializations = add_default_serializations(serializations)
+
     for parser_name, tests in test_unit.items():
         if parser_name[-2:] == '__':
             assert parser_name == 'config__', f'Unknown metadata-type: "{parser_name}"'
-            for key, value in tests.items():
-                if key[0:9] == 'DHParser.':  key = key[9:]
-                if key == "left_recursion":
-                    print('Warning: Config-Variable "left_recursion" has no effect in test-cases. '
-                          'Please set it in a the ...Config.ini file. Other than the test-cases, '
-                          'the ...Config.ini file is processed before the grammar is recompiled.')
-                saved_config_values[key] = get_config_value(key)
-                set_config_value(key, eval(value))
             continue
 
         track_history = config_history_tracking
@@ -887,28 +907,29 @@ def grammar_unit(test_unit, parser_factory, transformer_factory, report='REPORT'
                 for stage in transformation_stages:
                     try:
                         data = extract_data(targets[stage][0])
-                        if isinstance(data, Node):
+                        if isinstance(data, Node):  # TODO: exclude also trees with simplifying serialization (e.g. XML)
                             for nd in data.select_if(lambda n: n.has_attr(), include_root=True):
                                 nd.attr = {k: str(v) for k, v in nd.attr.items()}
-                        if isinstance(data, Node):
                             compare = flat_string_test(tests, stage, data, test_name,
                                                        parser_name, test_code, errata)
                             if compare and not compare.equals(data):
-                                test_str = flatten_sxpr(data.as_sxpr())
-                                compare_str = flatten_sxpr(compare.as_sxpr())
-                                test_code_str = "\n\t".join(test_code.split("\n"))
-                                errata.append(f'{stage}-test {test_name} for parser {parser_name} failed:\n'
-                                              f'\tExpr.:     {test_code_str}\n'
-                                              f'\tExpected:  {compare_str}\n'
-                                              f'\tReceived:  {test_str}')
+                                if (srl := serializations.get(stage, serializations['*'])[0]) == 'sxpr' \
+                                        or compare.serialize(srl) != data.serialize(srl):
+                                    test_str = flatten_sxpr(data.as_sxpr())
+                                    compare_str = flatten_sxpr(compare.as_sxpr())
+                                    test_code_str = "\n\t".join(test_code.split("\n"))
+                                    errata.append(f'{stage}-test {test_name} for parser {parser_name} failed:\n'
+                                                  f'\tExpr.:     {test_code_str}\n'
+                                                  f'\tExpected:  {compare_str}\n'
+                                                  f'\tReceived:  {test_str}')
                         else:
-                            compare = get(tests, stage, test_name).strip('\n')
+                            compare = get(tests, stage, test_name).strip()
                             if compare:
                                 test_str = str(data)
                                 if stage in ('match', 'fail', 'AST', 'CST'):
                                     test_str = normalize_code(test_str, full_normalization=False)
                                 else:
-                                    test_str = test_str.strip('\n')
+                                    test_str = test_str.strip()
                                 if not compare == test_str:
                                     test_code_str = "\n\t".join(test_code.split("\n"))
                                     if compare.find('\n') >= 0 and compare.strip() == compare:

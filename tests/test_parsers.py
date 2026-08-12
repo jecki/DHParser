@@ -33,15 +33,15 @@ from DHParser import nodetree, LEAF_PTYPES
 
 class TestHTMLParser:
     def test_CharRef(self):
-        tree = parse_HTML("<p><span>68</span><i>&#68;</i><b>&#68;</b><span>Δ</span></p>")
+        tree = parse_HTML("<p><span>68</span><i>&#68;</i><b>&#x68;</b><span>Δ</span></p>")
         assert tree.as_xml(inline_tags={'p'}) == \
-               "<p><span>68</span><i>&#x68;</i><b>&#x68;</b><span>Δ</span></p>"
+               "<p><span>68</span><i>&#68;</i><b>&#x68;</b><span>Δ</span></p>"
         assert tree.as_sxpr() == \
-               '(p (span "68") (i (:CharRef "68")) (b (:CharRef "68")) (span "Δ"))'
+               '(p (span "68") (i (:CharRef "68")) (b (:CharRef "x68")) (span "Δ"))'
 
     def test_EntityRef(self):
         tree = parse_HTML("<p><span>68</span><i>&nbsp;</i><b>&#68;</b><span>Δ</span></p>")
-        assert tree.as_xml(inline_tags={'p'}) == "<p><span>68</span><i>&nbsp;</i><b>&#x68;</b><span>Δ</span></p>"
+        assert tree.as_xml(inline_tags={'p'}) == "<p><span>68</span><i>&nbsp;</i><b>&#68;</b><span>Δ</span></p>"
         assert tree.as_sxpr() == '(p (span "68") (i (:EntityRef "nbsp")) (b (:CharRef "68")) (span "Δ"))'
 
     def test_preserve_whitespace(self):

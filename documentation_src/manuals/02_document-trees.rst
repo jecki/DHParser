@@ -1042,7 +1042,7 @@ no need to split. (Per default, the algorithm behaves somewhat "greedy", which,
 however can be configured with a parameter with the same name passed to the
 constructor of class ContentMapping.)
 
-But what if you don't wand the <foreign>-tag to be split up in two or
+But what if you don't want the <foreign>-tag to be split up in two or
 more parts, as the case may be. Well, in this case, you need to allow
 those tags, the borders of which the new markup runs across, to be split
 by that markup::
