@@ -35,10 +35,10 @@ declarations to more fully exploit the benefits of the Cython-compiler.
 from __future__ import annotations
 
 from typing import Optional, Union, Iterable, Tuple, List, cast
-try:
-    from typing import TypeAlias
-except ImportError:
-    from DHParser.externallibs.typing_extensions import TypeAlias
+# try:
+#     from typing import TypeAlias
+# except ImportError:
+#     from DHParser.externallibs.typing_extensions import TypeAlias
 
 try:
     import cython
