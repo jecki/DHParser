@@ -67,6 +67,7 @@ except ImportError:
         pass
 from datetime import datetime
 from functools import partial
+import inspect
 import io
 import json
 from multiprocessing import Process, Value, Array
@@ -474,7 +475,7 @@ class ExecutionEnvironment:
             return result, rpc_error
         try:
             if executor is None:
-                result = (await executable()) if asyncio.iscoroutinefunction(method) \
+                result = (await executable()) if inspect.iscoroutinefunction(method) \
                     else executable()
             else:
                 result = await self.loop.run_in_executor(executor, executable)
