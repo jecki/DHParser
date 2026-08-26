@@ -477,6 +477,9 @@ Combinators for Ambiguous Left-Recursive Grammars, in: P. Hudak and
 D.S. Warren (Eds.): PADL 2008, LNCS 4902, pp. 167–181, Springer-Verlag
 Berlin Heidelberg 2008.
 
+Luke A. D. Hutchinson: The Squirrel Parser: A Linear-Time PEG Packrat Parser Capable 
+of Left Recursion and Optimal Error Recovery, ArxiV, [arXiv:2601.05012](https://arxiv.org/abs/2601.05012) 
+
 Elizabeth Scott and Adrian Johnstone, GLL Parsing,
 in: Electronic Notes in Theoretical Computer Science 253 (2010) 177–189,
 [dotat.at/tmp/gll.pdf][scott_johnstone_2010]
