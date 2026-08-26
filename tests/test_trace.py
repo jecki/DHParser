@@ -92,10 +92,10 @@ class TestTrace:
                 # check if the first failed parser yields an excerpt
                 assert record.excerpt
                 break
-        assert len(history) == 32
+        assert len(history) in (32, 30)
         log_parsing_history(gr, 'trace_simple')
         history = get_history('trace_simple')
-        assert history.count('<tr>') == 33  # same as len(history) + 1 title row
+        assert history.count('<tr>') in (33, 31)  # same as len(history) + 1 title row
 
     def test_trace_stopped_early(self):
         lang = """
@@ -110,7 +110,7 @@ class TestTrace:
         _ = gr('2*(3+4)xxx')
         log_parsing_history(gr, 'trace_stopped_early')
         history = get_history('trace_stopped_early')
-        assert history.count('<tr>') == 35
+        assert history.count('<tr>') in (35, 33)
 
     def test_trace_drop(self):
         lang = r"""

@@ -61,6 +61,8 @@ venv/*
 .DS_Store
 experimental
 
+uv.lock
+/.DS_Store
 
 /nimparser/nodetree
 /nimparser/parse
