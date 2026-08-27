@@ -329,6 +329,15 @@ Third-Party-Software
 
 DHParser includes the following third-party-software:
 
+* [seuqirrel tests](https://github.com/lukehutch/squirrelparser):
+  These test under tests/squirrel_test have been copy and pasted 
+  from the Python version of Luke Hutchinson's squirrelparser.
+  The squirrel parser test suite contains many edge cases, in 
+  particular with respect to left recursive grammars.
+  License: [MIT License](https://github.com/lukehutch/squirrelparser/blob/master/LICENSE)
+  **DHParser's left-recursion handling algorithm is strongly 
+  indepted to Luke Hutchinson's great work on this topic!**
+
 * [typing_extensions](https://pypi.org/project/typing-extensions/): 
   needed for backwards compatibility with older Python versions.
   Licensed under the 
