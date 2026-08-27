@@ -16,7 +16,7 @@ LOG_DIR = os.path.abspath(os.path.join(scriptpath, "LOGS"))
 
 
 from DHParser.dsl import create_parser, CompilationError
-from DHParser.error import FATAL, Error
+from DHParser.error import FATAL, ERROR, Error
 from DHParser.nodetree import WHITESPACE_PTYPE, ZOMBIE_TAG, LEAF_PATH, RootNode
 
 
