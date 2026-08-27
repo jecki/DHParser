@@ -326,7 +326,7 @@ class TestInfiLoopsAndRecursion:
             log_ST(syntax_tree, "test_LeftRecursion_indirect3.cst")
             log_parsing_history(arithmetic, "test_LeftRecursion_indirect3")
 
-    def test_indirect_left_recursion4(self):
+    def test_indirect_left_recursion4_expansion_sematnics(self):
         """See Hutchinson Squirrel Parser / Expansion Semantics"""
         ebnf = r"""
         A = (B !'y') | 'x'
@@ -336,6 +336,18 @@ class TestInfiLoopsAndRecursion:
         syntax_tree = parser('xxxy', complete_match=False)
         assert not syntax_tree.errors
         assert str(syntax_tree) == 'xx'
+
+    def test_indirect_left_recursion5_disjoint_expansion_regions(self):
+        """See Hutchinson Squirrel Parser / Cost of left recursion expansion
+        𝑆 ←(&𝐸 ’x’𝑆)/’x’; 𝐸 ←𝐸 ’x’ /’x’"""
+        ebnf = r"""
+        S = (&E 'x' S) | 'x'
+        E = E 'x' | 'x' 
+        """
+        parser = grammar_provider(ebnf)()
+        syntax_tree = parser('xxxxx', complete_match=False)
+        assert not syntax_tree.errors
+        assert str(syntax_tree) == 'xxxxx'
 
     def test_left_recursion_side_effects(self):
         syntax = r"""@literalws = right
