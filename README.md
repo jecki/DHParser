@@ -334,8 +334,8 @@ DHParser includes the following third-party-software:
   from the Python version of Luke Hutchinson's squirrelparser.
   The squirrel parser test suite contains many edge cases, in 
   particular with respect to left recursive grammars.
-  **DHParser's left-recursion handling algorithm is strongly 
-  indepted to Luke Hutchinson's great work on this topic!**
+  (DHParser's left-recursion handling algorithm is highly 
+  indepted to Luke Hutchinson's work on this topic!)
   License: [MIT License](https://github.com/lukehutch/squirrelparser/blob/master/LICENSE)
 
 * [typing_extensions](https://pypi.org/project/typing-extensions/): 
