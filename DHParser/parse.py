@@ -5453,7 +5453,7 @@ class Forward(ForwardBase):
                 return last[0]  # versions[0][0]
         elif location in visited:
             # Sorry, no history recording in case of memoized results!
-            # if history_tracking:  self.tracer_memo(self, location, visited[location])  # TODO: Remove tracer_memo entirely when finished!
+            # if history_tracking:  self.tracer_memo(self, location, visited[location])
             return visited[location]
 
         # check if a seed has been planted for the seed and grow algorithm
@@ -5552,8 +5552,8 @@ class Forward(ForwardBase):
 
     def set_proxy(self, proxy: Optional[ParseFunc]):
         super(Forward, self).set_proxy(proxy)
-        if proxy is None:
-            self.set_fwtracer(nil_tracer, nil_tracer, nil_tracer, nil_tracer)
+        # if proxy is None:
+        #     self.set_fwtracer(nil_tracer, nil_tracer, nil_tracer, nil_tracer)
 
     def set_fwtracer(self, memo: FWTracerMemo, init: FWTracerInit, loop: FWTracerLoop, done: FWTracerDone):
         """Adds a seed-and-grow loop-tracer. The tracer can be disabled by calling either
