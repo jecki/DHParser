@@ -326,6 +326,19 @@ class TestInfiLoopsAndRecursion:
             log_ST(syntax_tree, "test_LeftRecursion_indirect3.cst")
             log_parsing_history(arithmetic, "test_LeftRecursion_indirect3")
 
+    def test_indirect_left_recursion4(self):
+        """See Hutchinson Squirrel Parser / Expansion Semantics
+        The semantics of DHParsers LR-Algorithm differ from the Squirrel Parser!
+        """
+        ebnf = r"""
+        A = (B !'y') | 'x'
+        B = A 'x' 
+        """
+        parser = grammar_provider(ebnf)()
+        syntax_tree = parser('xxyx', complete_match=False)
+        assert not syntax_tree.errors
+        assert str(syntax_tree) == 'x'
+
     def test_left_recursion_side_effects(self):
         syntax = r"""@literalws = right
         Beleg = '"' Text '"'
