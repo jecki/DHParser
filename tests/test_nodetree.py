@@ -395,6 +395,15 @@ class TestParseJSON:
         assert not b.has_equal_attr(a, ignore_order=False)
 
 
+class TestPickle:
+    def test_pickle(self):
+        import pickle
+        tree = parse_sxpr('(a (b `(attr "value") c) (d e) (f (g h)))')
+        pickled = pickle.dumps(tree)
+        unpickled = pickle.loads(pickled)
+        assert unpickled.equals(tree)
+
+
 class TestNode:
     """
     Tests for class Node 
