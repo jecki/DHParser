@@ -10,6 +10,7 @@
 import collections
 from functools import partial
 import os
+import re
 import sys
 from typing import List
 
@@ -23,10 +24,6 @@ if scriptpath not in sys.path:
 if dhparser_parentdir not in sys.path:
     sys.path.append(dhparser_parentdir)
 
-try:
-    import regex as re
-except ImportError:
-    import re
 from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, AnyChar, \
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, Option, \
@@ -86,7 +83,7 @@ class XMLGrammar(Grammar):
     element = Forward()
     source_hash__ = "687c53d0fe78fca76cc4846176d952ad"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:CData$|VersionNum$|PubidCharsSingleQuoted$|CommentChars$|NameStartChar$|EncName$|Reference$|EOF$|Misc$|PubidChars$|NameChars$)')
+    disposable__ = re.compile('(?:NameStartChar$|PubidCharsSingleQuoted$|CData$|CommentChars$|Reference$|EncName$|PubidChars$|VersionNum$|Misc$|EOF$|NameChars$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''

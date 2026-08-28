@@ -5514,7 +5514,7 @@ class Forward(ForwardBase):
                             continue  # TODO:  Could this lead to an infinite loop?
                     else:
                         # make sure that a parser that treats the water
-                        # ("der auf der Stelle tritt") matches nevertheless
+                        # ("der auf der Stelle tritt") matches nevertheless,
                         # see test_parse.TestInfiniLoopRecursion.test_parser_that_treads_the_water()
                         result = next_result
 

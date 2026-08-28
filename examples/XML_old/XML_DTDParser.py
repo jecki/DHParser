@@ -10,6 +10,7 @@
 import collections
 from functools import partial
 import os
+import re
 import sys
 from typing import Tuple, List, Union, Any, Optional, Callable
 
@@ -20,10 +21,7 @@ except NameError:
 if scriptpath and scriptpath not in sys.path:
     sys.path.append(scriptpath)
 
-try:
-    import regex as re
-except ImportError:
-    import re
+
 from DHParser import start_logging, suspend_logging, resume_logging, is_filename, load_if_file, \
     Grammar, Compiler, nil_preprocessor, PreprocessorToken, Whitespace, Drop, AnyChar, \
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \
