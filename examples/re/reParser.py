@@ -78,7 +78,7 @@ if DHParser.versionnumber.__version_info__ < (1, 8, 0):
 
 
 from runeranges import RuneRange, sort_and_merge, range_union, range_difference, range_intersection, \
-    union_with_compl, diff_with_compl
+    union_with_compl, diff_with_compl, intersect_with_compl
 
 
 #######################################################################
@@ -782,6 +782,12 @@ def intersect_charsets(charsets: Sequence[Node]) -> Node:
     attr = {'complement': '^'} if intersection[0] else {}
     node = Node('charset', chRanges(intersection[1])[0]).with_attr(attr).with_pos(charsets[0].pos)
     return node
+
+
+# def runeRange(node: Node) -> RuneRange:
+#     assert len(node.children) == 2
+#     return RuneRange(int(node.children[0].content),
+#                      int(node.children[1].content))
 
 
 def diff_charsets(A: Sequence[Node], B: Sequence[Node]) -> Node:
