@@ -2561,6 +2561,7 @@ class Grammar:
         # for debugging: all_parsers = sorted(list(self.all_parsers__), key=lambda p:p.pname)
         for parser in self.all_parsers__:
             error_list.extend(parser.static_analysis())
+            assert self.document__ is EMPTY_STRING_VIEW
             if parser.pname and not has_leaf_parsers(parser):
                 error_list.append(AnalysisError(parser.symbol, parser, Error(
                     'Parser %s is entirely cyclical and, therefore, cannot even touch '
@@ -4287,6 +4288,7 @@ class Alternative(NaryParser):
                     # In case of recursive parsers, the test is not reliable!
                     return False
             cst = self.grammar(start, parser, complete_match=False)
+            self.grammar._reset__()
             return not cst.errors and cst.strlen() >= 1
 
         for i in range(2, len(self.parsers)):

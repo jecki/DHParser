@@ -4,7 +4,7 @@ PERFORMANCE & EDGE CASE TESTS
 These tests verify performance characteristics and edge cases.
 """
 
-import pytest
+# import pytest
 import time
 
 from test_utils import test_parse, squirrel_parse_pt

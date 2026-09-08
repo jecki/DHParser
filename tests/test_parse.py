@@ -1750,6 +1750,7 @@ class TestMetaParser:
         assert bool(cst.pick('MUL')), "Named empty nodes should not be dropped!!!"
 
 
+
 class TestStaticAnalysis:
     def setup_class(self):
         self.static_analysis = get_config_value('static_analysis')
@@ -1785,7 +1786,6 @@ class TestStaticAnalysis:
         assert any(e.code == PARSER_NEVER_TOUCHES_DOCUMENT for e in errors)
         code, errors, ast = compile_ebnf(lang2, preserve_AST=True)
         assert any(e.code == PARSER_NEVER_TOUCHES_DOCUMENT for e in errors)
-
 
 class TestMemoization:
     def test_memoization(self):

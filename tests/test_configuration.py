@@ -20,12 +20,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import multiprocessing
+# import multiprocessing
 import os
 import shutil
 import sys
 
-scriptpath = os.path.dirname(__file__) or '.'
+scriptpath = str(os.path.dirname(__file__)) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser.configuration import access_presets, finalize_presets, \
