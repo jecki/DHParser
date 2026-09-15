@@ -5168,12 +5168,12 @@ class ContentMapping:
         generated. This can be a branch of another tree and therefore does not
         need to be a RootNode-object.
     :ivar select_func: Only leaf-paths for which this is true will be considered when
-        generating the content-mapping. This function integrates both the select-
-        and ignore-criteria passed to the constructor of the class. Note that the
+        generating the content-mapping. Note that the
         select-criterion must only accept leaf-paths. Otherwise, a ValueError will
-        be raised.
-    :ivar ignore_func: The ignore function derives from the ignore-parameter of
-        the ``__init__()``-constructor of class ContentMapping.
+        be raised. (This is similar to the match_func parameter of Node.select_path_if)
+    :ivar ignore_func: No leaf-path for which this is true will be considered when
+        generating the content-mapping. (This is similar to the skip_func parameter
+        of Node.select_path_if)
     :ivar content: The string content of the selected parts of the tree.
 
     Markup-related instance variables:
@@ -5670,6 +5670,9 @@ class ContentMapping:
         path_head = self._path_list[:first_index]
         path_tail = self._path_list[last_index + 1:]
 
+        print('>>>', content, len(content))
+        print(self.content)
+        print(start_pos, end_pos)
         self.content = ''.join([self.content[:start_pos], content, self.content[end_pos:]])
 
         self._pos_list.clear()

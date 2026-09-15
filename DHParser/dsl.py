@@ -956,9 +956,9 @@ def batch_process(file_names: List[str], out_dir: str,
     pf_parms = len(str(parm_tuple.annotation).split(","))
     if pf_parms <= 2:
         deprecation_warning("'process_file'-function passed to DHParser.dsl.batch_process() "
-                            "appears to be outdated as it does not take a third paramter. "
-                            "It's signature ought to be (source: str, out_dir: str, "
-                            "cancel_query: DHParser.toolkit.CancelQuery).")
+                            "appears to be outdated as it does not take a tuple with a third "
+                            "parameter. It's signature ought to be (args: tuple(source: str, "
+                            "out_dir: str, cancel_query: DHParser.toolkit.CancelQuery)).")
         pf_parms = 2
     else:
         pf_parms = 3
