@@ -1722,6 +1722,21 @@ class TestMarkupInsertion:
                '(p (b "I") (:Text " ") (i (Klassifikation "gener.") ' \
                '(:Text ":")) (:Text "[MFSP]") (b "A"))'
 
+    def test_markup_rebuild_mapping(self):
+        xml = """
+        <document>
+        Klaus Störtebeker gründete <datum>1401</datum> (in <ort>Hamburg</ort>) den HSV!
+        </document>
+        """
+        klammer_rx = re.compile(r'\([^)]*\)')
+        tree = parse_xml(xml)
+        cm = ContentMapping(tree)
+        assert cm.content == tree.content
+        for m in klammer_rx.finditer(cm.content):
+            cm.markup(m.start(), m.end(), 'klammer')
+        assert cm.content == tree.content
+
+
     def test_deep_split(self):
         print()
         urtree = tree = parse_sxpr(

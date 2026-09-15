@@ -5651,11 +5651,14 @@ class ContentMapping:
         while last_index < last and self._path_list[last_index + 1][i:i + 1] == [common_ancestor]:
             last_index += 1
 
+        # BEWARE: the paths self._path_list are already messed up from first_index to last_index
+        #         from common_ancestor downwards (after markup)!
+
         stump = start_path[:i]
         content, offsets, paths = self._generate_mapping(common_ancestor, stump)
         assert offsets[0] == 0
         start_pos = self._pos_list[first_index]
-        end_pos = self._pos_list[last_index] + self._path_list[last_index][-1].strlen()
+        end_pos = self._pos_list[last_index] + paths[-1][-1].strlen()
         offsets = [offset + start_pos for offset in offsets]
         if stump:  paths = [stump + path for path in paths]
 
@@ -5670,10 +5673,7 @@ class ContentMapping:
         path_head = self._path_list[:first_index]
         path_tail = self._path_list[last_index + 1:]
 
-        print('>>>', content, len(content))
-        print(self.content)
-        print(start_pos, end_pos)
-        self.content = ''.join([self.content[:start_pos], content, self.content[end_pos:]])
+        self.content = ''.join([self.content[:start_pos], content, self.content[end_pos + 1:]])
 
         self._pos_list.clear()
         self._pos_list.extend(off_head)
@@ -5875,6 +5875,9 @@ class ContentMapping:
         r = can_split(
             stump_B, pos_B, True, self.greedy, self.select_func, self.ignore_func, divisible)
 
+        # BEWARE: the following deep_spit()-calls mess up the paths self._path_list from path_A
+        #         through to path_B from common_ancestor downwards!
+
         i = -1
         k = -1
         if q < abs(q) == len(stump_A) - 1:
@@ -5922,7 +5925,7 @@ class ContentMapping:
         if self.auto_cleanup:
             self.rebuild_mapping_slice(self.get_path_index(start_pos, left_biased=True),
                                        self.get_path_index(end_pos, left_biased=False))
-            # TODO: add a suitable unit-test for a case for the left_biased=True and
+            # TODO: add a suitable unit-test a case to demonstrate that left_biased=True and
             #       left_biased=False parameter values are indeed neded! They are, to be sure!
         return NodeLocation(common_ancestor, path_index)
         # assert not common_ancestor.pick_if(lambda nd: nd.name == ':Text' and bool(nd.children),
