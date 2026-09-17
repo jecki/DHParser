@@ -5,7 +5,10 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..', '..')))
 scriptpath = os.path.abspath(scriptpath)
 
 from DHParser.nodetree import Node, ContentMapping, parse_xml, find_common_ancestor, TOKEN_PTYPE, pp_path
-from DHParser.transform import pull_up, merge_adjacent, reduce_single_child
+
+
+from tools import pull_out
+
 
 EXAMPLES_FILE = "VerlinkungsBeispiele.mwg.xml"
 

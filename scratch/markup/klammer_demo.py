@@ -13,10 +13,13 @@ scriptpath = abspath
 try:
     from DHParser.nodetree import (Node, ContentMapping, parse_xml, find_common_ancestor, TOKEN_PTYPE,
                                    pp_path, PathMatchFunction, BRANCH_PATH)
-    from DHParser.transform import (pull_up, merge_adjacent, reduce_single_child, replace_by_children,
-                                    merge_leaves, pull_out, traverse)
+    from DHParser.transform import (merge_adjacent, reduce_single_child, replace_by_children,
+                                    merge_leaves, traverse)
 except ImportError as e:
     raise ImportError("Bitte installiere DHParser mit python3 -m pip install DHParser!")
+
+
+from tools import pull_out
 
 
 ###### Hier geht's los: ################################################
