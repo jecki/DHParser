@@ -1641,8 +1641,14 @@ def _pull_up_or_out(path, keep_markup: bool):
         return
     parent = path[-2]
     ur_parent = path[-3]
-    i = parent.index(node)
-    i2 = ur_parent.index(parent)
+    try:
+        i = parent.index(node)
+        i2 = ur_parent.index(parent)
+    except ValueError:
+        parent = path[0].find_parent(node)
+        ur_parent = path[0].find_parent(parent)
+        i = parent.index(node)
+        i2 = ur_parent.index(parent)
     if keep_markup:
         node._set_result(Node(parent.name, node.result).with_pos(node._pos).with_attr(parent.attr))
     children = ur_parent._children
