@@ -5110,20 +5110,22 @@ def leaf_paths(criterion: PathSelector) -> PathMatchFunction:
 
 def sourcemap_path(origin: Node,
                    match_func: PathMatchFunction,
-                   skip_func: PathMatchFunction = NO_PATH) \
+                   ignore_func: PathMatchFunction = NO_PATH) \
         -> Iterator[Tuple[Path, int]]:
     """
-    Like :py:func:`Node.select_path_if` but yields the path and the
+    Similar to :py:func:`Node.select_path_if` but yields the path and the
     number of characters skipped since the last matched path was returned.
+    Also, other than skip_func from select_path_if, ignore_func does not
+    (still) yield the root-node if the ignored elements!
     """
     gap: int = 0
 
     def recursive(path) -> Iterator[Tuple[Path, int]]:
-        nonlocal match_func, skip_func
+        nonlocal match_func, ignore_func, gap
         for child in path[-1].children:
             child_path = path + [child]
             if child._children:
-                if skip_func(child_path):
+                if ignore_func(child_path):
                     gap += child.strlen()
                 else:
                     yield from recursive(child_path)
@@ -5133,9 +5135,9 @@ def sourcemap_path(origin: Node,
             else:
                 gap += child.strlen()
 
-    path: List[Node] = [root]
-    if not root._children and match_func(path):  yield path, 0
-    if not skip_func(path):
+    path: List[Node] = [origin]
+    if not origin._children and match_func(path):  yield path, 0
+    if not ignore_func(path):
         yield from recursive(path)
 
 
@@ -5146,21 +5148,36 @@ def content_selection(origin: Node,
     -> Tuple[str, List[int], List[Path], SourceMap]:
     """Generates the string content, list of positions and list of paths
     as well as a source mapping for the given origin taking into account
-    ``select_func`` and ``ignore_func`` as constraints."""
-    if ignore([origin]):
+    select and ignore as constraints.
+
+    Note that ignore is not a strict equivalent to the skip_subtree or
+    skip_func parameter from the Node.select...() methods. skip_subtree
+    and skip_func still return the root of the subtree to be skipped
+    and only  leave out its branches. ingnore also holds back the
+    root of the subtree to be skipped!
+    """
+    select_f, ignore_f = _breed_leaf_selector(select, ignore)
+    if ignore_f([origin]):
         return '', [], []
     pos = 0
+    offset = 0
     content_list = []
     path_list = []
     pos_list = []
     offsets = []
-    if stump:  select = lambda pth: select(stump + pth)
-    for path, gap in sourcemap_path(origin, select, ignore):
+    if stump:  select_f = lambda pth: select_f(stump + pth)
+    for path, gap in sourcemap_path(origin, select_f, ignore_f):
+        offset += gap
         pos_list.append(pos)
+        offsets.append(offset)
         path_list.append(path)
         content_list.append(path[-1].content)
         pos += path[-1].strlen()
-    return ''.join(content_list), pos_list, path_list
+    content = ''.join(content_list)
+    offsets.append(offsets[-1] if len(offsets) > 0 else 0)
+    source_map = SourceMap('selection', pos_list + [len(content) + 1], offsets,
+                           ['selection'] * len(offsets), {'selection': content})
+    return content, pos_list, path_list, source_map
 
 
 class ContentLocation(NamedTuple):
@@ -5229,6 +5246,11 @@ class ContentMapping:
     :ivar ignore_func: No leaf-path for which this is true will be considered when
         generating the content-mapping. (This is similar to the skip_func parameter
         of Node.select_path_if)
+        Caveat: ignore is not a strict equivalent to the skip_subtree or
+        skip_func parameter from the Node.select...() methods. skip_subtree
+        and skip_func still return the root of the subtree to be skipped
+        and only  leave out its branches. ingnore also holds back the
+        root of the subtree to be skipped!
     :ivar content: The string content of the selected parts of the tree.
 
     Markup-related instance variables:
@@ -5792,8 +5814,6 @@ class ContentMapping:
         with ``name``, eventually cutting through ``divisible`` nodes. Returns the
         nearest common ancestor of ``start_pos`` and ``end_pos``.
 
-        :param cm:  A context mapping of the document (or a part thereof) where the
-            markup shall be inserted. See :py:func:`generate_content_mapping`
         :param start_pos:  The string-position of the first character to be marked
             up. Note that this is the position in the string-content of the tree
             over which the content mapping has been generated and not the position

@@ -35,7 +35,8 @@ from DHParser.nodetree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxp
     prev_path, pick_from_path, ContentMapping, leaf_paths, NO_PATH, \
     select_path_if, pick_path, LEAF_PATH, TOKEN_PTYPE, content_of, strlen_of, \
     gen_chain_ID, parse_sxml, DIVISIBLES, reflow_as_oneliner, has_token, eq_tokens, \
-    add_class, has_class, remove_class, HTML_EMPTY_TAGS, get_next_leaf, deep_split
+    add_class, has_class, remove_class, HTML_EMPTY_TAGS, get_next_leaf, deep_split, \
+    sourcemap_path, content_selection
 from DHParser.pipeline import create_parser_junction, Junction, PseudoJunction
 from DHParser.transform import traverse, reduce_single_child, remove_brackets, \
     replace_by_single_child, flatten, remove_empty, remove_whitespace, TransformerFunc, \
@@ -46,7 +47,7 @@ from DHParser.dsl import grammar_provider, create_parser
 from DHParser.error import Error
 from DHParser.parse import RE, Grammar, Forward, Whitespace, Drop, SmartRE, RegExp, Series, \
     ZeroOrMore, Alternative, Option, Text, mixin_comment
-from DHParser.preprocess import gen_neutral_srcmap_func
+from DHParser.preprocess import gen_neutral_srcmap_func, SourceMap, source_map
 from DHParser.toolkit import re, ThreadLocalSingletonFactory
 
 
@@ -1267,7 +1268,6 @@ class TestPathNavigation:
         assert path == cm.path_list[0]
         assert i == 5
 
-
     def test_standalone_select_path_if(self):
         start = self.tree.pick_path('E')
         save = start.copy()
@@ -1736,7 +1736,6 @@ class TestMarkupInsertion:
             cm.markup(m.start(), m.end(), 'klammer')
         assert cm.content == tree.content
 
-
     def test_deep_split(self):
         print()
         urtree = tree = parse_sxpr(
@@ -1781,6 +1780,25 @@ class TestMarkupInsertion:
         path = tree.pick_path('M')
         assert deep_split(path, i=0, left_biased=False, greedy=False) == 1
         assert tree.as_sxpr() == '(X (A (B "123") (N) (M)) (A (C "456")) (D "789"))'
+
+
+class TestContentSelectionMapping:
+    def test_content_selection(self):
+        tree = parse_xml('<doc>Klaus Störtebeker gründete <klammer>(in Hamburg) </klammer>den HSV</doc>')
+        full_content = tree.content
+        content, pos_list, path_list, sm = content_selection(tree, select=LEAF_PATH, ignore="klammer")
+        i = content.find('gründete')
+        k = source_map(i, sm).pos
+        assert full_content[k:k+len('gründete')] == 'gründete'
+        i = content.find('gründete')
+        k = source_map(i + len('gründete'), sm).pos
+        assert full_content[k:k+1] == ' '
+        i = content.find('HSV')
+        k = source_map(i, sm).pos
+        assert full_content[k:k+len('HSV')] == 'HSV'
+        i = content.find('den HSV')
+        k = source_map(i, sm).pos
+        assert full_content[k:k+len('den HSV')] == 'den HSV'
 
 
 class TestSerializationMapping:
