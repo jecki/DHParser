@@ -102,7 +102,7 @@ from typing import Callable, cast, Iterator, Sequence, List, \
 from DHParser.configuration import get_config_value, ALLOWED_PRESET_VALUES
 from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END, \
     add_source_locations, has_errors, only_errors, error_category
-from DHParser.preprocess import SourceMapFunc, gen_neutral_srcmap_func
+from DHParser.preprocess import SpourceMap, SourceMapFunc, gen_neutral_srcmap_func, source_map
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, linebreaks, line_col, JSONnull, JSON_Dict, \
     validate_XML_attribute_value, fix_XML_attribute_value, lxml_XML_attribute_value, \
@@ -5108,6 +5108,40 @@ def leaf_paths(criterion: PathSelector) -> PathMatchFunction:
     return leaf_match_func
 
 
+def sourcemap_path(root: Node,
+                   match_func: PathMatchFunction,
+                   skip_func: PathMatchFunction = NO_PATH) \
+        -> Iterator[Tuple[Path, int]]:
+    """
+    Like :py:func:`Node.select_path_if` but yields the path and the
+    number of characters skipped since the last matched path was returned.
+    """
+    gap: int = 0
+
+    def recursive(path) -> Iterator[Tuple[Path, int]]:
+        nonlocal match_func, skip_func
+        for child in path[-1].children:
+            child_path = path + [child]
+            if child._children:
+                if skip_func(child_path):
+                    gap += child.strlen()
+                else:
+                    yield from recursive(child_path)
+            elif match_func(child_path):
+                yield child_path, gap
+                gap = 0
+            else:
+                gap += child.strlen()
+
+    path: List[Node] = [root]
+    if not root._children and match_func(path):  yield path, 0
+    if not skip_func(path):
+        yield from recursive(path)
+
+
+def content_selection() -> Tuple[str, List[int], List[Path], SourceMap]:
+    pass
+
 class ContentLocation(NamedTuple):
     """DEPRECATED: A location within in a context mapping"""
     path: Path
@@ -5249,7 +5283,6 @@ class ContentMapping:
             return '', [], []
         for path in origin.select_path_if(
                 select_func, include_root=True, skip_func=self.ignore_func):
-            #  if self.ignore_func(path):  continue
             pos_list.append(pos)
             path_list.append(path)
             content_list.append(path[-1].content)
@@ -5402,7 +5435,7 @@ class ContentMapping:
         children has more than one child.
 
         Examples::
-
+            >>> for p in cm._path_list:  print(pp_path(p))
             >>> tree = parse_sxpr('(A (B (x "1") (y "2")) (C (z "3")))')
             >>> cm = ContentMapping(tree)
             >>> B = tree.pick('B')
@@ -5497,12 +5530,23 @@ class ContentMapping:
         ``start_from``. Searching within a path starts from the end
         of the path, and only the last matching node in every path is returned.
         Only the path-index from the first path that contains a matching node
-        is returned. Subseuqent pathes that contain the same node are skipped.
+        is returned. Subsequent pathes that contain the same node are skipped.
+
+        Note that one and the same node can occur in more than one path, so
+        there is no 1:1 relation between nodes and paths. In particular, the
+        node location for one and the same node can differ depending on
+        whether you iterate from the start or from the end (revers=True) of
+        the content mapping.
 
         Examples::
 
             >>> tree = parse_sxpr('(A (B (x "1") (y "2")) (B "!") (C (z "3")))')
             >>> cm = ContentMapping(tree)
+            >>> for p in cm._path_list:  print(pp_path(p, 1))
+            A <- B <- x "1"
+            A <- B <- y "2"
+            A <- B "!"
+            A <- C <- z "3"
             >>> mf = create_match_function("B")
             >>> print([(i, nd.as_sxpr()) for nd, i in cm.select_if(mf)])
             [(0, '(B (x "1") (y "2"))'), (2, '(B "!")')]
