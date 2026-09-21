@@ -5108,7 +5108,7 @@ def leaf_paths(criterion: PathSelector) -> PathMatchFunction:
     return leaf_match_func
 
 
-def sourcemap_path(root: Node,
+def sourcemap_path(origin: Node,
                    match_func: PathMatchFunction,
                    skip_func: PathMatchFunction = NO_PATH) \
         -> Iterator[Tuple[Path, int]]:
@@ -5139,8 +5139,30 @@ def sourcemap_path(root: Node,
         yield from recursive(path)
 
 
-def content_selection() -> Tuple[str, List[int], List[Path], SourceMap]:
-    pass
+def content_selection(origin: Node,
+                      stump: Path = [],
+                      select: PathSelector = LEAF_PATH,
+                      ignore: PathSelector = NO_PATH) \
+    -> Tuple[str, List[int], List[Path], SourceMap]:
+    """Generates the string content, list of positions and list of paths
+    as well as a source mapping for the given origin taking into account
+    ``select_func`` and ``ignore_func`` as constraints."""
+    pos = 0
+    content_list = []
+    path_list = []
+    pos_list = []
+    offsets = []
+    select_func = (lambda pth: self.select_func(stump + pth)) if stump else self.select_func
+    if self.ignore_func([origin]):
+        return '', [], []
+    for path in origin.select_path_if(
+            select_func, include_root=True, skip_func=self.ignore_func):
+        pos_list.append(pos)
+        path_list.append(path)
+        content_list.append(path[-1].content)
+        pos += path[-1].strlen()
+    return ''.join(content_list), pos_list, path_list
+
 
 class ContentLocation(NamedTuple):
     """DEPRECATED: A location within in a context mapping"""
