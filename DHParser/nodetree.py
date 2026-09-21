@@ -102,7 +102,7 @@ from typing import Callable, cast, Iterator, Sequence, List, \
 from DHParser.configuration import get_config_value, ALLOWED_PRESET_VALUES
 from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END, \
     add_source_locations, has_errors, only_errors, error_category
-from DHParser.preprocess import SpourceMap, SourceMapFunc, gen_neutral_srcmap_func, source_map
+from DHParser.preprocess import SourceMap, SourceMapFunc, gen_neutral_srcmap_func, source_map
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, linebreaks, line_col, JSONnull, JSON_Dict, \
     validate_XML_attribute_value, fix_XML_attribute_value, lxml_XML_attribute_value, \
@@ -5140,23 +5140,22 @@ def sourcemap_path(origin: Node,
 
 
 def content_selection(origin: Node,
-                      stump: Path = [],
-                      select: PathSelector = LEAF_PATH,
-                      ignore: PathSelector = NO_PATH) \
+                      select: PathSelector,
+                      ignore: PathSelector = NO_PATH,
+                      stump: Path = []) \
     -> Tuple[str, List[int], List[Path], SourceMap]:
     """Generates the string content, list of positions and list of paths
     as well as a source mapping for the given origin taking into account
     ``select_func`` and ``ignore_func`` as constraints."""
+    if ignore([origin]):
+        return '', [], []
     pos = 0
     content_list = []
     path_list = []
     pos_list = []
     offsets = []
-    select_func = (lambda pth: self.select_func(stump + pth)) if stump else self.select_func
-    if self.ignore_func([origin]):
-        return '', [], []
-    for path in origin.select_path_if(
-            select_func, include_root=True, skip_func=self.ignore_func):
+    if stump:  select = lambda pth: select(stump + pth)
+    for path, gap in sourcemap_path(origin, select, ignore):
         pos_list.append(pos)
         path_list.append(path)
         content_list.append(path[-1].content)
@@ -5296,13 +5295,13 @@ class ContentMapping:
         """Generates the string content, list of positions and list of paths
         for the given origin taking into account ``self.select_func`` and
         ``self.ignore_func`` as constraints."""
+        if self.ignore_func([origin]):
+            return '', [], []
         pos = 0
         content_list = []
         path_list = []
         pos_list = []
         select_func = (lambda pth: self.select_func(stump + pth)) if stump else self.select_func
-        if self.ignore_func([origin]):
-            return '', [], []
         for path in origin.select_path_if(
                 select_func, include_root=True, skip_func=self.ignore_func):
             pos_list.append(pos)
@@ -5457,7 +5456,6 @@ class ContentMapping:
         children has more than one child.
 
         Examples::
-            >>> for p in cm._path_list:  print(pp_path(p))
             >>> tree = parse_sxpr('(A (B (x "1") (y "2")) (C (z "3")))')
             >>> cm = ContentMapping(tree)
             >>> B = tree.pick('B')
