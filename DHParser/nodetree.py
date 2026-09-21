@@ -103,6 +103,7 @@ from DHParser.configuration import get_config_value, ALLOWED_PRESET_VALUES
 from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END, \
     add_source_locations, has_errors, only_errors, error_category
 from DHParser.preprocess import SourceMap, SourceMapFunc, gen_neutral_srcmap_func, source_map
+from DHParser.ranges import Range, sort_and_merge, is_sorted_and_merged, range_difference
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, linebreaks, line_col, JSONnull, JSON_Dict, \
     validate_XML_attribute_value, fix_XML_attribute_value, lxml_XML_attribute_value, \
@@ -5108,9 +5109,9 @@ def leaf_paths(criterion: PathSelector) -> PathMatchFunction:
     return leaf_match_func
 
 
-def sourcemap_path(origin: Node,
-                   match_func: PathMatchFunction,
-                   ignore_func: PathMatchFunction = NO_PATH) \
+def sourcemapped_path(origin: Node,
+                      match_func: PathMatchFunction,
+                      ignore_func: PathMatchFunction = NO_PATH) \
         -> Iterator[Tuple[Path, int]]:
     """
     Similar to :py:func:`Node.select_path_if` but yields the path and the
@@ -5124,27 +5125,45 @@ def sourcemap_path(origin: Node,
         nonlocal match_func, ignore_func, gap
         for child in path[-1].children:
             child_path = path + [child]
-            if child._children:
+            if match_func(child_path):
+                yield child_path, gap
+                gap = 0
+            elif child._children:
                 if ignore_func(child_path):
                     gap += child.strlen()
                 else:
                     yield from recursive(child_path)
-            elif match_func(child_path):
-                yield child_path, gap
-                gap = 0
             else:
                 gap += child.strlen()
 
     path: List[Node] = [origin]
-    if not origin._children and match_func(path):  yield path, 0
+    if match_func(path):  yield path, 0
     if not ignore_func(path):
         yield from recursive(path)
 
 
-def content_selection(origin: Node,
-                      select: PathSelector,
-                      ignore: PathSelector = NO_PATH,
-                      stump: Path = []) \
+def content_ranges(origin: Node,
+                   select: PathSelector,
+                   ignore: PathSelector = NO_PATH) -> List[Range]:
+    select_func, ignore_func = _breed_leaf_selector(select, ignore)
+    a = 0
+    ranges = []
+    for path, gap in sourcemapped_path(origin, select_func, ignore_func):
+        a += gap
+        b = a + path[-1].strlen() - 1
+        if a >= b:
+            if ranges and a <= ranges[-1][1] + 1:
+                ranges[-1][1] = b
+            else:
+                ranges.append(Range(a, b))
+    assert is_sorted_and_merged(ranges)
+    return ranges
+
+
+def sourcemapped_selection(origin: Node,
+                          select: PathSelector,
+                          ignore: PathSelector = NO_PATH,
+                          stump: Path = []) \
     -> Tuple[str, List[int], List[Path], SourceMap]:
     """Generates the string content, list of positions and list of paths
     as well as a source mapping for the given origin taking into account
@@ -5166,7 +5185,7 @@ def content_selection(origin: Node,
     pos_list = []
     offsets = []
     if stump:  select_f = lambda pth: select_f(stump + pth)
-    for path, gap in sourcemap_path(origin, select_f, ignore_f):
+    for path, gap in sourcemapped_path(origin, select_f, ignore_f):
         offset += gap
         pos_list.append(pos)
         offsets.append(offset)
@@ -5282,7 +5301,8 @@ class ContentMapping:
                  greedy: bool = True,
                  divisibility: Union[Dict[str, Container], Container, str] = DIVISIBLES,
                  chain_attr_name: str = '',
-                 auto_cleanup: bool = True):
+                 auto_cleanup: bool = True,
+                 sourcemap: bool = True):
         assert isinstance(origin, Node), f"origin must be a Node, not {type(origin)}, {origin}"
         self.origin: Node = origin
         select_func, ignore_func = _breed_leaf_selector(select, ignore)
@@ -5306,7 +5326,13 @@ class ContentMapping:
         self.chain_attr_name: str = chain_attr_name
         self.auto_cleanup = auto_cleanup
 
-        content, pos_list, path_list = self._generate_mapping(origin)
+        if sourcemap:
+            content, pos_list, path_list, sm = sourcemapped_selection(
+                origin, select, ignore)
+            self._sourcemap: Optionel[SourceMap] = sm
+        else:
+            content, pos_list, path_list = self._generate_mapping(origin)
+            self._sourcemap = None
         self.content: str = content
         self._pos_list: List[int] = pos_list
         self._path_list: List[Path] = path_list
@@ -5354,6 +5380,14 @@ class ContentMapping:
             s = ', '.join(s for s in path)
             lines.append(f'{position} -> {s}')
         return '\n'.join(lines)
+
+    @property
+    def sourcemap(self) -> SourceMap:
+        if self._sourcemap is None:
+            _, _, _, sm = sourcemapped_selection(
+                self.origin, self.select_func, self.ignore_func)
+            self._sourcemap = sm
+        return self._sourcemap
 
     @property
     def path_list(self) -> List[Path]:
@@ -5810,7 +5844,7 @@ class ContentMapping:
     @cython.locals(i=cython.int, k=cython.int, q=cython.int, r=cython.int, t=cython.int, u=cython.int, L=cython.int)
     def markup(self, start_pos: cython.int, end_pos: cython.int, name: str,
                *attr_dict, **attributes) -> NodeLocation:
-        """ Marks the span [start_pos, end_pos[ up by adding one or more Node's
+        """Marks the span [start_pos, end_pos[ up by adding one or more Node's
         with ``name``, eventually cutting through ``divisible`` nodes. Returns the
         nearest common ancestor of ``start_pos`` and ``end_pos``.
 
@@ -6015,6 +6049,63 @@ class ContentMapping:
         # assert not common_ancestor.pick_if(lambda nd: nd.name == ':Text' and bool(nd.children),
         #     include_root=True), common_ancestor.as_sxpr()
         # return NodeLocation(common_ancestor, path_index)
+
+
+def markup(cm: ContentMapping,
+           start_pos: cython.int,
+           end_pos: cython.int,
+           exclude: Sequence[Range],
+           name: str,
+           *attr_dict, **attributes) -> Optional[NodeLocation]:
+    """Marks the span [start_pos, end_pos[ up by adding one or more Node's
+    with ``name``, eventually cutting through ``divisible`` nodes. Returns the
+    nearest common ancestor of ``start_pos`` and ``end_pos``.
+
+    :param start_pos:  The string-position of the first character to be marked
+        up. Note that this is the position in the string-content of the tree
+        over which the content mapping has been generated and not the position
+        in the XML or any other serialization of the tree!
+    :param end_pos:  The string-position after the last character to be included
+        in the markup. Similar to the slicing of Python lists
+        or strings, the beginning and ending define a half-open intervall,
+        [start_pos, ent_pos[. The character indexed by end_pos is not included
+        in the markup. Also, keep in mind that ``end_pos`` is the position in
+        the string-content of the tree over which the content mapping has been
+        generated and not the positionvin the XML or any other serialization
+        of the tree!
+    :param exclude: A sequences of ranges that will be excluded from the markup.
+        If any of these ranges lies within [start_pos, end_pos[, the markup
+        will be split in to two or more non-contiguous regions!
+        Note that other than the half-open intervall [start_pos, end_pos[,
+        these ranges are defined as closed intervalls [low, high]. They can
+        be generated with :py:func:`content_ranges`.
+    :param name:  The name, or "tag-name" in XML-terminology, of the element
+        (or tag) to be added.
+    :param attr_dict: A dictionary of attributes that will
+        be added to the newly created tag.
+    :param attributes: Alternatively, the attributes can also be passed as a
+        list of named parameters.
+
+    :returns: The nearest (from the top of the tree) node, e.g. "ancestor", within
+        which the entire markup lies as well as the first path-index of that
+        ancestor."""
+
+    rr = range_difference(Range(start_pos, end_pos - 1), exclude)
+    if not rr:  return None
+    nl = [cm.markup(r[0], r[1] + 1, name, *attr_dict, **attributes) for r in rr]
+    if len(nl) == 1:  return nl[0]
+    pi = nl[0][1]
+    ca = find_common_ancestor(cm.path(pi), cm.path(nl[1][1]))
+    p = cm.path(pi)
+    for i in range(2, len(nl)):
+        ca2 = find_common_ancestor(p, cm.path(nl[i][1]))
+        for nd in p:
+            if nd is ca:
+                break
+            if nd is ca2:
+                ca = ca2
+                break
+    return NodeLocation(ca, pi)
 
 
 class LocalContentMapping(ContentMapping):
