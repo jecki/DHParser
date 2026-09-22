@@ -6097,7 +6097,7 @@ def markup(cm: ContentMapping,
     with ``name``, eventually cutting through ``divisible`` nodes. Returns the
     nearest common ancestor of ``start_pos`` and ``end_pos``.
 
-    :param cm: The ContentMapping where the markup shall added and to which
+    :param cm: The ContentMapping where the markup shall be added and to which
         start_pos and end_pos relate.
     :param start_pos:  The string-position of the first character to be marked
         up. Note that this is the position in the string-content of the tree
