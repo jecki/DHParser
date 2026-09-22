@@ -1807,6 +1807,16 @@ class TestContentSelectionMapping:
         assert full_content[k:k+len('den HSV')] == 'den HSV'
 
     def test_markup_with_exclusion(self):
+        # HINWEIS: Die Exclude-Bereiche beziehen sich immer auf den vollen
+        # Inhalt ("content"), nicht auf den (möglicherweise) reduzierten
+        # oder ausgewählten Inhalt eines bestimmten ContentMappings
+        # Die Angabe, wo das Tag hinkommt [a, b[ bezieht sich aber wieder
+        # auf den möglicherweise reduzierten Inhalt eines konkreten
+        # content mappings!
+        # Der Grund dafür ist, dass diejenigen Bereich, die bei der Textsuche
+        # ausgeschlossen werden sollen sich nicht mit denen decken müssen,
+        # die vom Tagging (mittels markup) ausgespart bleiben sollen.
+
         xml = '<doc>Klaus Störtebeker gründete <klammer>(in Hamburg) </klammer>den HSV</doc>'
         tree = parse_xml(xml)
         cm = ContentMapping(tree, ignore="klammer")
@@ -1818,7 +1828,6 @@ class TestContentSelectionMapping:
         cm = ContentMapping(tree, ignore="klammer")
         exclude = []
         markup(cm, a, b, exclude, 'X')
-        print(tree.as_sxpr())
         expected = parse_sxpr('''
             (doc
               (:Text "Klaus Störtebeker ")
@@ -1840,6 +1849,24 @@ class TestContentSelectionMapping:
               (X "gründete ")
               (klammer "(in Hamburg) ")
               (X "den ")
+              (:Text "HSV"))''')
+        assert tree.equals(expected)
+
+        # Unmittelbare Bereichsangabe
+        tree = parse_xml(xml)
+        full_content = tree.content
+        cm = ContentMapping(tree, ignore="klammer")
+        exclude = [Range(full_content.find('('), full_content.find(')'))]
+        markup(cm, a, b, exclude, 'X')
+        expected = parse_sxpr('''
+            (doc
+              (:Text "Klaus Störtebeker ")
+              (X "gründete ")
+              (klammer
+                (:Text "(in Hamburg)")
+                (X " "))
+              (X
+                (:Text "den "))
               (:Text "HSV"))''')
         assert tree.equals(expected)
 
