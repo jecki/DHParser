@@ -51,7 +51,7 @@ from DHParser.pipeline import end_points, full_pipeline, create_parser_junction,
     create_preprocess_junction, create_junction, PseudoJunction, PipelineResult
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors, \
-    SourceMap, source_map, result_from_mapping, gen_neutral_srcmap_func
+    SourceMap, map_source, result_from_mapping, gen_neutral_srcmap_func
 from DHParser.stringview import StringView
 from DHParser.toolkit import re, is_filename, load_if_file, cpu_count, \
     ThreadLocalSingletonFactory, expand_table, CancelQuery

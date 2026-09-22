@@ -59,7 +59,7 @@ __all__ = ('RX_TOKEN_NAME',
            'SourceMap',
            'SourceMapFunc',
            'gen_neutral_srcmap_func',
-           'source_map',
+           'map_source',
            'apply_src_mappings',
            'nil_preprocessor',
            'nil_preprocessor_factory',
@@ -126,7 +126,7 @@ def result_from_mapping(mapping: SourceMap,
               processed_text: Union[str, StringView],
               errors: List[Error]) -> PreprocessorResult:
     mapping.validate()
-    mapper = functools.partial(source_map, srcmap=mapping)
+    mapper = functools.partial(map_source, srcmap=mapping)
     return PreprocessorResult(original_text, processed_text, mapper, errors)
 
 FindIncludeFunc: TypeAlias = Union[Callable[[str, int], IncludeInfo],   # (document: str,  start: int)
@@ -312,7 +312,7 @@ def gen_neutral_srcmap_func(original_text: Union[StringView, str], original_name
     return functools.partial(SourceLocation, original_name, original_text)
 
 
-def source_map(position: int, srcmap: SourceMap) -> SourceLocation:
+def map_source(position: int, srcmap: SourceMap) -> SourceLocation:
     """
     Maps a position in a (pre-)processed text to its corresponding
     position in the original document according to the given source map.
@@ -401,7 +401,7 @@ def make_preprocessor(tokenizer: Tokenizer) -> PreprocessorFunc:
             -> PreprocessorResult:
         tokenized_text, errors = tokenizer(original_text)
         srcmap = tokenized_to_original_mapping(tokenized_text, original_text, original_name)
-        mapping = functools.partial(source_map, srcmap=srcmap)
+        mapping = functools.partial(map_source, srcmap=srcmap)
         return PreprocessorResult(original_text, tokenized_text, mapping, errors)
     return preprocessor
 

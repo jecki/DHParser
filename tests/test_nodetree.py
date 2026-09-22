@@ -47,7 +47,7 @@ from DHParser.dsl import grammar_provider, create_parser
 from DHParser.error import Error
 from DHParser.parse import RE, Grammar, Forward, Whitespace, Drop, SmartRE, RegExp, Series, \
     ZeroOrMore, Alternative, Option, Text, mixin_comment
-from DHParser.preprocess import gen_neutral_srcmap_func, SourceMap, source_map
+from DHParser.preprocess import gen_neutral_srcmap_func, SourceMap, map_source
 from DHParser.toolkit import re, ThreadLocalSingletonFactory
 
 
@@ -1793,16 +1793,16 @@ class TestContentSelectionMapping:
         full_content = tree.content
         content, pos_list, path_list, sm = sourcemapped_selection(tree, select=LEAF_PATH, ignore="klammer")
         i = content.find('gründete')
-        k = source_map(i, sm).pos
+        k = map_source(i, sm).pos
         assert full_content[k:k+len('gründete')] == 'gründete'
         i = content.find('gründete')
-        k = source_map(i + len('gründete'), sm).pos
+        k = map_source(i + len('gründete'), sm).pos
         assert full_content[k:k+1] == ' '
         i = content.find('HSV')
-        k = source_map(i, sm).pos
+        k = map_source(i, sm).pos
         assert full_content[k:k+len('HSV')] == 'HSV'
         i = content.find('den HSV')
-        k = source_map(i, sm).pos
+        k = map_source(i, sm).pos
         assert full_content[k:k+len('den HSV')] == 'den HSV'
 
 
