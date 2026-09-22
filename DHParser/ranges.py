@@ -115,6 +115,8 @@ def range_union(A: Sequence[Range], B: Sequence[Range]) -> List[Range]:
 
 def range_difference(A: Sequence[Range], B: Sequence[Range]) \
         -> List[Range]:
+    if not A:  return []
+    if not B:  return list(A)
     assert never_empty(A) and never_empty(B)
     assert is_sorted_and_merged(A) and is_sorted_and_merged(B)
 

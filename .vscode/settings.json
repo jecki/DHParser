@@ -32,5 +32,6 @@
     ],
     "cSpell.enabledFileTypes": {
         "nim": false
-    }
+    },
+    "python-envs.defaultEnvManager": "ms-python.python:system"
 }

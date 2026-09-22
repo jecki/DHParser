@@ -301,7 +301,7 @@ class SourceMap(NamedTuple):
             raise ValueError("The first element of the list of positions must be 0.")
         if not all(self.positions[i] < self.positions[i + 1]
                    for i in range(len(self.positions) - 1)):
-            raise ValueError("The list of positions must be strictly increasing.")
+            raise ValueError(f"The list of positions must be strictly increasing. {self.positions} {self.offsets}")
         return self
 
 

@@ -36,8 +36,9 @@ from DHParser.nodetree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxp
     select_path_if, pick_path, LEAF_PATH, TOKEN_PTYPE, content_of, strlen_of, \
     gen_chain_ID, parse_sxml, DIVISIBLES, reflow_as_oneliner, has_token, eq_tokens, \
     add_class, has_class, remove_class, HTML_EMPTY_TAGS, get_next_leaf, deep_split, \
-    sourcemapped_path, sourcemapped_selection
+    sourcemapped_path, sourcemapped_selection, markup, content_ranges
 from DHParser.pipeline import create_parser_junction, Junction, PseudoJunction
+from DHParser.ranges import Range
 from DHParser.transform import traverse, reduce_single_child, remove_brackets, \
     replace_by_single_child, flatten, remove_empty, remove_whitespace, TransformerFunc, \
     transformer
@@ -1804,6 +1805,46 @@ class TestContentSelectionMapping:
         i = content.find('den HSV')
         k = map_source(i, sm).pos
         assert full_content[k:k+len('den HSV')] == 'den HSV'
+
+    def test_markup_with_exclusion(self):
+        xml = '<doc>Klaus Störtebeker gründete <klammer>(in Hamburg) </klammer>den HSV</doc>'
+        tree = parse_xml(xml)
+        cm = ContentMapping(tree, ignore="klammer")
+        a = cm.content.find('gründete')
+        b = cm.content.find('HSV')
+
+        # Vergleichsfall ohne exclude
+        tree = parse_xml(xml)
+        cm = ContentMapping(tree, ignore="klammer")
+        exclude = []
+        markup(cm, a, b, exclude, 'X')
+        print(tree.as_sxpr())
+        expected = parse_sxpr('''
+            (doc
+              (:Text "Klaus Störtebeker ")
+              (X
+                (:Text "gründete ")
+                (klammer "(in Hamburg) ")
+                (:Text "den "))
+              (:Text "HSV"))''')
+        assert tree.equals(expected)
+
+        # Kanonischer Fall
+        tree = parse_xml(xml)
+        cm = ContentMapping(tree, ignore="klammer")
+        exclude = content_ranges(tree, 'klammer')
+        markup(cm, a, b, exclude, 'X')
+        expected = parse_sxpr('''
+            (doc
+              (:Text "Klaus Störtebeker ")
+              (X "gründete ")
+              (klammer "(in Hamburg) ")
+              (X "den ")
+              (:Text "HSV"))''')
+        assert tree.equals(expected)
+
+
+
 
 
 class TestSerializationMapping:

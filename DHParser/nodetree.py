@@ -5145,13 +5145,16 @@ def sourcemapped_path(origin: Node,
 def content_ranges(origin: Node,
                    select: PathSelector,
                    ignore: PathSelector = NO_PATH) -> List[Range]:
+    """Returns the minimal sequence of position-ranges in form of
+    closed intervals (within the string content of the tree rooted in
+    "origin") that covers all selected paths."""
     select_func, ignore_func = _breed_leaf_selector(select, ignore)
     a = 0
     ranges = []
     for path, gap in sourcemapped_path(origin, select_func, ignore_func):
         a += gap
         b = a + path[-1].strlen() - 1
-        if a >= b:
+        if b >= a:
             if ranges and a <= ranges[-1][1] + 1:
                 ranges[-1][1] = b
             else:
@@ -5183,19 +5186,27 @@ def sourcemapped_selection(origin: Node,
     content_list = []
     path_list = []
     pos_list = []
-    offsets = []
+    offsets = [0]
+    positions = [0]
     if stump:  select_f = lambda pth: select_f(stump + pth)
     for path, gap in sourcemapped_path(origin, select_f, ignore_f):
-        offset += gap
+        if gap > 0:
+            offset += gap
+            if pos == positions[-1]:
+                offsets[-1] = offset
+            else:
+                offsets.append(offset)
+                positions.append(pos)
         pos_list.append(pos)
-        offsets.append(offset)
         path_list.append(path)
         content_list.append(path[-1].content)
         pos += path[-1].strlen()
     content = ''.join(content_list)
     offsets.append(offsets[-1] if len(offsets) > 0 else 0)
-    source_map = SourceMap('selection', pos_list + [len(content) + 1], offsets,
+    positions.append(len(content) + 1)
+    source_map = SourceMap('selection', positions, offsets,
                            ['selection'] * len(offsets), {'selection': content})
+    source_map.validate()  # TODO: Remove this when sufficiently tested!
     return content, pos_list, path_list, source_map
 
 
@@ -5329,7 +5340,7 @@ class ContentMapping:
         if sourcemap:
             content, pos_list, path_list, sm = sourcemapped_selection(
                 origin, select, ignore)
-            self._sourcemap: Optionel[SourceMap] = sm
+            self._sourcemap: Optional[SourceMap] = sm
         else:
             content, pos_list, path_list = self._generate_mapping(origin)
             self._sourcemap = None
@@ -5459,6 +5470,18 @@ class ContentMapping:
             raise IndexError(errmsg(pos))
         return path_index
 
+    def get_path(self, pos: int, left_biased: bool = False) -> Path:
+        """Returns the path for a given position in the string content.
+        :param pos: the position in the string-content for which the path and
+            offset should be determined.
+        :param left_biased: yields the location after the end of the previous
+            path rather than the location at the very beginning of the
+            next path. The default value is "False".
+        :returns: The path for the given position
+        """
+        path_index = self.get_path_index(pos, left_biased)
+        return self._path_list[path_index]
+
     def get_path_and_offset(self, pos: int, left_biased: bool = False,
                             index_out: Optional[List[int]] = None) -> Tuple[Path, int]:
         """Returns the path and relative position within the leaf-node of
@@ -5503,7 +5526,8 @@ class ContentMapping:
         return LocationInfo(
             path_index, self._path_list[path_index], pos - self._pos_list[path_index])
 
-    def get_node_index(self, node: Optional[Node], reverse: bool=False) -> int:
+    def get_node_index(self, node: Optional[Node], reverse: bool=False,
+                       start_idx: int = 0, end_idx: int = -1) -> int:
         """Returns the index in the path_list of the first or last
         (if 'reverse' is True) path that contains 'node' or -1 if 'node'
         is None or the node cannot be found. Note: If 'node' is a leaf
@@ -5511,6 +5535,12 @@ class ContentMapping:
         occurs (if at all) more often than once if it or any of its
         children has more than one child.
 
+        :param node: The node for which a path-index shall be found.
+            If None is passed, -1 for "invalid index" is returned
+        :param reverse: If true, search starts from the end.
+        :param start_idx: An optional starting path index for the search.
+        :param end_idx: An optional ending path index for the search.
+        
         Examples::
             >>> tree = parse_sxpr('(A (B (x "1") (y "2")) (C (z "3")))')
             >>> cm = ContentMapping(tree)
@@ -5528,16 +5558,17 @@ class ContentMapping:
         """
         if node is None:
             return -1
+        if end_idx <= 0:  end_idx = len(self._path_list)
         if reverse:
             while node.children:
                 node = node.children[-1]
-            for i in range(len(self._path_list) - 1, -1, -1):
+            for i in range(end_idx - 1, start_idx - 1, -1):
                 if self._path_list[i][-1] == node:
                     return i
         else:
             while node.children:
                 node = node.children[0]
-            for i in range(len(self._path_list)):
+            for i in range(end_idx):
                 if self._path_list[i][-1] == node:
                     return i
         return -1
@@ -6056,11 +6087,14 @@ def markup(cm: ContentMapping,
            end_pos: cython.int,
            exclude: Sequence[Range],
            name: str,
+           fullmap: Optional[ContentMapping] = None,
            *attr_dict, **attributes) -> Optional[NodeLocation]:
     """Marks the span [start_pos, end_pos[ up by adding one or more Node's
     with ``name``, eventually cutting through ``divisible`` nodes. Returns the
     nearest common ancestor of ``start_pos`` and ``end_pos``.
 
+    :param cm: The ContentMapping where the markup shall added and to which
+        start_pos and end_pos relate.
     :param start_pos:  The string-position of the first character to be marked
         up. Note that this is the position in the string-content of the tree
         over which the content mapping has been generated and not the position
@@ -6071,16 +6105,25 @@ def markup(cm: ContentMapping,
         [start_pos, ent_pos[. The character indexed by end_pos is not included
         in the markup. Also, keep in mind that ``end_pos`` is the position in
         the string-content of the tree over which the content mapping has been
-        generated and not the positionvin the XML or any other serialization
+        generated and not the position in the XML or any other serialization
         of the tree!
     :param exclude: A sequences of ranges that will be excluded from the markup.
         If any of these ranges lies within [start_pos, end_pos[, the markup
         will be split in to two or more non-contiguous regions!
         Note that other than the half-open intervall [start_pos, end_pos[,
-        these ranges are defined as closed intervalls [low, high]. They can
+        these ranges are a) defined as closed intervalls [low, high] and 
+        b) related to the exhaustive string content of the root-Node ("origin")
+        of the content mapping ``cm``, not to cm.content! These ranges can
         be generated with :py:func:`content_ranges`.
     :param name:  The name, or "tag-name" in XML-terminology, of the element
         (or tag) to be added.
+    :param fullmap:  A content mapping that spans the entire range of cm but
+        does not skip any leaf nodes ("exhaustive mapping"). 
+        This should only be passed if such a mapping is ready at hand. 
+        The default value None means that markup will build itself an exhaustive
+        mapping that spans the tree of the common ancestor for the interval
+        [start_pos, end_pos[ for the purpose of adding markup that leaves out
+        the excluded ranges.
     :param attr_dict: A dictionary of attributes that will
         be added to the newly created tag.
     :param attributes: Alternatively, the attributes can also be passed as a
@@ -6089,24 +6132,40 @@ def markup(cm: ContentMapping,
     :returns: The nearest (from the top of the tree) node, e.g. "ancestor", within
         which the entire markup lies as well as the first path-index of that
         ancestor."""
-    # TODO: Second CM!!!
+    if fullmap:
+        assert cm.origin is fullmap.origin, \
+            f"fullmap should have the same root, resp. origin, as cm!"
+        dm = fullmap
+        delta = 0
+    else:
+        ca, _ = find_common_ancestor(cm.get_path(start_pos), cm.get_path(end_pos - 1))
+        assert ca is not None
+        dm = ContentMapping(ca, select = LEAF_PATH, ignore = NO_PATH,
+                            greedy = cm.greedy, divisibility = cm.divisibility,
+                            chain_attr_name= cm.chain_attr_name, 
+                            auto_cleanup=True, sourcemap = False)
+        delta = cm.pos(cm.get_path_index(start_pos))
     a = map_source(start_pos, cm.sourcemap).pos
     b = map_source(end_pos, cm.sourcemap).pos
-    rr = range_difference(Range(a, b - 1), exclude)
+    rr = range_difference([Range(a, b - 1)], exclude)
     if not rr:  return None
-    nl = [cm.markup(r[0], r[1] + 1, name, *attr_dict, **attributes) for r in rr]
+    nl = [dm.markup(r[0] - delta, r[1] + 1 - delta, name, *attr_dict, **attributes) 
+          for r in rr]
     if len(nl) == 1:  return nl[0]
-    pi = nl[0][1]
-    ca = find_common_ancestor(cm.path(pi), cm.path(nl[1][1]))
-    p = cm.path(pi)
+    p = dm.path(nl[0][1])
+    ca, _ = find_common_ancestor(p, dm.path(nl[1][1]))
     for i in range(2, len(nl)):
-        ca2 = find_common_ancestor(p, cm.path(nl[i][1]))
+        ca2, _ = find_common_ancestor(p, dm.path(nl[i][1]))
         for nd in p:
             if nd is ca:
                 break
             if nd is ca2:
                 ca = ca2
                 break
+    start_idx = cm.get_path_index(start_pos)
+    end_idx = cm.get_path_index(end_pos)
+    cm.rebuild_mapping_slice(start_idx, end_idx)
+    pi = cm.get_node_index(ca, reverse=False, start_idx = start_idx, end_idx = end_idx)
     return NodeLocation(ca, pi)
 
 
