@@ -330,12 +330,13 @@ class SourceMap(NamedTuple):
             the actual position, result.original_name the file name of the
             source whithin which the position is located.)
         """
-        assert len(self.positions) == len(self.offsets) == len(self.file_names)
+        assert len(self.positions) == len(self.offsets)
+        assert len(self.file_names) in (1, len(self.offsets))
         # assert set(self.file_names) == set(self.originals_dict.keys())
         import bisect
         i = bisect.bisect_right(self.positions, position)
         if 0 < i < len(self.positions):
-            original_name = self.file_names[i - 1]
+            original_name = self.file_names[0 if len(self.file_names) == 1 else (i - 1)]
             return SourceLocation(
                 original_name,
                 self.originals_dict[original_name],

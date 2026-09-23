@@ -5186,7 +5186,7 @@ def sourcemapped_selection(origin: Node,
     select_f, ignore_f = _breed_leaf_selector(select, ignore)
     if ignore_f([origin]):
         return '', [], [], SourceMap('selection', [0, 1], [0, 0],
-                                     ['selection'] * 2, {'selection': ''})
+                                     ['selection'], {'selection': ''})
     pos = 0
     offset = 0
     content_list = []
@@ -5211,7 +5211,7 @@ def sourcemapped_selection(origin: Node,
     offsets.append(offsets[-1] if len(offsets) > 0 else 0)
     positions.append(len(content) + 1)
     source_map = SourceMap('selection', positions, offsets,
-                           ['selection'] * len(offsets), {'selection': content})
+                           ['selection'], {'selection': content})
     source_map.validate()  # TODO: Remove this when sufficiently tested!
     return content, pos_list, path_list, source_map
 
