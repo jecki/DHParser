@@ -101,7 +101,7 @@ def mark_text(root: etree._Element,
         cm = ContentMapping(element[-1], ignore=XPath(exclude), divisibility=split)
         for m in re.finditer(pattern, cm.content):
             a, b = m.span()
-            cm.markup(a, b, tag, attributes)
+            cm.add_markup(a, b, tag, attributes)
 
             if lock_out:
                 smallest_subtree, _ = find_common_ancestor(cm.path(cm.get_path_index(a)),

@@ -37,7 +37,7 @@ from typing import Union, Optional, Callable, Tuple, List, Dict, Any, \
 
 from DHParser.error import Error, add_source_locations
 from DHParser.stringview import StringView
-from DHParser.toolkit import re, TypeAlias, LazyRE
+from DHParser.toolkit import re, TypeAlias, LazyRE, deprecated
 
 
 __all__ = ('RX_TOKEN_NAME',
@@ -59,7 +59,6 @@ __all__ = ('RX_TOKEN_NAME',
            'SourceMap',
            'SourceMapFunc',
            'gen_neutral_srcmap_func',
-           'map_source',
            'apply_src_mappings',
            'nil_preprocessor',
            'nil_preprocessor_factory',
@@ -126,8 +125,7 @@ def result_from_mapping(mapping: SourceMap,
               processed_text: Union[str, StringView],
               errors: List[Error]) -> PreprocessorResult:
     mapping.validate()
-    mapper = functools.partial(map_source, srcmap=mapping)
-    return PreprocessorResult(original_text, processed_text, mapper, errors)
+    return PreprocessorResult(original_text, processed_text, mapping.map, errors)
 
 FindIncludeFunc: TypeAlias = Union[Callable[[str, int], IncludeInfo],   # (document: str,  start: int)
                                    functools.partial]
@@ -304,6 +302,48 @@ class SourceMap(NamedTuple):
             raise ValueError(f"The list of positions must be strictly increasing. {self.positions} {self.offsets}")
         return self
 
+    def srcpos(self, position) -> int:
+        """Returns the source position corresponding to the given position in the processed text.
+
+        Other than the map-method get_srcpos does not return the file name of the source! If
+        the destination was composed of more than one file, the map-method is recommended
+        instead. For a single file-mapping, srcpos is preferable, because its faster."""
+        assert len(self.positions) == len(self.offsets)
+        import bisect
+        i = bisect.bisect_right(self.positions, position)
+        if 0 < i < len(self.positions):
+            return min(position + self.offsets[i - 1], self.positions[i] + self.offsets[i])
+        raise ValueError(f"Position {position} seems is out of range "
+                         f"[{self.positions[0]}, {self.positions[-1]}[ "
+                         f"or source map ist corrupted.")
+
+    def map(self, position: int) -> SourceLocation:
+        """
+        Maps a position in a (pre-)processed text to its corresponding
+        position in the original document according to the given source map.
+
+        If the destination has not been derived from several source-files
+        it is recommended to use the faster srcpos()-method.
+
+        :param  position: the position in the processed text
+        :returns: the mapped source location (result.pos contains
+            the actual position, result.original_name the file name of the
+            source whithin which the position is located.)
+        """
+        assert len(self.positions) == len(self.offsets) == len(self.file_names)
+        # assert set(self.file_names) == set(self.originals_dict.keys())
+        import bisect
+        i = bisect.bisect_right(self.positions, position)
+        if 0 < i < len(self.positions):
+            original_name = self.file_names[i - 1]
+            return SourceLocation(
+                original_name,
+                self.originals_dict[original_name],
+                min(position + self.offsets[i - 1], self.positions[i] + self.offsets[i]))
+        raise ValueError(f"Position {position} seems is out of range "
+                         f"[{self.positions[0]}, {self.positions[-1]}[ "
+                         f"or source map ist corrupted.")
+
 
 def gen_neutral_srcmap_func(original_text: Union[StringView, str], original_name: str = '') -> SourceMapFunc:
     """Generates a source map function that maps positions to itself."""
@@ -312,29 +352,16 @@ def gen_neutral_srcmap_func(original_text: Union[StringView, str], original_name
     return functools.partial(SourceLocation, original_name, original_text)
 
 
+@deprecated("DHParser.preprocessor.map_source is deprecated, use SourceMap.map instead!")
 def map_source(position: int, srcmap: SourceMap) -> SourceLocation:
-    """
-    Maps a position in a (pre-)processed text to its corresponding
-    position in the original document according to the given source map.
+    """DEPRECATED: Use SourceMap.map instead!"""
+    return srcmap.map(position)
 
-    :param  position: the position in the processed text
-    :param  srcmap:  the source map, i.e. a mapping of locations to offset values
-        and source texts.
-    :returns:  the mapped position
-    """
-    assert len(srcmap.positions) == len(srcmap.offsets) == len(srcmap.file_names)
-    # assert set(srcmap.file_names) == set(srcmap.originals_dict.keys())
-    import bisect
-    i = bisect.bisect_right(srcmap.positions, position)
-    if 0 < i < len(srcmap.positions):
-        original_name = srcmap.file_names[i - 1]
-        return SourceLocation(
-            original_name,
-            srcmap.originals_dict[original_name],
-            min(position + srcmap.offsets[i - 1], srcmap.positions[i] + srcmap.offsets[i]))
-    raise ValueError(f"Position {position} seems is out of range "
-                     f"[{srcmap.positions[0]}, {srcmap.positions[-1]}[ "
-                     f"or source map ist corrupted.")
+
+@deprecated("DHParser.preprocessor.source_map is deprecated, use SourceMap.map instead!")
+def source_map(position: int, srcmap: SourceMap) -> SourceLocation:
+    """DEPRECATED: Use SourceMap.map instead!"""
+    return srcmap.map(position)
 
 
 def apply_src_mappings(position: int, mappings: List[SourceMapFunc]) -> SourceLocation:
@@ -401,8 +428,7 @@ def make_preprocessor(tokenizer: Tokenizer) -> PreprocessorFunc:
             -> PreprocessorResult:
         tokenized_text, errors = tokenizer(original_text)
         srcmap = tokenized_to_original_mapping(tokenized_text, original_text, original_name)
-        mapping = functools.partial(map_source, srcmap=srcmap)
-        return PreprocessorResult(original_text, tokenized_text, mapping, errors)
+        return PreprocessorResult(original_text, tokenized_text, srcmap.map, errors)
     return preprocessor
 
 

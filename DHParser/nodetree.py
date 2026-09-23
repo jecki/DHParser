@@ -102,7 +102,7 @@ from typing import Callable, cast, Iterator, Sequence, List, \
 from DHParser.configuration import get_config_value, ALLOWED_PRESET_VALUES
 from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END, \
     add_source_locations, has_errors, only_errors, error_category
-from DHParser.preprocess import SourceMap, SourceMapFunc, gen_neutral_srcmap_func, map_source
+from DHParser.preprocess import SourceMap, SourceMapFunc, gen_neutral_srcmap_func
 from DHParser.ranges import Range, sort_and_merge, is_sorted_and_merged, range_difference
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, linebreaks, line_col, JSONnull, JSON_Dict, \
@@ -4829,12 +4829,13 @@ def can_split(t: Path, i: cython.int, left_biased: bool = True, greedy: bool = T
     return -k
 
 
-def markup_leaf(node: Node, start: int, end: int, name: str, *attr_dict, **attributes):
+def markup_leaf(node: Node, start: int, end: int, name: str, attr_dict: Optional[Dict] = None):
     """Adds markup to a leaf node, incidentally turning the leaf node into a branch node."""
     assert not node._children
+    if attr_dict is None:  attr_dict = {}
     seg_1 = Node(TOKEN_PTYPE, node._result[:start])
     seg_1._pos = node._pos
-    seg_2 = Node(name, node._result[start:end]).with_attr(*attr_dict, **attributes)
+    seg_2 = Node(name, node._result[start:end]).with_attr(attr_dict)
     seg_2._pos = node._pos + start if node._pos >= 0 else -1
     seg_3 = Node(TOKEN_PTYPE, node._result[end:])
     seg_3._pos = node._pos + end if node._pos >= 0 else -1
@@ -5184,7 +5185,8 @@ def sourcemapped_selection(origin: Node,
     """
     select_f, ignore_f = _breed_leaf_selector(select, ignore)
     if ignore_f([origin]):
-        return '', [], []
+        return '', [], [], SourceMap('selection', [0, 1], [0, 0],
+                                     ['selection'] * 2, {'selection': ''})
     pos = 0
     offset = 0
     content_list = []
@@ -5286,6 +5288,8 @@ class ContentMapping:
         and only  leave out its branches. ingnore also holds back the
         root of the subtree to be skipped!
     :ivar content: The string content of the selected parts of the tree.
+    :ivar sourcemap: A :py:class:`preprocess.SourceMap` instance that
+        maps positions in the content
 
     Markup-related instance variables:
 
@@ -5754,7 +5758,7 @@ class ContentMapping:
             12 -> a, e, f, h "ABC"
             15 -> a, e, i "DEF"
             >>> cm.auto_cleanup = False
-            >>> common_ancestor, _ = cm.markup(10, 16, 'Y')
+            >>> common_ancestor, _ = cm.add_markup(10, 16, 'Y')
             >>> print(common_ancestor.as_sxpr())
             (e (f (g (:Text "7") (Y "89")) (Y (h "ABC"))) (i (Y "D") (:Text "EF")))
             >>> print(cm)
@@ -5781,7 +5785,7 @@ class ContentMapping:
 
             >>> tree = parse_sxpr('(a (b (c "123") (d "456")) (e (f (g "789") (h "ABC")) (i "DEF")))')
             >>> cm = ContentMapping(tree, auto_cleanup=False)
-            >>> common_ancestor, _ = cm.markup(0, 6, 'Y')
+            >>> common_ancestor, _ = cm.add_markup(0, 6, 'Y')
             >>> print(common_ancestor.as_sxpr())
             (b (Y (c "123") (d "456")))
             >>> a = cm.get_path_index(0)
@@ -5877,8 +5881,8 @@ class ContentMapping:
 
 
     @cython.locals(i=cython.int, k=cython.int, q=cython.int, r=cython.int, t=cython.int, u=cython.int, L=cython.int)
-    def markup(self, start_pos: cython.int, end_pos: cython.int, name: str,
-               *attr_dict, **attributes) -> NodeLocation:
+    def add_markup(self, start_pos: cython.int, end_pos: cython.int, tag_name: str,
+                   attributes: Optional[Dict] = None, **additional_attrs) -> NodeLocation:
         """Marks the span [start_pos, end_pos[ up by adding one or more Node's
         with ``name``, eventually cutting through ``divisible`` nodes. Returns the
         nearest common ancestor of ``start_pos`` and ``end_pos``.
@@ -5895,11 +5899,10 @@ class ContentMapping:
             the string-content of the tree over which the content mapping has been
             generated and not the positionvin the XML or any other serialization
             of the tree!
-        :param name:  The name, or "tag-name" in XML-terminology, of the element
-            (or tag) to be added.
-        :param attr_dict: A dictionary of attributes that will
+        :param tag_name:  The name of the element (or tag) to be added.
+        :param attributes: A dictionary of attributes that will
             be added to the newly created tag.
-        :param attributes: Alternatively, the attributes can also be passed as a
+        :param additional_attrs: Alternatively, the attributes can also be passed as a
             list of named parameters.
 
         :returns: The nearest (from the top of the tree) node, e.g. "ancestor", within
@@ -5913,72 +5916,70 @@ class ContentMapping:
             ...                   ' (B (Q "789") (R "abc")) (n "+-"))')
             >>> X = copy.deepcopy(tree)
             >>> t = ContentMapping(X)
-            >>> _ = t.markup(2, 8, 'em')
+            >>> _ = t.add_markup(2, 8, 'em')
             >>> printw(X.as_sxpr(flatten_threshold=-1))
             (X (l ",.") (A (em (O "123") (P "456"))) (m "!?") (B (Q "789") (R "abc"))
              (n "+-"))
             >>> Y = copy.deepcopy(X)
             >>> t = ContentMapping(Y, divisibility={'bf': {':Text', 'em', 'A', 'P'}})
-            >>> _ = t.markup(0, 7, 'bf')
+            >>> _ = t.add_markup(0, 7, 'bf')
             >>> printw(Y.as_sxpr(flatten_threshold=-1))
             (X (bf (l ",.") (A (em (O "123") (P "45")))) (A (em (P "6"))) (m "!?")
              (B (Q "789") (R "abc")) (n "+-"))
             >>> X = copy.deepcopy(tree)
             >>> t = ContentMapping(X)
-            >>> _ = t.markup(2, 10, 'em')
+            >>> _ = t.add_markup(2, 10, 'em')
             >>> printw(X.as_sxpr(flatten_threshold=-1))
             (X (l ",.") (em (A (O "123") (P "456")) (m "!?")) (B (Q "789") (R "abc"))
              (n "+-"))
             >>> X = copy.deepcopy(tree)
             >>> t = ContentMapping(X, divisibility={'A'})
-            >>> _ = t.markup(5, 10, 'em')
+            >>> _ = t.add_markup(5, 10, 'em')
             >>> printw(X.as_sxpr(flatten_threshold=-1))
             (X (l ",.") (A (O "123")) (em (A (P "456")) (m "!?")) (B (Q "789") (R "abc"))
              (n "+-"))
             >>> X = copy.deepcopy(tree)
             >>> t = ContentMapping(X)
-            >>> _ = t.markup(2, 13, 'em')
+            >>> _ = t.add_markup(2, 13, 'em')
             >>> printw(X.as_sxpr(flatten_threshold=-1))
             (X (l ",.") (em (A (O "123") (P "456")) (m "!?")) (B (em (Q "789")) (R "abc"))
              (n "+-"))
             >>> X = copy.deepcopy(tree)
             >>> t = ContentMapping(X)
-            >>> _ = t.markup(5, 16, 'em')
+            >>> _ = t.add_markup(5, 16, 'em')
             >>> printw(X.as_sxpr(flatten_threshold=-1))
             (X (l ",.") (A (O "123") (em (P "456"))) (em (m "!?") (B (Q "789") (R "abc")))
              (n "+-"))
             >>> X = copy.deepcopy(tree)
             >>> t = ContentMapping(X)
-            >>> _ = t.markup(5, 13, 'em')
+            >>> _ = t.add_markup(5, 13, 'em')
             >>> printw(X.as_sxpr(flatten_threshold=-1))
             (X (l ",.") (A (O "123") (em (P "456"))) (em (m "!?")) (B (em (Q "789"))
              (R "abc")) (n "+-"))
             >>> X = copy.deepcopy(tree)
             >>> t = ContentMapping(X)
-            >>> _ = t.markup(6, 12, 'em')
+            >>> _ = t.add_markup(6, 12, 'em')
             >>> printw(X.as_sxpr(flatten_threshold=-1))
             (X (l ",.") (A (O "123") (P (:Text "4") (em "56"))) (em (m "!?"))
              (B (Q (em "78") (:Text "9")) (R "abc")) (n "+-"))
             >>> X = copy.deepcopy(tree)
             >>> t = ContentMapping(X)
-            >>> _ = t.markup(1, 17, 'em')
+            >>> _ = t.add_markup(1, 17, 'em')
             >>> printw(X.as_sxpr(flatten_threshold=-1))
             (X (l (:Text ",") (em ".")) (em (A (O "123") (P "456")) (m "!?") (B (Q "789")
              (R "abc"))) (n (em "+") (:Text "-")))
             >>> X = copy.deepcopy(tree)
             >>> t = ContentMapping(X, divisibility={'em': {'l', 'n'}})
-            >>> _ = t.markup(1, 17, 'em')
+            >>> _ = t.add_markup(1, 17, 'em')
             >>> printw(X.as_sxpr(flatten_threshold=-1))
             (X (l ",") (em (l ".") (A (O "123") (P "456")) (m "!?") (B (Q "789") (R "abc"))
              (n "+")) (n "-"))
         """
-        assert not attr_dict or (len(attr_dict) == 1 and isinstance(attr_dict[0], Dict)), \
-            f'{attr_dict} is not a valid attribute-dictionary!'
         assert end_pos >= start_pos
-        attr_dict = attr_dict[0] if attr_dict else {}
-        attr_dict.update(attributes)
+        if attributes is None:  attributes = {}
+        attributes.update(additional_attrs)
         if start_pos == end_pos:
-            milestone = Node(name, '').with_attr(attr_dict)
+            milestone = Node(tag_name, '').with_attr(attributes)
             common_ancestor, path_index = self.insert_node(start_pos, milestone)
             return NodeLocation(common_ancestor, path_index)
 
@@ -5992,14 +5993,14 @@ class ContentMapping:
         assert not common_ancestor.pick_if(lambda nd: nd.name == ':Text' and bool(nd.children),
             include_root=True), common_ancestor.as_sxpr()
 
-        if self.chain_attr_name and self.chain_attr_name not in attr_dict:
-            attr_dict[self.chain_attr_name] = gen_chain_ID()
+        if self.chain_attr_name and self.chain_attr_name not in attributes:
+            attributes[self.chain_attr_name] = gen_chain_ID()
 
-        divisible = self.divisibility.get(name, self.divisibility.get('*', frozenset()))
+        divisible = self.divisibility.get(tag_name, self.divisibility.get('*', frozenset()))
 
         if not common_ancestor._children:
-            attr_dict.pop(self.chain_attr_name, None)
-            markup_leaf(common_ancestor, pos_A, pos_B, name, attr_dict)
+            attributes.pop(self.chain_attr_name, None)
+            markup_leaf(common_ancestor, pos_A, pos_B, tag_name, attributes)
             if ((not self.greedy or common_ancestor.name[0:1] == ":") and i != 0
                      and (common_ancestor.name in divisible or common_ancestor.anonymous)):
                 for child in common_ancestor.children:
@@ -6007,7 +6008,7 @@ class ContentMapping:
                         child.name = common_ancestor.name
                         child.with_attr(common_ancestor.attr)
                     elif not common_ancestor.anonymous:
-                        assert child.name == name
+                        assert child.name == tag_name
                         assert not child._children
                         child.result = Node(common_ancestor.name, child.result).with_attr(common_ancestor.attr)
                 ur_ancestor = path_A[i - 1]
@@ -6041,37 +6042,37 @@ class ContentMapping:
                            self.ignore_func, self.chain_attr_name)
 
         if i >= 0 and k >= 0:
-            attr_dict.pop(self.chain_attr_name, None)
-            nd = Node(name, common_ancestor[i:k]).with_attr(attr_dict)
+            attributes.pop(self.chain_attr_name, None)
+            nd = Node(tag_name, common_ancestor[i:k]).with_attr(attributes)
             nd._pos = common_ancestor[i]._pos
             common_ancestor.result = common_ancestor[:i] + (nd,) + common_ancestor[k:]
         elif i >= 0:
             t = common_ancestor.index(stump_B[1])
-            nd = Node(name, common_ancestor[i:t]).with_attr(attr_dict)
+            nd = Node(tag_name, common_ancestor[i:t]).with_attr(attributes)
             nd._pos = common_ancestor[i]._pos
-            markup_left(stump_B[1:], pos_B, name, attr_dict,
+            markup_left(stump_B[1:], pos_B, tag_name, attributes,
                         self.greedy, self.select_func, self.ignore_func,
                         divisible, self.chain_attr_name)
             common_ancestor.result = common_ancestor[:i] + (nd,) + common_ancestor[t:]
         elif k >= 0:
             t = common_ancestor.index(stump_A[1])
-            nd = Node(name, common_ancestor[t + 1:k]).with_attr(attr_dict)
+            nd = Node(tag_name, common_ancestor[t + 1:k]).with_attr(attributes)
             nd._pos = common_ancestor[t + 1]._pos
-            markup_right(stump_A[1:], pos_A, name, attr_dict,
+            markup_right(stump_A[1:], pos_A, tag_name, attributes,
                          self.greedy, self.select_func, self.ignore_func,
                          divisible, self.chain_attr_name)
             common_ancestor.result = common_ancestor[:t + 1] + (nd,) + common_ancestor[k:]
         else:
             t = common_ancestor.index(stump_A[1])
             u = common_ancestor.index(stump_B[1])
-            markup_right(stump_A[1:], pos_A, name, attr_dict,
+            markup_right(stump_A[1:], pos_A, tag_name, attributes,
                          self.greedy, self.select_func, self.ignore_func,
                          divisible, self.chain_attr_name)
-            markup_left(stump_B[1:], pos_B, name, attr_dict,
+            markup_left(stump_B[1:], pos_B, tag_name, attributes,
                         self.greedy, self.select_func, self.ignore_func,
                         divisible, self.chain_attr_name)
             if u - t > 1:
-                nd = Node(name, common_ancestor[t + 1:u]).with_attr(attr_dict)
+                nd = Node(tag_name, common_ancestor[t + 1:u]).with_attr(attributes)
                 nd._pos = common_ancestor[t + 1]._pos
                 common_ancestor.result = common_ancestor[:t + 1] + (nd,) + common_ancestor[u:]
 
@@ -6085,12 +6086,26 @@ class ContentMapping:
         #     include_root=True), common_ancestor.as_sxpr()
         # return NodeLocation(common_ancestor, path_index)
 
+    def markup(self, start_pos: cython.int,
+           end_pos: cython.int,
+           name: str,
+           exclude_regions: Sequence[Range] = [], *,
+           attributes: Optional[Dict] = None, **additional_attrs) -> Optional[NodeLocation]:
+        if attributes is None:
+            if isinstance(exclude_regions, Dict):
+                attributes = exclude_regions
+                exclude_regions = []
+            else:
+                attributes = {}
+        attributes.update(additional_attrs)
+        return self.add_markup(start_pos, end_pos, name, attributes)
+
 
 def markup(cm: ContentMapping,
            start_pos: cython.int,
            end_pos: cython.int,
-           exclude: Sequence[Range],
            name: str,
+           exclude_regions: Sequence[Range],
            fullmap: Optional[ContentMapping] = None,
            *attr_dict, **attributes) -> Optional[NodeLocation]:
     """Marks the span [start_pos, end_pos[ up by adding one or more Node's
@@ -6111,16 +6126,16 @@ def markup(cm: ContentMapping,
         the string-content of the tree over which the content mapping has been
         generated and not the position in the XML or any other serialization
         of the tree!
-    :param exclude: A sequences of ranges that will be excluded from the markup.
-        If any of these ranges lies within [start_pos, end_pos[, the markup
-        will be split in to two or more non-contiguous regions!
+    :param name:  The name, or "tag-name" in XML-terminology, of the element
+        (or tag) to be added.        
+    :param exclude_regions: A sequences of ranges that will be excluded from
+        the markup. If any of these ranges lies within [start_pos, end_pos[,
+        the markup will be split in to two or more non-contiguous regions!
         Note that other than the half-open intervall [start_pos, end_pos[,
         these ranges are a) defined as closed intervalls [low, high] and 
         b) related to the exhaustive string content of the root-Node ("origin")
         of the content mapping ``cm``, not to cm.content! These ranges can
         be generated with :py:func:`content_ranges`.
-    :param name:  The name, or "tag-name" in XML-terminology, of the element
-        (or tag) to be added.
     :param fullmap:  A content mapping that spans the entire range of cm but
         does not skip any leaf nodes ("exhaustive mapping"). 
         This should only be passed if such a mapping is ready at hand. 
@@ -6149,11 +6164,11 @@ def markup(cm: ContentMapping,
                             chain_attr_name= cm.chain_attr_name, 
                             auto_cleanup=True, sourcemap = False)
         delta = cm.pos(cm.get_path_index(start_pos))
-    a = map_source(start_pos, cm.sourcemap).pos
-    b = map_source(end_pos, cm.sourcemap).pos
-    rr = range_difference([Range(a, b - 1)], exclude)
+    a = cm.sourcemap.srcpos(start_pos)
+    b = cm.sourcemap.srcpos(end_pos)
+    rr = range_difference([Range(a, b - 1)], exclude_regions)
     if not rr:  return None
-    nl = [dm.markup(r[0] - delta, r[1] + 1 - delta, name, *attr_dict, **attributes) 
+    nl = [dm.add_markup(r[0] - delta, r[1] + 1 - delta, name, *attr_dict, **attributes)
           for r in rr]
     if len(nl) == 1:  return nl[0]
     p = dm.path(nl[0][1])
@@ -6168,7 +6183,7 @@ def markup(cm: ContentMapping,
                 break
     start_idx = cm.get_path_index(start_pos)
     end_idx = cm.get_path_index(end_pos)
-    cm.rebuild_mapping_slice(start_idx, end_idx)
+    cm.rebuild_mapping_slice(start_idx, end_idx)  # if auto_cleanup
     pi = cm.get_node_index(ca, reverse=False, start_idx = start_idx, end_idx = end_idx)
     return NodeLocation(ca, pi)
 
@@ -6257,10 +6272,10 @@ class LocalContentMapping(ContentMapping):
     def insert_node(self, pos: int, node: Node, left_biased: bool=False) -> NodeLocation:
         return super().insert_node(pos + self.pos_offset, node, left_biased)
 
-    def markup(self, start_pos: int, end_pos: int, name: str,
-               *attr_dict, **attributes) -> NodeLocation:
-        return super().markup(start_pos + self.pos_offset, end_pos + self.pos_offset, name,
-                              *attr_dict, **attributes)
+    def add_markup(self, start_pos: int, end_pos: int, tag_name: str,
+                   *attributes, **additional_attrs) -> NodeLocation:
+        return super().add_markup(start_pos + self.pos_offset, end_pos + self.pos_offset, tag_name,
+                                  *attributes, **additional_attrs)
 
 
 class SerPart(IntEnum):

@@ -48,7 +48,7 @@ from DHParser.dsl import grammar_provider, create_parser
 from DHParser.error import Error
 from DHParser.parse import RE, Grammar, Forward, Whitespace, Drop, SmartRE, RegExp, Series, \
     ZeroOrMore, Alternative, Option, Text, mixin_comment
-from DHParser.preprocess import gen_neutral_srcmap_func, SourceMap, map_source
+from DHParser.preprocess import gen_neutral_srcmap_func, SourceMap
 from DHParser.toolkit import re, ThreadLocalSingletonFactory
 
 
@@ -1535,7 +1535,7 @@ class TestMarkupInsertion:
         mapping = ContentMapping(tree, divisibility=divisability_map,
                                  chain_attr_name = "chain")
         match = re.search(r"Stadt\s+München", mapping.content)
-        _ = mapping.markup(match.start(), match.end(), "foreign", {'lang': 'de'})
+        _ = mapping.add_markup(match.start(), match.end(), "foreign", {'lang': 'de'})
         xml_str = tree.as_xml(empty_tags={'lb'})
         # print(xml_str)
         chains = {loc.attr['chain'] for loc in tree.select('location')}
@@ -1551,6 +1551,20 @@ class TestMarkupInsertion:
     #     _ = cm.markup(m.start(), m.end(), 'location', chain_attr_name='chain')
     #     print(tree.as_xml(empty_tags={'lb'}))
 
+    def test_insert_node(self):
+        tree = parse_xml("<document>In Charlottenburg steht ein <i>großes </i> Schloss.</document>")
+        cm = ContentMapping(tree, auto_cleanup=True)
+        assert cm._pos_list == [0, 28, 35]
+        i = cm.content.find('Charlottenburg')
+        cm.insert_node(i, Node("b", "der Stadt "))
+        assert cm._pos_list == [0, 3, 13, 38, 45]
+        assert tree.equals(parse_sxpr("""
+            (document
+              (:Text "In ")
+              (b "der Stadt ")
+              (:Text "Charlottenburg steht ein ")
+              (i "großes ")
+              (:Text " Schloss."))"""))
 
     def test_insert_milestone_1(self):
         empty_tags = set()
@@ -1588,7 +1602,7 @@ class TestMarkupInsertion:
         assert i >= 0
         k = i + len("Charlottenburg")
         tm = ContentMapping(tree)
-        tm.markup(i, k, "ref", { 'type':"subj", 'target':"Charlottenburg_S00231"})
+        tm.add_markup(i, k, "ref", {'type': "subj", 'target': "Charlottenburg_S00231"})
         xml = tree.as_xml(inline_tags={"document"}, string_tags={TOKEN_PTYPE},
                           empty_tags=empty_tags)
         assert xml == ('<document>In <ref type="subj" '
@@ -1600,7 +1614,7 @@ class TestMarkupInsertion:
         tree = parse_xml(self.testdata_2, string_tag=TOKEN_PTYPE, out_empty_tags=empty_tags)
         m = re.search(r'silvae,?\s*glandiferae', tree.content)
         tm = ContentMapping(tree)
-        tm.markup(m.start(), m.end(), "ref", {'type': "subj", 'target': "silva_glandifera_S01229"})
+        tm.add_markup(m.start(), m.end(), "ref", {'type': "subj", 'target': "silva_glandifera_S01229"})
         xml = tree.as_xml(inline_tags={"document"}, string_tags={TOKEN_PTYPE},
                           empty_tags=empty_tags)
         assert xml == ('<document><app n="g"><lem>silvae</lem><ref type="subj" '
@@ -1612,14 +1626,14 @@ class TestMarkupInsertion:
         tree = parse_xml(self.testdata_3, string_tag=TOKEN_PTYPE, out_empty_tags=empty_tags)
         m = re.search(r'Anfang war das Wort', tree.content)
         cm = ContentMapping(tree)
-        cm.markup(m.start(), m.end(), "a")
+        cm.add_markup(m.start(), m.end(), "a")
         assert tree.as_xml(inline_tags={'doc'}, string_tags={':Text'}) == \
             '<doc>Am <outer><a><inner>Anfang</inner> war das Wort</a></outer>.</doc>'
         empty_tags = set()
         tree = parse_xml(self.testdata_3, string_tag=TOKEN_PTYPE, out_empty_tags=empty_tags)
         m = re.search(r'Am Anfang war', tree.content)
         cm = ContentMapping(tree)
-        cm.markup(m.start(), m.end(), "a")
+        cm.add_markup(m.start(), m.end(), "a")
         assert tree.as_xml(inline_tags={'doc'}, string_tags={':Text'}) == \
             '<doc><a>Am </a><outer><a><inner>Anfang</inner> war</a> das Wort</outer>.</doc>'
 
@@ -1628,7 +1642,7 @@ class TestMarkupInsertion:
         tree = parse_xml(self.testdata_3, string_tag=TOKEN_PTYPE, out_empty_tags=empty_tags)
         m = re.search(r'Am Anfang war', tree.content)
         cm = ContentMapping(tree, chain_attr_name='_chain')
-        cm.markup(m.start(), m.end(), "a")
+        cm.add_markup(m.start(), m.end(), "a")
         I = tree.pick('a').attr['_chain']
         assert tree.as_xml(inline_tags={'doc'}, string_tags={':Text'}) == \
             f'<doc><a _chain="{I}">Am </a><outer><a _chain="{I}"><inner>Anfang</inner> war</a>'\
@@ -1639,7 +1653,7 @@ class TestMarkupInsertion:
         i = tree.content.find('Q.')
         k = tree.content.find('Tubero') + len('Tubero')
         cm = ContentMapping(tree)
-        cm.markup(i, k, "a")
+        cm.add_markup(i, k, "a")
         assert tree.as_xml(inline_tags={'text'}, string_tags={TOKEN_PTYPE}) == \
             '<text><hi rend="i">X</hi>34, 53 ... <a>Q. Aelius Tubero</a> tribunus plebis</text>'
 
@@ -1649,7 +1663,7 @@ class TestMarkupInsertion:
         m = re.search(r'Cicero', tree.content)
         a, b = m.start(), m.end()
         cm = ContentMapping(tree, auto_cleanup=True)
-        cm.markup(a, b, 'ref')
+        cm.add_markup(a, b, 'ref')
         assert flatten_sxpr(tree.as_sxpr()) == '(doc (:Text "wenn wir bei ") '\
             '(hi `(rend "italic") (ref "Cicero")) (note `(type "footnote") `(n "29)") '\
             '(pb `(n "225")) (:Text "In Verr. acc. 1. 3, 120. ")) '\
@@ -1662,7 +1676,7 @@ class TestMarkupInsertion:
         m = re.search(r'Mommsen', tree.content)
         a, b = m.start(), m.end()
         cm = ContentMapping(tree, auto_cleanup=True)
-        cm.markup(a, b, 'ref')
+        cm.add_markup(a, b, 'ref')
         assert flatten_sxpr(tree.as_sxpr()) == '(doc (:Text "Zugleich traf sie für ") '\
             '(pb `(n "219")) (:Text "den ager compascuus folgende Bestimmung '\
             '(Z. 14, 15 nach ") (ref (hi `(rend "italic") "Momm") (lb)) (hi `(rend "italic") '\
@@ -1676,7 +1690,7 @@ class TestMarkupInsertion:
         m = re.search('Beaudouin. Études', tree.content)
         a, b = m.start(), m.end()
         cm = ContentMapping(tree, auto_cleanup=True)
-        cm.markup(a, b, 'ref')
+        cm.add_markup(a, b, 'ref')
         assert tree.as_xml(inline_tags={'item'}) == '<item><pb n="283" ed="A"/>'\
             '<ref><hi rend="italic">Beaudouin</hi>. Études</ref><note type="comment" n="10">'\
             'Im Titel heißt es: Étude. </note> sur le jus Italicum (Nouvelle revue historique '\
@@ -1687,13 +1701,13 @@ class TestMarkupInsertion:
         tree = parse_xml('<doc>Hello, <em>World</em>!</doc>')
         X = copy.deepcopy(tree)
         t = ContentMapping(X)
-        _ = t.markup(3, 4, 'b')
+        _ = t.add_markup(3, 4, 'b')
         assert X.as_xml(inline_tags={'doc'}) \
             == '<doc>Hel<b>l</b>o, <em>World</em>!</doc>'
 
         X = copy.deepcopy(tree)
         t = ContentMapping(X)
-        _ = t.markup(3, 3, 'b')
+        _ = t.add_markup(3, 3, 'b')
         assert X.as_xml(inline_tags={'doc'}, empty_tags={'b'}) \
                == '<doc>Hel<b/>lo, <em>World</em>!</doc>'
 
@@ -1703,13 +1717,13 @@ class TestMarkupInsertion:
         t = copy.deepcopy(tree)
         cm = ContentMapping(t, divisibility=DIVISIBLES | {'i', 'span'})
         cm.greedy = True
-        cm.markup(2, 8, "Klassifikation")
+        cm.add_markup(2, 8, "Klassifikation")
         assert t.as_sxpr() == \
             '(p (b "I") (:Text " ") (i (Klassifikation "gener.") (:Text ":")) ' \
             '(:Text "[MFSP]") (b "A"))'
         t = copy.deepcopy(tree)
         cm = cm = ContentMapping(t, divisibility=DIVISIBLES)
-        cm.markup(2, 8, "Klassifikation")
+        cm.add_markup(2, 8, "Klassifikation")
         assert t.as_sxpr() == \
             '(p (b "I") (:Text " ") (i (Klassifikation "gener.") (:Text ":")) ' \
             '(:Text "[MFSP]") (b "A"))'
@@ -1717,13 +1731,13 @@ class TestMarkupInsertion:
         t = copy.deepcopy(tree)
         cm = ContentMapping(t, divisibility=DIVISIBLES | {'i', 'span'})
         cm.greedy = False
-        cm.markup(2, 8, "Klassifikation")
+        cm.add_markup(2, 8, "Klassifikation")
         assert t.as_sxpr() == \
                '(p (b "I") (:Text " ") (Klassifikation (i "gener.")) ' \
                '(i ":") (:Text "[MFSP]") (b "A"))'
         t = copy.deepcopy(tree)
         cm = cm = ContentMapping(t, divisibility=DIVISIBLES)
-        cm.markup(2, 8, "Klassifikation")
+        cm.add_markup(2, 8, "Klassifikation")
         assert t.as_sxpr() == \
                '(p (b "I") (:Text " ") (i (Klassifikation "gener.") ' \
                '(:Text ":")) (:Text "[MFSP]") (b "A"))'
@@ -1739,7 +1753,7 @@ class TestMarkupInsertion:
         cm = ContentMapping(tree)
         assert cm.content == tree.content
         for m in klammer_rx.finditer(cm.content):
-            cm.markup(m.start(), m.end(), 'klammer')
+            cm.add_markup(m.start(), m.end(), 'klammer')
         assert cm.content == tree.content
 
     def test_deep_split(self):
@@ -1794,16 +1808,16 @@ class TestContentSelectionMapping:
         full_content = tree.content
         content, pos_list, path_list, sm = sourcemapped_selection(tree, select=LEAF_PATH, ignore="klammer")
         i = content.find('gründete')
-        k = map_source(i, sm).pos
+        k = sm.map(i).pos # map_source(i, sm).pos
         assert full_content[k:k+len('gründete')] == 'gründete'
         i = content.find('gründete')
-        k = map_source(i + len('gründete'), sm).pos
+        k = sm.map(i + len('gründete')).pos
         assert full_content[k:k+1] == ' '
         i = content.find('HSV')
-        k = map_source(i, sm).pos
+        k = sm.map(i).pos
         assert full_content[k:k+len('HSV')] == 'HSV'
         i = content.find('den HSV')
-        k = map_source(i, sm).pos
+        k = sm.map(i).pos
         assert full_content[k:k+len('den HSV')] == 'den HSV'
 
     def test_markup_with_exclusion(self):
@@ -1827,7 +1841,7 @@ class TestContentSelectionMapping:
         tree = parse_xml(xml)
         cm = ContentMapping(tree, ignore="klammer")
         exclude = []
-        markup(cm, a, b, exclude, 'X')
+        markup(cm, a, b, 'X', exclude)
         expected = parse_sxpr('''
             (doc
               (:Text "Klaus Störtebeker ")
@@ -1842,7 +1856,7 @@ class TestContentSelectionMapping:
         tree = parse_xml(xml)
         cm = ContentMapping(tree, ignore="klammer")
         exclude = content_ranges(tree, 'klammer')
-        markup(cm, a, b, exclude, 'X')
+        markup(cm, a, b, 'X', exclude)
         expected = parse_sxpr('''
             (doc
               (:Text "Klaus Störtebeker ")
@@ -1857,7 +1871,7 @@ class TestContentSelectionMapping:
         full_content = tree.content
         cm = ContentMapping(tree, ignore="klammer")
         exclude = [Range(full_content.find('('), full_content.find(')'))]
-        markup(cm, a, b, exclude, 'X')
+        markup(cm, a, b, 'X', exclude)
         expected = parse_sxpr('''
             (doc
               (:Text "Klaus Störtebeker ")
@@ -1869,9 +1883,6 @@ class TestContentSelectionMapping:
                 (:Text "den "))
               (:Text "HSV"))''')
         assert tree.equals(expected)
-
-
-
 
 
 class TestSerializationMapping:

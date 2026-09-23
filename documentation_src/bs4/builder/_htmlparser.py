@@ -365,7 +365,7 @@ class HTMLParserTreeBuilder(HTMLTreeBuilder):
             is_html=True,
             exclude_encodings=exclude_encodings
         )
-        yield (dammit.markup, dammit.original_encoding,
+        yield (dammit.add_markup, dammit.original_encoding,
                dammit.declared_html_encoding,
                dammit.contains_replacement_characters)
 

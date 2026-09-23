@@ -35,7 +35,7 @@ from DHParser.dsl import grammar_provider
 from DHParser.compile import compile_source
 from DHParser.preprocess import make_token, tokenized_to_original_mapping, BEGIN_TOKEN, END_TOKEN, TOKEN_DELIMITER, PreprocessorResult, chain_preprocessors, \
     strip_tokens, gen_find_include_func, preprocess_includes, IncludeInfo, make_preprocessor, \
-    ReadIncludeClass, ReadIncludeOnce, SourceMap, map_source
+    ReadIncludeClass, ReadIncludeOnce, SourceMap
 from DHParser.error import Error
 from DHParser.toolkit import normalize_docstring, re
 from DHParser.testing import unique_name
@@ -82,17 +82,17 @@ class TestSourceMapping:
         # position at the end of the file
         source = " "
         srcmap = tokenized_to_original_mapping(source, source)
-        _ = map_source(0, srcmap)
-        _ = map_source(1, srcmap)
+        _ = srcmap.map(0)
+        _ = srcmap.map(1)
         try:
-            _ = map_source(2, srcmap)
+            _ = srcmap.map(2)
             assert False, "position out of bounds not recognized..."
         except ValueError:
             pass
         # empty file
         source =""
         srcmap = tokenized_to_original_mapping(source, source)
-        _ = map_source(0, srcmap)
+        _ = srcmap.map(0)
 
 
 def tokenize_indentation(src: str) -> Tuple[str, List[Error]]:
@@ -139,11 +139,11 @@ def preprocess_comments(src: str, src_name: str) -> PreprocessorResult:
     positions.append(pos)
     offsets.append(offsets[-1])
     return PreprocessorResult(src, '\n'.join(lines),
-                              partial(map_source, srcmap=SourceMap(src_name,
-                                                                   positions,
-                                                                   offsets,
-                                                                   [src_name] * len(positions),
-                                                                   {src_name: src})),
+                              SourceMap(src_name,
+                                        positions,
+                                        offsets,
+                                        [src_name] * len(positions),
+                                        {src_name: src}).map,
                               [])
 
 
@@ -189,7 +189,7 @@ class TestTokenParsing:
         assert not cst.error_flag
 
     def test_source_mapping_1(self):
-        mapping = partial(map_source, srcmap=self.srcmap)
+        mapping = self.srcmap.map
         self.verify_mapping("def func", self.code, self.tokenized, mapping)
         self.verify_mapping("x > 0:", self.code, self.tokenized, mapping)
         self.verify_mapping("if y > 0:", self.code, self.tokenized, mapping)
@@ -200,7 +200,7 @@ class TestTokenParsing:
         previous_index = 0
         L = len(self.code)
         for mapped_index in range(len(self.tokenized)):
-            _, _, index = map_source(mapped_index, self.srcmap)
+            _, _, index = self.srcmap.map(mapped_index)
             assert previous_index <= index <= L, \
                 "%i <= %i <= %i violated" % (previous_index, index, L)
             previous_index = index

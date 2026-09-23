@@ -999,7 +999,7 @@ strings works with DHParser::
     >>> mapping = ContentMapping(trivial_xml)
     >>> match = re.search(r"Stadt\s+München", mapping.content)
     >>> _ = mapping.markup(match.start(), match.end(), "foreign",
-    ...                    {'lang': 'de'})
+    ...                    attributes={'lang': 'de'})
     >>> printw(trivial_xml.as_xml(inline_tags={'trivial'}))
     <trivial>Please mark up <foreign lang="de">Stadt München</foreign>
      in Bavaria in this sentence.</trivial>
@@ -1016,7 +1016,7 @@ different configurations, we use copied of the tree "hard_xml"::
     >>> mapping = ContentMapping(hard_xml_copy)
     >>> match = re.search(r"Stadt\s+München", mapping.content)
     >>> _ = mapping.markup(match.start(), match.end(), "foreign",
-    ...                    {'lang': 'de'})
+    ...                    attributes={'lang': 'de'})
     >>> xml_str = hard_xml_copy.as_xml(empty_tags={'lb'})
     >>> print(xml_str)
     <hard>
@@ -1053,7 +1053,7 @@ by that markup::
     >>> mapping = ContentMapping(hard_xml_copy, divisibility=divisibility_map)
     >>> match = re.search(r"Stadt\s+München", mapping.content)
     >>> _ = mapping.markup(match.start(), match.end(), "foreign",
-    ...                    {'lang': 'de'})
+    ...                    attributes={'lang': 'de'})
     >>> xml_str = hard_xml_copy.as_xml(empty_tags={'lb'})
     >>> print(xml_str)
     <hard>

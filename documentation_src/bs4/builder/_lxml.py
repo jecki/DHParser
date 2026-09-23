@@ -216,7 +216,7 @@ class LXMLTreeBuilderForXML(TreeBuilder):
             exclude_encodings=exclude_encodings
         )
         for encoding in detector.encodings:
-            yield (detector.markup, encoding, document_declared_encoding, False)
+            yield (detector.add_markup, encoding, document_declared_encoding, False)
 
     def feed(self, markup):
         if isinstance(markup, bytes):
