@@ -210,13 +210,12 @@ __all__ = ('WHITESPACE_PTYPE',
            'leaf_paths',
            'reset_chain_ID',
            'sourcemapped_path',
-           'content_ranges',
+           'content_regions',
            'sourcemapped_selection',
            'DEFAULT_START_INDEX_SENTINEL',
            'LocationInfo',
            'NodeLocation',
            'ContentMapping',
-           'markup',
            'SerPart',
            'SerLocation',
            'SerializationMapping',
@@ -5147,9 +5146,9 @@ def sourcemapped_path(origin: Node,
         yield from recursive(path)
 
 
-def content_ranges(origin: Node,
-                   select: PathSelector,
-                   ignore: PathSelector = NO_PATH) -> List[Range]:
+def content_regions(origin: Node,
+                    select: PathSelector,
+                    ignore: PathSelector = NO_PATH) -> List[Range]:
     """Returns the minimal sequence of position-ranges in form of
     closed intervals (within the string content of the tree rooted in
     "origin") that covers all selected paths."""
@@ -5352,10 +5351,12 @@ class ContentMapping:
         else:
             content, pos_list, path_list = self._generate_mapping(origin)
             self._sourcemap = None
+
         self.content: str = content
         self._pos_list: List[int] = pos_list
         self._path_list: List[Path] = path_list
         self._path_str_cache: Dict[int, str] = dict()
+        self._fullcm: Optional[ContentMapping] = None  # needed for markup with excluded regions
 
     def _generate_mapping(self, origin, stump: Path = []) \
             -> Tuple[str, List[int], List[Path]]:
@@ -5407,6 +5408,11 @@ class ContentMapping:
                 self.origin, self.select_func, self.ignore_func)
             self._sourcemap = sm
         return self._sourcemap
+
+    def flush_exclude_cache(self):
+        """Use this to clean up once after several markup-calls with
+        parameter flush_exclude_cache=False"""
+        self._fullcm = None
 
     @property
     def path_list(self) -> List[Path]:
@@ -5848,8 +5854,10 @@ class ContentMapping:
 
 
     def rebuild_mapping(self, start_pos: int, end_pos: int):
-        """Reconstructs a particular section of the content mapping after the
-        underlying tree has been restructured.
+        """Reconstructs parts of the content mapping. This will be
+        necessary after the underlying tree has been restructured by
+        other methods than the methods (markup, insert_node)
+        of ContentMapping or if auto_cleanup was set to False.
 
         :param start_pos: The string position of the beginning of the text-area
             that has been affected by earlier changes.
@@ -5886,6 +5894,10 @@ class ContentMapping:
         """Marks the span [start_pos, end_pos[ up by adding one or more Node's
         with ``name``, eventually cutting through ``divisible`` nodes. Returns the
         nearest common ancestor of ``start_pos`` and ``end_pos``.
+
+        Use of this method is discouraged. Instead, the use of the more general method
+        :pa:meth:`markup` is recommended for which this special case method merely
+        is a building block - just like the various top-level markup-methods.
 
         :param start_pos:  The string-position of the first character to be marked
             up. Note that this is the position in the string-content of the tree
@@ -6087,105 +6099,101 @@ class ContentMapping:
         # return NodeLocation(common_ancestor, path_index)
 
     def markup(self, start_pos: cython.int,
-           end_pos: cython.int,
-           name: str,
-           exclude_regions: Sequence[Range] = [], *,
-           attributes: Optional[Dict] = None, **additional_attrs) -> Optional[NodeLocation]:
+               end_pos: cython.int,
+               name: str,
+               exclude_regions: Sequence[Range] = [], *,
+               flush_exclude_cache: bool = True,
+               attributes: Optional[Dict] = None, **additional_attrs) -> Optional[NodeLocation]:
+        """Marks the span [start_pos, end_pos[ up by adding one or more Node's
+        with ``name``, eventually cutting through ``divisible`` nodes and
+        - in contrast to :py:meth:`add_markup` - circumventing "excluded" regions.
+        Returns the nearest common ancestor of ``start_pos`` and ``end_pos``.
+
+        :param start_pos:  The string-position of the first character to be marked
+            up. Note that this is the position in the string-content of the tree
+            over which the content mapping has been generated and not the position
+            in the XML or any other serialization of the tree!
+        :param end_pos:  The string-position after the last character to be included
+            in the markup. Similar to the slicing of Python lists
+            or strings, the beginning and ending define a half-open intervall,
+            [start_pos, ent_pos[. The character indexed by end_pos is not included
+            in the markup. Also, keep in mind that ``end_pos`` is the position in
+            the string-content of the tree over which the content mapping has been
+            generated and not the position in the XML or any other serialization
+            of the tree!
+        :param name:  The name, or "tag-name" in XML-terminology, of the element
+            (or tag) to be added.
+        :param exclude_regions: A sequences of ranges that will be excluded from
+            the markup. If any of these ranges lies within [start_pos, end_pos[,
+            the markup will be split in to two or more non-contiguous regions!
+            Note that other than the half-open intervall [start_pos, end_pos[,
+            these ranges are a) defined as closed intervalls [low, high] and
+            b) related to the exhaustive string content of the root-Node ("origin")
+            of the content mapping ``cm``, not to cm.content! These ranges can
+            be generated with :py:func:`content_ranges`.
+        :param flush_exclude_cache: If exclude_regions is not empty, markup
+            will build itself an exhaustive mapping that spans the tree of the
+            common ancestor for the interval [start_pos, end_pos[ for the purpose
+            of adding markup that leaves out the excluded ranges. If markup is called
+            several times in sequence, flush_exclude_cache should be set to False
+            to avoid unnecessary recomputation of the exhaustive mapping.
+        :param attr_dict: A dictionary of attributes that will
+            be added to the newly created tag.
+        :param attributes: Alternatively, the attributes can also be passed as a
+            list of named parameters.
+
+        :returns: The nearest (from the top of the tree) node, e.g. "ancestor", within
+            which the entire markup lies as well as the first path-index of that
+            ancestor.
+        """
         if attributes is None:
             if isinstance(exclude_regions, Dict):
                 attributes = exclude_regions
                 exclude_regions = []
             else:
                 attributes = {}
+        if not exclude_regions:
+            if flush_exclude_cache:  self._fullcm = None
+            return self.add_markup(start_pos, end_pos, name, attributes=attributes, **additional_attrs)
+
         attributes.update(additional_attrs)
-        return self.add_markup(start_pos, end_pos, name, attributes)
-
-
-def markup(cm: ContentMapping,
-           start_pos: cython.int,
-           end_pos: cython.int,
-           name: str,
-           exclude_regions: Sequence[Range],
-           fullmap: Optional[ContentMapping] = None,
-           *attr_dict, **attributes) -> Optional[NodeLocation]:
-    """Marks the span [start_pos, end_pos[ up by adding one or more Node's
-    with ``name``, eventually cutting through ``divisible`` nodes. Returns the
-    nearest common ancestor of ``start_pos`` and ``end_pos``.
-
-    :param cm: The ContentMapping where the markup shall be added and to which
-        start_pos and end_pos relate.
-    :param start_pos:  The string-position of the first character to be marked
-        up. Note that this is the position in the string-content of the tree
-        over which the content mapping has been generated and not the position
-        in the XML or any other serialization of the tree!
-    :param end_pos:  The string-position after the last character to be included
-        in the markup. Similar to the slicing of Python lists
-        or strings, the beginning and ending define a half-open intervall,
-        [start_pos, ent_pos[. The character indexed by end_pos is not included
-        in the markup. Also, keep in mind that ``end_pos`` is the position in
-        the string-content of the tree over which the content mapping has been
-        generated and not the position in the XML or any other serialization
-        of the tree!
-    :param name:  The name, or "tag-name" in XML-terminology, of the element
-        (or tag) to be added.        
-    :param exclude_regions: A sequences of ranges that will be excluded from
-        the markup. If any of these ranges lies within [start_pos, end_pos[,
-        the markup will be split in to two or more non-contiguous regions!
-        Note that other than the half-open intervall [start_pos, end_pos[,
-        these ranges are a) defined as closed intervalls [low, high] and 
-        b) related to the exhaustive string content of the root-Node ("origin")
-        of the content mapping ``cm``, not to cm.content! These ranges can
-        be generated with :py:func:`content_ranges`.
-    :param fullmap:  A content mapping that spans the entire range of cm but
-        does not skip any leaf nodes ("exhaustive mapping"). 
-        This should only be passed if such a mapping is ready at hand. 
-        The default value None means that markup will build itself an exhaustive
-        mapping that spans the tree of the common ancestor for the interval
-        [start_pos, end_pos[ for the purpose of adding markup that leaves out
-        the excluded ranges.
-    :param attr_dict: A dictionary of attributes that will
-        be added to the newly created tag.
-    :param attributes: Alternatively, the attributes can also be passed as a
-        list of named parameters.
-
-    :returns: The nearest (from the top of the tree) node, e.g. "ancestor", within
-        which the entire markup lies as well as the first path-index of that
-        ancestor."""
-    if fullmap:
-        assert cm.origin is fullmap.origin, \
-            f"fullmap should have the same root, resp. origin, as cm!"
-        dm = fullmap
-        delta = 0
-    else:
-        ca, _ = find_common_ancestor(cm.get_path(start_pos), cm.get_path(end_pos - 1))
-        assert ca is not None
-        dm = ContentMapping(ca, select = LEAF_PATH, ignore = NO_PATH,
-                            greedy = cm.greedy, divisibility = cm.divisibility,
-                            chain_attr_name= cm.chain_attr_name, 
-                            auto_cleanup=True, sourcemap = False)
-        delta = cm.pos(cm.get_path_index(start_pos))
-    a = cm.sourcemap.srcpos(start_pos)
-    b = cm.sourcemap.srcpos(end_pos)
-    rr = range_difference([Range(a, b - 1)], exclude_regions)
-    if not rr:  return None
-    nl = [dm.add_markup(r[0] - delta, r[1] + 1 - delta, name, *attr_dict, **attributes)
-          for r in rr]
-    if len(nl) == 1:  return nl[0]
-    p = dm.path(nl[0][1])
-    ca, _ = find_common_ancestor(p, dm.path(nl[1][1]))
-    for i in range(2, len(nl)):
-        ca2, _ = find_common_ancestor(p, dm.path(nl[i][1]))
-        for nd in p:
-            if nd is ca:
-                break
-            if nd is ca2:
-                ca = ca2
-                break
-    start_idx = cm.get_path_index(start_pos)
-    end_idx = cm.get_path_index(end_pos)
-    cm.rebuild_mapping_slice(start_idx, end_idx)  # if auto_cleanup
-    pi = cm.get_node_index(ca, reverse=False, start_idx = start_idx, end_idx = end_idx)
-    return NodeLocation(ca, pi)
+        if self._fullcm is None or self.origin != self._fullcm.origin:
+            si = self.get_path_index(start_pos)
+            delta = self.pos(si)
+            ca, _ = find_common_ancestor(self.path(si), self.get_path(end_pos - 1))
+            assert ca is not None
+            if self._fullcm is None or self._fullcm.origin is not ca:
+                self._fullcm = ContentMapping(ca, select = LEAF_PATH, ignore = NO_PATH,
+                                greedy = self.greedy, divisibility = self.divisibility,
+                                chain_attr_name = self.chain_attr_name,
+                                auto_cleanup=True, sourcemap = False)
+        else:
+            delta = 0
+        a = self.sourcemap.srcpos(start_pos)
+        b = self.sourcemap.srcpos(end_pos)
+        rr = range_difference([Range(a, b - 1)], exclude_regions)
+        if not rr:  return None
+        nl = [self._fullcm.add_markup(r[0] - delta, r[1] + 1 - delta, name,
+                                      attributes, **additional_attrs)
+              for r in rr]
+        if len(nl) == 1:  return nl[0]
+        p = self._fullcm.path(nl[0][1])
+        ca, _ = find_common_ancestor(p, self._fullcm.path(nl[1][1]))
+        for i in range(2, len(nl)):
+            ca2, _ = find_common_ancestor(p, self._fullcm.path(nl[i][1]))
+            for nd in p:
+                if nd is ca:
+                    break
+                if nd is ca2:
+                    ca = ca2
+                    break
+        start_idx = self.get_path_index(start_pos)
+        end_idx = self.get_path_index(end_pos)
+        if self.auto_cleanup:
+            self.rebuild_mapping_slice(start_idx, end_idx)
+        if flush_exclude_cache:  self._fullcm = None
+        pi = self.get_node_index(ca, reverse=False, start_idx=start_idx, end_idx=end_idx)
+        return NodeLocation(ca, pi)
 
 
 class LocalContentMapping(ContentMapping):

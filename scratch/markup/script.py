@@ -14,12 +14,12 @@ scriptpath = abspath
 
 try:
     from DHParser.nodetree import (Node, ContentMapping, parse_xml, find_common_ancestor, TOKEN_PTYPE,
-                                   pp_path, PathMatchFunction)
+                                   pp_path, PathMatchFunction, content_regions)
     from DHParser.transform import merge_adjacent, reduce_single_child
 except ImportError as e:
     raise ImportError("Bitte installiere DHParser mit python3 -m pip install DHParser!")
 
-from tools import pull_out
+# from tools import pull_out
 
 def pull_out(path):
     """A variant of DHParser.transform.pull_up that does not keep the
@@ -101,11 +101,14 @@ def mark_text(root: etree._Element,
         cm = ContentMapping(element[-1], ignore=XPath(exclude), divisibility=split)
         for m in re.finditer(pattern, cm.content):
             a, b = m.span()
-            cm.add_markup(a, b, tag, attributes)
+            cm.add_markup(a, b, tag,
+                          exclude_regions = content_regions(root_node, XPath(lock_out)),
+                          attributes = attributes)
 
             if lock_out:
                 smallest_subtree, _ = find_common_ancestor(cm.path(cm.get_path_index(a)),
                                                            cm.path(cm.get_path_index(b)))
+                assert smallest_subtree is not None
                 for note_path in smallest_subtree.select_path(XPath(lock_out)):
                     pull_out(note_path)
                 subtree_pos = cm.get_node_position(smallest_subtree)

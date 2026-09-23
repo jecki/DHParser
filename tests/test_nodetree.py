@@ -36,7 +36,7 @@ from DHParser.nodetree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxp
     select_path_if, pick_path, LEAF_PATH, TOKEN_PTYPE, content_of, strlen_of, \
     gen_chain_ID, parse_sxml, DIVISIBLES, reflow_as_oneliner, has_token, eq_tokens, \
     add_class, has_class, remove_class, HTML_EMPTY_TAGS, get_next_leaf, deep_split, \
-    sourcemapped_path, sourcemapped_selection, markup, content_ranges
+    sourcemapped_path, sourcemapped_selection, content_regions
 from DHParser.pipeline import create_parser_junction, Junction, PseudoJunction
 from DHParser.ranges import Range
 from DHParser.transform import traverse, reduce_single_child, remove_brackets, \
@@ -1841,7 +1841,7 @@ class TestContentSelectionMapping:
         tree = parse_xml(xml)
         cm = ContentMapping(tree, ignore="klammer")
         exclude = []
-        markup(cm, a, b, 'X', exclude)
+        cm.markup(a, b, 'X', exclude)
         expected = parse_sxpr('''
             (doc
               (:Text "Klaus Störtebeker ")
@@ -1855,8 +1855,8 @@ class TestContentSelectionMapping:
         # Kanonischer Fall
         tree = parse_xml(xml)
         cm = ContentMapping(tree, ignore="klammer")
-        exclude = content_ranges(tree, 'klammer')
-        markup(cm, a, b, 'X', exclude)
+        exclude = content_regions(tree, 'klammer')
+        cm.markup(a, b, 'X', exclude)
         expected = parse_sxpr('''
             (doc
               (:Text "Klaus Störtebeker ")
@@ -1871,7 +1871,7 @@ class TestContentSelectionMapping:
         full_content = tree.content
         cm = ContentMapping(tree, ignore="klammer")
         exclude = [Range(full_content.find('('), full_content.find(')'))]
-        markup(cm, a, b, 'X', exclude)
+        cm.markup(a, b, 'X', exclude)
         expected = parse_sxpr('''
             (doc
               (:Text "Klaus Störtebeker ")

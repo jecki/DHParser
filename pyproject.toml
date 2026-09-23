@@ -19,6 +19,9 @@ keywords = [
     'formal grammar',
     'EBNF', 'SXML', 'XML'
 ]
+dependencies = [
+    "lxml>=6.1.3",
+]
 
 [project.urls]
 repository = "https://gitlab.lrz.de/badw-it/DHParser"

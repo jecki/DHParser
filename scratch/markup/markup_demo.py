@@ -99,7 +99,7 @@ def markup(before: str, replacements: list[dict[str, str]], exclude=select_note_
         if typ: attrs['type'] = typ
         attrs['target'] = target
 
-        cm.add_markup(a, b, 'ref', attrs)   # <=== the most important part!
+        cm.markup(a, b, 'ref', attributes = attrs)   # <=== the most important part!
 
         smallest_subtree, _ = find_common_ancestor(cm.path(cm.get_path_index(a)),
                                                    cm.path(cm.get_path_index(b)))

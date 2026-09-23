@@ -46,7 +46,7 @@ def demo_1():
     tree = parse_xml(xml)
     cm = ContentMapping(tree)
     for m in such_rx_1.finditer(cm.content):
-        cm.add_markup(m.start(), m.end(), 'wichtig')
+        cm.markup(m.start(), m.end(), 'wichtig')
     print(tree.as_xml(inline_tags={'document'}), "\n\n\n")  # einschließlich aller in <document> enthaltenen Tags
 
 
@@ -59,7 +59,7 @@ def demo_2():
           'und wird dadurch in der XML-Struktur "sichtibar"!')
     cm = ContentMapping(tree)
     for m in klammer_rx.finditer(cm.content):
-        cm.add_markup(m.start(), m.end(), 'klammer')
+        cm.markup(m.start(), m.end(), 'klammer')
     print(tree.as_xml(inline_tags={'document'}), '\n')
 
     print('Schritt 2: Suche "gründete 1401 den HSV" und markiere den gesamten Bereich '
@@ -68,7 +68,7 @@ def demo_2():
     # im content des ContentMappings auftauchen
     cm = ContentMapping(tree, ignore={'klammer'})
     for m in such_rx_2.finditer(cm.content):
-        cm.add_markup(m.start(), m.end(), 'wichtig')
+        cm.markup(m.start(), m.end(), 'wichtig')
     print(tree.as_xml(inline_tags={'document'}), '\n')  # einschließlich aller in <document> enthaltenen Tags
 
     print('Schritt 3: Entfernung der nicht mehr benötigten <klammer>-tags!')
@@ -91,7 +91,7 @@ def demo_3():
           'und wird dadurch in der XML-Struktur "sichtibar"!')
     cm = ContentMapping(tree)
     for m in klammer_rx.finditer(cm.content):
-        cm.add_markup(m.start(), m.end(), 'klammer')
+        cm.markup(m.start(), m.end(), 'klammer')
     print(tree.as_xml(inline_tags={'document'}), '\n')
 
     print('Schritt 2: Suche "gründete 1401 (in Hamburg) den HSV" und markiere den gesamten Bereich '
@@ -100,7 +100,7 @@ def demo_3():
     # im content des ContentMappings auftauchen
     cm = ContentMapping(tree, ignore={'klammer'})
     for m in such_rx_2.finditer(cm.content):
-        cm.add_markup(m.start(), m.end(), 'wichtig')
+        cm.markup(m.start(), m.end(), 'wichtig')
     print(tree.as_xml(inline_tags={'document'}), '\n')  # einschließlich aller in <document> enthaltenen Tags
 
     print('Schritt 3: Nimm die eingeklammerten Bereiche von der <wichtig>-Markierung aus. ')
@@ -131,14 +131,14 @@ def demo_4():
           'und wird dadurch in der XML-Struktur "sichtibar"!')
     cm = ContentMapping(tree)
     for m in klammer_rx.finditer(cm.content):
-        cm.add_markup(m.start(), m.end(), 'klammer')
+        cm.markup(m.start(), m.end(), 'klammer')
     print(tree.as_xml(inline_tags={'document'}), '\n')
 
     print('Schritt 2: Suche "gründete 1401 (in Hamburg) den HSV" und markiere den gesamten Bereich '
           'einschließlich der beim suchen ignorierten eingeklammerten Textteile!')
     # kein Neubau des ContentMappings erforderlich!
     for m in such_rx_1.finditer(cm.content):
-        cm.add_markup(m.start(), m.end(), 'wichtig')
+        cm.markup(m.start(), m.end(), 'wichtig')
     print(tree.as_xml(inline_tags={'document'}), '\n')  # einschließlich aller in <document> enthaltenen Tags
 
     print('Schritt 3: Nimm die eingeklammerten Bereiche von der <wichtig>-Markierung aus. ')
