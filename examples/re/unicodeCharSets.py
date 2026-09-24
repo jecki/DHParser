@@ -44,6 +44,7 @@ def as_intervals(elements: List[int]) -> List[Tuple[int, int]]:
     intervals.append((start, last))
     return intervals
 
+
 def as_python_src(identifier: str, intervals: List[Tuple[int, int]]) -> str:
     """Converts a list of intervals into a Python source code fragment
     using hex-codes for the unicode numbers."""
