@@ -6188,7 +6188,7 @@ class ContentMapping:
                                 chain_attr_name = self.chain_attr_name,
                                 auto_cleanup=True, sourcemap = False)
         else:
-            delta = 0  # TODO: check delta!!!
+            delta = 0  # TODO: check delta!!! Something wrong, here!
         a = self.sourcemap.srcpos(start_pos)
         b = self.sourcemap.srcpos(end_pos)
         rr = range_difference([(a, b - 1)], exclude_regions)
