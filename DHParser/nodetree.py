@@ -96,7 +96,7 @@ import copy
 from enum import IntEnum
 import functools
 import json
-from typing import Callable, cast, Iterator, Sequence, List, \
+from typing import Callable, cast, Iterator, Iterable, Sequence, List, \
     Union, Tuple, Container, Optional, Dict, Any, NamedTuple
 
 from DHParser.configuration import get_config_value, ALLOWED_PRESET_VALUES
@@ -5160,9 +5160,9 @@ def content_regions(origin: Node,
         b = a + path[-1].strlen() - 1
         if b >= a:
             if ranges and a <= ranges[-1][1] + 1:
-                ranges[-1][1] = b
+                ranges[-1] = (ranges[-1][0], b)
             else:
-                ranges.append(Range(a, b))
+                ranges.append((a, b))
     assert is_sorted_and_merged(ranges)
     return ranges
 
@@ -5431,7 +5431,16 @@ class ContentMapping:
                 "to determine the path that for a particular position in the text!")
 
     def pos(self, path_index: int) -> int:
-        return self._pos_list[path_index]
+        """Returns the position of the first character of the leaf-node
+        at the given path index. If the path index surpasses the
+        highest possible path index exactly by one, the position right
+        after the last character of the content mapping will be returned!
+        (This helps to avoid boundary checking for some algorithms.)
+        """
+        try:
+            return self._pos_list[path_index]
+        except IndexError as e:
+            return self._pos_list[path_index - 1] + self._path_list[path_index - 1][-1].strlen()
 
     def path_str(self, path_index: int) -> str:
         return self._path_str_cache.setdefault(path_index, path_str(self._path_list[path_index]))
@@ -5853,18 +5862,20 @@ class ContentMapping:
         self._path_str_cache = dict()  # clear path-string-cache
 
 
-    def rebuild_mapping(self, start_pos: int, end_pos: int):
+    def rebuild_mapping(self, start_pos: int = -1, end_pos: int = -1):
         """Reconstructs parts of the content mapping. This will be
         necessary after the underlying tree has been restructured by
         other methods than the methods (markup, insert_node)
         of ContentMapping or if auto_cleanup was set to False.
 
         :param start_pos: The string position of the beginning of the text-area
-            that has been affected by earlier changes.
+            that has been affected by earlier changes. Any value <= 0 is assumend
+            to refer to the beginning of the text.
         :param end_pos: The string position of the ending of the text-area
-            that has been affected by earlier changes."""
-        first_index = self.get_path_index(start_pos)
-        last_index = self.get_path_index(end_pos)
+            that has been affected by earlier changes. A value < 0 means the
+            last position in the text."""
+        first_index = self.get_path_index(start_pos) if start_pos >= 0 else 0
+        last_index = self.get_path_index(end_pos) if end_pos >= 0 else (len(self._path_list) - 1)
         self.rebuild_mapping_slice(first_index, last_index)
 
 
@@ -6101,7 +6112,7 @@ class ContentMapping:
     def markup(self, start_pos: cython.int,
                end_pos: cython.int,
                name: str,
-               exclude_regions: Sequence[Range] = [], *,
+               exclude_regions: Sequence[Union[Range, Tuple[int, int]]] = [], *,
                flush_exclude_cache: bool = True,
                attributes: Optional[Dict] = None, **additional_attrs) -> Optional[NodeLocation]:
         """Marks the span [start_pos, end_pos[ up by adding one or more Node's
@@ -6152,6 +6163,15 @@ class ContentMapping:
                 exclude_regions = []
             else:
                 attributes = {}
+        for ambigue in ('exclude', 'exclude_ranges'):
+            if ambigue in additional_attrs:
+                value = additional_attrs[ambigue]
+                if (isinstance(value, Iterable) and
+                        all((isinstance(it, Sequence) and len(it) == 2) for it in value)):
+                    raise ValueError(
+                        f'Wrong argument name: Use "exclude_regions=" instead of "{ambigue}="! '
+                        f'In case "{ambigue}" was really meant to be an attribtue, use '
+                        f'"attributes={{{ambigue}:{value}}}"!')
         if not exclude_regions:
             if flush_exclude_cache:  self._fullcm = None
             return self.add_markup(start_pos, end_pos, name, attributes=attributes, **additional_attrs)
@@ -6168,10 +6188,10 @@ class ContentMapping:
                                 chain_attr_name = self.chain_attr_name,
                                 auto_cleanup=True, sourcemap = False)
         else:
-            delta = 0
+            delta = 0  # TODO: check delta!!!
         a = self.sourcemap.srcpos(start_pos)
         b = self.sourcemap.srcpos(end_pos)
-        rr = range_difference([Range(a, b - 1)], exclude_regions)
+        rr = range_difference([(a, b - 1)], exclude_regions)
         if not rr:  return None
         nl = [self._fullcm.add_markup(r[0] - delta, r[1] + 1 - delta, name,
                                       attributes, **additional_attrs)

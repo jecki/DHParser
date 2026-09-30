@@ -797,6 +797,16 @@ the tree, you need to either call
 content mapping at the affected places or instantiate an entirely new
 content mapping.
 
+.. note::
+    Content mappings are somwhat similar to and provide some of the
+    functionality of *standoff markup*-techniques. Unlike most
+    standoff-markup-tools, however, they remain connected to the
+    tree structure. Changes made with methods of
+    :py:class:`~nodetree.ContentMapping` will directly be reflected
+    in the tree structure (unless the instance-variable auto_cleanup
+    is set to "False"). Changes made directly to the tree structure
+    will require a manual update of the content mapping with
+    :py:meth:`~nodetree.ContentMapping.rebuild_mapping`.
 
 Restricted Mappings
 ^^^^^^^^^^^^^^^^^^^
@@ -941,8 +951,8 @@ and last path index of the content mapping where a change has taken place::
 Limitations
 ^^^^^^^^^^^
 
-As of now, a limitation of the content mappings provided
-by :py:mod:`DHParser.nodetree` consists in the fact that they remain
+A limitation shared with other techniques of standoff-markup
+consists in the fact that content mappings remain
 completely agnostic with respect to any textual meaning of the nodes.
 For example assume that the node-name "pb" signifies a page break, which
 implies that there is a gap between the two parts separated by the page
@@ -964,7 +974,11 @@ Currently, the only remedy is to either allow redundant encoding
 of textual meanings within the string-content or adding specific
 nodes that carry the redundant textual meanings within their
 string-content and removing them again, after searches etc. have
-been finished.
+been finished. In the example above one can implement the
+first suggestion either by adding "\n" before or after
+the <pb/>-node, or, more elegantly, by turning the empty <pb/> node
+into a node with content: <pb>\n</pb>. The same trick can be applied
+for practically any kind empty node.
 
 
 Markup insertion
@@ -1133,10 +1147,11 @@ Let's try this on the previous example::
 Markup plays well together with restricted content mappings as the
 following example may show::
 
-    >>> tree = parse_xml("<doc>Please mark up Stadt\n<lb/>"
-    ...     "<em>München</em><footnote>'Stadt <em>München</em>'"
-    ...     " is German for 'City of Munich'</footnote> in Bavaria"
-    ...     " in this sentence.</doc>")
+    >>> xml = ("<doc>Please mark up Stadt\n<lb/>"
+    ...        "<em>München</em><footnote>'Stadt <em>München</em>'"
+    ...        " is German for 'City of Munich'</footnote> in Bavaria"
+    ...        " in this sentence.</doc>")
+    >>> tree = parse_xml(xml)
 
 Let's assume we'd like to markup locations and text-passages in foreign
 languages, but only in the main text and not within footnotes and the
@@ -1177,11 +1192,11 @@ markup::
 
 The <location>-element covers the entire span, including the footnote. This
 is to be expected as changes are always carried out on the full tree. Only,
-the mapping is restricted to certain parts of the document. Usually, this
-is also the desired behavior, though, admittedly, depending on the use case
+the mapping is restricted to certain parts of the document. Often, this
+is indeed the desired behavior. Depending on the use case, however,
 another behavior (e.g. splitting the <location>-element into one part before
-the <footnote>-element and one part after that element) might be preferable.
-Such cases are not covered by the markup-method of class ContentMapping.
+the <footnote>-element and one part after that element) might be preferable (see
+further below).
 
 Because, the <location>-element did not need to be split, it does not need
 and therefore does not have a "chain"-attribute.
@@ -1215,10 +1230,29 @@ key is picked!)::
 
 Here again, one might ask, why the <foreign>-tag contains the <lb>-tag,
 but the choice makes sense, because if put together again, it should
-cover the complete stretch including the line-break. Again, different
-use cases and different choices are imaginable which, however, are not
-covered by the :py:meth:`ContentMapping.markup`-method.
+cover the complete stretch including the line-break.
 
+As said earlier, different use cases and different choices are imaginable.
+What if, you prefer to exclude any footnotes from markup that you
+add to the main text? For this purpose, you can use the exclude_regions
+parameter which takes a list of tuples (start, end) as value where
+(start, end) are closed intervalls of character positions within the
+string content. Because of this, if you need to exclude particular tags,
+you first need to determine the start and end of each of theses tags.
+While this deviates from the practice of defining (sub-)regions of the
+tree-structured document by path-select functions, it has the advantage
+that one can easily exclude regions that are not delinieated by markup,
+but merely but textual characteristics like, for examples, bracketed text.
+Let's see how this can be done, with out original XML-snippet::
+
+    >>> tree = parse_xml(xml)
+    >>> cm = ContentMapping(tree, ignore='footnote')
+    >>> m = re.search(r"München\s+in\s+Bavaria", cm.content)
+    >>> exclude = content_regions(tree, leaf_paths('footnote'))
+    >>> _ = cm.markup(m.start(), m.end(), 'location', exclude)
+    >>> print(tree.as_xml(empty_tags={'lb'}))
+
+TO BE CONTINUED... (explain exlude-parameter of method markup, here)
 
 Error Messages
 --------------

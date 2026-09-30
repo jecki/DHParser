@@ -87,6 +87,26 @@ func neverEmpty*(rr: seq[RuneRange]): bool =
   return true
 
 
+func neverEmpty*(rr: seq[RuneRange]): bool =
+  ## Confirms that the sequence of ranges is not empty and that
+  ## for each range low <= high.
+  if rr.len <= 0: return false
+  for r in rr:
+    if r.high <% r.low: return false
+  return true
+
+
+# func neverInvaid*(rr: seq[RuneRange]): bool =
+#   ## Confirms that the sequence of ranges is not empty and that
+#   ## for each range low <= high - 1. Note that a range (8, 9)
+#   ## signifies the division between the 8th and 9th rune and is
+#   ## thus still valid.
+#   if rr.len <= 0: return false
+#   for r in rr:
+#     if r.high <% r.low: return false
+#  return true
+
+
 proc sortAndMerge*(R: var seq[RuneRange]) =
   ## Sorts the sequence of ranges and merges overlapping regions
   ## in place so that the ranges are in ascending order,
@@ -133,7 +153,7 @@ func `+`*(A, B: seq[RuneRange]): seq[RuneRange] =
 
 func `-`*(A, B: seq[RuneRange]): seq[RuneRange] =
   assert neverEmpty(A)
-  assert neverEmpty(B)
+  assert neverEmpty(B)  # use neverInvalid(B) in case you'd like to allow `-` to separate a contiguous range.
   assert isSortedAndMerged(A)
   assert isSortedAndMerged(B)
 

@@ -1870,7 +1870,7 @@ class TestContentSelectionMapping:
         tree = parse_xml(xml)
         full_content = tree.content
         cm = ContentMapping(tree, ignore="klammer")
-        exclude = [Range(full_content.find('('), full_content.find(')'))]
+        exclude = [(full_content.find('('), full_content.find(')'))]
         cm.markup(a, b, 'X', exclude)
         expected = parse_sxpr('''
             (doc
@@ -1883,6 +1883,26 @@ class TestContentSelectionMapping:
                 (:Text "den "))
               (:Text "HSV"))''')
         assert tree.equals(expected)
+
+    def test_markup_with_exclusion_2(self):
+        xml = "<doc>Die Stadt<lb/>München liegt in Bayern</doc>"
+        tree = parse_xml(xml)
+        cm = ContentMapping(tree)
+        cm.markup(0, 16, "X", exclude_regions=[(9, 8)])
+        assert tree.as_xml(inline_tags={'doc'}) == \
+               "<doc><X>Die Stadt</X><lb/><X>München</X> liegt in Bayern</doc>"
+
+    def test_markup_with_excludion_3(self):
+        xml = ("<doc>Please mark up Stadt\n<lb/>"
+               "<em>München</em><footnote>'Stadt <em>München</em>'"
+               " is German for 'City of Munich'</footnote> in Bavaria"
+               " in this sentence.</doc>")
+        tree = parse_xml(xml)
+        cm = ContentMapping(tree, ignore='footnote')
+        m = re.search(r"München\s+in\s+Bavaria", cm.content)
+        exclude = content_regions(tree, leaf_paths('footnote'))
+        cm.markup(m.start(), m.end(), 'location', exclude)
+        print(tree.as_xml(empty_tags={'lb'}))
 
 
 class TestSerializationMapping:

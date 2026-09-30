@@ -22,7 +22,7 @@ of characters in subsets (say, all greek letters) of Unicode-characters."""
 
 # TDOO: needs unit-tests
 
-from typing import NamedTuple, Sequence, List, Tuple
+from typing import NamedTuple, Sequence, List, Tuple, TypeAlias
 
 __all__ = ('Range',
            'contains',
@@ -40,9 +40,11 @@ __all__ = ('Range',
 
 # Character ranges algebra...
 
-class Range(NamedTuple):
-    low: int
-    high: int
+# class Range(NamedTuple):
+#     low: int
+#     high: int
+
+Range: TypeAlias = Tuple[int, int]
 
 
 def contains(ranges: Sequence[Range], r: int) -> bool:
@@ -54,8 +56,8 @@ def contains(ranges: Sequence[Range], r: int) -> bool:
 
     while i != last_i:
         rng = ranges[i]
-        if rng.low <= r:
-            if r <= rng.high:
+        if rng[0] <= r:
+            if r <= rng[1]:
                 return True
             else:
                 a = min(i + 1, highest)
@@ -67,7 +69,7 @@ def contains(ranges: Sequence[Range], r: int) -> bool:
 
 
 def RR(low: str, high: str) -> Range:
-    return Range(ord(low), ord(high))
+    return (ord(low), ord(high))
 
 
 def RRstr(s: str) -> Range:
@@ -77,27 +79,34 @@ def RRstr(s: str) -> Range:
 
 def is_sorted_and_merged(rr: Sequence[Range]) -> bool:
     for i in range(1, len(rr)):
-        if rr[i].low <= rr[i - 1].high: return False
+        if rr[i][0] <= rr[i - 1][1]: return False
     return True
 
 
 def never_empty(rr: Sequence[Range]) -> bool:
     if len(rr) <= 0: return False
     for r in rr:
-        if r.low > r.high: return False
+        if r[0] > r[1]: return False
+    return True
+
+
+def never_invalid(rr: Sequence[Range]) -> bool:
+    if len(rr) <= 0: return False
+    for r in rr:
+        if r[0] - r[1] > 1: return False
     return True
 
 
 def sort_and_merge(R: List[Range]):
     Rlen = len(R)
-    R.sort(key=lambda r: r.low)
+    R.sort(key=lambda r: r[0])
     a = 0
     b = 1
     while b < Rlen:
-        if R[b].low <= R[a].high + 1:
-            if R[a].high <= R[b].high:
+        if R[b][0] <= R[a][1] + 1:
+            if R[a][1] <= R[b][1]:
                 # high(R[a]) := high(R[b])
-                R[a] = Range(R[a].low, R[b].high)
+                R[a] = (R[a][0], R[b][1])
         else:
             a += 1
             if a != b: R[a] = R[b]
@@ -117,7 +126,7 @@ def range_difference(A: Sequence[Range], B: Sequence[Range]) \
         -> List[Range]:
     if not A:  return []
     if not B:  return list(A)
-    assert never_empty(A) and never_empty(B)
+    assert never_empty(A) # and never_empty(B)
     assert is_sorted_and_merged(A) and is_sorted_and_merged(B)
 
     result = []
@@ -143,25 +152,25 @@ def range_difference(A: Sequence[Range], B: Sequence[Range]) \
             S = B[k]
 
     while k < lenB:
-        if S.low <= M.high and M.low <= S.high:
-            if M.low < S.low:
-                result.append(Range(M.low, S.low - 1))
-                if S.high < M.high:
-                    M = Range(S.high + 1, M.high)  # need to create a new object, here!
+        if S[0] <= M[1] and M[0] <= S[1]:
+            if M[0] < S[0]:
+                result.append((M[0], S[0] - 1))
+                if S[1] < M[1]:
+                    M = (S[1] + 1, M[1])  # need to create a new object, here!
                     nextB()
                 elif nextA():
                     return result
-            elif S.high < M.high:# need to create a new object, here!
-                M = Range(S.high + 1, M.high)
+            elif S[1] < M[1]:# need to create a new object, here!
+                M = (S[1] + 1, M[1])
                 nextB()
             elif nextA():
                 return result
-        elif M.high < S.low:
+        elif M[1] < S[0]:
             result.append(M)
             if nextA():
                 return result
         else:
-            assert S.high < M.low
+            assert S[1] < M[0]
             nextB()
     result.append(M)
     while i < lenA:
