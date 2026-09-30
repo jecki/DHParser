@@ -1251,6 +1251,20 @@ Let's see how this can be done, with out original XML-snippet::
     >>> exclude = content_regions(tree, leaf_paths('footnote'))
     >>> _ = cm.markup(m.start(), m.end(), 'location', exclude)
     >>> print(tree.as_xml(empty_tags={'lb'}))
+    <doc>
+      Please mark up Stadt
+      <lb/>
+      <em>
+        <location>München</location>
+      </em>
+      <footnote>
+        'Stadt
+        <em>München</em>
+        ' is German for 'City of Munich'
+      </footnote>
+      <location> in Bavaria</location>
+      in this sentence.
+    </doc>
 
 TO BE CONTINUED... (explain exlude-parameter of method markup, here)
 

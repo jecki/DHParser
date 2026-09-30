@@ -5163,6 +5163,7 @@ def content_regions(origin: Node,
                 ranges[-1] = (ranges[-1][0], b)
             else:
                 ranges.append((a, b))
+            a = b + 1
     assert is_sorted_and_merged(ranges)
     return ranges
 
@@ -6179,16 +6180,20 @@ class ContentMapping:
         attributes.update(additional_attrs)
         if self._fullcm is None or self.origin != self._fullcm.origin:
             si = self.get_path_index(start_pos)
-            delta = self.pos(si)
-            ca, _ = find_common_ancestor(self.path(si), self.get_path(end_pos - 1))
+            ca, k = find_common_ancestor(self.path(si), self.get_path(end_pos - 1))
+            while (si > 0 and len(self._path_list[si -1 ]) > k
+                   and self._path_list[si - 1][k] == ca):
+                si -= 1
+            delta = self._pos_list[si]
             assert ca is not None
             if self._fullcm is None or self._fullcm.origin is not ca:
                 self._fullcm = ContentMapping(ca, select = LEAF_PATH, ignore = NO_PATH,
                                 greedy = self.greedy, divisibility = self.divisibility,
                                 chain_attr_name = self.chain_attr_name,
                                 auto_cleanup=True, sourcemap = False)
+                self._fullcm.delta = delta
         else:
-            delta = 0  # TODO: check delta!!! Something wrong, here!
+            delta = self._fullcm.delta
         a = self.sourcemap.srcpos(start_pos)
         b = self.sourcemap.srcpos(end_pos)
         rr = range_difference([(a, b - 1)], exclude_regions)

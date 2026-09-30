@@ -1901,8 +1901,24 @@ class TestContentSelectionMapping:
         cm = ContentMapping(tree, ignore='footnote')
         m = re.search(r"München\s+in\s+Bavaria", cm.content)
         exclude = content_regions(tree, leaf_paths('footnote'))
+        assert exclude == [(28, 73)]
         cm.markup(m.start(), m.end(), 'location', exclude)
-        print(tree.as_xml(empty_tags={'lb'}))
+        expected = parse_sxpr('''
+            (doc
+              (:Text
+                "Please mark up Stadt"
+                "")
+              (lb)
+              (em
+                (location "München"))
+              (footnote
+                (:Text "'Stadt ")
+                (em "München")
+                (:Text "' is German for 'City of Munich'"))
+              (location " in Bavaria")
+              (:Text " in this sentence."))
+            ''')
+        assert tree.equals(expected)
 
 
 class TestSerializationMapping:
