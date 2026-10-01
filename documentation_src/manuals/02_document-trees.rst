@@ -832,8 +832,9 @@ In order to restrict the content mapping to certain parts of the tree, the
 ContentMapping-class takes a same pair of path selectors similar to the
 "criteria" and "skip_subtree" parameters of :py:meth:`Node.select_path`
 and :py:meth:`Node.pick`. However, there is a subtle but important difference:
-The "select"-parameter of the ContentMapping-class must only accept leaf-paths!
-Otherwise a ValueError will be raised.
+If the select parameter matches paths that do not end in a leaf-node, all
+path-extensions from this path that end in a leaf node will be selected.
+(See also :py:func:`~nodetree.leaf_paths`.)
 
 In contrast to the restricted content mapping, the search in the
 string-content of the entire tree yields::
@@ -893,19 +894,16 @@ position of each path in the content mapping.
 Conversely, we could also have restricted the content mapping only to
 the footnote(s)::
 
-    >>> fm = ContentMapping(tree, select=leaf_paths('footnote'), ignore=NO_PATH)
+    >>> fm = ContentMapping(tree, select='footnote', ignore=NO_PATH)
     >>> print(fm)
     0 -> doc, p, footnote, em "München"
     7 -> doc, p, footnote, :Text " is the German" "name of the city of Munich"
 
 Here, the parameter ``ignore=NO_PATH`` has to be understood as "from the
-selected paths do not ignore any paths". Note, the
-:py:func:`leaf_path`-filter used to define the value of the
-select-argument. ContentMapping raises a ValueError if the
-select-criterion allows paths that are not leaf-path. The
-leaf_paths-filter is a simple, though slightly costly in terms of speed,
-means of turning any criteria into a "criteria is true for path AND path
-is a leaf-path"-condition.
+selected paths do not ignore any paths". In case the select-parameter matches
+for nodes that are not leave-nodes, ContentMapping will map all leave nodes
+that are reachable from there. In this case these are all leaf-nodes "above"
+a "footnote" node.
 
 Now, let's look for the string "München" in the footnotes only::
 
@@ -1248,7 +1246,7 @@ Let's see how this can be done, with out original XML-snippet::
     >>> tree = parse_xml(xml)
     >>> cm = ContentMapping(tree, ignore='footnote')
     >>> m = re.search(r"München\s+in\s+Bavaria", cm.content)
-    >>> exclude = content_regions(tree, leaf_paths('footnote'))
+    >>> exclude = content_regions(tree, 'footnote')
     >>> _ = cm.markup(m.start(), m.end(), 'location', exclude)
     >>> print(tree.as_xml(empty_tags={'lb'}))
     <doc>

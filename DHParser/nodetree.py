@@ -5057,34 +5057,32 @@ def markup_left(path: Path, i: cython.int, name: str, attr_dict: Dict[str, Any],
     assert not any(nd.name == ':Text' and nd.children for nd in path)
 
 
-def _breed_leaf_selector(select: PathSelector,
-                         ignore: PathSelector) -> Tuple[Callable, Callable]:
-    select_func = create_path_match_function(select)
-    ignore_func = create_path_match_function(ignore)
-
-    def general_match_func(path: Path) -> bool:
-        if path[-1]._children:
-            if select_func(path):
-                raise ValueError(f'Selector "{select}" should yield only leaf-paths! But '
-                    f'the last element "{path[-1].name}" of path "{pp_path(path)}" has '
-                    f'children: {", ".join(child.name for child in path[-1].children)}! '
-                    f'Use leaf_path({select}) to circumvent this error.')
-            return False
-        return select_func(path) and not ignore_func(path)
-
-    if select == LEAF_PATH and ignore == NO_PATH:
-        match_func = LEAF_PATH
-    else:
-        match_func = general_match_func
-
-    return match_func, ignore_func
+# def _breed_leaf_selector(select: PathSelector,
+#                          ignore: PathSelector) -> Tuple[Callable, Callable]:
+#     select_func = create_path_match_function(select)
+#     ignore_func = create_path_match_function(ignore)
+#
+#     def general_match_func(path: Path) -> bool:
+#         if path[-1]._children:
+#             if select_func(path):
+#                 raise ValueError(f'Selector "{select}" should yield only leaf-paths! But '
+#                     f'the last element "{path[-1].name}" of path "{pp_path(path)}" has '
+#                     f'children: {", ".join(child.name for child in path[-1].children)}! '
+#                     f'Use leaf_path({select}) to circumvent this error.')
+#             return False
+#         return select_func(path) and not ignore_func(path)
+#
+#     if select == LEAF_PATH and ignore == NO_PATH:
+#         match_func = LEAF_PATH
+#     else:
+#         match_func = general_match_func
+#
+#     return select_func, ignore_func  # match_func, ignore_func
 
 
 def leaf_paths(criterion: PathSelector) -> PathMatchFunction:
     """Creates a path-match function that matches only and all leaf paths
-    for those paths that the criterion matches. Warning: This may be
-    slower than a custom algorithm that matches only leaf-paths right
-    from the start. Example::
+    for those paths that the criterion matches.
 
         >>> xml = '''<doc><p>In München<footnote><em>München</em> is the German
         ... name of the city of Munich</footnote> is a Hofbräuhaus</p></doc>'''
@@ -5100,16 +5098,22 @@ def leaf_paths(criterion: PathSelector) -> PathMatchFunction:
         ...    pp_path(path, 1)
         'doc <- p <- footnote "München is the German\\nname of the city of Munich"'
     """
-
-    match_func = create_path_match_function(criterion)
-
     def leaf_match_func(path: Path) -> bool:
+        nonlocal cache_idx, cache_nd, match_func
         if path[-1]._children:  return False
+        if cache_idx < len(path) and path[cache_idx] is cache_nd:
+            return True
         for i in range(len(path), 0, -1):
             if match_func(path[:i]):
+                cache_idx = i - 1
+                cache_nd = path[cache_idx]
                 return True
         return False
 
+    if criterion is leaf_match_func:  return criterion
+    match_func = create_path_match_function(criterion)
+    cache_idx = 0
+    cache_nd = None
     return leaf_match_func
 
 
@@ -5152,7 +5156,9 @@ def content_regions(origin: Node,
     """Returns the minimal sequence of position-ranges in form of
     closed intervals (within the string content of the tree rooted in
     "origin") that covers all selected paths."""
-    select_func, ignore_func = _breed_leaf_selector(select, ignore)
+    # select_func, ignore_func = _breed_leaf_selector(select, ignore)
+    select_func = leaf_paths(select)
+    ignore_func = create_path_match_function(ignore)
     a = 0
     ranges = []
     for path, gap in sourcemapped_path(origin, select_func, ignore_func):
@@ -5183,7 +5189,9 @@ def sourcemapped_selection(origin: Node,
     and only  leave out its branches. ingnore also holds back the
     root of the subtree to be skipped!
     """
-    select_f, ignore_f = _breed_leaf_selector(select, ignore)
+    # select_f, ignore_f = _breed_leaf_selector(select, ignore)
+    select_f = leaf_paths(select)
+    ignore_f = create_path_match_function(ignore)
     if ignore_f([origin]):
         return '', [], [], SourceMap('selection', [0, 1], [0, 0],
                                      ['selection'], {'selection': ''})
@@ -5278,7 +5286,8 @@ class ContentMapping:
     :ivar select_func: Only leaf-paths for which this is true will be considered when
         generating the content-mapping. Note that the
         select-criterion must only accept leaf-paths. Otherwise, a ValueError will
-        be raised. (This is similar to the match_func parameter of Node.select_path_if)
+        be raised. (Other than that, select_func is similar to the match_func
+        parameter of Node.select_path_if)
     :ivar ignore_func: No leaf-path for which this is true will be considered when
         generating the content-mapping. (This is similar to the skip_func parameter
         of Node.select_path_if)
@@ -5324,7 +5333,9 @@ class ContentMapping:
                  sourcemap: bool = True):
         assert isinstance(origin, Node), f"origin must be a Node, not {type(origin)}, {origin}"
         self.origin: Node = origin
-        select_func, ignore_func = _breed_leaf_selector(select, ignore)
+        # select_func, ignore_func = _breed_leaf_selector(select, ignore)
+        select_func = leaf_paths(select)
+        ignore_func = create_path_match_function(ignore)
         self.select_func: PathMatchFunction = select_func
         self.ignore_func: PathMatchFunction = ignore_func
         self.greedy: bool = greedy

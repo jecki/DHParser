@@ -32,7 +32,7 @@ scriptpath = os.path.abspath(scriptpath)
 from DHParser.configuration import get_config_value, set_config_value
 from DHParser.nodetree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxpr, \
     flatten_xml, parse_json, ZOMBIE_TAG, EMPTY_NODE, ANY_NODE, next_path, \
-    prev_path, pick_from_path, ContentMapping, leaf_paths, NO_PATH, \
+    prev_path, pick_from_path, ContentMapping, NO_PATH, \
     select_path_if, pick_path, LEAF_PATH, TOKEN_PTYPE, content_of, strlen_of, \
     gen_chain_ID, parse_sxml, DIVISIBLES, reflow_as_oneliner, has_token, eq_tokens, \
     add_class, has_class, remove_class, HTML_EMPTY_TAGS, get_next_leaf, deep_split, \
@@ -1252,7 +1252,7 @@ class TestPathNavigation:
         assert content_of(tree, select, ignore | {'A'}) == ""
         assert strlen_of(tree, select, ignore | {'A'}) == 0
 
-        mapping = ContentMapping(tree, leaf_paths(select), ignore)
+        mapping = ContentMapping(tree, select, ignore)
         mapping.insert_node(content.find('delta'), Node('G', 'omicron'))
         assert flatten_sxpr(tree.as_sxpr()) == \
                '(A (B "alpha") (C (D "beta") (E "gamma")) (G "omicron") (F "delta"))'
@@ -1491,23 +1491,15 @@ class TestMarkupInsertion:
     def test_ContentMapping_constructor(self):
         tree = parse_xml('<doc><p>In München<footnote><em>München</em> is the '
             'German name of the city of Munich</footnote> is a Hofbräuhaus</p></doc>')
-        try:
-            cm = ContentMapping(tree, select='footnote', sourcemap=True)
-            assert False, "ValueError expected"
-        except ValueError as e:
-            pass
-        try:
-            cm = ContentMapping(tree, select='footnote', sourcemap=False)
-            assert False, "ValueError expected"
-        except ValueError as e:
-            pass
+        cm = ContentMapping(tree, select='footnote', sourcemap=True)
+        cm = ContentMapping(tree, select='footnote', sourcemap=False)
         cm = ContentMapping(tree, select=lambda pth: pick_from_path(pth, 'footnote')
                                                      and not pth[-1].children)
 
     def test_ContentMapping_rebuild_mapping(self):
         tree = parse_xml('<doc><p>In München<footnote><em>München</em> is the '
             'German name of the city of Munich</footnote> is a Hofbräuhaus</p></doc>')
-        fm = ContentMapping(tree, select=leaf_paths('footnote'), ignore=NO_PATH)
+        fm = ContentMapping(tree, select='footnote', ignore=NO_PATH)
         i = fm.content.find('München')
         path, offset = fm.get_path_and_offset(i)
         path[-1].result = path[-1].result[:offset] + "Stadt " + path[-1].result[offset:]
@@ -1900,7 +1892,7 @@ class TestContentSelectionMapping:
         tree = parse_xml(xml)
         cm = ContentMapping(tree, ignore='footnote')
         m = re.search(r"München\s+in\s+Bavaria", cm.content)
-        exclude = content_regions(tree, leaf_paths('footnote'))
+        exclude = content_regions(tree, 'footnote')
         assert exclude == [(28, 73)]
         cm.markup(m.start(), m.end(), 'location', exclude)
         expected = parse_sxpr('''
