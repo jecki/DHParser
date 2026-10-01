@@ -5358,6 +5358,7 @@ class ContentMapping:
         self._path_list: List[Path] = path_list
         self._path_str_cache: Dict[int, str] = dict()
         self._fullcm: Optional[ContentMapping] = None  # needed for markup with excluded regions
+        self._fullcm_delta = 0
 
     def _generate_mapping(self, origin, stump: Path = []) \
             -> Tuple[str, List[int], List[Path]]:
@@ -6191,9 +6192,9 @@ class ContentMapping:
                                 greedy = self.greedy, divisibility = self.divisibility,
                                 chain_attr_name = self.chain_attr_name,
                                 auto_cleanup=True, sourcemap = False)
-                self._fullcm.delta = delta
+                self._fullcm_delta = delta
         else:
-            delta = self._fullcm.delta
+            delta = self._fullcm_delta
         a = self.sourcemap.srcpos(start_pos)
         b = self.sourcemap.srcpos(end_pos)
         rr = range_difference([(a, b - 1)], exclude_regions)
