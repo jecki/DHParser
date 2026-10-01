@@ -1264,7 +1264,7 @@ Let's see how this can be done, with out original XML-snippet::
       in this sentence.
     </doc>
 
-TO BE CONTINUED... (explain exlude-parameter of method markup, here)
+TO BE CONTINUED... (examples for the exclusion of empty nodes!)
 
 Error Messages
 --------------
