@@ -47,35 +47,35 @@ cdef class NoMemoizationParser(LeafParser):
 
 # cpdef mixin_nonempty(whitespace)
 
-cdef class Grammar:
-    cdef dict __dict__
-    cdef public set all_parsers__
-    cdef public object comment_rx__
-    cdef public object start_parser__
-    # cdef public object unconnected_parsers__
-    # cdef public object resume_parsers__
-    cdef bint _dirty_flag__
-    cdef public bint history_tracking__
-    cdef public bint suspend_memoization__
-    cdef public bint flatten_tree__
-    cdef public int max_parser_dropouts__
-#    cdef public object root_parser__  # do not uncomment this!!!
-    cdef public object tree__
-    cdef public object document__
-    cdef public str text__
-    cdef public object _reversed__
-    cdef public int document_length__
-    cdef public list _document_lbreaks__
-    cdef public object variables__
-    cdef public list rollback__
-    cdef public int last_rb__loc__
-    cdef public list call_stack__
-    cdef public list history__
-    cdef public bint moving_forward__
-    cdef public int farthest_failure__
-    # cdef public object static_analysis_pending__
-    # cdef public object static_analysis_errors__
-    # cdef public object parser_names
+# cdef class Grammar:
+#     cdef dict __dict__
+#     cdef public set all_parsers__
+#     cdef public object comment_rx__
+#     cdef public object start_parser__
+#     # cdef public object unconnected_parsers__
+#     # cdef public object resume_parsers__
+#     cdef bint _dirty_flag__
+#     cdef public bint history_tracking__
+#     cdef public bint suspend_memoization__
+#     cdef public bint flatten_tree__
+#     cdef public int max_parser_dropouts__
+# #    cdef public object root_parser__  # do not uncomment this!!!
+#     cdef public object tree__
+#     cdef public object document__
+#     cdef public str text__
+#     cdef public object _reversed__
+#     cdef public int document_length__
+#     cdef public list _document_lbreaks__
+#     cdef public object variables__
+#     cdef public list rollback__
+#     cdef public int last_rb__loc__
+#     cdef public list call_stack__
+#     cdef public list history__
+#     cdef public bint moving_forward__
+#     cdef public int farthest_failure__
+#     # cdef public object static_analysis_pending__
+#     # cdef public object static_analysis_errors__
+#     # cdef public object parser_names
 
 cdef class PreprocessorToken(LeafParser):
     pass

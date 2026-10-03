@@ -499,7 +499,7 @@ def NOCALL(*args, **kwargs):
 _GRAMMAR_PLACEHOLDER: Optional[Grammar] = None  # type: Optional[Grammar]
 
 
-def get_grammar_placeholder() -> Grammar:
+def get_grammar_placeholder() -> 'Grammar':
     global _GRAMMAR_PLACEHOLDER
     if _GRAMMAR_PLACEHOLDER is None:
         _GRAMMAR_PLACEHOLDER = Grammar.__new__(Grammar)
@@ -933,7 +933,7 @@ class Parser:
             raise AttributeError('Parser placeholder does not have a grammar!')
 
     @grammar.setter
-    def grammar(self, grammar: Grammar):
+    def grammar(self, grammar: 'Grammar'):
         try:
             if is_grammar_placeholder(self._grammar):
                 self._grammar = grammar
