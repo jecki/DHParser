@@ -1876,10 +1876,44 @@ class TestContentSelectionMapping:
               (:Text "HSV"))''')
         assert tree.equals(expected)
 
+    def test_content_region(self):
+        xml = "<doc><f>eins</f><lb/><f>zwei</f></doc>"
+        tree = parse_xml(xml)
+        ex = content_regions(tree, {'lb', 'f'})
+        assert ex == [(0,7)]
+        cm = ContentMapping(tree)
+        cm.markup(0, 8, "X", ex)
+        assert tree.pick('X') is None
+
+        xml = "<doc>eins<lb/><f>zwei</f></doc>"
+        tree = parse_xml(xml)
+        ex = content_regions(tree, {'lb', 'f'})
+        assert ex == [(4,7)]
+        cm = ContentMapping(tree)
+        cm.markup(0, 8, "X", ex)
+        assert tree.equals(parse_sxpr('(doc (X "eins") (lb) (f "zwei"))'))
+
+        xml = "<doc><f>eins</f><lb/>zwei</doc>"
+        tree = parse_xml(xml)
+        ex = content_regions(tree, {'lb', 'f'})
+        assert ex == [(0,3)]
+        cm = ContentMapping(tree)
+        cm.markup(0, 8, "X", ex)
+        assert tree.equals(parse_sxpr('(doc (f "eins") (lb) (X "zwei"))'))
+
+        xml = "<doc><f>eins</f> <lb/> <f>zwei</f></doc>"
+        tree = parse_xml(xml)
+        ex = content_regions(tree, {'lb', 'f'})
+        assert ex == [(0, 3), (5, 4), (6, 9)]
+        cm = ContentMapping(tree)
+        cm.markup(0, 10, "X", ex)
+        assert tree.equals(parse_sxpr('(doc (f "eins") (X " ") (lb) (X " ") (f "zwei"))'))
+
     def test_markup_with_exclusion_2(self):
         xml = "<doc>Die Stadt<lb/>München liegt in Bayern</doc>"
         tree = parse_xml(xml)
         cm = ContentMapping(tree)
+        print(content_regions(tree, 'lb'))
         cm.markup(0, 16, "X", exclude_regions=[(9, 8)])
         assert tree.as_xml(inline_tags={'doc'}) == \
                "<doc><X>Die Stadt</X><lb/><X>München</X> liegt in Bayern</doc>"

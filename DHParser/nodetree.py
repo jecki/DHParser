@@ -5164,7 +5164,7 @@ def content_regions(origin: Node,
     for path, gap in sourcemapped_path(origin, select_func, ignore_func):
         a += gap
         b = a + path[-1].strlen() - 1
-        if b >= a:
+        if b + 1 >= a:
             if ranges and a <= ranges[-1][1] + 1:
                 ranges[-1] = (ranges[-1][0], b)
             else:
