@@ -2424,9 +2424,9 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
             else:
                 # use a dictionary only after having made sure
                 # that each child node's name is unique
-                jo: JSON_Dict = {node.name: {nd.name: dict_flavor(nd)[nd.name]
-                                             for nd in node._children}
-                                            if node._children else str(node._result)}
+                jo = {node.name: {nd.name: dict_flavor(nd)[nd.name]
+                                  for nd in node._children}
+                                  if node._children else str(node._result)}
             additional = {}
             if include_pos:
                 pos = node._pos
@@ -3401,8 +3401,8 @@ def parse_sxpr(sxpr: Union[str, StringView]) -> RootNode:
     @cython.locals(pos=cython.int, i=cython.int, k=cython.int, m=cython.int, L=cython.int)
     def parse_attrs(sxpr: StringView, attr_start: str, attributes: Dict[str, Any]) \
                    -> Tuple[StringView, int]:
-        pos: int = -1
-        L: int = len(attr_start)
+        pos = -1
+        L = len(attr_start)
         while sxpr[:L] == attr_start:
             i = sxpr.find('"')
             k = sxpr.find(')')

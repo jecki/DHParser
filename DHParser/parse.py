@@ -3935,7 +3935,7 @@ class ZeroOrMore(Option):
     @cython.locals(n=cython.int)
     def _parse(self, location: cython.int) -> ParsingResult:
         results: Tuple[Node, ...] = ()
-        n: int = location - 1
+        n = location - 1
         while True:  # location > n:
             n = location
             node, location = self.parser(location)
@@ -3991,7 +3991,7 @@ class OneOrMore(UnaryParser):
         results: Tuple[Node, ...] = ()
         # text_ = text  # type: StringView
         match_flag: bool = False
-        n: int = location - 1
+        n = location - 1
         while True:
             n = location
             node, location = self.parser(location)

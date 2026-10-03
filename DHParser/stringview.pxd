@@ -21,7 +21,7 @@ cdef int last_char(str text, int begin, int end, str chars) noexcept
 
 cdef int pack_index(int index, int length) noexcept
 
-cdef (int, int) fast_real_indices(begin, end, int length) noexcept
+# cdef (int, int) fast_real_indices(begin, end, int length) noexcept
 
 cdef class StringView:
     cdef public str _text
