@@ -602,7 +602,9 @@ RX_NEVER_MATCH = LazyRE(NEVER_MATCH_PATTERN)  # DEPRECATED: moved to parse.py
 try:
     RxPatternType: TypeAlias = re.Pattern
 except AttributeError:
-    RxPatternType: TypeAlias = Any
+    RxPatternType = Any
+    # RxPatternType: TypeAlias = Any  # cython crashes here!
+
 
 RxType: TypeAlias = Union[RxPatternType, LazyRE]
 
