@@ -2078,7 +2078,7 @@ class ContentMapping:
             of the tree!
         :param name:  The name, or "tag-name" in XML-terminology, of the element
             (or tag) to be added.
-        :param exclude_regions: A sequences of ranges that will be excluded from
+        :param exclude_regions: A sequence of ranges that will be excluded from
             the markup. If any of these ranges lies within [start_pos, end_pos[,
             the markup will be split in two or more non-contiguous regions!
             Note that other than the half-open intervall [start_pos, end_pos[,
