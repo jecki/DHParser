@@ -91,37 +91,6 @@ __all__ = ('insert_node',
 
 Range: TypeAlias = Tuple[int, int]
 
-
-def contains(ranges: Sequence[Range], r: int) -> bool:
-    highest = len(ranges) - 1
-    a = 0
-    b = highest
-    last_i = -1
-    i = b >> 1
-
-    while i != last_i:
-        rng = ranges[i]
-        if rng[0] <= r:
-            if r <= rng[1]:
-                return True
-            else:
-                a = min(i + 1, highest)
-        else:
-            b = max(i - 1, 0)
-        last_i = i
-        i = a + (b - a) >> 1
-    return False
-
-
-def RR(low: str, high: str) -> Range:
-    return (ord(low), ord(high))
-
-
-def RRstr(s: str) -> Range:
-    assert len(s) == 3 and s[1] == '-'
-    return RR(s[0], s[2])
-
-
 def is_sorted_and_merged(rr: Sequence[Range]) -> bool:
     for i in range(1, len(rr)):
         if rr[i][0] <= rr[i - 1][1]: return False
@@ -229,48 +198,6 @@ def range_intersection(A: Sequence[Range], B: Sequence[Range]) \
         -> List[Range]:
     C = range_difference(A, B)
     return range_difference(A, C)
-
-
-def union_with_compl(A: Tuple[bool, Sequence[Range]], B: Tuple[bool, Sequence[Range]]) \
-        -> Tuple[bool, List[Range]]:
-    if A[0]:
-        if B[0]:
-            return True, range_intersection(B[1], A[1])
-        else:
-            return True, range_difference(A[1], B[1])
-    else:
-        if B[0]:
-            return True, range_intersection(B[1], A[1])
-        else:
-            return False, range_union(A[1], B[1])
-
-
-def diff_with_compl(A: Tuple[bool, Sequence[Range]], B: Tuple[bool, Sequence[Range]]) \
-        -> Tuple[bool, List[Range]]:
-    if A[0]:
-        if B[0]:
-            return False, range_difference(B[1], A[1])
-        else:
-            return True, range_union(A[1], B[1])
-    else:
-        if B[0]:
-            return False, range_intersection(A[1], B[1])
-        else:
-            return False, range_difference(A[1], B[1])
-
-
-def intersect_with_compl(A: Tuple[bool, Sequence[Range]], B: Tuple[bool, Sequence[Range]]) \
-        -> Tuple[bool, List[Range]]:
-    if A[0]:
-        if B[0]:
-            return True, range_union(B[1], A[1])
-        else:
-            return False, range_difference(B[1], A[1])
-    else:
-        if B[0]:
-            return False, range_difference(A[1], B[1])
-        else:
-            return False, range_intersection(A[1], B[1])
 
 
 #######################################################################
