@@ -24,7 +24,7 @@ markup:
     the string-content for searching in the document and then switching
     to the tree-structure to manipulate it.
 
-    An (experimental) special case of content mappings are
+    A (very experimental!) special case of content mappings are
     serialization mappings that map positions within a serialized version
     of the syntax-tree (XML, S-Expression or SXML) to locations within
     the tree (Node, Node-position within the serialization, offset and
@@ -2080,7 +2080,7 @@ class ContentMapping:
             (or tag) to be added.
         :param exclude_regions: A sequences of ranges that will be excluded from
             the markup. If any of these ranges lies within [start_pos, end_pos[,
-            the markup will be split in to two or more non-contiguous regions!
+            the markup will be split in two or more non-contiguous regions!
             Note that other than the half-open intervall [start_pos, end_pos[,
             these ranges are a) defined as closed intervalls [low, high] and
             b) related to the exhaustive string content of the root-Node ("origin")
