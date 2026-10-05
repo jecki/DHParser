@@ -87,6 +87,7 @@ __all__ = ('insert_node',
 #
 #######################################################################
 
+# TODO: change to algebra for half-open intervals
 # TDOO: needs unit-tests
 
 Range: TypeAlias = Tuple[int, int]
