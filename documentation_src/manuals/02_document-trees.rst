@@ -8,6 +8,16 @@ a parser. This includes serialization and deserialization of node-trees,
 navigating and searching node-trees as well as annotating node-trees
 with attributes and error messages.
 
+DHParser also provides some functionality of standoff markup, like a
+"markup anywhere" function (:py:meth:`~standoff.ContentMapping.markup`)
+that allows to add markup anywhere, irrespective of the existing
+markup and tree structure. (By appropriately deviding tags the algorithm
+ensures that tha tags remain in the nested tree-structure.) This
+functionality is concentrated in the module :py:mod:`standoff`.
+See :ref:`content_mappings` for the description of DHParser's
+standoff markup funcationality.
+
+
 .. _node_objects:
 
 Node-objects
@@ -722,6 +732,8 @@ tree pre-order. See the difference::
      'A <- C <- D <- E "2"', 'A <- B "1"']
 
 
+.. _content_mappings:
+
 Content Mappings
 ----------------
 
@@ -737,6 +749,7 @@ that maps text positions within the pure string-content to the paths of
 the leaf-nodes to which they belong. This mapping can be thought of as a
 "string-view" on the tree::
 
+    >>> from DHParser.standoff import *
     >>> sentence = parse_sxpr(
     ...     '(sentence (word "This") (blank " ") (word "is") (blank " ")'
     ...     ' (phrase (word "Buckingham") (blank " ") (word "Palace")))')
@@ -769,7 +782,7 @@ Now let's find all letters that are followed by a whitespace character::
     only when instantiating or rebuilding the mapping. Performance-wise
     it is advisable to always use the content mapping's content field.
 
-The target returned by :py:meth:`~nodetree.ContentMapping.get_path_and_offset`
+The target returned by :py:meth:`~standoff.ContentMapping.get_path_and_offset`
 is a tuple of the target path and the relative position of the location that
 falls within this path::
 
@@ -791,9 +804,9 @@ tree at the very moment when the path mapping is generated, not the
 source positions captured by the `pos`-property of the node-objects!
 This also means that the mapping becomes outdated, when the tree is
 being restructured. Unless you use the methods provided by
-:py:class:`~nodetree.ContentMapping` itself in order to make changes to
+:py:class:`~standoff.ContentMapping` itself in order to make changes to
 the tree, you need to either call
-:py:meth:`~nodetree.ContentMapping.rebuild_mapping` to update the
+:py:meth:`~standoff.ContentMapping.rebuild_mapping` to update the
 content mapping at the affected places or instantiate an entirely new
 content mapping.
 
@@ -802,11 +815,11 @@ content mapping.
     functionality of *standoff markup*-techniques. Unlike most
     standoff-markup-tools, however, they remain connected to the
     tree structure. Changes made with methods of
-    :py:class:`~nodetree.ContentMapping` will directly be reflected
+    :py:class:`~standoff.ContentMapping` will directly be reflected
     in the tree structure (unless the instance-variable auto_cleanup
     is set to "False"). Changes made directly to the tree structure
     will require a manual update of the content mapping with
-    :py:meth:`~nodetree.ContentMapping.rebuild_mapping`.
+    :py:meth:`~standoff.ContentMapping.rebuild_mapping`.
 
 Restricted Mappings
 ^^^^^^^^^^^^^^^^^^^
@@ -1559,21 +1572,21 @@ every (selected) leaf-node to the path of this node.
 The class provides methods for mapping string positions to paths and
 offsets (relative to the beginning of the leaf-node of the path)
 
-* :py:class:`~nodetree.ContentMapping`: Mapping the tree to its string-content
+* :py:class:`~standoff.ContentMapping`: Mapping the tree to its string-content
 
-    * :py:meth:`~nodetree.ContentMapping.get_path_and_offset`:
+    * :py:meth:`~standoff.ContentMapping.get_path_and_offset`:
       Maps positions in string-content of the ContentMapping to the
       leaf-path into which they fall
 
-    * :py:meth:`~nodetree.ContentMapping.iterate_paths`:
+    * :py:meth:`~standoff.ContentMapping.iterate_paths`:
       Yields all paths from
       position ``start_pos`` up to and including position ``end_pos``.
 
-    * :py:meth:`~nodetree.ContentMapping.insert_node`:
+    * :py:meth:`~standoff.ContentMapping.insert_node`:
       Inserts a node at a
       particular text-position.
 
-    * :py:meth:`~nodetree.ContentMapping.markup`:
+    * :py:meth:`~standoff.ContentMapping.markup`:
        Adds markup (i.e. an element) to a particular stretch of text.
 
 .. _ElementTree: https://docs.python.org/3/library/xml.etree.elementtree.html

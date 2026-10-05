@@ -34,9 +34,10 @@ from DHParser.nodetree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxp
     flatten_xml, parse_json, ZOMBIE_TAG, EMPTY_NODE, ANY_NODE, next_path, \
     prev_path, pick_from_path, ContentMapping, NO_PATH, \
     select_path_if, pick_path, LEAF_PATH, TOKEN_PTYPE, content_of, strlen_of, \
-    gen_chain_ID, parse_sxml, DIVISIBLES, reflow_as_oneliner, has_token, eq_tokens, \
-    add_class, has_class, remove_class, HTML_EMPTY_TAGS, get_next_leaf, deep_split, \
+    parse_sxml, DIVISIBLES, reflow_as_oneliner, has_token, eq_tokens, \
+    add_class, has_class, remove_class, HTML_EMPTY_TAGS, get_next_leaf, \
     sourcemapped_path, sourcemapped_selection, content_regions
+from DHParser.standoff import gen_chain_ID, deep_split, split_tree, split_tree_if
 from DHParser.pipeline import create_parser_junction, Junction, PseudoJunction
 from DHParser.ranges import Range
 from DHParser.transform import traverse, reduce_single_child, remove_brackets, \
@@ -1430,14 +1431,14 @@ class TestSplitMethod:
     def test_split(self):
         urtree = parse_sxpr('(A (B (C "123") (M) (D "456")) (E "789") (M) (F "000"))')
         tree = copy.deepcopy(urtree)
-        parts = tree.split("M")
+        parts = split_tree(tree, "M")
         assert len(parts) == 3
         assert parts[0].as_sxpr() == '(A (B (C "123")))'
         assert parts[1].as_sxpr() == '(A (B (D "456")) (E "789"))'
         assert parts[2].as_sxpr() == '(A (F "000"))'
 
         tree = copy.deepcopy(urtree)
-        parts = tree.split("M", "B")
+        parts = split_tree(tree, "M", "B")
         assert len(parts) == 2
         assert parts[0].as_sxpr() == '(A (B (C "123") (M) (D "456")) (E "789"))'
         assert parts[1].as_sxpr() == '(A (F "000"))'
@@ -1445,32 +1446,31 @@ class TestSplitMethod:
     def test_split_edge_cases(self):
         urtree = parse_sxpr('(A (L) (B (C "123") (M) (M) (D "456")) (E "789") (N))')
         tree = copy.deepcopy(urtree)
-        parts = tree.split('X')
+        parts = split_tree(tree, 'X')
         assert len(parts) == 1
         assert parts[0] == tree
 
         tree = copy.deepcopy(urtree)
-        parts = tree.split('L')
+        parts = split_tree(tree, 'L')
         assert len(parts) == 2
         assert parts[0] == tree
         assert parts[0].as_sxpr() == '(A)'
         assert parts[1].as_sxpr() == '(A (B (C "123") (M) (M) (D "456")) (E "789") (N))'
 
         tree = copy.deepcopy(urtree)
-        parts = tree.split('N')
+        parts = split_tree(tree, 'N')
         assert len(parts) == 2
         assert parts[0] == tree
         assert parts[0].as_sxpr() == '(A (L) (B (C "123") (M) (M) (D "456")) (E "789"))'
         assert parts[1].as_sxpr() == '(A)'
 
         tree = copy.deepcopy(urtree)
-        parts = tree.split('M')
+        parts = split_tree(tree, 'M')
         assert len(parts) == 3
         assert parts[0] == tree
         assert parts[0].as_sxpr() == '(A (L) (B (C "123")))'
         assert parts[1].as_sxpr() == '(A)'
         assert parts[2].as_sxpr() == '(A (B (D "456")) (E "789") (N))'
-
 
 
 class TestMarkupInsertion:

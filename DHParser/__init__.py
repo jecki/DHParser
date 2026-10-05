@@ -38,9 +38,9 @@ from .parse import *
 from .pipeline import *
 from .preprocess import *
 # from .server import *
-from .ranges import *
 from .stringview import *
 from .nodetree import *
+from .standoff import *
 # from .testing import *
 from .toolkit import *
 from .trace import *
@@ -57,8 +57,8 @@ __all__ = (*compile.__all__,
            *parse.__all__,
            *pipeline.__all__,
            *preprocess.__all__,
-           *ranges.__all__,
            # *server.__all__,
+           *standoff.__all__,
            *stringview.__all__,
            *nodetree.__all__,
            # *testing.__all__,

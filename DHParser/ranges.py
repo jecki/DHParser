@@ -20,8 +20,6 @@ This is useful for handling subsets of a text but also for fast lookup
 of characters in subsets (say, all greek letters) of Unicode-characters."""
 
 
-# TDOO: needs unit-tests
-
 from typing import NamedTuple, Sequence, List, Tuple, TypeAlias
 
 __all__ = ('Range',
