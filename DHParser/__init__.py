@@ -24,7 +24,7 @@ import sys
 assert sys.version_info >= (3, 7, 0), "DHParser requires at least Python-Version 3.7!"
 
 from . import (compile, configuration, dsl, ebnf, error, log, parse,
-               pipeline, preprocess, ranges, stringview, nodetree, toolkit,
+               pipeline, preprocess, stringview, nodetree, toolkit,
                trace, transform, versionnumber)
 
 from .compile import *

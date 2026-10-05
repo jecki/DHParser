@@ -39,7 +39,6 @@ from DHParser.nodetree import Node, RootNode, parse_sxpr, parse_xml, flatten_sxp
     sourcemapped_path, sourcemapped_selection, content_regions
 from DHParser.standoff import gen_chain_ID, deep_split, split_tree, split_tree_if
 from DHParser.pipeline import create_parser_junction, Junction, PseudoJunction
-from DHParser.ranges import Range
 from DHParser.transform import traverse, reduce_single_child, remove_brackets, \
     replace_by_single_child, flatten, remove_empty, remove_whitespace, TransformerFunc, \
     transformer
