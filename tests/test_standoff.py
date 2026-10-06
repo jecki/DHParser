@@ -4,7 +4,7 @@
 
 Author: Eckhart Arnold <arnold@badw.de>
 
-Copyright 2017 Bavarian Academy of Sciences and Humanities
+Copyright 2026 Bavarian Academy of Sciences and Humanities
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -23,11 +23,21 @@ import re
 
 from DHParser import parse_sxpr, split_tree, parse_xml, content_of, ContentMapping, pick_from_path, NO_PATH, Node, \
     TOKEN_PTYPE, flatten_sxpr, DIVISIBLES, sourcemapped_selection, LEAF_PATH, content_regions, ANY_NODE
-from DHParser.standoff import gen_chain_ID, deep_split
+from DHParser.standoff import gen_chain_ID, deep_split, range_difference
 
 if __name__ == "__main__":
     from DHParser.testing import runner
     runner("", globals())
+
+
+class TestRangeAlgebra:
+    def test_superset_subtraction(self):
+        include_set = [(3,5), (8,11)]
+        superset = [(-10, 100)]
+        exclude_set = range_difference(superset, include_set)
+        assert exclude_set == [(-10, 3), (5, 8), (11, 100)]
+        real_incl_set = range_difference([(2, 14)], exclude_set)
+        assert real_incl_set == [(3, 5), (8, 11)]
 
 
 class TestSplitMethod:
@@ -506,11 +516,11 @@ class TestContentSelectionMapping:
         tree = parse_xml(xml)
         cm = ContentMapping(tree)
         # print(content_regions(tree, 'lb'))
-        cm.markup(0, 16, "X", exclude_regions=[(9, 8)])
+        cm.markup(0, 16, "X", exclude_regions=[(9, 9)])
         assert tree.as_xml(inline_tags={'doc'}) == \
                "<doc><X>Die Stadt</X><lb/><X>München</X> liegt in Bayern</doc>"
 
-    def test_markup_with_excludion_3(self):
+    def test_markup_with_exclusion_3(self):
         xml = ("<doc>Please mark up Stadt\n<lb/>"
                "<em>München</em><footnote>'Stadt <em>München</em>'"
                " is German for 'City of Munich'</footnote> in Bavaria"
@@ -519,7 +529,7 @@ class TestContentSelectionMapping:
         cm = ContentMapping(tree, ignore='footnote')
         m = re.search(r"München\s+in\s+Bavaria", cm.content)
         exclude = content_regions(tree, 'footnote')
-        assert exclude == [(28, 73)]
+        assert exclude == [(28, 74)]
         cm.markup(m.start(), m.end(), 'location', exclude)
         expected = parse_sxpr('''
             (doc

@@ -58,7 +58,15 @@ except ImportError:
     import DHParser.externallibs.shadow_cython as cython
 
 
-__all__ = ('insert_node',
+__all__ = ('Range',
+           'never_empty',
+           'never_invalid',
+           'is_sorted_and_merged',
+           'sort_and_merge',
+           'range_union',
+           'range_difference',
+           'range_intersection',
+           'insert_node',
            'split',  # deprecated!
            'split_node',
            # 'deep_split',
@@ -82,23 +90,19 @@ __all__ = ('insert_node',
 
 #######################################################################
 #
-# ranges - range algebra for closed intervals
+# ranges - range algebra for half-open [...[ intervals
 #          (adapted from examples/re/runranges.py)
 #
 #######################################################################
 
-# TODO: change to algebra for half-open intervals
-# TDOO: needs unit-tests
 
 Range: TypeAlias = Tuple[int, int]
-
-def is_sorted_and_merged(rr: Sequence[Range]) -> bool:
-    for i in range(1, len(rr)):
-        if rr[i][0] < rr[i - 1][1]: return False
-    return True
+# represents the half-open interval r[0] <= n < r[1]
 
 
 def never_empty(rr: Sequence[Range]) -> bool:
+    """Returns True if the sequence of ranges is not empty and
+    no range in the seuqence has zero length."""
     if len(rr) <= 0: return False
     for r in rr:
         if r[0] >= r[1]: return False
@@ -106,13 +110,25 @@ def never_empty(rr: Sequence[Range]) -> bool:
 
 
 def never_invalid(rr: Sequence[Range]) -> bool:
+    """Returns True if the sequence of ranges is not empty and
+    no range in the sequence is invalid, i.e. the end of the range
+    lies before the start."""
     if len(rr) <= 0: return False
     for r in rr:
         if r[0] > r[1]: return False
     return True
 
 
+def is_sorted_and_merged(rr: Sequence[Range]) -> bool:
+    """Checks if a sequence of ranges is sorted in order
+    and adjacent ranges merged where possible."""
+    for i in range(1, len(rr)):
+        if rr[i][0] < rr[i - 1][1]: return False
+    return True
+
+
 def sort_and_merge(R: List[Range]):
+    """Sorts a sequence of ranges in order and merges all adjacent ranges."""
     Rlen = len(R)
     R.sort(key=lambda r: r[0])
     a = 0
@@ -127,10 +143,11 @@ def sort_and_merge(R: List[Range]):
             if a != b: R[a] = R[b]
         b += 1
     del R[a + 1:]
-    assert is_sorted_and_merged(R)
+    # assert is_sorted_and_merged(R)
 
 
 def range_union(A: Sequence[Range], B: Sequence[Range]) -> List[Range]:
+    """Returns the (sorted and merged) union of two sequences of ranges."""
     R = [r for r in A]
     R.extend(B)
     sort_and_merge(R)
@@ -139,10 +156,14 @@ def range_union(A: Sequence[Range], B: Sequence[Range]) -> List[Range]:
 
 def range_difference(A: Sequence[Range], B: Sequence[Range]) \
         -> List[Range]:
+    """Returns the (sorted and merged) difference of two sequences of ranges: A - B.
+    Unless A or B is empty, no range in A must be empty and both A and B must
+    be sorted and merged. Otherwise, no reliable result can be guaranteed.
+    """
     if not A:  return []
     if not B:  return list(A)
-    assert never_empty(A) # and never_empty(B)
-    assert is_sorted_and_merged(A) and is_sorted_and_merged(B)
+    # assert never_empty(A) and never_invalid(B)
+    # assert is_sorted_and_merged(A) and is_sorted_and_merged(B)
 
     result = []
     lenB = len(B)
@@ -191,12 +212,15 @@ def range_difference(A: Sequence[Range], B: Sequence[Range]) \
     while i < lenA:
         result.append(A[i])
         i += 1
-    assert is_sorted_and_merged(result)
+    # assert is_sorted_and_merged(result)
     return result
 
 
 def range_intersection(A: Sequence[Range], B: Sequence[Range]) \
         -> List[Range]:
+    """Returns the (sorted and merged) intersection of two sequences of ranges.
+    Unless A or B is empty, no range in A must be empty and both A and B must
+    be sorted and merged. Otherwise, no reliable result can be guaranteed."""
     C = range_difference(A, B)
     return range_difference(A, C)
 
@@ -1023,7 +1047,7 @@ def content_regions(origin: Node,
             else:
                 ranges.append((a, b))
             a = b
-    assert is_sorted_and_merged(ranges)
+    # assert is_sorted_and_merged(ranges)
     return ranges
 
 
@@ -1276,9 +1300,9 @@ class ContentMapping:
             self._sourcemap = sm
         return self._sourcemap
 
-    def flush_exclude_cache(self):
+    def flush_markup_cache(self):
         """Use this to clean up once after several markup-calls with
-        parameter flush_exclude_cache=False"""
+        parameter use_cache=True"""
         self._fullcm = None
 
     @property
@@ -1985,7 +2009,7 @@ class ContentMapping:
                end_pos: cython.int,
                name: str,
                exclude_regions: Sequence[Union[Range, Tuple[int, int]]] = [], *,
-               flush_exclude_cache: bool = True,
+               use_cache: bool = False,
                attributes: Optional[Dict] = None, **additional_attrs) -> Optional[NodeLocation]:
         """Marks the span [start_pos, end_pos[ up by adding one or more Node's
         with ``name``, eventually cutting through ``divisible`` nodes and
@@ -2009,17 +2033,20 @@ class ContentMapping:
         :param exclude_regions: A sequence of ranges that will be excluded from
             the markup. If any of these ranges lies within [start_pos, end_pos[,
             the markup will be split in two or more non-contiguous regions!
-            Note that other than the half-open intervall [start_pos, end_pos[,
-            these ranges are a) defined as closed intervalls [low, high] and
-            b) related to the exhaustive string content of the root-Node ("origin")
-            of the content mapping ``cm``, not to cm.content! These ranges can
-            be generated with :py:func:`content_ranges`.
-        :param flush_exclude_cache: If exclude_regions is not empty, markup
+            Note that the regions are a) interpreted a) as half-open intervalls
+            [low, high[ and b) related to the exhaustive string content of the
+            root-Node ("origin") of the content mapping ``cm``, not to cm.content!
+            The regions can be generated with :py:func:`content_ranges` in case
+            you'd like to exclude particular tags or path-patterns.
+        :param use_cache: If exclude_regions is not empty, markup
             will build itself an exhaustive mapping that spans the tree of the
-            common ancestor for the interval [start_pos, end_pos[ for the purpose
-            of adding markup that leaves out the excluded ranges. If markup is called
-            several times in sequence, flush_exclude_cache should be set to False
-            to avoid unnecessary recomputation of the exhaustive mapping.
+            common ancestor for the interval [start_pos, end_pos[ to add markup
+            that leaves out the excluded ranges. If markup is called
+            several times in sequence, use_cache prevents recomputing this mapping
+            when it is not necessary. If use_cache is True, no other tree-changing
+            operations should be performed between the calls to markup and at the
+            end of the sequence of cached markup calls :py:meth:`flush_markup_cache`
+            should be called.
         :param attr_dict: A dictionary of attributes that will
             be added to the newly created tag.
         :param attributes: Alternatively, the attributes can also be passed as a
@@ -2045,8 +2072,13 @@ class ContentMapping:
                         f'In case "{ambigue}" was really meant to be an attribtue, use '
                         f'"attributes={{{ambigue}:{value}}}"!')
         if not exclude_regions:
-            if flush_exclude_cache:  self._fullcm = None
-            return self.add_markup(start_pos, end_pos, name, attributes=attributes, **additional_attrs)
+            if not use_cache:  self._fullcm = None
+            return self.add_markup(start_pos, end_pos, name,
+                                   attributes=attributes, **additional_attrs)
+        if not is_sorted_and_merged(exclude_regions):
+            raise ValueError('The sequence passed to parameter exclude_regions '
+                             f'has not beensorted and merged: {exclude_regions} ' 
+                             'Please run it through sort_and_merge(regsions), first!')
 
         attributes.update(additional_attrs)
         if self._fullcm is None or self.origin != self._fullcm.origin:
@@ -2087,7 +2119,7 @@ class ContentMapping:
         end_idx = self.get_path_index(end_pos)
         if self.auto_cleanup:
             self.rebuild_mapping_slice(start_idx, end_idx)
-        if flush_exclude_cache:  self._fullcm = None
+        if not use_cache:  self._fullcm = None
         pi = self.get_node_index(ca, reverse=False, start_idx=start_idx, end_idx=end_idx)
         return NodeLocation(ca, pi)
 

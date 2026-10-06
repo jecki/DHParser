@@ -847,7 +847,7 @@ ContentMapping-class takes a same pair of path selectors similar to the
 and :py:meth:`Node.pick`. However, there is a subtle but important difference:
 If the select parameter matches paths that do not end in a leaf-node, all
 path-extensions from this path that end in a leaf node will be selected.
-(See also :py:func:`~nodetree.leaf_paths`.)
+(See also :py:func:`~standoff.leaf_paths`.)
 
 In contrast to the restricted content mapping, the search in the
 string-content of the entire tree yields::
@@ -1128,7 +1128,7 @@ short string that all elements (of the same name) belonging to one and
 the same chain share with each other, but not with any other elements.
 Let's try this on the previous example::
 
-    >>> reset_chain_ID()  # just to ensure deterministic ID values for doctest
+    >>> reset_chain_ID()  # just to ensure deterministic ID values for doctest, here
 
     >>> hard_xml_copy = copy.deepcopy(hard_xml)
     >>> match = re.search(r"Stadt\s+München", hard_xml_copy.content)
@@ -1246,13 +1246,13 @@ cover the complete stretch including the line-break.
 As said earlier, different use cases and different choices are imaginable.
 What if, you prefer to exclude any footnotes from markup that you
 add to the main text? For this purpose, you can use the exclude_regions
-parameter which takes a list of tuples (start, end) as value where
-(start, end) are closed intervalls of character positions within the
-string content. Because of this, if you need to exclude particular tags,
-you first need to determine the start and end of each of theses tags.
+parameter which takes a list of tuples (start, end) as value which
+represent half-open intervalls of character positions start <= n < end
+within the string content. Because of this, if you need to exclude particular
+tags, you first need to determine the start and end of each of theses tags.
 While this deviates from the practice of defining (sub-)regions of the
 tree-structured document by path-select functions, it has the advantage
-that one can easily exclude regions that are not delinieated by markup,
+that one can easily exclude regions that are not delineated by markup,
 but merely but textual characteristics like, for examples, bracketed text.
 Let's see how this can be done, with out original XML-snippet::
 
@@ -1277,7 +1277,22 @@ Let's see how this can be done, with out original XML-snippet::
       in this sentence.
     </doc>
 
-TO BE CONTINUED... (examples for the exclusion of empty nodes!)
+.. note::
+   If one prefers to define include-regions instead of exclude-regions for markup,
+   the exclude-regions that must be passt to the :py:meth:`~standoff.ContentMapping.markup`
+   method can easily be derived from the input-regions by substracting the input regions
+   from the region covering the full string content (or any superset of it in case you'd
+   like to avoid a potentially costly :py:meth:`~nodetree.Node.strlen` call) with
+   the function :py:func:`~standoff.range_difference`. The list of exclude regions passed
+   to :py:meth:`~standoff.ContentMapping.markup` must be sorted and overlapping regions
+   be merged beforehand. Any list of ranges can be sorted and merged
+   with :py:func:`~standoff.sort_and_merge`. Likewise, the range-algebraic functions in
+   module :mod:`~standoff` expect sorted and merged input but are - under this condition -
+   guaranteed to yield sorted and merged results.
+
+In case empty nodes shall be excluded from the markup, it suffices to pass a zero-length
+range at the first character after the empty node.
+
 
 Error Messages
 --------------
