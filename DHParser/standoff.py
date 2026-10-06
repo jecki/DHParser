@@ -94,21 +94,21 @@ Range: TypeAlias = Tuple[int, int]
 
 def is_sorted_and_merged(rr: Sequence[Range]) -> bool:
     for i in range(1, len(rr)):
-        if rr[i][0] <= rr[i - 1][1]: return False
+        if rr[i][0] < rr[i - 1][1]: return False
     return True
 
 
 def never_empty(rr: Sequence[Range]) -> bool:
     if len(rr) <= 0: return False
     for r in rr:
-        if r[0] > r[1]: return False
+        if r[0] >= r[1]: return False
     return True
 
 
 def never_invalid(rr: Sequence[Range]) -> bool:
     if len(rr) <= 0: return False
     for r in rr:
-        if r[0] - r[1] > 1: return False
+        if r[0] > r[1]: return False
     return True
 
 
@@ -118,7 +118,7 @@ def sort_and_merge(R: List[Range]):
     a = 0
     b = 1
     while b < Rlen:
-        if R[b][0] <= R[a][1] + 1:
+        if R[b][0] <= R[a][1]:
             if R[a][1] <= R[b][1]:
                 # high(R[a]) := high(R[b])
                 R[a] = (R[a][0], R[b][1])
@@ -167,25 +167,25 @@ def range_difference(A: Sequence[Range], B: Sequence[Range]) \
             S = B[k]
 
     while k < lenB:
-        if S[0] <= M[1] and M[0] <= S[1]:
+        if S[0] < M[1] and M[0] < S[1]:
             if M[0] < S[0]:
-                result.append((M[0], S[0] - 1))
+                result.append((M[0], S[0]))
                 if S[1] < M[1]:
-                    M = (S[1] + 1, M[1])  # need to create a new object, here!
+                    M = (S[1], M[1])  # need to create a new object, here!
                     nextB()
                 elif nextA():
                     return result
             elif S[1] < M[1]:# need to create a new object, here!
-                M = (S[1] + 1, M[1])
+                M = (S[1], M[1])
                 nextB()
             elif nextA():
                 return result
-        elif M[1] < S[0]:
+        elif M[1] <= S[0]:
             result.append(M)
             if nextA():
                 return result
         else:
-            assert S[1] < M[0]
+            assert S[1] <= M[0]
             nextB()
     result.append(M)
     while i < lenA:
@@ -1016,13 +1016,13 @@ def content_regions(origin: Node,
     ranges = []
     for path, gap in sourcemapped_path(origin, select_func, ignore_func):
         a += gap
-        b = a + path[-1].strlen() - 1
-        if b + 1 >= a:
-            if ranges and a <= ranges[-1][1] + 1:
+        b = a + path[-1].strlen()
+        if b >= a:
+            if ranges and a <= ranges[-1][1]:
                 ranges[-1] = (ranges[-1][0], b)
             else:
                 ranges.append((a, b))
-            a = b + 1
+            a = b
     assert is_sorted_and_merged(ranges)
     return ranges
 
@@ -2067,9 +2067,9 @@ class ContentMapping:
             delta = self._fullcm_delta
         a = self.sourcemap.srcpos(start_pos)
         b = self.sourcemap.srcpos(end_pos)
-        rr = range_difference([(a, b - 1)], exclude_regions)
+        rr = range_difference([(a, b)], exclude_regions)
         if not rr:  return None
-        nl = [self._fullcm.add_markup(r[0] - delta, r[1] + 1 - delta, name,
+        nl = [self._fullcm.add_markup(r[0] - delta, r[1] - delta, name,
                                       attributes, **additional_attrs)
               for r in rr]
         if len(nl) == 1:  return nl[0]
