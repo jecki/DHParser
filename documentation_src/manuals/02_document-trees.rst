@@ -1291,7 +1291,25 @@ Let's see how this can be done, with out original XML-snippet::
    guaranteed to yield sorted and merged results.
 
 In case empty nodes shall be excluded from the markup, it suffices to pass a zero-length
-range at the first character after the empty node.
+range at the first character after the empty node (wihtin the content). Say, we have an
+xml document ``<doc>Die Stadt<lb/>München liegt in Bayern</doc>``. Here, the letter after
+the empty tag <lb/> is the "M" of the word "München". In the string
+content of this document "Die StadtMünchen liegt in Bayern", the "M" of München is the ninth
+letter. In order to avoid it being included in a newly markedup region the range (9, 9)
+must be added to the exclude region. The simplest way of obtaining all the regions where
+a particular type of tag is located is, again, the function :py:func:`~standoff.content_regions`,
+e.g. exlude = content_regions(tree, "lb"). Here is the full example:
+
+    >>> xml = "<doc>Die Stadt<lb/>München liegt in Bayern</doc>"
+    >>> tree = parse_xml(xml)
+    >>> cm = ContentMapping(tree)
+    >>> exclude = content_regions(tree, 'lb')
+    >>> print(exclude)
+    [(9, 9)]
+    >>> _ = cm.markup(0, 16, "X", exclude_regions=exclude)  # assignment just to mute output, here
+    >>> print(tree.as_xml(inline_tags={'doc'}))
+    <doc><X>Die Stadt</X><lb/><X>München</X> liegt in Bayern</doc>
+
 
 
 Error Messages

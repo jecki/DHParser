@@ -18,16 +18,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
+
 import copy
 import re
 
 from DHParser import parse_sxpr, split_tree, parse_xml, content_of, ContentMapping, pick_from_path, NO_PATH, Node, \
     TOKEN_PTYPE, flatten_sxpr, DIVISIBLES, sourcemapped_selection, LEAF_PATH, content_regions, ANY_NODE
 from DHParser.standoff import gen_chain_ID, deep_split, range_difference
-
-if __name__ == "__main__":
-    from DHParser.testing import runner
-    runner("", globals())
 
 
 class TestRangeAlgebra:
@@ -515,8 +513,9 @@ class TestContentSelectionMapping:
         xml = "<doc>Die Stadt<lb/>München liegt in Bayern</doc>"
         tree = parse_xml(xml)
         cm = ContentMapping(tree)
-        # print(content_regions(tree, 'lb'))
-        cm.markup(0, 16, "X", exclude_regions=[(9, 9)])
+        lb_regions = content_regions(tree, 'lb')
+        assert lb_regions == [(9, 9)]
+        cm.markup(0, 16, "X", exclude_regions=lb_regions)
         assert tree.as_xml(inline_tags={'doc'}) == \
                "<doc><X>Die Stadt</X><lb/><X>München</X> liegt in Bayern</doc>"
 
@@ -646,3 +645,8 @@ class TestSerializationMapping:
 
         k = sm.content_pos(path[-1], ser_pos, i - ser_pos, part)
         assert k == 6
+
+
+if __name__ == "__main__":
+    from DHParser.testing import runner
+    runner("", globals())
