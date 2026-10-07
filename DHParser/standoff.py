@@ -96,7 +96,7 @@ __all__ = ('Range',
 #######################################################################
 
 
-Range: TypeAlias = Tuple[cython.int, cython.int]
+Range: TypeAlias = Tuple[int, int]
 # represents the half-open interval r[0] <= n < r[1]
 
 
@@ -155,7 +155,6 @@ def range_union(A: Sequence[Range], B: Sequence[Range]) -> List[Range]:
     return R
 
 
-@cython.locals(i=cython.int, k=cython.int)
 def range_difference(A: Sequence[Range], B: Sequence[Range]) \
         -> List[Range]:
     """Returns the (sorted and merged) difference of two sequences of ranges: A - B.
@@ -996,7 +995,6 @@ def leaf_paths(criterion: PathSelector) -> PathMatchFunction:
     return leaf_match_func
 
 
-@cython.locals(gap=cython.int)
 def sourcemapped_path(origin: Node,
                       match_func: PathMatchFunction,
                       ignore_func: PathMatchFunction = NO_PATH) \
