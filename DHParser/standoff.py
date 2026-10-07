@@ -96,7 +96,7 @@ __all__ = ('Range',
 #######################################################################
 
 
-Range: TypeAlias = Tuple[int, int]
+Range: TypeAlias = Tuple[cython.int, cython.int]
 # represents the half-open interval r[0] <= n < r[1]
 
 
@@ -127,6 +127,7 @@ def is_sorted_and_merged(rr: Sequence[Range]) -> bool:
     return True
 
 
+@cython.locals(a=cython.int, b=cython.int)
 def sort_and_merge(R: List[Range]):
     """Sorts a sequence of ranges in order and merges all adjacent ranges."""
     Rlen = len(R)
@@ -154,6 +155,7 @@ def range_union(A: Sequence[Range], B: Sequence[Range]) -> List[Range]:
     return R
 
 
+@cython.locals(i=cython.int, k=cython.int)
 def range_difference(A: Sequence[Range], B: Sequence[Range]) \
         -> List[Range]:
     """Returns the (sorted and merged) difference of two sequences of ranges: A - B.
@@ -994,17 +996,18 @@ def leaf_paths(criterion: PathSelector) -> PathMatchFunction:
     return leaf_match_func
 
 
+@cython.locals(gap=cython.int)
 def sourcemapped_path(origin: Node,
                       match_func: PathMatchFunction,
                       ignore_func: PathMatchFunction = NO_PATH) \
-        -> Iterator[Tuple[Path, int]]:
+        -> Iterator[Tuple[Path, cython.int]]:
     """
     Similar to :py:func:`Node.select_path_if` but yields the path and the
     number of characters skipped since the last matched path was returned.
     Also, other than skip_func from select_path_if, ignore_func does not
     (still) yield the root-node if the ignored elements!
     """
-    gap: int = 0
+    gap = 0
 
     def recursive(path) -> Iterator[Tuple[Path, int]]:
         nonlocal match_func, ignore_func, gap
@@ -1027,6 +1030,7 @@ def sourcemapped_path(origin: Node,
         yield from recursive(path)
 
 
+@cython.locals(a=cython.int, b=cython.int, gap=cython.int)
 def content_regions(origin: Node,
                     select: PathSelector,
                     ignore: PathSelector = NO_PATH) -> List[Range]:
@@ -1051,6 +1055,7 @@ def content_regions(origin: Node,
     return ranges
 
 
+@cython.locals(pos=cython.int, offset=cython.int, gap=cython.int)
 def sourcemapped_selection(origin: Node,
                            select: PathSelector,
                            ignore: PathSelector = NO_PATH,
@@ -1246,7 +1251,7 @@ class ContentMapping:
         self._path_list: List[Path] = path_list
         self._path_str_cache: Dict[int, str] = dict()
         self._fullcm: Optional[ContentMapping] = None  # needed for markup with excluded regions
-        self._fullcm_delta = 0
+        self._fullcm_offset = 0
 
     def _generate_mapping(self, origin, stump: Path = []) \
             -> Tuple[str, List[int], List[Path]]:
@@ -2087,21 +2092,21 @@ class ContentMapping:
             while (si > 0 and len(self._path_list[si - 1]) > k
                    and self._path_list[si - 1][k] == ca):
                 si -= 1
-            delta = self._pos_list[si]
+            offset = self._pos_list[si]
             assert ca is not None
             if self._fullcm is None or self._fullcm.origin is not ca:
                 self._fullcm = ContentMapping(ca, select=LEAF_PATH, ignore=NO_PATH,
                                               greedy=self.greedy, divisibility=self.divisibility,
                                               chain_attr_name=self.chain_attr_name,
                                               auto_cleanup=True, sourcemap=False)
-                self._fullcm_delta = delta
+                self._fullcm_offset = offset
         else:
-            delta = self._fullcm_delta
+            offset = self._fullcm_offset
         a = self.sourcemap.srcpos(start_pos)
         b = self.sourcemap.srcpos(end_pos)
         rr = range_difference([(a, b)], exclude_regions)
         if not rr:  return None
-        nl = [self._fullcm.add_markup(r[0] - delta, r[1] - delta, name,
+        nl = [self._fullcm.add_markup(r[0] - offset, r[1] - offset, name,
                                       attributes, **additional_attrs)
               for r in rr]
         if len(nl) == 1:  return nl[0]
