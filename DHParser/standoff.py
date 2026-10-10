@@ -42,7 +42,7 @@ from __future__ import annotations
 import copy
 from enum import IntEnum
 from typing import Container, Tuple, Optional, List, Dict, Any, Iterator, \
-    Iterable, NamedTuple, Union, Sequence, cast, TypeAlias
+    Iterable, NamedTuple, Union, Sequence, cast
 
 from DHParser.nodetree import Node, Path, PathMatchFunction, PathSelector, \
     NodeMatchFunction, NodeSelector, flatten_sxpr, raw_strlen_of, strlen_of, \
@@ -50,7 +50,7 @@ from DHParser.nodetree import Node, Path, PathMatchFunction, PathSelector, \
     find_common_ancestor, pp_path, RawMappingType, \
     ANY_PATH, NO_PATH, LEAF_PATH, DIVISIBLES, TOKEN_PTYPE
 from DHParser.preprocess import SourceMap
-from DHParser.toolkit import deprecated, deprecation_warning
+from DHParser.toolkit import deprecated, deprecation_warning, TypeAlias
 
 try:
     import cython

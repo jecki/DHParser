@@ -22,6 +22,12 @@ limitations under the License.
 
 import copy
 import re
+import os
+import sys
+
+scriptpath = os.path.dirname(__file__) or '.'
+sys.path.append(scriptpath)
+sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
 from DHParser import parse_sxpr, split_tree, parse_xml, content_of, ContentMapping, pick_from_path, NO_PATH, Node, \
     TOKEN_PTYPE, flatten_sxpr, DIVISIBLES, sourcemapped_selection, LEAF_PATH, content_regions, ANY_NODE
@@ -448,7 +454,6 @@ class TestContentSelectionMapping:
         cm = ContentMapping(tree, ignore="klammer")
         exclude = content_regions(tree, 'klammer')
         cm.markup(a, b, 'X', exclude)
-        print(tree.as_sxpr())
         expected = parse_sxpr('''
             (doc
               (:Text "Klaus Störtebeker ")

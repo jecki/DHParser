@@ -10,9 +10,11 @@ LOGGING = 'LOGS'
 DEBUG = True
 TEST_DIRNAME = 'tests_grammar'
 
-scriptpath = os.path.dirname(__file__)
-if scriptpath not in sys.path:
-    sys.path.append(scriptpath)
+scriptpath = os.path.dirname(__file__) or '.'
+for path in (os.path.join('..', '..'), '.'):
+    fullpath = os.path.abspath(os.path.join(scriptpath, path))
+    if fullpath not in sys.path:
+        sys.path.append(fullpath)
 
 try:
     from DHParser.configuration import access_presets, set_preset_value, \
