@@ -1613,7 +1613,7 @@ class Grammar:
                 that serves the same function.
 
 
-    Tacing and debugging support:
+    Tracing and debugging support:
 
     The following parameters are needed by the debugging functions in module
     "trace.py". They should not be manipulated by the users of class
