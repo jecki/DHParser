@@ -1,3 +1,11 @@
+DHParser Version 1.9.8 (12.10.2026)
+..................................
+
+- nodetree module split into nodetree and contentmapping module "standoff"
+- standoff.ContentMapping.markup() now accepts exclude_regions parameter
+- bugfixes and more tests for ContentMapping.markup()
+
+
 DHParser Version 1.9.7 (29.6.2026)
 ..................................
 
@@ -15,6 +23,7 @@ DHParser Version 1.9.6 (20.4.2026)
   because it affects history-records and tracing
 - Cython-compatibility restored
 - various bug-fixes
+
 
 DHParser Version 1.9.5 (16.4.2026)
 ..................................

@@ -45,6 +45,17 @@ cythonize_modules = [
 
 def build(setup_kwargs={}):
     if has_cython:
+        # tell poetry how to cythonize stringview
+        ext_modules = cythonize(
+            cythonize_modules,
+            nthreads=0,
+            annotate=False,
+            compiler_directives={'subinterpreters_compatible': 'own_gil'}
+        )
+        setup_kwargs.update({
+            'ext_modules': ext_modules,
+            'zip_safe': False,
+        })
 
         # find path of DHParser-module
         scriptdir = os.path.dirname(os.path.abspath(os.path.realpath(__file__)))
