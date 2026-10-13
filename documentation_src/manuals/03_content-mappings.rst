@@ -25,6 +25,7 @@ that maps text positions within the pure string-content to the paths of
 the leaf-nodes to which they belong. This mapping can be thought of as a
 "string-view" on the tree::
 
+    >>> from DHParser.nodetree import *
     >>> from DHParser.standoff import *
     >>> sentence = parse_sxpr(
     ...     '(sentence (word "This") (blank " ") (word "is") (blank " ")'
@@ -128,6 +129,7 @@ path-extensions from this path that end in a leaf node will be selected.
 In contrast to the restricted content mapping, the search in the
 string-content of the entire tree yields::
 
+    >>> from DHParser.toolkit import printw
     >>> printw(list(re.finditer('München', tree.content)))
     [<re.Match object; span=(3, 10), match='München'>, <re.Match object; span=(10,
      17), match='München'>]
@@ -313,6 +315,7 @@ example, it could be broken up by a line break, e.g. "Stadt\\nMünchen".
 Now, let's try the more complicated case. Because we will try
 different configurations, we use copied of the tree "hard_xml"::
 
+    >>> import copy
     >>> hard_xml_copy = copy.deepcopy(hard_xml)
     >>> mapping = ContentMapping(hard_xml_copy)
     >>> match = re.search(r"Stadt\s+München", mapping.content)

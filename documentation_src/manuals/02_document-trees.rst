@@ -757,19 +757,27 @@ from a parsing-process, we have to do it manually::
 
     >>> _ = document.with_pos(0)
 
-Now, let's mark all ``word``-nodes that contain non-letter characters with an
-error-message. There should be plenty of them, because, earlier, we have
-replaced some of the words partially with "..."::
+Let's first add some artificial errors in form of illegal characters as
+they may happen during optical character recognition or a poor transcription
+of a printed text::
 
+    >>> for word in document.select('word'):
+    ...     word.result = word.content[:1] + '*' + word.content[1:]
+    >>> print(document.content)
+    T*his i*s B*uckingham P*alace
+
+Now, let's mark all ``word``-nodes that contain non-letter characters with an
+error-message::
     >>> import re
     >>> len([document.new_error(node, "word contains illegal characters")
     ...      for node in document.select('word')
     ...          if re.fullmatch(r'\w*', node.content) is None])
-    3
+    4
     >>> for error in document.errors_sorted:  print(error)
     1:1: Error (1000): word contains illegal characters
     1:6: Error (1000): word contains illegal characters
-    1:11: Error (1000): word contains illegal characters
+    1:9: Error (1000): word contains illegal characters
+    1:20: Error (1000): word contains illegal characters
 
 The format of the string representation of Error-objects resembles that of
 compilers and is understood by many Text-Editors which mark the errors in the
