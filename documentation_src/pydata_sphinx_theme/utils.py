@@ -95,16 +95,16 @@ def _update_and_remove_templates(
     Args:
         app: Sphinx application passed to the html page context
         context: The html page context; dictionary of values passed to the templating engine
-        templates: A list of template names, or a string of comma separated template names
+        templates: A list of template names, or a string of comma-separated template names
         section: Name of the template section where the templates are to be rendered. Valid
             section names include any of the ``sphinx`` or ``html_theme_options`` that take templates
-            or lists of templates as arguments, for example: ``theme_navbar_start``,
+            or lists of templates as arguments, for example ``theme_navbar_start``,
             ``theme_primary_sidebar_end``, ``theme_secondary_sidebar_items``, ``sidebars``, etc. For
             a complete list of valid section names, see the source for
             :py:func:`pydata_sphinx_theme.update_and_remove_templates` and
             :py:func:`pydata_sphinx_theme.utils.set_secondary_sidebar_items`, both of which call
             this function.
-        templates_skip_empty_check: Names of any templates which should never be removed from the list
+        templates_skip_empty_check: Names of any templates that should never be removed from the list
             of filtered templates returned by this function. These templates aren't checked if they
             render empty, which can save time if the template is slow to render.
 

@@ -17,7 +17,7 @@
 
 
 """
-Module ``toolkit`` contains utility functions that are needed across
+Module "toolkit" contains utility functions that are needed across
 several of the other DHParser-Modules Helper functions that are not
 needed in more than one module are best placed within that module and
 not in the toolkit-module. Acceptable exceptions to this rule are
@@ -1084,7 +1084,8 @@ def char_code(unicode_ch) -> str:
 
 
 def ascii_xml_entity(ch) -> str:
-    r"""Converts a character to an XML entity. Example::
+    r"""
+    Converts a character to an XML entity. Example::
 
         >>> print(ascii_xml_entity('\r'))
         &#x0d;
@@ -1093,7 +1094,8 @@ def ascii_xml_entity(ch) -> str:
 
 
 def ascii_char_code(ch) -> str:
-    r"""Converts a character with ord(ch) < 256 to char-code. Example::
+    r"""
+    Converts a character with ord(ch) < 256 to char-code. Example::
 
         >>> print(ascii_char_code('a'))
         \x61

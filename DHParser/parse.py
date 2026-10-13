@@ -1387,7 +1387,7 @@ class Grammar:
     ways of connecting parsers to grammar objects: Either by passing
     the root parser object to the constructor of a Grammar object
     ("direct instantiation"), or by assigning the root parser to the
-    class variable "root__" of a descendant class of class Grammar.
+    class variable "root\__" of a descendant class of class Grammar.
 
     Example for direct instantiation of a grammar::
 
@@ -1439,11 +1439,11 @@ class Grammar:
     field "parser.pname" contains the variable name after instantiation
     of the Grammar class. The parser will nevertheless remain anonymous
     with respect to the tag names of the nodes it generates, if its name
-    is included in the "disposable__" set or, if "disposable__"
+    is included in the "disposable\__" set or, if "disposable\__"
     has been defined by a regular expression, matched by that regular expression.
     If one and the same parser is assigned to several class variables
     such as, for example, the parser "expression" in the example above,
-    which is also assigned to "root__", the first name sticks.
+    which is also assigned to "root\__", the first name sticks.
 
     Grammar objects are callable. Calling a grammar object with a UTF-8
     encoded document initiates the parsing of the document with the
@@ -1528,7 +1528,7 @@ class Grammar:
                 root parser. The set of parsers is collected during instantiation.
 
     :ivar resume_parsers\__: A set of parsers that appear either in a resume-rule
-                or a skip-rule. This set is a subset of "unconnected_parsers__"
+                or a skip-rule. This set is a subset of "unconnected_parsers\__"
 
     :ivar _dirty_flag\__:  A flag indicating that the Grammar has been called at
                 least once so that the parsing-variables need to be reset
@@ -1549,7 +1549,7 @@ class Grammar:
 
     :ivar tree\__: The root-node of the parsing tree. This variable is available
                for error-reporting already during parsing  via
-               "self.grammar.tree__.add_error", but it references the full
+               "self.grammar.tree\__.add_error", but it references the full
                parsing tree only after parsing has been finished.
 
     :ivar _reversed\__:  the same text in reverse order - needed by the "Lookbehind"-
@@ -1571,7 +1571,7 @@ class Grammar:
                 location < last_rb__loc__) then a rollback of all variable
                 changing operations is necessary that occurred after the
                 location to which the parser backtracks. This is done by
-                calling method :py:meth:`rollback_to__`(location).
+                calling method :py:meth:`rollback_to__` (location).
 
     :ivar ff_pos\__: The "farthest fail", i.e. the highest location in the
                 document where a parser failed. This gives a good indication
@@ -1579,7 +1579,7 @@ class Grammar:
                 a text.
 
     :ivar ff_parser\__: The parser that failed at the "farthest fail"-location
-                "ff_pos__"
+                "ff_pos\__"
 
     :ivar suspend_memoization\__: A flag that if set suspends memoization of
                 results from returning parsers. This flag is needed by the
@@ -1596,7 +1596,7 @@ class Grammar:
                 of the parser) and zero mapped to the Grammar-object under constrcution.
                 This allows assigning the object variables to the duplicated parser objects
                 as well as assigning the grammar object to all parsers very early in the
-                construction phase. Before the constructor returns memo__ will be set to
+                construction phase. Before the constructor returns, memo\__ will be set to
                 None and it will never be used anymore, afterwards.
 
 
@@ -1725,7 +1725,7 @@ class Grammar:
 
         After the call of this method symbol.pname == "symbol" holds.
         Parser names starting or ending with a double underscore like
-        "root__" will be ignored. See :py:func:`sane_parser_name`
+        "root\__" will be ignored. See :py:func:`sane_parser_name`
 
         This is done only once, upon the first instantiation of the
         grammar class!
@@ -3020,7 +3020,7 @@ class Whitespace(RegExp):
         or trailing whitespace as well, not just the comment.
 
     Caveat 2: If there are several comments, possibly interspersed with whitespace,
-        there will still only one flat node named "commet__" be produced that
+        there will still only one flat node named "comment\__" be produced that
         contains all whitespace and all comments in the sequence.
 
     Example::
@@ -4022,7 +4022,7 @@ class OneOrMore(UnaryParser):
 
 
 def to_interleave(parser: Parser) -> Parser:
-    """Converts a :py:clas:`Counted`-parser into an :py:class:`Interleave`-parser. Any other
+    """Converts a :py:class:`Counted`-parser into an :py:class:`Interleave`-parser. Any other
     parser is simply passed through."""
     if isinstance(parser, Counted):
         return Interleave(cast(Counted, parser).parser,

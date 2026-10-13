@@ -1401,6 +1401,7 @@ class ContentMapping:
 
     def get_path(self, pos: int, left_biased: bool = False) -> Path:
         """Returns the path for a given position in the string content.
+
         :param pos: the position in the string-content for which the path and
             offset should be determined.
         :param left_biased: yields the location after the end of the previous
@@ -1816,7 +1817,7 @@ class ContentMapping:
         nearest common ancestor of ``start_pos`` and ``end_pos``.
 
         Use of this method is discouraged. Instead, the use of the more general method
-        :pa:meth:`markup` is recommended for which this special case method merely
+        :py:meth:`markup` is recommended for which this special case method merely
         is a building block - just like the various top-level markup-methods.
 
         :param start_pos:  The string-position of the first character to be marked

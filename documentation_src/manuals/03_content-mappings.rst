@@ -588,3 +588,47 @@ e.g. exlude = content_regions(tree, "lb"). Here is the full example:
     >>> _ = cm.markup(0, 16, "X", exclude_regions=exclude)  # assignment just to mute output, here
     >>> print(tree.as_xml(inline_tags={'doc'}))
     <doc><X>Die Stadt</X><lb/><X>München</X> liegt in Bayern</doc>
+
+
+*Classes and Functions-Reference*
+---------------------------------
+
+The full documentation of all classes and functions can be found in module
+:py:mod:`DHParser.standoff`. The following table of contents lists the most
+important of these:
+
+
+class ContentMapping
+^^^^^^^^^^^^^^^^^^^^
+
+ContentMapping represents a path-mapping of the string-content of
+all or a specific selection of the leave-nodes of a tree. A
+content-mapping is an ordered mapping of the first text position of
+every (selected) leaf-node to the path of this node.
+
+The class provides methods for mapping string positions to paths and
+offsets (relative to the beginning of the leaf-node of the path)
+
+* :py:func:`~standoff.content_regions`: Returns a list of string-regions,
+    i.e. half-open intervalls. for given path-selectors.
+
+* :py:class:`~standoff.ContentMapping`: Mapping the tree to its string-content
+
+    * :py:meth:`~standoff.ContentMapping.get_path_and_offset`:
+      Maps positions in string-content of the ContentMapping to the
+      leaf-path into which they fall
+
+    * :py:meth:`~standoff.ContentMapping.iterate_paths`:
+      Yields all paths from
+      position ``start_pos`` up to and including position ``end_pos``.
+
+    * :py:meth:`~standoff.ContentMapping.insert_node`:
+      Inserts a node at a
+      particular text-position.
+
+    * :py:meth:`~standoff.ContentMapping.markup`:
+       Adds markup (i.e. an element) to a particular stretch of text.
+
+
+
+.. _mixed content: https://www.w3.org/TR/xml/#sec-mixed-content

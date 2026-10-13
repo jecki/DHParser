@@ -768,6 +768,7 @@ of a printed text::
 
 Now, let's mark all ``word``-nodes that contain non-letter characters with an
 error-message::
+
     >>> import re
     >>> len([document.new_error(node, "word contains illegal characters")
     ...      for node in document.select('word')
