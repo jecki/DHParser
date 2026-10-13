@@ -4,7 +4,8 @@ scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..', '..')))
 scriptpath = os.path.abspath(scriptpath)
 
-from DHParser.nodetree import Node, ContentMapping, parse_xml, find_common_ancestor, TOKEN_PTYPE, pp_path
+from DHParser.nodetree import Node, parse_xml, find_common_ancestor, TOKEN_PTYPE, pp_path
+from DHParser.standoff import ContentMapping, content_regions
 
 
 from tools import pull_out
@@ -99,13 +100,9 @@ def markup(before: str, replacements: list[dict[str, str]], exclude=select_note_
         if typ: attrs['type'] = typ
         attrs['target'] = target
 
-        cm.markup(a, b, 'ref', attributes = attrs)   # <=== the most important part!
-
-        smallest_subtree, _ = find_common_ancestor(cm.path(cm.get_path_index(a)),
-                                                   cm.path(cm.get_path_index(b)))
-
-        for note_path in smallest_subtree.select_path(exclude):
-            pull_out(note_path)
+        cm.markup(a, b, 'ref',
+                  exclude_regions=content_regions(tree, exclude),
+                  attributes = attrs)   # <=== the most important part!
 
     return tree.as_xml(inline_tags={'cell'}, empty_tags={'lb'})
 

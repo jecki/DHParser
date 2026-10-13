@@ -29,9 +29,10 @@ scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(scriptpath)
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 
-from DHParser import parse_sxpr, split_tree, parse_xml, content_of, ContentMapping, pick_from_path, NO_PATH, Node, \
-    TOKEN_PTYPE, flatten_sxpr, DIVISIBLES, sourcemapped_selection, LEAF_PATH, content_regions, ANY_NODE
-from DHParser.standoff import gen_chain_ID, deep_split, range_difference
+from DHParser.nodetree import parse_sxpr, parse_xml, content_of, pick_from_path, NO_PATH, Node, \
+    TOKEN_PTYPE, flatten_sxpr, DIVISIBLES, LEAF_PATH, ANY_NODE, create_path_match_function, pp_path
+from DHParser.standoff import gen_chain_ID, deep_split, range_difference, leaf_paths, sourcemapped_path, sourcemapped_selection, \
+    ContentMapping, split_tree, content_regions
 
 
 class TestRangeAlgebra:
@@ -416,6 +417,24 @@ class TestContentSelectionMapping:
         i = content.find('den HSV')
         k = sm.map(i).pos
         assert full_content[k:k+len('den HSV')] == 'den HSV'
+
+    def test_source_mapped_path(self):
+        xml = "<cell>Dagegen D. 18 § 44<note type=\"comment\" n=\"109\">Das Zitat stammt aus § 4.</note> eod.</cell>"
+        tree = parse_xml(xml)
+        select_f = leaf_paths(LEAF_PATH)
+        ignore_f = create_path_match_function('note')
+        for path, gap in sourcemapped_path(tree, select_f, ignore_f):
+            assert not any(nd.name == 'note' for nd in path)
+        content, pos_list, path_list, source_map = sourcemapped_selection(tree, LEAF_PATH, 'note')
+        assert content == 'Dagegen D. 18 § 44 eod.'
+        assert pos_list[0] == 0 and len(pos_list) == 2 and pos_list[1] == len('Dagegen D. 18 § 44')
+        assert len(path_list) == len(pos_list) == 2
+        assert source_map.positions == [0, len('Dagegen D. 18 § 44'), len(content) + 1]
+        skipped_len = len('Das Zitat stammt aus § 4.')
+        assert source_map.offsets == [0, skipped_len, skipped_len]
+        cm = ContentMapping(tree, ignore='note')
+        assert cm.content == 'Dagegen D. 18 § 44 eod.'
+
 
     def test_markup_with_exclusion(self):
         # HINWEIS: Die Exclude-Bereiche beziehen sich immer auf den vollen

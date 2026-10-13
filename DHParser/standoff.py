@@ -1011,20 +1011,27 @@ def sourcemapped_path(origin: Node,
         nonlocal match_func, ignore_func, gap
         for child in path[-1].children:
             child_path = path + [child]
-            if match_func(child_path):
+            if ignore_func(child_path) or not match_func(child_path):
+                gap += child.strlen()
+            else:
                 yield child_path, gap
                 gap = 0
-            elif child._children:
-                if ignore_func(child_path):
-                    gap += child.strlen()
-                else:
-                    yield from recursive(child_path)
-            else:
-                gap += child.strlen()
+
+            #
+            # if match_func(child_path):
+            #     yield child_path, gap
+            #     gap = 0
+            # elif child._children:
+            #     if ignore_func(child_path):
+            #         gap += child.strlen()
+            #     else:
+            #         yield from recursive(child_path)
+            # else:
+            #     gap += child.strlen()
 
     path: List[Node] = [origin]
-    if match_func(path):  yield path, 0
     if not ignore_func(path):
+        if match_func(path):  yield path, 0
         yield from recursive(path)
 
 
