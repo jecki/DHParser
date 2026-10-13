@@ -8,9 +8,6 @@ from DHParser.nodetree import Node, parse_xml, find_common_ancestor, TOKEN_PTYPE
 from DHParser.standoff import ContentMapping, content_regions
 
 
-from tools import pull_out
-
-
 EXAMPLES_FILE = "VerlinkungsBeispiele.mwg.xml"
 
 
@@ -45,32 +42,10 @@ DIVISIBILITY = {
 IGNORE = {}  # {'note'}
 
 
-def pull_out(path):
-    """A variant of DHParser.transform.pull_up that does not keep the
-    surrounding markup intact."""
-    node = path[-1]
-    if len(path) <= 2:
-        return
-    parent = path[-2]
-    ur_parent = path[-3]
-    i = parent.index(node)
-    i2 = ur_parent.index(parent)
-    children = ur_parent._children
-    inlay = []
-    if i > 0:
-        inlay.append(Node(parent.name, parent[:i]).with_pos(parent._pos).with_attr(parent.attr))
-    inlay.append(node)
-    if i < len(parent.children) - 1:
-        inlay.append(Node(parent.name, parent[i + 1:]).with_pos(parent[i + 1]._pos).with_attr(parent.attr))
-    ur_parent._set_result(children[:i2] + tuple(inlay) + children[i2 + 1:])
-
-
 def select_note_inside_app(path) -> bool:
     if len(path) < 3:
         return False
-    if (path[-1].name == 'note' and
-        path[-2].name == 'ref'
-            and any(nd.name == 'app' for nd in path)):
+    if (path[-1].name == 'note' and any(nd.name == 'app' for nd in path)):
         return True
     return False
 
@@ -93,16 +68,15 @@ def markup(before: str, replacements: list[dict[str, str]], exclude=select_note_
         typ = replacement.get('type', '')
         ignore = set(replacement.get('ignore', "").split(','))
         cm = ContentMapping(tree, ignore=ignore, divisibility=DIVISIBILITY)
-        a = cm.content.find(ref)
+        content = cm.content
+        a = content.find(ref)
         assert a >= 0, f'{ref}\n{cm.content}'
         b = a + len(ref)
         attrs = dict()
         if typ: attrs['type'] = typ
         attrs['target'] = target
-
-        cm.markup(a, b, 'ref',
-                  exclude_regions=content_regions(tree, exclude),
-                  attributes = attrs)   # <=== the most important part!
+        excl_regs = content_regions(tree, exclude)
+        cm.markup(a, b, 'ref', exclude_regions=excl_regs, attributes = attrs)   # <=== the most important part!
 
     return tree.as_xml(inline_tags={'cell'}, empty_tags={'lb'})
 

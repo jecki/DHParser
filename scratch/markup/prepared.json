@@ -136,7 +136,8 @@
   },
   {
     "before": "<cell><app n=\"h\"><lem>publizianische</lem><note><pb n=\"185\"></pb>A: <hi rend=\"serif\">publiziarische</hi></note></app> Edikt</cell>",
-    "after": "<cell><ref type=\"subj\" target=\"publizianisches_Edikt_S01076\"><app n=\"h\"><lem>publizianische</lem><note><pb n=\"185\"></pb>A: <hi rend=\"serif\">publiziarische</hi></note></app> Edikt</ref></cell>",
+    "after": "<cell><app n=\"h\"><lem><ref type=\"subj\" target=\"publizianisches_Edikt_S01076\">publizianische</ref></lem><note><pb n=\"185\"></pb>A: <hi rend=\"serif\">publiziarische</hi></note></app><ref type=\"subj\" target=\"publizianisches_Edikt_S01076\"> Edikt</ref></cell>",
+    "after_mistaken": "<cell><ref type=\"subj\" target=\"publizianisches_Edikt_S01076\"><app n=\"h\"><lem>publizianische</lem><note><pb n=\"185\"></pb>A: <hi rend=\"serif\">publiziarische</hi></note></app> Edikt</ref></cell>",
     "replacements": [
       {
         "ref": "publizianischeA: publiziarische Edikt",
@@ -169,7 +170,8 @@
   },
   {
     "before": "<cell><app n=\"e\"><lem>ζυ(γά</lem><note>A: <hi rend=\"serif\"><hi rend=\"greek\">ζ(υγά</hi></hi></note></app></cell>",
-    "after": "<cell><app n=\"e\"><ref type=\"subj\" target=\"znga_S01501\"><lem>ζυ(γά</lem><note>A: <hi rend=\"serif\"><hi rend=\"greek\">ζ(υγά</hi></hi></note></ref></app></cell>",
+    "after": "<cell><app n=\"e\"><lem><ref type=\"subj\" target=\"znga_S01501\">ζυ(γά</ref></lem><note>A: <hi rend=\"serif\"><hi rend=\"greek\">ζ(υγά</hi></hi></note></app></cell>",
+    "after_mistaken": "<cell><app n=\"e\"><ref type=\"subj\" target=\"znga_S01501\"><lem>ζυ(γά</lem><note>A: <hi rend=\"serif\"><hi rend=\"greek\">ζ(υγά</hi></hi></note></ref></app></cell>",
     "replacements": [
       {
         "ref": "ζυ(γάA: ζ(υγά",
@@ -180,7 +182,8 @@
   },
   {
     "before": "<cell>D. 52 pr. d[e] a[ctionibus]<app n=\"o\"><lem>e[mpti]</lem><note><pb n=\"336\"></pb>A: <hi rend=\"serif\">o.</hi></note></app> v[enditi]</cell>",
-    "after": "<cell><ref type=\"bibl\" target=\"Digesten_L0082\">D. 52 pr. d[e] a[ctionibus]<app n=\"o\"><lem>e[mpti]</lem><note><pb n=\"336\"></pb>A: <hi rend=\"serif\">o.</hi></note></app> v[enditi]</ref></cell>",
+    "after": "<cell><ref type=\"bibl\" target=\"Digesten_L0082\">D. 52 pr. d[e] a[ctionibus]</ref><app n=\"o\"><ref type=\"bibl\" target=\"Digesten_L0082\"><lem>e[mpti]</lem></ref><note><pb n=\"336\"></pb>A: <hi rend=\"serif\">o.</hi></note></app><ref type=\"bibl\" target=\"Digesten_L0082\"> v[enditi]</ref></cell>",
+    "after_mistaken": "<cell><ref type=\"bibl\" target=\"Digesten_L0082\">D. 52 pr. d[e] a[ctionibus]<app n=\"o\"><lem>e[mpti]</lem><note><pb n=\"336\"></pb>A: <hi rend=\"serif\">o.</hi></note></app> v[enditi]</ref></cell>",
     "replacements": [
       {
         "ref": "D. 52 pr. d[e] a[ctionibus]e[mpti]A: o. v[enditi]",

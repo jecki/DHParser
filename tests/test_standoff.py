@@ -418,7 +418,13 @@ class TestContentSelectionMapping:
         k = sm.map(i).pos
         assert full_content[k:k+len('den HSV')] == 'den HSV'
 
-    def test_source_mapped_path(self):
+    def test_source_mapped_path_1(self):
+        tree = parse_xml('<doc><p>In München<footnote><em>München</em> is the '
+            'German name of the city of Munich</footnote> is a Hofbräuhaus</p></doc>')
+        for path, gap in sourcemapped_path(tree, create_path_match_function('footnote'), NO_PATH):
+            assert any(nd.name == 'footnote' for nd in path)
+
+    def test_source_mapped_path_2(self):
         xml = "<cell>Dagegen D. 18 § 44<note type=\"comment\" n=\"109\">Das Zitat stammt aus § 4.</note> eod.</cell>"
         tree = parse_xml(xml)
         select_f = leaf_paths(LEAF_PATH)
@@ -434,7 +440,6 @@ class TestContentSelectionMapping:
         assert source_map.offsets == [0, skipped_len, skipped_len]
         cm = ContentMapping(tree, ignore='note')
         assert cm.content == 'Dagegen D. 18 § 44 eod.'
-
 
     def test_markup_with_exclusion(self):
         # HINWEIS: Die Exclude-Bereiche beziehen sich immer auf den vollen

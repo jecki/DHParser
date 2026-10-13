@@ -157,7 +157,7 @@ TEST_CODE =   {
   }
 
 
-def test_with_lxml(snippet, ref, target, typ) -> str:
+def tst_with_lxml(snippet, ref, target, typ) -> str:
     root = etree.XML(snippet)
     result = mark_text(root = root,
                        elements = './/cell',
@@ -171,9 +171,9 @@ def test_with_lxml(snippet, ref, target, typ) -> str:
 
 
 if __name__ == '__main__':
-    after = test_with_lxml(TEST_CODE['before'],
-                           TEST_CODE['replacements'][0]['ref'],
-                           TEST_CODE['replacements'][0]['target'],
+    after = tst_with_lxml(TEST_CODE['before'],
+                          TEST_CODE['replacements'][0]['ref'],
+                          TEST_CODE['replacements'][0]['target'],
                           TEST_CODE['replacements'][0]['type'])
     print(after.decode('utf-8'))
     # process_example()

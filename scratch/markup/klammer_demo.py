@@ -11,15 +11,13 @@ if abspath.find('/DHParser/') >= 0 or abspath.find('\\DHParser\\') >= 0:
 scriptpath = abspath
 
 try:
-    from DHParser.nodetree import (Node, ContentMapping, parse_xml, find_common_ancestor, TOKEN_PTYPE,
-                                   pp_path, PathMatchFunction, BRANCH_PATH)
-    from DHParser.transform import (merge_adjacent, reduce_single_child, replace_by_children,
-                                    merge_leaves, traverse)
+    from DHParser.nodetree import Node, parse_xml, find_common_ancestor, TOKEN_PTYPE, \
+            pp_path, PathMatchFunction, BRANCH_PATH
+    from DHParser.standoff import ContentMapping, content_regions
+    from DHParser.transform import merge_adjacent, reduce_single_child, replace_by_children, \
+            merge_leaves, traverse
 except ImportError as e:
     raise ImportError("Bitte installiere DHParser mit python3 -m pip install DHParser!")
-
-
-from tools import pull_out
 
 
 ###### Hier geht's los: ################################################
@@ -99,16 +97,12 @@ def demo_3():
     # Erst mal ContentMapping neu bauen. Diesmal soll der eingeklammerte Text nicht
     # im content des ContentMappings auftauchen
     cm = ContentMapping(tree, ignore={'klammer'})
+    excl_regs = content_regions(tree, 'klammer')
     for m in such_rx_2.finditer(cm.content):
-        cm.markup(m.start(), m.end(), 'wichtig')
+        cm.markup(m.start(), m.end(), 'wichtig', exclude_regions=excl_regs)
     print(tree.as_xml(inline_tags={'document'}), '\n')  # einschließlich aller in <document> enthaltenen Tags
 
     print('Schritt 3: Nimm die eingeklammerten Bereiche von der <wichtig>-Markierung aus. ')
-    # Dieser Not-Algorithmus funktionier nur, wenn zwischen dem <wichtig>-Tag und dem '
-    # '<klammer>-Tag keine weiteren Schichten im XML liegen!'
-    # for p in tree.select_path('klammer'):
-    #     pull_out(p)
-    traverse(tree, {'klammer': pull_out})
     print(tree.as_xml(inline_tags={'document'}), '\n')
 
     print('Schritt 4: Entfernung der nicht mehr benötigten <klammer>-tags!')
@@ -137,15 +131,12 @@ def demo_4():
     print('Schritt 2: Suche "gründete 1401 (in Hamburg) den HSV" und markiere den gesamten Bereich '
           'einschließlich der beim suchen ignorierten eingeklammerten Textteile!')
     # kein Neubau des ContentMappings erforderlich!
+    excl_regs = content_regions(tree, 'klammer')
     for m in such_rx_1.finditer(cm.content):
-        cm.markup(m.start(), m.end(), 'wichtig')
+        cm.markup(m.start(), m.end(), 'wichtig', exclude_regions=excl_regs)
     print(tree.as_xml(inline_tags={'document'}), '\n')  # einschließlich aller in <document> enthaltenen Tags
 
     print('Schritt 3: Nimm die eingeklammerten Bereiche von der <wichtig>-Markierung aus. ')
-    # Dieser Not-Algorithmus funktioniert nur, wenn zwischen dem <wichtig>-Tag und dem '
-    # '<klammer>-Tag keine weiteren Schichten im XML liegen!'
-    for p in tree.select_path('klammer'):
-        pull_out(p)
     print(tree.as_xml(inline_tags={'document'}), '\n')
 
     print('Schritt 4: Entfernung der nicht mehr benötigten <klammer>-tags!')
