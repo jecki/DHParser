@@ -20,11 +20,11 @@ Umfang
 
 lark ist vor allem ein Parser-Generator, DHParser ist ein vollständiges ("full-stack") DSL-Entwicklungs-Rahmenwerk, das über den Parser-Generator und Hilfsfunktionen bei der Syntax-Baum-Transformation (die bei DHParser vegleichsweise [umfangreicher ausgebaut](https://dhparser.readthedocs.io/en/latest/Overview.html#an-internal-mini-dsl-for-ast-transformation) sind) hinaus noch folgende Komponenten anbietet:
 
-1. Ein Test-Rahmenwerk, das die Test-getriebene Grammatik-Entwicklung erleichtert. [-> link](https://dhparser.readthedocs.io/en/latest/manuals/05_testing.html)
+1. Ein Test-Rahmenwerk, das die Test-getriebene Grammatik-Entwicklung erleichtert. [-> link](https://dhparser.readthedocs.io/en/latest/manuals/06_testing.html)
 
 2. Einen Post-Mortem-Debugger für den Parser, der auch automatische für alle gescheiterten Tests ausgelöst wird. [-> link](https://dhparser.readthedocs.io/en/latest/Overview.html#debugger-included)
 
-3. Ein Rahmenwerk für einfache oder verzweigte Datentransformations-Fließbänder. [-> link](https://dhparser.readthedocs.io/en/latest/manuals/04_postprocessing.html#processing-pipelines)
+3. Ein Rahmenwerk für einfache oder verzweigte Datentransformations-Fließbänder. [-> link](https://dhparser.readthedocs.io/en/latest/manuals/05_postprocessing.html#processing-pipelines)
 
 4. Unterstüzung für die Fehlerbehandlung in einer DSL. [-> link](https://dhparser.readthedocs.io/en/latest/manuals/01_EBNF-grammars.html#error-catching)
 
