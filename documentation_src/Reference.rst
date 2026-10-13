@@ -449,6 +449,13 @@ Module ``nodetree``
 .. automodule:: nodetree
    :members:
 
+Module ``standoff``
+-------------------
+
+.. automodule:: standoff
+   :members:
+
+
 Module ``transform``
 --------------------
 
