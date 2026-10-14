@@ -5,6 +5,12 @@
 
 .. default-domain::py
 
+.. image:: DHParser_Logo_192.png
+   :width: 192px
+   :height: 192px
+   :align: center
+
+
 Welcome to DHParser's documentation!
 ====================================
 

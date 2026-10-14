@@ -68,7 +68,7 @@ pytest = ["pytest (>=9.0) ; python_version >= '3.10'"]
 
 
 [tool.poetry]
-build = "build.py"
+# build = "build_docs.py"
 requires-poetry = ">=2.0"
 packages = [ { include = "DHParser" } ]
 include = [

@@ -105,6 +105,8 @@ add_module_names = False
 #
 html_theme = 'sphinx_book_theme'  # 'sphinxdoc'  # 'alabaster'  # 'sphinx_rtd_theme'
 # html_theme_path = ['sphinx_book_theme/theme/sphinx_book_theme']
+html_logo = "../DHParser/assets/DHParser_Logo_128.png"
+html_favicon = "../DHParser/assets/DHParser_Logo_32.png"
 html_theme_options = {
   "repository_url": "https://gitlab.lrz.de/badw-it/DHParser",
   "repository_branch": "master",

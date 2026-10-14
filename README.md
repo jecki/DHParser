@@ -1,119 +1,18 @@
-DHParser
-========
+<div style="text-align:center;">
+<img src="DHParser/assets/DHParser_Logo_192.png" alt="DHParser Logo" style="width:192px; height:192px;" />
+</div>
+
 
 ![](https://img.shields.io/pypi/v/DHParser) 
 ![](https://img.shields.io/pypi/status/DHParser)
 ![](https://img.shields.io/pypi/l/DHParser)
 ![](https://img.shields.io/pypi/pyversions/DHParser)
 
-DHParser - Rapid prototyping and testing of formal grammars and 
-domain specific languages (DSL) in the Digital Humanities.
-See https://dhparser.readthedocs.io/en/latest/
+**_DHParser_** is a full-stack framework for rapid prototyping and testing 
+of formal grammars (EBNF) and domain specific languages (DSL).
+See https://dhparser.readthedocs.io/en/latest/ for the full documentation.
 
-This software is open source software under the Apache 2.0-License (see section License, below).
-
-Copyright 2016-2026  Eckhart Arnold, Bavarian Academy of Sciences and Humanities
-
-
-Latest News
------------
-
-- Finally, full left recursion support via an adapted version of [Luke Hutchinson's squirrel parser](https://github.com/lukehutch/squirrelparser)!
-- support for the conversion between different flavors of the EBNF-syntax.
-- new projects include the skeleton for an App to compile snippets with a GUI.
-
-Purpose
--------
-
-DHParser is a parser full-stack-framwork for developing grammars, parsers and 
-domain specific languages. In particular, DHParser supports
-
-1. Developing *parsers for domain specific languages*, either existing
-   languages like, LaTeX, or newly created DSLs, like the
-   [Medieval-Latin-Dictionary-DSL](https://gitlab.lrz.de/badw-it/mlw-dsl-oeffentlich).
-
-   Typically, these languages are strict formal languages with a context free grammar. 
-   (In cases where this does not hold like TeX, it is often still possible to describe a 
-   reasonably large subset of the formal language with a context free grammar.) 
-
-2. Developing *parsers for semi-structured or informally structured
-   text-data*.    
-
-   This kind of data is typically what you get when retro-digitizing
-   textual data like printed bibliographies, or reference works or
-   dictionaries. Often such works can be captured with a formal 
-   grammar, but these grammars require a lot of iterations and tests
-   to develop and usually become much more ramified than the grammars
-   of well-designed formal languages. Thus, DHParser's elaborated
-   testing and debugging-framework for grammars.
-
-   (See Florian Zacherl's [Dissertation on the retro-digitalization of dictionary data](https://www.kit.gwi.uni-muenchen.de/?band=82908&v=1)
-   for an interesting case study. I am confident that the development of
-   a suitable formal grammar is much easier with an elaborated framework
-   like DHParser than with the PHP-parsing-expression-grammar-kit that
-   Florian Zacherl has used.)
-
-3. Developing *processing pipelines for tree-structured data*.
-
-   In many digital humanities applications one wants to produce
-   different forms of output (say, printed, online-human-readable,
-   online-machine-readable) from one and the same source of data.
-   Therefore, the parsing stage (if the data source is structured
-   text-data) will be followed by more or less intricate bifurcated
-   processing pipelines.
-   
-
-Features
---------
-
-* Memoizing packrat-parser based on Parsing Expression Grammars. This
-  means: 
-  
-    - Linear parsing time guaranteed, not matter how complex the grammar.
-
-    - Any EBNF-grammar supported, including left-recursive grammars 
-      (supported via "seed and grow"-algorithm - experimental support 
-      for Luke Hutchinson's squirrel parser LR-algorithm.)
-
-    - Unlimited look ahead and look behind.
-
-* [Macros](https://dhparser.readthedocs.io/en/latest/manuals/01_EBNF-grammars.html#macros)
-  to avoid code-repetition within grammars
-
-* [Declarative tree-transformations](https://dhparser.readthedocs.io/en/latest/manuals/03_AST-transformation.html#declarative-tree-transformation)
-  for post-processing syntax-trees
-
-* Unit testing framework and post-mortem-debuger for [test-driven grammar
-  development](https://dhparser.readthedocs.io/en/latest/Overview.html#test-driven-grammar-development)
-  and rapid-prototyping of grammars
-
-* [Customizable error reporting](
-  https://dhparser.readthedocs.io/en/latest/manuals/01_EBNF-grammars.html#error-catching),
-  [recovery after syntax errors](
-  https://dhparser.readthedocs.io/en/latest/manuals/01_EBNF-grammars.html#skip-and-resume) 
-  and support for [fail-tolerant parsers](
-  https://dhparser.readthedocs.io/en/latest/manuals/01_EBNF-grammars.html#fail-tolerant-parsing)
-
-* Support for [Language-servers](https://microsoft.github.io/language-server-protocol/)
-
-* Workflow-support and [data-processing-pipelines](
-  https://dhparser.readthedocs.io/en/latest/manuals/04_postprocessing.html#processing-pipelines)
-
-* XML-support like [mapping flat-text to the DOM-tree](
-  https://dhparser.readthedocs.io/en/latest/manuals/02_document-trees.html#content-mappings)
-  ("node-tree" in DHParser's terminology) and 
-  [adding markup in arbitrary places](
-  https://dhparser.readthedocs.io/en/latest/manuals/02_document-trees.html#markup-insertion),
-  even if this requires splitting tags.
-
-* Full Unicode support
-
-* No dependencies except the Python Standard Library
-
-* [Extensive documentation](https://dhparser.readthedocs.io) and examples
-
-
-Ease of use
+Ease of Use
 -----------
 
 **Directly compile existing EBNF-grammars:**
@@ -269,6 +168,95 @@ to set up a project-directory with all the scaffolding that a
 serious DSL-project needs, including DHParser's unit-testing-framework
 for EBNF-grammars.
 
+
+Features
+--------
+
+* Memoizing packrat-parser based on Parsing Expression Grammars. This
+  means: 
+  
+    - Linear parsing time guaranteed, not matter how complex the grammar.
+
+    - Any EBNF-grammar supported, including left-recursive grammars 
+      (supported via "seed and grow"-algorithm - experimental support 
+      for Luke Hutchinson's squirrel parser LR-algorithm.)
+
+    - Unlimited look ahead and look behind.
+
+* [Macros](https://dhparser.readthedocs.io/en/latest/manuals/01_EBNF-grammars.html#macros)
+  to avoid code-repetition within grammars
+
+* [Declarative tree-transformations](https://dhparser.readthedocs.io/en/latest/manuals/03_AST-transformation.html#declarative-tree-transformation)
+  for post-processing syntax-trees
+
+* Unit testing framework and post-mortem-debuger for [test-driven grammar
+  development](https://dhparser.readthedocs.io/en/latest/Overview.html#test-driven-grammar-development)
+  and rapid-prototyping of grammars
+
+* [Customizable error reporting](
+  https://dhparser.readthedocs.io/en/latest/manuals/01_EBNF-grammars.html#error-catching),
+  [recovery after syntax errors](
+  https://dhparser.readthedocs.io/en/latest/manuals/01_EBNF-grammars.html#skip-and-resume) 
+  and support for [fail-tolerant parsers](
+  https://dhparser.readthedocs.io/en/latest/manuals/01_EBNF-grammars.html#fail-tolerant-parsing)
+
+* Support for [Language-servers](https://microsoft.github.io/language-server-protocol/)
+
+* Workflow-support and [data-processing-pipelines](
+  https://dhparser.readthedocs.io/en/latest/manuals/06_postprocessing.html#processing-pipelines)
+
+* XML-support like [mapping flat-text to the DOM-tree](
+  https://dhparser.readthedocs.io/en/latest/manuals/02_document-trees.html#content-mappings)
+  ("node-tree" in DHParser's terminology) and 
+  [adding markup in arbitrary places](
+  https://dhparser.readthedocs.io/en/latest/manuals/02_document-trees.html#markup-insertion),
+  even if this requires splitting tags.
+
+* Full Unicode support
+
+* No dependencies except the Python Standard Library
+
+* [Extensive documentation](https://dhparser.readthedocs.io) and examples
+
+
+Application Domains
+-------------------
+
+1. Developing *parsers for domain specific languages*, either existing
+   languages like, [LaTeX](https://github.com/jecki/LaTeX2TEIXML), 
+   or newly created DSLs, like the [Medieval-Latin-Dictionary-DSL](https://gitlab.lrz.de/badw-it/mlw-dsl-oeffentlich).
+
+   Typically, these languages are strict formal languages with a context free grammar. 
+   (In cases where this does not hold like TeX, it is often still possible to describe a 
+   reasonably large subset of the formal language with a context free grammar.) 
+
+2. Developing *parsers for semi-structured or informally structured
+   text-data*.    
+
+   This kind of data is typically what you get when retro-digitizing
+   textual data like printed bibliographies, or reference works or
+   dictionaries. Often such works can be captured with a formal 
+   grammar, but these grammars require a lot of iterations and tests
+   to develop and usually become much more ramified than the grammars
+   of well-designed formal languages. Thus, DHParser's elaborated
+   testing and debugging-framework for grammars.
+
+   (See Florian Zacherl's [Dissertation on the retro-digitalization of dictionary data](https://www.kit.gwi.uni-muenchen.de/?band=82908&v=1)
+   for an interesting case study. I am confident that the development of
+   a suitable formal grammar is much easier with an elaborated framework
+   like DHParser than with the PHP-parsing-expression-grammar-kit that
+   Florian Zacherl has used.)
+
+3. Developing *processing pipelines for tree-structured data*.
+
+   In many digital humanities applications one wants to produce
+   different forms of output (say, printed, online-human-readable,
+   online-machine-readable) from one and the same source of data.
+   Therefore, the parsing stage (if the data source is structured
+   text-data) will be followed by more or less intricate bifurcated
+   [processing pipelines](https://dhparser.readthedocs.io/en/latest/manuals/06_postprocessing.html#processing-pipelines). 
+
+
 Installation
 ------------
 
@@ -329,7 +317,7 @@ Third-Party-Software
 
 DHParser includes the following third-party-software:
 
-* [seuqirrel tests](https://github.com/lukehutch/squirrelparser):
+* [squirrel tests](https://github.com/lukehutch/squirrelparser):
   These test under tests/squirrel_test have been copy and pasted 
   from the Python version of Luke Hutchinson's squirrelparser.
   The squirrel parser test suite contains many edge cases, in 
@@ -462,7 +450,7 @@ Munich Germany 2017-2025, https://gitlab.lrz.de/badw-it/dhparser
 References and Acknowledgement
 ------------------------------
 
-An incomplete list of literature that has been used
+A very incomplete list of literature that has been used
 to develop DHParser.
 
 Eckhart Arnold: Domänenspezifische Notationen. Eine (noch)
