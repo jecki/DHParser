@@ -1,5 +1,5 @@
 """test_squirrel_paper.py  - The examples from Luke Hutchinson's Squirrel-Parser paper,
-p. 21, https://github.com/lukehutch/squirrelparser/blob/main/paper/squirrel_parser.pdf
+p. 21, https://github.com/lukehutch/squirrelparser/tree/main/paper
 
 Comment the return-statement at the beginning of the show()-function out to see the parse trees!
 """

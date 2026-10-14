@@ -1,3 +1,11 @@
+DHParser Version 1.9.9 (14.10.2026)
+...................................
+
+- bugfix: standoff.sourcemapped_path() which was broken in 1.9.8,
+  inderectly affecting ContentMapping.markup()
+- documentation build updated and Logo added
+
+
 DHParser Version 1.9.8 (12.10.2026)
 ..................................
 

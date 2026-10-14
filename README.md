@@ -186,7 +186,7 @@ Features
 * [Macros](https://dhparser.readthedocs.io/en/latest/manuals/01_EBNF-grammars.html#macros)
   to avoid code-repetition within grammars
 
-* [Declarative tree-transformations](https://dhparser.readthedocs.io/en/latest/manuals/03_AST-transformation.html#declarative-tree-transformation)
+* [Declarative tree-transformations](https://dhparser.readthedocs.io/en/latest/manuals/04_AST-transformation.html#declarative-tree-transformation)
   for post-processing syntax-trees
 
 * Unit testing framework and post-mortem-debuger for [test-driven grammar
@@ -203,7 +203,7 @@ Features
 * Support for [Language-servers](https://microsoft.github.io/language-server-protocol/)
 
 * Workflow-support and [data-processing-pipelines](
-  https://dhparser.readthedocs.io/en/latest/manuals/06_postprocessing.html#processing-pipelines)
+  https://dhparser.readthedocs.io/en/latest/manuals/05_postprocessing.html#processing-pipelines)
 
 * XML-support like [mapping flat-text to the DOM-tree](
   https://dhparser.readthedocs.io/en/latest/manuals/02_document-trees.html#content-mappings)
@@ -254,7 +254,7 @@ Application Domains
    online-machine-readable) from one and the same source of data.
    Therefore, the parsing stage (if the data source is structured
    text-data) will be followed by more or less intricate bifurcated
-   [processing pipelines](https://dhparser.readthedocs.io/en/latest/manuals/06_postprocessing.html#processing-pipelines). 
+   [processing pipelines](https://dhparser.readthedocs.io/en/latest/manuals/05_postprocessing.html#processing-pipelines). 
 
 
 Installation
