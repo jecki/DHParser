@@ -27,7 +27,7 @@
   {% if sidebars %}
     <div class="sidebar-primary-items__start sidebar-primary__section">
       {%- for sidebartemplate in sidebars %}
-        <div class="sidebar-primary-item">{%- include sidebartemplate %}</div>
+        <div class="sidebar-primary-item{% if sidebartemplate == 'sidebar-collapse.html' %} pst-sidebar-collapse{% endif %}">{%- include sidebartemplate %}</div>
       {%- endfor %}
     </div>
   {% endif %}
@@ -37,7 +37,5 @@
       <div class="sidebar-primary-item">{%- include sidebartemplate %}</div>
     {%- endfor %}
   </div>
-  {# add the rtd flyout in the sidebar if existing #}
-  <div id="rtd-footer-container"></div>
 {% endif %}
 {% endblock docs_sidebar %}

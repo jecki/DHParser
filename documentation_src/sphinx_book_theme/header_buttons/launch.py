@@ -1,7 +1,7 @@
 """Launch buttons for Binder / Thebe / Colab / etc."""
 
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 from urllib.parse import urlencode, quote
 
 from docutils.nodes import document
@@ -23,7 +23,7 @@ def add_launch_buttons(
     app: Sphinx,
     pagename: str,
     templatename: str,
-    context: Dict[str, Any],
+    context: dict[str, Any],
     doctree: Optional[document],
 ):
     """Builds a binder link and inserts it in HTML context for use in templating.
@@ -49,7 +49,13 @@ def add_launch_buttons(
         or not _is_notebook(app, context)
         or not any(
             launch_buttons.get(key)
-            for key in ("binderhub_url", "jupyterhub_url", "thebe", "colab_url")
+            for key in (
+                "binderhub_url",
+                "jupyterhub_url",
+                "thebe",
+                "colab_url",
+                "jupyterlite_url",
+            )
         )
     ):
         return
@@ -89,11 +95,9 @@ def add_launch_buttons(
     notebook_interface = launch_buttons.get("notebook_interface", "classic")
     if notebook_interface not in notebook_interface_prefixes:
         raise ValueError(
-            (
-                "Notebook UI for Binder/JupyterHub links must be one"
-                f"of {tuple(notebook_interface_prefixes.keys())},"
-                f"not {notebook_interface}"
-            )
+            "Notebook UI for Binder/JupyterHub links must be one"
+            f"of {tuple(notebook_interface_prefixes.keys())},"
+            f"not {notebook_interface}"
         )
     ui_pre = notebook_interface_prefixes[notebook_interface]
 
@@ -116,6 +120,9 @@ def add_launch_buttons(
     binderhub_url = launch_buttons.get("binderhub_url", "").strip("/")
     colab_url = launch_buttons.get("colab_url", "").strip("/")
     deepnote_url = launch_buttons.get("deepnote_url", "").strip("/")
+    # jupyterlite_url could be absolute but without a domain, so we only
+    # strip trailing slashes, not leading ones
+    jupyterlite_url = launch_buttons.get("jupyterlite_url", "").rstrip("/")
 
     # Loop through each provider and add a button for it if needed
     if binderhub_url:
@@ -188,6 +195,20 @@ def add_launch_buttons(
                     "url": url,
                 }
             )
+
+    if jupyterlite_url:
+        jl_ext = launch_buttons.get("jupyterlite_ext", extension).strip()
+        jl_rel_repo = f"{book_relpath}{pagename}{jl_ext}"
+        url = f"{jupyterlite_url}?path={jl_rel_repo}"
+        launch_buttons_list.append(
+            {
+                "type": "link",
+                "text": "JupyterLite",
+                "tooltip": "Launch via JupyterLite",
+                "icon": "_static/images/logo_jupyterlite.svg",
+                "url": url,
+            }
+        )
 
     # Add thebe flag in context
     if launch_buttons.get("thebe", False):

@@ -72,19 +72,25 @@ $all-colors: map.merge($pst-semantic-colors, $extra-semantic-colors);
   // on the WCAG color contrast guidelines
   --pst-color-#{$name}-text: #{a11y-combination($value)};
 
-  // TODO: highlight seems to be used for buttons @trallard to fix on a11y follow-up work
-  --pst-color-#{$name}-highlight: #{color.adjust($value, $lightness: -15%)};
+  // highlight is used for hover effects on buttons, here we make some fluid scaling
+  // to avoid jarring effects -- we create a local variable that we can access
+  // later to calculate the text color
+  $highlight-color: color.scale($value, $lightness: -15%, $saturation: 5%);
+
+  --pst-color-#{$name}-highlight: #{$highlight-color};
 
   // override the sphinx-design variables
   --sd-color-#{$name}: var(--pst-color-#{$name});
   --sd-color-#{$name}-text: var(--pst-color-#{$name}-text);
-
-  // TODO: highlight seems to be used for buttons @trallard to fix on a11y follow-up work
   --sd-color-#{$name}-highlight: var(--pst-color-#{$name}-highlight);
+
+  // calculate the text color for the highlight color
+  --pst-color-#{$name}-highlight-text: #{a11y-combination($highlight-color)};
 }
 
 // Now we override the --sd-color-* variables.
 @each $mode in (light, dark) {
+  @debug "Creating color variables for mode: #{$mode}";
   html[data-theme="#{$mode}"] {
     // check if this color is defined differently for light/dark
     @each $name in $sd-semantic-color-names {
@@ -99,7 +105,7 @@ $all-colors: map.merge($pst-semantic-colors, $extra-semantic-colors);
             @if string.index($key, "bg") {
               --sd-color-#{$name}-bg: #{$value};
 
-              // create local variable
+              // create local variable -- needed to calculate the text color
               $value: check-color($value);
 
               --sd-color-#{$name}-bg-text: #{a11y-combination($value)};
@@ -144,20 +150,20 @@ html[data-theme="light"] {
 
 .bd-content .sd-card {
   border: 1px solid var(--pst-color-border);
+  overflow: hidden;
 
-  // TODO - --pst-color-panel-background is not defined... where is this coming from?
   .sd-card-header {
-    background-color: var(--pst-color-panel-background);
+    background-color: var(--pst-color-on-background);
     border-bottom: 1px solid var(--pst-color-border);
   }
 
   .sd-card-footer {
-    background-color: var(--pst-color-panel-background);
+    background-color: var(--pst-color-on-background);
     border-top: 1px solid var(--pst-color-border);
   }
 
   .sd-card-body {
-    background-color: var(--pst-color-panel-background);
+    background-color: var(--pst-color-on-background);
   }
 
   // Focus ring for link-cards
@@ -317,11 +323,19 @@ details.sd-dropdown {
       top: 0.7rem;
     }
 
+    @include hover-darken-lighten;
+
     // Focus ring
-    &:focus-visible {
+    &:focus:focus-visible {
       outline: $focus-ring-outline;
-      outline-offset: -$focus-ring-width;
+      outline-offset: $focus-ring-offset;
+      border-radius: $focus-ring-width;
     }
+  }
+
+  &[open] summary.sd-card-header:focus:focus-visible {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
   }
 }
 
@@ -342,17 +356,27 @@ html {
   }
 
   @each $name in $sd-semantic-color-names {
+    .sd-btn-#{$name} {
+      &:hover {
+        color: var(--pst-color-#{$name}-highlight-text) !important;
+      }
+    }
+  }
+
+  @each $name in $sd-semantic-color-names {
     .sd-btn-#{$name},
     .sd-btn-outline-#{$name} {
       &:focus-visible {
+        outline: var(--sd-color-#{$name}) solid $focus-ring-width;
+        outline-offset: $focus-ring-offset;
+        border-radius: $focus-ring-width;
+
         // Override Sphinx Design's use of -highlight colors. The -highlight
         // colors are 15% darker, so this would create the effect of darkening
         // the button when focused but we just want the button to have a focus
         // ring of the same (non-highlight) color.
         background-color: var(--sd-color-#{$name}) !important;
         border-color: var(--sd-color-#{$name}) !important;
-        outline: var(--sd-color-#{$name}) solid $focus-ring-width;
-        outline-offset: $focus-ring-width;
       }
     }
   }

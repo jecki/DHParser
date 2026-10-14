@@ -16,10 +16,10 @@ $sidebar-padding-right: 1rem;
   @include make-col(3);
 
   // Borders padding and whitespace
-  padding: 2rem $sidebar-padding-right 1rem 1rem;
+  padding: $sidebar-padding-right;
   border-right: 1px solid var(--pst-color-border);
   background-color: var(--pst-color-background);
-  overflow-y: auto;
+  overflow: hidden auto;
   font-size: var(--pst-sidebar-font-size-mobile);
 
   @include media-breakpoint-up($breakpoint-sidebar-primary) {
@@ -70,34 +70,6 @@ $sidebar-padding-right: 1rem;
       font-size: var(--pst-sidebar-header-font-size);
       color: var(--pst-color-text-base);
       margin-bottom: 0.5rem;
-    }
-
-    // The dropdown toggle for extra links just shows them all instead.
-    .nav-item.dropdown {
-      // On mobile, the dropdown behaves like any other link, no hiding
-      button {
-        display: none;
-      }
-
-      .dropdown-menu {
-        display: flex;
-        flex-direction: column;
-        padding: 0;
-        margin: 0;
-        border: none;
-        background-color: inherit;
-        font-size: inherit;
-
-        .dropdown-item {
-          &:hover,
-          &:focus {
-            // In the mobile sidebar, the dropdown menu is inlined with the
-            // other links, which do not have background-color changes on hover
-            // and focus
-            background-color: unset;
-          }
-        }
-      }
     }
 
     .bd-navbar-elements {
@@ -265,7 +237,7 @@ nav.bd-links {
 
   li > a {
     display: block;
-    padding: 0.25rem 0.65rem;
+    padding: $toc-item-padding-y 0.65rem;
 
     @include link-sidebar;
 

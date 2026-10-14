@@ -24,7 +24,7 @@ from .header_buttons.source import add_source_buttons
 from ._compat import findall
 from ._transforms import HandleFootnoteTransform
 
-__version__ = "1.1.3"
+__version__ = "1.4.0"
 """sphinx-book-theme version"""
 
 SPHINX_LOGGER = logging.getLogger(__name__)
@@ -140,10 +140,8 @@ def update_mode_thebe_config(app):
         # but has not activated the sphinx_thebe extension.
         if not hasattr(app.env.config, "thebe_config"):
             SPHINX_LOGGER.warning(
-                (
-                    "Thebe is activated but not added to extensions list. "
-                    "Add `sphinx_thebe` to your site's extensions list."
-                )
+                "Thebe is activated but not added to extensions list. "
+                "Add `sphinx_thebe` to your site's extensions list."
             )
             return
         # Will be empty if it doesn't exist

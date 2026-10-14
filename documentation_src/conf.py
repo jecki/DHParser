@@ -32,7 +32,7 @@ if doc_path not in sys.path:
 # -- Project information -----------------------------------------------------
 
 project = 'DHParser'
-copyright = '2018-2023, Eckhart Arnold'
+copyright = '2018-2026, Eckhart Arnold, Licensed under Apache License, Version 2.0'
 author = 'Eckhart Arnold'
 
 # The short X.Y version
@@ -104,10 +104,11 @@ add_module_names = False
 # a list of builtin themes.
 #
 html_theme = 'sphinx_book_theme'  # 'sphinxdoc'  # 'alabaster'  # 'sphinx_rtd_theme'
-html_theme_path = ['pydata_sphinx_theme/theme/pydata_sphinx_theme',
-                   'sphinx_book_theme/theme/sphinx_book_theme']
+# html_theme_path = ['sphinx_book_theme/theme/sphinx_book_theme']
 html_theme_options = {
   "repository_url": "https://gitlab.lrz.de/badw-it/DHParser",
+  "repository_branch": "master",
+  "path_to_docs": "documentation_src",
   "use_repository_button": True
 }
 # Theme options are theme-specific and customize the look and feel of a theme

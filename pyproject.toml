@@ -1,6 +1,6 @@
 [project]
 name = "DHParser"
-version = "1.9.8"  # make sure that this is the same as in DHParser/versionnumber.py !
+version = "1.9.9"  # make sure that this is the same as in DHParser/versionnumber.py !
 description = "Parser Generator and DSL-construction-kit"
 
 license = { text = "Apache-2.0" }
@@ -19,6 +19,7 @@ keywords = [
     'formal grammar',
     'EBNF', 'SXML', 'XML'
 ]
+
 
 classifiers = [
     'Development Status :: 5 - Production/Stable',
@@ -49,6 +50,7 @@ homepage = "https://gitlab.lrz.de/badw-it/DHParser"
 documentation = "https://dhparser.readthedocs.io/en/latest/"
 "Bug Tracker" = "https://github.com/jecki/DHParser/issues"
 
+
 [project.scripts]
 dhparser = 'DHParser.scripts.dhparser:main'
 dhparser_build_cython = 'DHParser.scripts.dhparser_cythonize:build'
@@ -56,15 +58,25 @@ dhparser_cythonize = 'DHParser.scripts.dhparser_cythonize:build'
 dhparser_cythonize_stringview = 'DHParser.scripts.dhparser_cythonize_stringview:build'
 xml_reflow = 'DHParser.scripts.XMLreflow:main'
 
+
 [project.optional-dependencies]
 cython = ["cython>=3.0"]
-sphinx = ["sphinx (>=8.0) ; python_version >= '3.10'"]
+sphinx = ["sphinx (>=8.0) ; python_version >= '3.10'",
+          "pydata-sphinx-theme (>=0.16.0) ; python_version >= '3.10'",
+          "sphinx-book-theme (>= 1.1.0) ; python_version >= '3.10'"]
 pytest = ["pytest (>=9.0) ; python_version >= '3.10'"]
 
+
 [tool.poetry]
+build = "build.py"
 requires-poetry = ">=2.0"
 packages = [ { include = "DHParser" } ]
-include = ['CHANGES.txt', 'Introduction.md']
+include = [
+    'CHANGES.txt',
+    'Introduction.md',
+    { path = "DHParser/docs/**/*", format = ["sdist", "wheel"]}
+]
+
 
 
 [build-system]

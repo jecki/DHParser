@@ -19,6 +19,7 @@ $dropdown-link-hover-bg: var(--pst-color-surface);
 // scoped to different values depending on light/dark theme
 $dropdown-dark-link-hover-bg: var(--pst-color-surface);
 $dropdown-link-active-bg: var(--pst-color-surface);
+$dropdown-link-active-color: var(--pst-color-primary);
 $dropdown-dark-link-active-bg: var(--pst-color-surface);
 $focus-ring-width: 0.1875rem; // 3px at 100% zoom (0.1875 * 16px base font = 3px)
 $focus-ring-opacity: 1;
@@ -26,6 +27,17 @@ $focus-ring-color: var(--pst-color-accent);
 $focus-ring-blur: 0;
 $focus-ring-box-shadow: 0 0 $focus-ring-blur $focus-ring-width $focus-ring-color;
 
+// For many elements, we do not use `outline-offset`. For some we set the offset
+// equal to the focus ring width (either outwards or inwards). But for some
+// other elements (e.g., collapsible admonitions) we set it to this value.
+$focus-ring-offset: 0.125rem; // 2px at 100% zoom (0.125 * 16px base font = 2px)
+
 // outline creates the same style of focus ring, it just uses CSS outline instead of box shadow
 $focus-ring-outline: $focus-ring-color solid $focus-ring-width;
 $btn-focus-box-shadow: $focus-ring-box-shadow;
+
+// Speed up site navigation and reduce animation when using anchor links:
+// Don't enable `scroll-behavior: smooth` globally, instead use
+// `scroll-behavior: auto` which is also the behavior when
+// `prefers-reduced-motion` is active.
+$enable-smooth-scroll: false;

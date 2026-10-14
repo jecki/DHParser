@@ -1,12 +1,13 @@
 """Bootstrap-based sphinx theme from the PyData community."""
 
 import json
+
 from functools import partial
 from pathlib import Path
-from typing import Dict
 from urllib.parse import urlparse
 
 import requests
+
 from requests.exceptions import ConnectionError, HTTPError, RetryError
 from sphinx.application import Sphinx
 from sphinx.builders.dirhtml import DirectoryHTMLBuilder
@@ -14,7 +15,8 @@ from sphinx.errors import ExtensionError
 
 from . import edit_this_page, logo, pygments, short_link, toctree, translator, utils
 
-__version__ = "0.15.4"
+
+__version__ = "0.20.0"
 
 
 def update_config(app):
@@ -41,7 +43,18 @@ def update_config(app):
         raise ExtensionError(
             "`icon_links` must be a list of dictionaries, you provided "
             f"type {type(theme_options.get('icon_links'))}."
+            "If you wish to disable this feature, either do not provide "
+            "a value (leave undefined), or set to an empty list."
         )
+
+    # If the user hasn't explicitly set navbar_persistent, default it based on
+    # disable_search: show the search button field unless search is disabled.
+    if "navbar_persistent" not in theme_options:
+        if theme_options.get("disable_search", False):
+            navbar_persistent = []
+        else:
+            navbar_persistent = ["search-button-field"]
+        theme_options["navbar_persistent"] = navbar_persistent
 
     # Set the anchor link default to be # if the user hasn't provided their own
     if not utils.config_provided_by_user(app, "html_permalinks_icon"):
@@ -110,17 +123,29 @@ def update_config(app):
         # Google Analytics
         gid = analytics.get("google_analytics_id")
         if gid:
+            gid_defaults = """
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){ dataLayer.push(arguments); }
+                gtag('consent', 'default', {
+                    'ad_storage': 'denied',
+                    'ad_user_data': 'denied',
+                    'ad_personalization': 'denied',
+                    'analytics_storage': 'denied'
+                });
+            """
             gid_js_path = f"https://www.googletagmanager.com/gtag/js?id={gid}"
             gid_script = f"""
                 window.dataLayer = window.dataLayer || [];
-                function gtag(){{ dataLayer.push(arguments); }}
+                function gtag(){{dataLayer.push(arguments);}}
                 gtag('js', new Date());
                 gtag('config', '{gid}');
             """
 
             # Link the JS files
+            # Ref: https://developers.google.com/tag-platform/security/guides/consent?consentmode=advanced#implementation_example
+            app.add_js_file("", body=gid_defaults)
             app.add_js_file(gid_js_path, loading_method="async")
-            app.add_js_file(None, body=gid_script)
+            app.add_js_file("", body=gid_script)
 
     # Update ABlog configuration default if present
     fa_provided = utils.config_provided_by_user(app, "fontawesome_included")
@@ -202,7 +227,7 @@ def update_and_remove_templates(
         for i in range(len(context["css_files"])):
             asset = context["css_files"][i]
             # TODO: eventually the contents of context['css_files'] etc should probably
-            #       only be _CascadingStyleSheet etc. For now, assume mixed with strings.
+            # only be _CascadingStyleSheet etc. For now, assume mixed with strings.
             asset_path = getattr(asset, "filename", str(asset))
             if asset_path == theme_css_name:
                 del context["css_files"][i]
@@ -233,9 +258,16 @@ def update_and_remove_templates(
         DOCUMENTATION_OPTIONS.theme_version = '{__version__}';
         DOCUMENTATION_OPTIONS.theme_switcher_json_url = '{json_url}';
         DOCUMENTATION_OPTIONS.theme_switcher_version_match = '{version_match}';
-        DOCUMENTATION_OPTIONS.show_version_warning_banner = {str(context["theme_show_version_warning_banner"]).lower()};
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            {str(context["theme_show_version_warning_banner"]).lower()};
         """
         app.add_js_file(None, body=js)
+
+    # Specify whether search-as-you-type should be used or not.
+    search_as_you_type = str(context["theme_search_as_you_type"]).lower()
+    app.add_js_file(
+        None, body=f"DOCUMENTATION_OPTIONS.search_as_you_type = {search_as_you_type};"
+    )
 
     # Update version number for the "made with version..." component
     context["theme_version"] = __version__
@@ -265,15 +297,25 @@ def _fix_canonical_url(
     context["pageurl"] = app.config.html_baseurl + target
 
 
-def setup(app: Sphinx) -> Dict[str, str]:
+def add_shorten_xform(app: Sphinx) -> None:
+    """Add the link shortening transform."""
+    # Non-HTML builders (e.g. sphinx-build -b gettext, MessageCatalogBuilder)
+    # have no theme
+    if not hasattr(app.builder, "theme"):
+        return
+    theme_options = utils.get_theme_options_dict(app)
+    theme_conf_options = app.builder.theme.get_options()
+    if (theme_conf_options | theme_options).get("shorten_urls"):
+        app.add_post_transform(short_link.ShortenLinkTransform)
+
+
+def setup(app: Sphinx) -> dict[str, str]:
     """Setup the Sphinx application."""
     here = Path(__file__).parent.resolve()
     theme_path = here / "theme" / "pydata_sphinx_theme"
-
     app.add_html_theme("pydata_sphinx_theme", str(theme_path))
 
-    app.add_post_transform(short_link.ShortenLinkTransform)
-
+    app.connect("builder-inited", add_shorten_xform)
     app.connect("builder-inited", translator.setup_translators)
     app.connect("builder-inited", update_config)
     app.connect("html-page-context", _fix_canonical_url)

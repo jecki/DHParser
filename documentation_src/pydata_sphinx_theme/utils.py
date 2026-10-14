@@ -3,14 +3,16 @@
 import copy
 import os
 import re
-from typing import Any, Callable, Dict, Iterable, List, Optional, Union
+
+from collections.abc import Callable, Iterable
+from typing import Any
 
 from docutils.nodes import Node
 from sphinx.application import Sphinx
 from sphinx.util import logging, matching
 
 
-def get_theme_options_dict(app: Sphinx) -> Dict[str, Any]:
+def get_theme_options_dict(app: Sphinx) -> dict[str, Any]:
     """Return theme options for the application w/ a fallback if they don't exist.
 
     The "top-level" mapping (the one we should usually check first, and modify
@@ -19,7 +21,11 @@ def get_theme_options_dict(app: Sphinx) -> Dict[str, Any]:
     their ``conf.py``); sometimes that copy never occurs though which is why we
     check both.
     """
-    if hasattr(app.builder, "theme_options"):
+    if (
+        hasattr(app, "builder")
+        and app.builder is not None
+        and hasattr(app.builder, "theme_options")
+    ):
         return app.builder.theme_options
     elif hasattr(app.config, "html_theme_options"):
         return app.config.html_theme_options
@@ -33,7 +39,7 @@ def config_provided_by_user(app: Sphinx, key: str) -> bool:
 
 
 def traverse_or_findall(
-    node: Node, condition: Union[Callable, type], **kwargs
+    node: Node, condition: Callable | type, **kwargs
 ) -> Iterable[Node]:
     """Triage node.traverse (docutils <0.18.1) vs node.findall.
 
@@ -85,28 +91,34 @@ def set_secondary_sidebar_items(
 
 def _update_and_remove_templates(
     app: Sphinx,
-    context: Dict[str, Any],
-    templates: Union[List, str],
+    context: dict[str, Any],
+    templates: list | str,
     section: str,
-    templates_skip_empty_check: Optional[List[str]] = None,
-) -> List[str]:
-    """Update templates to include html suffix if needed; remove templates which render empty.
+    templates_skip_empty_check: list[str] | None = None,
+) -> list[str]:
+    """
+    Update templates to include html suffix if needed; remove templates which render
+    empty.
 
     Args:
         app: Sphinx application passed to the html page context
-        context: The html page context; dictionary of values passed to the templating engine
-        templates: A list of template names, or a string of comma-separated template names
-        section: Name of the template section where the templates are to be rendered. Valid
-            section names include any of the ``sphinx`` or ``html_theme_options`` that take templates
-            or lists of templates as arguments, for example ``theme_navbar_start``,
-            ``theme_primary_sidebar_end``, ``theme_secondary_sidebar_items``, ``sidebars``, etc. For
-            a complete list of valid section names, see the source for
+        context: The html page context; dictionary of values passed to the templating
+            engine
+        templates: A list of template names, or a string of comma separated template
+            names
+        section: Name of the template section where the templates are to be rendered.
+            Valid section names include any of the ``sphinx`` or ``html_theme_options``
+            that take templates or lists of templates as arguments, for example:
+            ``theme_navbar_start``, ``theme_primary_sidebar_end``,
+            ``theme_secondary_sidebar_items``, ``sidebars``, etc.
+            For a complete list of valid section names, see the source for
             :py:func:`pydata_sphinx_theme.update_and_remove_templates` and
-            :py:func:`pydata_sphinx_theme.utils.set_secondary_sidebar_items`, both of which call
-            this function.
-        templates_skip_empty_check: Names of any templates that should never be removed from the list
-            of filtered templates returned by this function. These templates aren't checked if they
-            render empty, which can save time if the template is slow to render.
+            :py:func:`pydata_sphinx_theme.utils.set_secondary_sidebar_items`,
+            both of which call this function.
+        templates_skip_empty_check: Names of any templates which should never be removed
+            from the list of filtered templates returned by this function.
+            These templates aren't checked if they render empty, which can save time if
+            the template is slow to render.
 
     Returns:
         A list of template names (including '.html' suffix) to render into the section
@@ -144,24 +156,29 @@ def _update_and_remove_templates(
 
 
 def _get_matching_sidebar_items(
-    pagename: str, sidebars: Dict[str, List[str]]
-) -> List[str]:
+    pagename: str, sidebars: dict[str, list[str]]
+) -> list[str]:
     """Get the matching sidebar templates to render for the given pagename.
 
-    If a page matches more than one pattern, a warning is emitted, and the templates for the
-    last matching pattern are used.
+    If a page matches more than one pattern, a warning is emitted, and the templates
+    for the last matching pattern are used.
 
-    This function was adapted from sphinx.builders.html.StandaloneHTMLBuilder.add_sidebars.
+    This function was adapted from
+    sphinx.builders.html.StandaloneHTMLBuilder.add_sidebars.
     """
     matched = None
     secondary_sidebar_items = []
     for pattern, sidebar_items in sidebars.items():
         if matching.patmatch(pagename, pattern):
             if matched and _has_wildcard(pattern) and _has_wildcard(matched):
-                SPHINX_LOGGER.warning(
-                    f"Page {pagename} matches two wildcard patterns in secondary_sidebar_items: {matched} and {pattern}"
-                ),
-
+                (
+                    SPHINX_LOGGER.warning(
+                        "Page %s matches two wildcard patterns in secondary_sidebar_items: %s and %s",  # noqa: E501
+                        pagename,
+                        matched,
+                        pattern,
+                    ),
+                )
             matched = pattern
             secondary_sidebar_items = sidebar_items
     return secondary_sidebar_items

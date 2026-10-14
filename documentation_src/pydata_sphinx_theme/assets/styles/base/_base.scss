@@ -39,20 +39,14 @@ a {
   // The # anchor that appears on hover over headings
   &.headerlink {
     color: var(--pst-color-secondary);
-    opacity: 0.7;
     font-size: 0.8em;
     padding: 0 4px;
     margin-left: 0.2em;
     text-decoration: none;
-    transition: all 0.2s ease-out;
     user-select: none;
-
-    &:hover {
-      opacity: 1;
-    }
   }
 
-  // set up a icon next to the shorten links from github and gitlab
+  // set up an icon next to the shorten links from github and gitlab
   &.github,
   &.gitlab {
     &::before {
@@ -78,33 +72,36 @@ a {
   line-height: 1.15;
 }
 
+// From 0.16.1, the preferred variable for headings is --pst-color-heading
+// if you have --pst-heading-color, this variable will be used, otherwise the default
+// --pst-color-heading will be used.
 h1 {
   @extend %heading-style;
 
   margin-top: 0;
   font-size: var(--pst-font-size-h1);
-  color: var(--pst-heading-color);
+  color: var(--pst-heading-color, --pst-color-heading);
 }
 
 h2 {
   @extend %heading-style;
 
   font-size: var(--pst-font-size-h2);
-  color: var(--pst-heading-color);
+  color: var(--pst-heading-color, --pst-color-heading);
 }
 
 h3 {
   @extend %heading-style;
 
   font-size: var(--pst-font-size-h3);
-  color: var(--pst-heading-color);
+  color: var(--pst-heading-color, --pst-color-heading);
 }
 
 h4 {
   @extend %heading-style;
 
   font-size: var(--pst-font-size-h4);
-  color: var(--pst-heading-color);
+  color: var(--pst-heading-color, --pst-color-heading);
 }
 
 h5 {
@@ -174,6 +171,7 @@ pre {
 
 // the back to top btn
 #pst-back-to-top {
+  // zindex-tooltip comes from Bootstrap https://getbootstrap.com/docs/5.2/layout/z-index/
   z-index: $zindex-tooltip;
   position: fixed;
   display: none;
@@ -194,8 +192,8 @@ pre {
     @include link-style-hover;
 
     text-decoration-thickness: 1px;
-    background-color: var(--pst-violet-600);
-    color: var(--pst-color-secondary-text);
+    background-color: var(--pst-color-secondary-highlight);
+    color: var(--pst-color-secondary-highlight-text);
   }
 
   &:focus-visible {

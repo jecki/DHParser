@@ -29,6 +29,12 @@ html .jp-RenderedHTMLCommon {
       // pandas
       table.dataframe {
         @include table-colors;
+
+        tbody {
+          tr:hover {
+            background-color: var(--pst-color-table-row-hover-bg);
+          }
+        }
       }
     }
 
@@ -52,6 +58,38 @@ div.nblast.container {
   margin-bottom: 1rem;
 }
 
+// Override nbsphinx's colors for notebook cell prompts because they do not have
+// sufficient contrast. Colors chosen from accessible-pygments
+// a11y-high-contrast-{light,dark} themes.
+
+// Notebook cell input line number. Replace nbsphinx's low contrast blue with
+// higher contrast blues.
+.nbinput.container .prompt pre {
+  html[data-theme="light"] & {
+    // Copied from accessible-pygments [a11y-high-contrast-light](https://github.com/Quansight-Labs/accessible-pygments/tree/main/a11y_pygments/a11y_high_contrast_light)
+    color: #005b82;
+  }
+
+  html[data-theme="dark"] & {
+    // Copied from accessible-pygments [a11y-high-contrast-dark](https://github.com/Quansight-Labs/accessible-pygments/tree/main/a11y_pygments/a11y_high_contrast_dark)
+    color: #00e0e0;
+  }
+}
+
+// Notebook cell output line number. Replace nbsphinx's low contrast red with
+// higher contrast red / orange.
+.nboutput.container .prompt pre {
+  html[data-theme="light"] & {
+    // Copied from accessible-pygments [a11y-high-contrast-light](https://github.com/Quansight-Labs/accessible-pygments/tree/main/a11y_pygments/a11y_high_contrast_light)
+    color: #a12236;
+  }
+
+  html[data-theme="dark"] & {
+    // Copied from accessible-pygments [a11y-high-contrast-dark](https://github.com/Quansight-Labs/accessible-pygments/tree/main/a11y_pygments/a11y_high_contrast_dark)
+    color: #ffa07a;
+  }
+}
+
 /*******************************************************************************
  * myst NB
  */
@@ -65,6 +103,12 @@ div.cell_output .output {
   // pandas
   table.dataframe {
     @include table-colors;
+
+    tbody {
+      tr:hover {
+        background-color: var(--pst-color-table-row-hover-bg);
+      }
+    }
   }
 
   html[data-theme="dark"] & {

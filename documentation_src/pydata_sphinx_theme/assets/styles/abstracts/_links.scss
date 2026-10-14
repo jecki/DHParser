@@ -67,7 +67,7 @@ $link-hover-decoration-thickness: string.unquote(
 // TODO: @trallard to improve focus styles in subsequent PR
 @mixin link-style-default {
   // So that really long links don't spill out of their container
-  word-wrap: break-word;
+  overflow-wrap: break-word;
   color: var(--pst-color-link);
 
   @include link-decoration;
@@ -164,7 +164,7 @@ $link-hover-decoration-thickness: string.unquote(
   }
 }
 
-// Heaver navbar text and icon links
+// Header navbar text and icon links
 // ---------------------------------
 // (includes light/dark mode button)
 
@@ -217,6 +217,6 @@ $link-hover-decoration-thickness: string.unquote(
   &:focus-visible {
     box-shadow: none; // override Bootstrap
     outline: 3px solid var(--pst-color-accent);
-    outline-offset: 3px;
+    outline-offset: $focus-ring-width;
   }
 }

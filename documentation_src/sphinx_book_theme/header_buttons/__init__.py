@@ -67,7 +67,7 @@ def add_header_buttons(app, pagename, templatename, context, doctree):
             download_buttons.append(
                 {
                     "type": "link",
-                    "url": f'{pathto("_sources", 1)}/{context.get("ipynb_source")}',
+                    "url": f"{pathto('_sources', 1)}/{context.get('ipynb_source')}",
                     "text": ".ipynb",
                     "icon": "fas fa-code",
                     "tooltip": translation("Download notebook file"),
@@ -79,7 +79,7 @@ def add_header_buttons(app, pagename, templatename, context, doctree):
         download_buttons.append(
             {
                 "type": "link",
-                "url": f'{pathto("_sources", 1)}/{context["sourcename"]}',
+                "url": f"{pathto('_sources', 1)}/{context['sourcename']}",
                 "text": suff,
                 "tooltip": translation("Download source file"),
                 "icon": "fas fa-file",
@@ -117,6 +117,7 @@ def add_header_buttons(app, pagename, templatename, context, doctree):
                 "tooltip": translation("Fullscreen mode"),
                 "icon": "fas fa-expand",
                 "label": "fullscreen-button",
+                "classes": "pst-navbar-icon",
             }
         )
 
@@ -174,10 +175,8 @@ def update_context_with_repository_info(app):
     # If provider is still empty, raise an error because we don't recognize it
     if provider == "":
         raise SphinxError(
-            (
-                f"Provider not recognized in repository url {repo_url}. "
-                "If you're using a custom provider URL, specify `repository_provider`"
-            )
+            f"Provider not recognized in repository url {repo_url}. "
+            "If you're using a custom provider URL, specify `repository_provider`"
         )
 
     # Update the context because this is what the get_edit_url function uses.

@@ -36,7 +36,14 @@
 
   // Ensure there is enough contrast against the background
   a {
-    color: var(--pst-color-inline-code-links);
+    color: var(--pst-color-link-higher-contrast);
+
+    &:hover {
+      // applying the same style as the SD "buttons"
+      @include link-style-hover;
+
+      cursor: pointer;
+    }
   }
 
   // The "Switch to stable version" link (styled like a button)
@@ -53,9 +60,13 @@
     border-radius: 0.25rem;
 
     &:hover {
+      // applying the same style as the SD "buttons"
+      @include link-style-hover;
+
+      text-decoration-thickness: 1px;
       background-color: $hover-background-color;
       border-color: $hover-background-color;
-      color: $color;
+      color: var(--pst-color-danger-highlight-text);
     }
 
     &:focus-visible {

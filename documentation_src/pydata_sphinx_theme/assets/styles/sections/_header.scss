@@ -5,6 +5,20 @@
 
 // Styling for the Icon links can be found in components/_icon-links.scss
 
+// A wrapper used when `sticky_banners` is enabled. It pins the announcement /
+// version-warning banners and the navbar at the top of the viewport.
+.pst-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: $zindex-fixed;
+
+  // The .bd-header (top navbar) inside the wrapper must not be sticky on its
+  // own, as .pst-sticky-header above is already sticky.
+  .bd-header {
+    position: static;
+  }
+}
+
 // If we want the shadow to only point downward in the future, set
 // box-shadow to: 0 0.125rem 0.25rem -0.125rem rgba(0, 0, 0, 0.11);
 .bd-header {
@@ -24,8 +38,7 @@
     display: flex;
     align-items: center;
     height: fit-content;
-    padding-left: 1rem;
-    padding-right: 1rem;
+    padding: 0.5rem 1rem;
   }
 
   :focus-visible {
@@ -34,8 +47,6 @@
 
   // These items will define the height of the header
   .navbar-item {
-    height: var(--pst-header-height);
-    max-height: var(--pst-header-height);
     display: flex;
     align-items: center;
   }
@@ -49,6 +60,8 @@
       display: inherit;
       flex-grow: 1;
       padding: 0 0 0 0.5rem;
+      flex-wrap: wrap;
+      row-gap: 0.5rem;
     }
   }
 
@@ -57,7 +70,7 @@
   .navbar-header-items__start {
     display: flex;
     align-items: center;
-    flex-flow: wrap;
+    flex-flow: nowrap;
 
     // In case we wrap our items to multiple rows on small screens
     row-gap: 0;
@@ -65,7 +78,7 @@
 
   .navbar-header-items__end,
   .navbar-header-items__center {
-    column-gap: 1rem;
+    column-gap: $nav-icon-column-gap;
   }
 
   // A little smaller because this is displayed by default on mobile
@@ -83,6 +96,7 @@
   // Contains the navigation links within the navbar
   ul.navbar-nav {
     display: flex;
+    flex-wrap: wrap;
 
     @include media-breakpoint-up($breakpoint-sidebar-primary) {
       // Align on wide screens so the dropdown button is centered properly
