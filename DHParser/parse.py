@@ -310,7 +310,7 @@ def reentry_point(rest: StringView,
                   comment_regex,
                   search_window: int = -1,
                   skip_node_name: str = "") -> Tuple[int, Node]:
-    """
+    r"""
     Finds the point where parsing should resume after a ParserError has been caught.
     The algorithm makes sure that this reentry-point does not lie inside a comment.
     The re-entry point is always the point after the end of the match of the regular
@@ -650,7 +650,7 @@ class Parser:
         self.reset()
 
     def __deepcopy__(self, memo):
-        """Deepcopy method of the parser. Upon instantiation of a Grammar-object,
+        r"""Deepcopy method of the parser. Upon instantiation of a Grammar-object,
         parsers will be deep-copied to the Grammar object. If a
         derived parser-class changes the signature of the "__init__"-constructor,
         "__deepcopy__"-method must be replaced (i.e. overridden without
@@ -1714,7 +1714,7 @@ class Grammar:
 
     @classmethod
     def _assign_parser_names__(cls):
-        """
+        r"""
         Initializes the "parser.pname" fields of those
         Parser objects that are directly assigned to a class field with
         the field's name, e.g.::
