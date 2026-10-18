@@ -88,3 +88,5 @@ uv.lock
 /nim_rewrite/tests/test_strslice
 /nim_rewrite/tests/*.js
 /publish_dhparser.sh
+.doctrees
+**/.doctrees

@@ -2081,8 +2081,7 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         :param indentation: The number of whitespaces for indentation
         :param inline_tags:  A set of tag names, the content of which will always be
                 written on a single line, unless it contains explicit line feeds (`\\n`).
-                In addition, all nodes that have the attribute ``xml:space="preserve"``
-                will be inlined.
+                Nodes with the attribute ``xml:space="preserve"`` will always be inlined.
         :param string_tags: A set of tags from which only the content will be printed, but
                 neither the opening tag nor its attr nor the closing tag. This
                 allows producing a mix of plain text and child tags in the output,
@@ -2227,6 +2226,8 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
         kwargs['empty_tags'] = empty_tags
         if empty_tags is not HTML_EMPTY_TAGS:
             kwargs['empty_tags'].update(HTML_EMPTY_TAGS)
+        if 'reflow_col' not in kwargs:
+            kwargs['reflow_col'] = 0
         xhtml = self.as_xml(**kwargs)
         css_snippet = '\n'.join(['<style type="text/css">', css, '</style>'])
         if head:
