@@ -28,35 +28,11 @@ except ImportError:
         return []
 
 
-cythonize_modules = [
-    'DHParser/stringview.py',
-    # 'DHParser/toolkit.py',
-    # 'DHParser/preprocess.py',
-    # 'DHParser/error.py',
-    # 'DHParser/nodetree.py',
-    # 'DHParser/log.py',
-    # 'DHParser/parse.py',
-    # 'DHParser/trace.py',
-    # 'DHParser/transform.py',
-    # 'DHParser/compile.py',
-    # 'DHParser/ebnf.py',
-]
+cythonize_modules = ['DHParser/stringview.py']
 
 
 def build(setup_kwargs={}):
     if has_cython:
-        # tell poetry how to cythonize stringview
-        ext_modules = cythonize(
-            cythonize_modules,
-            nthreads=0,
-            annotate=False,
-            compiler_directives={'subinterpreters_compatible': 'own_gil'}
-        )
-        setup_kwargs.update({
-            'ext_modules': ext_modules,
-            'zip_safe': False,
-        })
-
         # find path of DHParser-module
         scriptdir = os.path.dirname(os.path.abspath(os.path.realpath(__file__)))
         i = scriptdir.find('DHParser')
@@ -72,6 +48,18 @@ def build(setup_kwargs={}):
 
         save_cwd = os.getcwd()
         os.chdir(dhparserdir)
+
+        # tell poetry how to cythonize stringview
+        ext_modules = cythonize(
+            cythonize_modules,
+            nthreads=0,
+            annotate=False,
+            compiler_directives={'subinterpreters_compatible': 'own_gil'}
+        )
+        setup_kwargs.update({
+            'ext_modules': ext_modules,
+            'zip_safe': False,
+        })
 
         if os.path.isfile('pyproject.toml'):
             os.rename('pyproject.toml', 'pyproject.toml.termporarily_suspended')
