@@ -217,9 +217,6 @@ def is_disposable(name: str, disposables: Union[Set[str], RxType]) -> bool:
         return bool(re.match(disposables, name))
 
 
-PARSER_PLACEHOLDER = None
-
-
 class Grammar:
     r"""
     Class Grammar directs the parsing process and stores global state
@@ -337,7 +334,7 @@ class Grammar:
                  field contains a value other than "done". A value of "done" indicates
                  that the class has already been initialized.
 
-    :cvar static_analysis_pending\__: True as long as no static analysis (see the method
+    :cvar static_analysis_pending\__: True, as long as no static analysis (see the method
                 with the same name for more information) has been done to check
                 parser tree for correctness. Static analysis
                 is done at instantiation and the flag is then set to false, but it
@@ -411,16 +408,16 @@ class Grammar:
                 called and the state of the variable stack restored accordingly.
 
     :ivar last_rb__loc\__:  The last, i.e. most advanced location in the text
-                where a variable changing operation occurred. If the parser
+                where a variable-changing operation occurred. If the parser
                 backtracks to a location at or before "last_rb__loc__" (i.e.
-                location < last_rb__loc__) then a rollback of all variable
+                location < last_rb__loc__) then a rollback of all variable-
                 changing operations is necessary that occurred after the
                 location to which the parser backtracks. This is done by
                 calling method :py:meth:`rollback_to__` (location).
 
     :ivar ff_pos\__: The "farthest fail", i.e. the highest location in the
                 document where a parser failed. This gives a good indication
-                where and why parsing failed, if the grammar did not match
+                where and why parsing failed if the grammar did not match
                 a text.
 
     :ivar ff_parser\__: The parser that failed at the "farthest fail"-location
@@ -442,7 +439,7 @@ class Grammar:
                 This allows assigning the object variables to the duplicated parser objects
                 as well as assigning the grammar object to all parsers very early in the
                 construction phase. Before the constructor returns, memo\__ will be set to
-                None and it will never be used anymore, afterwards.
+                None, and it will never be used anymore, afterwards.
 
 
     Mirrored class attributes:
@@ -616,7 +613,7 @@ class Grammar:
         Adds the particular copy of the parser object to this
         particular instance of Grammar.
         """
-        assert parser is not PARSER_PLACEHOLDER
+        assert parser is not self.PARSER_PLACEHOLDER__
         if parser not in self.all_parsers__:
             from DHParser.parse_combinators import ForwardBase
             if parser.pname:
@@ -656,12 +653,11 @@ class Grammar:
         :param static_analysis: If not None, this overrides the config value
             "static_analysis".
         """
-        global PARSER_PLACEHOLDER, RESERVED_PARSER_NAMES
-        if PARSER_PLACEHOLDER is None:  # can happen in doc-test examples and other rare cases...
-            PARSER_PLACEHOLDER = get_parser_placeholder()
+        global RESERVED_PARSER_NAMES
         assert root is None or self.__class__ is Grammar, \
             "External root-parsers cannot be passed to derived classes of Grammar!"
         from DHParser.parse_combinators import ForwardBase, TreeReduction
+        self.PARSER_PLACEHOLDER__ = get_parser_placeholder()
         self.all_parsers__: MutableSet[Parser] = set()
         # add compiled regular expression for comments if it does not already exist
         if not hasattr(self, 'comment_rx__') or self.comment_rx__ is None:
@@ -686,13 +682,13 @@ class Grammar:
         self.cancel_interval__: int = CANCEL_QUERY_INTERVAL
         self._reset__()
 
-        # Bootsrapping phase 1: assign names to the parsers
+        # Bootstrapping phase 1: assign names to the parsers
         # Prepare parsers in the class, first, by setting the name of those parsers
         # that are assigned to a class variable to the name of that class variable.
         # Also, LateBindingUnary-parser will be bound at this stage.
         self.__class__._assign_parser_names__()
 
-        # Bottstrapping phase 2: deepcopy the parsers defined in the context of the
+        # Bootstrapping phase 2: deepcopy the parsers defined in the context of the
         # Grammar-class to the Grammar instance.
 
         # 2.1. Prepare a deepcopy-memo and inject the grammar-object into that memo.
@@ -710,7 +706,7 @@ class Grammar:
         for name in RESERVED_PARSER_NAMES:
             p = self.__class__.__dict__.get(name, None)
             if isinstance(p, Parser):
-                if p is PARSER_PLACEHOLDER:
+                if p is self.PARSER_PLACEHOLDER__:
                     setattr(self, name, p)
                 else:
                     setattr(self, name, copy.deepcopy(p, self.memo__))
@@ -742,12 +738,12 @@ class Grammar:
         # are not yet initialized. This will happen en passent in the next phase
 
         # Phase 3: Add any parser whatsoever connected to this Grammar instance
-        #          to the self.all_parsers__ set. Add those parser which are
+        #          to the self.all_parsers__ set. Add those parsers which are
         #          not connected to the root-parser to the
         #          self.unconnected_parsers__ - field
 
         # Start by adding the parsers connected to the root parser.
-        if self.root_parser__ is not PARSER_PLACEHOLDER:
+        if self.root_parser__ is not self.PARSER_PLACEHOLDER__:
             self.root_parser__.apply(self._add_parser__, self)
             assert self.root_parser__ is self.__dict__['root_parser__']
         root_connected = frozenset(self.all_parsers__)
@@ -792,9 +788,9 @@ class Grammar:
 
         if not root:  TreeReduction(self.all_parsers__, self.early_tree_reduction__)
 
-        # Phase 5: Do some static error checking, if the error checking flag
+        # Phase 5: Do some static error checking if the error checking flag
         #          has been set on the class and error checking for this class
-        #          has not already taken place.
+        #          has not yet taken place.
         if (self.static_analysis_pending__
             and (static_analysis
                  or (static_analysis is None
@@ -897,7 +893,7 @@ class Grammar:
             (i.e. particular parts of the EBNF-Grammar.)
         :param complete_match: If True, an error is generated, if
             "start_parser" did not match the entire document. If complete_match
-            is a string (default) it suffices that the remaining text after the
+            is a string (default), it suffices that the remaining text after the
             match consists of whitespace. The string is interpreted as the name
             of an attribute of self that contains a regular expression string
             defining the ensuing whitespace. If False, no error is generated
