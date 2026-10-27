@@ -18,20 +18,21 @@
 """
 Module parse_base defines class Parser which is the root class
 for all parser classes. Most notably, the memoization is handled
-by the base class.
+by the base class. Furthermore. base class for leaf-parsers and
+non-memoizing parsers are defined.
 """
-
 
 
 from __future__ import annotations
 
 from inspect import isclass
-from typing import Callable, cast, Union, Optional
+from typing import Callable, cast, Union, Optional, TYPE_CHECKING
 
 from DHParser.configuration import get_config_value
 from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION_AT_EOF, \
     RECURSION_DEPTH_LIMIT_HIT, MANDATORY_CONTINUATION_AT_EOF_NON_ROOT
 from DHParser.nodetree import Node, ZOMBIE_TAG, EMPTY_NODE, ChildrenType, ResultType
+from DHParser.parse_error import ParserError, reentry_point, artifact
 from DHParser.toolkit import TypeAlias, List, Tuple, Any, MutableSet, Set, FrozenSet, \
     Dict, INFINITE
 
@@ -39,6 +40,12 @@ try:
     import cython
 except (ImportError, NameError):
     import DHParser.externallibs.shadow_cython as cython
+
+
+if TYPE_CHECKING:
+    from parse_grammar import Grammar, AnalysisError
+    from parse_combinators import Series, Alternative, Interleave
+
 
 
 ########################################################################
@@ -66,7 +73,7 @@ def NOCALL(*args, **kwargs):
     assert False, f'illegal method-call on PLACEHOLDER-object!'
 
 
-_GRAMMAR_PLACEHOLDER: Optional[Grammar] = None  # type: Optional[Grammar]
+_GRAMMAR_PLACEHOLDER: Optional['Grammar'] = None
 
 
 def get_grammar_placeholder() -> 'Grammar':
@@ -384,6 +391,7 @@ class Parser:
     def __add__(self, other: Parser) -> 'Series':
         """The + operator generates a series-parser that applies two
         parsers in sequence."""
+        from parse_combinators import Series
         if isinstance(other, Series):
             return cast('Series', other).__radd__(self)
         return Series(self, other)
@@ -392,6 +400,7 @@ class Parser:
         """The | operator generates an alternative parser that applies
         the first parser and, if that does not match, the second parser.
         """
+        from parse_combinators import Alternative
         if isinstance(other, Alternative):
             return cast('Alternative', other).__ror__(self)
         return Alternative(self, other)
@@ -401,6 +410,7 @@ class Parser:
         the first parser and the second parser in any possible order
         until both match.
         """
+        from parse_combinators import Interleave
         if isinstance(other, Interleave):
             return other.__rmul__(self)
         return Interleave(self, other)
@@ -606,12 +616,16 @@ class Parser:
         return False
 
     def static_error(self, msg: str, code: ErrorCode) -> 'AnalysisError':
+        from parse_grammar import AnalysisError
         return AnalysisError(self.symbol, self, Error(msg, 0, code))
 
     def static_analysis(self) -> List['AnalysisError']:
         """Analyses the parser for logical errors after the grammar has been
         instantiated."""
         return []
+
+
+# Auxiliary functions for Parser class ###
 
 
 def assign(name: str, parser: Parser) -> Parser:
@@ -623,6 +637,100 @@ def assign(name: str, parser: Parser) -> Parser:
         doc
     """
     return parser.name(name)
+
+
+def copy_parser_base_attrs(src: Parser, duplicate: Parser, memo: Dict[int, Any]):
+    """Duplicates all attributes of the Parser-class from "src" to "duplicate".
+    Also, if the parser has directly been assigned to a field in the grammar-class, it
+    will be added early to the grammar! This is a hack, tn order to make
+    LateBindingUnary.resolve_parser_name() work!"""
+    grammar = memo[0]
+    duplicate.grammar = grammar
+    name = memo.get(-id(src), '')
+    if name:  setattr(grammar, name, duplicate)
+    duplicate.pname = src.pname
+    duplicate.disposable = src.disposable
+    duplicate.drop_content = src.drop_content
+    duplicate.node_name = src.node_name
+
+
+def Drop(parser: Parser) -> Parser:
+    """Returns the parser with the "parser.drop_content" property set to "True".
+    Parser must be anonymous and disposable. Use "DropFrom" instead
+    when this requirement ist not met."""
+    assert parser.disposable, "Parser must be anonymous to be allowed to drop its content."
+    from parse_combinators import ForwardBase
+    if isinstance(parser, ForwardBase):
+        cast(ForwardBase, parser).parser.drop_content = True
+    parser.drop_content = True
+    return parser
+
+
+def DropFrom(parser: Parser) -> Parser:
+    """Encapsulates the parser in an anonymous Synonym-Parser and sets the
+    drop_content-flag of the latter. This leaves the drop-flag of the
+    parser itself untouched. This is needed, if you want to drop the
+    result from a named-parser in one particular context where it is
+    referred to, only."""
+    from parse_combinators import Synonym
+    wrapper = Synonym(parser)
+    wrapper.drop_content = True
+    wrapper.disposable = True
+    return wrapper
+
+
+PARSER_PLACEHOLDER = None  # type: Optional[Parser]
+# Don't access PARSER_PLACEHOLDER directly, use get_parser_placeholder() instead
+
+
+def get_parser_placeholder() -> Parser:
+    global PARSER_PLACEHOLDER
+    if PARSER_PLACEHOLDER is None:
+        PARSER_PLACEHOLDER = Parser.__new__(Parser)  # Parser()
+        PARSER_PLACEHOLDER.pname = ''
+        PARSER_PLACEHOLDER.ptype = ':Parser'
+        PARSER_PLACEHOLDER.disposable = False
+        PARSER_PLACEHOLDER.drop_content = False
+        PARSER_PLACEHOLDER.node_name = ':PLACEHOLDER__'
+        PARSER_PLACEHOLDER.sub_parsers = frozenset()
+        if not cython.compiled:
+            PARSER_PLACEHOLDER.__deepcopy__ = NOCALL
+            PARSER_PLACEHOLDER.apply = NOCALL
+    return cast(Parser, PARSER_PLACEHOLDER)
+
+
+def is_parser_placeholder(parser: Optional[Parser]) -> bool:
+    """Returns True, if "parser" is "None" or merely a placeholder for a parser."""
+    return parser is None or parser.ptype == ":Parser"
+
+
+# functions for analysing the parser tree/graph ###
+
+
+def has_non_autocaptured_symbols(ptrail: ParserTrail) -> Optional[bool]:
+    """Returns True, if the parser-path contains a Capture-Parser that is not
+    shielded by a Retrieve-Parser. This is the case for captured symbols
+    that are not "auto-captured" by a Retrieve-Parser.
+    """
+    from parse_combinators import UnaryParser, Retrieve
+    for parser in ptrail:
+        if parser.ptype == ":Retrieve":
+            break
+        elif parser.ptype == ":Capture":
+            p = cast(UnaryParser, parser).parser
+            while p.ptype in (":Synonym", ":Forward"):
+                p = cast(UnaryParser, p).parser
+            if not isinstance(p, Retrieve):
+                return True
+    return None
+
+
+
+#######################################################################
+#
+# Special parser (base) classes
+#
+#######################################################################
 
 
 class LeafParser(Parser):
@@ -712,84 +820,40 @@ class NoMemoizationParser(LeafParser):
         return node, next_location
 
 
-def copy_parser_base_attrs(src: Parser, duplicate: Parser, memo: Dict[int, Any]):
-    """Duplicates all attributes of the Parser-class from "src" to "duplicate".
-    Also, if the parser has directly been assigned to a field in the grammar-class, it
-    will be added early to the grammar! This is a hack, tn order to make
-    LateBindingUnary.resolve_parser_name() work!"""
-    grammar = memo[0]
-    duplicate.grammar = grammar
-    name = memo.get(-id(src), '')
-    if name:  setattr(grammar, name, duplicate)
-    duplicate.pname = src.pname
-    duplicate.disposable = src.disposable
-    duplicate.drop_content = src.drop_content
-    duplicate.node_name = src.node_name
+class Unparameterized(NoMemoizationParser):
+    """Unparameterized parsers do not receive any parameters on instantiation.
+    As a consequence, different instances of the same unparameterized
+    parser are always functionally equivalent."""
+    pass
 
 
-def Drop(parser: Parser) -> Parser:
-    """Returns the parser with the "parser.drop_content" property set to "True".
-    Parser must be anonymous and disposable. Use "DropFrom" instead
-    when this requirement ist not met."""
-    assert parser.disposable, "Parser must be anonymous to be allowed to drop its content."
-    if isinstance(parser, ForwardBase):
-        cast(ForwardBase, parser).parser.drop_content = True
-    parser.drop_content = True
-    return parser
+class Always(Unparameterized):
+    """A parser that always matches, but does not capture anything."""
+    def _parse(self, location: cython.int) -> ParsingResult:
+        if self.node_name[0:1] == ':':
+            return EMPTY_NODE, location
+        else:
+            return Node(self.node_name, ''), location
+
+    def is_optional(self) -> Optional[bool]:
+        return True  # parser can never fail, like an optional parser
 
 
-def DropFrom(parser: Parser) -> Parser:
-    """Encapsulates the parser in an anonymous Synonym-Parser and sets the
-    drop_content-flag of the latter. This leaves the drop-flag of the
-    parser itself untouched. This is needed, if you want to drop the
-    result from a named-parser in one particular context where it is
-    referred to, only."""
-    wrapper = Synonym(parser)
-    wrapper.drop_content = True
-    wrapper.disposable = True
-    return wrapper
+class Never(Unparameterized):
+    """A parser that never matches."""
+    def _parse(self, location: cython.int) -> ParsingResult:
+        return None, location
 
 
-PARSER_PLACEHOLDER = None  # type: Optional[Parser]
-# Don't access PARSER_PLACEHOLDER directly, use get_parser_placeholder() instead
-
-
-def get_parser_placeholder() -> Parser:
-    global PARSER_PLACEHOLDER
-    if PARSER_PLACEHOLDER is None:
-        PARSER_PLACEHOLDER = Parser.__new__(Parser)  # Parser()
-        PARSER_PLACEHOLDER.pname = ''
-        PARSER_PLACEHOLDER.ptype = ':Parser'
-        PARSER_PLACEHOLDER.disposable = False
-        PARSER_PLACEHOLDER.drop_content = False
-        PARSER_PLACEHOLDER.node_name = ':PLACEHOLDER__'
-        PARSER_PLACEHOLDER.sub_parsers = frozenset()
-        if not cython.compiled:
-            PARSER_PLACEHOLDER.__deepcopy__ = NOCALL
-            PARSER_PLACEHOLDER.apply = NOCALL
-    return cast(Parser, PARSER_PLACEHOLDER)
-
-
-def is_parser_placeholder(parser: Optional[Parser]) -> bool:
-    """Returns True, if "parser" is "None" or merely a placeholder for a parser."""
-    return parser is None or parser.ptype == ":Parser"
-
-
-# functions for analysing the parser tree/graph ###
-
-
-def has_non_autocaptured_symbols(ptrail: ParserTrail) -> Optional[bool]:
-    """Returns True, if the parser-path contains a Capture-Parser that is not
-    shielded by a Retrieve-Parser. This is the case for captured symbols
-    that are not "auto-captured" by a Retrieve-Parser.
-    """
-    for parser in ptrail:
-        if parser.ptype == ":Retrieve":
-            break
-        elif parser.ptype == ":Capture":
-            p = cast(UnaryParser, parser).parser
-            while p.ptype in (":Synonym", ":Forward"):
-                p = cast(UnaryParser, p).parser
-            if not isinstance(p, Retrieve):
-                return True
-    return None
+class AnyChar(Unparameterized):
+    """A parser that returns the next Unicode character of the document
+    whatever that is. The parser fails only at the very end of the text."""
+    @cython.locals(location_=cython.int, L=cython.int)
+    def _parse(self, location: cython.int) -> ParsingResult:
+        text = self._grammar.document__._text
+        L = len(text)
+        if location < L:
+            location_ = location + 1
+            return Node(self.node_name, text[location:location_], True), location_
+        else:
+            return None, location

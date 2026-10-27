@@ -23,7 +23,7 @@ process after a (syntax) error occurred.
 
 
 from __future__ import annotations
-from typing import Callable, cast, Union, Optional, Iterator
+from typing import Callable, cast, Union, Optional, Iterator, TYPE_CHECKING
 
 from DHParser.error import Error, ERROR_WHILE_RECOVERING_FROM_ERROR
 from DHParser.log import CallItem
@@ -35,6 +35,9 @@ try:
     import cython
 except (ImportError, NameError):
     import DHParser.externallibs.shadow_cython as cython
+
+if TYPE_CHECKING:
+    from DHParser.parse_base import Parser
 
 
 class ParserError(Exception):
@@ -74,14 +77,14 @@ class ParserError(Exception):
                  error: Error, *,
                  first_throw: bool):
         assert node is not None
-        self.parser = parser  # type: Parser
-        self.node = node      # type: Node
-        self.node_orig_len = node_orig_len  # type: int
-        self.location = location  # type: int
-        self.error = error    # type: Error
-        self.first_throw = first_throw   # type: bool
+        self.parser: Parser = parser
+        self.node: Node = node
+        self.node_orig_len: int = node_orig_len
+        self.location: int = location
+        self.error: Error = error
+        self.first_throw: bool = first_throw
         self.attributes_locked = frozenset({'parser', 'node', 'location', 'error', 'first_throw'})
-        self.callstack_snapshot = []  # type: List[CallItem]  # name, location
+        self.callstack_snapshot: List[CallItem] = []  # List[(name, location)]
 
     def __setattr__(self, name, value):
         if name == "attributes_locked":
@@ -178,6 +181,8 @@ def reentry_point(rest: StringView,
         capturing all text from "rest" up to this point or (-1, None) if no
         reentry-point was found.
     """
+    from parse_base import Parser
+
     upper_limit = len(rest) + 1
     closest_match = upper_limit
     skip_node = None
