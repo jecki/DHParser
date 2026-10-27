@@ -29,38 +29,27 @@ from __future__ import annotations
 import functools
 from collections import defaultdict
 import copy
-from functools import lru_cache
-from inspect import isclass
-from itertools import chain
-from typing import Callable, cast, Collection, DefaultDict, Sequence, Union, Optional, \
-    NamedTuple, Iterator, TYPE_CHECKING
+from typing import Callable, cast, DefaultDict, Union, Optional, \
+    NamedTuple
 
 from DHParser.configuration import get_config_value, NEVER_MATCH_PATTERN
-from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
-    UNDEFINED_RETRIEVE, PARSER_LOOKAHEAD_FAILURE_ONLY, CUSTOM_PARSER_FAILURE, \
+from DHParser.error import Error, PARSER_LOOKAHEAD_FAILURE_ONLY, \
     PARSER_LOOKAHEAD_MATCH_ONLY, PARSER_STOPPED_BEFORE_END, PARSER_NEVER_TOUCHES_DOCUMENT, \
-    MALFORMED_ERROR_STRING, MANDATORY_CONTINUATION_AT_EOF, DUPLICATE_PARSERS_IN_ALTERNATIVE, \
-    CAPTURE_WITHOUT_PARSERNAME, CAPTURE_DROPPED_CONTENT_WARNING, LOOKAHEAD_WITH_OPTIONAL_PARSER, \
-    BADLY_NESTED_OPTIONAL_PARSER, BAD_ORDER_OF_ALTERNATIVES, BAD_MANDATORY_SETUP, \
-    OPTIONAL_REDUNDANTLY_NESTED_WARNING, CAPTURE_STACK_NOT_EMPTY, BAD_REPETITION_COUNT, \
-    AUTOCAPTURED_SYMBOL_NOT_CLEARED, RECURSION_DEPTH_LIMIT_HIT, CAPTURE_STACK_NOT_EMPTY_WARNING, \
-    MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, CAPTURE_STACK_NOT_EMPTY_NON_ROOT_ONLY, \
-    AUTOCAPTURED_SYMBOL_NOT_CLEARED_NON_ROOT, ERROR_WHILE_RECOVERING_FROM_ERROR, \
-    ZERO_LENGTH_CAPTURE_POSSIBLE_WARNING, PARSER_STOPPED_ON_RETRY, ERROR, CANCELED, \
-    INFINITE_LOOP_WARNING, REDUNDANT_PARSER_WARNING, PARSER_STOPPED_BEFORE_END_WARNING, \
-    has_errors, is_error
+    CAPTURE_STACK_NOT_EMPTY, AUTOCAPTURED_SYMBOL_NOT_CLEARED, \
+    CAPTURE_STACK_NOT_EMPTY_WARNING, CAPTURE_STACK_NOT_EMPTY_NON_ROOT_ONLY, \
+    AUTOCAPTURED_SYMBOL_NOT_CLEARED_NON_ROOT, PARSER_STOPPED_ON_RETRY, ERROR, CANCELED, \
+    PARSER_STOPPED_BEFORE_END_WARNING, has_errors, is_error
 from DHParser.log import CallItem, HistoryRecord
 from DHParser.parse_base import Parser, get_parser_placeholder, is_parser_placeholder, \
     has_non_autocaptured_symbols, LeafParser, ParserTrail, PARSER_PLACEHOLDER
 from DHParser.parse_error import ParserError, ResumeList, PatternMatchType
-from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME, SourceMapFunc
+from DHParser.preprocess import SourceMapFunc
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
-from DHParser.nodetree import Node, RootNode, FrozenNode, WHITESPACE_PTYPE, \
-    KEEP_COMMENTS_PTYPE, TOKEN_PTYPE, MIXED_CONTENT_TEXT_PTYPE, ZOMBIE_TAG, EMPTY_NODE, \
-    EMPTY_PTYPE, LEAF_NODE, ChildrenType, ResultType
-from DHParser.toolkit import sane_parser_name, escape_ctrl_chars, re, matching_brackets, \
-    abbreviate_middle, RxPatternType, linebreaks, line_col, TypeAlias, List, Tuple, Any, \
-    MutableSet, Set, FrozenSet, Dict, INFINITE, LazyRE, CancelQuery, deprecated, RxType
+from DHParser.nodetree import Node, RootNode, ZOMBIE_TAG, EMPTY_NODE, \
+    EMPTY_PTYPE, LEAF_NODE
+from DHParser.toolkit import sane_parser_name, re, RxPatternType, linebreaks, line_col, \
+    TypeAlias, List, Tuple, Any, MutableSet, Set, FrozenSet, Dict, INFINITE, LazyRE, \
+    CancelQuery, deprecated, RxType
 
 try:
     import cython
