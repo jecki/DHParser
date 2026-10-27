@@ -216,6 +216,7 @@ class Grammar:
 
     Example for direct instantiation of a grammar::
 
+        >>> from DHParser.parse_combinators import RE
         >>> number = RE(r'\d+') + RE(r'\.') + RE(r'\d+') | RE(r'\d+')
         >>> number_parser = Grammar(number)
         >>> number_parser("3.1416").content
@@ -636,6 +637,7 @@ class Grammar:
         :param static_analysis: If not None, this overrides the config value
             "static_analysis".
         """
+        global PARSER_PLACEHOLDER, RESERVED_PARSER_NAMES
         assert root is None or self.__class__ is Grammar, \
             "External root-parsers cannot be passed to derived classes of Grammar!"
         from DHParser.parse_combinators import ForwardBase, TreeReduction
@@ -684,6 +686,8 @@ class Grammar:
         for name in self.__class__.parser_names__:
             setattr(self, name, copy.deepcopy(self.__class__.__dict__[name], self.memo__))
         # 2.3 Now, initialize additional top-level parser references like 'root__'
+        if PARSER_PLACEHOLDER is None:  # can happen in doc-test examples...
+            PARSER_PLACEHOLDER = get_parser_placeholder()
         for name in RESERVED_PARSER_NAMES:
             p = self.__class__.__dict__.get(name, None)
             if isinstance(p, Parser):
@@ -1292,6 +1296,7 @@ class Grammar:
         If "parser" is not connected to any symbol in the Grammar,
         an AttributeError is raised. Example::
 
+            >>> from DHParser.parse_combinators import Series, Whitespace, RegExp
             >>> word = Series(RegExp(r'\w+'), Whitespace(r'\s*'))
             >>> word.pname = 'word'
             >>> gr = Grammar(word)

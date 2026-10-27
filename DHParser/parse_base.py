@@ -43,8 +43,8 @@ except (ImportError, NameError):
 
 
 if TYPE_CHECKING:
-    from parse_grammar import Grammar, AnalysisError
-    from parse_combinators import Series, Alternative, Interleave
+    from DHParser.parse_grammar import Grammar, AnalysisError
+    from DHParser.parse_combinators import Series, Alternative, Interleave
 
 
 
@@ -87,6 +87,7 @@ def get_grammar_placeholder() -> 'Grammar':
 
 
 def is_grammar_placeholder(grammar: Optional[Union['Grammar', type]]) -> bool:
+    from DHParser.parse_grammar import Grammar
     x = Grammar
     return grammar is None \
         or cast(Grammar, grammar) is _GRAMMAR_PLACEHOLDER \
@@ -391,7 +392,7 @@ class Parser:
     def __add__(self, other: Parser) -> 'Series':
         """The + operator generates a series-parser that applies two
         parsers in sequence."""
-        from parse_combinators import Series
+        from DHParser.parse_combinators import Series
         if isinstance(other, Series):
             return cast('Series', other).__radd__(self)
         return Series(self, other)
@@ -400,7 +401,7 @@ class Parser:
         """The | operator generates an alternative parser that applies
         the first parser and, if that does not match, the second parser.
         """
-        from parse_combinators import Alternative
+        from DHParser.parse_combinators import Alternative
         if isinstance(other, Alternative):
             return cast('Alternative', other).__ror__(self)
         return Alternative(self, other)
@@ -410,7 +411,7 @@ class Parser:
         the first parser and the second parser in any possible order
         until both match.
         """
-        from parse_combinators import Interleave
+        from DHParser.parse_combinators import Interleave
         if isinstance(other, Interleave):
             return other.__rmul__(self)
         return Interleave(self, other)
@@ -616,7 +617,7 @@ class Parser:
         return False
 
     def static_error(self, msg: str, code: ErrorCode) -> 'AnalysisError':
-        from parse_grammar import AnalysisError
+        from DHParser.parse_grammar import AnalysisError
         return AnalysisError(self.symbol, self, Error(msg, 0, code))
 
     def static_analysis(self) -> List['AnalysisError']:
@@ -632,6 +633,7 @@ def assign(name: str, parser: Parser) -> Parser:
     r"""Assigns a name to the given parser. This does the same
     as the :py:meth:`Parser.name`-method. Example::
 
+        >>> from DHParser.parse_combinators import RegExp
         >>> doc = assign("doc", RegExp(r"\w+"))
         >>> print(doc.pname)
         doc
@@ -659,7 +661,7 @@ def Drop(parser: Parser) -> Parser:
     Parser must be anonymous and disposable. Use "DropFrom" instead
     when this requirement ist not met."""
     assert parser.disposable, "Parser must be anonymous to be allowed to drop its content."
-    from parse_combinators import ForwardBase
+    from DHParser.parse_combinators import ForwardBase
     if isinstance(parser, ForwardBase):
         cast(ForwardBase, parser).parser.drop_content = True
     parser.drop_content = True
@@ -672,7 +674,7 @@ def DropFrom(parser: Parser) -> Parser:
     parser itself untouched. This is needed, if you want to drop the
     result from a named-parser in one particular context where it is
     referred to, only."""
-    from parse_combinators import Synonym
+    from DHParser.parse_combinators import Synonym
     wrapper = Synonym(parser)
     wrapper.drop_content = True
     wrapper.disposable = True
@@ -712,7 +714,7 @@ def has_non_autocaptured_symbols(ptrail: ParserTrail) -> Optional[bool]:
     shielded by a Retrieve-Parser. This is the case for captured symbols
     that are not "auto-captured" by a Retrieve-Parser.
     """
-    from parse_combinators import UnaryParser, Retrieve
+    from DHParser.parse_combinators import UnaryParser, Retrieve
     for parser in ptrail:
         if parser.ptype == ":Retrieve":
             break

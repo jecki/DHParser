@@ -430,6 +430,7 @@ class Whitespace(RegExp):
 
     Example::
 
+        >>> from DHParser.parse_grammar import mixin_comment
         >>> ws = Whitespace(mixin_comment(r'\s+', r'#.*'))
         >>> Grammar(ws)("   # comment").as_sxpr()
         '(root "   # comment")'

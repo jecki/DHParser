@@ -181,7 +181,7 @@ def reentry_point(rest: StringView,
         capturing all text from "rest" up to this point or (-1, None) if no
         reentry-point was found.
     """
-    from parse_base import Parser
+    from DHParser.parse_base import Parser
 
     upper_limit = len(rest) + 1
     closest_match = upper_limit
