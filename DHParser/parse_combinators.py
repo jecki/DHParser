@@ -49,7 +49,7 @@ from DHParser.error import Error, ErrorCode, MANDATORY_CONTINUATION, \
 from DHParser.parse_base import Parser, LeafParser, copy_parser_base_attrs, ParsingResult, \
     NoMemoizationParser, Drop, get_parser_placeholder, is_parser_placeholder, \
     is_grammar_placeholder, ParseFunc
-from DHParser.parse_error import ParserError
+from DHParser.parse_error import ParserError, reentry_point
 from DHParser.parse_grammar import Grammar, AnalysisError, dsl_error, is_disposable, \
     UninitializedError
 from DHParser.preprocess import BEGIN_TOKEN, END_TOKEN, RX_TOKEN_NAME
@@ -65,6 +65,111 @@ try:
     import cython
 except (ImportError, NameError):
     import DHParser.externallibs.shadow_cython as cython
+
+
+__all__ = ('parser_names',
+           'PreprocessorToken',
+           'extract_error_code',
+           'ERR',
+           'Text',
+           'IgnoreCase',
+           'DropText',
+           'RegExp',
+           'update_scanner',
+           'RE',
+           'TKN',
+           'DTKN',
+           'Whitespace',
+           'DropRegExp',
+           'NO_TREE_REDUCTION',
+           'FLATTEN',
+           'MERGE_TREETOPS',
+           'MERGE_LEAVES',
+           'CombinedParser',
+           'TreeReduction',
+           'RX_NAMED_GROUPS',
+           'SmartRE',
+           'CustomParseFunc',
+           'Custom',
+           'CustomParser',
+           'UnaryParser',
+           'LateBindingUnary',
+           'NaryParser',
+           'Synonym',
+           'Option',
+           'ZeroOrMore',
+           'OneOrMore',
+           'NO_MANDATORY',
+           'ErrorCatchingNary',
+           'Series',
+           'Alternative',
+           'longest_match',
+           'Counted',
+           'Interleave',
+           'Required',
+           'Lookahead',
+           'NegativeLookahead',
+           'Lookbehind',
+           'NegativeLookbehind',
+           'is_context_sensitive',
+           'ContextSensitive',
+           'Capture',
+           'Retrieve',
+           'Pop',
+           'last_value',
+           'optional_last_value',
+           'matching_bracket',
+           'ForwardBase',
+           'SEED',
+           'Forward',
+           'SimpleForwardRecursive',
+           'SimpleForwardIterative')
+
+
+parser_names = ('Always',
+                'Never',
+                'AnyChar',
+                'PreprocessorToken',
+                'ERR',
+                'Text',
+                'IgnoreCase',
+                'DropText',
+                'RegExp',
+                'SmartRE',
+                'RE',
+                'TKN',
+                'DTKN',
+                'Whitespace',
+                'DropRegExp',
+                'CombinedParser',
+                'Custom',
+                'CustomParser',
+                'Drop',
+                'DropFrom',
+                'Synonym',
+                'Option',
+                'ZeroOrMore',
+                'OneOrMore',
+                'Series',
+                'Alternative',
+                'Counted',
+                'Interleave',
+                'Required',
+                'Lookahead',
+                'NegativeLookahead',
+                'Lookbehind',
+                'NegativeLookbehind',
+                'Capture',
+                'Retrieve',
+                'Pop',
+                'Forward')
+
+
+#######################################################################
+#
+# Special Parsers: PreprocessorToken, ERR (error injection)
+#
+#######################################################################
 
 
 class PreprocessorToken(LeafParser):

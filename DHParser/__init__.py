@@ -34,7 +34,10 @@ from .ebnf import *
 from .error import *
 from .log import *
 # from .lsp import *
-from .parse import *
+from .parse_error import *
+from .parse_base import *
+from .parse_grammar import *
+from .parse_combinators import *
 from .pipeline import *
 from .preprocess import *
 # from .server import *
@@ -54,7 +57,10 @@ __all__ = (*compile.__all__,
            *error.__all__,
            *log.__all__,
            # *lsp.__all__,
-           *parse.__all__,
+           *parse_error.__all__,
+           *parse_base.__all__,
+           *parse_grammar.__all__,
+           *parse_combinators.__all__,
            *pipeline.__all__,
            *preprocess.__all__,
            # *server.__all__,

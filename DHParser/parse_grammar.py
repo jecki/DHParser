@@ -41,7 +41,7 @@ from DHParser.error import Error, PARSER_LOOKAHEAD_FAILURE_ONLY, \
     PARSER_STOPPED_BEFORE_END_WARNING, has_errors, is_error
 from DHParser.log import CallItem, HistoryRecord
 from DHParser.parse_base import Parser, get_parser_placeholder, is_parser_placeholder, \
-    has_non_autocaptured_symbols, LeafParser, ParserTrail, PARSER_PLACEHOLDER
+    has_non_autocaptured_symbols, LeafParser, ParserTrail
 from DHParser.parse_error import ParserError, ResumeList, PatternMatchType
 from DHParser.preprocess import SourceMapFunc
 from DHParser.stringview import StringView, EMPTY_STRING_VIEW
@@ -55,6 +55,22 @@ try:
     import cython
 except (ImportError, NameError):
     import DHParser.externallibs.shadow_cython as cython
+
+
+__all__ = ('ParserCallable',
+           'ParserFactory',
+           'Parser',
+           'AnalysisError',
+           'GrammarError',
+           'UninitializedError',
+           'cancel_proxy',
+           'NEVER_MATCH_PATTERN',
+           'RX_NEVER_MATCH',
+           'Grammar',
+           'match',
+           'fullmatch',
+           'mixin_comment',
+           'mixin_nonempty')
 
 
 RX_NEVER_MATCH = LazyRE(NEVER_MATCH_PATTERN)
@@ -199,6 +215,9 @@ def is_disposable(name: str, disposables: Union[Set[str], RxType]) -> bool:
     else:
         assert isinstance(disposables, str), type(disposables)
         return bool(re.match(disposables, name))
+
+
+PARSER_PLACEHOLDER = None
 
 
 class Grammar:
@@ -638,6 +657,8 @@ class Grammar:
             "static_analysis".
         """
         global PARSER_PLACEHOLDER, RESERVED_PARSER_NAMES
+        if PARSER_PLACEHOLDER is None:  # can happen in doc-test examples and other rare cases...
+            PARSER_PLACEHOLDER = get_parser_placeholder()
         assert root is None or self.__class__ is Grammar, \
             "External root-parsers cannot be passed to derived classes of Grammar!"
         from DHParser.parse_combinators import ForwardBase, TreeReduction
@@ -686,8 +707,6 @@ class Grammar:
         for name in self.__class__.parser_names__:
             setattr(self, name, copy.deepcopy(self.__class__.__dict__[name], self.memo__))
         # 2.3 Now, initialize additional top-level parser references like 'root__'
-        if PARSER_PLACEHOLDER is None:  # can happen in doc-test examples...
-            PARSER_PLACEHOLDER = get_parser_placeholder()
         for name in RESERVED_PARSER_NAMES:
             p = self.__class__.__dict__.get(name, None)
             if isinstance(p, Parser):

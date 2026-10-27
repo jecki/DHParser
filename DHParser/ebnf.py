@@ -1215,12 +1215,13 @@ from DHParser.error import ErrorCode, Error, canonical_error_strings, has_errors
     WARNING, ERROR, FATAL
 from DHParser.log import start_logging, suspend_logging, resume_logging
 from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode, Path, ZOMBIE_TAG
-from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, DropFrom, AnyChar, Parser, \\
-    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, ERR, \\
-    Option, NegativeLookbehind, OneOrMore, RegExp, SmartRE, Retrieve, Series, Capture, TreeReduction, \\
-    ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, \\
-    LateBindingUnary, mixin_comment, last_value, matching_bracket, optional_last_value, \\
-    PARSER_PLACEHOLDER, RX_NEVER_MATCH, UninitializedError, SimpleForwardRecursive, \\
+from DHParser.parse_base import Parser, Drop, DropFrom, AnyChar, get_parser_placeholder
+from DHParser.parse_grammar import Grammar, mixin_comment, RX_NEVER_MATCH, UninitializedError
+from DHParser.parse_combinators import PreprocessorToken, Whitespace, Lookbehind, Lookahead, \\
+    Alternative, Pop, Text, Synonym, Counted, Interleave, ERR, Option, NegativeLookbehind, \\
+    OneOrMore, RegExp, SmartRE, Retrieve, Series, Capture, TreeReduction, ZeroOrMore, Forward, \\
+    NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, LateBindingUnary, \\
+    last_value, matching_bracket, optional_last_value, SimpleForwardRecursive, \\
     SimpleForwardIterative, ForwardBase
 from DHParser.pipeline import end_points, full_pipeline, create_parser_junction, \\
     create_preprocess_junction, create_junction, Junction, PseudoJunction, PipelineResult
@@ -1228,7 +1229,7 @@ from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, Preprocessor
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.stringview import StringView
 from DHParser.toolkit import is_filename, load_if_file, cpu_count, get_piped_data, \\
-    ThreadLocalSingletonFactory, expand_table, static, CancelQuery, re
+    ThreadLocalSingletonFactory, expand_table, static, CancelQuery, re, INFINITE
 from DHParser.trace import set_tracer, resume_notices_on, trace_history
 from DHParser.transform import is_empty, remove_if, TransformationDict, TransformerFunc, \\
     transformation_factory, remove_children_if, move_fringes, normalize_whitespace, \\

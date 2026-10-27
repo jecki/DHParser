@@ -2222,8 +2222,12 @@ def parse_number(base_as_str: str):
     return parse_number_func
     '''
     py_parse_referring_class = r'''
+from DHParser.parse_base import get_parser_placeholder
+PARSER_PLACEHOLDER = get_parser_placeholder()
+
 class ParserNumber(LateBindingUnary):
     def _parse(self, location):
+        global PARSER_PLACEHOLDER
         assert self.parser is not PARSER_PLACEHOLDER
         parser = self.parser
         result, location_ = parser(location)

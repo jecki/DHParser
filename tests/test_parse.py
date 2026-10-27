@@ -38,7 +38,7 @@ from DHParser.error import Error, is_error, add_source_locations, MANDATORY_CONT
     MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, INFINITE_LOOP_WARNING, ErrorCode
 from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, \
-    Interleave, CombinedParser, Text, EMPTY_NODE, Capture, Drop, Whitespace, \
+    Interleave, CombinedParser, Text, Capture, Drop, Whitespace, \
     GrammarError, Counted, Always, longest_match, extract_error_code, \
     Option, DTKN, RegExp, Option, SmartRE, SEED
 from DHParser.preprocess import gen_neutral_srcmap_func
@@ -46,7 +46,7 @@ from DHParser.compile import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
     parse_ebnf, DHPARSER_IMPORTS, compile_ebnf
 from DHParser.dsl import grammar_provider, create_parser
-from DHParser.nodetree import Node, parse_sxpr, ANY_NODE
+from DHParser.nodetree import Node, parse_sxpr, ANY_NODE, EMPTY_NODE
 from DHParser.stringview import StringView
 from DHParser.trace import set_tracer, trace_history, resume_notices_on
 
