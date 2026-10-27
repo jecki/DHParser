@@ -79,6 +79,7 @@ _GRAMMAR_PLACEHOLDER: Optional['Grammar'] = None
 def get_grammar_placeholder() -> 'Grammar':
     global _GRAMMAR_PLACEHOLDER
     if _GRAMMAR_PLACEHOLDER is None:
+        from DHParser.parse_grammar import Grammar
         _GRAMMAR_PLACEHOLDER = Grammar.__new__(Grammar)
         if not cython.compiled:
             _GRAMMAR_PLACEHOLDER.__call__ = NOCALL
