@@ -83,13 +83,13 @@ import copy
 from enum import IntEnum
 import functools
 import json
-from typing import Callable, cast, Iterator, Iterable, Sequence, List, \
-    Union, Tuple, Container, Optional, Dict, Any, NamedTuple
+from typing import Callable, cast, Iterator, Sequence, List, \
+    Union, Tuple, Container, Optional, Dict, Any
 
 from DHParser.configuration import get_config_value, ALLOWED_PRESET_VALUES
 from DHParser.error import Error, ErrorCode, ERROR, PARSER_STOPPED_BEFORE_END, \
     add_source_locations, has_errors, only_errors, error_category
-from DHParser.preprocess import SourceMap, SourceMapFunc, gen_neutral_srcmap_func
+from DHParser.preprocess import SourceMapFunc, gen_neutral_srcmap_func
 from DHParser.stringview import StringView  # , real_indices
 from DHParser.toolkit import re, linebreaks, line_col, JSONnull, JSON_Dict, \
     validate_XML_attribute_value, fix_XML_attribute_value, lxml_XML_attribute_value, \

@@ -39,17 +39,17 @@ from DHParser.error import ErrorCode, Error, canonical_error_strings, has_errors
 from DHParser.log import start_logging, suspend_logging, resume_logging
 from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode, Path, ZOMBIE_TAG
 from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, DropFrom, AnyChar, Parser, \
-    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, ERR, \
+    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, ERR, \
     Option, NegativeLookbehind, OneOrMore, RegExp, SmartRE, Retrieve, Series, Capture, TreeReduction, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, \
     LateBindingUnary, mixin_comment, last_value, matching_bracket, optional_last_value, \
-    PARSER_PLACEHOLDER, RX_NEVER_MATCH, UninitializedError, SimpleForwardRecursive
+    RX_NEVER_MATCH, UninitializedError, SimpleForwardRecursive
 from DHParser.pipeline import end_points, full_pipeline, create_parser_junction, \
     create_preprocess_junction, create_junction, Junction, PseudoJunction, PipelineResult
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.stringview import StringView
-from DHParser.toolkit import is_filename, load_if_file, cpu_count, \
+from DHParser.toolkit import is_filename, load_if_file, cpu_count, INFINITE, \
     ThreadLocalSingletonFactory, expand_table, static, CancelQuery, re
 from DHParser.trace import set_tracer, resume_notices_on, trace_history
 from DHParser.transform import is_empty, remove_if, TransformationDict, TransformerFunc, \
@@ -116,7 +116,7 @@ class LR2Grammar(Grammar):
     """
     expr = Forward()
     term = Forward()
-    source_hash__ = "a6b2a5163d37c4fc32fca2c0e137c194"
+    source_hash__ = "af0a0f8061867f3e99f608ac1934dcf0"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

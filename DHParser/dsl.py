@@ -39,7 +39,7 @@ from DHParser.error import Error, is_error, has_errors, only_errors, canonical_e
     ErrorCode, ERROR
 from DHParser.log import suspend_logging, resume_logging, is_logging, append_log
 from DHParser.nodetree import Node
-from DHParser.parse import Grammar, ParserFactory
+from DHParser.parse_grammar import Grammar, ParserFactory
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, \
     PreprocessorFactory
 from DHParser.transform import TransformerFunc, TransformerFactory

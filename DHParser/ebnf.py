@@ -251,32 +251,34 @@ from DHParser.configuration import access_thread_locals, get_config_value, get_c
     set_config_value, NEVER_MATCH_PATTERN, ALLOWED_PRESET_VALUES
 from DHParser.error import Error, AMBIGUOUS_ERROR_HANDLING, WARNING, REDECLARED_TOKEN_WARNING,\
     REDEFINED_DIRECTIVE, UNUSED_ERROR_HANDLING_WARNING, NOTICE, \
-    DIRECTIVE_FOR_NONEXISTANT_SYMBOL, UNDEFINED_SYMBOL_IN_TRANSTABLE_WARNING, \
+    DIRECTIVE_FOR_NONEXISTANT_SYMBOL, \
     UNCONNECTED_SYMBOL_WARNING, REORDERING_OF_ALTERNATIVES_REQUIRED, BAD_ORDER_OF_ALTERNATIVES, \
     EMPTY_GRAMMAR_ERROR, MALFORMED_REGULAR_EXPRESSION, PEG_EXPRESSION_IN_DIRECTIVE_WO_BRACKETS, \
     STRUCTURAL_ERROR_IN_AST, SYMBOL_NAME_IS_PYTHON_KEYWORD, UNDEFINED_SYMBOL, ERROR, FATAL, \
     WRONG_NUMBER_OF_ARGUMENTS, UNKNOWN_MACRO_ARGUMENT, AMBIGUOUS_RANGE_EXPRESSION_WARNING, \
     UNDEFINED_MACRO, RECURSIVE_MACRO_CALL, UNUSED_MACRO_ARGUMENTS_WARNING, \
     NAME_SHADOWED_BY_DROP_CLASS_NOTICE, has_errors
-from DHParser.parse import Parser, Grammar, mixin_comment, mixin_nonempty, Forward, RegExp, SmartRE, \
-    Drop, DropFrom, Lookahead, NegativeLookahead, Alternative, Series, Option, ZeroOrMore, OneOrMore, \
-    Text, Capture, Retrieve, Pop, optional_last_value, GrammarError, Whitespace, Always, Never, \
-    Synonym, matching_bracket, ParseFunc, update_scanner, CombinedParser, parser_names, \
-    RX_NAMED_GROUPS, NO_TREE_REDUCTION, FLATTEN, MERGE_TREETOPS, MERGE_LEAVES
+from DHParser.parse_base import Parser, Drop
+from DHParser.parse_grammar import Grammar, GrammarError, mixin_comment, mixin_nonempty
+from DHParser.parse_combinators import Forward, RegExp, SmartRE, Lookahead, NegativeLookahead, \
+    Alternative, Series, Option, ZeroOrMore, OneOrMore, Text, \
+    Whitespace, Synonym, update_scanner, \
+    CombinedParser, parser_names, RX_NAMED_GROUPS, NO_TREE_REDUCTION, FLATTEN, \
+    MERGE_TREETOPS, MERGE_LEAVES
 from DHParser.preprocess import PreprocessorFunc, PreprocessorResult, gen_find_include_func, \
     preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.nodetree import Node, RootNode, Path, WHITESPACE_PTYPE, KEEP_COMMENTS_PTYPE, \
     TOKEN_PTYPE, ZOMBIE_TAG, flatten_sxpr, parse_sxpr
 from DHParser.toolkit import load_if_file, wrap_str_literal, escape_ctrl_chars, md5, \
     sane_parser_name, re, expand_table, unrepr, compile_python_object, deprecated, \
-    ThreadLocalSingletonFactory, Any, Iterable, Sequence, Set, Union, Dict, List, \
-    Tuple, FrozenSet, MutableSet, Optional, Type, Callable, Container, TypeAlias, \
-    matching_brackets, INFINITE, LazyRE, static, RX_NEVER_MATCH
+    ThreadLocalSingletonFactory, Any, Iterable, Union, Dict, List, \
+    Tuple, FrozenSet, MutableSet, Optional, Callable, TypeAlias, \
+    matching_brackets, INFINITE, LazyRE, static
 from DHParser.transform import TransformerFunc, transformer, remove_brackets, change_name, \
     reduce_single_child, replace_by_single_child, is_empty, remove_children, add_error, \
     remove_tokens, remove_anonymous_tokens, flatten, forbid, assert_content, remove_children_if, \
-    all_of, not_one_of, apply_if, apply_unless, neg, has_parent, has_child, any_of, \
-    peek, BLOCK_LEAVES
+    all_of, not_one_of, apply_if, neg, has_parent, has_child, \
+    BLOCK_LEAVES
 from DHParser.versionnumber import __version__
 
 

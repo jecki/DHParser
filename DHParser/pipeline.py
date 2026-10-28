@@ -43,14 +43,16 @@ from DHParser.compile import compile_source, process_tree, CompilerFactory
 from DHParser.configuration import get_config_value
 from DHParser.error import Error, has_errors, is_fatal, FATAL, CANCELED
 from DHParser.nodetree import RootNode, Node
-from DHParser.parse import Grammar, ParserFactory, Parser
+from DHParser.parse_base import Parser
+from DHParser.parse_grammar import Grammar, ParserFactory
 from DHParser.preprocess import PreprocessorFactory, PreprocessorFunc, Tokenizer, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors, \
     DeriveFileNameFunc, PreprocessorResult
 from DHParser.toolkit import ThreadLocalSingletonFactory, deprecation_warning, deprecated, \
     get_annotations, CancelQuery
 from DHParser.trace import resume_notices_on, set_tracer, trace_history
-from DHParser.transform import TransformerFunc, TransformerFactory, transformer, TransformationDict
+from DHParser.transform import TransformerFunc, TransformerFactory, transformer, \
+    TransformationDict
 
 __all__ = ('Junction',
            'PipelineResult',

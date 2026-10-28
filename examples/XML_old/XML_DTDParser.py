@@ -108,7 +108,7 @@ class XML_DTDGrammar(Grammar):
     element = Forward()
     extSubsetDecl = Forward()
     ignoreSectContents = Forward()
-    source_hash__ = "ff802928a895a9fb63a1be98619a723b"
+    source_hash__ = "c42c9d265e0efa56a5f352bc99d3f181"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

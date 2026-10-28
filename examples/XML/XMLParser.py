@@ -32,12 +32,12 @@ from DHParser.ebnf import grammar_changed
 from DHParser.error import ErrorCode, Error, canonical_error_strings, has_errors, NOTICE, \
     WARNING, ERROR, FATAL
 from DHParser.log import start_logging, suspend_logging, resume_logging
-from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode, ZOMBIE_TAG
+from DHParser.nodetree import Node, TOKEN_PTYPE, RootNode, ZOMBIE_TAG, EMPTY_NODE
 from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar, Parser, \
     Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, ERR, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, mixin_comment, \
-    last_value, matching_bracket, optional_last_value, SmartRE, EMPTY_NODE,RX_NEVER_MATCH, \
+    last_value, matching_bracket, optional_last_value, SmartRE, RX_NEVER_MATCH, \
     SimpleForwardRecursive, SimpleForwardIterative
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
@@ -107,9 +107,9 @@ class XMLGrammar(Grammar):
         syntax_tree = parser(source_code)
     """
     element = Forward()
-    source_hash__ = "9b7080d3b7f45d9a74fd8d81b202620a"
+    source_hash__ = "cf8d1883ad07671b73a1f8109154d01e"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:EOF$|CommentChars$|CData$|tagContent$|NameStartChar$|BOM$|PubidCharsSingleQuoted$|EncName$|PubidChars$|Misc$|Reference$|VersionNum$|NameChars$|prolog$|XmlPIAtts$)')
+    disposable__ = re.compile('(?:PubidCharsSingleQuoted$|EncName$|EOF$|prolog$|VersionNum$|NameChars$|XmlPIAtts$|NameStartChar$|Misc$|CommentChars$|Reference$|CData$|PubidChars$|tagContent$|BOM$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'tagContent': [('', "syntax error in tag-name of opening or empty tag:  {1}")],

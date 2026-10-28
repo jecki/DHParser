@@ -59,7 +59,6 @@ import functools
 import os
 from typing import Iterable, Iterator, Union, Dict, List, Sequence, Callable
 
-from DHParser.stringview import StringView
 from DHParser.toolkit import linebreaks, line_col, is_filename, TypeAlias
 
 

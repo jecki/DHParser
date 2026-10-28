@@ -76,13 +76,13 @@ import sys
 import threading
 from threading import Thread
 import time
-from typing import Callable, Coroutine, Awaitable, Optional, Union, Dict, List, Tuple, Sequence, \
+from typing import Callable, Coroutine, Awaitable, Optional, Union, Dict, List, Tuple, \
     Set, Any, cast, Type, TypeVar
 
 from DHParser.configuration import access_thread_locals, get_config_value
 from DHParser.nodetree import DHParser_JSONEncoder
 from DHParser.log import create_log, append_log, is_logging, log_dir
-from DHParser.toolkit import re, JSON_Type, JSON_Dict, JSONstr, JSONnull, \
+from DHParser.toolkit import re, JSON_Type, JSON_Dict, \
     json_encode_string, json_rpc, json_dumps, pp_json, pp_json_str, identify_python, \
     normalize_docstring, md5, is_html_name, TypeAlias, PickMultiCoreExecutor
 from DHParser.versionnumber import __version__

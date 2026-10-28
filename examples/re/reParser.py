@@ -41,11 +41,11 @@ from DHParser.log import start_logging, suspend_logging, resume_logging
 from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode, Path, ZOMBIE_TAG, \
     parse_sxpr
 from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, DropFrom, AnyChar, Parser, \
-    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, ERR, \
+    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, ERR, \
     Option, NegativeLookbehind, OneOrMore, RegExp, SmartRE, Retrieve, Series, Capture, TreeReduction, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, \
     LateBindingUnary, mixin_comment, last_value, matching_bracket, optional_last_value, \
-    PARSER_PLACEHOLDER, UninitializedError,  RX_NEVER_MATCH, SimpleForwardRecursive, \
+    UninitializedError,  RX_NEVER_MATCH, SimpleForwardRecursive, \
     SimpleForwardIterative
 from DHParser.pipeline import end_points, full_pipeline, create_parser_junction, \
     create_preprocess_junction, create_junction, PseudoJunction, PipelineResult
@@ -54,7 +54,7 @@ from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, Preprocessor
     SourceMap, result_from_mapping, gen_neutral_srcmap_func
 from DHParser.stringview import StringView
 from DHParser.toolkit import re, is_filename, load_if_file, cpu_count, \
-    ThreadLocalSingletonFactory, expand_table, CancelQuery
+    ThreadLocalSingletonFactory, expand_table, CancelQuery, INFINITE
 from DHParser.trace import set_tracer, resume_notices_on, trace_history
 from DHParser.transform import is_empty, remove_if, TransformationDict, TransformerFunc, \
     transformation_factory, remove_children_if, move_fringes, normalize_whitespace, \
@@ -198,9 +198,9 @@ class reGrammar(Grammar):
     _entity = Forward()
     _item = Forward()
     sequence = Forward()
-    source_hash__ = "c83ed2a1f7ed334e0132c419735ea5b4"
+    source_hash__ = "0fbef7547ea3b6b4dc41156d7b5e7af4"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:_entity$|_escapedCh$|_illegal$|EOF$|_csEsc$|_anyChar$|_reEsc$|_escape$|_extension$|_item$|_grpChars$|_grpItem$|_char$|_number$|_grpChar$|_group$|_nibble$|_octal$|_ch$|BS$|_special$|_chars$)')
+    disposable__ = re.compile('(?:EOF$|_illegal$|BS$|_anyChar$|_nibble$|_item$|_escape$|_grpChar$|_escapedCh$|_grpChars$|_char$|_reEsc$|_number$|_csEsc$|_ch$|_octal$|_extension$|_grpItem$|_special$|_chars$|_entity$|_group$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r''

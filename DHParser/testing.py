@@ -50,7 +50,8 @@ from DHParser.error import Error, is_error, PARSER_LOOKAHEAD_MATCH_ONLY, \
     MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, CAPTURE_STACK_NOT_EMPTY_NON_ROOT_ONLY, \
     AUTOCAPTURED_SYMBOL_NOT_CLEARED_NON_ROOT, PYTHON_ERROR_IN_TEST, RESUME_NOTICE
 from DHParser.log import is_logging, clear_logs, local_log_dir, log_parsing_history
-from DHParser.parse import Lookahead, artifact
+from DHParser.parse_error import artifact
+from DHParser.parse_combinators import Lookahead
 from DHParser.server import RX_CONTENT_LENGTH, RE_DATA_START, JSONRPC_HEADER_BYTES
 from DHParser.nodetree import Node, RootNode, deserialize, flatten_sxpr, ZOMBIE_TAG
 from DHParser.pipeline import extract_data, run_pipeline

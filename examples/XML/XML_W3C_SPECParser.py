@@ -117,7 +117,7 @@ class XML_W3C_SPECGrammar(Grammar):
     element = Forward()
     extSubsetDecl = Forward()
     ignoreSectContents = Forward()
-    source_hash__ = "dcb7944bfa6e6780abf6b4c1cff5cbca"
+    source_hash__ = "affeba3f99999feef2eedd31f86677d3"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

@@ -44,7 +44,8 @@ from DHParser.configuration import get_config_value
 from DHParser.preprocess import PreprocessorFunc, gen_neutral_srcmap_func
 from DHParser.nodetree import Node, RootNode, EMPTY_PTYPE, Path
 from DHParser.transform import TransformerFunc
-from DHParser.parse import ParserCallable, Parser
+from DHParser.parse_base import Parser
+from DHParser.parse_grammar import ParserCallable
 from DHParser.error import is_error, is_fatal, Error, FATAL, CANCELED, \
     TREE_PROCESSING_CRASH, COMPILER_CRASH, AST_TRANSFORM_CRASH, has_errors
 from DHParser.log import log_parsing_history, log_ST, is_logging

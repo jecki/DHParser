@@ -39,11 +39,11 @@ from DHParser.error import ErrorCode, Error, canonical_error_strings, has_errors
 from DHParser.log import start_logging, suspend_logging, resume_logging
 from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode, Path, ZOMBIE_TAG
 from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, DropFrom, AnyChar, Parser, \
-    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, ERR, \
+    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, ERR, \
     Option, NegativeLookbehind, OneOrMore, RegExp, SmartRE, Retrieve, Series, Capture, TreeReduction, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, IgnoreCase, \
     LateBindingUnary, mixin_comment, last_value, matching_bracket, optional_last_value, \
-    PARSER_PLACEHOLDER, RX_NEVER_MATCH, UninitializedError, SimpleForwardRecursive
+    RX_NEVER_MATCH, UninitializedError, SimpleForwardRecursive
 from DHParser.pipeline import end_points, full_pipeline, create_parser_junction, \
     create_preprocess_junction, create_junction, Junction, PseudoJunction, PipelineResult
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
@@ -116,7 +116,7 @@ class InterwovenLR2Grammar(Grammar):
     """
     L = Forward()
     P = Forward()
-    source_hash__ = "cbcac18c67c588b12fa41e6888e16d71"
+    source_hash__ = "de0909abc1c96923911057ac68989c8e"
     disposable__ = re.compile('$.')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
