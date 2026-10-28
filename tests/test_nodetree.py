@@ -43,8 +43,9 @@ from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compi
 from DHParser.error import ERROR
 from DHParser.dsl import grammar_provider, create_parser
 from DHParser.error import Error
-from DHParser.parse import RE, Grammar, Forward, Whitespace, Drop, SmartRE, RegExp, Series, \
-    ZeroOrMore, Alternative, Option, Text, mixin_comment
+from DHParser.parse_combinators import RE, Forward, Whitespace, Drop, SmartRE, RegExp, Series, \
+    ZeroOrMore, Alternative, Option, Text
+from DHParser.parse_grammar import Grammar, mixin_comment
 from DHParser.preprocess import gen_neutral_srcmap_func
 from DHParser.toolkit import re, ThreadLocalSingletonFactory
 

@@ -43,7 +43,7 @@ from DHParser.error import has_errors, MANDATORY_CONTINUATION, PARSER_STOPPED_BE
     NAME_SHADOWED_BY_DROP_CLASS_NOTICE
 from DHParser.nodetree import WHITESPACE_PTYPE, flatten_sxpr, parse_sxpr, RootNode, Node, ANY_PATH, \
     pp_path
-from DHParser.parse import Interleave
+from DHParser.parse_combinators import Interleave
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, EBNFTransform, \
     EBNFDirectives, get_ebnf_compiler, compile_ebnf, DHPARSER_IMPORTS, \
     WHITESPACE_TYPES, parse_ebnf, transform_ebnf, get_EBNF_AST_Serialization_Table, \

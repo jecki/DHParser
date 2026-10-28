@@ -65,7 +65,7 @@ sphinx = ["sphinx (>=8.0) ; python_version >= '3.10'",
           "pydata-sphinx-theme (>=0.16.0) ; python_version >= '3.10'",
           "sphinx-book-theme (>= 1.1.0) ; python_version >= '3.10'",
           "typing_extensions (>= 4.16.0) ; python_version >= '3.10'"]
-pytest = ["pytest (>=9.0) ; python_version >= '3.10'"]
+pytest = ["pytest (>=9.0.3) ; python_version >= '3.10'"]
 
 
 [tool.poetry]

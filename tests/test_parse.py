@@ -31,22 +31,23 @@ sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 from DHParser.configuration import get_config_value, set_config_value
 from DHParser.toolkit import compile_python_object, re, INFINITE
 from DHParser.log import is_logging, log_ST, log_parsing_history, start_logging
-from DHParser.error import Error, is_error, add_source_locations, MANDATORY_CONTINUATION, \
+from DHParser.error import is_error, MANDATORY_CONTINUATION, \
     MALFORMED_ERROR_STRING, MANDATORY_CONTINUATION_AT_EOF, RESUME_NOTICE, \
     PARSER_STOPPED_BEFORE_END, PARSER_NEVER_TOUCHES_DOCUMENT, \
     CAPTURE_DROPPED_CONTENT_WARNING, PARSER_STOPPED_BEFORE_END_WARNING, \
-    MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, INFINITE_LOOP_WARNING, ErrorCode
-from DHParser.parse import ParserError, Parser, Grammar, Forward, TKN, ZeroOrMore, RE, \
+    MANDATORY_CONTINUATION_AT_EOF_NON_ROOT, INFINITE_LOOP_WARNING
+from DHParser.parse_combinators import Forward, TKN, ZeroOrMore, RE, \
     RegExp, Lookbehind, NegativeLookahead, OneOrMore, Series, Alternative, \
     Interleave, CombinedParser, Text, Capture, Drop, Whitespace, \
-    GrammarError, Counted, Always, longest_match, extract_error_code, \
-    Option, DTKN, RegExp, Option, SmartRE, SEED
-from DHParser.preprocess import gen_neutral_srcmap_func
+    Counted, longest_match, Option, DTKN, RegExp, Option, SmartRE
+from DHParser.parse_base import Parser
+from DHParser.parse_error import ParserError
+from DHParser.parse_grammar import Grammar, GrammarError
 from DHParser.compile import compile_source
 from DHParser.ebnf import get_ebnf_grammar, get_ebnf_transformer, get_ebnf_compiler, \
     parse_ebnf, DHPARSER_IMPORTS, compile_ebnf
 from DHParser.dsl import grammar_provider, create_parser
-from DHParser.nodetree import Node, parse_sxpr, ANY_NODE, EMPTY_NODE
+from DHParser.nodetree import Node, parse_sxpr, EMPTY_NODE
 from DHParser.stringview import StringView
 from DHParser.trace import set_tracer, trace_history, resume_notices_on
 

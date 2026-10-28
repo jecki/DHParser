@@ -27,7 +27,7 @@ scriptpath = os.path.dirname(__file__) or '.'
 sys.path.append(os.path.abspath(os.path.join(scriptpath, '..')))
 LOG_DIR = os.path.abspath(os.path.join(scriptpath, "LOGS"))
 
-from DHParser.parse import Grammar, mixin_comment
+from DHParser.parse_grammar import Grammar, mixin_comment
 from DHParser.compile import Compiler
 from DHParser.error import is_error
 from DHParser.dsl import compile_on_disk, run_compiler, compileEBNF, grammar_provider, \
