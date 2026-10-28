@@ -82,6 +82,5 @@ __uri__ = __url__
 __author__ = "Eckhart Arnold"
 __email__ = "eckhart.arnold@posteo.de"
 __license__ = "https://www.apache.org/licenses/LICENSE-2.0"
-__copyright__ = "Copyright (c) 2016-2021 Eckhart Arnold"
-# __all__ = ['toolkit', 'stringview', 'error', 'nodetree', 'preprocess', 'parse',
-# 'transform', 'ebnf', 'dsl', 'testing', 'versionnumber', 'configuration']
+__copyright__ = "Copyright (c) 2016-2026 Eckhart Arnold"
+
