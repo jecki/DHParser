@@ -1,5 +1,5 @@
-<div style="text-align:center;">
-<img src="DHParser/assets/DHParser_Logo_192.png" alt="DHParser Logo" style="width:192px; height:192px;" />
+<div align="center" style="text-align:center;">
+<img src="https://raw.githubusercontent.com/jecki/DHParser/master/DHParser/assets/DHParser_Logo_192.png" alt="DHParser Logo" style="width:192px; height:192px;" width="192" height="192" />
 </div>
 
 
