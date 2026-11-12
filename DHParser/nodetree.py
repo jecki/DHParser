@@ -819,12 +819,13 @@ class Node:  # (collections.abc.Sized): Base class omitted for cython-compatibil
     def pos(self) -> int:
         """Returns the position of the Node's content in the source text."""
         if self._pos < 0:
-            raise AssertionError("Position value not initialized! Use node.with_pos() "
+            raise AssertionError("Position value not initialized in Node: "
+                f"{flatten_sxpr(self.as_sxpr())[:99]}! Use node.with_pos() "
                 "to set the position of node and all of its descendants.\nTypically, "
                 "you would call node.with_pos(0) for the root node of a node tree once "
                 "in the lifetime of the tree.\nWhen working with content mappings, the "
                 "position relative to the content mapping can be obtained with "
-                "cm.get_node_position(). This is independet of node. pos and does not "
+                "cm.get_node_position(). This is independet of node.pos and does not "
                 "require any initialization!")
         return self._pos
 
