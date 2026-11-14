@@ -4581,4 +4581,7 @@ Union = typing.Union
 ValuesView = typing.ValuesView
 cast = typing.cast
 no_type_check = typing.no_type_check
-no_type_check_decorator = typing.no_type_check_decorator
+try:
+    no_type_check_decorator = typing.no_type_check_decorator
+except AttributeError:
+    no_type_check_decorator = typing.no_type_check
