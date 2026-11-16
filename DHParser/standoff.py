@@ -995,15 +995,57 @@ def leaf_paths(criterion: PathSelector) -> PathMatchFunction:
     return leaf_match_func
 
 
+def iterate_paths(root: Node,
+                  match_func: PathMatchFunction,
+                  include_root: bool = False,
+                  reverse: bool = False,
+                  ignore_func: PathMatchFunction = NO_PATH) -> Iterator[Path]:
+    """
+    Selects paths from a tree based on a match function. Other than the
+    skip_func parameter of :py:meth:`nodetree.Node.select_path_if`, the
+    ignore_func parameter not only prevents the traveral of the child nodes
+    of a path it matches but that als ignores this matched path itself!
+
+    :param root: The root node of the tree to be traversed.
+    :param match_func: The function that determines if a path shall be selected.
+    :param include_root: If False, the path [root] will not be checked for a match
+        but simply be ignored.
+    :param reverse: If True, the tree will be walked in reverse
+        order, i.e. last children first.
+    :param ignore_func: A path for which ignore_func(path) returns True
+        will be ignores, even if it matches the match_func.
+    :returns: An iterator over all paths that for which ignore_func
+        is False and match_func is True. Traversal is pre-order.
+    """
+    def recursive(path) -> Iterator[Path]:
+        nonlocal match_func, reverse, ignore_func
+        top = path[-1]
+        child_iterator = reversed(top._children) if reverse else top._children
+        for child in child_iterator:
+            child_path = path + [child]
+            if ignore_func(child_path):
+                continue
+            if match_func(child_path):
+                yield child_path
+            if child._children:
+                yield from recursive(child_path)
+
+    path: List[Node] = [root]
+    if include_root:
+        if not ignore_func(path):
+            if match_func(path):  yield path
+            yield from recursive(path)
+    else:
+        yield from recursive(path)
+
+
 def sourcemapped_path(origin: Node,
                       match_func: PathMatchFunction,
                       ignore_func: PathMatchFunction = NO_PATH) \
         -> Iterator[Tuple[Path, cython.int]]:
     """
-    Similar to :py:func:`Node.select_path_if` but yields the path and the
+    Similar to :py:func:`iterate_paths` but yields the path and the
     number of characters skipped since the last matched path was returned.
-    Also, other than skip_func from select_path_if, ignore_func does not
-    (still) yield the root-node if the ignored elements!
     """
     gap = 0
 
@@ -1274,8 +1316,8 @@ class ContentMapping:
         path_list = []
         pos_list = []
         select_func = (lambda pth: self.select_func(stump + pth)) if stump else self.select_func
-        for path in origin.select_path_if(
-                select_func, include_root=True, skip_func=self.ignore_func):
+        for path in iterate_paths(origin, select_func,
+                                  include_root=True, ignore_func=self.ignore_func):
             pos_list.append(pos)
             path_list.append(path)
             content_list.append(path[-1].content)

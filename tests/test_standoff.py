@@ -867,6 +867,68 @@ class TestMarkup:
             assert after == example['after'], f'\n{after}\n{example["after"]}'
 
 
+lindenbaum_xml = """
+<doc>Am Brunnen<note>Der Lindenbaum beginnt mit "Am Brunnen<note>Kann sehr tief sein!</note> vor dem Tore"</note> vor dem Tore, da steht ein Lindenbaum. Ich täumt in seinem Schatten<note>Dem Schatten nämlich des Baums "Am Brunnen vor dem Tore"!</note> so manchen süßen Traum.</doc>
+"""
+
+lindenbaum_expected_1 = """
+(doc
+  (i "Am Brunnen")
+  (note
+    (:Text 'Der Lindenbaum beginnt mit "Am Brunnen')
+    (note "Kann sehr tief sein!")
+    (:Text ' vor dem Tore"'))
+  (i " vor dem Tore")
+  (:Text ", da steht ein Lindenbaum. Ich täumt in seinem Schatten")
+  (note 'Dem Schatten nämlich des Baums "Am Brunnen vor dem Tore"!')
+  (:Text " so manchen süßen Traum."))
+"""
+
+lindenbaum_expected_2 = """
+(doc
+  (i "Am Brunnen")
+  (note
+    (:Text 'Der Lindenbaum beginnt mit "')
+    (i "Am Brunnen")
+    (note "Kann sehr tief sein!")
+    (i " vor dem Tore")
+    (:Text '"'))
+  (i " vor dem Tore")
+  (:Text ", da steht ein Lindenbaum. Ich täumt in seinem Schatten")
+  (note
+    (:Text 'Dem Schatten nämlich des Baums "')
+    (i "Am Brunnen vor dem Tore")
+    (:Text '"!'))
+  (:Text " so manchen süßen Traum."))
+"""
+
+class TestNestedMarkup:
+    def test_nested_markup(self):
+        search_str = "Am Brunnen vor dem Tore"
+        L = len(search_str)
+        tree = parse_xml(lindenbaum_xml)
+        cm = ContentMapping(tree, ignore="note", sourcemap = False)
+        note_regs = content_regions(tree, select="note")
+        i = cm.content.find(search_str)
+        while i >= 0:
+            cm.markup(i, i+L, 'i', exclude_regions=note_regs)
+            i = cm.content.find(search_str, i+L)
+
+        assert tree.equals(parse_sxpr(lindenbaum_expected_1))
+
+        for note in tree.select('note'):
+            note_tags = lambda p: p[-1].name == 'note' and p[-1] is not note
+            cm = ContentMapping(note, ignore=note_tags, sourcemap=False)
+            note_regs = content_regions(note, select=note_tags)
+            i = cm.content.find(search_str)
+            while i >= 0:
+                cm.markup(i, i + L, 'i', exclude_regions=note_regs)
+                i = cm.content.find(search_str, i + L)
+
+        assert tree.equals(parse_sxpr(lindenbaum_expected_2))
+
+        print(tree.as_xml())
+
 ### end of big markup test
 
 

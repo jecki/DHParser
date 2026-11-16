@@ -28,3 +28,6 @@ from DHParser.parse_base import *
 from DHParser.parse_grammar import *
 from DHParser.parse_combinators import *
 
+# for backwards compatibility only!
+from DHParser.parse_base import PARSER_PLACEHOLDER
+from DHParser.toolkit import INFINITE
