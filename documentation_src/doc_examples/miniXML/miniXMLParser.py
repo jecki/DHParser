@@ -90,10 +90,15 @@ def preprocess_miniXML(source):
 #######################################################################
 
 class miniXMLGrammar(Grammar):
-    r"""Parser for a miniXML source file.
+    r"""Parser for a miniXML document.
+
+    Instantiate this class and then call the instance with the source
+    code as the single argument in order to use the parser, e.g.:
+        parser = miniXML()
+        syntax_tree = parser(source_code)
     """
     element = Forward()
-    source_hash__ = "b4b157bb523e9cb97f5ea6edb0b47bb6"
+    source_hash__ = "3ca8e6acbeb0963a0bac73be8c58e4d0"
     disposable__ = re.compile('(?:EOF$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -114,7 +119,23 @@ class miniXMLGrammar(Grammar):
     root__ = document
     
 parsing: PseudoJunction = create_parser_junction(miniXMLGrammar)
-get_grammar = parsing.factory # for backwards compatibility, only
+get_grammar = parsing.factory  # for backwards compatibility, only
+
+
+try:
+    assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
+        RE_COMMENT in (miniXMLGrammar.COMMENT__, NEVER_MATCH_PATTERN), \
+        "Please adjust the pre-processor-variable RE_COMMENT in file miniXMLParser.py so that " \
+        "it either is the NEVER_MATCH_PATTERN or has the same value as the COMMENT__-attribute " \
+        "of the grammar class miniXMLGrammar! " \
+        'Currently, RE_COMMENT reads "%s" while COMMENT__ is "%s". ' \
+        % (RE_COMMENT, miniXMLGrammar.COMMENT__) + \
+        "\n\nIf RE_COMMENT == NEVER_MATCH_PATTERN then includes will deliberately be " \
+        "processed, otherwise RE_COMMENT==miniXMLGrammar.COMMENT__ allows the " \
+        "preprocessor to ignore comments."
+except (AttributeError, NameError):
+    pass
+
 
 
 #######################################################################

@@ -90,10 +90,15 @@ def preprocess_simplifiedJSON(source):
 #######################################################################
 
 class simplifiedJSONGrammar(Grammar):
-    r"""Parser for a simplifiedJSON source file.
+    r"""Parser for a simplifiedJSON document.
+
+    Instantiate this class and then call the instance with the source
+    code as the single argument in order to use the parser, e.g.:
+        parser = simplifiedJSON()
+        syntax_tree = parser(source_code)
     """
     _element = Forward()
-    source_hash__ = "32c94bd22f445026abf16e6c8983e234"
+    source_hash__ = "33cdcc4c3d102542122ec54c54f50b64"
     disposable__ = re.compile('_\\w+')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -114,7 +119,23 @@ class simplifiedJSONGrammar(Grammar):
     root__ = json
     
 parsing: PseudoJunction = create_parser_junction(simplifiedJSONGrammar)
-get_grammar = parsing.factory # for backwards compatibility, only
+get_grammar = parsing.factory  # for backwards compatibility, only
+
+
+try:
+    assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
+        RE_COMMENT in (simplifiedJSONGrammar.COMMENT__, NEVER_MATCH_PATTERN), \
+        "Please adjust the pre-processor-variable RE_COMMENT in file simplifiedJSONParser.py so that " \
+        "it either is the NEVER_MATCH_PATTERN or has the same value as the COMMENT__-attribute " \
+        "of the grammar class simplifiedJSONGrammar! " \
+        'Currently, RE_COMMENT reads "%s" while COMMENT__ is "%s". ' \
+        % (RE_COMMENT, simplifiedJSONGrammar.COMMENT__) + \
+        "\n\nIf RE_COMMENT == NEVER_MATCH_PATTERN then includes will deliberately be " \
+        "processed, otherwise RE_COMMENT==simplifiedJSONGrammar.COMMENT__ allows the " \
+        "preprocessor to ignore comments."
+except (AttributeError, NameError):
+    pass
+
 
 
 #######################################################################
@@ -202,7 +223,7 @@ class simplifiedJSONCompiler(Compiler):
 
 
 
-get_compiler = ThreadLocalSingletonFactory(simplifiedJSONCompiler, ident=1)
+get_compiler = ThreadLocalSingletonFactory(simplifiedJSONCompiler)
 
 
 def compile_simplifiedJSON(ast):

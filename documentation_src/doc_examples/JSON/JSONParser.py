@@ -100,10 +100,15 @@ def preprocess_JSON(source):
 #######################################################################
 
 class JSONGrammar(Grammar):
-    r"""Parser for a JSON source file.
+    r"""Parser for a JSON document.
+
+    Instantiate this class and then call the instance with the source
+    code as the single argument in order to use the parser, e.g.:
+        parser = JSON()
+        syntax_tree = parser(source_code)
     """
     _element = Forward()
-    source_hash__ = "c119fddf783f9b6b43ae165012714e12"
+    source_hash__ = "4a92e3646fd05b3068609e562552aca3"
     disposable__ = re.compile('_\\w+')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
@@ -136,7 +141,23 @@ class JSONGrammar(Grammar):
     root__ = json
     
 parsing: PseudoJunction = create_parser_junction(JSONGrammar)
-get_grammar = parsing.factory # for backwards compatibility, only
+get_grammar = parsing.factory  # for backwards compatibility, only
+
+
+try:
+    assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
+        RE_COMMENT in (JSONGrammar.COMMENT__, NEVER_MATCH_PATTERN), \
+        "Please adjust the pre-processor-variable RE_COMMENT in file JSONParser.py so that " \
+        "it either is the NEVER_MATCH_PATTERN or has the same value as the COMMENT__-attribute " \
+        "of the grammar class JSONGrammar! " \
+        'Currently, RE_COMMENT reads "%s" while COMMENT__ is "%s". ' \
+        % (RE_COMMENT, JSONGrammar.COMMENT__) + \
+        "\n\nIf RE_COMMENT == NEVER_MATCH_PATTERN then includes will deliberately be " \
+        "processed, otherwise RE_COMMENT==JSONGrammar.COMMENT__ allows the " \
+        "preprocessor to ignore comments."
+except (AttributeError, NameError):
+    pass
+
 
 
 #######################################################################

@@ -101,16 +101,21 @@ preprocessing: PseudoJunction = create_preprocess_junction(
 #######################################################################
 
 class outlineGrammar(Grammar):
-    r"""Parser for an outline source file.
+    r"""Parser for an outline document.
+
+    Instantiate this class and then call the instance with the source
+    code as the single argument in order to use the parser, e.g.:
+        parser = outline()
+        syntax_tree = parser(source_code)
     """
     emphasis = Forward()
     s5section = Forward()
     section = Forward()
     subsection = Forward()
     subsubsection = Forward()
-    source_hash__ = "9b4c686f40f1a74d6dc76bd2637d83b3"
+    source_hash__ = "2a26650fa1ab2e0a4edba75959eb11d3"
     early_tree_reduction__ = CombinedParser.MERGE_LEAVES
-    disposable__ = re.compile('(?:L$|ESCAPED$|inner_emph$|GAP$|blocks$|LLF$|inner_bold$|EOF$|TEXT$|LINE$|WS$|CHARS$)')
+    disposable__ = re.compile('(?:GAP$|inner_emph$|L$|CHARS$|blocks$|EOF$|LLF$|TEXT$|inner_bold$|LINE$|ESCAPED$|WS$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     error_messages__ = {'document': [(re.compile(r'(?=)'), "End of file expected!")],
@@ -173,7 +178,23 @@ class outlineGrammar(Grammar):
     root__ = document
     
 parsing: PseudoJunction = create_parser_junction(outlineGrammar)
-get_grammar = parsing.factory # for backwards compatibility, only
+get_grammar = parsing.factory  # for backwards compatibility, only
+
+
+try:
+    assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
+        RE_COMMENT in (outlineGrammar.COMMENT__, NEVER_MATCH_PATTERN), \
+        "Please adjust the pre-processor-variable RE_COMMENT in file outlineParser.py so that " \
+        "it either is the NEVER_MATCH_PATTERN or has the same value as the COMMENT__-attribute " \
+        "of the grammar class outlineGrammar! " \
+        'Currently, RE_COMMENT reads "%s" while COMMENT__ is "%s". ' \
+        % (RE_COMMENT, outlineGrammar.COMMENT__) + \
+        "\n\nIf RE_COMMENT == NEVER_MATCH_PATTERN then includes will deliberately be " \
+        "processed, otherwise RE_COMMENT==outlineGrammar.COMMENT__ allows the " \
+        "preprocessor to ignore comments."
+except (AttributeError, NameError):
+    pass
+
 
 
 #######################################################################
