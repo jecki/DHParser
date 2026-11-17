@@ -105,7 +105,7 @@ class jsonGrammar(Grammar):
         syntax_tree = parser(source_code)
     """
     _element = Forward()
-    source_hash__ = "3886e8a3e8fc75c3fb807c9b9746c385"
+    source_hash__ = "83fcc8b48197bd89d71bb9340c9d55eb"
     disposable__ = re.compile('_[A-Za-z]+')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]

@@ -41,6 +41,7 @@ except NameError:
 if scriptpath not in sys.path:
     sys.path.append(scriptpath)
 
+
 from DHParser.compile import Compiler, compile_source, Junction, full_compile
 from DHParser.configuration import set_config_value, get_config_value, get_config_values, \
     access_presets, finalize_presets, set_preset_value, get_preset_value, NEVER_MATCH_PATTERN, \
@@ -54,17 +55,17 @@ from DHParser.log import start_logging, suspend_logging, resume_logging
 from DHParser.nodetree import Node, WHITESPACE_PTYPE, TOKEN_PTYPE, RootNode, Path, pick_from_path, \
     node_names
 from DHParser.parse import Grammar, PreprocessorToken, Whitespace, Drop, AnyChar, Parser, \
-    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, ERR, \
+    Lookbehind, Lookahead, Alternative, Pop, Text, Synonym, Counted, Interleave, INFINITE, ERR, \
     Option, NegativeLookbehind, OneOrMore, RegExp, Retrieve, Series, Capture, TreeReduction, \
     ZeroOrMore, Forward, NegativeLookahead, Required, CombinedParser, Custom, mixin_comment, \
-    last_value, matching_bracket, optional_last_value, SmartRE
+    last_value, matching_bracket, optional_last_value, SmartRE, RX_NEVER_MATCH
 from DHParser.pipeline import create_parser_junction, create_preprocess_junction, \
     create_junction, PseudoJunction, full_pipeline, end_points, PipelineResult
 from DHParser.preprocess import nil_preprocessor, PreprocessorFunc, PreprocessorResult, \
     gen_find_include_func, preprocess_includes, make_preprocessor, chain_preprocessors
 from DHParser.stringview import StringView
-from DHParser.toolkit import re, is_filename, load_if_file, cpu_count, RX_NEVER_MATCH, \
-    ThreadLocalSingletonFactory, expand_table, md5, as_list, static, INFINITE
+from DHParser.toolkit import re, is_filename, load_if_file, cpu_count, \
+    ThreadLocalSingletonFactory, expand_table, md5, as_list, static
 from DHParser.trace import set_tracer, resume_notices_on, trace_history
 from DHParser.transform import is_empty, remove_if, TransformationDict, TransformerFunc, \
     transformation_factory, remove_children_if, move_fringes, normalize_whitespace, \
@@ -72,7 +73,7 @@ from DHParser.transform import is_empty, remove_if, TransformationDict, Transfor
     remove_whitespace, replace_by_children, remove_empty, remove_tokens, flatten, all_of, \
     any_of, transformer, merge_adjacent, collapse, collapse_children_if, transform_result, \
     remove_children, remove_content, remove_brackets, change_name, remove_anonymous_tokens, \
-    keep_children, is_one_of, not_one_of, content_matches, apply_if, peek, \
+    keep_children, is_one_of, not_one_of, content_matches, apply_if, peek, remove, \
     remove_anonymous_empty, keep_nodes, traverse_locally, strip, lstrip, rstrip, \
     replace_content_with, forbid, assert_content, remove_infix_operator, add_error, error_on, \
     left_associative, lean_left, node_maker, has_descendant, neg, has_ancestor, insert, \
@@ -82,7 +83,7 @@ from DHParser.transform import is_empty, remove_if, TransformationDict, Transfor
 from DHParser import parse as parse_namespace__
 
 
-version = "0.8.0"
+version = "0.8.4"
 
 
 #######################################################################
@@ -124,7 +125,12 @@ preprocessing: PseudoJunction = create_preprocess_junction(
 #######################################################################
 
 class ts2pythonGrammar(Grammar):
-    r"""Parser for a ts2python source file.
+    r"""Parser for a ts2python document.
+
+    Instantiate this class and then call the instance with the source
+    code as the single argument in order to use the parser, e.g.:
+        parser = ts2python()
+        syntax_tree = parser(source_code)
     """
     arg_list = Forward()
     declaration = Forward()
@@ -135,9 +141,9 @@ class ts2pythonGrammar(Grammar):
     literal = Forward()
     type = Forward()
     types = Forward()
-    source_hash__ = "582498e801f2bd1c3f27dbda68c69b25"
+    source_hash__ = "82bb5d432b22175ac9f049606e6ef1d4"
     early_tree_reduction__ = CombinedParser.MERGE_TREETOPS
-    disposable__ = re.compile('(?:_top_level_assignment$|NEG$|EXP$|_keyword$|EOF$|_part$|DOT$|_array_ellipsis$|_quoted_identifier$|FRAC$|_namespace$|_top_level_literal$|_reserved$|INT$)')
+    disposable__ = re.compile('(?:FRAC$|EXP$|INT$|_array_ellipsis$|DOT$|_quoted_identifier$|_reserved$|NEG$|_top_level_literal$|_top_level_assignment$|_keyword$|_part$|_string$|EOF$|_namespace$)')
     static_analysis_pending__ = []  # type: List[bool]
     parser_initialization__ = ["upon instantiation"]
     COMMENT__ = r'(?://.*)\n?|(?:/\*(?:.|\n)*?\*/) *\n?'
@@ -156,14 +162,17 @@ class ts2pythonGrammar(Grammar):
     _part = RegExp('(?!\\d)\\w+')
     identifier = Series(NegativeLookahead(_reserved), _part, dwsp__)
     name = Series(NegativeLookahead(_reserved), _part, ZeroOrMore(Series(Text("."), _part)), dwsp__)
-    _quoted_identifier = Alternative(identifier, Series(Series(Drop(Text('"')), dwsp__), identifier, Series(Drop(Text('"')), dwsp__), mandatory=2), Series(Series(Drop(Text("\'")), dwsp__), identifier, Series(Drop(Text("\'")), dwsp__), mandatory=2))
+    _string = SmartRE(f'("[^"\\n]*")(?P<comment__>{WSP_RE__})|(\'[^\'\\n]*\')(?P<comment__>{WSP_RE__})', '/"[^"\\n]*"/ ~|/\'[^\'\\n]*\'/ ~')
+    pseudo_identifier = Synonym(_string)
+    _quoted_identifier = Alternative(identifier, Series(Series(Drop(Text('"')), dwsp__), identifier, Series(Drop(Text('"')), dwsp__)), Series(Series(Drop(Text("\'")), dwsp__), identifier, Series(Drop(Text("\'")), dwsp__)))
     variable = Synonym(name)
+    export = Series(Text("export"), dwsp__)
     basic_type = SmartRE(f'(?P<:Text>object|array|string|number|boolean|null|integer|uinteger|decimal|unknown|any|void)(?P<comment__>{WSP_RE__})', '`object`|`array`|`string`|`number`|`boolean`|`null`|`integer`|`uinteger`|`decimal`|`unknown`|`any`|`void` ~')
     key = Alternative(identifier, Series(Series(Drop(Text('"')), dwsp__), identifier, Series(Drop(Text('"')), dwsp__)))
     association = Series(key, Series(Drop(Text(":")), dwsp__), literal, mandatory=1)
     object = Series(Series(Drop(Text("{")), dwsp__), Option(Series(association, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), association)))), Option(Series(Drop(Text(",")), dwsp__)), Series(Drop(Text("}")), dwsp__))
     array = Series(Series(Drop(Text("[")), dwsp__), Option(Series(literal, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), literal)))), Series(Drop(Text("]")), dwsp__))
-    string = SmartRE(f'("[^"\\n]*")(?P<comment__>{WSP_RE__})|(\'[^\'\\n]*\')(?P<comment__>{WSP_RE__})', '/"[^"\\n]*"/ ~|/\'[^\'\\n]*\'/ ~')
+    string = Synonym(_string)
     boolean = SmartRE(f'(?P<:Text>true|false)(?P<comment__>{WSP_RE__})', '`true`|`false` ~')
     number = Series(INT, FRAC, EXP, dwsp__)
     integer = Series(INT, SmartRE(f'(?![.Ee])', '!/[.Ee]/'), dwsp__)
@@ -172,9 +181,9 @@ class ts2pythonGrammar(Grammar):
     _array_ellipsis = Drop(Series(literal, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), literal))))
     assignment = Series(variable, Series(Drop(Text("=")), dwsp__), Alternative(literal, variable), Option(Series(Drop(Text(";")), dwsp__)))
     _top_level_assignment = Drop(Synonym(assignment))
-    const = Series(Option(Series(Drop(Text("export")), dwsp__)), Series(Drop(Text("const")), dwsp__), declaration, Option(Series(Series(Drop(Text("=")), dwsp__), Alternative(literal, identifier))), Option(Series(Drop(Text(";")), dwsp__)), mandatory=2)
+    const = Series(Option(export), Series(Drop(Text("const")), dwsp__), declaration, Option(Series(Series(Drop(Text("=")), dwsp__), Alternative(literal, identifier))), Option(Series(Series(Drop(Text("as")), dwsp__), Series(Drop(Text("const")), dwsp__))), Option(Series(Drop(Text(";")), dwsp__)), mandatory=2)
     item = Series(_quoted_identifier, Option(Series(Series(Drop(Text("=")), dwsp__), literal)))
-    enum = Series(Option(Series(Drop(Text("export")), dwsp__)), Series(Drop(Text("enum")), dwsp__), identifier, Series(Drop(Text("{")), dwsp__), item, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), item)), Option(Series(Drop(Text(",")), dwsp__)), Series(Drop(Text("}")), dwsp__), mandatory=3)
+    enum = Series(Option(export), Series(Drop(Text("enum")), dwsp__), identifier, Series(Drop(Text("{")), dwsp__), item, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), item)), Option(Series(Drop(Text(",")), dwsp__)), Series(Drop(Text("}")), dwsp__), mandatory=3)
     keyof = Series(Text("keyof"), dwsp__)
     optional = Series(Text("?"), dwsp__)
     readonly = Series(Text("readonly"), dwsp__)
@@ -191,18 +200,18 @@ class ts2pythonGrammar(Grammar):
     array_types = Synonym(array_type)
     array_of = Series(array_types, Series(Drop(Text("[]")), dwsp__))
     equals_type = Series(Series(Drop(Text("=")), dwsp__), Alternative(basic_type, type_name))
-    parameter_type = Series(Option(readonly), Alternative(array_of, basic_type, generic_type, indexed_type, Series(type_name, Option(extends_type), Option(equals_type)), declarations_block, type_tuple, declarations_tuple))
+    parameter_type = Series(Option(readonly), Alternative(array_of, basic_type, generic_type, indexed_type, Series(type_name, Option(extends_type), Option(equals_type)), declarations_block, type_tuple, declarations_tuple, literal))
     parameter_types = Series(Option(Series(Drop(Text("|")), dwsp__)), parameter_type, ZeroOrMore(Series(Series(Drop(Text("|")), dwsp__), parameter_type)))
     type_parameters = Series(Series(Drop(Text("<")), dwsp__), parameter_types, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), parameter_types)), Series(Drop(Text(">")), dwsp__), mandatory=1)
-    type_alias = Series(Option(Series(Drop(Text("export")), dwsp__)), Series(Drop(Text("type")), dwsp__), identifier, Option(type_parameters), Series(Drop(Text("=")), dwsp__), types, Option(Series(Drop(Text(";")), dwsp__)), mandatory=2)
+    type_alias = Series(Option(export), Series(Drop(Text("type")), dwsp__), identifier, Option(type_parameters), Series(Drop(Text("=")), dwsp__), types, Option(Series(Drop(Text(";")), dwsp__)), mandatory=2)
     alias = Synonym(identifier)
     wildcard = Series(Series(Drop(Text("*")), dwsp__), Series(Drop(Text("as")), dwsp__), alias)
     intersection = Series(type, OneOrMore(Series(Series(Drop(Text("&")), dwsp__), type, mandatory=1)))
     symbol = Series(Option(Series(Drop(Text("type")), dwsp__)), identifier, Option(Series(Series(Drop(Text("as")), dwsp__), alias)))
-    interface = Series(Option(Series(Drop(Text("export")), dwsp__)), Option(Series(Drop(Text("declare")), dwsp__)), SmartRE(f'(?:interface)(?P<comment__>{WSP_RE__})|(?:class)(?P<comment__>{WSP_RE__})', '"interface"|"class"'), identifier, Option(type_parameters), Option(extends), declarations_block, Option(Series(Drop(Text(";")), dwsp__)), mandatory=3)
-    namespace = Series(Option(Series(Drop(Text("export")), dwsp__)), Series(Drop(Text("namespace")), dwsp__), identifier, Series(Drop(Text("{")), dwsp__), ZeroOrMore(Alternative(interface, type_alias, enum, const, Series(declaration, Option(Series(Drop(Text(";")), dwsp__))), Series(function, Option(Series(Drop(Text(";")), dwsp__))))), Series(Drop(Text("}")), dwsp__), mandatory=2)
+    interface = Series(Option(export), Option(Series(Drop(Text("declare")), dwsp__)), SmartRE(f'(?:interface)(?P<comment__>{WSP_RE__})|(?:class)(?P<comment__>{WSP_RE__})', '"interface"|"class"'), identifier, Option(type_parameters), Option(extends), declarations_block, Option(Series(Drop(Text(";")), dwsp__)), mandatory=3)
+    namespace = Series(Option(export), Series(Drop(Text("namespace")), dwsp__), identifier, Series(Drop(Text("{")), dwsp__), ZeroOrMore(Alternative(interface, type_alias, enum, const, Series(declaration, Option(Series(Drop(Text(";")), dwsp__))), Series(function, Option(Series(Drop(Text(";")), dwsp__))))), Series(Drop(Text("}")), dwsp__), mandatory=2)
     static = Series(Text("static"), dwsp__)
-    virtual_enum = Series(Option(Series(Drop(Text("export")), dwsp__)), Series(Drop(Text("namespace")), dwsp__), identifier, Series(Drop(Text("{")), dwsp__), ZeroOrMore(Alternative(interface, type_alias, enum, const, Series(declaration, Option(Series(Drop(Text(";")), dwsp__))))), Series(Drop(Text("}")), dwsp__))
+    virtual_enum = Series(Option(export), Series(Drop(Text("namespace")), dwsp__), identifier, Series(Drop(Text("{")), dwsp__), ZeroOrMore(Alternative(interface, type_alias, enum, const, Series(declaration, Option(Series(Drop(Text(";")), dwsp__))))), Series(Drop(Text("}")), dwsp__))
     qualifiers = Interleave(readonly, static, Series(Drop(Text('public')), dwsp__), Series(Drop(Text('protected')), dwsp__), Series(Drop(Text('private')), dwsp__), repetitions=[(0, 1), (0, 1), (0, 1), (0, 1), (0, 1)])
     _keyword = Drop(SmartRE(f'(?P<:Text>readonly|function|const|public|private|protected)(?!\\w)', '`readonly`|`function`|`const`|`public`|`private`|`protected` !/\\w/'))
     special = Series(Series(Drop(Text("[")), dwsp__), name, Series(Drop(Text("]")), dwsp__), Series(Drop(Text("(")), dwsp__), Option(arg_list), Series(Drop(Text(")")), dwsp__), Option(Series(Series(Drop(Text(":")), dwsp__), types, mandatory=1)), mandatory=4)
@@ -218,8 +227,8 @@ class ts2pythonGrammar(Grammar):
     type.set(Series(Option(readonly), Alternative(array_of, basic_type, generic_type, indexed_type, Series(type_name, NegativeLookahead(Text("("))), Series(Series(Drop(Text("(")), dwsp__), types, Series(Drop(Text(")")), dwsp__)), mapped_type, declarations_block, type_tuple, declarations_tuple, literal, func_type)))
     types.set(Series(Option(Series(Drop(Text("|")), dwsp__)), Alternative(intersection, type), ZeroOrMore(Series(Series(Drop(Text("|")), dwsp__), Alternative(intersection, type)))))
     arg_list.set(Series(Alternative(Series(argument, ZeroOrMore(Series(Series(Drop(Text(",")), dwsp__), argument)), Option(Series(Series(Drop(Text(",")), dwsp__), arg_tail))), arg_tail), Option(Series(Drop(Text(",")), dwsp__))))
-    function.set(Alternative(Series(Option(Series(Option(Series(Drop(Text("export")), dwsp__)), qualifiers, Option(Series(Drop(Text("function")), dwsp__)), NegativeLookahead(_keyword), identifier, Option(optional), Option(type_parameters))), Series(Drop(Text("(")), dwsp__), Option(arg_list), Series(Drop(Text(")")), dwsp__), Option(Series(Series(Drop(Text(":")), dwsp__), types, mandatory=1)), mandatory=2), special))
-    declaration.set(Series(Option(Series(Drop(Text("export")), dwsp__)), qualifiers, Option(SmartRE(f'(?:let)(?P<comment__>{WSP_RE__})|(?:var)(?P<comment__>{WSP_RE__})', '"let"|"var"')), NegativeLookahead(_keyword), identifier, Option(optional), NegativeLookahead(Text("(")), Option(Series(Series(Drop(Text(":")), dwsp__), types, mandatory=1))))
+    function.set(Alternative(Series(Option(Series(Option(export), qualifiers, Option(Series(Drop(Text("function")), dwsp__)), NegativeLookahead(_keyword), identifier, Option(optional), Option(type_parameters))), Series(Drop(Text("(")), dwsp__), Option(arg_list), Series(Drop(Text(")")), dwsp__), Option(Series(Series(Drop(Text(":")), dwsp__), types, mandatory=1)), mandatory=2), special))
+    declaration.set(Series(Option(export), qualifiers, Option(SmartRE(f'(?:let)(?P<comment__>{WSP_RE__})|(?:var)(?P<comment__>{WSP_RE__})', '"let"|"var"')), NegativeLookahead(_keyword), Alternative(_quoted_identifier, pseudo_identifier), Option(optional), NegativeLookahead(Text("(")), Option(Series(Series(Drop(Text(":")), dwsp__), types, mandatory=1))))
     declarations_block.set(Series(Series(Drop(Text("{")), dwsp__), Option(Series(Alternative(function, declaration), ZeroOrMore(Series(Option(SmartRE(f'(?:;)(?P<comment__>{WSP_RE__})|(?:,)(?P<comment__>{WSP_RE__})', '";"|","')), Alternative(function, declaration))), Option(SmartRE(f'(?:;)(?P<comment__>{WSP_RE__})|(?:,)(?P<comment__>{WSP_RE__})', '";"|","')))), Option(Series(map_signature, Option(SmartRE(f'(?:;)(?P<comment__>{WSP_RE__})|(?:,)(?P<comment__>{WSP_RE__})', '";"|","')))), Series(Drop(Text("}")), dwsp__)))
     document.set(Series(dwsp__, ZeroOrMore(Alternative(interface, type_alias, _namespace, enum, const, module, _top_level_assignment, _array_ellipsis, _top_level_literal, Series(Import, Option(Series(Drop(Text(";")), dwsp__))), Series(function, Option(Series(Drop(Text(";")), dwsp__))), Series(declaration, Option(Series(Drop(Text(";")), dwsp__)))))))
     root = Series(document, EOF)
@@ -234,7 +243,8 @@ class ts2pythonGrammar(Grammar):
     root__ = root
     
 parsing: PseudoJunction = create_parser_junction(ts2pythonGrammar)
-get_grammar = parsing.factory # for backwards compatibility, only
+get_grammar = parsing.factory  # for backwards compatibility, only
+
 
 try:
     assert RE_INCLUDE == NEVER_MATCH_PATTERN or \
@@ -251,13 +261,17 @@ except (AttributeError, NameError):
     pass
 
 
+
 #######################################################################
 #
 # AST SECTION - Can be edited. Changes will be preserved.
 #
 #######################################################################
 
+RX_COMMENT=re.compile(r'/\*(?:.|\n)*?\*/|//[^\n]*(?:\n//[^\n]*)')
+
 SPECIAL_FUNCTIONS = {"Symbol.iterator": "__iter__"}
+
 
 def convert_special_function(p: Path):
     node = p[-1]
@@ -266,26 +280,110 @@ def convert_special_function(p: Path):
     identifier.name = "identifier"
     identifier.result = SPECIAL_FUNCTIONS.get(identifier.content, "__unknown__")
 
+
 def add_flags(p: Path):
     p[0].attr['keep_comments'] = get_config_value('ts2python.KeepComments', False)
+    p[0].attr['doc_comments'] = get_config_value('ts2python.DocComments', '')
+
 
 def clear_flags(p: Path):
     p[0].attr = dict()
+
+
+def last_comment_is_doc(p: Path):
+    if p[-1].name == 'doc_comment__' or p[-1].get_attr('comments', False):
+        return True
+    if p[-1].name == 'comment__':
+        comments = list(RX_COMMENT.finditer(p[-1].content))
+        if comments:
+            p[-1].attr['comments'] = comments
+            return comments[-1].group(0)[:3] == '/**'
+    return False
+    # return (p[-1].name == "doc_comment__" or
+    #         (p[-1].name == "comment__"
+    #          and list(RX_COMMENT.finditer(p[-1].content))[-1].group(0)[:3] == '/**'))
+
+
+def split_last_doccomment(p: Path):
+    nd = p[-1]
+    assert nd.name == "comment__"
+    comments = nd.get_attr('comments', [])
+    if comments:
+        m = comments[-1]
+        if m.group(0)[:3] == '/**':
+            if len(comments) > 1:
+                m = comments[-1]
+                nd.result = (Node('comment__', nd.content[:m.start()]).with_pos(nd.pos),
+                    Node('docstring__', nd.content[m.start():m.end()]).with_pos(nd.pos + m.start()))
+            else:
+                nd.name = 'docstring__'
+
+
+def clear_comments_attr(p: Path):
+    if p[-1].has_attr('comments'):
+        del p[-1].attr['comments']
+
+
+def shift_docstrings(p: Path):
+    cl = list(p[-1].children)
+    modified = False
+    for i in range(len(cl) - 2, -1, -1):
+        if cl[i].name == "docstring__":
+            dc = cl[i]
+            if cl[i + 1].name == 'interface':
+                cl[i + 1]['declarations_block'].insert(0, dc)
+                del cl[i]
+            elif cl[i + 1].name == 'namespace':
+                cl[i + 1].insert(0, dc)
+                del cl[i]
+            elif cl[i + 1].name in ('virtual_enum', 'enum'):
+                k = cl[i + 1].index('identifier')
+                cl[i + 1].insert(k + 1, dc)
+                del cl[i]
+            else:  # if cl[i + 1].name == 'declaration':
+                # assert cl[i + 1].name in ('declaration', 'type_alias', 'const', 'map_signature', item'), cl[i + 1].as_sxpr()
+                cl[i] = cl[i + 1]
+                cl[i + 1] = dc
+            modified = True
+    if modified:
+        p[-1].result = tuple(cl)
+
+
+def mark_exported_identifier(p: Path):
+    if len(p) > 1:
+        parent = p[-2]
+        siblings = parent.result
+        if parent.name == "const":
+            siblings = parent['declaration'].result
+        for item in siblings:
+            if item.name == 'identifier':
+                item.attr['export'] = "True"
+                break
+        else:
+           add_error(path, "No related identifier found for export modifier!", ERROR) 
+
 
 ts2python_AST_transformation_table = {
     # AST Transformations for the ts2python-grammar
     # "<": flatten,
     "<<<": add_flags,
     ":Text": change_name('TEXT'),
-    "comment__": remove_if(lambda p: p[-1].content.rfind('\n') < 0 \
-                                     or not p[0].get_attr('keep_comments', True)),
+    "comment__": [apply_ifelse(
+        remove_if(lambda p: not p[0].attr['keep_comments']
+                            or (p[0].attr['doc_comments'] == 'drop') and last_comment_is_doc(p)),
+        apply_if((split_last_doccomment, replace_by_children),
+                 lambda p: p[0].attr['doc_comments'] == 'docstrings'),
+        any_of({neg(last_comment_is_doc), lambda p: p[0].attr['doc_comments'] in ('', 'drop')})),
+        clear_comments_attr],
     "special": [apply_if(add_error("Unknown special function"),
                          lambda p: p[-1]['name'].content not in SPECIAL_FUNCTIONS),
                 convert_special_function],
     "function": apply_if(reduce_single_child, has_child('special')),
     "alias": reduce_single_child,
     "document, root": [],  # declarations_block? # ensures that the transfomations under "*" are not applied, here!
-    "*": move_fringes(lambda p: p[-1].name == "comment__", side="right"),
+    "export": [mark_exported_identifier, remove],
+    "*": move_fringes(lambda p: p[-1].name in ("comment__", "docstring__"), side="right", merge=False),
+    ">": shift_docstrings,
     ">>>": clear_flags
 }
 
@@ -306,44 +404,88 @@ ASTTransformation: Junction = Junction(
 #
 #######################################################################
 
+
+RX_IDENTIFIER = re.compile(r'(?![\d.])[\w.]+')
+
+TS2PYTHON_CONFIG_DEFAULT = {
+    'RenderAnonymous': 'local',
+    'UseEnum': True,
+    'UsePostponedEvaluation': False,
+    'UseTypeUnion': False,
+    'UseExplicitTypeAlias': False,
+    'UseTypeParameters': False,
+    'UseLiteralType': False,
+    'UseVariadicGenerics': False,
+    'UseNotRequired': False,
+    'AllowReadOnly': False,
+    'AssumeDeferredEvaluation': False,
+    'KeepComments': False,
+    'DocComments': '',
+    'UseExtraItems': False,
+    'GenerateAllSpecial': True
+}
+
+TS2PYTHON_QUALIFIED_CONFIG_KEYS = frozenset(
+    'ts2python.' + k for k in TS2PYTHON_CONFIG_DEFAULT.keys())
+
+TS2PYTHON_CONFIG_ALLOWED_VALUES = {
+    'RenderAnonymous': ('type', 'functional', 'local', 'toplevel'),
+    'DocComments': ('', 'keep', 'drop', 'docstrings'),
+}
+
+
+def validate_configuration(ts2python_cfg):
+    accepted_keys = TS2PYTHON_QUALIFIED_CONFIG_KEYS
+    if not (ts2python_cfg.keys() <= accepted_keys):
+        raise ValueError('Illegal configuration option(s): '
+                         f'{", ".join(ts2python_cfg.keys() - accepted_keys)}\n'
+                         f'Allowed options are {", ".join(ts2python_cfg.keys())}')
+    for key in ts2python_cfg:
+        if not key.startswith('ts2python.'):
+            raise ValueError(
+                f'Unexpected prefix of configuration option "{key}". Should be "ts2python."')
+        option = key[len('ts2python.'):]
+        if option in TS2PYTHON_CONFIG_ALLOWED_VALUES and \
+                ts2python_cfg[key] not in TS2PYTHON_CONFIG_ALLOWED_VALUES[option]:
+            raise ValueError(f'Illegal value "{ts2python_cfg[key]}" for '
+                             f'ts2python.{key}. Must be one of '
+                             f'{", ".join(TS2PYTHON_CONFIG_ALLOWED_VALUES[key])}')
+
+
 def dump_configuration() -> str:
-    return f"""[ts2python]
-RenderAnonymous = {get_config_value('ts2python.RenderAnonymous', 'local')}
-UseEnum = {get_config_value('ts2python.UseEnum', True)}
-UsePostponedEvaluation = {get_config_value('ts2python.UsePostponedEvaluation', True)}
-UseTypeUnion = {get_config_value('ts2python.UseTypeUnion', False)}
-UseExplicitTypeAlias = {get_config_value('ts2python.UseExplicitTypeAlias', False)}
-UseTypeParameters = {get_config_value('ts2python.UseTypeParameters', False)}
-UseLiteralType = {get_config_value('ts2python.UseLiteralType', False)}
-UseVariadicGenerics = {get_config_value('ts2python.UseVariadicGenerics', False)}
-UseNotRequired = {get_config_value('ts2python.UseNotRequired', False)}
-AllowReadOnly = {get_config_value('ts2python.AllowReadOnly', False)}
-AssumeDeferredEvaluation = {get_config_value('ts2python.AssumeDeferredEvaluation', False)}
-KeepComments = {get_config_value('ts2python.KeepComments', False)}"""
+    cfg_list = ['[ts2python]']
+    for key, value in TS2PYTHON_CONFIG_DEFAULT.items():
+        cfg_list.append(f"{key} = {repr(value)}")
+        if key in TS2PYTHON_CONFIG_ALLOWED_VALUES:
+            cfg_list[-1] += (f"  # allowed values: {repr(TS2PYTHON_CONFIG_ALLOWED_VALUES[key])}")
+    cfg_list.append('')
+    return '\n'.join(cfg_list)
 
 
 def required_python_version(ts2python_cfg: Dict[str, bool],
                             purpose: str = "compatibility") -> Tuple[int, int]:
     assert purpose in ("compatibility", "features")
-    min_version = (3, 7, 0)
+    min_version = (3, 7)
     if ts2python_cfg.get('ts2python.UseLiteralType', False):
-        min_version = (3, 8, 0)
+        min_version = (3, 8)
     if ts2python_cfg.get('ts2python.UseTypeUnion', False):
-        min_version = (3, 10, 0)
+        min_version = (3, 10)
     elif ts2python_cfg.get('ts2python.UseExplicitTypeAlias', False):
-        min_version = (3, 10, 0)
+        min_version = (3, 10)
     if ts2python_cfg.get('ts2python.UseVariadicGenerics', False):
-        min_version = (3, 11, 0)
+        min_version = (3, 11)
     elif ts2python_cfg.get('ts2python.UseNotRequired', False) \
             and purpose == "features":
-        min_version = (3, 11, 0)
+        min_version = (3, 11)
     if ts2python_cfg.get('ts2python.UseTypeParameters', False):
-        min_version = (3, 12, 0)
+        min_version = (3, 12)
     if ts2python_cfg.get('ts2python.AllowReadOnly', False) \
             and purpose == "features":
-        min_version = (3, 13, 0)
+        min_version = (3, 13)
     if ts2python_cfg.get('ts2python.AssumeDeferredEvaluation', False):
-        min_version = (3, 14, 0)
+        min_version = (3, 14)
+    if ts2python_cfg.get('ts2python.UseExtraItems', False):
+        min_version = (3, 15)
     # Neither UseReadOnly nor UseNotRequired place any demand on the
     # Python version, because:
     # ReadOnly can be defined as Union for Python-version < 3.13
@@ -351,32 +493,34 @@ def required_python_version(ts2python_cfg: Dict[str, bool],
     return min_version
 
 
-def set_compatibility_level(version_info: Tuple[int, ...] = (3, 7, 0),
+def set_compatibility_level(version_info: Tuple[int, ...] = (3, 7),
                             config_or_preset: str = "preset"):
     if config_or_preset == "preset":
         set_value = set_preset_value
     else:
         assert config_or_preset == "config"
         set_value = set_config_value
-    if not version_info >= (3, 7, 0):
-        print('Compatibility version must be >= 3.7')
+    if not version_info >= (3, 7):  # TODO: Eventually change this to 3.8
+        print('Compatibility version must be >= 3.8')
         sys.exit(1)
-    if version_info >= (3, 8, 0):
+    if version_info >= (3, 8):
         set_value('ts2python.UseLiteralType', True, allow_new_key=True)
-    if version_info >= (3, 10, 0):
+    if version_info >= (3, 10):
         set_value('ts2python.UseTypeUnion', True, allow_new_key=True)
-        if version_info < (3, 12, 0):
+        if version_info < (3, 12):
             set_value('ts2python.UseExplicitTypeAlias', True, allow_new_key=True)
-    if version_info >= (3, 11, 0):
+    if version_info >= (3, 11):
         set_value('ts2python.UseNotRequired', True, allow_new_key=True)
         set_value('ts2python.UseVariadicGenerics', True, allow_new_key=True)
-    if version_info >= (3, 12, 0):
+    if version_info >= (3, 12):
         set_value('ts2python.UseTypeParameters', True, allow_new_key=True)
-    if version_info >= (3, 13, 0):
+    if version_info >= (3, 13):
         set_value('ts2python.AllowReadOnly', True, allow_new_key=True)
-    if version_info >= (3, 14, 0):
+    if version_info >= (3, 14):
         set_value('ts2python.AssumeDeferredEvaluation', True, allow_new_key=True)
         set_value('ts2python.UsePostponedEvaluation', False, allow_new_key=True)
+    if version_info >= (3, 15):
+        set_value('ts2python.UseExtraItems', True, allow_new_key=True)
 
 
 def source_hash(source_text: str) -> str:
@@ -442,10 +586,10 @@ except ImportError:
     GenericTypedDict = _GenericTypedDictMeta('TypedDict', (dict,), {})
     GenericTypedDict.__module__ = __name__"""
 
-TYPE_IMPORTS_MAPPING = {(3, 13, 0): [TYPE_IMPORTS_313],
-                        (3, 11, 0): [TYPE_IMPORTS_311],
-                        (3,  9, 0): [TYPE_IMPORTS_37, TYPEDDICT_IMPORTS_37],
-                        (3,  7, 0): [TYPE_IMPORTS_37, TYPEDDICT_IMPORTS_37]}
+TYPE_IMPORTS_MAPPING = {(3, 13): [TYPE_IMPORTS_313],
+                        (3, 11): [TYPE_IMPORTS_311],
+                        (3,  9): [TYPE_IMPORTS_37, TYPEDDICT_IMPORTS_37],
+                        (3,  7): [TYPE_IMPORTS_37, TYPEDDICT_IMPORTS_37]}
 
 FUNCTOOLS_IMPORTS = """
 try:
@@ -589,20 +733,38 @@ class ts2pythonCompiler(Compiler):
                 f'Illegal value "{self.render_anonymous}" for '
                 f'ts2python.RenderAnonymous. Must be one of "type", '
                 f'"functional", "local", "toplevel".')
+        defaults = TS2PYTHON_CONFIG_DEFAULT
         ts2python_cfg = get_config_values('ts2python.*')
-        self.use_enums = ts2python_cfg.get('ts2python.UseEnum', True)
-        self.use_postponed_evaluation = ts2python_cfg.get('ts2python.UsePostponedEvaluation', False)
-        self.use_type_union = ts2python_cfg.get('ts2python.UseTypeUnion', False)
-        self.use_explicit_type_alias = ts2python_cfg.get('ts2python.UseExplicitTypeAlias', False)
-        self.use_type_parameters = ts2python_cfg.get('ts2python.UseTypeParameters', False)
+        validate_configuration(ts2python_cfg)
+        self.use_enums = ts2python_cfg.get('ts2python.UseEnum', defaults['UseEnum'])
+        self.use_postponed_evaluation = ts2python_cfg.get(
+            'ts2python.UsePostponedEvaluation', defaults['UsePostponedEvaluation'])
+        self.use_type_union = ts2python_cfg.get(
+            'ts2python.UseTypeUnion', defaults['UseTypeUnion'])
+        self.use_explicit_type_alias = ts2python_cfg.get(
+            'ts2python.UseExplicitTypeAlias', defaults['UseExplicitTypeAlias'])
+        self.use_type_parameters = ts2python_cfg.get(
+            'ts2python.UseTypeParameters', defaults['UseTypeParameters'])
         if self.use_type_parameters:
             self.use_explicit_type_alias = False
-        self.use_literal_type = ts2python_cfg.get('ts2python.UseLiteralType', False)
-        self.use_variadic_generics = ts2python_cfg.get('ts2python.UseVariadicGenerics', False)
-        self.use_not_required = ts2python_cfg.get('ts2python.UseNotRequired', False)
-        self.allow_read_only = ts2python_cfg.get('ts2python.AllowReadOnly', False)
-        self.assume_deferred_evaluation = ts2python_cfg.get('ts2python.AssumeDeferredEvaluation', False)
-        self.keep_comments = ts2python_cfg.get('ts2python.KeepComments', False)
+        self.use_literal_type = ts2python_cfg.get(
+            'ts2python.UseLiteralType', defaults['UseLiteralType'])
+        self.use_variadic_generics = ts2python_cfg.get(
+            'ts2python.UseVariadicGenerics', defaults['UseVariadicGenerics'])
+        self.use_not_required = ts2python_cfg.get(
+            'ts2python.UseNotRequired', defaults['UseNotRequired'])
+        self.allow_read_only = ts2python_cfg.get(
+            'ts2python.AllowReadOnly', defaults['AllowReadOnly'])
+        self.assume_deferred_evaluation = ts2python_cfg.get(
+            'ts2python.AssumeDeferredEvaluation', defaults['AssumeDeferredEvaluation'])
+        self.keep_comments = ts2python_cfg.get(
+            'ts2python.KeepComments', defaults['KeepComments'])
+        self.doc_comments = ts2python_cfg.get(
+            'ts2python.DocComments', defaults['DocComments'])
+        self.use_extra_items = ts2python_cfg.get(
+            'ts2python.UseExtraItems', defaults['UseExtraItems'])
+        self.generate_all_special = ts2python_cfg.get(
+            'ts2python.GenerateAllSpecial', defaults['GenerateAllSpecial'])
         self.compatibility_level = required_python_version(ts2python_cfg, "compatibility")
         self.feature_level = required_python_version(ts2python_cfg, "features")
         if self.use_type_parameters and not self.use_variadic_generics:
@@ -629,7 +791,8 @@ class ts2pythonCompiler(Compiler):
         self.func_name: str = ''  # name of the current functions header or ''
         self.func_type_parameters: str = ''  # type parameters of the current function header, if any
         self.strip_type_from_const = False
-
+        self.extra_items_type = 'None'
+        self.export = []
 
     def compile(self, node) -> str:
         result = super().compile(node)
@@ -685,6 +848,12 @@ class ts2pythonCompiler(Compiler):
                 + [self.additional_imports, chksum, '\n##### BEGIN OF ts2python generated code\n']
         else:
             code_blocks = []
+        if self.export and self.generate_all_special:
+            self.export.sort()
+            exports = ['\n\n__all__ = (',
+                       ",\n           ".join(self.export), 
+                       ')\n\n']
+            code_blocks.append(''.join(exports))
         code_blocks.append(python_code)
         if self.tree.name == 'root':
             code_blocks.append('\n##### END OF ts2python generated code\n')
@@ -702,7 +871,6 @@ class ts2pythonCompiler(Compiler):
         # raise ValueError('Malformed syntax-tree!')
 
     def on_comment__(self, node) -> str:
-        assert node.content.rfind("\n") >= 0  # inline comments should have been removed
         if self.keep_comments:
             comment = node.content
             multiline = True if re.match(' *\n', comment) else False
@@ -718,8 +886,18 @@ class ts2pythonCompiler(Compiler):
             return f"\n{comment}" if multiline else comment
         return ""
 
+    def on_docstring__(self, node) -> str:
+        assert self.doc_comments == 'docstrings'
+        comment = node.content
+        comment = comment.strip()
+        comment = re.sub(r'/\*+\s*|\s*\*/|//[ \t]*', '', comment)
+        comment = re.sub(r'(?:\n|^)[ \t]*\* ?', '\n', comment).lstrip()
+        comment = comment.replace("'", chr(0x2bc))
+        lf = "\n" if comment.find('\n') != -1 else ""
+        return f'"""{comment}"""{lf}'
+
     def on_root(self, node) -> str:
-        roots = [child for child in node.children if child.name != 'comment__']
+        roots = [child for child in node.children if child.name not in ('comment__', 'docstring__')]
         assert len(roots) == 1, node.as_sxpr()
         return self.compile(roots[0])
 
@@ -731,8 +909,9 @@ class ts2pythonCompiler(Compiler):
                 'be transpiled for now.', NOT_YET_IMPLEMENTED_WARNING)
             return self.compile(node['module'][0]['document'])
         self.mark_overloaded_functions(node)
-        return '\n\n'.join(self.compile(child) for child in node.children
+        code = '\n\n'.join(self.compile(child) for child in node.children
                            if child.name != 'declaration')
+        return code.replace('\n\n"""', '\n"""')
 
     def on_module(self, node) -> str:
         name = self.compile(node['identifier'])
@@ -755,20 +934,28 @@ class ts2pythonCompiler(Compiler):
         if base_class_name == 'TypedDict':
             total = not bool(optional_key_list) or self.use_not_required
             if base_classes:
-                td_name = 'TypedDict' if (self.use_variadic_generics or
-                                          base_classes.find('Generic[') < 0) \
-                                      else 'GenericTypedDict'
+                td_name = '' if (self.use_variadic_generics or
+                                 base_classes.find('Generic[') < 0) \
+                                else ', GenericTypedDict'
                 if self.use_not_required or total:
-                    return f"class {name}{tps}({base_classes}, {td_name}):\n"
+                    return f"class {name}{tps}({base_classes}{td_name}):\n"
                 else:
-                    return f"class {name}{tps}({base_classes}, "\
+                    return f"class {name}{tps}({base_classes}"\
                            f"{td_name}, total={total}):\n"
             else:
                 tps = generic_types if self.use_type_parameters else ''
-                if self.use_not_required or total:
-                    return f"class {name}{tps}(TypedDict):\n"
+                total_str = '' if self.use_not_required or total else f", total={total}"
+                if self.use_extra_items:
+                    if self.extra_items_type == 'None':
+                        extra_str = ", closed=True"
+                    elif self.extra_items_type == 'Any':
+                        extra_str = ", closed=False"
+                    else:
+                        extra_str = f", extra_items={self.extra_items_type}"
+                    self.extra_items_type = 'None'  # revert to default
                 else:
-                    return f"class {name}{tps}(TypedDict, total={total}):\n"
+                    extra_str = ''
+                return f"class {name}{tps}(TypedDict{total_str}{extra_str}):\n"
         else:
             if base_classes:
                 if base_class_name:
@@ -843,13 +1030,21 @@ class ts2pythonCompiler(Compiler):
         if force_base_class:
             self.render_anonymous = "local"
             decls_block.attr['no_typed_dict'] = True
+        if decls_block.children and decls_block[0].name == 'docstring__':
+            ds = ('    ' + self.on_docstring__(decls_block.result[0])
+                  .replace('\n', '\n    ').rstrip(' '))
+            if ds[-2:] != '\n\n':  ds += '\n'
+            decls_block.result = decls_block.result[1:]
+        else:
+            ds = ''
         decls = self.compile(decls_block)
         interface = self.render_class_header(name, base_classes, force_base_class, tps)
         self.base_classes[name] = base_class_list
         if self.base_class_name == "TypedDict" and self.render_anonymous == "toplevel":
-            interface = self.render_local_classes() + '\n' + interface
+            interface = self.render_local_classes() + '\n' + interface + ds
         else:
-            interface += ('    ' + self.render_local_classes().replace('\n', '\n    ')).rstrip(' ')
+            interface += (ds + '    ' + self.render_local_classes()
+                          .replace('\n', '\n    ')).rstrip(' ')
         self.render_anonymous = save_render_anonymous
         self.optional_keys.pop()
         self.local_classes.pop()
@@ -894,7 +1089,7 @@ class ts2pythonCompiler(Compiler):
             self.local_classes.append([])
             self.optional_keys.append([])
             types = self.compile(node['types'])
-            preface += self.render_local_classes()
+            preface += self.render_local_classes()  # TODO: worry about movind docstring in front of local classes?
             self.optional_keys.pop()
             self.local_classes.pop()
             if self.use_type_parameters:  self.known_types.pop()
@@ -907,7 +1102,7 @@ class ts2pythonCompiler(Compiler):
                 del self.known_types[-1][alias]
         else:
             code = ''
-        if node[-1].name == 'comment__':
+        if node[-1].name in ('comment__', 'docstring__'):
             code += '\n\n' + self.compile(node[-1])
         self.obj_name.pop()
         return code
@@ -943,14 +1138,18 @@ class ts2pythonCompiler(Compiler):
                 if 'optional' in nd:
                     nd.attr['force_optional'] = True
         raw_decls = [self.compile(nd) for nd in node
-                     if nd.name in ('declaration', 'function', 'comment__')]
+                     if nd.name in ('declaration', 'function', 'comment__', 'docstring__')]
+        if self.use_extra_items and 'map_signature' in node:
+            index_type, item_type = self.compile_map_signature(node['map_signature'])
+            self.extra_items_type = item_type if index_type == 'str' else 'Any'
+
         declarations = '\n'.join(d for d in raw_decls if d)
         if all(decl.lstrip()[0:1] in ('#', '') for decl in raw_decls):
             return "pass"
         return declarations or "pass"
 
     def on_declaration(self, node) -> str:
-        identifier = self.compile(node['identifier'])
+        identifier = self.compile(node.get('identifier', node.get('pseudo_identifier', None)))
         self.obj_name.append(to_typename(identifier))
         T = self.compile_type_expression(node, node['types']) \
             if 'types' in node else 'Any'
@@ -1076,7 +1275,7 @@ class ts2pythonCompiler(Compiler):
                         (not all(self.get_known_type(typ) for typ in union) \
                          and pick_from_path(self.path, 'type_alias'))):
                 union = [typ.replace("'", '') for typ in union]
-                union = [typ.replace('"', '') for typ in union if not typ.find('Literal') >= 0] # rather crude criterion!
+                union = [typ.replace('"', '') if not typ.find('Literal') >= 0 else typ for typ in union] # rather crude criterion!
                 return f"{preface}'{' | '.join(union)}'"
             else:
                 return preface + ' | '.join(union)
@@ -1132,15 +1331,15 @@ class ts2pythonCompiler(Compiler):
             preface = ''
         if self.use_literal_type and \
                 any(nd[0].name == 'literal' for nd in node.children
-                    if nd.name != 'comment__'):
+                    if nd.name not in  ('comment__', 'docstring__')):
             if all(nd[0].name == 'literal' for nd in node.children
-                   if nd.name != 'comment__'):
+                   if nd.name not in ('comment__', 'docstring__')):
                 result = f"Literal[{', '.join(typ for typ in union)}]"
             else:
                 new_union = []
                 literal_package = []
                 for i, nd in enumerate(node.children):
-                    if nd.name == 'comment__':
+                    if nd.name in ('comment__', 'docstring__'):
                         continue
                     if nd[0].name == 'literal':
                         literal_package.append(union[i])
@@ -1228,9 +1427,16 @@ class ts2pythonCompiler(Compiler):
     def on_mapped_type(self, node) -> str:
         return self.compile(node['map_signature'])
 
+    def compile_map_signature(self, node) -> Tuple[str, str]:
+        signature = self.compile(node['index_signature'])
+        self.obj_name.append('INDEX_SIGNATURE_TYPE_NAME_SURROGATE')
+        types = self.compile(node['types'])
+        self.obj_name.pop()
+        return signature, types
+
     def on_map_signature(self, node) -> str:
-        return "Dict[%s, %s]" % (self.compile(node['index_signature']),
-                                 self.compile(node['types']))
+        signature, types = self.compile_map_signature(node)
+        return f"Dict[{signature}, {types}]"
 
     def on_indexed_type(self, node) -> str:
         assert node[0].name == "type_name"
@@ -1269,7 +1475,8 @@ class ts2pythonCompiler(Compiler):
         else:
             self.add_to_known_types(node, name, 'virtual_enum')
         save = self.strip_type_from_const
-        if all(child.name in ('const', 'comment__') for child in node.children[1:]):
+        if all(child.name in ('const', 'comment__', 'docstring__')
+               for child in node.children[1:]):
             if all(nd['literal'][0].name == 'integer'
                    for nd in node.select_children('const') if 'literal' in nd):
                 header = f'class {name}(IntEnum):'
@@ -1307,7 +1514,7 @@ class ts2pythonCompiler(Compiler):
         declaration = self.compile(node[1])
         declaration = declaration.lstrip('\n')
         declarations.extend(declaration.split('\n'))
-        for nd in node[2:]:
+        for nd in node[2:]:  # TODO: Worry about docstrings following local classes
             declaration = self.compile(nd)
             declarations.extend(declaration.split('\n'))
         local_classes = self.render_local_classes()
@@ -1341,8 +1548,8 @@ class ts2pythonCompiler(Compiler):
         name = self.compile(node['identifier'])
         self.add_to_known_types(node, name, 'enum')
         enum = ['class ' + name + base_class + ':']
-        for item in node.select_children('item'):
-            enum.append(self.compile(item))
+        for item in node.select_children({'item', 'docstring__'}):
+            enum.append(self.compile(item).replace('\n', '\n    '))
         return '\n    '.join(enum)
 
     def on_item(self, node) -> str:
@@ -1511,9 +1718,22 @@ class ts2pythonCompiler(Compiler):
 
     def on_identifier(self, node) -> str:
         identifier = node.content
+        if node.get_attr('export', False):
+            self.export.append(f"'{identifier}'")
         if keyword.iskeyword(identifier):
             identifier += '_'
         return identifier
+
+    def on_pseudo_identifier(self, node) -> str:
+        psd_ident = node.content.strip("'").strip('"')
+        if len(psd_ident) == 0:
+            return '_'
+        psd_ident = re.sub(r'[^\w.]', '_', psd_ident)
+        if psd_ident[0].isdigit() or psd_ident[0] == '.' \
+                or not re.match(r'\w', psd_ident[0]):
+            psd_ident = '_' + psd_ident[1:]
+        return psd_ident
+
 
 compiling: Junction = create_junction(
     ts2pythonCompiler, 'AST', "py")
@@ -1751,11 +1971,14 @@ def main(called_from_app=False):
     parser.add_argument('-a', '--anonymous', nargs=1, action='extend', type=str,
                         help='How to render anonymous interfaces: "local" (default), '
                              '"toplevel", "functional", "type"')
+    parser.add_argument('-d', '--doccomments', nargs=1, action='extend', type=str,
+                        choices=['keep', 'drop', 'docstrings'],
+                        help='How to handle documentation comments: "keep", "drop", "docstrings"')
     parser.add_argument('-p', '--peps', nargs=1, action='extend', type=str,
                         help='Assume or ignore Python-PEPs, e.g. "655,~705" assume NotRequired '
                              '(PEP 655), but ignore ReadOnly (PEP 705)')
     parser.add_argument('-k', '--comments', action='store_const', const="comments",
-                        help="Preserve (multiline) comments")
+                        help="Preserve comments")
     parser.add_argument('-s', '--serialize', nargs=1, default=[],
                         help="Choose serialization format for abstract syntax tree. Available: "
                              + ', '.join(ALLOWED_PRESET_VALUES['default_serialization']))
@@ -1767,6 +1990,8 @@ def main(called_from_app=False):
     file_names, out, log_dir = args.files, args.out[0], ''
 
     read_local_config(os.path.join(scriptpath, 'ts2pythonConfig.ini'))
+    ts2python_cfg = get_config_values('ts2python.*')
+    validate_configuration(ts2python_cfg)
 
     if args.serialize:
         if (args.serialize[0].lower() not in
@@ -1789,7 +2014,8 @@ def main(called_from_app=False):
             sys.exit(1)
         targets = chosen
 
-    if args.debug or args.compatibility or args.peps or args.anonymous:
+    if args.debug or args.compatibility or args.peps or args.anonymous \
+            or args.comments or args.doccomments:
         access_presets()
         if args.debug is not None:
             log_dir = 'LOGS'
@@ -1800,12 +2026,13 @@ def main(called_from_app=False):
             version_info = tuple(int(part) for part in args.compatibility[0].split('.'))
             set_compatibility_level(version_info, "preset")
         if args.anonymous:  set_preset_value('ts2python.RenderAnonymous', args.anonymous[0].strip())
+        if args.doccomments:  set_preset_value('ts2python.DocComments', args.doccomments[0].strip())
         if args.peps:
             args_peps = [pep.strip() for pep in args.peps[0].split(',')]
             all_peps = { '435',  '563',  '584',  '586',  '604', '613',
-                         '646',  '649',  '655',  '695',  '705',  '749',
+                         '646',  '649',  '655',  '695',  '705', '728', '749',
                         '~435', '~563', '~584', '~586', '~604', '~613',
-                        '~646', '~649', '~655', '~695', '~705', '~749'}
+                        '~646', '~649', '~655', '~695', '~705', '~728', '~749'}
             if not all(pep in all_peps for pep in args_peps):
                 print(f'Unsupported PEPs specified: {args_peps}\n'
                       'Allowed PEP arguments are:\n'
@@ -1818,7 +2045,8 @@ def main(called_from_app=False):
                       '  649 or 749 - assume deferred type evaluation (Python 3.14)\n'
                       '  655  - use NotRequired instead of Optional (Python3.11)\n'
                       '  695  - use type parameters (Python 3.12)\n'
-                      '  705  - allow ReadOnly (Python 3.13)\n')
+                      '  705  - allow ReadOnly (Python 3.13)\n'
+                      '  728  - extra items (Python 3.15)\n')
                 sys.exit(1)
             for pep in args_peps:
                 kwargs= {'value': pep[0] != '~', 'allow_new_key': True}
@@ -1831,6 +2059,7 @@ def main(called_from_app=False):
                 if pep == '655':  set_preset_value('ts2python.UseNotRequired', **kwargs)
                 if pep == '695':  set_preset_value('ts2python.UseTypeParameters', **kwargs)
                 if pep == '705':  set_preset_value('ts2python.AllowReadOnly', **kwargs)
+                if pep == '728':  set_preset_value('ts2python.UseExtraItems', **kwargs)
                 if pep in ('649', '749'):  set_preset_value('ts2python.AssumeDeferredEvaluation', **kwargs)
         if args.comments: set_preset_value('ts2python.KeepComments', True, allow_new_key=True)
         finalize_presets()
