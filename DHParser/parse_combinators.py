@@ -18,12 +18,12 @@
 """
 Module parse_combinators provides classes for all kinds of parsers and
 parser combinators, e.g. Series, Alternative, OneOrMore. It furthermore
-defines look a head and look behind parsers as well as content capturing
+defines look-ahead and look-behind parsers as well as content capturing
 parsers. (The latter break with the paradigm of conext free grammars and
 are not compatible with other parsing expression grammar suites. Use with
-care!) Finally, it defines Forward parsers allow for cycles
+care!) Finally, it defines Forward-parsers to allow for cycles
 (i.e. forward-references) in the grammar. Class :py:class:`Forward` also
-contains functionality for handling left left-recursion via a variant of
+contains functionality for handling left-recursion via a variant of
 the squirrel-parser algorithm.
 """
 

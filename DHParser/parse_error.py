@@ -16,7 +16,7 @@
 # permissions and limitations under the License.
 
 """
-Module parse_error contains defines ParserError which can be
+Module parse_error contains defines :py:class:`ParserError` which can be
 raised by parsers as well as functions for resuming the parsing
 process after a (syntax) error occurred.
 """

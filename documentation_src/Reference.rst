@@ -366,14 +366,37 @@ Modules
    in EBNF-notation, like for example scoping based on indentation (as used
    by Python) or chaining of source-texts via an "include"-directive.
 
-:py:mod:`parse`
-   contains the parsing algorithms and the
-   Python-Interface for defining parsers. DHParser features a packrat-parser
-   for parsing-expression-grammars with full left-recursion support as well
-   configurable error catching an continuation after error. The
-   Python-Interface allows to define grammars directly as Python-code
-   without the need to compile an EBNF-grammar first. This is an alternative
-   approach to defining grammars similar to that of pyparsing_.
+:py:mod:`parse_base`
+   Module parse_base defines class :py:class:`~parse_base.Parser`
+   which is the root class
+   for all parser classes. Most notably, memoization is handled
+   by the base class. Furthermore, base classes for leaf-parsers and
+   non-memoizing parsers are defined in this module.
+
+:py:mod:`parse_error`
+    Module parse_error contains defines class
+    :py:class:`~parse_error.ParserError` which can be
+    raised by parsers as well as functions for resuming the parsing
+    process after a (syntax) error occurred.
+
+:py:mod:`parse_grammar`
+    Module parse_grammar defines the class :py:class:`~parse_grammar.Grammar` which
+    serves as a hub object for the hierarchy (or, rather, directed graph)
+    of connected parser classes. It is also the entry and exit point for
+    the parsing process. Parser objects are never call directly, but only
+    through the Grammar object to which they belong.
+
+:py:mod:`parse_combinators`
+    Module parse_combinators provides classes for all kinds of parsers and
+    parser combinators, e.g. Series, Alternative, OneOrMore. It furthermore
+    defines look-ahead and look-behind parsers as well as content capturing
+    parsers. (The latter break with the paradigm of conext free grammars and
+    are not compatible with other parsing expression grammar suites. Use with
+    care!) Finally, it defines Forward-parsers to allow for cycles
+    (i.e. forward-references) in the grammar. Class
+    :py:class:`~parse_combinators.Forward` also
+    contains functionality for handling left-recursion via a variant of
+    the squirrel-parser algorithm.
 
 :py:mod:`dsl`
    contains high-level functions for compiling

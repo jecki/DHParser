@@ -16,10 +16,10 @@
 # permissions and limitations under the License.
 
 """
-Module parse_base defines class Parser which is the root class
-for all parser classes. Most notably, the memoization is handled
-by the base class. Furthermore. base class for leaf-parsers and
-non-memoizing parsers are defined.
+Module parse_base defines class :py:class:`Parser` which is the root class
+for all parser classes. Most notably, memoization is handled
+by the base class. Furthermore, base classes for leaf-parsers and
+non-memoizing parsers are defined in this module.
 """
 
 
