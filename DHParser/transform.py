@@ -491,7 +491,7 @@ def transformer(tree: RootNode,
                 dst_stage: str = '') -> RootNode:
     """
     Same as :func:`traverse`, but expects a node of type RootNode
-    to be passed in parameter ``tree`` and retruns this RootNode.
+    to be passed in parameter ``tree`` and returns this RootNode.
     Furthermore, the names of the source and destination stages
     can be passed optionally in the parameters  ``src_stage`` and
     ``dst_stage``. If these parameters are not empty strings,
